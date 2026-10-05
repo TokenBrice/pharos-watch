@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import usdcCircleCoin from "@shared/data/stablecoins/coins/usdc-circle.json";
 import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdeEthenaCoin from "@shared/data/stablecoins/coins/usde-ethena.json";
-import { DWELLIR_CHAINS, buildChainRpcs, dwellirRpcUrl } from "../../chain-registry";
+import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
+import { buildAlchemyRpcUrl, buildChainRpcs } from "../../chain-registry";
 import { getPublicRpcUrl } from "../../public-rpc-registry";
 import {
   RPC_PARITY_TARGETS,
@@ -34,6 +35,14 @@ describe("rpc parity targets", () => {
       // calls, including avalanche's path suffix.
       expect(dwellirHostForChain(entry.chainId)).toBe(new URL(dwellirRpcUrl(entry)).host);
     }
+  });
+
+  it("selects only verified chain-local block-number sentinels", () => {
+    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "arbsys-block-number")
+      .map((entry) => entry.chainId)).toEqual(["arbitrum", "robinhood"]);
+    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "state-bracket")
+      .map((entry) => entry.chainId)).toEqual(["xdc"]);
+    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "multicall3-block-number")).toHaveLength(34);
   });
 
   it("tracks a contract that the named coin lists on that chain", () => {
@@ -74,12 +83,35 @@ describe("rpc parity targets", () => {
     expect(resolveRpcParityComparator(target("megaeth"), new Map())?.url).toBe(pinned?.url);
   });
 
+  it("keeps HyperEVM state on keyless dRPC and requires configured Alchemy only for logs", () => {
+    const entry = target("hyperevm");
+    const state = { url: "https://hyperliquid.drpc.org", ref: { operator: "public", host: "hyperliquid.drpc.org", source: "pin" } };
+    const keyed = buildChainRpcs("parity-test-alchemy-key");
+    expect(resolveRpcParityComparator(entry, keyed)).toEqual(state);
+    expect(resolveRpcParityComparator(entry, keyed, "logs")).toEqual({
+      url: "https://hyperliquid-mainnet.g.alchemy.com/v2/",
+      ref: { operator: "alchemy", host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" },
+    });
+    // Origin registration alone cannot admit an unconfigured paid log pin.
+    expect(resolveRpcParityComparator(entry, buildChainRpcs(), "logs")).toBeNull();
+    buildAlchemyRpcUrl("hyperliquid-mainnet");
+    expect(resolveRpcParityComparator(entry, keyed, "logs")).toBeNull();
+    expect(resolveRpcParityComparator(entry, new Map(), "logs")).toBeNull();
+    expect(resolveRpcParityComparator(entry, new Map())).toEqual(state);
+    expect(plannedRpcParityComparator(entry)).toEqual(state.ref);
+    expect(plannedRpcParityComparator(entry, "logs")).toEqual({
+      operator: "alchemy", host: "hyperliquid-mainnet.g.alchemy.com", source: "pin",
+    });
+  });
+
   it("keeps every pin keyless and https", () => {
     for (const entry of RPC_PARITY_TARGETS) {
-      if (entry.comparator.source !== "pin") continue;
-      const url = new URL(entry.comparator.url);
-      expect(url.protocol, entry.chainId).toBe("https:");
-      expect(url.search, entry.chainId).toBe("");
+      for (const plan of [entry.comparator, entry.logsComparator]) {
+        if (plan?.source !== "pin") continue;
+        const url = new URL(plan.url);
+        expect(url.protocol, entry.chainId).toBe("https:");
+        expect(url.search, entry.chainId).toBe("");
+      }
     }
   });
 

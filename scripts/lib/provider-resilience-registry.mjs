@@ -575,6 +575,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "CIRCUIT_SOURCE.DWELLIR_EVM",
       "RPC_PARITY_MAX_ROW_BYTES",
       "X-Api-Key",
+      "RPC_PARITY_LATEST_MAX_NUMERIC_CALLS",
+      "firstTouch",
+      "insufficient-warm-samples",
+      "latest-state-freshness",
     ],
   },
   {

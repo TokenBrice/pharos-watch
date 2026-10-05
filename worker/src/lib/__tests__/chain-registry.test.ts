@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
-  DWELLIR_CHAINS,
   buildAlchemyRpcUrl,
   buildChainRpcs,
-  dwellirRpcUrl,
   getRpcAuthHeaders,
   hasRegistryRpc,
   logScanRpcEndpoints,
@@ -257,12 +256,13 @@ describe("buildChainRpcs", () => {
   it("creates supplemental-only configs for pin-only chains", () => {
     const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
 
-    for (const chainId of ["hyperevm", "linea", "zksync"]) {
+    for (const chainId of ["hyperevm", "linea", "zksync", "cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
       expect(hasRegistryRpc(config), chainId).toBe(false);
       expect(primaryRpcUrl(config), chainId).toBeUndefined();
       expect(registryRpcUrls(config), chainId).toEqual([]);
+      expect(logScanRpcEndpoints(config), chainId).toEqual([]);
       expect(supplementalRpcEndpoints(config), chainId).toHaveLength(1);
       expect(config, chainId).toMatchObject({
         chainName: CHAIN_META[chainId]!.name,

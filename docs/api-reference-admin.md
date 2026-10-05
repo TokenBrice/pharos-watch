@@ -1233,7 +1233,7 @@ Operator-only report for the Dwellir supplemental-RPC trial. It answers three qu
 
 - credit ledger — this UTC month's metered Dwellir JSON-RPC response items against the configured cap (`budget`)
 - `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
-- per-chain parity of the supplemental operator against that chain's incumbent operator: retained runs, success rate, head lag, state and log parity, latency percentiles, error classes for both operators, per-step failure counts, the newest comparator failure with its HTTP status, and the plan's pass/fail gates (`observation.chains[]`)
+- per-chain parity against an independent incumbent: retained runs, per-method availability, head lag, pinned state/log parity, first-touch and warm latency per method, latest-tag freshness, diagnostics, and pass/fail gates (`observation.chains[]`)
 
 Diagnostic only: it never feeds scoring, public health, or the public API, and no other lane reads it. The response never contains the Dwellir API key — the report carries key presence (`budget.configured`) and credit accounting only. Registration lives in `worker/src/routes/admin-routes.ts`; the loader is `loadRpcProviderTrialReport` in `worker/src/lib/rpc-provider-parity/report.ts`.
 
@@ -1258,27 +1258,83 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
   "observation": {
     "windowStartSec": 1771000000,
     "lastRunAtSec": 1779999000,
-    "runsRetained": 6,
+    "runsRetained": 24,
     "chains": [
       {
         "chainId": "base",
         "dwellirHost": "api-base-mainnet-archive.n.dwellir.com",
         "comparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
-        "runs": 6,
+        "logsComparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
+        "comparatorsByStep": {
+          "head": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
+          "state": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
+          "logs": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
+          "latest": []
+        },
+        "runs": 24,
+        "skips": { "no-comparator": 0, "no-dwellir-entry": 0, "deadline": 0, "aborted": 0, "unknown": 0 },
+        "lastSkip": null,
         "dwellirSuccessRate": 1,
-        "headLagBlocks": { "p50": 0, "p95": 1 },
-        "stateParity": { "checked": 6, "matched": 6, "mismatched": 0, "lastMismatch": null },
-        "logParity": { "checked": 6, "matched": 6, "mismatched": 0, "skippedReason": null },
+        "headLagBlocks": { "p50": 0, "p95": 1, "samples": 24 },
+        "stateParity": { "checked": 24, "matched": 24, "mismatched": 0, "lastMismatch": null },
+        "logParity": { "checked": 24, "matched": 24, "mismatched": 0, "skippedReason": null },
         "prunedLogProbe": null,
         "latency": {
-          "dwellir": { "p50Ms": 180, "p95Ms": 420, "samples": 6 },
-          "comparator": { "p50Ms": 140, "p95Ms": 300, "samples": 6 }
+          "dwellir": {
+            "firstTouch": {
+              "head": { "p50Ms": 180, "p95Ms": 420, "samples": 24 },
+              "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+            },
+            "warm": {
+              "head": { "p50Ms": 70, "p95Ms": 140, "samples": 24 },
+              "state": { "p50Ms": 80, "p95Ms": 160, "samples": 24 },
+              "logs": { "p50Ms": 90, "p95Ms": 180, "samples": 24 },
+              "latest": { "p50Ms": 80, "p95Ms": 160, "samples": 24 }
+            },
+            "warmRunMedian": { "p50Ms": 80, "p95Ms": 160, "samples": 24 }
+          },
+          "comparator": {
+            "firstTouch": {
+              "head": { "p50Ms": 140, "p95Ms": 300, "samples": 24 },
+              "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+            },
+            "warm": {
+              "head": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "state": { "p50Ms": 60, "p95Ms": 120, "samples": 24 },
+              "logs": { "p50Ms": 70, "p95Ms": 140, "samples": 24 },
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+            },
+            "warmRunMedian": { "p50Ms": 60, "p95Ms": 120, "samples": 24 }
+          }
+        },
+        "availability": {
+          "dwellir": {
+            "head": { "attempts": 48, "successes": 48, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "latest": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 }
+          },
+          "comparator": {
+            "head": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
+            "latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "unknownRuns": 24, "successRate": null }
+          }
+        },
+        "latestFreshness": {
+          "fresh": 24, "stale": 0, "indeterminate": 0, "unknown": 0,
+          "discriminatingFresh": 24, "nonDiscriminatingFresh": 0,
+          "reasons": { "served-block-in-range": 24 }, "maxNumericCalls": 4, "blockTolerance": 3, "lastStale": null
         },
         "errorClasses": {},
         "comparatorErrorClasses": {},
         "failedSteps": {
-          "dwellir": { "head": 0, "state": 0, "logs": 0 },
-          "comparator": { "head": 0, "state": 0, "logs": 0 }
+          "dwellir": { "head": 0, "state": 0, "logs": 0, "latest": 0 },
+          "comparator": { "head": 0, "state": 0, "logs": 0, "latest": 0 }
         },
         "lastComparatorFailure": null,
         "gate": { "passed": true, "failing": [] },
@@ -1290,9 +1346,51 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
 }
 ```
 
-`gate.failing` names every rule a chain does not currently satisfy. Sufficiency and values are separate rules, because a comparison the lane could not perform is never a passing gate: `runs` needs 24 retained runs; `success-rate` needs 99.5% of runs in which every Dwellir read answered (plan refusals excluded from the denominator); `insufficient-comparable-samples` needs 24 runs in which both operators answered `eth_blockNumber`, which is also what `head-lag` (p95 lag ≤ `max(3, ceil(6 / block time))` blocks) and `latency` (Dwellir p95 ≤ comparator p95 + 500 ms) are measured over; `insufficient-state-checks` needs 24 `totalSupply` comparisons before `state-parity` can pass on zero mismatches; and, where the chain is expected to serve logs at all, `insufficient-log-checks` needs 24 log-window comparisons before `log-parity` can pass — chains whose Dwellir history is declared `none` (zkSync) carry no log-check requirement and report `logParity.skippedReason: "logs-history-none"` instead.
+`gate.failing` separates insufficient evidence from measured failures:
 
-Each stored sample records failures for both operators, so a chain that produced no parity claim says why. `errorClasses` and `comparatorErrorClasses` count Dwellir-side and comparator-side failure classes over the window (same vocabulary: `range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts samples in which the `head`, `state`, or `logs` step produced no usable answer for that operator — a comparator that refuses logs is not a Dwellir fault, and the report keeps them apart. An unavailable read is never a mismatch (R1): `stateParity.checked` and `logParity.checked` count only comparisons in which *both* operators answered, so `mismatched` strictly means different values, and a Dwellir read that never answered instead lowers `dwellirSuccessRate` — the availability measure, whose denominator excludes plan refusals — and appears in `failedSteps.dwellir` with its error class. `lastComparatorFailure` carries the newest such comparator failure with the step, the class, and the HTTP status when a response arrived (a Cloudflare `403`/`1010` egress block is otherwise indistinguishable from a timeout). A chain whose comparator never answers cannot prove parity: its `headLagBlocks` percentiles stay `null` and the corresponding gates stay in `gate.failing`.
+- `runs`: at least 24 retained chain runs.
+- `insufficient-<method>-attempts`: at least 24 non-capability attempts for each Dwellir method category (`head`, `state`, `logs`, `latest`). `success-rate:<method>` requires ≥99.5% success for that category, excluding only its own capability refusals. A skipped/unrecorded method is unknown, not a success.
+- `insufficient-comparable-samples`: 24 comparable head pairs; `head-lag`: p95 lag ≤ `max(3, ceil(6 / blockTimeSec))`.
+- `insufficient-state-checks` / `state-parity`: 24 performed pinned comparisons and zero mismatches.
+- `insufficient-log-checks` / `log-parity`: 24 performed comparisons and zero mismatches where log history is declared available; `logs-history-none` reports a deep pruned-window trap probe instead.
+- `no-log-comparator`: the newest sample explicitly lacked its reviewed logs comparator. This fails closed even when older retained runs have sufficient log checks; it is not the `logs-history-none` exemption.
+- `insufficient-warm-samples`: 24 runs per operator with at least two successful warm calls. `latency` compares p95 of each run's warm median: Dwellir ≤ comparator + 500 ms. First-touch is reported, never gated; neither metric measures TLS or actual connection reuse.
+- `insufficient-latest-freshness-checks`: 24 discriminating fresh checks or stale verdicts. Constant-value matches and legacy fresh checks with unknown discrimination do not meet this floor. `latest-state-freshness`: fails on any stale verdict in the window.
+
+`comparator` names the newest primary head/lag/state baseline, or the planned baseline when no samples exist. `logsComparator` names its separate logs baseline (the same reference on ordinary targets); explicit `null` records an unavailable reviewed logs pin. `comparatorsByStep` lists the actual references behind each method's retained observations, including failed calls and legacy recorded comparisons, so a window spanning a comparator change is not attributed solely to the newest host. State `lastMismatch` and `lastComparatorFailure` also carry the reference actually read. A split target's comparator latency is a composite of its step-specific baselines, not a single provider measurement.
+
+The Dwellir-only latest check uses an explicit chain-local block-number sentinel on 36 targets: Multicall3's external getBlockNumber view at `0xca11bde05977b3631167028862be2a173976ca11` / selector `0x42cbb15c` on 34 chains, and ArbSys's external arbBlockNumber view at `0x0000000000000000000000000000000000000064` / selector `0xa3b1b31d` on Arbitrum and Robinhood. Nitro/Orbit Multicall3 returns Ethereum's L1 height, not the local L2 height; it is not a valid freshness sentinel on those targets. Each target requires a reviewed `latestStateProbe`; runtime magnitude heuristics and automatic method fallback are not used. Live Multicall3 bytecode was 3,808 bytes on 36 targets; XDC returned `0x` and uses the state fallback.
+
+The sentinel sequence is head H1 → `eth_call(latest)` yielding served block R → head H2, with no numeric references. The sole tolerance authority is `headLagThresholdBlocks(blockTimeSec)` in `worker/src/lib/rpc-provider-parity/report.ts`: T = `max(3, ceil(6 / blockTimeSec))`, the same six-second/minimum-three-block policy used by the head-lag gate. It is discriminating and `fresh` / `served-block-in-range` when H1−T ≤ R ≤ H2+T, or `stale` / `served-block-behind` below H1−T. This gives Arbitrum 24 blocks (0.25 seconds/block), Robinhood and HyperEVM six (one second/block), and Base three (two seconds/block). A fixed two-block allowance was insufficient for fast-chain/load-balanced skew: an Arbitrum served block 11 ahead of H2 is now inside its shared 24-block budget, not missing evidence. Ahead-of-budget results, any regressing head (which could be a reorg), or a failed step remain indeterminate; a fast advancing head does not exhaust a numeric bracket. Each sample preserves the `toleranceBlocks` actually used when acquired; summary `blockTolerance` reports the current chain's shared sentinel budget, without rewriting historical verdicts.
+
+The 2026-10-05T19:15:06Z domain audit read H1, Multicall3, ArbSys and H2 on every one of the 37 targets. Only these two targets returned an L1-numbered Multicall3 result and a valid local ArbSys result; all other 34 deployed Multicall3 results were in their local head domain. XDC returned `0x` for both sentinels; BSC and zkSync's ArbSys calls returned RPC errors, not an available sentinel.
+
+| Nitro target | H1 | Multicall3 (L1) | ArbSys (L2) | H2 |
+| --- | ---: | ---: | ---: | ---: |
+| Arbitrum | 512,015,100 | 26,128,190 | 512,015,102 | 512,015,103 |
+| Robinhood | 81,024,812 | 26,128,192 | 81,024,815 | 81,024,816 |
+
+The XDC/unverified-target fallback reads the target's `totalSupply(latest)` between H1 and H2, then every numeric reference H2 down to H1, never more than four (`RPC_PARITY_LATEST_MAX_NUMERIC_CALLS`). A match is `fresh` / `matched-numeric-block`, but equal values at every reference are `discriminating: false` and cannot prove tag freshness. A stable-head, stable-hash no-match is `stale` / `no-bracket-match`; a moving-head no-match is indeterminate (`moving-bracket-no-match`) because a reorg above H1 could legitimately replace the bracket's state. Boundary block hashes are checked before/after numeric reads; detected changes are `bracket-reorg`, not stale. Wider brackets, regressing heads and failed reads remain indeterminate. `lastStale` names the method, run clock, both heads, served block/lag/tolerance when available, and the newest stale value/reference payload.
+
+`latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` includes the latest-tag call and fallback numeric/header checks; the two freshness head reads belong to `head`. The comparator has no latest-check attempts by design.
+
+The compressed v4 store retains the existing cache key and reads v1/v2/v3 samples during seven-day retention. V1 samples have unknown per-method attempts, warm latency and latest freshness; v2 fresh verdicts have unknown discrimination and cannot satisfy the new freshness floor. V3's single comparator remains the reference for every legacy method; it is never retroactively relabeled as the new per-step pin. V4 stores an optional log-comparator table index (explicit null when unavailable) and tags split-origin calls, including the Alchemy warm-up head, in dictionary-encoded layouts. Ordinary integer milliseconds are losslessly bit-packed, and block heights are delta encoded. The same derived per-operator call bounds govern encoding and decoding. Full values are retained for the newest stale example per chain; earlier verdicts retain their method, served block, discrimination and reason. Unrecorded skip reasons remain `unknown`, not inferred deadlines. The compressed row cap is 240 KiB (below the 256 KiB cache budget), with oldest-run pruning as the final hard bound. Older readers reject v4 rows and their next write resets history; preserve the cache row before rollback.
+
+`errorClasses` and `comparatorErrorClasses` count samples with provider failures (`range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts failed method categories per operator; `lastComparatorFailure` names its run clock, category, class, HTTP status and actual comparator reference. Invalid method result shapes are failures, not successes. HTTP 5xx stays `server-error` even if its body mentions an unsupported operation; HTTP range/result-cap bodies retain their specific class. Unavailable reads never count as state/log mismatches: both operators must answer for a comparison. Dwellir state/log reads are still attempted when the comparator's corresponding method fails; an unresolved logs pin skips that method without issuing either operator's log read. Astar's reviewed keyless pin is `https://evm.astar.network`, verified for historical USDC supply and recent/older logs on 2026-10-05.
+
+Worldchain's reviewed keyless comparator is `https://worldchain.drpc.org` ([provider listing](https://drpc.org/chainlist/worldchain-mainnet-rpc)). Its distinct origin prevents the configured census Alchemy bearer from reaching public comparator reads. On 2026-10-05 it returned chain ID 480; USDC total supply and all 22 transaction-hash/log-index identities over the ten-block window ending at block 35,949,925 matched the official Alchemy public endpoint, with both endpoints read without authentication.
+
+HyperEVM explicitly separates comparator roles: keyless dRPC `https://hyperliquid.drpc.org` supplies head/lag and numeric state, while the configured reth Alchemy pin `https://hyperliquid-mainnet.g.alchemy.com/v2/` supplies logs with its origin-registered bearer header. Missing Alchemy configuration/auth still permits head/numeric-state checks; logs remain unchecked with `logParity.skippedReason = "no-comparator"`, without substituting native log indices. One Alchemy head read immediately before its log read genuinely warms that separate origin; its reference and first-touch phase are recorded, without changing the primary head/lag/state baseline or the two-warm-call floor. The 2026-10-05T19:50Z numeric-state reproduction in `agents/dwellir-switch/raw/orch-hyperevm-alchemy-state.txt` found Dwellir = dRPC ≠ Alchemy in five head−64 samples with identical Dwellir/Alchemy block hashes, but all three agreed in five head−500 samples. Alchemy's value at block 47,756,020 equaled Dwellir's at later block 47,756,029: recent numeric `eth_call` tags returned newer-than-requested state on Alchemy. The 19:17Z historical supply match does not establish correctness near head.
+
+The 2026-10-05T19:17Z log reproduction showed Dwellir/Alchemy matching 16/22/24 log identities in three pinned windows ending at blocks 47,753,799/798/797. At block 47,753,790 all four providers returned hash `0xbfcfc3f34fd4226ca24620b5e719d0cac262b6638ea82206444aae5368006ed1`, but Dwellir/Alchemy included eight transactions versus dRPC/official native's seven. The native representation omitted synthetic transaction `0x7989bc119042f05c3ee4169493d883a0409035a8c31c560a37accafc1515d08a`, whose reth receipt contains one other-token transfer at index zero; four regular USDC log indices consequently differed by one (`0x11` versus `0x10`, for example) despite identical event payloads. This is a pinned, same-hash representation difference, not evidence of a lagging node or a near-head race. The earlier 28-identity dRPC match did not cover this difference. Log identities remain exact; no normalization or exclusion turns shifted/missing logs into a pass.
+
+The hourly lane is strictly serial (`maxConnections: 1`) with a four-minute run deadline and an eight-second request timeout clipped to remaining time. The 35 ordinary sentinel targets use eight total / five Dwellir calls each; HyperEVM uses nine total / five Dwellir calls with its separate log-origin warm-up head. XDC uses 12–15 total / 9–12 Dwellir calls depending on bracket width, including three header checks. Totals are 301–304 calls and 189–192 Dwellir credits/run: 4,536 ordinary / 4,608 maximum credits/day before failures/skips. Linear extrapolation of the prior 29-chain, 174-call measured maximum (102 s) gives ~176–178 s, leaving ~62 s; this is a planning estimate, not a new live timing measurement. The starting target rotates by `floor(atSec / 3600) % targetCount` so slow prefixes cannot permanently starve the same tail. Stored/report `skips` counts each chain's `no-comparator`, `no-dwellir-entry`, `deadline`, and `aborted` reasons; `lastSkip` names the latest clock/reason, and `unknown` covers retained legacy gaps without skip evidence. An unavailable HyperEVM logs pin is instead recorded on its retained partial sample, not as a whole-chain skip.
+
+The 2026-10-05T19:30Z live smoke of this probe completed in 31 seconds with 37/37 Dwellir heads, 187 credits, no deadline hit and no skipped chains. Both ArbSys freshness checks were fresh with zero block lag; HyperEVM's Alchemy state and exact log identities matched. Celo's comparator returned HTTP 400, so its state/log comparisons remained unchecked rather than positive parity evidence. This single-run measurement does not replace the conservative deadline planning estimate or the 24-run gates.
+
+The 2026-10-05T19:45Z smoke after adopting the shared chain-time tolerance also completed in 31 seconds, used 187 credits, read 37/37 Dwellir heads, and had no skipped chains or deadline hit. Arbitrum and Robinhood were fresh with their recorded 24- and six-block budgets. HyperEVM's exact logs matched Alchemy, but its pinned state comparison mismatched; that remains negative parity evidence, not a freshness failure or grounds to relax exact comparison. Celo's HTTP 400 left state/log unchecked, and Manta's comparator HTTP 429 left logs unchecked. These single-run observations do not establish a 24-run gate pass.
+
+The 2026-10-05T20:25Z smoke with the per-step comparator split completed in 40 seconds, used 189 Dwellir credits, read 37/37 Dwellir heads, and had no skipped chains or deadline hit. HyperEVM's dRPC numeric state and Alchemy exact logs both matched Dwellir; its latest sentinel and both Nitro ArbSys checks were fresh. HTTP 500 responses were observed, and Celo's comparator was correctly classified as `server-error`, leaving its state/log comparisons unchecked. This remains a single-run observation, not a 24-run gate verdict.
 
 `budget.reason` is `ok` when the ledger is readable and under cap, and otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`; `budget.usedCredits` is `null` when the ledger row could not be read. `circuit` is `null` until the `dwellir-evm` circuit has been written at least once. `observation` is `null` with `observationError` set when the stored parity samples could not be read — that is still a `200`, because a degraded sample store is exactly the state an operator needs to see, and the budget and circuit sections remain live diagnostics.
 

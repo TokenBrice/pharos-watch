@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 
 import {
   buildChainRpcs,
@@ -137,6 +138,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     const registryOnly = buildChainRpcs(ALCHEMY_API_KEY, DRPC_API_KEY);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(runtime.dwellirNative).toBeUndefined();
     expect([...runtime.chainRpcs.keys()].sort()).toEqual([...registryOnly.keys()].sort());
     expect(runtime.chainRpcs.get("ethereum")?.endpoints).toEqual(registryOnly.get("ethereum")?.endpoints);
   });
@@ -148,6 +150,8 @@ describe("scheduled runtime Dwellir enablement", () => {
 
     await runJob(runtime);
 
+    expect(dwellirUrls(runtime.chainRpcs).sort()).toEqual(DWELLIR_CHAINS.map(dwellirRpcUrl).sort());
+    expect(runtime.dwellirNative).toBeDefined();
     for (const [chainId, registryConfig] of registryOnly) {
       const endpoints = runtime.chainRpcs.get(chainId)?.endpoints ?? [];
       const dwellir = endpoints.filter((endpoint) => endpoint.operator === "dwellir");
@@ -170,6 +174,16 @@ describe("scheduled runtime Dwellir enablement", () => {
     const megaeth = runtime.chainRpcs.get("megaeth");
     expect(hasRegistryRpc(megaeth)).toBe(false);
     expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
+
+    for (const chainId of ["cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"]) {
+      expect(registryOnly.has(chainId), chainId).toBe(false);
+      const config = runtime.chainRpcs.get(chainId);
+      expect(config, chainId).toBeDefined();
+      expect(hasRegistryRpc(config), chainId).toBe(false);
+      expect(supplementalRpcEndpoints(config), chainId).toEqual([
+        expect.objectContaining({ operator: "dwellir", position: "supplemental" }),
+      ]);
+    }
   });
 
   it("withholds Dwellir and never reads the ledger without a key", async () => {
@@ -180,6 +194,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(runtime.dwellirNative).toBeUndefined();
     expect([...runtime.chainRpcs.keys()].sort()).toEqual([...registryOnly.keys()].sort());
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(0);
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(0);
@@ -194,6 +209,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(runtime.dwellirNative).toBeUndefined();
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
     // The circuit is never probed when the budget already forbids Dwellir.
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(0);
@@ -206,6 +222,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(runtime.dwellirNative).toBeUndefined();
   });
 
   it("withholds Dwellir while the circuit is open, across jobs and without re-reading", async () => {
@@ -228,6 +245,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(runtime.dwellirNative).toBeUndefined();
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(1);
   });
@@ -237,9 +255,12 @@ describe("scheduled runtime Dwellir enablement", () => {
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
 
     await runJob(runtime);
+    const admittedNative = runtime.dwellirNative;
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs).length).toBeGreaterThan(0);
+    expect(admittedNative).toBeDefined();
+    expect(runtime.dwellirNative).toBe(admittedNative);
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(1);
   });

@@ -3,18 +3,18 @@ import { buildChainRpcs } from "../../../lib/chain-registry";
 import { chainHasRpc } from "../multichain-supply";
 
 /**
- * Dwellir trial chains that carry coin/curated pins but no registry endpoint of
- * their own: the trial key creates a config for them, its endpoints are all
- * supplemental.
+ * Dwellir-only chains have no registry endpoint of their own: the trial key
+ * creates a config for them, but its supplemental endpoints must not expand
+ * the multichain aggregate's readable chain inventory.
  */
-const PIN_ONLY_DWELLIR_CHAINS = ["hyperevm", "zksync"] as const;
+const SUPPLEMENTAL_ONLY_DWELLIR_CHAINS = ["hyperevm", "zksync", "cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"] as const;
 
 describe("chainHasRpc", () => {
   it("keeps the multichain aggregate's chain set identical with and without the Dwellir key", () => {
     const withoutKey = buildChainRpcs();
     const withKey = buildChainRpcs(undefined, undefined, { dwellirApiKey: "dwellir-test" });
 
-    for (const chain of PIN_ONLY_DWELLIR_CHAINS) {
+    for (const chain of SUPPLEMENTAL_ONLY_DWELLIR_CHAINS) {
       expect(withoutKey.has(chain)).toBe(false);
       const config = withKey.get(chain);
       expect(config).toBeDefined();
@@ -28,7 +28,7 @@ describe("chainHasRpc", () => {
 
     expect(readableWithoutKey).toContain("ethereum");
     expect(readableWithoutKey).toContain("arc");
-    for (const chain of PIN_ONLY_DWELLIR_CHAINS) {
+    for (const chain of SUPPLEMENTAL_ONLY_DWELLIR_CHAINS) {
       expect(chainHasRpc(chain, { chainRpcs: withKey })).toBe(false);
     }
   });

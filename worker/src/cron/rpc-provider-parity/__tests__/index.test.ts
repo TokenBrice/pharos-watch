@@ -169,6 +169,8 @@ describe("rpc parity job", () => {
     expect(metadataOf(result)).toMatchObject({ circuit: "neutral", circuitRecorded: false });
     const circuit = await getCircuitRecord(db, CIRCUIT_SOURCE.DWELLIR_EVM);
     expect(circuit).toMatchObject({ consecutiveFailures: 0, lastSuccessAt: null, lastFailureAt: null });
+    const store = await readRpcParityStore(db);
+    expect(store.row?.runs[0].skipped).toEqual([{ chainId: "base", reason: "deadline" }]);
   });
 
   it("reports a truncated run as degraded and still stores what was measured", async () => {
@@ -186,6 +188,7 @@ describe("rpc parity job", () => {
     expect(metadataOf(result)).toMatchObject({ attempted: 1, headOk: 1, deadlineHit: true, skipped: 1, runsRetained: 1 });
     const store = await readRpcParityStore(db);
     expect(store.row?.runs).toHaveLength(1);
+    expect(store.row?.runs[0].skipped).toEqual([{ chainId: RPC_PARITY_TARGETS[1].chainId, reason: "deadline" }]);
   });
 
   it("returns an error result instead of throwing when the probe itself fails", async () => {

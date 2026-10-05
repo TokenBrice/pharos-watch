@@ -1,6 +1,7 @@
 import { RPC_PARITY_TARGETS } from "../targets";
 import { mergeRpcParityRun, type RpcParityStoreRow } from "../store";
 import type { RpcParityChainSample, RpcParityRunSamples, RpcParityStepFailures } from "../types";
+import { headLagThresholdBlocks } from "../report";
 
 /**
  * Shared fixtures for the parity lane's tests. Heights and latencies use
@@ -18,7 +19,9 @@ export function paritySample(
   chainId: string,
   overrides: Partial<RpcParityChainSample> = {},
 ): RpcParityChainSample {
-  return {
+  const target = RPC_PARITY_TARGETS.find((entry) => entry.chainId === chainId);
+  if (!target) throw new Error(`missing parity target for ${chainId}`);
+  const sample: RpcParityChainSample = {
     chainId,
     comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
     dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
@@ -40,13 +43,40 @@ export function paritySample(
     comparatorErrorClass: null,
     comparatorHttpStatus: null,
     failedSteps: { dwellir: stepFailures(), comparator: stepFailures() },
+    latestFreshness: target.latestStateProbe === "state-bracket" ? {
+      verdict: "fresh", reason: "matched-numeric-block", headBefore: 380_000_000,
+      headAfter: 380_000_000, matchedBlock: 380_000_000, method: "state-bracket",
+      discriminating: false, toleranceBlocks: 0,
+    } : {
+      verdict: "fresh", reason: "served-block-in-range", headBefore: 380_000_000,
+      headAfter: 380_000_000, matchedBlock: null, method: target.latestStateProbe,
+      discriminating: true, servedBlock: 380_000_000, lagBlocks: 0,
+      toleranceBlocks: headLagThresholdBlocks(target.blockTimeSec),
+    },
     ...overrides,
   };
+  if (!("calls" in overrides)) {
+    sample.calls = { dwellir: [], comparator: [] };
+    for (const operator of ["dwellir", "comparator"] as const) {
+      for (const step of ["head", "state", "logs", "latest"] as const) {
+        if (operator === "comparator" && step === "latest") continue;
+        const latencyMs = operator === "dwellir" ? sample.dwellirLatencyMs : sample.comparatorLatencyMs;
+        if (latencyMs === null) continue;
+        const failed = sample.failedSteps[operator][step] || (step === "head"
+          && !(operator === "dwellir" ? sample.headOk : sample.comparatorHeadOk));
+        sample.calls[operator].push({
+          step, phase: step === "head" ? "firstTouch" : "warm", latencyMs,
+          errorClass: failed ? (operator === "dwellir" ? sample.errorClass : sample.comparatorErrorClass) ?? "timeout" : null,
+        });
+      }
+    }
+  }
+  return sample;
 }
 
 /** Step-failure flags for one operator; every step is healthy unless named. */
 export function stepFailures(overrides: Partial<RpcParityStepFailures> = {}): RpcParityStepFailures {
-  return { head: false, state: false, logs: false, ...overrides };
+  return { head: false, state: false, logs: false, latest: false, ...overrides };
 }
 
 export function fullParityRun(
@@ -83,6 +113,7 @@ export function buildParityRow(atSecs: readonly number[]): RpcParityStoreRow {
 export interface ParityRunFixture {
   atSec: number;
   samples: RpcParityChainSample[];
+  skipped?: RpcParityRunSamples["skipped"];
 }
 
 /** A run window of `runCount` hourly runs ending at `PARITY_NOW_SEC`, index 0 oldest. */
