@@ -208,12 +208,13 @@ function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCau
 
 export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   const scope = gap.causeScope ?? scopeForGap(gap);
-  const scopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope);
+  const scopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope, "research");
   const entries = classifications.getAll(context.asset.assetId);
-  const scoped = entries.filter((entry) => v9EvidenceCauseScopeKey(entry.assetId, entry.scope) === scopeKey);
+  const scoped = entries.filter((entry) => v9EvidenceCauseScopeKey(entry.assetId, entry.scope, "research") === scopeKey);
   if (scoped.length > 1) throw new Error(`Conflicting evidence classifications for ${scopeKey}`);
+  const exactScopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope);
   const captured = context.fixedInput.pipelineGapByAssetId?.[context.asset.assetId]?.find(
-    ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === scopeKey,
+    ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === exactScopeKey,
   ) ?? capturedReserveFailure(context, scope);
   if (captured) addEvidence(context, captured.evidence);
   const classification = scoped[0];

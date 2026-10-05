@@ -121,9 +121,23 @@ export const V9TypedReviewGapClassificationSchema = z.discriminatedUnion("cause"
 ]);
 export type V9TypedReviewGapClassification = z.infer<typeof V9TypedReviewGapClassificationSchema>;
 
-/** Exact machine identity, never labels, prose, symbols or partial-scope matching. */
-export function v9EvidenceCauseScopeKey(assetId: string, scope: V9EvidenceCauseScope): string {
-  return JSON.stringify([assetId, scope.pillar, scope.componentKey, scope.factorKey, scope.routeKey, scope.exposureId, scope.requiredDatum]);
+// Only publication generations admitted by the DEX/redemption producers are removable.
+// Route IDs may themselves contain colons; unfamiliar route-key formats remain exact.
+const ResearchDexRouteKey = /^(dex):dex-liquidity-[0-9]+:(.+)$/u;
+const ResearchRedemptionRouteKey = /^(redemption):(?:redemption:(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9]+:[a-z0-9]{0,8})|redemption-backstops-unavailable):(.+)$/u;
+
+/** Exact identity by default; research binds the same lane/route across producer generations. */
+export function v9EvidenceCauseScopeKey(
+  assetId: string,
+  scope: V9EvidenceCauseScope,
+  identity: "exact" | "research" = "exact",
+): string {
+  let routeIdentity: string | null | readonly string[] = scope.routeKey;
+  if (identity === "research" && scope.routeKey !== null) {
+    const match = ResearchDexRouteKey.exec(scope.routeKey) ?? ResearchRedemptionRouteKey.exec(scope.routeKey);
+    if (match) routeIdentity = [match[1]!, match[2]!];
+  }
+  return JSON.stringify([assetId, scope.pillar, scope.componentKey, scope.factorKey, routeIdentity, scope.exposureId, scope.requiredDatum]);
 }
 export const V9EvidenceGapClassificationsV1Schema = z.object({
   schemaVersion: z.literal(1), entries: z.array(V9EvidenceGapClassificationSchema),
@@ -131,7 +145,7 @@ export const V9EvidenceGapClassificationsV1Schema = z.object({
   const ids = new Set<string>();
   const scopes = new Set<string>();
   registry.entries.forEach((entry, index) => {
-    const scope = v9EvidenceCauseScopeKey(entry.assetId, entry.scope);
+    const scope = v9EvidenceCauseScopeKey(entry.assetId, entry.scope, "research");
     if (ids.has(entry.id)) ctx.addIssue({ code: "custom", path: ["entries", index, "id"], message: "Duplicate classification ID" });
     if (scopes.has(scope)) ctx.addIssue({ code: "custom", path: ["entries", index, "scope"], message: "Duplicate or contradictory classification scope" });
     ids.add(entry.id);
@@ -142,6 +156,7 @@ export const V9EvidenceGapClassificationsV1Schema = z.object({
 /** Catalog, captured scope and clock admission are required in addition to structural parsing. */
 export function createV9EvidenceGapClassificationsV1Schema(context: {
   assetIds: ReadonlySet<string>;
+  /** Captured scopes keyed with v9EvidenceCauseScopeKey(assetId, scope, "research"). */
   scopeKeys: ReadonlySet<string>;
   asOfSec: number;
   researchMaxAgeSec: number;
@@ -149,7 +164,7 @@ export function createV9EvidenceGapClassificationsV1Schema(context: {
   return V9EvidenceGapClassificationsV1Schema.superRefine((registry, ctx) => {
     for (const [index, entry] of registry.entries.entries()) {
       if (!context.assetIds.has(entry.assetId)) ctx.addIssue({ code: "custom", path: ["entries", index, "assetId"], message: "Noncatalog asset identity" });
-      if (!context.scopeKeys.has(v9EvidenceCauseScopeKey(entry.assetId, entry.scope))) ctx.addIssue({ code: "custom", path: ["entries", index, "scope"], message: "Unsupported or wrong captured datum scope" });
+      if (!context.scopeKeys.has(v9EvidenceCauseScopeKey(entry.assetId, entry.scope, "research"))) ctx.addIssue({ code: "custom", path: ["entries", index, "scope"], message: "Unsupported or wrong captured datum scope" });
       const reviewedAtSec = Date.parse(entry.reviewedAt) / 1000;
       if (reviewedAtSec > context.asOfSec || context.asOfSec - reviewedAtSec > context.researchMaxAgeSec) {
         ctx.addIssue({ code: "custom", path: ["entries", index, "reviewedAt"], message: "Future or expired current-datum research" });
@@ -211,6 +226,7 @@ export function findV9EvidenceCauseProofIssues(args: {
     evidenceById = index;
   }
   if (proof.cause !== "D" && scope === null) errors.push("Cause proof requires an exact datum scope");
+  const scopeIdentity = proof.cause === "B" || proof.cause === "C" ? "research" : "exact";
   for (const id of proof.evidenceRefIds) {
     const ref = evidenceById.get(id);
     if (!ref) {
@@ -220,7 +236,7 @@ export function findV9EvidenceCauseProofIssues(args: {
     const binding = ref.causeBinding;
     if (ref.observedAtSec > args.asOfSec) errors.push("Cause evidence is future-dated");
     if (!binding || binding.assetId !== args.assetId ||
-        (scope !== null && v9EvidenceCauseScopeKey(binding.assetId, binding.scope) !== v9EvidenceCauseScopeKey(args.assetId, scope))) {
+        (scope !== null && v9EvidenceCauseScopeKey(binding.assetId, binding.scope, scopeIdentity) !== v9EvidenceCauseScopeKey(args.assetId, scope, scopeIdentity))) {
       errors.push("Cause evidence has wrong asset or required-datum scope");
     }
     if (proof.cause === "A" && (ref.sourceId !== proof.sourceId || ref.sourceGenerationId !== proof.sourceGenerationId ||
