@@ -44,6 +44,9 @@ const threadBackedWorkerTests = THREADED_WORKER_TESTS;
 
 export default defineConfig({
   plugins: [wasmStubPlugin()],
+  // Keep large evidence JSON on Vite's JSON-specific SSR path. "auto" with
+  // named exports builds per-character JS source maps larger than the catalog.
+  json: { stringify: true, namedExports: false },
   test: {
     execArgv: nodeExecArgv,
     // Vitest's 5s default is below what several honest suites need on a

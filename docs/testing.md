@@ -228,6 +228,8 @@ export default defineConfig({
 
 The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `@data`, `cloudflare:workers`, `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and nightly validation runs a non-blocking Node 26 typecheck proof.
 
+JSON imports use `json: { stringify: true, namedExports: false }` so Vite takes its JSON-specific SSR transform instead of generating JavaScript source maps for the evidence-rich catalog. The default `stringify: "auto"` path produced a 112 MB source map for a 29 MB catalog, inflating the coordinator's retained transform graph and every importing fork. Tests still receive the complete parsed JSON data; only synthetic named exports and unnecessary JSON source maps are omitted. Keep JavaScript/TypeScript source maps and per-file Worker isolation enabled.
+
 The suite is split into five `test.projects` (all `extends: true` from the root config):
 
 - `node` — `functions/`, `scripts/`, `shared/` suites with `isolate: false` (pure-node tests reuse worker processes instead of paying a fork per file).
