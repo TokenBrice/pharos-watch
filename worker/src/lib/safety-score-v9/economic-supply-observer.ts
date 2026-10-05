@@ -16,6 +16,7 @@ import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { buildReviewedEconomicDeploymentInventory, deriveReviewedEconomicDeploymentPartition, economicProviderSupplyContradictionChain, economicSupplyInputDeploymentObservation, economicSupplyInputReferencePrice, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
+import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
 import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
 import { observeCcipPending } from "./ccip-pending-observer";
 
@@ -467,6 +468,19 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
         responseSha256: sha256Hex(stableJsonStringifyV1({ source, state, calls, messages, header,
           sourceGeneration: input.fixedInput.sourceGeneration, baseInputGenerationId: input.fixedInput.baseInputGenerationId })) };
     };
+    const readOftPending = async (
+      source: Extract<NonNullable<ReviewedEconomicSupplyPlan["liabilityInFlightSource"]>, { kind: "evm-layerzero-oft-pending" }>,
+      id: string, deploymentKey: string,
+    ): Promise<EconomicSupplyObservation | null> => {
+      const pins = source.sides.map(side => headers.get(side.chainId));
+      if (pins.some(pin => pin === undefined)) { failedRouteId = `${id}:pin-missing`; return null; }
+      const result = await observeLayerZeroOftPending({ source, headers: pins as EvmBlockHeader[], chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+      if (result.status !== "accepted") { failedRouteId = `${id}:${result.reason}`; return null; }
+      const header = pins[0]!;
+      return { id, deploymentKey, amount: result.amount, observedAtSec: header.timestamp,
+        anchor: String(header.number), anchorHash: header.hash,
+        responseSha256: result.responseSha256, layerZeroOftPendingProof: result.proof };
+    };
     for (const row of plan.deployments) {
       throwIfAborted(input.signal); failedRouteId = row.routeId ?? row.deploymentKey;
       let observation: EconomicSupplyObservation | null = null;
@@ -564,6 +578,8 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           pending = { id: `in-flight:${escrow.id}`, deploymentKey: escrow.canonicalDeploymentKey, amount: result.amount,
             observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
             responseSha256: result.responseSha256, curvePendingProof: result.proof };
+        } else if (escrow.inFlightSource.kind === "evm-layerzero-oft-pending") {
+          pending = await readOftPending(escrow.inFlightSource, `in-flight:${escrow.id}`, escrow.canonicalDeploymentKey);
         } else {
           pending = await readPendingState(escrow.inFlightSource, escrow);
         }
@@ -576,19 +592,28 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       }
     }
     if (plan.liabilityInFlightSource !== null) {
-      if ("kind" in plan.liabilityInFlightSource) {
-        const source = plan.liabilityInFlightSource;
-        if (source.kind !== "evm-ccip-pending") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
-        const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
-          chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
-        if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
-        const header = headers.get(source.chainId)!;
-        inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: result.amount,
-          observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
-          responseSha256: result.responseSha256, ccipPendingProof: result.proof });
+      failedRouteId = "in-flight:liability";
+      const source = plan.liabilityInFlightSource;
+      if ("kind" in source) {
+        if (source.kind === "evm-layerzero-oft-pending") {
+          const pending = await readOftPending(source, "in-flight:liability", plan.deployments[0]!.deploymentKey);
+          if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
+          inFlight.push(pending);
+        } else if (source.kind === "evm-ccip-pending") {
+          const result = await observeCcipPending({ source, headers, clockSec: input.scoringClockSec,
+            chainRpcs: input.chainRpcs, signal: input.signal, db: input.db });
+          if (result.status !== "accepted") return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: `in-flight:liability:${result.reason}` };
+          const header = headers.get(source.chainId);
+          if (!header) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:pin-missing" };
+          inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: result.amount,
+            observedAtSec: header.timestamp, anchor: String(header.number), anchorHash: header.hash,
+            responseSha256: result.responseSha256, ccipPendingProof: result.proof });
+        } else {
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability:unsupported-read" };
+        }
       } else {
-        const pending = await readReviewedApiAmount(plan.liabilityInFlightSource, input.signal);
-        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "in-flight:liability" };
+        const pending = await readReviewedApiAmount(source, input.signal);
+        if (!pending) return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId };
         inFlight.push({ id: "in-flight:liability", deploymentKey: plan.deployments[0]!.deploymentKey, amount: pending.value,
           observedAtSec: pending.observedAtSec, anchor: pending.sourceGeneration, anchorHash: pending.responseSha256, responseSha256: pending.responseSha256 });
       }
