@@ -11,6 +11,7 @@ import {
   plannedRpcParityComparator,
 } from "./targets";
 import {
+  combineRpcParityLatestFreshness,
   RPC_PARITY_PROBE_STEPS,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
   type RpcParityChainSample,
@@ -24,6 +25,8 @@ import {
   type RpcProviderTrialReport,
   type RpcParityOperatorLatency,
   type RpcParityMethodAvailability,
+  type RpcParityFreshnessCheckSummary,
+  type RpcParityLatestFreshness,
 } from "./types";
 
 /**
@@ -82,6 +85,17 @@ function summarizeLatency(values: readonly (number | null)[]): RpcParityLatencyS
   };
 }
 
+function countFreshnessCheck(
+  summary: RpcParityFreshnessCheckSummary,
+  freshness: RpcParityLatestFreshness | null | undefined,
+): void {
+  if (!freshness) summary.unknown++;
+  else {
+    summary[freshness.verdict]++;
+    if (freshness.verdict === "fresh" && freshness.discriminating === true) summary.discriminatingFresh++;
+  }
+}
+
 /**
  * Gate ids reported in `gate.failing`. Each one is an observable claim about
  * the retained window, evaluated per chain.
@@ -104,7 +118,10 @@ export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeS
       failing.push(`success-rate:${step}`);
     }
   }
-  if (summary.latestFreshness.discriminatingFresh + summary.latestFreshness.stale < RPC_PARITY_GATE_MIN_RUNS) {
+  // The configured sentinel owns sufficiency; token changes are opportunistic.
+  const freshnessEvidence = RPC_PARITY_TARGETS.find((target) => target.chainId === summary.chainId)?.latestStateProbe === "state-bracket"
+    ? summary.latestFreshness.tokenState : summary.latestFreshness.sentinel;
+  if (freshnessEvidence.discriminatingFresh + freshnessEvidence.stale < RPC_PARITY_GATE_MIN_RUNS) {
     failing.push("insufficient-latest-freshness-checks");
   }
   if (summary.latestFreshness.stale > 0) failing.push("latest-state-freshness");
@@ -273,9 +290,18 @@ export function buildRpcParityChainSummary(input: {
   const latestFreshness: RpcParityChainSummary["latestFreshness"] = {
     fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0, nonDiscriminatingFresh: 0, reasons: {},
     maxNumericCalls: RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, blockTolerance: headLagThresholdBlocks(input.blockTimeSec), lastStale: null,
+    sentinel: { fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0 },
+    tokenState: { fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0 },
   };
   for (const { atSec, sample } of samples) {
-    const freshness = sample.latestFreshness;
+    const sentinel = sample.sentinelFreshness === undefined
+      ? sample.latestFreshness?.method === "multicall3-block-number" || sample.latestFreshness?.method === "arbsys-block-number"
+        ? sample.latestFreshness : null
+      : sample.sentinelFreshness;
+    countFreshnessCheck(latestFreshness.sentinel, sentinel);
+    countFreshnessCheck(latestFreshness.tokenState, sample.tokenFreshness);
+    const freshness = sample.tokenFreshness
+      ? combineRpcParityLatestFreshness(sentinel, sample.tokenFreshness) : sample.latestFreshness;
     if (!freshness) latestFreshness.unknown++;
     else {
       latestFreshness[freshness.verdict]++;

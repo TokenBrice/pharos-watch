@@ -69,7 +69,10 @@ const TRIAL_REPORT = {
         latency: {
           dwellir: {
             firstTouch: { head: { p50Ms: 180, p95Ms: 420, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY },
-            warm: { head: METHOD_LATENCY, state: METHOD_LATENCY, logs: METHOD_LATENCY, latest: METHOD_LATENCY },
+            warm: {
+              head: { ...METHOD_LATENCY, samples: 12 }, state: METHOD_LATENCY, logs: METHOD_LATENCY,
+              latest: { ...METHOD_LATENCY, samples: 54 },
+            },
             warmRunMedian: METHOD_LATENCY,
           },
           comparator: {
@@ -80,8 +83,8 @@ const TRIAL_REPORT = {
         },
         availability: {
           dwellir: {
-            head: { ...SERVED_METHOD, attempts: 12, successes: 12 }, state: SERVED_METHOD, logs: SERVED_METHOD,
-            latest: SERVED_METHOD,
+            head: { ...SERVED_METHOD, attempts: 18, successes: 18 }, state: SERVED_METHOD, logs: SERVED_METHOD,
+            latest: { ...SERVED_METHOD, attempts: 54, successes: 54 },
           },
           comparator: {
             head: SERVED_METHOD, state: SERVED_METHOD, logs: SERVED_METHOD,
@@ -90,7 +93,9 @@ const TRIAL_REPORT = {
         },
         latestFreshness: {
           fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6, nonDiscriminatingFresh: 0,
-          reasons: { "served-block-in-range": 6 }, maxNumericCalls: 4, blockTolerance: 3, lastStale: null,
+          reasons: { "served-block-in-range": 6 }, maxNumericCalls: 10, blockTolerance: 3, lastStale: null,
+          sentinel: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
+          tokenState: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
         },
         errorClasses: {},
         comparatorErrorClasses: {},
@@ -98,7 +103,7 @@ const TRIAL_REPORT = {
         lastComparatorFailure: null,
         gate: { passed: false, failing: [
           "runs", "insufficient-head-attempts", "insufficient-state-attempts", "insufficient-log-attempts",
-          "insufficient-latest-attempts", "insufficient-latest-freshness-checks", "insufficient-comparable-samples",
+          "insufficient-latest-freshness-checks", "insufficient-comparable-samples",
           "insufficient-state-checks", "insufficient-log-checks", "insufficient-warm-samples",
         ] },
         last: { atSec: 1_771_999_000, dwellirHead: 21_000_000, comparatorHead: 21_000_000, commonBlock: 21_000_000 },

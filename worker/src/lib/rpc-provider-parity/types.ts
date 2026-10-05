@@ -18,9 +18,9 @@ export interface RpcParityLatencySummary { p50Ms: number | null; p95Ms: number |
 /** Read categories; latest includes the latest-tag call and its numeric references. */
 export type RpcParityProbeStep = "head" | "state" | "logs" | "latest";
 export const RPC_PARITY_PROBE_STEPS: readonly RpcParityProbeStep[] = ["head", "state", "logs", "latest"];
-export const RPC_PARITY_LATEST_MAX_NUMERIC_CALLS = 4;
+export const RPC_PARITY_LATEST_MAX_NUMERIC_CALLS = 10;
 export const RPC_PARITY_MAX_CALLS_PER_OPERATOR = {
-  dwellir: 5 + RPC_PARITY_LATEST_MAX_NUMERIC_CALLS + 3, // fallback bracket + hash stability reads
+  dwellir: 10 + RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, // sentinel, token bracket, stable hashes, state/logs
   comparator: 4, // primary head/state plus logs and a split log-origin warm-up head
 } as const;
 export const RPC_PARITY_SKIP_REASONS = ["no-comparator", "no-dwellir-entry", "deadline", "aborted"] as const;
@@ -37,13 +37,14 @@ export interface RpcParityCallObservation {
   comparator?: RpcParityComparatorRef;
 }
 export const RPC_PARITY_LATEST_FRESHNESS_VERDICTS = ["fresh", "stale", "indeterminate"] as const;
-/** Append only: indices are persisted in v2/v3/v4 observations. */
+/** Append only: indices are persisted in v2–v5 observations. */
 export const RPC_PARITY_LATEST_FRESHNESS_REASONS = [
   "matched-numeric-block", "no-bracket-match", "bracket-too-wide", "head-regressed", "step-failed",
   "served-block-in-range", "served-block-behind", "served-block-ahead", "bracket-reorg", "moving-bracket-no-match",
+  "sentinel-unavailable",
 ] as const;
 
-/** Append only: v3/v4 persist method indices (Multicall3=0, state bracket=1, ArbSys=2). */
+/** Append only: v3–v5 persist method indices (Multicall3=0, state bracket=1, ArbSys=2). */
 export const RPC_PARITY_LATEST_PROBE_METHODS = ["multicall3-block-number", "state-bracket", "arbsys-block-number"] as const;
 export type RpcParityLatestProbeMethod = (typeof RPC_PARITY_LATEST_PROBE_METHODS)[number];
 
@@ -61,6 +62,29 @@ export interface RpcParityLatestFreshness {
   servedBlock?: number | null;
   lagBlocks?: number | null;
   toleranceBlocks?: number;
+  /** Upper end of the token window, including a same-probe sentinel ahead of H2. */
+  referenceEndBlock?: number | null;
+  /** Exact target/selector; telemetry names actual attempts. Absent before v5. */
+  call?: { to: string; data: string };
+}
+
+/** Stale evidence always wins; absent sentinels use the actual token verdict. */
+export function combineRpcParityLatestFreshness(
+  sentinel: RpcParityLatestFreshness | null,
+  token: RpcParityLatestFreshness,
+): RpcParityLatestFreshness {
+  if (sentinel?.verdict === "stale") return sentinel;
+  if (token.verdict === "stale") return token;
+  if (sentinel === null) return token;
+  if (sentinel.verdict !== "fresh") return sentinel;
+  if (token.verdict === "fresh"
+    || (token.verdict === "indeterminate" && token.reason === "bracket-too-wide")) return sentinel;
+  return token;
+}
+
+export interface RpcParityFreshnessCheckSummary {
+  fresh: number; stale: number; indeterminate: number; unknown: number;
+  discriminatingFresh: number;
 }
 export interface RpcParityMethodAvailability {
   attempts: number;
@@ -104,6 +128,8 @@ export interface RpcParityChainSummary {
     maxNumericCalls: number;
     blockTolerance: number;
     lastStale: (RpcParityLatestFreshness & { atSec: number }) | null;
+    sentinel: RpcParityFreshnessCheckSummary;
+    tokenState: RpcParityFreshnessCheckSummary;
   };
   errorClasses: Partial<Record<RpcParityErrorClass, number>>;
   /** Comparator-side failure classes over the window: an unreadable baseline is not a Dwellir fault. */
@@ -195,7 +221,11 @@ export interface RpcParityChainSample {
   failedSteps: { dwellir: RpcParityStepFailures; comparator: RpcParityStepFailures };
   /** Absent on v1 samples: old head timings never become warm evidence. */
   calls?: Record<"dwellir" | "comparator", RpcParityCallObservation[]>;
+  /** Combined verdict on dual-check samples; the single recorded check on legacy samples. */
   latestFreshness?: RpcParityLatestFreshness;
+  /** Absent on legacy observations; null names an unavailable block sentinel (XDC). */
+  sentinelFreshness?: RpcParityLatestFreshness | null;
+  tokenFreshness?: RpcParityLatestFreshness;
 }
 
 /** One run's samples, stamped with the run clock the slot fence and store prune on. */

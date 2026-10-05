@@ -1,6 +1,6 @@
 import { RPC_PARITY_TARGETS } from "../targets";
 import { mergeRpcParityRun, type RpcParityStoreRow } from "../store";
-import type { RpcParityChainSample, RpcParityRunSamples, RpcParityStepFailures } from "../types";
+import { combineRpcParityLatestFreshness, RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, type RpcParityChainSample, type RpcParityRunSamples, type RpcParityStepFailures } from "../types";
 import { headLagThresholdBlocks } from "../report";
 
 /**
@@ -43,18 +43,34 @@ export function paritySample(
     comparatorErrorClass: null,
     comparatorHttpStatus: null,
     failedSteps: { dwellir: stepFailures(), comparator: stepFailures() },
-    latestFreshness: target.latestStateProbe === "state-bracket" ? {
-      verdict: "fresh", reason: "matched-numeric-block", headBefore: 380_000_000,
-      headAfter: 380_000_000, matchedBlock: 380_000_000, method: "state-bracket",
-      discriminating: false, toleranceBlocks: 0,
-    } : {
-      verdict: "fresh", reason: "served-block-in-range", headBefore: 380_000_000,
-      headAfter: 380_000_000, matchedBlock: null, method: target.latestStateProbe,
-      discriminating: true, servedBlock: 380_000_000, lagBlocks: 0,
-      toleranceBlocks: headLagThresholdBlocks(target.blockTimeSec),
-    },
     ...overrides,
   };
+  if (!("latestFreshness" in overrides)) {
+    const head = sample.dwellirHead ?? 380_000_000;
+    const tolerance = headLagThresholdBlocks(target.blockTimeSec);
+    const covered = tolerance + 1 <= RPC_PARITY_LATEST_MAX_NUMERIC_CALLS;
+    if (!("sentinelFreshness" in overrides)) sample.sentinelFreshness = target.latestStateProbe === "state-bracket" ? null : {
+      verdict: "fresh", reason: "served-block-in-range", headBefore: head, headAfter: head,
+      matchedBlock: null, method: target.latestStateProbe, discriminating: true,
+      servedBlock: head, lagBlocks: 0, toleranceBlocks: tolerance, latestValue: `0x${head.toString(16)}`, numericValues: [],
+      call: target.latestStateProbe === "arbsys-block-number"
+        ? { to: "0x0000000000000000000000000000000000000064", data: "0xa3b1b31d" }
+        : { to: "0xca11bde05977b3631167028862be2a173976ca11", data: "0x42cbb15c" },
+    };
+    if (!("tokenFreshness" in overrides)) sample.tokenFreshness = {
+      verdict: covered ? "fresh" : "indeterminate", reason: covered ? "matched-numeric-block" : "bracket-too-wide",
+      headBefore: head, headAfter: head, referenceEndBlock: head,
+      matchedBlock: covered ? head : null, method: "state-bracket", discriminating: covered, toleranceBlocks: tolerance,
+      latestValue: "0x100",
+      numericValues: covered ? Array.from({ length: tolerance + 1 }, (_, index) => ({
+        block: head - index, value: index === 0 ? "0x100" : "0xff",
+      })) : [],
+      call: { to: target.contract, data: "0x18160ddd" },
+    };
+    sample.latestFreshness = sample.tokenFreshness
+      ? combineRpcParityLatestFreshness(sample.sentinelFreshness ?? null, sample.tokenFreshness)
+      : sample.sentinelFreshness ?? undefined;
+  }
   if (!("calls" in overrides)) {
     sample.calls = { dwellir: [], comparator: [] };
     for (const operator of ["dwellir", "comparator"] as const) {

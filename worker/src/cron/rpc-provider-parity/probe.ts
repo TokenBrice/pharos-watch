@@ -16,6 +16,7 @@ import {
   type RpcParityTarget,
 } from "../../lib/rpc-provider-parity/targets";
 import {
+  combineRpcParityLatestFreshness,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
   type RpcParityCallObservation,
   type RpcParityChainSkip,
@@ -41,10 +42,10 @@ import { headLagThresholdBlocks } from "../../lib/rpc-provider-parity/report";
 
 const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
 /**
- * 35 ordinary sentinels x 8 calls, HyperEVM x 9 (log-origin warm-up), and
- * XDC's fallback (12–15) yield 301–304 calls. Prior 102 s at 174 calls gives
- * ~176–178 s, leaving ~62 s before the deadline. Slow tails deadline-skip,
- * and the start rotates hourly so the same chains are not always skipped.
+ * A stationary-head 37-chain pass uses 648 calls / 536 Dwellir credits;
+ * capped feasible windows allow at most 802 calls / 690 credits. Extrapolating
+ * prior 102 s / 174 calls gives ~380–470 s, beyond this four-minute deadline;
+ * slow tails deadline-skip, and hourly rotation shares the retained coverage.
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
 const RPC_PARITY_MAX_RESPONSE_BYTES = 128 * 1024;
@@ -499,7 +500,7 @@ async function probeRpcParityChain(
   return { sample, stop: "none" };
 }
 
-/** Sentinel is block-dependent; the fallback needs moving state and stable hashes. */
+/** A served-block sentinel cannot establish freshness for another (to,data) pair. */
 async function probeLatestFreshness(
   input: RpcParityChainProbeInput,
   context: ChainProbeContext,
@@ -507,33 +508,49 @@ async function probeLatestFreshness(
   headBefore: number | null,
 ): Promise<"none" | RpcCallStop> {
   const method = input.target.latestStateProbe;
-  const tolerance = method !== "state-bracket" ? headLagThresholdBlocks(input.target.blockTimeSec) : 0;
-  const freshness: RpcParityLatestFreshness = {
+  const tolerance = headLagThresholdBlocks(input.target.blockTimeSec);
+  const sentinel: RpcParityLatestFreshness | null = method === "state-bracket" ? null : {
     verdict: "indeterminate", reason: "step-failed", method, discriminating: false,
     headBefore, headAfter: null, matchedBlock: null, latestValue: null,
-    numericValues: [], servedBlock: null, lagBlocks: null,
-    toleranceBlocks: tolerance,
+    numericValues: [], servedBlock: null, lagBlocks: null, toleranceBlocks: tolerance,
+    call: method === "multicall3-block-number"
+      ? { to: RPC_PARITY_MULTICALL3_ADDRESS, data: RPC_PARITY_MULTICALL3_BLOCK_SELECTOR }
+      : { to: RPC_PARITY_ARBSYS_ADDRESS, data: RPC_PARITY_ARBSYS_BLOCK_SELECTOR },
   };
-  sample.latestFreshness = freshness;
-  if (headBefore === null) return "none";
-  const call = (rpcMethod: string, params: readonly unknown[]) => callRpcEndpoint({
-    url: input.dwellirUrl, method: rpcMethod, params, headers: { "X-Api-Key": input.dwellirApiKey },
+  const token: RpcParityLatestFreshness = {
+    verdict: "indeterminate", reason: "step-failed", method: "state-bracket", discriminating: false,
+    headBefore, headAfter: null, matchedBlock: null, latestValue: null,
+    numericValues: [], toleranceBlocks: tolerance,
+    call: { to: input.target.contract, data: RPC_PARITY_TOTAL_SUPPLY_SELECTOR },
+  };
+  sample.sentinelFreshness = sentinel;
+  sample.tokenFreshness = token;
+  if (headBefore === null) {
+    sample.latestFreshness = combineRpcParityLatestFreshness(sentinel, token);
+    return "none";
+  }
+  const headers = { "X-Api-Key": input.dwellirApiKey };
+  const call: LatestRpcCall = (rpcMethod, params) => callRpcEndpoint({
+    url: input.dwellirUrl, method: rpcMethod, params, headers,
     metered: true, signal: context.signal, timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs, deps: context.deps,
   });
-  let beforeHash: string | null = null;
-  if (method === "state-bracket") {
-    const header = await call("eth_getBlockByNumber", [toHexQuantity(headBefore), false]);
-    if (header.status === "deadline" || header.status === "aborted") return header.status;
-    if (header.status !== "ok" || !isRpcParityBlockHeader(header.result)) return "none";
-    beforeHash = header.result.hash;
+  let stop = sentinel ? await probeServedBlockFreshness(sample, sentinel, call) : "none" as const;
+  if (stop === "none") {
+    stop = await probeTokenFreshness(token, sentinel?.servedBlock ?? null, call);
   }
-  const state = method === "multicall3-block-number"
-    ? { to: RPC_PARITY_MULTICALL3_ADDRESS, data: RPC_PARITY_MULTICALL3_BLOCK_SELECTOR }
-    : method === "arbsys-block-number"
-      ? { to: RPC_PARITY_ARBSYS_ADDRESS, data: RPC_PARITY_ARBSYS_BLOCK_SELECTOR }
-      : { to: input.target.contract, data: RPC_PARITY_TOTAL_SUPPLY_SELECTOR };
-  const latest = await call("eth_call", [state, "latest"]);
+  sample.latestFreshness = combineRpcParityLatestFreshness(sentinel, token);
+  return stop;
+}
+
+type LatestRpcCall = (method: string, params: readonly unknown[]) => Promise<RpcCallResult>;
+
+async function probeServedBlockFreshness(
+  sample: RpcParityChainSample,
+  freshness: RpcParityLatestFreshness,
+  call: LatestRpcCall,
+): Promise<"none" | RpcCallStop> {
+  const latest = await call("eth_call", [freshness.call!, "latest"]);
   if (latest.status === "deadline" || latest.status === "aborted") return latest.status;
   freshness.latestValue = normalizeRpcQuantity(latest.result);
   if (latest.status !== "ok") return "none";
@@ -542,51 +559,73 @@ async function probeLatestFreshness(
   const headAfter = normalizeBlockNumber(after.result);
   freshness.headAfter = headAfter;
   if (after.status !== "ok" || headAfter === null) return "none";
-  if (method !== "state-bracket") {
-    const served = normalizeBlockNumber(latest.result);
-    if (served === null) {
-      // A syntactically valid uint256 outside the safe block-height domain is unavailable.
-      const observation = sample.calls!.dwellir.find((entry) => entry.step === "latest");
-      if (observation) observation.errorClass = "invalid-response";
-      sample.failedSteps.dwellir.latest = true;
-      sample.errorClass ??= "invalid-response";
-      return "none";
-    }
-    freshness.servedBlock = served;
-    freshness.lagBlocks = headBefore - served;
-    // A regressing bracket may be a reorg; tolerance never turns it into stale evidence.
-    if (headAfter < headBefore) freshness.reason = "head-regressed";
-    else if (served < headBefore - tolerance) {
-      freshness.verdict = "stale";
-      freshness.reason = "served-block-behind";
-      freshness.discriminating = true;
-    } else if (served > headAfter + tolerance) freshness.reason = "served-block-ahead";
-    else {
-      freshness.verdict = "fresh";
-      freshness.reason = "served-block-in-range";
-      freshness.discriminating = true;
-    }
+  const served = normalizeBlockNumber(latest.result);
+  if (served === null) {
+    const observation = sample.calls!.dwellir.find((entry) => entry.step === "latest");
+    if (observation) observation.errorClass = "invalid-response";
+    sample.failedSteps.dwellir.latest = true;
+    sample.errorClass ??= "invalid-response";
     return "none";
   }
+  const headBefore = freshness.headBefore!;
+  const tolerance = freshness.toleranceBlocks!;
+  freshness.servedBlock = served;
+  freshness.lagBlocks = headBefore - served;
+  if (headAfter < headBefore) freshness.reason = "head-regressed";
+  else if (served < headBefore - tolerance) {
+    freshness.verdict = "stale";
+    freshness.reason = "served-block-behind";
+    freshness.discriminating = true;
+  } else if (served > headAfter + tolerance) freshness.reason = "served-block-ahead";
+  else {
+    freshness.verdict = "fresh";
+    freshness.reason = "served-block-in-range";
+    freshness.discriminating = true;
+  }
+  return "none";
+}
+
+async function probeTokenFreshness(
+  freshness: RpcParityLatestFreshness,
+  sentinelBlock: number | null,
+  call: LatestRpcCall,
+): Promise<"none" | RpcCallStop> {
+  const headBefore = freshness.headBefore!;
+  const before = await call("eth_getBlockByNumber", [toHexQuantity(headBefore), false]);
+  if (before.status === "deadline" || before.status === "aborted") return before.status;
+  if (before.status !== "ok" || !isRpcParityBlockHeader(before.result)) return "none";
+  const latest = await call("eth_call", [freshness.call!, "latest"]);
+  if (latest.status === "deadline" || latest.status === "aborted") return latest.status;
+  freshness.latestValue = normalizeRpcQuantity(latest.result);
+  if (latest.status !== "ok") return "none";
+  const after = await call("eth_blockNumber", []);
+  if (after.status === "deadline" || after.status === "aborted") return after.status;
+  const headAfter = normalizeBlockNumber(after.result);
+  freshness.headAfter = headAfter;
+  if (after.status !== "ok" || headAfter === null) return "none";
   if (headAfter < headBefore) {
     freshness.reason = "head-regressed";
     return "none";
   }
-  if (headAfter - headBefore + 1 > RPC_PARITY_LATEST_MAX_NUMERIC_CALLS) {
+  const firstBlock = Math.max(0, headBefore - freshness.toleranceBlocks!);
+  const endBlock = Math.max(headAfter, sentinelBlock ?? headAfter);
+  freshness.referenceEndBlock = endBlock;
+  if (endBlock - firstBlock + 1 > RPC_PARITY_LATEST_MAX_NUMERIC_CALLS) {
     freshness.reason = "bracket-too-wide";
     return "none";
   }
+  // Fence known head hashes; an ahead-of-head sentinel must not require its header.
   const anchor = await call("eth_getBlockByNumber", [toHexQuantity(headAfter), false]);
   if (anchor.status === "deadline" || anchor.status === "aborted") return anchor.status;
   if (anchor.status !== "ok" || !isRpcParityBlockHeader(anchor.result)) return "none";
   const anchorBlock = anchor.result;
-  if ((headAfter === headBefore && anchorBlock.hash !== beforeHash)
-    || (headAfter === headBefore + 1 && anchorBlock.parentHash !== beforeHash)) {
+  if ((headAfter === headBefore && anchorBlock.hash !== before.result.hash)
+    || (headAfter === headBefore + 1 && anchorBlock.parentHash !== before.result.hash)) {
     freshness.reason = "bracket-reorg";
     return "none";
   }
-  for (let block = headAfter; block >= headBefore; block--) {
-    const numeric = await call("eth_call", [state, toHexQuantity(block)]);
+  for (let block = endBlock; block >= firstBlock; block--) {
+    const numeric = await call("eth_call", [freshness.call!, toHexQuantity(block)]);
     if (numeric.status === "deadline" || numeric.status === "aborted") return numeric.status;
     const value = normalizeRpcQuantity(numeric.result);
     if (numeric.status !== "ok" || value === null) return "none";
@@ -601,13 +640,9 @@ async function probeLatestFreshness(
     return "none";
   }
   if (freshness.matchedBlock !== null) {
+    freshness.discriminating = freshness.numericValues!.some((entry) => entry.value !== freshness.numericValues![0].value);
     freshness.verdict = "fresh";
     freshness.reason = "matched-numeric-block";
-    freshness.discriminating = freshness.numericValues!.some((entry) => entry.value !== freshness.numericValues![0].value);
-  } else if (headAfter !== headBefore) {
-    // A reorg above H1 between latest and H2 can legitimately change every
-    // numeric reference. A moving bracket alone cannot prove stale state.
-    freshness.reason = "moving-bracket-no-match";
   } else {
     freshness.verdict = "stale";
     freshness.reason = "no-bracket-match";

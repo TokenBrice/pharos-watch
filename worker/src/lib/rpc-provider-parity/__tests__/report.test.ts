@@ -545,6 +545,87 @@ describe("rpc parity gate math", () => {
     expect(summary.gate.failing).toContain("insufficient-latest-freshness-checks");
   });
 
+  it.each(["inconclusive", "constant", "legacy"])("uses sufficient sentinel evidence despite %s token coverage", (mode) => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      const token = paritySample(chainId).tokenFreshness!;
+      return mode === "legacy" ? { tokenFreshness: undefined } : {
+        tokenFreshness: {
+          ...token,
+          verdict: mode === "constant" ? "fresh" as const : "indeterminate" as const,
+          reason: mode === "constant" ? "matched-numeric-block" as const : "bracket-too-wide" as const,
+          discriminating: false,
+          ...(mode === "constant" ? {
+            numericValues: token.numericValues?.map((entry) => ({ ...entry, value: token.latestValue! })),
+          } : {
+            headAfter: token.headBefore! + 20, referenceEndBlock: token.headBefore! + 20,
+            matchedBlock: null, numericValues: [],
+          }),
+        },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState[mode === "legacy" ? "unknown" : mode === "constant" ? "fresh" : "indeterminate"])
+      .toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate.passed).toBe(true);
+    expect(summary.gate.failing).not.toContain("insufficient-latest-freshness-checks");
+  });
+
+  it("does not replace an unreadable configured sentinel with discriminating token evidence", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      if (chainId !== PARITY_REGISTRY_CHAIN) return {};
+      return {
+        sentinelFreshness: {
+          ...paritySample(chainId).sentinelFreshness!, verdict: "indeterminate" as const, reason: "step-failed" as const,
+          headAfter: null, servedBlock: null, lagBlocks: null, latestValue: null, discriminating: false,
+        },
+        failedSteps: { dwellir: stepFailures({ latest: true }), comparator: stepFailures() },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate.failing).toContain("insufficient-latest-freshness-checks");
+  });
+
+  it.each([false, true])("uses the token discrimination floor only without a configured sentinel: %s", (discriminating) => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      if (chainId !== "xdc") return {};
+      const token = paritySample(chainId).tokenFreshness!;
+      return {
+        tokenFreshness: {
+          ...token, discriminating,
+          numericValues: discriminating ? token.numericValues
+            : token.numericValues?.map((entry) => ({ ...entry, value: token.latestValue! })),
+        },
+      };
+    });
+    const summary = summaryFor("xdc", runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(discriminating ? RPC_PARITY_GATE_MIN_RUNS : 0);
+    expect(summary.gate.failing.includes("insufficient-latest-freshness-checks")).toBe(!discriminating);
+    expect(summary.gate.failing).not.toContain("latest-state-freshness");
+  });
+
+  it("keeps a stale token defect failing after the sentinel floor is satisfied", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, index) => {
+      if (chainId !== PARITY_REGISTRY_CHAIN || index !== RPC_PARITY_GATE_MIN_RUNS - 1) return {};
+      return {
+        tokenFreshness: {
+          ...paritySample(chainId).tokenFreshness!, verdict: "stale" as const, reason: "no-bracket-match" as const,
+          matchedBlock: null, latestValue: "0xfe", discriminating: true,
+        },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.tokenState.stale).toBe(1);
+    expect(summary.gate.failing).not.toContain("insufficient-latest-freshness-checks");
+    expect(summary.gate.failing).toContain("latest-state-freshness");
+  });
+
   it("exposes per-chain skip reasons without inventing reasons for legacy gaps", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, [
       { atSec: PARITY_NOW_SEC - 7200, samples: [] },

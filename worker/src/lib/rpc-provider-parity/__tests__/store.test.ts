@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache } from "../../db-cache";
 import { RPC_PARITY_TARGETS } from "../targets";
-import { RPC_PARITY_MAX_CALLS_PER_OPERATOR } from "../types";
+import { RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, RPC_PARITY_MAX_CALLS_PER_OPERATOR } from "../types";
+import { headLagThresholdBlocks, RPC_PARITY_GATE_MIN_RUNS } from "../report";
 import {
   decodeRpcParityStoreRow,
   encodeRpcParityStoreRow,
@@ -12,6 +13,7 @@ import {
   readRpcParityStore,
   recordRpcParityRun,
   RPC_PARITY_MAX_ROW_BYTES,
+  RPC_PARITY_MAX_DECOMPRESSED_BYTES,
   RPC_PARITY_RETENTION_RUNS,
   RPC_PARITY_RETENTION_SEC,
   RPC_PARITY_STORE_KEY,
@@ -279,6 +281,85 @@ describe("rpc parity store wire form", () => {
     expect(decodeRpcParityStoreRow(legacy)?.runs[0].samples[0].latestFreshness?.method).toBe(method);
   });
 
+  it("reads v4 sentinel evidence without inventing a token check", () => {
+    const legacy = JSON.stringify({
+      v: 4, chains: ["base"],
+      comparators: [["public", "mainnet.base.org", "registry"]],
+      hosts: ["api-base-mainnet-archive.n.dwellir.com"], layouts: [[[0], [0]]],
+      runs: [[NOW_SEC, `0|63|2s|0|||0|0|0|${JSON.stringify([
+        0, [100, 100], [0, 5, 0, 0, null, null, null, 0, true, 0, 0, 3],
+      ])}`]],
+      latest: { base: [NOW_SEC, 100, 100, 100] },
+    });
+    const sample = decodeRpcParityStoreRow(legacy)?.runs[0].samples[0];
+    expect(sample?.latestFreshness).toMatchObject({ verdict: "fresh", method: "multicall3-block-number", servedBlock: 100 });
+    expect(sample?.sentinelFreshness).toBeUndefined();
+    expect(sample?.tokenFreshness).toBeUndefined();
+    const rewritten = decodeRpcParityStoreRow(encodeRpcParityStoreRow(decodeRpcParityStoreRow(legacy)!));
+    expect(rewritten?.runs[0].samples[0].tokenFreshness).toBeUndefined();
+  });
+
+  it.each([2, 3, 4])("keeps v%s's original four-reference decoder bound", (version) => {
+    const values = Array.from({ length: 5 }, (_, index) => ({ block: 100 + index, value: "0" }));
+    const fields = version === 2
+      ? [0, 0, 0, 3, 0, "0", values]
+      : [0, 0, 0, 3, 0, "0", values, 1, false, null, null, 0];
+    const wire = {
+      v: version, chains: ["base"],
+      comparators: [["public", "mainnet.base.org", "registry"]],
+      hosts: ["api-base-mainnet-archive.n.dwellir.com"], layouts: [[[0], [0]]],
+      runs: [[NOW_SEC, `0|63|2s|0|||0|0|0|${JSON.stringify([0, [100, 100], fields])}`]],
+      latest: { base: [NOW_SEC, 100, 100, 100] },
+    };
+    expect(decodeRpcParityStoreRow(JSON.stringify(wire))).toBeNull();
+    values.pop();
+    wire.runs[0][1] = `0|63|2s|0|||0|0|0|${JSON.stringify([0, [100, 100], fields])}`;
+    expect(decodeRpcParityStoreRow(JSON.stringify(wire))).not.toBeNull();
+  });
+
+  it("rejects nonregressing dual token evidence without its numeric endpoint", () => {
+    const sample = paritySample("base");
+    sample.tokenFreshness = {
+      ...sample.tokenFreshness!, verdict: "indeterminate", reason: "step-failed",
+      referenceEndBlock: undefined, matchedBlock: null, numericValues: [], discriminating: false,
+    };
+    const row = mergeRpcParityRun(null, { atSec: NOW_SEC, samples: [sample] }, { nowSec: NOW_SEC }).row;
+    expect(decodeRpcParityStoreRow(encodeRpcParityStoreRow(row))).toBeNull();
+  });
+
+  it("retains both freshness checks, exact calls and values even before the newest run", () => {
+    const sample = paritySample("base");
+    sample.tokenFreshness = {
+      ...sample.tokenFreshness!, verdict: "stale", reason: "no-bracket-match",
+      matchedBlock: null, latestValue: "0xfe", discriminating: true,
+    };
+    const merged = mergeRpcParityRun({
+      chains: RPC_PARITY_TARGETS.map((target) => target.chainId), comparators: [], dwellirHosts: [], latest: {},
+      runs: [{ atSec: NOW_SEC - 3600, samples: [sample] }],
+    }, { atSec: NOW_SEC, samples: [paritySample("base")] }, { nowSec: NOW_SEC });
+    expect(merged.reset).toBe(false);
+    const row = merged.row;
+    expect(row.runs.map((run) => run.atSec)).toEqual([NOW_SEC - 3600, NOW_SEC]);
+    const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
+    const retained = decoded?.runs[0].samples[0];
+    expect(retained?.sentinelFreshness).toEqual(sample.sentinelFreshness);
+    expect(retained?.tokenFreshness).toEqual(sample.tokenFreshness);
+    expect(retained?.latestFreshness?.verdict).toBe("stale");
+  });
+
+  it("does not fabricate successful freshness evidence from an unavailable token read", () => {
+    const sample = paritySample("base");
+    sample.tokenFreshness = {
+      ...sample.tokenFreshness!, verdict: "indeterminate", reason: "step-failed",
+      headAfter: null, referenceEndBlock: undefined, matchedBlock: null,
+      latestValue: null, numericValues: [], discriminating: false,
+    };
+    const row = mergeRpcParityRun(null, { atSec: NOW_SEC, samples: [sample] }, { nowSec: NOW_SEC }).row;
+    const retained = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row))?.runs[0].samples[0];
+    expect(retained?.tokenFreshness).toMatchObject({ verdict: "indeterminate", latestValue: null, numericValues: [] });
+    expect(retained?.latestFreshness?.verdict).toBe("indeterminate");
+  });
+
   it("preserves split comparator provenance, including the log-origin warm-up head", () => {
     const stateRef = { operator: "public" as const, host: "hyperliquid.drpc.org", source: "pin" as const };
     const logRef = { operator: "alchemy" as const, host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" as const };
@@ -380,7 +461,7 @@ describe("rpc parity store wire form", () => {
     expect(decoded?.runs[1].samples[0].latestFreshness).toEqual(freshness);
   });
 
-  it("fits the verified 36 sentinel chains and one maximum fallback chain by 168 runs", () => {
+  it("keeps maximum dual-check layouts under the row budget with an attributable retained suffix", () => {
     let seed = 1_234_567;
     const latency = () => {
       seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
@@ -395,9 +476,13 @@ describe("rpc parity store wire form", () => {
           logsComparator: { operator: "alchemy" as const, host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" as const },
         } : {}),
         calls: {
-          dwellir: (chainId === "xdc"
-            ? ["head", "latest", "latest", "head", "latest", "latest", "latest", "latest", "latest", "latest", "state", "logs"]
-            : ["head", "state", "logs", "latest", "head"]).map((step, callIndex) => ({
+          dwellir: [
+            "head", ...(chainId === "xdc" ? [] : ["latest", "head"]),
+            "latest", "latest", "head",
+            ...(headLagThresholdBlocks(RPC_PARITY_TARGETS[chainIndex].blockTimeSec) >= RPC_PARITY_LATEST_MAX_NUMERIC_CALLS
+              ? [] : ["latest", ...Array.from({ length: RPC_PARITY_LATEST_MAX_NUMERIC_CALLS }, () => "latest"), "latest"]),
+            "state", "logs",
+          ].map((step, callIndex) => ({
             step: step as "head" | "latest" | "state" | "logs",
             phase: callIndex === 0 ? "firstTouch" as const : "warm" as const,
             latencyMs: latency(), errorClass: null,
@@ -413,15 +498,55 @@ describe("rpc parity store wire form", () => {
         },
       }),
     ));
-    const row = {
+    const row = mergeRpcParityRun({
       chains: RPC_PARITY_TARGETS.map((target) => target.chainId),
-      comparators: [], dwellirHosts: [], runs, latest: {},
-    };
+      comparators: [], dwellirHosts: [], runs: runs.slice(0, -1), latest: {},
+    }, runs[runs.length - 1], { nowSec: NOW_SEC }).row;
     expect(row.chains).toHaveLength(37);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
-    expect(decoded?.runs).toHaveLength(168);
-    expect(decoded?.runs[167].samples[36].calls).toEqual(runs[167].samples[36].calls);
+    expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
+    expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
+    expect(decoded?.runs).toHaveLength(row.runs.length);
+    expect(decoded?.runs[row.runs.length - 1]?.samples[36].calls).toEqual(runs[167].samples[36].calls);
+    expect(decoded?.runs[0].atSec).toBe(runs[RPC_PARITY_RETENTION_RUNS - row.runs.length].atSec);
+  });
+
+  it("prunes highly compressible full-width token proofs to the reader's raw ceiling", () => {
+    const supply = ((1n << 256n) - 1n).toString();
+    const previousSupply = ((1n << 256n) - 2n).toString();
+    const runs = Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => fullParityRun(
+      NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600,
+      (chainId, chainIndex) => {
+        const token = paritySample(chainId, { dwellirHead: 380_000_000 + chainIndex * 1000 }).tokenFreshness!;
+        if (token.reason === "bracket-too-wide") return {};
+        const end = token.headBefore! + RPC_PARITY_LATEST_MAX_NUMERIC_CALLS - 1 - token.toleranceBlocks!;
+        return {
+          tokenFreshness: {
+            ...token, headAfter: end, referenceEndBlock: end, matchedBlock: end, latestValue: supply,
+            numericValues: Array.from({ length: RPC_PARITY_LATEST_MAX_NUMERIC_CALLS }, (_, offset) => ({
+              block: end - offset, value: offset === 0 ? supply : previousSupply,
+            })),
+          },
+        };
+      },
+    ));
+    const unpruned: RpcParityStoreRow = {
+      chains: RPC_PARITY_TARGETS.map((target) => target.chainId),
+      comparators: [], dwellirHosts: [], latest: {}, runs,
+    };
+    expect(() => encodeRpcParityStoreRow(unpruned)).toThrow("rpc-parity-raw-row-budget");
+    const merged = mergeRpcParityRun({ ...unpruned, runs: runs.slice(0, -1) }, runs[runs.length - 1], { nowSec: NOW_SEC });
+    const encoded = encodeRpcParityStoreRow(merged.row);
+    const envelope = JSON.parse(encoded) as { payload: string };
+    expect(gunzipSync(Buffer.from(envelope.payload, "base64")).byteLength).toBeLessThanOrEqual(RPC_PARITY_MAX_DECOMPRESSED_BYTES);
+    expect(encoded.length).toBeLessThanOrEqual(RPC_PARITY_MAX_ROW_BYTES);
+    expect(merged.droppedOldest).toBeGreaterThan(0);
+    expect(merged.row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
+    expect(decodeRpcParityStoreRow(encoded)?.runs).toHaveLength(merged.row.runs.length);
+    expect(merged.row.runs[0].atSec).toBe(runs[merged.droppedOldest].atSec);
+    expect(decodeRpcParityStoreRow(encoded)?.runs[merged.row.runs.length - 1]?.samples[0].tokenFreshness?.numericValues)
+      .toEqual(runs[runs.length - 1].samples[0].tokenFreshness?.numericValues);
   });
 
   it("rejects payloads it cannot trust", () => {
