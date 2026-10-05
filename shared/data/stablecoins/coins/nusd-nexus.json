@@ -134,6 +134,13 @@
         {
           "name": "DAI",
           "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "balanceRead": {
+            "contract": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+            "selector": "0x91ceb3eb",
+            "args": [
+              "0x0000000000000000000000000000000000000000000000000000000000000000"
+            ]
+          },
           "token": {
             "chain": "ethereum",
             "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
@@ -146,6 +153,13 @@
         {
           "name": "USDC",
           "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "balanceRead": {
+            "contract": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+            "selector": "0x91ceb3eb",
+            "args": [
+              "0x0000000000000000000000000000000000000000000000000000000000000001"
+            ]
+          },
           "token": {
             "chain": "ethereum",
             "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -158,6 +172,13 @@
         {
           "name": "USDT",
           "holder": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+          "balanceRead": {
+            "contract": "0x1116898DdA4015eD8dDefb84b6e8Bc24528Af2d8",
+            "selector": "0x91ceb3eb",
+            "args": [
+              "0x0000000000000000000000000000000000000000000000000000000000000002"
+            ]
+          },
           "token": {
             "chain": "ethereum",
             "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
