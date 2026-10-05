@@ -428,9 +428,13 @@
           {
             "label": "Hyperlane Ethereum registry addresses",
             "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/ethereum/addresses.yaml"
+          },
+          {
+            "label": "Pinned Hyperlane SDK Sophon validator identity: exact address assigned to Abacus Works",
+            "url": "https://raw.githubusercontent.com/hyperlane-xyz/hyperlane-monorepo/dee2a40255b684898088bbaa8c4686d6c13bbd2d/typescript/sdk/src/consts/multisigIsm.ts"
           }
         ],
-        "evidence": "At Ethereum block 25783942 to 25784000, Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 owner()=0x562dfaac27a84be6c96273f5c9594da1681c0da7, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046, localDomain()=1, EIP-1967 impl=0x7b4d881c122a5e61adcffb56a2e3ce9927d53455 / admin=0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659. The owner is a GnosisSafeProxy (VERSION 1.3.0) whose getOwners()+getThreshold() and Safe API return 6-of-10, modules=[], guard=0, fallback=0xf48f2B2d..., nonce=44. ProxyAdmin.owner() is the same Safe. Default ISM bytecode is an EIP-1167 clone of StaticAggregationISM 0xc2ccfc65... with threshold 2 and modules [DomainRoutingISM 0x713afc60... owned by the Safe, PausableISM 0x9c34257b... owned by 0xa7eccdb9..., paused=false]. Per-origin Multisig ISM validator sets were read from clone immutable args / modulesAndThreshold and match the published zkSync and Starknet default-ISM tables; Sophon is live on-chain as 2-of-3 but is registry-deprecated and unpublished. USN token ISM is zero."
+        "evidence": "At Ethereum block 25783942 to 25784000, Mailbox 0xc005dc82818d67af737725bd4bf75435d065d239 owner()=0x562dfaac27a84be6c96273f5c9594da1681c0da7, defaultIsm()=0x10cf42691db303ff44f35c9ced2cd1283a93e046, localDomain()=1, EIP-1967 impl=0x7b4d881c122a5e61adcffb56a2e3ce9927d53455 / admin=0x75ee15ee1b4a75fa3e2fdf5df3253c25599cc659. The owner is a GnosisSafeProxy (VERSION 1.3.0) whose getOwners()+getThreshold() and Safe API return 6-of-10, modules=[], guard=0, fallback=0xf48f2B2d..., nonce=44. ProxyAdmin.owner() is the same Safe. Default ISM bytecode is an EIP-1167 clone of StaticAggregationISM 0xc2ccfc65... with threshold 2 and modules [DomainRoutingISM 0x713afc60... owned by the Safe, PausableISM 0x9c34257b... owned by 0xa7eccdb9..., paused=false]. Per-origin Multisig ISM validator sets were read from clone immutable args / modulesAndThreshold and match the published zkSync and Starknet default-ISM tables; Sophon is live on-chain as 2-of-3 but is registry-deprecated and absent from the current validator table. Research on 2026-10-05 located the issuer's historical SDK configuration at commit dee2a40255b684898088bbaa8c4686d6c13bbd2d: its sophon validator 0xb84c5d02120ed0b39d0f78bbc0e298d89ebcd10b has alias AW_VALIDATOR_ALIAS, explicitly defined as Abacus Works. This answers the scoped operator-identity question; it does not attest independent human signers, key custody or current validator liveness. USN token ISM is zero."
       },
       {
         "id": "ethereum-usn-bridge-proxy-upgrade",
@@ -1027,23 +1031,6 @@
           {
             "label": "Starknet USN owner account class (via token owner)",
             "url": "https://starkscan.co/contract/0x025beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072"
-          }
-        ]
-      },
-      {
-        "controlRef": "ethereum-usn-hyperlane-mailbox-owner",
-        "question": "Who operates Sophon-origin Hyperlane validator 0xb84c5d02120ed0b39d0f78bbc0e298d89ebcd10b? It is in the live Ethereum default-ISM 2-of-3 set for origin 50104, but Sophon is omitted from the published default-ISM validator table and the Hyperlane registry marks sophon deprecated/disabled.",
-        "subject": "key-custody-independence",
-        "reviewedAt": "2026-08-18",
-        "reviewer": "aug18-v927-control-wave W01",
-        "sources": [
-          {
-            "label": "Hyperlane default ISM validator docs (no Sophon section)",
-            "url": "https://docs.hyperlane.xyz/docs/reference/addresses/validators/mainnet-default-ism-validators"
-          },
-          {
-            "label": "Hyperlane Sophon registry metadata (deprecated)",
-            "url": "https://github.com/hyperlane-xyz/hyperlane-registry/blob/main/chains/sophon/metadata.yaml"
           }
         ]
       }
