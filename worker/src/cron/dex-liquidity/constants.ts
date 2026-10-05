@@ -135,13 +135,15 @@ export const SUBGRAPH_PAGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 /** TVL floor for Uni V3 subgraph rows (native query filter; Messari rows client-side). */
 export const UNIV3_POOL_MIN_TVL_USD = 10_000;
 
-export const buildUniV3PoolQuery = (skip: number): string => `{
+export const buildUniV3PoolQuery = (skip: number, trackedCurrencies?: readonly string[]): string => `{
   pools(
     first: ${UNIV3_POOL_PAGE_SIZE},
     skip: ${skip},
     orderBy: totalValueLockedUSD,
     orderDirection: desc,
-    where: { totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}" }
+    where: { totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}"${trackedCurrencies?.length
+      ? `, or: [{ token0_in: ${JSON.stringify(trackedCurrencies)} }, { token1_in: ${JSON.stringify(trackedCurrencies)} }]`
+      : ""} }
   ) {
     id
     token0 { id symbol decimals }
@@ -173,13 +175,15 @@ export const UNIV3_MESSARI_SCHEMA_CHAINS: Readonly<Record<string, true>> = { cel
  * `[token0, token1]`, the fee tier is the `FIXED_TRADING_FEE` percentage, and
  * the spot price is derived from `tick`.
  */
-export const buildUniV3MessariPoolQuery = (skip: number): string => `{
+export const buildUniV3MessariPoolQuery = (skip: number, trackedCurrencies?: readonly string[]): string => `{
   liquidityPools(
     first: ${UNIV3_POOL_PAGE_SIZE},
     skip: ${skip},
     orderBy: id,
     orderDirection: asc,
-    where: { totalLiquidity_gt: "0" }
+    where: { totalLiquidity_gt: "0"${trackedCurrencies?.length
+      ? `, or: [${trackedCurrencies.map((address) => `{ inputTokens_contains: [${JSON.stringify(address)}] }`).join(", ")}]`
+      : ""} }
   ) {
     id
     inputTokens { id symbol decimals }

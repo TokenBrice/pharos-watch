@@ -1,11 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DexApiPool } from "../../../lib/dex-api-common";
 import {
   buildUniV3ExecutionCandidateKey,
   type UniV3ExecutionCandidate,
 } from "../../measured-execution/inventory";
-import { buildRegisteredDirectApiExecutionTarget } from "../process-pool-execution-capability";
+import {
+  buildPoolExecutionCapability,
+  buildRegisteredDirectApiExecutionTarget,
+} from "../process-pool-execution-capability";
+import { buildUniV3MessariPoolQuery, buildUniV3PoolQuery } from "../constants";
+import { fetchUniV3Data } from "../subgraph-source-families";
+import { isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
+import type { PoolProcessingContext, PoolProtocolEnrichment, ResolvedPoolIdentity } from "../process-pool-types";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -121,5 +128,110 @@ describe("registered QuoterV2 exact identity", () => {
     const result = buildTarget(null, [candidate(), candidate({ feePips: 3000 })]);
     expect(result?.measuredExecutionTarget).toBeUndefined();
     expect(result?.executionCapabilityGate?.reason).toBe("target-unresolved");
+  });
+
+  it("recovers a missing fingerprint fee only from one actual source pool", () => {
+    const result = buildTarget(null, [candidate()], [USDT, USDC], `fp:ethereum:uniswap-v3:${USDC}:${USDT}`);
+    expect(result?.measuredExecutionTarget).toMatchObject({ poolId: `ethereum:${POOL}`, feePips: 100 });
+  });
+
+  it.each([100, 3000])("keeps a missing-fee fingerprint unresolved with parallel fee %s", (feePips) => {
+    const result = buildTarget(
+      null,
+      [candidate(), candidate({ feePips, poolAddress: "0x0000000000000000000000000000000000000001" })],
+      [USDC, USDT],
+      `fp:ethereum:uniswap-v3:${USDC}:${USDT}`,
+    );
+    expect(result?.measuredExecutionTarget).toBeUndefined();
+    expect(result?.executionCapabilityGate?.reason).toBe("target-unresolved");
+  });
+
+  it("does not broaden an explicitly known fingerprint fee", () => {
+    const result = buildTarget(0.003, [candidate()], [USDC, USDT], `fp:ethereum:uniswap-v3:${USDC}:${USDT}`);
+    expect(result?.measuredExecutionTarget).toBeUndefined();
+    expect(result?.executionCapabilityGate?.reason).toBe("target-unresolved");
+  });
+
+  it("does not admit an unsupported QuoterV2 chain", () => {
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(false);
+  });
+
+  it("does not use a display-enrichment minimum fee to choose an ambiguous primary pool", () => {
+    const first = candidate();
+    const second = candidate({ feePips: 3000, poolAddress: "0x0000000000000000000000000000000000000001" });
+    const context: PoolProcessingContext = {
+      pools: [],
+      dexProjects: new Set(),
+      curvePoolMap: new Map(),
+      uniV3PoolFees: new Map(),
+      uniV3SymbolFees: new Map(),
+      chainAddressToId: new Map([[`ethereum:${USDC}`, "usdc-circle"], [`ethereum:${USDT}`, "usdt-tether"]]),
+      stablecoinPriceById: new Map([["usdc-circle", 1], ["usdt-tether", 1]]),
+      symbolToChainScopedIds: new Map(),
+      measuredTargetCapturedAt: 1_790_835_011,
+      curvePoolCandidatesByFingerprint: new Map(),
+      uniswapV4ExecutionCandidates: new Map(),
+      uniV3ExecutionCandidates: new Map([
+        [buildUniV3ExecutionCandidateKey("ethereum", [USDC, USDT], 100)!, [first]],
+        [buildUniV3ExecutionCandidateKey("ethereum", [USDC, USDT], 3000)!, [second]],
+      ]),
+    };
+    const identity = {
+      protocol: "uniswap-v3",
+      chainNorm: "ethereum",
+      pool: {
+        pool: `fp:ethereum:uniswap-v3:${USDC}:${USDT}`,
+        project: "uniswap-v3",
+        underlyingTokens: [USDC, USDT],
+        symbol: "USDC-USDT",
+        poolMeta: null,
+        tvlUsd: 1_000_000,
+      },
+    } as ResolvedPoolIdentity;
+    const enrichment = {
+      rawContribTvl: 1_000_000, resolvedPoolType: "uniswap-v3-1bp", feeTierForExtra: 100,
+    } as PoolProtocolEnrichment;
+    const result = buildPoolExecutionCapability(context, identity, enrichment, "usdc-circle");
+    expect(result.measuredExecutionTarget).toBeUndefined();
+    expect(result.executionCapabilityGate?.reason).toBe("target-unresolved");
+  });
+});
+
+describe("tracked-currency QuoterV2 source pages", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("scopes both native currency sides without changing page offsets or the TVL floor", () => {
+    const query = buildUniV3PoolQuery(1000, [USDC, USDT]);
+    expect(query).toContain("skip: 1000");
+    expect(query).toContain('totalValueLockedUSD_gt: "10000"');
+    expect(query).toContain(`token0_in: ${JSON.stringify([USDC, USDT])}`);
+    expect(query).toContain(`token1_in: ${JSON.stringify([USDC, USDT])}`);
+  });
+
+  it("scopes Messari input currencies while preserving its liquidity-only filter", () => {
+    const query = buildUniV3MessariPoolQuery(2000, [USDC, USDT]);
+    expect(query).toContain("skip: 2000");
+    expect(query).toContain('totalLiquidity_gt: "0"');
+    expect(query).toContain(`inputTokens_contains: ["${USDC}"]`);
+    expect(query).toContain(`inputTokens_contains: ["${USDT}"]`);
+    expect(query).not.toContain("totalValueLockedUSD_gt");
+  });
+
+  it("passes only canonical chain-local tracked currencies into source queries", async () => {
+    const queries: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const query = JSON.parse(init?.body as string).query as string;
+      queries.push(query);
+      return new Response(JSON.stringify({ data: query.includes("liquidityPools(") ? { liquidityPools: [] } : { pools: [] } }));
+    }));
+    await fetchUniV3Data("test-key", new Map(), new Map([
+      [`ethereum:${USDC.toUpperCase()}`, "usdc-circle"],
+      [`celo:${USDT}`, "usdt-tether"],
+      ["ethereum:not-an-address", "invalid"],
+    ]));
+    expect(queries.some((query) => query.includes(`token0_in: ["${USDC}"]`))).toBe(true);
+    expect(queries.some((query) => query.includes(`inputTokens_contains: ["${USDT}"]`))).toBe(true);
+    expect(queries.every((query) => !query.includes("not-an-address"))).toBe(true);
+    expect(queries.every((query) => !query.includes(`token0_in: ["${USDT}"]`))).toBe(true);
   });
 });
