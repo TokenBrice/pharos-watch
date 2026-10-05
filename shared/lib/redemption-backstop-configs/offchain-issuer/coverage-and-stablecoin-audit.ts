@@ -715,8 +715,9 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "queued",
     outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Anemoy / Centrifuge materials describe qualified-investor ACRDX subscriptions and redemptions; public materials reviewed do not publish one fixed ACRDX redemption fee",
+    costModel: fixedFee(
+      0,
+      "Anemoy's June 2026 ACRDX factsheet lists Entry/exit fees $0 for the USDC subscription/redemption rail. This is the issuer entry/exit fee only: brokerage, custody, banking, administration, audit, network gas and any separate stablecoin conversion or third-party charges are outside that zero. Quarterly repurchases remain queued and do not establish a completion SLA.",
     ),
     docs: [
       sourceRef("Anemoy ACRDX launch", "https://www.anemoy.io/news/acrdx-launched", [
@@ -731,6 +732,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Anemoy ACRDX June 2026 factsheet, Key Facts (reviewed 2026-10-05)",
+        "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m",
+        ["route", "fees"],
+      ),
     ],
     notes: [
       "Modeled as qualified-investor NAV redemption through the Anemoy / Centrifuge issuer rail, mirroring the Apollo credit fund template while preserving queued private-credit settlement risk.",

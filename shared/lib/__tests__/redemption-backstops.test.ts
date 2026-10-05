@@ -56,6 +56,62 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config?.notes?.join(" ")).toContain("not Ember eEARN");
   });
 
+  it.each(["frxusd-frax", "sfrxusd-frax", "usdz-anzen"])(
+    "keeps %s public mutable fee formulas separate from numeric all-in costs",
+    (id) => {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config?.costModel).toMatchObject({
+        kind: "dynamic-or-unclear",
+        confidence: "formula",
+        feeModelKind: "formula",
+      });
+      expect(config?.costModel).not.toHaveProperty("feeBps");
+      expect(config?.costModel).not.toHaveProperty("feeBpsMax");
+      expect(config?.v9RouteCostTerms).toBeUndefined();
+      expect(config?.capacityModel).toMatchObject({ kind: "reserve-sync-metadata" });
+    },
+  );
+
+  it("keeps syrupUSDG's zero native fee separate from unbounded queue completion", () => {
+    const config = getRedemptionBackstopConfig("syrupusdg-maple");
+    expect(config?.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0, confidence: "fixed" });
+    expect(config?.costModel.feeDescription).toContain("gas, wallet and third-party charges");
+    expect(config?.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement"],
+    });
+    expect(config?.v9RouteReviewTerms).not.toHaveProperty("settlementDelaySec");
+    expect(config?.outputAssets).toEqual(["usdg-paxos"]);
+    expect(config?.capacityModel).toEqual({ kind: "reserve-sync-metadata" });
+  });
+
+  it("records ACRDX's issuer-only zero without changing queued NAV redemption", () => {
+    const config = getRedemptionBackstopConfig("acrdx-anemoy-apollo");
+    expect(config?.costModel).toMatchObject({ kind: "fee-bps", feeBps: 0, confidence: "fixed" });
+    expect(config?.costModel.feeDescription).toContain("issuer entry/exit fee only");
+    expect(config?.settlementModel).toBe("queued");
+    expect(config?.outputAssetType).toBe("nav");
+    expect(config?.docs).toContainEqual(expect.objectContaining({
+      url: "https://centrifuge-files.mypinata.cloud/ipfs/bafkreigpp4zkwecojcuipjnzyclrfgzaqe6tu5vedvujw6u73c3xfwbx5m",
+      supports: ["route", "fees"],
+    }));
+  });
+
+  it.each([
+    ["tryb-bilira", "bank-transfer leg"],
+    ["avusd-avant", "0.05% (5 bps)"],
+  ])("keeps %s partial fee disclosures without a route-wide numerical ceiling", (id, disclosure) => {
+    const config = getRedemptionBackstopConfig(id);
+    expect(config?.costModel).toMatchObject({
+      kind: "dynamic-or-unclear",
+      feeModelKind: "documented-variable",
+    });
+    expect(config?.costModel.feeDescription).toContain(disclosure);
+    expect(config?.costModel).not.toHaveProperty("feeBps");
+    expect(config?.costModel).not.toHaveProperty("feeBpsMax");
+    expect(config?.v9RouteCostTerms).toBeUndefined();
+  });
+
   it("keeps UTY's verified Base USDC payout separate from unbounded redemption terms", () => {
     const config = getRedemptionBackstopConfig("uty-xsy");
 

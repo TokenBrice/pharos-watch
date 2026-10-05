@@ -60,10 +60,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "tryb-bilira": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 issuance and redemption through BiLira; public fee schedule not disclosed",
+    costModel: documentedVariableFee(
+      "BiLira Kripto's published deposit/withdrawal tariff lists Banka Transferi as Ücretsiz (free) for both directions, reviewed 2026-10-05. The known zero applies only to that issuer-platform bank-transfer leg, not the complete TRYB redemption: crypto withdrawal charges vary by network, and holder gas, conversion applicability, third-party commissions and taxes remain separate and unquantified. No all-in zero fee or route-wide ceiling is asserted.",
     ),
-    docs: [sourceRefRouteCapacity("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin")],
+    docs: [
+      sourceRefRouteCapacity("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin"),
+      sourceRef("BiLira Kripto deposit/withdrawal tariff (reviewed 2026-10-05)", "https://kripto.bilira.co/komisyonlar-ve-ucretler/ucretler", ["fees"]),
+    ],
   },
   "tgbp-tokenised": {
     ...issuerBase,
