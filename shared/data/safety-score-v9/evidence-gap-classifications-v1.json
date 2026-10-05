@@ -39116,6 +39116,50 @@
         "https://superstate.com/assets/uscc"
       ],
       "rationale": "The exact USD4,400 unsettled claim class (including reserve-exposure), obligor, maximum maturity and realization horizon are not publicly disclosed. The live query still omits the schema-supported requestId. Superstate expressly makes transaction state and payment allocation private/authenticated and documents that inbound payments are not completed subscriptions. Its issued USCC token and generic T+1/T+2 dealing terms cannot identify this pending claim or contractual rights. The unavailable Nest risk board is not the basis for C."
+    },
+    {
+      "id": "uw-syrupusdg-maple-7b37adcd33526386",
+      "assetId": "syrupusdg-maple",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:syrupusdg-maple:queue-redeem"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-04T23:45:21Z",
+      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R24)",
+      "sources": [
+        {
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "observedAt": "2026-10-04T23:45:21Z",
+          "datumAsOf": null,
+          "location": "\u00a72.3 Liquidity and Withdrawal Risk",
+          "excerpt": "There is no guaranteed maximum withdrawal period.",
+          "assertion": "Governing USDG risk terms expressly withhold a guaranteed end-to-end withdrawal completion maximum."
+        },
+        {
+          "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+          "observedAt": "2026-10-04T23:45:21Z",
+          "datumAsOf": null,
+          "location": "How long do withdrawals take?",
+          "excerpt": "the maximum possible time being 30 days",
+          "assertion": "FAQ marketing maximum conflicts with specific legal no-guarantee language; it cannot establish the required enforceable completion bound."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://maple.finance/transparency",
+        "https://docs.maple.finance/llms.txt",
+        "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/risk.md",
+        "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xf95e5722226a1018d058cd757b75f1d10289e967"
+      ],
+      "rationale": "Exact native syrupUSDG queue-redeem end-to-end maximum settlement is not guaranteed. Legal \u00a72.3 expressly disclaims any maximum; FIFO processing is liquidity- and redeemer-dependent. FAQ says 30 days, but that conflicts with governing risk terms and is not a guaranteed funded SLA. Verified exact queue source supplies no deadline forcing full request completion."
     }
   ]
 }
