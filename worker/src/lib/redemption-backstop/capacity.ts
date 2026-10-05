@@ -14,10 +14,6 @@ import { resolveFixedUsdCapacity } from "../redemption-backstop-capacity/fixed-u
 import { resolveReserveSyncCapacity } from "../redemption-backstop-capacity/reserve-sync";
 import { resolveSupplyFullCapacity } from "../redemption-backstop-capacity/supply-full";
 import { resolveSupplyRatioCapacity } from "../redemption-backstop-capacity/supply-ratio";
-import {
-  REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS,
-  REDEMPTION_BACKSTOP_PROVIDER_IDS,
-} from "@shared/lib/redemption-backstop-providers";
 
 export {
   resolveCapacityBasis,
