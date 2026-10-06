@@ -421,7 +421,8 @@ When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, 
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "A short user-facing sentence explaining who can create durable supply and through which route.",
+    "summary": "Reviewer narrative explaining who can create durable supply and through which route; shown under Review notes.",
+    "headline": "Concentrated — the issuer mints AUSD directly through a 3/5 multisig; admin power is concentrated.",
     "controls": [
       {
         "chain": "ethereum",
@@ -628,7 +629,9 @@ Current practice:
 
 Mint Authority review feeds the V9 Economic Control mint component and should answer whether durable native supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics. Representations and cross-chain transfer machinery belong to Bridge Risk even when they share a controller with native issuance.
 
-For new high-value active additions and pre-launch promotions, record either a reviewed `mintAuthority` profile or an intentional gap. High-value means top-60 canonical rank, market cap ≥ $50M, or an obvious issuer/operator mint control. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
+For new high-value active additions and pre-launch promotions, record either a reviewed `mintAuthority` profile or an intentional gap. High-value means top-60 canonical rank, market cap ≥ $50M, or an obvious issuer/operator mint control. Missing data is acceptable, but the detail page then shows an explicit not-reviewed (`NR`) Mint Authority card until reviewed data exists; do not imply unknown means safe.
+
+Every new addition or promotion that authors a `mintAuthority` profile must also author `mintAuthority.headline`: the detail card's one-sentence verdict, at most 25 words, with no raw identifiers (contract addresses, block heights, second counts, gate codes such as `D29`, evaluator keys, or version pins). `npm run check:stablecoin-data` rejects a headline that breaks that budget (`findSummaryBudgetViolations` in `shared/lib/summary-budget.ts`). Keep the long reviewer narrative in `summary`, which the card folds under `Review notes`. Without a headline the card falls back to a verdict generated from structured fields, which is acceptable for legacy profiles but not for new work.
 
 When authoring `mintAuthority`, verify:
 
