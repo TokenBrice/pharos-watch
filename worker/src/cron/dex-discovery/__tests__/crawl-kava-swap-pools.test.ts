@@ -6,8 +6,8 @@ import { discoveryContext } from "./discovery.test-support";
 import { crawlKavaSwapPoolsStage, isKavaSwapDiscoveryDeployment } from "../crawl-kava-swap-pools";
 
 const KAVA_USDX_ADDRESS = "usdx";
-const KAVA_SWAP_PARAMS_URL = "https://api.data.kava.io/kava/swap/v1beta1/params";
-const KAVA_SWAP_POOLS_URL = "https://api.data.kava.io/kava/swap/v1beta1/pools";
+const KAVA_SWAP_PARAMS_URL = "https://api.kava.io/kava/swap/v1beta1/params";
+const KAVA_SWAP_POOLS_URL = "https://api.kava.io/kava/swap/v1beta1/pools";
 
 function target(chain = "kava", address = KAVA_USDX_ADDRESS): ContractDeployment {
   return { chain, address, decimals: 6 };
