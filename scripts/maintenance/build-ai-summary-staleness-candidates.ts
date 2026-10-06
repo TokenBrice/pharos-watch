@@ -32,6 +32,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
 import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import currentMethodologyVersion from "@shared/lib/methodology-versions/current-version.json";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
@@ -101,6 +102,8 @@ export interface Current {
   dewsScore: number | null;
   depegCount: number | null;
   circulatingUsd?: number | null;
+  /** Published weakest included pillar; absent when the card has none. */
+  weakestPillar?: "backing" | "exit" | "control" | null;
 }
 
 export interface Finding {
@@ -251,6 +254,7 @@ export function buildCurrentMap(
       dewsScore: typeof dews?.score === "number" ? dews.score : null,
       depegCount: typeof pegRow?.eventCount === "number" ? pegRow.eventCount : null,
       ...(stablecoin ? { circulatingUsd: getCirculatingRaw(stablecoin) } : {}),
+      weakestPillar: card.weakestPillar?.pillar ?? null,
     });
   }
   return map;
@@ -541,6 +545,37 @@ export function extractFindings(text: string, cur: Current): Finding[] {
     const ratio = diff / Math.max(cur.depegCount, 1);
     const severity: Severity = ratio >= 0.5 || diff >= 50 ? "medium" : "low";
     push({ kind: "depeg-count", claim: m[0], claimed: String(claimed), current: String(cur.depegCount), severity });
+  }
+
+  // 9. Weakest-pillar claims: "exit is the weakest of the three pillars",
+  //    "the weakest pillar is economic control".
+  if (cur.weakestPillar) {
+    const pillar = "(backing|exit|(?:economic\\s+)?control)";
+    const weakestRe = new RegExp(
+      `\\b${pillar}(?:\\s+pillar)?\\s+(?:is|remains|sits\\s+as|stays)\\s+(?:still\\s+|now\\s+)?(?:the\\s+)?weakest\\b` +
+        `|\\bweakest\\s+(?:of\\s+the\\s+three\\s+)?(?:pillars?\\s+)?(?:is|remains)\\s+(?:the\\s+)?${pillar}\\b`,
+      "gi",
+    );
+    for (const m of t.matchAll(weakestRe)) {
+      const claimed = (m[1] ?? m[2] ?? "").toLowerCase().replace(/^economic\s+/, "");
+      if (claimed && claimed !== cur.weakestPillar) {
+        push({ kind: "weakest-pillar", claim: m[0], claimed, current: cur.weakestPillar, severity: "medium" });
+      }
+    }
+  }
+
+  // 10. Superseded Safety Score majors ("v9's freshness bound"). Protocol versions (Liquity V2,
+  // Aave v3) share the token shape, so only a Safety Score sentence counts; pre-v9 claims are
+  // already owned by the retired-dimension findings above.
+  const currentMajor = Number.parseInt(currentMethodologyVersion.currentVersion, 10);
+  for (const sentence of t.split(/(?<=[.!?])\s+/)) {
+    if (!/\b(?:safety|score|scorecard|report\s+card|card|pillars?|grades?|multiplier|freshness)\b/i.test(sentence)) continue;
+    for (const m of sentence.matchAll(/\b[vV](\d{1,2})(?:'s)?\b/g)) {
+      const major = Number(m[1]);
+      if (major >= 9 && major < currentMajor) {
+        push({ kind: "retired-methodology-version", claim: m[0], claimed: `v${major}`, current: `v${currentMajor}`, severity: "medium" });
+      }
+    }
   }
 
   return out;
