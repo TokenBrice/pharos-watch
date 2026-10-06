@@ -26,6 +26,7 @@ const HEX = /^0x[0-9a-f]*$/;
 const PAGE_BLOCKS = 2000;
 const PAGES_PER_ATTEMPT = 8;
 const MAX_CHECKPOINT_BYTES = 128 * 1024;
+const MAX_LOG_DATA_LENGTH = 32770;
 const DISCOVERY_LIMIT = 1;
 const API_BASE = "https://api.ccip.chain.link/v2";
 type Lane = CcipPendingRead["lanes"][number];
@@ -33,7 +34,7 @@ type Message = CcipPendingCheckpoint["lanes"][number]["messages"][number];
 type Proof = NonNullable<EconomicSupplyObservation["ccipPendingProof"]>;
 const LogSchema = z.object({
   address: z.string().regex(/^0x[0-9a-f]{40}$/), topics: z.array(z.string().regex(WORD)).max(4),
-  data: z.string().regex(HEX).max(32770).refine(value => value.length % 2 === 0).transform(value => value as `0x${string}`),
+  data: z.string().regex(HEX).refine(value => value.length % 2 === 0).transform(value => value as `0x${string}`),
   blockNumber: z.string().regex(/^0x[0-9a-f]+$/).max(18),
   blockHash: z.string().regex(WORD), transactionHash: z.string().regex(WORD),
   logIndex: z.string().regex(/^0x[0-9a-f]+$/).max(18), removed: z.literal(false),
@@ -56,9 +57,9 @@ const call = (signature: string, args: `0x${string}` = "0x") => toFunctionSelect
 const nextSequenceCall = (lane: Lane) => lane.version === "2.0.0" ? call("getExpectedNextMessageNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)]))
   : lane.version === "1.6" ? call("getExpectedNextSequenceNumber(uint64)", encodeAbiParameters(parseAbiParameters("uint64"), [BigInt(lane.destination.chainSelector)])) : call("getExpectedNextSequenceNumber()");
 function fail(reason: string): never { throw new Error(`ccip-pending:${reason}`); }
-function asLog(raw: unknown): Log {
+function asLog(raw: unknown, envelopeOnly = false): Log {
   const parsed = LogSchema.safeParse(raw);
-  if (!parsed.success) fail("log-invalid");
+  if (!parsed.success || (!envelopeOnly && parsed.data.data.length > MAX_LOG_DATA_LENGTH)) fail("log-invalid");
   const row = parsed.data;
   return row;
 }
@@ -435,13 +436,15 @@ export async function observeCcipPending(input: {
       const [raw] = await rpc(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
         fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }]);
       if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
-      const logs = raw.map(asLog), blockHashes = new Map<string, string>();
+      const logs = raw.map(log => asLog(log, true)), blockHashes = new Map<string, string>();
       let previousPosition = -1;
       for (const log of logs) {
         const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex)), position = height * 1000000 + index;
         if (!Number.isSafeInteger(position) || height < from || height > end || index >= 1000000 || position <= previousPosition) fail("history-gap");
         previousPosition = position;
         if (!addresses.includes(log.address) || !topics.includes(log.topics[0] as `0x${string}`)) fail("log-filter-mismatch");
+        const topicCount = log.topics[0] === SEND_15 ? 1 : log.topics[0] === EXECUTION_15 || log.topics[0] === SEND_16 ? 3 : 4;
+        if (log.topics.length !== topicCount) fail("log-invalid");
         const previous = blockHashes.get(log.blockNumber);
         if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
         blockHashes.set(log.blockNumber, log.blockHash);
@@ -466,6 +469,9 @@ export async function observeCcipPending(input: {
           return lane.version === "1.5" || log.topics[1] === word(sent ? lane.destination.chainSelector : lane.source.chainSelector);
         });
         for (const log of laneLogs) {
+          // Bound payloads only after exact directed-lane routing. A valid
+          // foreign message on this shared ramp cannot poison our census.
+          if (log.data.length > MAX_LOG_DATA_LENGTH) fail("log-invalid");
           if (sent) {
             const message = decodeSend(log, lane);
             if (message.sequence !== BigInt(cp.lastSequence) + 1n) fail("sequence-gap");

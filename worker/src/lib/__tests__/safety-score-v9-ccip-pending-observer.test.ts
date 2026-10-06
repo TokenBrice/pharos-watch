@@ -31,25 +31,25 @@ function source(version: CcipVersion = "1.6"): CcipPendingRead {
     lanes: [{ id: "eth-base", version, source: side("ethereum", "1", 10, 11), destination: side("base", "2", 20, 21),
       onRampAddress: addr(30), offRampAddress: addr(31), onRampRuntimeCodeSha256: sha256Hex(CODE), offRampRuntimeCodeSha256: sha256Hex(CODE), sourceStartBlock: 100 }] };
 }
-function send(sequence: number, amount = 10n, block = 100, version: "1.5" | "1.6" = "1.6") {
+function send(sequence: number, amount = 10n, block = 100, version: "1.5" | "1.6" = "1.6", applicationData: `0x${string}` = "0x", destinationSelector = 2n) {
   const messageId = word(1000 + sequence);
   const data = version === "1.6" ? encodeAbiParameters(parseAbiParameters(MESSAGE_16), [{
-    header: { messageId, sourceChainSelector: 1n, destChainSelector: 2n, sequenceNumber: BigInt(sequence), nonce: 0n },
-    sender: addr(40), data: "0x", receiver: word(40), extraArgs: "0x", feeToken: addr(41), feeTokenAmount: 1n, feeValueJuels: 1n,
+    header: { messageId, sourceChainSelector: 1n, destChainSelector: destinationSelector, sequenceNumber: BigInt(sequence), nonce: 0n },
+    sender: addr(40), data: applicationData, receiver: word(40), extraArgs: "0x", feeToken: addr(41), feeTokenAmount: 1n, feeValueJuels: 1n,
     tokenAmounts: [{ sourcePoolAddress: addr(11), destTokenAddress: word(20), extraData: "0x", amount, destExecData: "0x" }],
-  }]) : encodeAbiParameters(parseAbiParameters(MESSAGE_15), [{ sourceChainSelector: 1n, sender: addr(40), receiver: addr(40), sequenceNumber: BigInt(sequence), gasLimit: 0n, strict: false, nonce: 0n, feeToken: addr(41), feeTokenAmount: 1n, data: "0x",
+  }]) : encodeAbiParameters(parseAbiParameters(MESSAGE_15), [{ sourceChainSelector: 1n, sender: addr(40), receiver: addr(40), sequenceNumber: BigInt(sequence), gasLimit: 0n, strict: false, nonce: 0n, feeToken: addr(41), feeTokenAmount: 1n, data: applicationData,
     tokenAmounts: [{ token: addr(10), amount }], sourceTokenData: [encodeAbiParameters(parseAbiParameters("(bytes sourcePoolAddress,bytes destTokenAddress,bytes extraData,uint32 destGasAmount)"), [{ sourcePoolAddress: word(11), destTokenAddress: word(20), extraData: "0x", destGasAmount: 90000 }])], messageId }]);
-  return { address: addr(30), topics: version === "1.6" ? [SEND_16, word(2), word(sequence)] : [SEND_15], data,
+  return { address: addr(30), topics: version === "1.6" ? [SEND_16, word(destinationSelector), word(sequence)] : [SEND_15], data,
     blockNumber: `0x${block.toString(16)}`, blockHash: word(block), transactionHash: word(2000 + sequence), logIndex: `0x${sequence.toString(16)}`, removed: false };
 }
-function send20(sequence: number, amount = 10n, block = 100, onRamp = 30, offRamp = 31): SendLog {
+function send20(sequence: number, amount = 10n, block = 100, onRamp = 30, offRamp = 31, applicationData: `0x${string}` = "0x", destinationSelector = 2n): SendLog {
   const field = (value: string, bytes = 1) => ((value.length - 2) / 2).toString(16).padStart(bytes * 2, "0") + value.slice(2);
   const token = "01" + amount.toString(16).padStart(64, "0") + field(word(11)) + field(word(10)) +
     field(addr(20)) + field(addr(40)) + "0000";
-  const encoded = `0x01${1n.toString(16).padStart(16, "0")}${2n.toString(16).padStart(16, "0")}${sequence.toString(16).padStart(16, "0")}${"00".repeat(44)}` +
-    field(word(onRamp)) + field(addr(offRamp)) + field(word(40)) + field(addr(40)) + "0000" + field(`0x${token}`, 2) + "0000";
+  const encoded = `0x01${1n.toString(16).padStart(16, "0")}${destinationSelector.toString(16).padStart(16, "0")}${sequence.toString(16).padStart(16, "0")}${"00".repeat(44)}` +
+    field(word(onRamp)) + field(addr(offRamp)) + field(word(40)) + field(addr(40)) + "0000" + field(`0x${token}`, 2) + field(applicationData, 2);
   const payload = `0x${encoded.slice(2)}` as `0x${string}`, messageId = keccak256(payload);
-  return { address: addr(onRamp), topics: [SEND_20, word(2), word(40), messageId],
+  return { address: addr(onRamp), topics: [SEND_20, word(destinationSelector), word(40), messageId],
     data: encodeAbiParameters(parseAbiParameters("address,uint256,bytes,(address,uint32,uint32,uint256,bytes)[],bytes[]"), [addr(41), amount + 1n, payload, [], []]),
     blockNumber: `0x${block.toString(16)}`, blockHash: word(block), transactionHash: word(2000 + sequence), logIndex: `0x${sequence.toString(16)}`, removed: false };
 }
@@ -154,6 +154,7 @@ beforeEach(() => {
     if (selector === toFunctionSelector("getRemoteToken(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes"), [word(chain === "ethereum" ? 20 : 10)]);
     if (selector === toFunctionSelector("getRemotePools(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes[]"), [[word(chain === "ethereum" ? 21 : 11)]]);
     if (selector === toFunctionSelector("getStaticConfig()")) {
+      if (chain === "ethereum" && protocol === "1.5") return encodeAbiParameters(parseAbiParameters("(address,uint64,uint64,uint64,uint96,address,address,address)"), [[addr(50), 1n, 2n, 0n, 0n, addr(0), addr(51), addr(52)]]);
       if (chain === "ethereum" && (protocol === "2.0.0" || to === addr(32))) return encodeAbiParameters(parseAbiParameters("(uint64,address,uint32,address)"), [[1n, addr(50), 1, addr(52)]]);
       if (chain === "base" && (protocol === "2.0.0" || to === addr(33))) return encodeAbiParameters(parseAbiParameters("(uint64,uint16,address,address,uint32)"), [[2n, 1, addr(51), addr(52), 1]]);
       if (chain === "ethereum") return encodeAbiParameters(parseAbiParameters("(uint64,address,address,address)"), [[1n, addr(50), addr(51), addr(52)]]);
@@ -176,6 +177,35 @@ describe("authenticated CCIP pending quantities", () => {
     expect(result.status).toBe("accepted");
     if (result.status !== "accepted") throw new Error(result.reason);
     expect(result.amount).toBe("10"); expect(result.proof.lanes[0]).toMatchObject({ pendingCount: 1, failedCount: 0, lastSequence: "1" });
+  });
+  it.each(["1.6", "2.0.0"] as const)("excludes a large foreign %s message on the shared ramp without blocking our census", async version => {
+    const data = `0x${"ab".repeat(20000)}` as `0x${string}`;
+    const own = version === "1.6" ? send(1) : send20(1);
+    const foreign = version === "1.6" ? send(1, 90n, 100, version, data, 3n) : send20(1, 90n, 100, 30, 31, data, 3n);
+    foreign.logIndex = "0x2";
+    sent = [own, foreign];
+    const result = await observeCcipPending(input(source(version)));
+    expect(result).toMatchObject({ status: "accepted", amount: "10", proof: { lanes: [{ pendingCount: 1, lastSequence: "1" }] } });
+  });
+  it.each(["1.5", "1.6", "2.0.0"] as const)("rejects an oversized matched %s message rather than skipping its liability", async version => {
+    const data = `0x${"ab".repeat(20000)}` as `0x${string}`;
+    sent = [version === "2.0.0" ? send20(1, 10n, 100, 30, 31, data) : send(1, 10n, 100, version, data)];
+    const result = await observeCcipPending(input(source(version)));
+    expect(logRanges.length).toBeGreaterThan(0);
+    expect(result.status).toBe("rejected");
+    expect(result).not.toHaveProperty("amount");
+  });
+  it.each(["removed", "missing-selector", "malformed-data", "noncanonical"] as const)("rejects a %s foreign log instead of treating invalid evidence as irrelevant", async fault => {
+    const foreign = send(1, 90n, 100, "1.6", "0x", 3n);
+    foreign.logIndex = "0x2";
+    if (fault === "removed") foreign.removed = true;
+    else if (fault === "missing-selector") foreign.topics = [SEND_16];
+    else if (fault === "malformed-data") foreign.data = "0x0";
+    else foreign.blockHash = word(999);
+    sent = [send(1), foreign];
+    const result = await observeCcipPending(input());
+    expect(result.status).toBe("rejected");
+    expect(result).not.toHaveProperty("amount");
   });
   it("excludes successfully executed messages without trusting the indexer status", async () => {
     states["1"] = 2; indexed = [word(1001)];
@@ -416,16 +446,6 @@ describe("authenticated CCIP pending quantities", () => {
     expect(authenticateCcipPendingObservation(read, observation, deployments.map(row => ({ ...observation, id: row.deploymentKey })), deployments)).toBe(false);
   });
   it("decodes v1.5 sends and retains failed token-pool liabilities", async () => {
-    const baseMock = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
-    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
-      const values = await baseMock(chain, requests, options);
-      return values?.map((value, i) => {
-        const request = requests[i]!, body = request.params[0];
-        const data = body && typeof body === "object" && "data" in body ? body.data : undefined;
-        if (chain === "ethereum" && data === toFunctionSelector("getStaticConfig()")) return encodeAbiParameters(parseAbiParameters("(address,uint64,uint64,uint64,uint96,address,address,address)"), [[addr(50), 1n, 2n, 0n, 0n, addr(0), addr(51), addr(52)]]);
-        return value;
-      }) ?? null;
-    });
     sent = [send(1, 12n, 100, "1.5")]; states["1"] = 3;
     expect(await observeCcipPending(input(source("1.5")))).toMatchObject({ status: "accepted", amount: "12", proof: { lanes: [{ pendingCount: 1, failedCount: 1 }] } });
   });
