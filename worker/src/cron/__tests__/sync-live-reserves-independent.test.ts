@@ -4,6 +4,9 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
+import { syncReserveCoin } from "../sync-live-reserves-core";
+import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
+import { buildDocumentedRedemptionTelemetry } from "../reserve-adapters/redemption";
 import {
   mockLiveReserveD1,
   recordOutcomeSafeMock,
@@ -316,6 +319,34 @@ describe("syncLiveReserves", () => {
     expect(finalizeSuccess?.binds.some((bind) =>
       typeof bind === "string" && bind.includes("stale-source-data")
     )).toBe(true);
+  });
+
+  it("heals a reachable source's breaker without publishing stale redemption evidence", async () => {
+    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "wars-argentine-peso") as ConfiguredCoin;
+    const { sqlite, db } = fixtures.open();
+    const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 100 * 86400;
+    const result = await syncReserveCoin({
+      db, coin, signal: new AbortController().signal, adapter: adapterForCoin(coin),
+      runAdapter: async () => ({
+        slices: [{ name: "Reviewed ARS deposits", pct: 100, risk: "high" }],
+        metadata: {
+          freshnessMode: "verified", sourceTimestamp: timestamp,
+          redemption: buildDocumentedRedemptionTelemetry(timestamp, { holderEligibility: "verified-customer" }),
+        },
+      }),
+      breakerCanFetch: new Map([[breakerKey, true]]), d1FinalizeTimeoutMs: 30_000, previousState: null,
+    });
+    expect(result).toMatchObject({ status: "failed", breakerOutcome: true });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 0 });
+    const state = sqlite.prepare("SELECT last_status, last_success_at, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id);
+    expect(state).toMatchObject({ last_status: "degraded", last_success_at: null });
+    if (!state || typeof state.metadata !== "string") throw new Error("Missing persisted stale-attempt metadata");
+    expect(JSON.parse(state.metadata)).toMatchObject({ reason: "source-stale" });
+    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000));
+    expect(overview.staleCoins).toBe(1);
+    expect(overview.errorCoins).toBe(0);
+    expect(overview.freshCoins).toBe(0);
   });
 
   it("keeps an allowlisted degraded warning recorded while admitting the snapshot to scoring", async () => {

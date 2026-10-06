@@ -473,6 +473,21 @@ export async function syncReserveCoin(args: {
     });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
+      const staleOnly = validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")
+        && validation.warnings.every((warning) => warning.effect !== "fatal" || warning.code === "stale-redemption-source-timestamp")
+        && !(result.warnings ?? []).some((warning) => warning.effect === "fatal");
+      if (staleOnly) {
+        // The source was read successfully, but its evidence cannot be published.
+        // Heal transport failure debt without refreshing the retained snapshot.
+        const { finalized } = await recordFailure(
+          "degraded", `Validation failed: ${message}`, "source-stale", validation.warnings,
+          { durationMs, failureCategory: "validation", sourceTimestamp: result.metadata?.sourceTimestamp },
+        );
+        return timedResult({
+          breakerKey, status: "failed", ...(finalized ? { breakerOutcome: true } : {}),
+          warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true,
+        });
+      }
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
       await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
       return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });

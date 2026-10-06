@@ -153,6 +153,11 @@ function countCoinsByStatus(
     const uncertainWrite = hasUncertainWriteState(syncState);
 
     if (!hasSnapshot) {
+      if (syncState?.metadata.reason === "source-stale") {
+        staleCoins++;
+        if (uncertainWrite) writeTimeoutUncertain++;
+        continue;
+      }
       if (syncState?.lastStatus === "error") {
         errorCoins++;
         if (uncertainWrite) writeTimeoutUncertain++;
@@ -172,6 +177,11 @@ function countCoinsByStatus(
     if (admission.eligible) independentFreshEligible++;
     const ageSec = Math.max(0, now - record.fetchedAt);
     lastSuccessAt = lastSuccessAt == null ? record.fetchedAt : Math.max(lastSuccessAt, record.fetchedAt);
+    if (syncState?.metadata.reason === "source-stale") {
+      staleCoins++;
+      if (uncertainWrite) writeTimeoutUncertain++;
+      continue;
+    }
 
     if (syncState?.lastStatus === "error") {
       errorCoins++;
