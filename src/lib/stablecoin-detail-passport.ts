@@ -14,7 +14,14 @@ import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
+import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import { HERO_MUTED_CLASS } from "@/lib/stablecoin-detail-hero-metrics";
+
+/**
+ * The passport reads the client-projected freeze review to decide whether the
+ * in-page Freeze & seizure card exists to jump to.
+ */
+export type HeroPassportCoin = StablecoinMeta & Pick<StablecoinDetailCoinMeta, "blacklistabilitySummary">;
 
 export interface HeroPassportItemViewModel {
   key:
@@ -111,16 +118,16 @@ const ATTESTOR_PASSPORT_LABELS: Record<keyof typeof POR_TIER_STYLES, string> = {
 };
 
 function buildFreezePassportItem(
-  coin: StablecoinMeta,
+  coin: HeroPassportCoin,
   blacklistStatus: BlacklistStatus | null,
-  mintAuthorityReviewed: boolean,
 ): HeroPassportItemViewModel {
-  // Target priority: live blacklist tracker > mint-authority evidence >
-  // FreezeWatch coverage page (coins without an in-page freeze section).
-  const href = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
-    ? "#blacklist"
-    : mintAuthorityReviewed
-      ? "#mint-authority"
+  // Target priority: the reviewed Freeze & seizure card > live blacklist
+  // tracker > FreezeWatch coverage page (coins without an in-page freeze
+  // section).
+  const href = coin.blacklistabilitySummary
+    ? "#freeze-seizure"
+    : (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
+      ? "#blacklist"
       : buildCoinTrackerLink(coin.id, "freezewatch", coin.symbol).href;
 
   switch (blacklistStatus) {
@@ -185,7 +192,7 @@ export function buildHeroPassportItems({
   pegScoreResult,
   isNavToken,
 }: {
-  coin: StablecoinMeta;
+  coin: HeroPassportCoin;
   chainCount: number;
   blacklistStatus: BlacklistStatus | null;
   resolvedMechanismArchetype: MechanismArchetype | null;
@@ -196,9 +203,9 @@ export function buildHeroPassportItems({
 }): HeroPassportItemViewModel[] {
   const isDecentralized = coin.flags.governance === "decentralized";
   const hasMechanismBlock = Boolean(coin.pegMechanism);
-  // Jurisdiction facts render on-page in the Regulatory standing module (rail at
-  // `xl+`, `#jurisdiction` fold below it); when neither regime is reviewed there
-  // is nothing to jump to, so the strip's own value is the whole answer.
+  // Jurisdiction facts render on-page in the Regulatory standing card, whose
+  // single in-flow mount owns `#jurisdiction`; when neither regime is reviewed
+  // there is nothing to jump to, so the strip's own value is the whole answer.
   const jurisdictionHref = buildRegulatoryStandingView(coin) ? "#jurisdiction" : "#info";
   const mintAuthorityReviewed = mintAuthority.status === "reviewed";
   const mechanismValue = resolvedMechanismArchetype
@@ -239,7 +246,7 @@ export function buildHeroPassportItems({
     });
   }
 
-  items.push(buildFreezePassportItem(coin, blacklistStatus, mintAuthorityReviewed));
+  items.push(buildFreezePassportItem(coin, blacklistStatus));
 
   // Peg track record — the passport-stamp analogue. Counts are public incident
   // projections; the history surface exposes their constituent crossings.

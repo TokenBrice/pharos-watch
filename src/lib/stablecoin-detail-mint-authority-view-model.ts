@@ -4,14 +4,16 @@ import type {
 } from "@shared/types/stablecoin-client-meta";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
   type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
+import { buildMintAuthorityVerdict, formatMintTimelockDelay } from "@/lib/mint-authority-verdict";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
@@ -45,6 +47,8 @@ export interface MintAuthorityProcessMetricViewModel {
 export interface MintAuthorityDetailControlViewModel {
   key: string;
   label: string;
+  /** Raw bounded `role` key ("minter-admin", "timelock", …) for role-first rail labels. */
+  roleKey: string;
   roleLabel: string;
   /** Raw bounded key ("multisig", "safe", "eoa", …) for glyph dispatch. */
   authorityTypeKey: string;
@@ -101,6 +105,13 @@ export interface MintAuthorityDetailScoreViewModel {
   caps: MintAuthorityDetailScoreCapViewModel[];
 }
 
+/** Parent whose mint authority governs a wrapper's or variant's underlying supply. */
+export interface MintAuthorityInheritanceViewModel {
+  symbol: string;
+  /** The parent's Mint Authority module. */
+  href: string;
+}
+
 export interface MintAuthorityDetailViewModel {
   status: MintAuthorityDetailStatus;
   reviewLabel: string;
@@ -111,8 +122,15 @@ export interface MintAuthorityDetailViewModel {
   authorityPostureTone: MintAuthorityPostureTone;
   confidenceLabel: string;
   confidenceVerified: boolean;
+  /**
+   * Summary-layer verdict (≤25 words, no raw identifiers): the authored
+   * `headline` when present, otherwise generated from structured fields.
+   * Null when no review exists.
+   */
+  verdict: string | null;
+  /** Authored reviewer narrative; folded behind "Review notes". */
   summary: string;
-  inheritedFrom: string | null;
+  inheritedFrom: MintAuthorityInheritanceViewModel | null;
   controls: MintAuthorityDetailControlViewModel[];
   totalControlCount?: number;
   controlCensusUrl?: string;
@@ -122,7 +140,6 @@ export interface MintAuthorityDetailViewModel {
   mintIncidents: MintAuthorityDetailIncidentViewModel[];
   sourceFreeRationale: string | null;
   unresolvedQuestions: string[];
-  processEvidenceAvailable: boolean;
   processDiagnostics: MintAuthorityProcessDiagnosticViewModel[];
   processMetrics: MintAuthorityProcessMetricViewModel[];
 }
@@ -136,6 +153,7 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   authorityPostureTone: "neutral",
   confidenceLabel: "Not reviewed",
   confidenceVerified: false,
+  verdict: null,
   summary:
     "Pharos has not published a mint authority review for this stablecoin yet. Unknown does not mean no privileged mint authority.",
   inheritedFrom: null,
@@ -146,7 +164,6 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   mintIncidents: [],
   sourceFreeRationale: null,
   unresolvedQuestions: [],
-  processEvidenceAvailable: false,
   processDiagnostics: [],
   processMetrics: [],
 };
@@ -294,13 +311,7 @@ function formatThreshold(threshold: number | null, signerCount: number | null): 
 
 function formatTimelock(seconds: number | null): string | null {
   if (seconds == null || seconds < 0) return null;
-  if (seconds === 0) return "No timelock";
-  const days = seconds / DAY_SECONDS;
-  if (Number.isInteger(days) && days >= 1) return `${days}d timelock`;
-  const hours = seconds / 3600;
-  if (Number.isInteger(hours) && hours >= 1) return `${hours}h timelock`;
-  const minutes = Math.round(seconds / 60);
-  return `${minutes}m timelock`;
+  return seconds === 0 ? "No timelock" : `${formatMintTimelockDelay(seconds)} timelock`;
 }
 
 function postureToneFrom(value: string): MintAuthorityPostureTone {
@@ -392,6 +403,7 @@ function buildMintAuthorityControlViewModel(
   return {
     key: `${label}:${chain ?? "no-chain"}:${address ?? index}`,
     label,
+    roleKey: control.role,
     roleLabel: labelFromMap(control.role, CONTROL_ROLE_LABELS),
     authorityTypeKey: control.authorityType,
     authorityTypeLabel,
@@ -474,9 +486,8 @@ export function buildMintAuthorityDetailViewModel(
           "operational-decision-rule-inadmissible", "restructure-reachable"].includes(diagnostic.code)
           ? "Failed gate" : "Missing evidence",
   }));
-  const processEvidenceAvailable = summary != null;
   if (!candidate) return {
-    ...NOT_REVIEWED_MINT_AUTHORITY, processEvidenceAvailable, processDiagnostics: diagnostics,
+    ...NOT_REVIEWED_MINT_AUTHORITY, processDiagnostics: diagnostics,
     processMetrics: projectProcessMetrics(summary),
   };
 
@@ -497,10 +508,15 @@ export function buildMintAuthorityDetailViewModel(
       processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.includes(ref)),
     };
   });
-  const score = buildMintAuthorityScoreViewModel(
-    resolveMintAuthorityScoreDisplay(published?.mint),
-    published?.caps ?? [],
-  );
+  const scoreDisplay = resolveMintAuthorityScoreDisplay(published?.mint);
+  const score = buildMintAuthorityScoreViewModel(scoreDisplay, published?.caps ?? []);
+  const parentId = candidate.inheritedFrom ?? null;
+  const inheritedFrom = parentId
+    ? {
+        symbol: CLIENT_TRACKED_META_BY_ID.get(parentId)?.symbol ?? parentId,
+        href: buildStablecoinUrl(parentId, "#mint-authority"),
+      }
+    : null;
 
   return {
     status: "reviewed",
@@ -511,14 +527,22 @@ export function buildMintAuthorityDetailViewModel(
     authorityPostureTone: postureToneFrom(candidate.authorityPosture),
     confidenceLabel: labelFromMap(candidate.confidence, RESEARCH_REVIEW_CONFIDENCE_LABELS),
     confidenceVerified: candidate.confidence === "verified",
+    verdict: candidate.headline ?? buildMintAuthorityVerdict({
+      symbol: coin.symbol,
+      bandLabel: scoreDisplay.bandKey === "nr" ? null : scoreDisplay.bandLabel,
+      mintPath: candidate.mintPath,
+      authorityPosture: candidate.authorityPosture,
+      controls,
+      controlsTruncated: totalControlCount > controls.length,
+      parentSymbol: inheritedFrom?.symbol ?? null,
+    }),
     summary: candidate.summary,
-    inheritedFrom: candidate.inheritedFrom ?? null,
+    inheritedFrom,
     controls: controlViewModels,
     ...(totalControlCount > controlViewModels.length ? {
       totalControlCount,
       controlCensusUrl: candidate.controlCensusUrl,
     } : {}),
-    processEvidenceAvailable,
     processMetrics: projectProcessMetrics(summary),
     processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.some((ref) =>
       ref === null || !matchedControlRefs.has(ref))),

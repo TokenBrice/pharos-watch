@@ -14,7 +14,7 @@ const GRADE_LEGEND_ITEMS = [
   { label: "Grade F", color: GRADE_RADAR_COLORS.F },
 ];
 
-export function ContagionGraphLegend() {
+export function ContagionGraphLegend({ deferHelp = false }: { deferHelp?: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
       {GRADE_LEGEND_ITEMS.map(({ label, color }) => (
@@ -38,8 +38,10 @@ export function ContagionGraphLegend() {
           {DEPENDENCY_TYPE_PRESENTATION[type].label}
         </span>
       ))}
-      <span className="w-full text-[10px] text-muted-foreground">Arrows point to the asset a coin depends on</span>
-      <span className="w-full text-[10px] text-muted-foreground">Exposure halo: linked coin. Hatched halo: unknown supply.</span>
+      {!deferHelp ? <>
+        <span className="w-full text-[10px] text-muted-foreground">Arrows point to the asset a coin depends on</span>
+        <span className="w-full text-[10px] text-muted-foreground">Exposure halo: linked coin. Hatched halo: unknown supply.</span>
+      </> : null}
     </div>
   );
 }

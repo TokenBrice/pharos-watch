@@ -7,23 +7,23 @@ import type {
   ReserveSyncStateView,
   ReserveDisplayBadgeView,
 } from "@shared/types";
-import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   buildReserveFetchNotice,
   buildReserveFootnoteModel,
   buildReserveCompositionNote,
   buildReserveProvenanceNotice,
-  buildReserveSyncNotice,
+  buildReserveFeedStatus,
+  buildReserveSourceChip,
+  liveCompositionDiffers,
+  reserveSliceLabel,
+  type ReserveCompositionSlice,
   formatReserveSnapshotLabel,
 } from "../reserve-presentation";
 
-// Reserve notices carry the shared severity tones (WS8.4); the provenance
-// notice already used the house neutral spelling, and the fetch notices were
-// migrated onto it from a one-off `bg-muted/40`.
-const AMBER = SEVERITY_TONE_CLASS.watch.pill;
-const NEUTRAL = SEVERITY_TONE_CLASS.neutral.pill;
-const NEUTRAL_PROVENANCE = SEVERITY_TONE_CLASS.neutral.pill;
-const DESTRUCTIVE = "border-destructive/50 bg-destructive/10 text-destructive";
+// Notices carry only a tone: neutral is informational, watch is an active
+// (amber) condition. Nothing in the reserve module is red.
+const AMBER = "watch";
+const NEUTRAL = "neutral";
 
 function makeReserves(overrides: Partial<ReserveResult> & { mode: ReservePresentationMode }): ReserveResult {
   return {
@@ -50,75 +50,75 @@ describe("buildReserveFetchNotice", () => {
   it("live-stale → amber refresh-delayed tone", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "live-stale" }));
     expect(notice.title).toBe("Live reserve refresh delayed");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("live → amber refresh-delayed tone", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "live" }));
     expect(notice.title).toBe("Live reserve refresh delayed");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("curated-fallback → amber, curated baseline message", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "curated-fallback" }));
     expect(notice.title).toBe("Live reserve feed unavailable");
     expect(notice.message).toContain("curated reserve baseline");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("template-fallback → amber, estimated template message", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "template-fallback" }));
     expect(notice.title).toBe("Live reserve feed unavailable");
     expect(notice.message).toContain("estimated reserve template");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("503 ApiFetchError with no fallback → neutral 'not yet available' (not amber)", () => {
     const notice = buildReserveFetchNotice(new ApiFetchError("/r", 503, null), null);
     expect(notice.title).toBe("Live reserve data not yet available");
     expect(notice.message).toContain("check back shortly");
-    expect(notice.toneClass).toBe(NEUTRAL);
+    expect(notice.tone).toBe(NEUTRAL);
   });
 
   it("503 ApiFetchError with fallback view → neutral, fallback message", () => {
     const notice = buildReserveFetchNotice(new ApiFetchError("/r", 503, null), makeReserves({ mode: "unavailable" }));
     expect(notice.title).toBe("Live reserve data not yet available");
     expect(notice.message).toContain("current fallback view");
-    expect(notice.toneClass).toBe(NEUTRAL);
+    expect(notice.tone).toBe(NEUTRAL);
   });
 
-  it("network error with no fallback → destructive connection issue", () => {
+  it("network error with no fallback → connection issue asking the reader to retry", () => {
     const notice = buildReserveFetchNotice(networkError(), null);
     expect(notice.title).toBe("Connection issue");
     expect(notice.message).toContain("check your connection");
-    expect(notice.toneClass).toBe(DESTRUCTIVE);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("network error with fallback view → amber connection issue", () => {
     const notice = buildReserveFetchNotice(networkError(), makeReserves({ mode: "unavailable" }));
     expect(notice.title).toBe("Connection issue");
     expect(notice.message).toContain("current fallback view");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
-  it("generic error with no fallback → destructive, surfaces error message", () => {
+  it("generic error with no fallback → generic message, never the raw error text", () => {
     const notice = buildReserveFetchNotice(new Error("upstream exploded"), null);
     expect(notice.title).toBe("Live reserve feed unavailable");
-    expect(notice.message).toBe("upstream exploded");
-    expect(notice.toneClass).toBe(DESTRUCTIVE);
+    expect(notice.message).toBe("Unable to load reserve composition right now.");
+    expect(notice.tone).toBe(AMBER);
   });
 
-  it("generic non-Error with no fallback → destructive, generic message", () => {
+  it("generic non-Error with no fallback → generic message", () => {
     const notice = buildReserveFetchNotice("string failure", null);
     expect(notice.message).toBe("Unable to load reserve composition right now.");
-    expect(notice.toneClass).toBe(DESTRUCTIVE);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("generic error with fallback view → amber, fallback message", () => {
     const notice = buildReserveFetchNotice(new Error("upstream exploded"), makeReserves({ mode: "unavailable" }));
     expect(notice.title).toBe("Live reserve feed unavailable");
     expect(notice.message).toContain("current fallback view");
-    expect(notice.toneClass).toBe(AMBER);
+    expect(notice.tone).toBe(AMBER);
   });
 
   it("mode precedence: live-stale wins even over a 503 error", () => {
@@ -261,7 +261,7 @@ describe("buildReserveProvenanceNotice", () => {
       }),
     );
     expect(notice?.title).toBe("Curated-validated reserve baseline");
-    expect(notice?.toneClass).toBe(NEUTRAL_PROVENANCE);
+    expect(notice?.tone).toBe("neutral");
   });
 
   it("proof badge outranks an independent provenance class", () => {
@@ -310,7 +310,7 @@ describe("buildReserveProvenanceNotice", () => {
   });
 });
 
-describe("buildReserveSyncNotice", () => {
+describe("buildReserveFeedStatus", () => {
   function makeSync(overrides: Partial<ReserveSyncStateView> = {}): ReserveSyncStateView {
     return {
       enabled: true,
@@ -322,58 +322,108 @@ describe("buildReserveSyncNotice", () => {
   }
 
   it("returns null for healthy ok sync without uncertain write", () => {
-    expect(buildReserveSyncNotice(makeReserves({ mode: "live", sync: makeSync() }))).toBeNull();
-    expect(buildReserveSyncNotice(makeReserves({ mode: "live" }))).toBeNull();
+    expect(buildReserveFeedStatus(makeReserves({ mode: "live", sync: makeSync() }), null)).toBeNull();
+    expect(buildReserveFeedStatus(makeReserves({ mode: "live" }), null)).toBeNull();
+    expect(buildReserveFeedStatus(null, null)).toBeNull();
   });
 
-  it("ok status with uncertain write → degraded notice (partial data)", () => {
-    const notice = buildReserveSyncNotice(
+  it("ok status with uncertain write → degraded chip (partial data)", () => {
+    const status = buildReserveFeedStatus(
       makeReserves({ mode: "live", sync: makeSync({ status: "ok", uncertainWrite: true }) }),
+      null,
     );
-    expect(notice?.title).toBe("Live reserve sync degraded");
-    expect(notice?.rows).toContain("Status: ok");
-    expect(notice?.rows).toContain("Latest write state uncertain");
-    expect(notice?.toneClass).toBe(AMBER);
+    expect(status?.label).toBe("Reserve sync degraded · uncertain-write");
+    expect(status?.rows).toContain("Sync status: ok");
+    expect(status?.rows).toContain("Latest write state uncertain");
+    expect(status?.tone).toBe("watch");
   });
 
-  it("error status with full failure detail → destructive notice (full data)", () => {
-    const notice = buildReserveSyncNotice(
+  it("error status with full failure detail → amber chip carrying the failure category", () => {
+    const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live",
         sync: makeSync({ status: "error", failureCategory: "upstream", lastError: "503 from adapter", uncertainWrite: true }),
       }),
+      null,
     );
-    expect(notice?.title).toBe("Live reserve sync error");
-    expect(notice?.rows).toEqual([
-      "Status: error",
-      "Failure category: upstream",
+    expect(status?.label).toBe("Reserve sync error · upstream");
+    expect(status?.reason).toBe("upstream");
+    expect(status?.rows).toEqual([
+      "Reason: upstream",
+      "Sync status: error",
       "Last error: 503 from adapter",
       "Latest write state uncertain",
     ]);
-    expect(notice?.toneClass).toBe(DESTRUCTIVE);
+    expect(status?.tone).toBe("watch");
   });
 
-  it("degraded status → amber degraded notice", () => {
-    const notice = buildReserveSyncNotice(makeReserves({
+  it("degraded status → amber degraded chip", () => {
+    const status = buildReserveFeedStatus(makeReserves({
       mode: "curated-fallback",
       sync: makeSync({
         status: "degraded",
         warnings: ["Upstream reserve source timestamp exceeds the accepted age"],
       }),
-    }));
-    expect(notice?.title).toBe("Live reserve sync degraded");
-    expect(notice?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
-    expect(notice?.toneClass).toBe(AMBER);
+    }), null);
+    expect(status?.label).toBe("Reserve sync degraded · warnings");
+    expect(status?.rows).toContain("Upstream reserve source timestamp exceeds the accepted age");
+    expect(status?.tone).toBe("watch");
   });
 
-  it("never-attempted live adapter → neutral pending notice, not degraded", () => {
+  it("a validation error that only reports source age becomes a stale chip naming date and budget in days", () => {
+    const status = buildReserveFeedStatus(
+      makeReserves({
+        mode: "live-stale",
+        liveAt: Date.parse("2026-10-04T12:00:00Z") / 1000,
+        metadata: { sourceTimestamp: Date.parse("2026-09-24T00:00:00Z") / 1000 },
+        sync: makeSync({
+          status: "error",
+          stale: true,
+          failureCategory: "validation",
+          lastError: "Validation failed: Redemption source timestamp is 1066290s old for dynamic-mix/independent (max 604800s)",
+          warnings: ["Redemption source timestamp is 1066290s old for dynamic-mix/independent (max 604800s)"],
+        }),
+      }),
+      null,
+    );
+    expect(status?.label).toBe("Reserve feed stale · last report 24 Sep · 7-day budget");
+    expect(status?.reason).toBe("source-age");
+    expect(status?.tone).toBe("watch");
+    const detail = status?.rows.join(" ") ?? "";
+    expect(detail).toContain("Source age: 12.3 days (budget 7 days)");
+    expect(detail).not.toMatch(/1066290|604800|Validation failed/);
+  });
+
+  it("prefers the published freshness verdict over parsing the warning text", () => {
+    const status = buildReserveFeedStatus(
+      makeReserves({
+        mode: "live-stale",
+        sync: makeSync({
+          status: "degraded",
+          stale: true,
+          warnings: ["Upstream reserve source timestamp is 700000s old for static-validated (max 604800s)"],
+          freshness: {
+            stale: true, staleReasons: ["source-age"], assessedAt: 1_790_000_000, fetchedAt: 1_789_900_000,
+            attemptId: null, fetchAgeSec: 100_000, fetchBudgetSec: 172_800,
+            sourceTimestamp: Date.parse("2026-09-20T00:00:00Z") / 1000, sourceAgeSec: 691_200,
+            sourceAgeBudgetSec: 345_600, sourceAgeBudgetCap: "adapter",
+          },
+        }),
+      }),
+      null,
+    );
+    expect(status?.label).toBe("Reserve feed stale · last report 20 Sep · 4-day budget");
+  });
+
+  it("never-attempted live adapter → neutral pending chip, not degraded", () => {
     const pending = makeReserves({
       mode: "curated-fallback",
       sync: makeSync({ status: "skipped", bootstrap: true }),
     });
-    const notice = buildReserveSyncNotice(pending);
-    expect(notice?.title).toBe("Live reserve sync pending");
-    expect(notice?.rows).toEqual(["The first scheduled live reserve sync has not run yet."]);
+    const status = buildReserveFeedStatus(pending, null);
+    expect(status?.label).toBe("Live sync pending first run");
+    expect(status?.tone).toBe("neutral");
+    expect(status?.reason).toBe("bootstrap-pending");
     expect(buildReserveFootnoteModel(pending, true, "rwa backed")?.text)
       .toBe("Live sync pending first run; showing curated reserve baseline");
   });
@@ -388,9 +438,72 @@ describe("buildReserveSyncNotice", () => {
       mode: "curated-fallback",
       sync: makeSync({ status: "skipped", bootstrap: true, ...evidence }),
     });
-    expect(buildReserveSyncNotice(reserves)?.title).toBe("Live reserve sync degraded");
+    expect(buildReserveFeedStatus(reserves, null)?.label).toContain("Reserve sync degraded");
     expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
       .toBe("Live sync unavailable; showing curated reserve baseline");
+  });
+
+  it("a failed fetch outranks the sync state and stays retryable with a machine-readable reason", () => {
+    const status = buildReserveFeedStatus(
+      makeReserves({ mode: "live", sync: makeSync({ status: "degraded", warnings: ["Adapter returned a partial slice set"] }) }),
+      new Error("boom"),
+    );
+    expect(status?.label).toBe("Live reserve refresh delayed");
+    expect(status?.reason).toBe("fetch-failed");
+    expect(status?.retryable).toBe(true);
+    expect(status?.rows).toContain("Adapter returned a partial slice set");
+    expect(buildReserveFeedStatus(null, new ApiFetchError("/r", 503, null))?.reason).toBe("api-unavailable");
+    expect(buildReserveFeedStatus(null, networkError())?.reason).toBe("network");
+  });
+});
+
+describe("reserve source chip", () => {
+  it("uses the adapter badge label, upgrading a weak live probe to Live proof", () => {
+    const badge: ReserveDisplayBadgeView = { kind: "proof", label: "Proof" };
+    expect(buildReserveSourceChip(makeReserves({
+      mode: "live", displayBadge: badge, provenance: makeProvenance({ evidenceClass: "independent" }),
+    }))?.label).toBe("Proof");
+    expect(buildReserveSourceChip(makeReserves({
+      mode: "live", displayBadge: badge, provenance: makeProvenance({ evidenceClass: "weak-live-probe" }),
+    }))?.label).toBe("Live proof");
+    expect(buildReserveSourceChip(makeReserves({ mode: "curated-fallback" }))).toBeNull();
+  });
+
+  it("carries the dated-evidence sentence as the tooltip, not as page copy", () => {
+    const chip = buildReserveSourceChip(makeReserves({
+      mode: "live", displayBadge: { kind: "proof", label: "Attestation" }, provenance: makeProvenance(),
+    }));
+    expect(chip?.label).toBe("Attestation");
+    expect(chip?.tooltip).toContain("dated attestation, proof, or liveness check");
+  });
+});
+
+describe("reserve composition slices", () => {
+  it("keeps contract identifiers off the visual, preferring the reviewed obligor", () => {
+    expect(reserveSliceLabel("GhoDirectFacilitator GSM Arbitrum", "Aave DAO Arbitrum GHO Reserve and remote GSM"))
+      .toBe("Aave DAO Arbitrum GHO Reserve and remote GSM");
+    expect(reserveSliceLabel("CoreGhoDirectMinter", null)).toBe("Core Gho Direct Minter");
+    expect(reserveSliceLabel("stataUSDT GSM", "Tether and Aave GHO Stability Module")).toBe("stataUSDT GSM");
+  });
+
+  it("leaves human names alone, including parenthetical expansions", () => {
+    expect(reserveSliceLabel("cbBTC (Coinbase Wrapped BTC)", "Coinbase")).toBe("cbBTC (Coinbase Wrapped BTC)");
+    expect(reserveSliceLabel("U.S. Treasury bills", "United States Treasury")).toBe("U.S. Treasury bills");
+    expect(reserveSliceLabel("USDe staking vault shares", "Ethena")).toBe("USDe staking vault shares");
+  });
+
+  it("treats the live feed as the same composition only when both share and identity match per rank", () => {
+    const slice = (label: string, pct: number): ReserveCompositionSlice => ({ key: label + pct, label, pct, risk: "low", detail: null });
+    expect(liveCompositionDiffers([slice("T-bills", 60), slice("Cash", 40)], [slice("T-bills", 59.7), slice("Cash", 40.3)])).toBe(false);
+    expect(liveCompositionDiffers([slice("T-bills", 60), slice("Cash", 40)], [slice("T-bills", 67.6), slice("Cash", 32.4)])).toBe(true);
+    expect(liveCompositionDiffers([slice("ETH", 100)], [slice("T-bills", 60), slice("Cash", 40)])).toBe(true);
+    // A parenthetical expansion does not change identity.
+    expect(liveCompositionDiffers([slice("cbBTC (Coinbase Wrapped BTC)", 100)], [slice("cbBTC", 100)])).toBe(false);
+  });
+
+  it("reports 100% ETH reviewed against 100% USDC live as different despite identical shares", () => {
+    const slice = (label: string): ReserveCompositionSlice => ({ key: label, label, pct: 100, risk: "low", detail: null });
+    expect(liveCompositionDiffers([slice("USDC")], [slice("ETH")])).toBe(true);
   });
 });
 
@@ -416,9 +529,9 @@ describe("dated reserve disclosures", () => {
     const totals = formatReserveSnapshotLabel(reserves);
     expect(totals).toContain(`Source as of Sep 26, 2026${stale} · Checked Sep 27`);
     expect(totals).not.toContain("2026-06-30");
-    const ageNotice = buildReserveSyncNotice(reserves);
-    expect(ageNotice?.rows).toContain(totals);
-    expect(ageNotice?.rows.join(" ")).not.toContain("2026-06-30");
+    const ageStatus = buildReserveFeedStatus(reserves, null);
+    expect(ageStatus?.rows).toContain(totals);
+    expect(ageStatus?.rows.join(" ")).not.toContain("2026-06-30");
   });
 
   it.each(["live", "live-stale"] as const)("withholds an undated XAUT reviewed-config composition clock in %s mode", (mode) => {
@@ -474,11 +587,12 @@ describe("dated reserve disclosures", () => {
     });
     const footnote = buildReserveFootnoteModel(reserves, true, "rwa backed");
     expect(footnote?.text).toContain("Report as of 2026-06-30 · Stale · Checked");
-    const notice = buildReserveSyncNotice(reserves);
-    expect(notice?.title).toBe("Reserve evidence is out of date");
-    expect(notice?.rows.join(" ")).not.toContain("5775332");
-    expect(buildReserveSyncNotice({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } })?.title)
-      .toBe("Live reserve sync error");
+    const status = buildReserveFeedStatus(reserves, null);
+    expect(status?.label).toBe("Reserve feed stale · last report 30 Jun · 46.3-day budget");
+    expect(status?.reason).toBe("source-age");
+    expect(status?.rows.join(" ")).not.toContain("5775332");
+    expect(buildReserveFeedStatus({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } }, null)?.label)
+      .toBe("Reserve sync error · unclassified");
   });
 
   it("prefers the report date over the source timestamp", () => {
@@ -515,7 +629,7 @@ describe("dated reserve disclosures", () => {
   });
 
   it("keeps operational diagnostics when age is not the only warning", () => {
-    const notice = buildReserveSyncNotice(
+    const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
         sync: {
@@ -526,17 +640,18 @@ describe("dated reserve disclosures", () => {
           ],
         },
       }),
+      null,
     );
-    expect(notice?.title).toBe("Live reserve sync degraded");
-    expect(notice?.rows).toContain("Adapter returned a partial slice set");
-    expect(notice?.rows).toContain("Status: degraded");
+    expect(status?.label).toBe("Reserve sync degraded · warnings");
+    expect(status?.rows).toContain("Adapter returned a partial slice set");
+    expect(status?.rows).toContain("Sync status: degraded");
   });
 
   it.each([
     ["an uncertain write", { uncertainWrite: true } as const],
     ["a recorded last error", { lastError: "HTTP 503" } as const],
-  ])("stays a sync-degraded notice when a stale-age warning arrives with %s", (_label, extra) => {
-    const notice = buildReserveSyncNotice(
+  ])("stays a sync-degraded chip when a stale-age warning arrives with %s", (_label, extra) => {
+    const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
         sync: {
@@ -545,8 +660,12 @@ describe("dated reserve disclosures", () => {
           ...extra,
         },
       }),
+      null,
     );
-    expect(notice?.title).toBe("Live reserve sync degraded");
-    expect(notice?.rows.join(" ")).toContain("5775332");
+    expect(status?.reason).not.toBe("source-age");
+    expect(status?.label).toContain("Reserve sync degraded");
+    // Ages in a diagnostic read in days, never raw seconds.
+    expect(status?.rows.join(" ")).toContain("66.8 days old");
+    expect(status?.rows.join(" ")).not.toContain("5775332");
   });
 });

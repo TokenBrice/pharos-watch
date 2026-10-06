@@ -49,7 +49,7 @@ describe("AccessPosturePanel", () => {
 
     expect(screen.getByText("Transfer restriction")).toBeTruthy();
     expect(screen.getByText("Restrictable")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /How this was verified/ })).toBeNull();
+    expect(screen.queryByText(/How this was verified/)).toBeNull();
   });
 
   it("renders nothing without scored rows", () => {
@@ -60,7 +60,7 @@ describe("AccessPosturePanel", () => {
   it("folds the per-deployment citations behind the standard Sources disclosure", () => {
     render(<AccessPosturePanel rows={rows} review={review} compact />);
 
-    fireEvent.click(screen.getByRole("button", { name: /How this was verified · 2 deployments/ }));
+    expect(screen.getByText(/How this was verified · 2 deployments/).closest("details")?.hasAttribute("open")).toBe(false);
     expect(screen.getByText(/blocklist guarded by the issuer multisig/)).toBeTruthy();
     // Reviewed date now lives in the shared evidence footer, not a hand-rolled
     // mono micro-line (WS8.13).

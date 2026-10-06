@@ -78,11 +78,14 @@ describe("OracleLiquidationSection", () => {
     expect(html).not.toContain("Collateral pricing");
   });
 
-  it("cuts long profile summaries to a lead behind Read more", () => {
+  it("keeps the reviewer summary and branch prose behind Review notes", () => {
     const longSummary = `${"External feeds with response validation and per-branch shutdown. ".repeat(12)}TAIL-MARKER`;
     const html = renderToStaticMarkup(<OracleLiquidationSection summary={{ ...SUMMARY, summary: longSummary }} />);
-    expect(html).toContain("Read more");
-    expect(html).not.toContain("TAIL-MARKER"); // collapsed lead only
+    expect(html).toContain("Review notes");
+    expect(html.indexOf("Review notes")).toBeLessThan(html.indexOf("TAIL-MARKER"));
+    expect(html).not.toContain("Read more");
+    // Branch prose is not drawn in the summary layer.
+    expect(html.indexOf("WETH collateral uses external feeds")).toBeGreaterThan(html.indexOf("Review notes"));
   });
 
   it("sorts branches by debt share with unmeasured branches last, preserving curated order on ties", () => {
@@ -137,7 +140,7 @@ describe("OracleLiquidationSection", () => {
     expect(html).toContain("Liquidation delay None");
   });
 
-  it("caps the inline branch list at 6, sorted by debt share, with the rest in the disclosure", () => {
+  it("caps the inline branch bars at 3, sorted by debt share, with the rest in the disclosure", () => {
     const manyBranches: OracleRiskClientSummary["branches"] = Array.from({ length: 8 }, (_, index) => ({
       id: `branch-${index}`,
       label: `Branch ${index}`,
@@ -158,14 +161,21 @@ describe("OracleLiquidationSection", () => {
     const detailsIndex = html.indexOf("<details");
     expect(detailsIndex).toBeGreaterThan(-1);
     const beforeDetails = html.slice(0, detailsIndex);
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < 3; index++) {
       expect(beforeDetails).toContain(`Branch ${index}`);
     }
-    expect(beforeDetails).not.toContain("Branch 6");
+    expect(beforeDetails).not.toContain("Branch 3");
     expect(beforeDetails).not.toContain("Branch 7");
-    expect(html).toContain("+ 2 more branches in the breakdown below");
-    // The two overflow branches still render (inside the disclosure).
-    expect(html).toContain("Branch 6");
+    expect(html).toContain("+ 5 more branches in the breakdown below");
+    // The overflow branches still render (inside the disclosure).
+    expect(html).toContain("Branch 3");
     expect(html).toContain("Branch 7");
+  });
+
+  it("rounds debt shares for display", () => {
+    const html = renderToStaticMarkup(
+      <OracleLiquidationSection summary={{ ...SUMMARY, branches: [{ ...SUMMARY.branches[0]!, debtSharePct: 33.333333333 }] }} />,
+    );
+    expect(html).toContain("33.33% of debt");
   });
 });

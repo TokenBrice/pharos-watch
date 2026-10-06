@@ -76,7 +76,7 @@
   "governanceQuality": "dao-governance",
   "notices": [
     {
-      "type": "warning",
+      "type": "info",
       "title": "Single-name equity concentration (BOSS)",
       "message": "BOSS (Boss Info AG, a Swiss-listed IT/consulting equity) is currently the largest collateral line in the Frankencoin protocol at roughly one-third of total backing. Single-name corporate equity introduces issuer- and liquidity-specific risk distinct from the protocol's BTC, ETH, and gold collateral; positions are managed under Frankencoin's veto governance and remain subject to challenge auctions."
     }

@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import { MINT_AUTHORITY_TONE_NOTE } from "@/lib/mint-authority-display";
 import { cn } from "@/lib/utils";
 
 /**
  * The Mint Authority Score pill — the published V9 mint component score in its
- * band colour, with the review-bucket sentence in the tooltip.
+ * band colour, with the review-bucket sentence and the tone-follows-band note
+ * in the tooltip.
  *
  * Sibling of `SafetyGradeBadge`: one pill + tooltip grammar shared by the
  * screener table (desktop cell and mobile card) and the homepage stablecoin
@@ -31,7 +33,7 @@ export function MintAuthorityScoreBadge({
     <Badge
       variant="outline"
       className={cn("px-2 py-0.5 pharos-numeric text-xs", badgeClassName, className)}
-      title={`${detail} Review bucket: ${reviewBucketLabel}.`}
+      title={`${detail} Review bucket: ${reviewBucketLabel}. ${MINT_AUTHORITY_TONE_NOTE}`}
     >
       {scoreLabel}
     </Badge>

@@ -277,7 +277,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           />
           <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-11 min-h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:h-5 md:min-h-0 md:w-5">
             <Table2 className="h-3 w-3" aria-hidden="true" />
-            <span className="sr-only">Show inputs</span>
+            <span className="sr-only">Toggle score inputs</span>
           </ShowYourWorkToggle>
         </div>
       </CardHeader>
@@ -310,12 +310,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             const isInactive = Math.round(signal.value) === 0;
             return (
               <div key={key} className={cn("space-y-2", isInactive && "opacity-60")}>
-                <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
-                  <span className="min-w-0 truncate" title={meta.name}>
+                {/* Below sm the label and its metric restack instead of
+                    truncating the label ("POOL BALANCE DRIFT · 52 / 100"). */}
+                <div className="flex flex-col gap-0.5 font-mono text-[11px] uppercase tracking-[0.08em] sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                  <span className="min-w-0 break-words">
                     <span className="text-foreground">{meta.name}</span>
                     <span className="text-muted-foreground"> · {Math.round(signal.value)} / 100</span>
                   </span>
-                  <span className="shrink-0 whitespace-nowrap text-muted-foreground" title={meta.metricLabel}>
+                  <span className="text-muted-foreground sm:shrink-0 sm:whitespace-nowrap" title={meta.metricLabel}>
                     {meta.metricLabel} ·{" "}
                     <span className="text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
                   </span>

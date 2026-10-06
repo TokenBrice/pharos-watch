@@ -1,6 +1,11 @@
 import { Award, ShieldCheck } from "lucide-react";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
-import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
+
+const WRAPPER_TREATMENT_LABELS: Record<string, string> = {
+  "local-facts": "after discounting the wrapper's own reviewed risks",
+  "fallback-discount": "after a standard discount because the wrapper's own risks are not fully reviewed",
+  "documented-risk-transfer": "after crediting documented risk transfer",
+};
 
 export function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   const adjustment = card.scoreTrace.scoreAdjustments[0];
@@ -22,29 +27,30 @@ export function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   );
 }
 
+/**
+ * Renders only when a cap determined the published score (#10). A wrapper's
+ * parent limit binds through the `parent` cap; a non-binding limit (sUSDe
+ * 59 under a 60 limit) is construction detail, not a callout.
+ */
 export function CapSection({ card }: { card: SafetyScoreV9CurrentCard }) {
   const cap = card.bindingCap;
-  const wrapperLimit = card.scoreTrace.wrapperParentLimit;
-  if (!cap && !wrapperLimit) return null;
+  if (!cap) return null;
+  const wrapperLimit = cap.kind === "parent" ? card.scoreTrace.wrapperParentLimit : null;
   return (
     <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-cap`}>
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-4 w-4 text-amber-700 dark:text-amber-400" aria-hidden="true" />
         <h3 id={`${card.id}-v9-cap`} className="text-sm font-semibold">
-          {cap ? "Binding cap" : "Wrapper parent limit"}
+          {wrapperLimit ? "Capped by parent asset" : "Binding cap"}
         </h3>
       </div>
-      {cap ? (
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {cap.reason} Limit {cap.limit.toFixed(0)} / 100.
-        </p>
-      ) : null}
-      {wrapperLimit ? (
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Parent score {wrapperLimit.parentScore.toFixed(0)}; wrapper limit {wrapperLimit.limit.toFixed(0)} / 100
-          {" "}using {humanizeSafetyScoreV9Value(wrapperLimit.treatment).toLowerCase()} treatment.
-        </p>
-      ) : null}
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        {wrapperLimit
+          ? `The parent asset scores ${wrapperLimit.parentScore.toFixed(0)}; this wrapper is limited to ${wrapperLimit.limit.toFixed(0)} / 100 ${
+              WRAPPER_TREATMENT_LABELS[wrapperLimit.treatment] ?? "after wrapper adjustments"
+            }.`
+          : `${cap.reason} Limit ${cap.limit.toFixed(0)} / 100.`}
+      </p>
     </section>
   );
 }

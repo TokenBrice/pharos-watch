@@ -19,7 +19,9 @@ export interface SpectrumBand {
  * - `range`: segments sized by real score cutoffs with a marker notched at
  *   the score — only for scores whose tones ARE range-derived (redemption).
  *
- * Inactive band labels hide below `sm`; the active label always shows.
+ * Phone widths cannot fit every label, so below `sm` the inactive labels hide
+ * (keeping their width) and the active label shows in full, free to run under
+ * its empty neighbours and anchored inward at either end of the track.
  */
 export function ScoreBandSpectrum({
   bands,
@@ -83,8 +85,14 @@ export function ScoreBandSpectrum({
             key={band.key}
             style={{ flexGrow: widths[index], flexBasis: 0 }}
             className={cn(
-              "min-w-0 truncate text-center text-[9px] font-medium uppercase leading-tight tracking-[0.08em]",
-              index === activeIndex ? band.textClass : "text-muted-foreground/60",
+              "min-w-0 text-[9px] font-medium uppercase leading-tight tracking-[0.08em] sm:text-center",
+              index === activeIndex
+                ? cn(
+                    "whitespace-nowrap sm:truncate",
+                    index === 0 ? "text-left" : index === bands.length - 1 ? "text-right" : "text-center",
+                    band.textClass,
+                  )
+                : "invisible truncate text-center text-muted-foreground/60 sm:visible",
             )}
           >
             {band.label}

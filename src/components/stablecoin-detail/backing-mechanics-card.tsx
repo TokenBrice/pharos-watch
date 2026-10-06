@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { CircleDashed, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismBackingMetric, MechanismBackingNote, MechanismBackingView } from "@/lib/mechanism-backing";
@@ -34,7 +33,7 @@ function formatMetric(metric: MechanismBackingMetric): string {
   return `${metric.value < 1 ? metric.value.toFixed(2) : metric.value.toFixed(1)}%`;
 }
 
-function NoteRow({ note, open }: { note: MechanismBackingNote; open: boolean }) {
+function NoteRow({ note }: { note: MechanismBackingNote }) {
   return (
     <li>
       <div className="flex items-baseline justify-between gap-2">
@@ -50,22 +49,6 @@ function NoteRow({ note, open }: { note: MechanismBackingNote; open: boolean }) 
           {STATE_LABELS[note.state]}
         </Badge>
       </div>
-      {open ? (
-        <>
-          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{note.rationale}</p>
-          {note.sourceUrl ? (
-            <a
-              href={note.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring mt-1 inline-flex items-center gap-1 rounded-sm text-[11px] text-frost-blue underline-offset-2 hover:underline"
-            >
-              <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-              Source
-            </a>
-          ) : null}
-        </>
-      ) : null}
     </li>
   );
 }
@@ -82,7 +65,6 @@ function NoteRow({ note, open }: { note: MechanismBackingNote; open: boolean }) 
  * metrics of its own beneath `CollateralizationCard`.
  */
 export function BackingMechanicsCard({ view, frameless }: { view: MechanismBackingView | null; frameless?: boolean }) {
-  const [open, setOpen] = useState(false);
   if (view === null) return null;
 
   const [headline, ...rest] = view.metrics;
@@ -141,14 +123,28 @@ export function BackingMechanicsCard({ view, frameless }: { view: MechanismBacki
             Reviewed gaps ({view.notes.length})
           </h3>
           <ul className="mt-2 space-y-2.5">
-            {view.notes.map((note) => <NoteRow key={note.key} note={note} open={open} />)}
+            {view.notes.map((note) => <NoteRow key={note.key} note={note} />)}
           </ul>
-          <InlineDisclosureToggle
-            open={open}
-            onToggle={() => setOpen((value) => !value)}
-            collapsedLabel="Why"
-            className="mt-2"
-          />
+          <ModuleDisclosure label="Review notes">
+            <ul className="space-y-2.5 pb-1 pt-1">
+              {view.notes.map((note) => (
+                <li key={note.key} className="text-[11px] leading-snug text-muted-foreground">
+                  <span className="font-medium text-foreground">{note.label}</span>: {note.rationale}
+                  {note.sourceUrl ? (
+                    <a
+                      href={note.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pharos-focus-ring ml-1.5 inline-flex items-center gap-1 rounded-sm underline underline-offset-2 hover:text-foreground"
+                    >
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      Source
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </ModuleDisclosure>
         </div>
       ) : null}
 

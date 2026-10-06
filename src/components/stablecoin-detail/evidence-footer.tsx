@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { ChevronDown, ExternalLink } from "lucide-react";
-import { MethodologyLinks } from "@/components/methodology-hint";
-import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
+import { MODULE_DISCLOSURE_SUMMARY_CLASS } from "@/components/stablecoin-detail/module-disclosure";
+import { useShowWorkMode } from "@/hooks/use-show-work-mode";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +16,47 @@ export interface EvidenceFooterSource {
 }
 
 /**
+ * Footer controls keep the 16 px text line but carry a >= 32 px hit area: the
+ * vertical padding is cancelled by an equal negative margin, so desktop density
+ * is unchanged while the tap target grows.
+ */
+const FOOTER_LINK_CLASS =
+  "pharos-focus-ring -my-2 inline-flex min-h-8 items-center rounded-sm hover:text-foreground hover:underline hover:underline-offset-4";
+const FOOTER_TOGGLE_CLASS = "pharos-focus-ring -my-2 inline-flex min-h-11 items-center gap-1 rounded-sm lg:min-h-8";
+
+/**
+ * The sitewide score-inputs switch, drawn as a disclosure: it folds the
+ * `ShowYourWorkPanel` rendered by the module above, so it carries the
+ * `ModuleDisclosure` summary grammar and `aria-expanded` rather than a bare
+ * link-styled toggle.
+ */
+function ScoreInputsDisclosure() {
+  const { enabled, toggle } = useShowWorkMode();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-expanded={enabled}
+      className={cn(MODULE_DISCLOSURE_SUMMARY_CLASS, "-my-2 min-h-11 text-xs lg:min-h-8")}
+    >
+      <span className="underline decoration-dashed underline-offset-2">Score inputs</span>
+      <ChevronDown
+        aria-hidden="true"
+        className={cn("h-3 w-3 shrink-0 transition-transform", enabled && "rotate-180")}
+      />
+    </button>
+  );
+}
+
+/**
  * The standard module footer: one line carrying the methodology links, the
  * folded "Sources (N)" affordance, and the right-aligned reviewed/updated
  * stamp. Sources stay collapsed by default at every breakpoint; the list is
  * kept in the DOM (`hidden`) so citations remain crawlable.
+ *
+ * The methodology version never prints in the footer: five modules with five
+ * different version strings read as noise. It lives in the "View methodology"
+ * link's tooltip instead.
  *
  * Supersedes ad-hoc always-expanded evidence lists on the stablecoin detail
  * page; `MethodologyCardActions` remains for cards without source lists
@@ -26,7 +64,6 @@ export interface EvidenceFooterSource {
  */
 export function EvidenceFooter({
   topic,
-  showVersion = true,
   showWorkToggle = false,
   sources,
   sourcesLabel = "Sources",
@@ -36,7 +73,6 @@ export function EvidenceFooter({
   className,
 }: {
   topic?: MethodologyContextKey;
-  showVersion?: boolean;
   showWorkToggle?: boolean;
   sources?: readonly EvidenceFooterSource[];
   sourcesLabel?: string;
@@ -55,15 +91,30 @@ export function EvidenceFooter({
   return (
     <div className={cn("border-t border-border/50 pt-3 text-xs text-muted-foreground", className)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {item ? <MethodologyLinks item={item} showVersion={showVersion} /> : null}
-        {showWorkToggle ? <ShowYourWorkToggle /> : null}
+        {item ? (
+          <>
+            <Link
+              href={item.methodologyPath}
+              title={item.versionLabel ? `Methodology ${item.versionLabel}` : undefined}
+              className={FOOTER_LINK_CLASS}
+            >
+              View methodology
+            </Link>
+            {item.changelogPath ? (
+              <Link href={item.changelogPath} className={FOOTER_LINK_CLASS}>
+                Version history &rarr;
+              </Link>
+            ) : null}
+          </>
+        ) : null}
+        {showWorkToggle ? <ScoreInputsDisclosure /> : null}
         {children}
         {hasSources ? (
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm lg:min-h-0"
+            className={FOOTER_TOGGLE_CLASS}
           >
             <span className="underline decoration-dashed underline-offset-2">{sourcesLabel}</span>
             <span aria-hidden="true" className="pharos-numeric">

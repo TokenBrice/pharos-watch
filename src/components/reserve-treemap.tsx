@@ -3,30 +3,32 @@
 import { useMemo } from "react";
 import { Treemap, Tooltip } from "recharts";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
 import {
   RESERVE_TREEMAP_INVERSE_LABEL_COLOR,
   RESERVE_TREEMAP_LABEL_COLOR,
   RISK_ACCENT_COLORS,
   RISK_COLORS,
 } from "@/lib/chart-colors";
-import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
+import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatDecimal } from "@shared/lib/format";
 
 interface ReserveTreemapProps {
-  reserves: ReserveSlice[];
-  badge?: ReserveDisplayBadgeView;
+  slices: readonly ReserveCompositionSlice[];
+  /** What the figure shows, for its accessible name: "Reviewed reserve slices". */
+  subject: string;
 }
 
-const RESERVE_BADGE_CLASSNAMES: Record<ReserveDisplayBadgeView["kind"], string> = {
-  live: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
-  "curated-validated": "bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-500/20",
-  proof: "bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-500/20",
-};
+/**
+ * A basket whose largest slice holds at least this share is drawn as a single
+ * labelled bar: a treemap of one tile (LUSD 100% ETH) or a 92% tile plus
+ * crumbs is a giant rectangle that encodes nothing a bar does not.
+ */
+const DOMINANT_SLICE_MIN_PCT = 90;
 
 /* Break a cell label on word boundaries instead of mid-word ("Deposits at
  * Sy…"). Lines hold whole words up to maxChars; running out of lines appends
@@ -59,7 +61,7 @@ interface TreemapCellProps {
   y: number;
   width: number;
   height: number;
-  name: string;
+  label: string;
   risk: ReserveRisk;
   pct: number;
   depth?: number;
@@ -82,14 +84,18 @@ function formatReserveSharePct(pct: number): string {
   return pct > 0 && pct < 0.01 ? "<0.01%" : `${formatDecimal(pct, 0, 2)}%`;
 }
 
-function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCellProps) {
+/** White on the dark end of the ramp, dark ink on the bright medium tier. The
+ *  ramp hue itself (red on maroon) does not clear 4.5:1 against its own fill. */
+function labelInk(risk: ReserveRisk): string {
+  return risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RESERVE_TREEMAP_INVERSE_LABEL_COLOR;
+}
+
+function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
   const fill = RISK_COLORS[risk];
-  // White on the dark end of the ramp, dark ink on the bright medium tier. The
-  // ramp hue itself (red on maroon) does not clear 4.5:1 against its own fill.
-  const labelFill = risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RESERVE_TREEMAP_INVERSE_LABEL_COLOR;
+  const labelFill = labelInk(risk);
   const fontSize = Math.min(11, Math.max(9, width / 9));
   const maxChars = Math.floor((width - LABEL_INSET * 2) / (fontSize * CHAR_WIDTH_EM));
   const showLabel =
@@ -100,7 +106,13 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
   const showPct = showLabel && height >= 48;
 
   const maxLines = height >= 88 ? 3 : height >= 60 ? 2 : 1;
-  const lines = showLabel ? wrapTreemapLabel(name, maxChars, maxLines) : [];
+  let lines = showLabel ? wrapTreemapLabel(label, maxChars, maxLines) : [];
+  // A parenthetical expansion ("XAUt (Tether Gold)") is the first thing to give
+  // up: the bare name beats a sentence cut off mid-word.
+  if (lines.at(-1)?.endsWith("…") && label.includes("(")) {
+    const bareLines = wrapTreemapLabel(label.replace(/\s*\(.*\)\s*$/, ""), maxChars, maxLines);
+    if (!bareLines.at(-1)?.endsWith("…")) lines = bareLines;
+  }
   const rowHeight = 13;
   const totalRows = lines.length + (showPct ? 1 : 0);
   const topY = y + height / 2 - ((totalRows - 1) * rowHeight) / 2;
@@ -108,6 +120,21 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} rx={4} fill={fill} stroke="var(--color-card)" strokeWidth={2} />
+      {/* The tier's accent as an inset outline: the legend swatch carries the same
+          fill + accent border, so a tile always has a swatch it visibly matches. */}
+      {width > 8 && height > 8 && (
+        <rect
+          x={x + 1.5}
+          y={y + 1.5}
+          width={width - 3}
+          height={height - 3}
+          rx={3}
+          fill="none"
+          stroke={RISK_ACCENT_COLORS[risk]}
+          strokeOpacity={0.5}
+          strokeWidth={1}
+        />
+      )}
       {showLabel && (
         <text
           textAnchor="middle"
@@ -149,95 +176,148 @@ function ReserveTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: Array<{ payload: { name: string; pct: number; risk: ReserveRisk } }>;
+  payload?: Array<{ payload: ReserveCompositionSlice }>;
 }) {
   if (!payload?.[0]) return null;
-  const { name, pct, risk } = payload[0].payload;
+  const { label, pct, risk, detail } = payload[0].payload;
   return (
     <PharosChartTooltip active={active}>
-      <TooltipLabel>{name}</TooltipLabel>
+      <TooltipLabel>{label}</TooltipLabel>
       <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RESERVE_RISK_PRESENTATION[risk].longLabel} value={formatReserveSharePct(pct)} />
+      {detail ? <div className="mt-1 max-w-56 text-xs text-muted-foreground">{detail}</div> : null}
     </PharosChartTooltip>
   );
 }
 
-export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
-  const data = useMemo(
-    () => reserves.filter((r) => Number.isFinite(r.pct) && r.pct > 0).map((r) => ({ ...r, size: r.pct })),
-    [reserves],
+/** A risk-tier swatch is the tile itself in miniature: same fill, same accent border. */
+function RiskSwatch({ risk }: { risk: ReserveRisk }) {
+  return (
+    <span
+      className="size-2.5 shrink-0 rounded-[2px] border"
+      style={{ backgroundColor: RISK_COLORS[risk], borderColor: RISK_ACCENT_COLORS[risk] }}
+    />
   );
-  // Only the tiers actually in the basket are keyed; a fixed five-tier row
-  // would describe colors that appear nowhere on the chart.
+}
+
+/** Only the tiers actually drawn are keyed; every tile tone has a swatch. */
+function RiskLegend({ risks }: { risks: readonly ReserveRisk[] }) {
+  return (
+    <ul aria-label="Reserve risk tiers" className="mt-3 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+      {risks.map((risk) => (
+        <li key={risk} className="flex min-w-0 items-center gap-1.5">
+          <RiskSwatch risk={risk} />
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {RESERVE_RISK_PRESENTATION[risk].longLabel}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * One labelled bar for a basket a single slice dominates. The leading segment
+ * carries its full name (wrapped, never ellipsised); every remaining slice is
+ * listed beneath with its swatch, so no share is unlabeled.
+ */
+function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice[] }) {
+  const [top, ...rest] = slices;
+  if (!top) return null;
+  return (
+    <div>
+      <div className="flex min-h-12 w-full gap-0.5 overflow-hidden rounded-md">
+        {slices.map((slice, index) => (
+          <div
+            key={slice.key}
+            title={`${slice.label} · ${formatReserveSharePct(slice.pct)}`}
+            className="flex min-w-[3px] items-center px-3 py-2"
+            style={{
+              width: `${slice.pct}%`,
+              backgroundColor: RISK_COLORS[slice.risk],
+              boxShadow: `inset 0 0 0 1px ${RISK_ACCENT_COLORS[slice.risk]}80`,
+            }}
+          >
+            {index === 0 ? (
+              <span
+                className="min-w-0 font-mono text-[11px] font-semibold uppercase leading-snug tracking-[0.06em]"
+                style={{ color: labelInk(slice.risk) }}
+              >
+                {slice.label} · {formatReserveSharePct(slice.pct)}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {rest.length > 0 ? (
+        <ul aria-label="Other reserve slices" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {rest.map((slice) => (
+            <li key={slice.key} className="flex items-center gap-1.5">
+              <RiskSwatch risk={slice.risk} />
+              {slice.label}
+              <span className="font-mono tabular-nums text-foreground">{formatReserveSharePct(slice.pct)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The module's one reserve visual, toned by risk tier. Renders flat (no card
+ * chrome; the Reserves module owns the shell). Dominated baskets draw as a bar
+ * (`DOMINANT_SLICE_MIN_PCT`); everything else is a treemap.
+ */
+export function ReserveTreemap({ slices, subject }: ReserveTreemapProps) {
+  const data = useMemo(
+    () => slices.filter((slice) => Number.isFinite(slice.pct) && slice.pct > 0).sort((a, b) => b.pct - a.pct),
+    [slices],
+  );
   const presentRisks = useMemo(
-    () => (Object.keys(RESERVE_RISK_PRESENTATION) as ReserveRisk[]).filter((risk) => data.some((r) => r.risk === risk)),
+    () => (Object.keys(RESERVE_RISK_PRESENTATION) as ReserveRisk[]).filter((risk) => data.some((slice) => slice.risk === risk)),
     [data],
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
-  // Rendered flat (no Card chrome): the treemap lives inside the report-card
-  // panel's right column, and a nested card would violate Flat-By-Default.
+  if (data.length === 0) return null;
+
+  const ariaLabel = `${subject}: ${data.map((slice) => `${slice.label} ${formatReserveSharePct(slice.pct)}`).join(", ")}`;
+  const isDominated = data[0]!.pct >= DOMINANT_SLICE_MIN_PCT;
+
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold tracking-normal text-muted-foreground">
-          Reserve Composition
-          {badge && (
-            <span
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}
-            >
-              {badge.label}
-            </span>
-          )}
-        </DetailSectionTitle>
-        {/* Risk-tier legend on the title row (right-aligned to save vertical
-            space): square swatches + mono uppercase labels. Shown even for a
-            single-tier basket so the color always has a key. */}
-        {presentRisks.length > 0 && (
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
-            {presentRisks.map((risk) => (
-              <div key={risk} className="flex min-w-0 items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
-                <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                  {RESERVE_RISK_PRESENTATION[risk].longLabel}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {/* Below lg the panel stacks in auto-height flow, so the stage keeps its
-          6/5 ratio (flex-1 would collapse to zero with no definite parent
-          height). At lg the report-card grid gives the right column a definite
-          height driven by the score column, so the stage flexes into whatever
-          that is instead of overflowing a width-derived ratio and clipping the
-          bottom row of tiles. The ratio lives in a class, not an inline style,
-          so the lg override can win. */}
-      <div className="mt-3 aspect-[6/5] min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:aspect-auto lg:min-h-[240px] lg:max-h-[520px] lg:flex-1 lg:shrink">
-        <div
-          ref={chartContainerRef}
-          className="h-full min-w-0 overflow-hidden"
-          role="figure"
-          aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${formatReserveSharePct(r.pct)}`).join(", ")}`}
-        >
-          {isChartReady ? (
-            <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">
-              <Treemap
-                width={width}
-                height={height}
-                data={data}
-                dataKey="size"
-                nameKey="name"
-                content={(props) => <TreemapCell {...(props as unknown as TreemapCellProps)} />}
-                isAnimationActive={false}
-              >
-                <Tooltip content={<ReserveTooltip />} />
-              </Treemap>
-            </SectionErrorBoundary>
-          ) : (
-            <ChartSkeleton className="h-full w-full" />
-          )}
+    <div className="min-w-0">
+      {isDominated ? (
+        <div role="figure" aria-label={ariaLabel}>
+          <DominantSliceBar slices={data} />
         </div>
-      </div>
+      ) : (
+        <div className="h-64 w-full min-w-0 overflow-hidden sm:h-72">
+          <div ref={chartContainerRef} className="h-full min-w-0 overflow-hidden" role="figure" aria-label={ariaLabel}>
+            {isChartReady ? (
+              <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">
+                <Treemap
+                  width={width}
+                  height={height}
+                  data={data.map((slice) => ({ ...slice, size: slice.pct }))}
+                  dataKey="size"
+                  nameKey="label"
+                  content={(props) => {
+                    // Recharts passes `key` inside the props bag; React rejects keys spread into JSX.
+                    const { key: _key, ...cell } = props as unknown as TreemapCellProps & { key?: unknown };
+                    return <TreemapCell {...cell} />;
+                  }}
+                  isAnimationActive={false}
+                >
+                  <Tooltip content={<ReserveTooltip />} />
+                </Treemap>
+              </SectionErrorBoundary>
+            ) : (
+              <ChartSkeleton className="h-full w-full" />
+            )}
+          </div>
+        </div>
+      )}
+      <RiskLegend risks={presentRisks} />
     </div>
   );
 }

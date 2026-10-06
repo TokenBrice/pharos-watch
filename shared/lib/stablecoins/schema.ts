@@ -14,6 +14,7 @@ import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import { hasIndependentLiveCompositionDates, hasIndependentReserveObservationDates } from "../report-card-policy";
 import { normalizeDeploymentId } from "../../types/deployment-id";
 import { resolveV10ReserveObservationDeploymentRefs } from "../safety-score-v9/reserve-scope";
+import { findSummaryBudgetViolations } from "../summary-budget";
 import {
   CoinNoticeSchema,
   ContractDeploymentSchema,
@@ -808,6 +809,21 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
         code: z.ZodIssueCode.custom,
         message: `[mint-bridge-ownership:${violation.code}] ${violation.message}`,
         path,
+      });
+    }
+  })
+  .superRefine((meta, ctx) => {
+    // The authored mint headline renders as the detail card's summary-layer
+    // verdict, so it carries the same budget as the generated one.
+    const headline = meta.mintAuthority?.headline;
+    if (headline == null) return;
+    for (const violation of findSummaryBudgetViolations(headline)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: violation.kind === "word-count"
+          ? `mintAuthority.headline has ${violation.words} words; the summary-layer verdict budget is ${violation.max}`
+          : `mintAuthority.headline contains a raw identifier (${violation.id}: "${violation.match}"); keep identifiers in the review notes`,
+        path: ["mintAuthority", "headline"],
       });
     }
   });

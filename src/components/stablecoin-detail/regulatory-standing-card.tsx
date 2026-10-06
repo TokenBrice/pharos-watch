@@ -17,18 +17,14 @@ import { cn } from "@/lib/utils";
 export function RegulatoryStandingCard({
   view,
   frameless,
-  anchorTwin,
 }: {
   view?: RegulatoryStandingView | null;
   frameless?: boolean;
-  /** Anchor id the rail instance stands in for — `#jurisdiction`, owned by the
-   *  `xl:hidden` in-flow fold (see `RailCard`). */
-  anchorTwin?: string;
 }) {
   if (!view) return null;
 
-  return <EvidenceRailCard frameless={frameless} title="Regulatory standing" anchorTwin={anchorTwin} badge={{ label: view.badgeLabel, className: cn("text-[11px] font-medium", view.badgeToneClass) }} evidence={{ sources: view.sources, trailing: view.reviewedAt ? `Reviewed ${view.reviewedAt}` : undefined }}>
-      <CollapsibleProse text={view.summary} className="text-xs" variant="rail" />
+  return <EvidenceRailCard frameless={frameless} title="Regulatory standing" badge={{ label: view.badgeLabel, className: cn("text-[11px] font-medium", view.badgeToneClass) }} evidence={{ sources: view.sources, trailing: view.reviewedAt ? `Reviewed ${view.reviewedAt}` : undefined }}>
+      <CollapsibleProse text={view.summary} className="text-xs" />
       {view.regimes.map((regime) => (
         <div key={regime.key} className="space-y-2.5 border-t border-border/50 pt-3">
           <div className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">

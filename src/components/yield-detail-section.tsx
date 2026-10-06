@@ -36,7 +36,8 @@ import {
 } from "@/lib/yield-source-risk";
 import { formatPercent, formatSignedPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
-import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
@@ -443,7 +444,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {hasWorkbench ? "View full yield analysis" : YIELD_SOURCE_FACT_LABELS.fallbackLink}
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
-        <MethodologyCardActions topic="pys" className="border-t-0 pt-0" />
+        <EvidenceFooter topic="pys" className="border-t-0 pt-0" />
       </div>
     </YieldDetailSectionFrame>
   );

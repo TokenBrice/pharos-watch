@@ -317,10 +317,9 @@ describe("stablecoin V9 safety presentation", () => {
     expect(presentation.pillars[1].breakdown).toMatchObject({
       sectionLabel: "Primary route components — Direct redemption",
       exitHighlight: {
-        primaryRouteLabel: "Direct redemption",
+        venueLabel: "Direct redemption",
         primaryRouteScore: 84,
         redundancyCredit: 0,
-        capacityLine: "<1% of $25m executable within 10m · 74 bps",
       },
       alternatives: [{
         label: "Curve liquidity",
@@ -420,9 +419,8 @@ describe("stablecoin V9 safety presentation", () => {
       },
     ]));
     expect(exit.breakdown?.exitHighlight).toMatchObject({
-      primaryRouteLabel: "Queued USDC redemption",
+      venueLabel: "Queued USDC redemption",
       primaryRouteScore: 0,
-      capacityLine: "0% of $1.0m executable within 30d · 5 bps",
     });
     expect(exit.reasons).toEqual([
       "The selected Queued USDC redemption route had zero executable capacity for the $1,000,000 stress request.",

@@ -42,7 +42,7 @@ export const StablecoinSafetyScoreV9Card = lazyDetailSection(
   "StablecoinSafetyScoreV9Card",
   "h-[420px] w-full rounded-xl",
 );
-export const ReservePanel = lazyDetailSection("ReservePanel", "h-[320px] w-full rounded-xl");
+export const ReservesSection = lazyDetailSection("ReservesSection", "h-[320px] w-full rounded-xl");
 export const DepegHistory = lazyDetailSection("DepegHistory", "h-[360px] w-full rounded-xl");
 
 // Explicit null fallback, not a skeleton: the module renders nothing until the

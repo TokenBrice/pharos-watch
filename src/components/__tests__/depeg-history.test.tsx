@@ -21,7 +21,7 @@ afterEach(() => {
 
 function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {}) {
   useInfiniteDepegEventsMock.mockReturnValue({
-    data: { events, total: events.length },
+    data: { events, total: events.length, totalExact: true },
     isLoading: false,
     error: null,
     refetch: vi.fn(),
@@ -35,7 +35,7 @@ function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {
 describe("DepegHistory provenance badges", () => {
   it("withholds partial metrics until all history has loaded", () => {
     const events = [makeEvent()];
-    mockEvents(events, { data: { events, total: 2 }, isFullyLoaded: false, isFetchingNextPage: true });
+    mockEvents(events, { data: { events, total: 2, totalExact: true }, isFullyLoaded: false, isFetchingNextPage: true });
     const view = render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByText(/Loading full history.*1 \/ 2 incidents/)).toBeTruthy();
     expect(screen.queryByText("Worst Depeg")).toBeNull();
@@ -46,6 +46,16 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.queryByText(/Loading full history/)).toBeNull();
     expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-350 bps");
     expect(screen.getByText("Current Streak").parentElement?.textContent).toContain("Depegged now");
+  });
+
+  it("never presents the cursor API's inexact page total as the incident count", () => {
+    const events = [makeEvent(), makeEvent({ id: 2 })];
+    // includeTotal=false: `total` is a page lower bound (LUSD showed "newest 1,000 of 101").
+    mockEvents(events, { data: { events, total: 3, totalExact: false }, isFullyLoaded: false, isAutoLoadCapped: true });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Incidents").parentElement?.textContent).toContain("2+");
+    expect(screen.getByText(/Partial history: the newest 2 incidents are loaded/)).toBeTruthy();
+    expect(screen.queryByText(/of 3 incidents/)).toBeNull();
   });
 
   it.each([false, true])("offers retry after failure with retained rows=%s", (hasRows) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CircleCheck, CircleDashed, ExternalLink, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleDashed, ExternalLink, Link2, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,7 +25,9 @@ import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityDetailScoreViewModel,
   MintAuthorityDetailViewModel,
+  MintAuthorityProcessDiagnosticViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { MINT_AUTHORITY_TONE_NOTE } from "@/lib/mint-authority-display";
 import { cn } from "@/lib/utils";
 import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail/mint-authority-presentation";
 
@@ -63,52 +65,69 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
   );
 }
 
-function MintProcessDetails({
-  diagnostics = [], metrics, available = true,
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Published issuance-process diagnostics, folded after Primary controls. Each
+ * group carries gate codes, class ids and sampled control references, so it
+ * never renders in the summary layer; absent evidence renders nothing.
+ */
+function MintIssuanceDiagnostics({
+  diagnostics,
+  metrics,
 }: {
-  diagnostics?: MintAuthorityDetailViewModel["processDiagnostics"];
-  metrics?: MintAuthorityDetailViewModel["processMetrics"];
-  available?: boolean;
+  diagnostics: readonly MintAuthorityProcessDiagnosticViewModel[];
+  metrics: MintAuthorityDetailViewModel["processMetrics"];
 }) {
-  if (!available) return <p className="mt-2 text-xs text-muted-foreground">Published process diagnostics are unavailable.</p>;
-  if (diagnostics.length === 0 && !metrics?.length) return null;
+  if (diagnostics.length === 0 && metrics.length === 0) return null;
   const diagnosticCount = diagnostics.reduce((sum, diagnostic) => sum + diagnostic.count, 0);
   return (
-    <details className="mt-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
-      <summary className="pharos-focus-ring cursor-pointer font-medium">Issuance process evidence ({diagnosticCount} total diagnostics; {diagnostics.length} groups)</summary>
-      {metrics?.length ? (
-        <dl className="mt-2 space-y-1">
-          {metrics.map((metric) => <div key={metric.label}><dt className="inline text-muted-foreground">{metric.label}: </dt><dd className="inline">{metric.value}</dd></div>)}
-        </dl>
-      ) : null}
-      {diagnostics.length > 0 ? (
-        <ul className="mt-2 space-y-2">
-          {diagnostics.map((diagnostic) => (
-            <li key={diagnostic.key}>
-              <p><strong>{diagnostic.statusLabel}</strong> · Gate {diagnostic.gate} · {diagnostic.code}</p>
-              <p className="break-all text-muted-foreground">
-                {diagnostic.classId ? `Class ${diagnostic.classId} / ` : ""}{`field ${diagnostic.field}`}
-              </p>
-              <p className="text-muted-foreground">
-                Group total: {diagnostic.count} across {diagnostic.controlRefs.length} control references.
-                {" "}Showing {diagnostic.exemplars.length} sampled exemplars, not an exhaustive member list.
-              </p>
-              <ul className="mt-1 space-y-1">
-                {diagnostic.exemplars.map((exemplar) => (
-                  <li key={JSON.stringify([exemplar.controlRef, exemplar.pathId, exemplar.memberRef])} className="break-all text-muted-foreground">
-                    {exemplar.controlRef ?? "Process-level"}{exemplar.pathId ? ` / path ${exemplar.pathId}` : ""}
-                    {exemplar.memberRef ? ` / member ${exemplar.memberRef}` : ""}
-                    {exemplar.evidenceRefCount > 0 ? (
-                      <p>Evidence: {exemplar.evidenceRefIds.join(", ")} ({exemplar.evidenceRefIds.length} sampled / {exemplar.evidenceRefCount} total references)</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </details>
+    <ModuleDisclosure
+      id="mint-issuance-diagnostics"
+      label="Issuance diagnostics"
+      count={diagnostics.length > 0 ? diagnostics.length : undefined}
+    >
+      <div className="mt-2 space-y-2 rounded-lg border border-border/60 px-3 py-2 text-xs">
+        {diagnostics.length > 0 ? (
+          <p className="text-muted-foreground">
+            {plural(diagnosticCount, "diagnostic")} in {plural(diagnostics.length, "group")}.
+          </p>
+        ) : null}
+        {metrics.length > 0 ? (
+          <dl className="space-y-1">
+            {metrics.map((metric) => <div key={metric.label}><dt className="inline text-muted-foreground">{metric.label}: </dt><dd className="inline">{metric.value}</dd></div>)}
+          </dl>
+        ) : null}
+        {diagnostics.length > 0 ? (
+          <ul className="space-y-2">
+            {diagnostics.map((diagnostic) => (
+              <li key={diagnostic.key}>
+                <p><strong>{diagnostic.statusLabel}</strong> · Gate {diagnostic.gate} · {diagnostic.code}</p>
+                <p className="break-all text-muted-foreground">
+                  {diagnostic.classId ? `Class ${diagnostic.classId} / ` : ""}{`field ${diagnostic.field}`}
+                </p>
+                <p className="text-muted-foreground">
+                  {`Group total: ${diagnostic.count} across ${plural(diagnostic.controlRefs.length, "control reference")}. Showing ${plural(diagnostic.exemplars.length, "sampled exemplar")}, not an exhaustive member list.`}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {diagnostic.exemplars.map((exemplar) => (
+                    <li key={JSON.stringify([exemplar.controlRef, exemplar.pathId, exemplar.memberRef])} className="break-all text-muted-foreground">
+                      {exemplar.controlRef ?? "Process-level"}{exemplar.pathId ? ` / path ${exemplar.pathId}` : ""}
+                      {exemplar.memberRef ? ` / member ${exemplar.memberRef}` : ""}
+                      {exemplar.evidenceRefCount > 0 ? (
+                        <p>Evidence: {exemplar.evidenceRefIds.join(", ")} ({exemplar.evidenceRefIds.length} sampled / {exemplar.evidenceRefCount} total references)</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </ModuleDisclosure>
   );
 }
 
@@ -159,7 +178,6 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
         <ControlMeta label="Safe modules/guard" value={control.modulesOrGuardsLabel} />
       </div>
       {control.capDescription ? <p className="mt-2 text-xs text-muted-foreground">{control.capDescription}</p> : null}
-      <MintProcessDetails diagnostics={control.processDiagnostics} />
     </li>
   );
 }
@@ -248,6 +266,17 @@ export function MintAuthoritySection({
   const mintIncidents = profile.mintIncidents ?? [];
   const activeIncidents = mintIncidents.filter((incident) => incident.status === "active");
   const resolvedIncidents = mintIncidents.filter((incident) => incident.status !== "active");
+  // Diagnostics matched to a rendered control ride on that control; the fold
+  // lists every published group once.
+  const issuanceDiagnostics = [
+    ...new Map(
+      [...profile.processDiagnostics, ...railControls.flatMap((control) => control.processDiagnostics)]
+        .map((diagnostic) => [diagnostic.key, diagnostic] as const),
+    ).values(),
+  ];
+  const issuanceDiagnosticsFold = (
+    <MintIssuanceDiagnostics diagnostics={issuanceDiagnostics} metrics={profile.processMetrics} />
+  );
 
   return (
     <Card id="mint-authority" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
@@ -258,7 +287,11 @@ export function MintAuthoritySection({
           </StablecoinModuleTitle>
           {score ? (
             <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
-              <ScorePill label={score.scoreLabel} toneClass={score.badgeClassName} title={score.detail} />
+              <ScorePill
+                label={score.compactLabel}
+                toneClass={score.badgeClassName}
+                title={`${score.detail} ${MINT_AUTHORITY_TONE_NOTE}`}
+              />
             </ScoreBadgeWrapper>
           ) : (
             <ScorePill label="NR" title="The mint control posture is not rated." />
@@ -266,7 +299,6 @@ export function MintAuthoritySection({
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        <MintProcessDetails diagnostics={profile.processDiagnostics} metrics={profile.processMetrics} available={profile.processEvidenceAvailable ?? false} />
         {!isReviewed ? (
           <>
             <div className="flex flex-wrap gap-1.5">
@@ -274,6 +306,7 @@ export function MintAuthoritySection({
               <DetailBadge>Mint control posture: NR</DetailBadge>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
+            {issuanceDiagnosticsFold}
             <EvidenceFooter topic="mintAuthorityScore" />
           </>
         ) : (
@@ -299,6 +332,8 @@ export function MintAuthoritySection({
               />
             ) : null}
 
+            {profile.verdict ? <p className="text-sm leading-relaxed text-foreground">{profile.verdict}</p> : null}
+
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               {score && !hasSpectrum ? (
                 <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
@@ -321,10 +356,19 @@ export function MintAuthoritySection({
                 {profile.confidenceVerified ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
                 Confidence: {profile.confidenceLabel}
               </DetailBadge>
-              {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
+              {profile.inheritedFrom ? (
+                <Link
+                  href={profile.inheritedFrom.href}
+                  title={`This score rates ${symbol ?? "this token"}'s own mint controls; underlying supply follows ${profile.inheritedFrom.symbol}'s mint authority.`}
+                  className="pharos-focus-ring rounded-md"
+                >
+                  <DetailBadge className="transition-colors hover:text-foreground">
+                    <Link2 aria-hidden />
+                    Inherits {profile.inheritedFrom.symbol} mint risk
+                  </DetailBadge>
+                </Link>
+              ) : null}
             </div>
-
-            <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
 
             {activeIncidents.length > 0 ? (
               <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
@@ -401,6 +445,12 @@ export function MintAuthoritySection({
                 No primary control rows are published in the compact review summary.
               </div>
             )}
+
+            <ModuleDisclosure id="mint-review-notes" label="Review notes">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
+            </ModuleDisclosure>
+
+            {issuanceDiagnosticsFold}
 
             {resolvedIncidents.length > 0 ? (
               /* Historical record, not an alarm: resolved incidents read as a

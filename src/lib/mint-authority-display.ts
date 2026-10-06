@@ -179,10 +179,19 @@ export interface PublishedMintComponent {
   posture: string | null;
 }
 
+/**
+ * Why a mint pill can look "amber at 81" beside a green pillar: its tone is
+ * the published posture band, not a numeric cutoff (retired in V9.1).
+ * Appended to every mint score pill tooltip.
+ */
+export const MINT_AUTHORITY_TONE_NOTE =
+  "The pill tone follows the posture band; numeric mint score cutoffs were retired in V9.1.";
+
 export interface MintAuthorityScoreDisplay {
   score: number | null;
   posture: string | null;
   scoreLabel: string;
+  /** Score with its band beside it ("81 · Managed"), or "NR". */
   compactLabel: string;
   bandKey: MintAuthorityScoreFilterValue;
   bandLabel: string;
@@ -205,7 +214,7 @@ export function resolveMintAuthorityScoreDisplay(
   const score = band === null ? null : (mint?.score ?? null);
   const bandLabel = MINT_AUTHORITY_SCORE_FILTER_CONFIG[bandKey].label;
   const scoreLabel = score != null ? `${score}/100` : "NR";
-  const compactLabel = score != null ? `${score} ${bandLabel}` : "NR";
+  const compactLabel = score != null ? `${score} · ${bandLabel}` : "NR";
   const detail =
     score != null
       ? `Mint control posture: ${scoreLabel} (${bandLabel}). ${mint?.posture === "unbounded-operationally-governed"

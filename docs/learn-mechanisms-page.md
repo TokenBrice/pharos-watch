@@ -99,7 +99,7 @@ These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og
 
 - **Shared navigation:** `src/lib/nav-config.ts` `Resources` menu → `Research` column → `Mechanisms`, `Case Studies`, and `Glossary` in desktop/mobile navigation and the command palette
 - **Coin detail (`src/components/stablecoin-detail/peg-stability-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, plus the header info affordance, both gated on the resolved mechanism archetype.
-- **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link, rendered in both the compact rail card and the embedded risk-context fold, gated on a resolved mechanism review.
+- **Mechanism review panel (`src/components/stablecoin-detail/mechanism-review-panel.tsx`):** "How <archetype> stablecoins work" link in the evidence footer of its single in-flow mount (the `#mechanism-review` band in the detail page's `#control-evidence` group), gated on a resolved mechanism review.
 - **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`PegStabilityCard` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn how each stablecoin design produces its peg" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.

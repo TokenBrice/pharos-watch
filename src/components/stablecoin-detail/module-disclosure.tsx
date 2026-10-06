@@ -5,6 +5,15 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
+ * The summary grammar every detail-page fold shares: dashed label, trailing
+ * chevron, and a 44 px (mobile) / 36 px (desktop) hit area. Exported so
+ * controls that fold content they do not own (the footer's score-inputs
+ * toggle) read as the same affordance.
+ */
+export const MODULE_DISCLOSURE_SUMMARY_CLASS =
+  "pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9";
+
+/**
  * The one disclosure affordance for detail-page modules: a native `<details>`
  * so folded content stays in the DOM (crawlable, and Chromium auto-expands it
  * on find-in-page), with the dashed-underline summary grammar the page already
@@ -44,7 +53,7 @@ export function ModuleDisclosure({
   return (
     <details
       id={id}
-      className={cn("group scroll-mt-24", className)}
+      className={cn("group/disclosure scroll-mt-24", className)}
       open={defaultOpen ? true : undefined}
       onToggle={
         deferredChildren != null && !hasOpened
@@ -54,19 +63,14 @@ export function ModuleDisclosure({
           : undefined
       }
     >
-      <summary
-        className={cn(
-          "pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9",
-          summaryClassName,
-        )}
-      >
+      <summary className={cn(MODULE_DISCLOSURE_SUMMARY_CLASS, summaryClassName)}>
         <span className="underline decoration-dashed underline-offset-2">{label}</span>
         {count != null ? (
           <span aria-hidden="true" className="pharos-numeric text-xs text-muted-foreground/80">
             ({count})
           </span>
         ) : null}
-        <ChevronDown aria-hidden="true" className="h-3 w-3 shrink-0 transition-transform group-open:rotate-180" />
+        <ChevronDown aria-hidden="true" className="h-3 w-3 shrink-0 transition-transform group-open/disclosure:rotate-180" />
       </summary>
       {children}
       {deferredChildren != null && hasOpened ? deferredChildren : null}

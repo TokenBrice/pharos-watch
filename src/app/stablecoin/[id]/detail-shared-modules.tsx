@@ -4,11 +4,12 @@ import type { ReactNode } from "react";
 import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
 import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { formatReserveSnapshotLabel } from "@/components/stablecoin-detail/reserve-presentation";
-import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import { buildCollateralizationChip, CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { FreezeSeizureCard } from "@/components/stablecoin-detail/freeze-seizure-card";
+import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import type { RailCopyFoldChip } from "@/components/stablecoin-detail/rail-copy-fold";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
@@ -16,67 +17,48 @@ import { buildControlPostureView } from "@/lib/control-posture";
 import { buildFailureDomainsView } from "@/lib/failure-domains";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
 /**
- * The eight detail modules that appear both in the `xl+` summary rail and, on
- * narrower viewports, in the main column — built once here and rendered by both
- * mount sites.
+ * One structural evidence card (custody, bridging, freeze & seizure, …).
  *
- * Before this module each card was declared twice (rail arm in
- * `detail-content.tsx`, in-flow arm in `detail-risk-context-sections.tsx`) and
- * four of their view builders — `buildRegulatoryStandingView`,
- * `buildControlPostureView`, `buildFailureDomainsView`, and the two live
- * reserve ratios — ran twice per render. Adding a rail card cost two edits in
- * two files; it now costs one entry here.
- *
- * `null` members are modules with nothing to show; every card already renders
- * `null` for empty input, so the rail can mount them unconditionally while the
- * in-flow arm uses the same nullability to decide whether to draw its wrapper.
+ * Each card mounts exactly once, in flow, inside its Safety Score pillar group
+ * (`#backing-evidence` / `#control-evidence`), as a `RailCopyFold` band that
+ * owns the shell, `title`, `chip` and `anchorId`; `body` is the card's
+ * frameless (body-only) render. The `xl+` summary rail only indexes it: one
+ * row of `title` + `chip` linking to `anchorId`.
+ */
+export interface StructuralModuleEntry {
+  key: string;
+  title: string;
+  anchorId: string;
+  /** Scan-level verdict chip mirrored from the card's own header badge. */
+  chip: RailCopyFoldChip | null;
+  body: ReactNode;
+}
+
+/**
+ * The structural cards grouped by the pillar whose evidence they carry, in
+ * reading order. Absent modules (no review published) are omitted, so an
+ * empty list means the group has no structural cards to show.
  */
 export interface DetailSharedModules {
-  collateralization: ReactNode;
-  failureDomains: ReactNode;
-  custody: ReactNode;
-  backingMechanics: ReactNode;
-  bridging: ReactNode;
-  regulatoryStanding: ReactNode;
-  controlPosture: ReactNode;
-  freezeSeizure: ReactNode;
-  /** True when the collateralization/failure-domain pair has anything to render. */
-  hasStructureCards: boolean;
-  /**
-   * Scan-level chips for the below-`xl` `RailCopyFold` bands, mirrored from
-   * each card's own header badge. Backing mechanics has no status chip and is
-   * deliberately absent.
-   */
-  foldChips: Partial<
-    Record<"custody" | "bridging" | "regulatoryStanding" | "controlPosture" | "freezeSeizure", RailCopyFoldChip>
-  >;
-  /**
-   * Frameless (body-only) renders of the same six modules for mounting inside
-   * `RailCopyFold`, which owns the shell, title, and chip — the chromed nodes
-   * above stay rail-only. Both variants read the views built once here.
-   */
-  foldBodies: {
-    custody: ReactNode;
-    backingMechanics: ReactNode;
-    bridging: ReactNode;
-    regulatoryStanding: ReactNode;
-    controlPosture: ReactNode;
-    freezeSeizure: ReactNode;
-  };
+  backing: StructuralModuleEntry[];
+  control: StructuralModuleEntry[];
 }
 
 export function buildDetailSharedModules({
   mechanismBacking,
   mechanismCollateralization,
+  mechanismReview,
   viewModel,
 }: {
   mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
+  mechanismReview: MechanismReviewView | null;
   viewModel: ReadyDetailViewModel;
 }): DetailSharedModules {
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
@@ -90,71 +72,105 @@ export function buildDetailSharedModules({
   const custodySummary = viewModel.coin.custodyProfileSummary ?? null;
   const bridgeSummary = viewModel.coin.bridgeRouteRiskSummary ?? null;
   const blacklistabilitySummary = viewModel.coin.blacklistabilitySummary ?? null;
+  const hasCollateralization =
+    mechanismCollateralization != null || liveCollateralizationRatio != null || liveLiquidationCapacityRatio != null;
 
-  return {
-    collateralization: (
-      <CollateralizationCard
-        reviewed={mechanismCollateralization}
-        liveRatio={liveCollateralizationRatio}
-        liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
-        liveAtSec={viewModel.reserves?.liveAt ?? null}
-        liveFreshnessLabel={viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined}
-        liveBalanceSheetScope={liveScopeMetadata?.balanceSheetScope}
-        liveSharedBookAssetIds={liveScopeMetadata?.sharedBookAssetIds}
-      />
-    ),
-    failureDomains: <FailureDomainsCard view={failureDomainsView} />,
-    custody: custodySummary ? <CustodyCard summary={custodySummary} /> : null,
-    backingMechanics: mechanismBacking ? <BackingMechanicsCard view={mechanismBacking} /> : null,
-    bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} /> : null,
-    regulatoryStanding: regulatoryStanding ? (
-      <RegulatoryStandingCard view={regulatoryStanding} anchorTwin="jurisdiction" />
-    ) : null,
-    controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} /> : null,
-    freezeSeizure: blacklistabilitySummary ? <FreezeSeizureCard summary={blacklistabilitySummary} /> : null,
-    foldBodies: {
-      custody: custodySummary ? <CustodyCard summary={custodySummary} frameless /> : null,
-      backingMechanics: mechanismBacking ? <BackingMechanicsCard view={mechanismBacking} frameless /> : null,
-      bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} frameless /> : null,
-      regulatoryStanding: regulatoryStanding ? (
-        <RegulatoryStandingCard view={regulatoryStanding} frameless />
-      ) : null,
-      controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} frameless /> : null,
-      freezeSeizure: blacklistabilitySummary ? (
-        <FreezeSeizureCard summary={blacklistabilitySummary} frameless />
-      ) : null,
-    },
-    foldChips: {
-      ...(custodySummary
-        ? { custody: { label: custodySummary.postureLabel, toneClass: custodySummary.postureToneClass } }
-        : {}),
-      ...(bridgeSummary
-        ? { bridging: { label: bridgeSummary.tierLabel, toneClass: bridgeSummary.tierToneClass } }
-        : {}),
-      ...(regulatoryStanding
-        ? {
-            regulatoryStanding: {
-              label: regulatoryStanding.badgeLabel,
-              toneClass: regulatoryStanding.badgeToneClass,
-            },
-          }
-        : {}),
-      ...(controlPosture
-        ? { controlPosture: { label: controlPosture.label, toneClass: controlPosture.badgeClassName } }
-        : {}),
-      ...(blacklistabilitySummary
-        ? {
-            freezeSeizure: {
-              label: blacklistabilitySummary.statusLabel,
-              toneClass: blacklistabilitySummary.statusToneClass,
-            },
-          }
-        : {}),
-    },
-    hasStructureCards:
-      mechanismCollateralization != null
-      || liveCollateralizationRatio != null
-      || liveLiquidationCapacityRatio != null
-      || failureDomainsView != null,
-  };
+  const backing: StructuralModuleEntry[] = [];
+  if (hasCollateralization) {
+    backing.push({
+      key: "collateralization",
+      title: "Collateralization",
+      anchorId: "collateralization",
+      chip: buildCollateralizationChip(mechanismCollateralization, liveCollateralizationRatio),
+      body: (
+        <CollateralizationCard
+          reviewed={mechanismCollateralization}
+          liveRatio={liveCollateralizationRatio}
+          liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
+          liveAtSec={viewModel.reserves?.liveAt ?? null}
+          liveFreshnessLabel={viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined}
+          liveBalanceSheetScope={liveScopeMetadata?.balanceSheetScope}
+          liveSharedBookAssetIds={liveScopeMetadata?.sharedBookAssetIds}
+          frameless
+        />
+      ),
+    });
+  }
+  if (mechanismBacking) {
+    backing.push({
+      key: "backingMechanics",
+      title: "Backing mechanics",
+      anchorId: "backing-mechanics",
+      chip: null,
+      body: <BackingMechanicsCard view={mechanismBacking} frameless />,
+    });
+  }
+  if (mechanismReview) {
+    backing.push({
+      key: "mechanismReview",
+      title: "Mechanism review",
+      anchorId: "mechanism-review",
+      chip: null,
+      body: <MechanismReviewPanel review={mechanismReview} />,
+    });
+  }
+  if (custodySummary) {
+    backing.push({
+      key: "custody",
+      title: "Custody",
+      anchorId: "custody",
+      chip: { label: custodySummary.postureLabel, toneClass: custodySummary.postureToneClass },
+      body: <CustodyCard summary={custodySummary} frameless />,
+    });
+  }
+
+  const control: StructuralModuleEntry[] = [];
+  if (controlPosture) {
+    control.push({
+      key: "controlPosture",
+      title: "Control posture",
+      anchorId: "control-posture",
+      chip: { label: controlPosture.label, toneClass: controlPosture.badgeClassName },
+      body: <ControlPostureCard view={controlPosture} frameless />,
+    });
+  }
+  if (blacklistabilitySummary) {
+    control.push({
+      key: "freezeSeizure",
+      title: "Freeze & seizure",
+      anchorId: "freeze-seizure",
+      chip: { label: blacklistabilitySummary.statusLabel, toneClass: blacklistabilitySummary.statusToneClass },
+      body: <FreezeSeizureCard summary={blacklistabilitySummary} frameless />,
+    });
+  }
+  if (bridgeSummary) {
+    control.push({
+      key: "bridging",
+      title: "Bridging",
+      anchorId: "bridging",
+      chip: { label: bridgeSummary.tierLabel, toneClass: bridgeSummary.tierToneClass },
+      body: <BridgingCard summary={bridgeSummary} frameless />,
+    });
+  }
+  if (failureDomainsView) {
+    control.push({
+      key: "failureDomains",
+      title: "Shared failure domains",
+      anchorId: "failure-domains",
+      chip: null,
+      body: <FailureDomainsCard view={failureDomainsView} frameless />,
+    });
+  }
+  if (regulatoryStanding) {
+    control.push({
+      key: "regulatoryStanding",
+      title: "Regulatory standing",
+      // The passport's Jurisdiction and MiCA cells link here.
+      anchorId: "jurisdiction",
+      chip: { label: regulatoryStanding.badgeLabel, toneClass: regulatoryStanding.badgeToneClass },
+      body: <RegulatoryStandingCard view={regulatoryStanding} frameless />,
+    });
+  }
+
+  return { backing, control };
 }

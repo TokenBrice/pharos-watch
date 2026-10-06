@@ -22,7 +22,11 @@ import {
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
-import { buildHeroPassportItems, type HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import {
+  buildHeroPassportItems,
+  type HeroPassportCoin,
+  type HeroPassportItemViewModel,
+} from "@/lib/stablecoin-detail-passport";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -113,7 +117,7 @@ export interface HeroSupplyTrendViewModel {
 }
 
 export interface BuildHeroCardViewModelParams {
-  coin: StablecoinMeta;
+  coin: HeroPassportCoin;
   coinData: StablecoinData;
   logoSrc?: string;
   isNavToken: boolean;

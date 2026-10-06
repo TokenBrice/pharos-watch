@@ -1000,6 +1000,23 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).not.toThrow();
   });
 
+  it("admits a budgeted headline and rejects over-long or identifier-bearing ones", () => {
+    const withHeadline = (headline: string) => [makeCoin({
+      id: "fixture-mint-headline",
+      mintAuthority: makeMintAuthority({ headline }),
+    })];
+    expect(() => parseStablecoinMetaAssets(
+      withHeadline("Managed — the issuer mints directly through a 3/6 multisig; supply is unbounded but reconciled."),
+      "fixture",
+    )).not.toThrow();
+    expect(() => parseStablecoinMetaAssets(withHeadline(Array.from({ length: 26 }, () => "word").join(" ")), "fixture"))
+      .toThrow(/mintAuthority\.headline has 26 words/);
+    for (const identifier of [`0x${"ab".repeat(20)}`, "block 25,711,857", "345603 seconds", "D29", "v10.05 campaign pin"]) {
+      expect(() => parseStablecoinMetaAssets(withHeadline(`Owner gate ${identifier} controls minting.`), "fixture"))
+        .toThrow(/mintAuthority\.headline contains a raw identifier/);
+    }
+  });
+
   it("requires verified and probable profiles to include a source link", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({

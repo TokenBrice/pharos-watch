@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
+import { ReviewNotes } from "@/components/stablecoin-detail/collapsible-prose";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -17,8 +17,8 @@ import {
 import { formatOraclePct, type OracleBranchClientRow, type OracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
 import { cn } from "@/lib/utils";
 
-/** Inline branches beyond this count move into the disclosure, sorted forward. */
-const INLINE_BRANCH_LIMIT = 6;
+/** Inline branch bars beyond this count move into the disclosure, sorted forward. */
+const INLINE_BRANCH_LIMIT = 3;
 
 function branchHasDetail(branch: OracleBranchClientRow): boolean {
   return (
@@ -52,7 +52,16 @@ export function sortOracleBranchesForDisplay(branches: readonly OracleBranchClie
     .map(({ branch }) => branch);
 }
 
-function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow; tierLabel: string }) {
+function BranchSummaryRow({
+  branch,
+  tierLabel,
+  showSummary = false,
+}: {
+  branch: OracleBranchClientRow;
+  tierLabel: string;
+  /** The reviewer prose is disclosure content; the summary layer draws bars only. */
+  showSummary?: boolean;
+}) {
   return (
     <li>
       <div className="flex items-baseline justify-between gap-2">
@@ -64,7 +73,7 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
         </span>
         {branch.debtSharePct != null ? (
           <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-            {branch.debtSharePct}% of debt
+            {formatOraclePct(branch.debtSharePct)} of debt
           </span>
         ) : null}
       </div>
@@ -76,7 +85,7 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
           />
         </div>
       ) : null}
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{branch.summary}</p>
+      {showSummary ? <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{branch.summary}</p> : null}
     </li>
   );
 }
@@ -96,11 +105,12 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
 export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClientSummary | null }) {
   if (!summary) return null;
 
+  // Four facts at most: feed count and confidence are disclosure/footer
+  // material, not summary-layer facts.
   const facts: FactGridItem[] = [
     ...(summary.branchCount > 0
       ? [{ key: "branches", label: "Branches", value: String(summary.branchCount) }]
       : []),
-    ...(summary.feedCount > 0 ? [{ key: "feeds", label: "Feeds", value: String(summary.feedCount) }] : []),
     ...(summary.worstMaxLtvPct != null
       ? [{ key: "max-ltv", label: "Max LTV", value: formatOraclePct(summary.worstMaxLtvPct) }]
       : []),
@@ -109,9 +119,6 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
       : []),
     ...(summary.maxLiquidationDelayLabel != null
       ? [{ key: "liq-delay", label: "Liq. delay", value: summary.maxLiquidationDelayLabel }]
-      : []),
-    ...(summary.confidenceLabel != null
-      ? [{ key: "confidence", label: "Confidence", value: summary.confidenceLabel }]
       : []),
   ];
 
@@ -129,11 +136,7 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
         </Badge>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        <div>
-          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{summary.roleNote}</p>
-          {/* 14 of 81 CDP oracle summaries run past 400 characters. */}
-          <CollapsibleProse text={summary.summary} className="text-sm" toggleClassName="mt-2" size="md" />
-        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground">{summary.roleNote}</p>
         <FactGrid aria-label={`${summary.title} facts`} items={facts} />
         {inlineBranches.length > 0 ? (
           <div>
@@ -149,13 +152,25 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
             ) : null}
           </div>
         ) : null}
+        <ReviewNotes>
+          <p className="whitespace-pre-line">{summary.summary}</p>
+          {inlineBranches.length > 0 ? (
+            <ul aria-label="Branch review notes" className="space-y-2">
+              {inlineBranches.map((branch) => (
+                <li key={branch.id}>
+                  <span className="font-medium text-foreground">{branch.label}</span>: {branch.summary}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </ReviewNotes>
         {detailBranches.length > 0 || overflowBranches.length > 0 ? (
           <ModuleDisclosure label="Feeds, parameters & failure behavior">
             <div className="mt-3 space-y-4">
               {overflowBranches.length > 0 ? (
                 <ul aria-label="Additional oracle branches" className="space-y-3">
                   {overflowBranches.map((branch) => (
-                    <BranchSummaryRow key={branch.id} branch={branch} tierLabel={summary.tierLabel} />
+                    <BranchSummaryRow key={branch.id} branch={branch} tierLabel={summary.tierLabel} showSummary />
                   ))}
                 </ul>
               ) : null}
@@ -207,7 +222,7 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
         ) : null}
         <EvidenceFooter
           sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
-          trailing={summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined}
+          trailing={[summary.confidenceLabel ? `${summary.confidenceLabel} confidence` : null, summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : null].filter(Boolean).join(" · ") || undefined}
         />
       </CardContent>
     </Card>

@@ -51,7 +51,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.queryByText("TUSD")).toBeNull();
   });
 
-  it("renders rated V9 data and reserve composition in one responsive card", () => {
+  it("renders rated V9 data in one full-width card without a reserve column", () => {
     const bindingCap = {
       kind: "track-record",
       limit: 84,
@@ -84,14 +84,13 @@ describe("StablecoinSafetyScoreV9Card", () => {
     card.scoreTrace.stages.preCapScore = 86.9;
     const response = makeReportCardsV9Response({ cards: [card] });
 
-    const { container } = render(
+    render(
       <StablecoinSafetyScoreV9Card
         card={card}
         identity={response.safetyScoreIdentity}
         publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
         stablecoinName="Test Stablecoin"
-        rightColumn={<section aria-label="Reserve composition">Reserve treemap</section>}
       />,
     );
 
@@ -102,12 +101,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.getByText("Backing")).toBeTruthy();
     expect(screen.getByText("Exit")).toBeTruthy();
     expect(screen.getByText("Economic Control")).toBeTruthy();
-    expect(screen.getByText("None known")).toBeTruthy();
-    expect(screen.queryByText("none-known")).toBeNull();
-    expect(screen.getByLabelText("Reserve composition")).toBeTruthy();
     expect(screen.getByText("Binding cap")).toBeTruthy();
-    expect(container.querySelector(".lg\\:grid-cols-2")).toBeTruthy();
-    expect(container.querySelector('[style*="contain"]')).toBeTruthy();
     expect(screen.queryByText("Resilience")).toBeNull();
     expect(screen.queryByText("Decentralization")).toBeNull();
 
@@ -167,7 +161,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
         identity={response.safetyScoreIdentity}
         publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
-        rightColumn={<section aria-label="Reserve composition">Reserve treemap</section>}
       />,
     );
 
@@ -211,7 +204,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     })).toBeTruthy();
   });
 
-  it("uses the held-since timestamp in the held publication notice", () => {
+  it("shows held publication as a header chip; reason codes stay machine-readable, never copy", () => {
     const card = makeV9Card();
     const response = makeReportCardsV9Response({
       cards: [card],
@@ -232,13 +225,15 @@ describe("StablecoinSafetyScoreV9Card", () => {
         identity={response.safetyScoreIdentity}
         publicationHealth={response.publicationHealth}
         updatedAtMs={response.updatedAt * 1000}
-        rightColumn={<div>Reserve treemap</div>}
       />,
     );
 
-    const notice = screen.getByText(/Ratings held at the last verified snapshot/).closest('[role="status"]')!;
-    expect(notice.textContent).toContain("Ratings held at the last verified snapshot");
-    expect(notice.querySelector("time")?.getAttribute("datetime")).toBe(new Date(1_752_534_060 * 1000).toISOString());
+    const chip = screen.getByRole("button", { name: /Ratings held/ });
+    expect(chip.getAttribute("data-reason-codes")).toBe("dex-stale");
+    fireEvent.click(chip);
+    const time = document.querySelector("time");
+    expect(time?.getAttribute("datetime")).toBe(new Date(1_752_534_060 * 1000).toISOString());
+    expect(document.body.textContent).not.toContain("dex-stale");
   });
 
   it("renders an NR result without manufacturing score stages", () => {

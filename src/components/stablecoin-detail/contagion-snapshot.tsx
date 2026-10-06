@@ -84,7 +84,7 @@ export function ContagionSnapshot({
     () => buildDetailDependencyContext(stablecoinId, rc?.cards ?? [], rc?.dependencyGraph.edges ?? [], mcapMap, marketCapAsOf),
     [stablecoinId, rc?.cards, rc?.dependencyGraph.edges, mcapMap, marketCapAsOf],
   );
-  // Disclosures with no published row would render four "none" lines and nothing else.
+  // Keep the existing whole-module empty behavior when no context has a published row.
   const detailCard = focusCard && hasDependencyContextRows(focusCard, dependencyContext) ? focusCard : undefined;
   const collateralUsageEntries = useMemo<PublishedCollateralUsageEntry[]>(
     () => edges.filter((edge) => edge.from === stablecoinId).map((edge) => {
@@ -143,7 +143,6 @@ export function ContagionSnapshot({
         >
           Open in Dependency Map
         </Link>
-        <p className="text-xs text-muted-foreground sm:hidden">Open the map for the neighborhood list, fullscreen Graph tab, Fit and Zoom controls.</p>
       </div>
       <div className={DETAIL_MODULE_BODY_CLASS}>
         {sourceError ? (

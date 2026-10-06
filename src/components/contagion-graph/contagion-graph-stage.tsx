@@ -91,6 +91,7 @@ export function ContagionGraphStage({
         suppressHubLabels={Boolean(detailNodePresentation)}
         showTickerLabels={showTickerLabels}
         fillHeight={Boolean(detailNodePresentation)}
+        deferHelp={detailNodePresentation}
         bottomInsetFraction={bottomInsetFraction}
         nodeTooltipEl={nodeTooltipEl}
         edgeTooltipEl={edgeTooltipEl}
@@ -100,13 +101,13 @@ export function ContagionGraphStage({
         className="pointer-events-none absolute bottom-2 left-2 hidden max-w-[calc(100%-1rem)] rounded-sm border px-2 py-1.5 backdrop-blur-sm sm:block"
         style={{ backgroundColor: "var(--graph-panel-bg)", borderColor: "var(--graph-grid-line)" }}
       >
-        <ContagionGraphLegend />
+        <ContagionGraphLegend deferHelp={detailNodePresentation} />
       </div>
       <div
         className="border-t px-3 py-2 sm:hidden"
         style={{ borderColor: "var(--graph-grid-line)" }}
       >
-        <ContagionGraphLegend />
+        <ContagionGraphLegend deferHelp={detailNodePresentation} />
       </div>
     </div>
   );

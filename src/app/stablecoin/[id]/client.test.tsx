@@ -80,8 +80,8 @@ vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
 }));
 
 vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
-  RedemptionBackstopCard: ({ entry }: { entry: { stablecoinId: string } }) => (
-    <section data-testid="redemption-backstop-card">{entry.stablecoinId}</section>
+  RedemptionRouteSection: ({ entry }: { entry: { stablecoinId: string } | null }) => (
+    <section data-testid="redemption-route-section">{entry?.stablecoinId ?? "no-route"}</section>
   ),
 }));
 
@@ -144,7 +144,7 @@ describe("StablecoinDetailClient", () => {
 
 
   it.each([
-    { name: "activity near", near: [false, true, false], redemption: true, flows: true, blacklist: true, reserves: false },
+    { name: "activity near", near: [false, true, false], redemption: false, flows: true, blacklist: true, reserves: false },
     { name: "overview near", near: [true, false, false], redemption: true, flows: true, blacklist: false, reserves: true },
     { name: "all lanes offscreen", near: [false, false, false], redemption: false, flows: false, blacklist: false, reserves: false },
   ])("keeps hero queries eager with $name", ({ near, redemption, flows, blacklist, reserves }) => {
@@ -235,7 +235,7 @@ describe("StablecoinDetailClient", () => {
     expect(container.querySelectorAll("#price-transparency").length).toBeLessThanOrEqual(1);
   });
 
-  it("renders reserve view in the overview stream when report-card data is unavailable", async () => {
+  it("mounts the reserves module in the score row when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
     useStablecoinDetailViewModelMock.mockReturnValue(
@@ -253,15 +253,16 @@ describe("StablecoinDetailClient", () => {
 
     const { container } = renderDetail(coin);
 
-    const reservePanel = await screen.findByTestId("reserve-panel");
-    const reportCardAnchor = container.querySelector("#report-card");
+    const reserves = await screen.findByTestId("reserves-section");
     expect(screen.queryByTestId("report-card")).toBeNull();
-    expect(reservePanel.textContent).toContain("curated-fallback");
-    expect(reportCardAnchor?.contains(reservePanel)).toBe(false);
+    expect(reserves.textContent).toContain("curated-fallback");
+    expect(container.querySelector("#backing-evidence")?.contains(reserves)).toBe(false);
+    const backingEvidence = container.querySelector("#backing-evidence")!;
+    expect(reserves.compareDocumentPosition(backingEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
-  it("renders reserve composition inside a rated V9 Safety Score card", async () => {
+  it("orders the Risk zone as the Safety Score spine: score, then backing, exit and control evidence", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const reportCard = makeV9Card({ id: coin.id });
     const reportCardsResponse = makeReportCardsV9Response({ cards: [reportCard] });
@@ -270,34 +271,6 @@ describe("StablecoinDetailClient", () => {
         reportCard,
         reportCardsResponse,
         reportCardUpdatedAt: reportCardsResponse.updatedAt * 1000,
-        reserves: {
-          reserves: [{ name: "Curated reserve", pct: 100, risk: "low" }],
-          estimated: false,
-          mode: "curated-fallback",
-        },
-        featureStates: {
-          ...makeReadyViewModel().featureStates,
-          reserves: { status: "ready", dataUpdatedAt: 1, error: null },
-        },
-      }),
-    );
-
-    renderDetail(coin);
-
-    const reportCardElement = await screen.findByTestId("report-card");
-    const reservePanel = await screen.findByTestId("reserve-panel");
-    expect(reportCardElement.contains(reservePanel)).toBe(true);
-    expect(reservePanel.textContent).toContain("curated-fallback");
-  });
-
-  it("holds the reserve column open while live composition is loading", async () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    const reportCard = makeV9Card({ id: coin.id });
-    const reportCardsResponse = makeReportCardsV9Response({ cards: [reportCard] });
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        reportCard,
-        reportCardsResponse,
         featureStates: {
           ...makeReadyViewModel().featureStates,
           reserves: { status: "loading", dataUpdatedAt: 0, error: null },
@@ -305,12 +278,32 @@ describe("StablecoinDetailClient", () => {
       }),
     );
 
-    renderDetail(coin);
+    const { container } = renderDetail(coin);
 
     const reportCardElement = await screen.findByTestId("report-card");
-    const reservePanel = await screen.findByTestId("reserve-panel");
-    expect(reportCardElement.contains(reservePanel)).toBe(true);
-    expect(reservePanel.textContent).toContain("loading-reserves");
+    const reserves = await screen.findByTestId("reserves-section");
+    // The treemap left the score card: Reserves pairs with it in one row
+    // (score first), ahead of the backing-evidence group.
+    expect(reportCardElement.contains(reserves)).toBe(false);
+    expect(reserves.textContent).toContain("loading-reserves");
+    const scoreSection = container.querySelector("#report-card")!;
+    expect(scoreSection.parentElement).toBe(reserves.parentElement?.parentElement);
+    expect(scoreSection.compareDocumentPosition(reserves) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const spine = ["#reserves", "#backing-evidence", "#exit-evidence", "#control-evidence"].map(
+      (selector) => container.querySelector(selector)!,
+    );
+    const overview = container.querySelector("#overview")!;
+    for (const [index, node] of spine.entries()) {
+      expect(overview.contains(node)).toBe(true);
+      if (index > 0) {
+        expect(spine[index - 1]!.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    }
+    // Below-xl reference copies follow the evidence, in the Context zone.
+    const contracts = container.querySelector("#contracts");
+    if (contracts) {
+      expect(spine[3]!.compareDocumentPosition(contracts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it("renders the underlying asset card outside the overview section for variants", () => {
@@ -416,7 +409,7 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("orders the Context zone with the mechanism review folded after the zone-owned modules", () => {
+  it("mounts each structural card once, in its pillar group, and indexes it from the rail", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
 
@@ -444,64 +437,33 @@ describe("StablecoinDetailClient", () => {
       />,
     );
 
+    const backingEvidence = container.querySelector("#backing-evidence");
+    const controlEvidence = container.querySelector("#control-evidence");
     const mintAuthority = container.querySelector("#mint-authority");
     const mechanismReview = container.querySelector("#mechanism-review");
-    // The anchor now lands on the collapsed fold band, not the card inside it.
+    const backingMechanics = container.querySelector("#backing-mechanics");
+    // The anchor lands on the fold band itself — one mount at every width.
     expect(mechanismReview?.tagName).toBe("DETAILS");
-    expect((mechanismReview as HTMLDetailsElement).open).toBe(false);
-    expect(mechanismReview?.closest("div")?.className).toContain("xl:hidden");
-    expect(mintAuthority!.compareDocumentPosition(mechanismReview!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Reference material sits below the zone-owned modules and leads the folds.
-    const contextZone = mechanismReview!.parentElement!.parentElement!;
-    const foldBands = Array.from(contextZone.querySelectorAll('div[class~="xl:hidden"] > details'));
-    expect(foldBands.length).toBeGreaterThan(1);
-    expect(foldBands[0]).toBe(mechanismReview);
-  });
+    expect(mechanismReview?.closest('[class~="xl:hidden"]')).toBeNull();
+    expect(controlEvidence?.contains(mintAuthority)).toBe(true);
+    // Mechanism review explains the Backing pillar's mechanism scores.
+    expect(backingEvidence?.contains(mechanismReview)).toBe(true);
+    expect(backingEvidence?.contains(backingMechanics)).toBe(true);
 
-  it("mounts redemption backstop data in the liquidity zone", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        redemptionBackstop: {
-          stablecoinId: coin.id,
-        },
-      }),
+    const rail = container.querySelector('aside[aria-label="Coin summary rail"]')!;
+    const railLinks = Array.from(rail.querySelectorAll('[aria-label="Evidence index"] a')).map((link) =>
+      link.getAttribute("href"),
     );
-
-    renderDetail(coin);
-
-    // Two instances render (liquidity zone + xl right rail); the in-flow
-    // liquidity copy is the one wrapped in the #price section.
-    const priceCards = screen.getAllByTestId("price-transparency-card");
-    expect(priceCards).toHaveLength(2);
-    const priceSection = priceCards
-      .map((card) => card.closest("section#price"))
-      .find((section) => section != null);
-    expect(priceSection).toBeTruthy();
-    const redemptionCard = screen.getByTestId("redemption-backstop-card");
-    expect(redemptionCard.parentElement).toBe(priceSection?.parentElement);
+    expect(railLinks).toEqual(expect.arrayContaining(["#backing-mechanics", "#mechanism-review"]));
+    // The rail holds index rows only, never a second copy of the card body.
+    expect(rail.textContent).not.toContain("Reserves sit in segregated accounts.");
+    expect(container.querySelectorAll("#mechanism-review")).toHaveLength(1);
   });
 
-  it("keeps the liquidity price panel when redemption backstop data is absent", () => {
+  it("mounts the redemption route in exit evidence, out of the Market zone", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
-        redemptionBackstop: undefined,
-      }),
-    );
-
-    renderDetail(coin);
-
-    expect(screen.getAllByTestId("price-transparency-card").length).toBeGreaterThan(0);
-    expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
-  });
-
-  it("keeps redemption in the liquidity zone when price transparency data is absent", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(
-      makeReadyViewModel({
-        coinData: makeAbsentPriceCoinData(),
-        dexPriceCheck: null,
         redemptionBackstop: {
           stablecoinId: coin.id,
         },
@@ -510,26 +472,35 @@ describe("StablecoinDetailClient", () => {
 
     const { container } = renderDetail(coin);
 
-    expect(screen.queryByTestId("price-transparency-card")).toBeNull();
-    const redemptionCard = screen.getByTestId("redemption-backstop-card");
-    const liquiditySection = container.querySelector("#dex-liquidity");
-    expect(liquiditySection?.parentElement?.contains(redemptionCard)).toBe(true);
+    const redemptionRoute = screen.getByTestId("redemption-route-section");
+    expect(container.querySelector("#exit-evidence")?.contains(redemptionRoute)).toBe(true);
+    expect(container.querySelector("#dex-liquidity")?.parentElement?.contains(redemptionRoute)).toBe(false);
   });
 
-  it("omits the liquidity detail grid when price transparency and redemption data are absent", () => {
+  it("keeps the in-flow price panel in the Market zone below xl", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    renderDetail(coin);
+
+    // Two instances render (Market zone + xl rail); the in-flow copy is the
+    // one wrapped in the #price section.
+    const priceCards = screen.getAllByTestId("price-transparency-card");
+    expect(priceCards).toHaveLength(2);
+    expect(priceCards.some((card) => card.closest("section#price") != null)).toBe(true);
+  });
+
+  it("omits the price panel when price transparency data is absent", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
         coinData: makeAbsentPriceCoinData(),
         dexPriceCheck: null,
-        redemptionBackstop: undefined,
       }),
     );
 
-    renderDetail(coin);
+    const { container } = renderDetail(coin);
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
-    expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
+    expect(container.querySelector("#price")).toBeNull();
   });
 });
 

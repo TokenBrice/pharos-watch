@@ -55,6 +55,7 @@ interface ContagionGraphSvgProps {
   showTickerLabels?: boolean;
   bottomInsetFraction?: number;
   fillHeight?: boolean;
+  deferHelp?: boolean;
   nodeTooltipEl: ReactNode;
   edgeTooltipEl: ReactNode;
 }
@@ -468,6 +469,7 @@ export function ContagionGraphSvg({
   showTickerLabels = false,
   bottomInsetFraction = 0,
   fillHeight = false,
+  deferHelp = false,
   nodeTooltipEl,
   edgeTooltipEl,
 }: ContagionGraphSvgProps) {
@@ -520,7 +522,7 @@ export function ContagionGraphSvg({
       <button type="button" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => setViewport(null)}>Fit</button>
       <button type="button" aria-label="Zoom in" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => zoom(0.8)}>Zoom in</button>
       <button type="button" aria-label="Zoom out" className="pharos-focus-ring min-h-11 min-w-11 rounded-sm border px-3 text-xs" onClick={() => zoom(1.25)}>Zoom out</button>
-      <p className="text-xs text-muted-foreground">Drag the background to pan. Tap a coin to select. Mouse-drag a coin to pin it.</p>
+      {!deferHelp ? <p className="text-xs text-muted-foreground">Drag the background to pan. Tap a coin to select. Mouse-drag a coin to pin it.</p> : null}
     </div>
     <svg
       viewBox={viewBox}

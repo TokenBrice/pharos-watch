@@ -136,7 +136,8 @@ function StablecoinDetailClientContent({
       // These lanes also supply the visible hero, not only their deeper sections.
       liquidity: true,
       reportCards: true,
-      redemption: overviewActive || activityActive,
+      // The redemption route lives in the Risk zone's exit evidence.
+      redemption: overviewActive,
       yield: true,
       stress: true,
       flows: overviewActive || activityOrHistoryActive,

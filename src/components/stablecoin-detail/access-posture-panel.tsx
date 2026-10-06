@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import {
   EvidenceFooter,
   type EvidenceFooterSource,
@@ -72,7 +70,6 @@ export function AccessPosturePanel({
   review?: TransferReviewView | null;
   compact?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   if (rows.length === 0) return null;
 
   const list = (
@@ -89,37 +86,28 @@ export function AccessPosturePanel({
   const evidence = review === null
     ? null
     : (
-      <>
-        <InlineDisclosureToggle
-          open={open}
-          onToggle={() => setOpen((value) => !value)}
-          collapsedLabel={`How this was verified · ${review.deployments.length} ${review.deployments.length === 1 ? "deployment" : "deployments"}`}
-          className="mt-2"
-        />
-        {open ? (
-          <div className="mt-2 border-t border-border/50 pt-3">
-            {review.mixedPosture ? (
-              <p className="mb-2 text-[11px] leading-snug text-amber-700 dark:text-amber-400">
-                Posture differs by chain. The rows above summarise the strictest.
-              </p>
-            ) : null}
-            <ul className="space-y-3">
-              {review.deployments.map((deployment) => (
-                <DeploymentEvidence key={deployment.key} deployment={deployment} />
-              ))}
-            </ul>
-            {/* `Reviewed {date}` as plain trailing text, matching the four
-                sibling `EvidenceFooter` call sites. `ReviewedStamp` is the
-                *header* chip primitive (backing-mechanics, collateralization);
-                the footer row has its own one spelling. */}
-            <EvidenceFooter
-              className="mt-3"
-              sources={collectReviewSources(review)}
-              trailing={`Reviewed ${review.reviewedAt}`}
-            />
-          </div>
-        ) : null}
-      </>
+      <ModuleDisclosure
+        label={`How this was verified · ${review.deployments.length} ${review.deployments.length === 1 ? "deployment" : "deployments"}`}
+        className="mt-1"
+      >
+        <div className="mt-1 border-t border-border/50 pt-3">
+          {review.mixedPosture ? (
+            <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
+              Posture differs by chain. The rows above summarise the strictest.
+            </p>
+          ) : null}
+          <ul className="space-y-3">
+            {review.deployments.map((deployment) => (
+              <DeploymentEvidence key={deployment.key} deployment={deployment} />
+            ))}
+          </ul>
+          <EvidenceFooter
+            className="mt-3"
+            sources={collectReviewSources(review)}
+            trailing={`Reviewed ${review.reviewedAt}`}
+          />
+        </div>
+      </ModuleDisclosure>
     );
 
   if (compact) {

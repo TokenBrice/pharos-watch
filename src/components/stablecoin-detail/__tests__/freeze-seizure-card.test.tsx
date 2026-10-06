@@ -101,24 +101,13 @@ describe("FreezeSeizureCard", () => {
     expect(html).not.toContain("Sources");
   });
 
-  it("reveals the tail of long evidence behind Read more and folds it again", () => {
-    const longEvidence = `${"The verified implementation exposes no holder blacklist or freeze path. ".repeat(12)}TAIL-MARKER`;
-    render(<FreezeSeizureCard summary={{ ...SUMMARY, evidence: longEvidence }} />);
+  it("folds evidence and the resolver rationale behind Review notes", () => {
+    render(<FreezeSeizureCard summary={{ ...SUMMARY, sourceFreeRationale: "Resolved by the resolver." }} />);
 
-    expect(screen.queryByText(/TAIL-MARKER/)).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: /Read more/ }));
-    expect(screen.getByText(/TAIL-MARKER/)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: /Show less/ }));
-    expect(screen.queryByText(/TAIL-MARKER/)).toBeNull();
-  });
-
-  it("renders no evidence toggle when the review is short enough to show whole", () => {
-    render(<FreezeSeizureCard summary={SUMMARY} />);
-
-    expect(screen.getByText(SUMMARY.evidence)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Read more/ })).toBeNull();
+    expect(screen.getByText("Review notes")).toBeTruthy();
+    expect(screen.getByText(SUMMARY.evidence).closest("details")?.hasAttribute("open")).toBe(false);
+    expect(screen.getByText("Resolved by the resolver.").closest("details")).toBeTruthy();
+    expect(screen.queryByText(/Read more/)).toBeNull();
   });
 
   it("keeps the citation unreachable until Sources is opened", () => {

@@ -1,11 +1,15 @@
 import { ApiFetchError } from "@/lib/api";
-import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
+import type { ReserveRisk, ReserveSlice } from "@shared/types";
+
+/** `neutral` is informational; `watch` is an active condition (amber). Nothing here is red. */
+export type ReserveNoticeTone = "neutral" | "watch";
 
 export interface ReserveNoticeModel {
   title: string;
   message: string;
-  toneClass: string;
+  tone: ReserveNoticeTone;
 }
 
 export interface ReserveReferenceLink {
@@ -18,11 +22,40 @@ export interface ReserveFootnoteModel {
   references: ReserveReferenceLink[];
 }
 
-export interface ReserveSyncNoticeModel {
-  title: string;
+/**
+ * Ops/pipeline state of the reserve feed, shaped for a header chip plus a
+ * disclosure (D6): `label` is the chip, `summary` its tooltip, `rows` the
+ * disclosure detail. `reason` is the machine-readable cause (data-integrity
+ * rules R3/R4: the freshness budget and the reason stay visible).
+ */
+export interface ReserveFeedStatusModel {
+  label: string;
+  tone: ReserveNoticeTone;
+  reason: string;
+  summary: string;
   rows: string[];
-  toneClass: string;
+  /** True when the state came from a failed fetch, so a retry can help. */
+  retryable: boolean;
 }
+
+export interface ReserveSourceChipModel {
+  label: string;
+  /** The provenance sentence that used to sit under the module as an all-caps footnote. */
+  tooltip: string | null;
+}
+
+/** One tile/segment of the reserve visual, whichever snapshot it came from. */
+export interface ReserveCompositionSlice {
+  key: string;
+  label: string;
+  pct: number;
+  risk: ReserveRisk;
+  /** Obligor / asset-class line for tooltips; never rendered as tile text. */
+  detail: string | null;
+}
+
+const SECONDS_PER_DAY = 86_400;
+const SECONDS_PER_HOUR = 3_600;
 
 function isNetworkFetchError(error: unknown): boolean {
   return error instanceof TypeError
@@ -56,7 +89,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve refresh delayed",
       message: "Showing the last worker-resolved reserve snapshot while refresh retries.",
-      toneClass: SEVERITY_TONE_CLASS.watch.pill,
+      tone: "watch",
     };
   }
 
@@ -64,7 +97,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing curated reserve baseline.",
-      toneClass: SEVERITY_TONE_CLASS.watch.pill,
+      tone: "watch",
     };
   }
 
@@ -72,7 +105,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing the estimated reserve template.",
-      toneClass: SEVERITY_TONE_CLASS.watch.pill,
+      tone: "watch",
     };
   }
 
@@ -82,7 +115,7 @@ export function buildReserveFetchNotice(
       message: hasFallbackView
         ? "The live reserve feed has not been populated yet. Showing the current fallback view."
         : "The live reserve feed has not been populated yet. Please check back shortly.",
-      toneClass: SEVERITY_TONE_CLASS.neutral.pill,
+      tone: "neutral",
     };
   }
 
@@ -92,9 +125,7 @@ export function buildReserveFetchNotice(
       message: hasFallbackView
         ? "Unable to reach the live reserve API. Showing the current fallback view."
         : "Unable to reach the live reserve API right now. Please check your connection and try again.",
-      toneClass: hasFallbackView
-        ? SEVERITY_TONE_CLASS.watch.pill
-        : "border-destructive/50 bg-destructive/10 text-destructive",
+      tone: "watch",
     };
   }
 
@@ -102,12 +133,8 @@ export function buildReserveFetchNotice(
     title: "Live reserve feed unavailable",
     message: hasFallbackView
       ? "Unable to load the live reserve feed right now. Showing the current fallback view."
-      : error instanceof Error
-        ? error.message
-        : "Unable to load reserve composition right now.",
-    toneClass: hasFallbackView
-      ? SEVERITY_TONE_CLASS.watch.pill
-      : "border-destructive/50 bg-destructive/10 text-destructive",
+      : "Unable to load reserve composition right now.",
+    tone: "watch",
   };
 }
 
@@ -255,7 +282,7 @@ export function buildReserveProvenanceNotice(
     return {
       title: "Curated-validated reserve baseline",
       message: "This reserve view uses the reviewed reserve baseline, kept current through live validation rather than a fully independent live reserve composition feed.",
-      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      tone: "neutral",
     };
   }
 
@@ -263,7 +290,7 @@ export function buildReserveProvenanceNotice(
     return {
       title: "Reserve evidence",
       message: "This reserve view reflects a dated attestation, proof, or liveness check. The checked date records collection; it does not advance the underlying evidence date.",
-      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      tone: "neutral",
     };
   }
 
@@ -276,64 +303,249 @@ export function buildReserveProvenanceNotice(
           : reserves.provenance.freshnessMode === "unverified"
             ? "This reserve view comes from an independently measured live reserve feed, but freshness is not verified strongly enough for collateral scoring."
             : "This reserve view comes from an independently measured live reserve feed, but the current snapshot is not scoring-eligible.",
-        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+        tone: "neutral",
       };
     case "static-validated":
       return {
         title: "Live reserve disclosure",
         message: "This reserve view comes from a live reserve feed, but the current source is not treated as independent evidence for collateral scoring.",
-        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+        tone: "neutral",
       };
     case "weak-live-probe":
       return {
         title: "Proof-based reserve view",
         message: "This reserve view reflects a live proof, attestation, or liveness check rather than a full live reserve composition feed.",
-        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+        tone: "neutral",
       };
     default:
       return null;
   }
 }
 
-export function buildReserveSyncNotice(
-  reserves: ReserveResult | null,
-): ReserveSyncNoticeModel | null {
-  const sync = reserves?.sync;
-  if (!sync || (sync.status === "ok" && !sync.uncertainWrite)) {
-    return null;
+/**
+ * The source-type chip ("Attestation", "Live proof", "Proof", "Live"): the
+ * adapter's own badge label, with the provenance sentence as its tooltip.
+ * Absent for curated and template views, which carry no live badge.
+ */
+export function buildReserveSourceChip(reserves: ReserveResult | null): ReserveSourceChipModel | null {
+  const badge = reserves?.displayBadge;
+  if (!reserves || !badge) return null;
+  const isLiveProof = badge.kind === "proof" && reserves.provenance?.evidenceClass === "weak-live-probe";
+  return {
+    label: isLiveProof ? "Live proof" : badge.label,
+    tooltip: buildReserveProvenanceNotice(reserves)?.message ?? null,
+  };
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds >= SECONDS_PER_DAY) {
+    const days = Math.round((seconds / SECONDS_PER_DAY) * 10) / 10;
+    return `${days} ${days === 1 ? "day" : "days"}`;
   }
+  if (seconds >= SECONDS_PER_HOUR) return `${Math.round((seconds / SECONDS_PER_HOUR) * 10) / 10} h`;
+  return `${Math.round(seconds / 60)} min`;
+}
+
+function formatBudget(seconds: number): string {
+  if (seconds >= SECONDS_PER_DAY) {
+    const days = Math.round((seconds / SECONDS_PER_DAY) * 10) / 10;
+    return `${days}-day budget`;
+  }
+  return `${Math.max(1, Math.round(seconds / SECONDS_PER_HOUR))}-hour budget`;
+}
+
+/** "1066290s old … (max 604800s)" becomes "12.3 days old … (max 7 days)": ages read in days, never raw seconds. */
+function humanizeDurations(text: string): string {
+  return text.replace(/\b(\d{3,})s\b/g, (_match, seconds: string) => formatDuration(Number(seconds)));
+}
+
+/** Date of the evidence the feed last collected: attested report date first, else the source timestamp. */
+function reserveEvidenceDate(reserves: ReserveResult): number | null {
+  const assurance = reserves.metadata?.details?.assurance;
+  const reportDate = assurance && typeof assurance === "object" && "reportDate" in assurance
+    && typeof assurance.reportDate === "string" ? Date.parse(assurance.reportDate) : Number.NaN;
+  if (Number.isFinite(reportDate)) return reportDate;
+  const sourceTimestamp = reserves.sync?.freshness?.sourceTimestamp ?? reserves.metadata?.sourceTimestamp;
+  return typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp) ? sourceTimestamp * 1000 : null;
+}
+
+/** A stale-source-age diagnostic, as the adapter validators and the sync warning both word it. */
+const SOURCE_AGE_DIAGNOSTIC = /source timestamp is (\d+)s old.*?\(max (\d+)s\)/i;
+
+function buildSyncFeedStatus(reserves: ReserveResult): ReserveFeedStatusModel | null {
+  const sync = reserves.sync;
+  if (!sync || (sync.status === "ok" && !sync.uncertainWrite)) return null;
+
   if (isAwaitingFirstLiveSync(reserves)) {
     return {
-      title: "Live reserve sync pending",
+      label: "Live sync pending first run",
+      tone: "neutral",
+      reason: "bootstrap-pending",
+      summary: "The first scheduled live reserve sync has not run yet.",
       rows: ["The first scheduled live reserve sync has not run yet."],
-      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      retryable: false,
     };
   }
 
-  const staleSourceWarnings = (sync.warnings ?? []).filter((warning) => warning.startsWith("Upstream reserve source timestamp is ") && warning.includes("s old"));
-  const sourceAgeOnly = sync.status === "degraded" && !sync.lastError && !sync.uncertainWrite
-    && staleSourceWarnings.length > 0 && staleSourceWarnings.length === sync.warnings?.length;
-  if (sourceAgeOnly) {
+  const diagnostics = [...(sync.lastError ? [sync.lastError] : []), ...(sync.warnings ?? [])];
+  const ageDiagnostics = diagnostics.map((text) => SOURCE_AGE_DIAGNOSTIC.exec(text));
+  const isAgeOnly = (sync.status === "degraded" || sync.status === "error")
+    && !sync.uncertainWrite
+    && diagnostics.length > 0
+    && ageDiagnostics.every((match) => match != null);
+
+  if (isAgeOnly) {
+    const ageMatch = ageDiagnostics.find((match) => match != null) ?? null;
+    const budgetSec = sync.freshness?.sourceAgeBudgetSec ?? (ageMatch ? Number(ageMatch[2]) : null);
+    const ageSec = sync.freshness?.sourceAgeSec ?? (ageMatch ? Number(ageMatch[1]) : null);
+    const evidenceDate = reserveEvidenceDate(reserves);
+    const label = [
+      "Reserve feed stale",
+      // en-US month abbreviation: en-GB spells September "Sept".
+      ...(evidenceDate != null
+        ? [`last report ${new Date(evidenceDate).getUTCDate()} ${new Date(evidenceDate).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}`]
+        : []),
+      ...(budgetSec != null ? [formatBudget(budgetSec)] : []),
+    ].join(" · ");
+    const rows = [
+      "Reason: source-age",
+      ...(ageSec != null && budgetSec != null
+        ? [`Source age: ${formatDuration(ageSec)} (budget ${formatDuration(budgetSec)})`]
+        : []),
+      "The latest collected disclosure is older than this source’s accepted reporting window.",
+      formatReserveSnapshotLabel(reserves),
+    ];
     return {
-      title: "Reserve evidence is out of date",
-      rows: [
-        "The latest collected disclosure is older than this source’s accepted reporting window.",
-        formatReserveSnapshotLabel(reserves!),
-      ],
-      toneClass: SEVERITY_TONE_CLASS.watch.pill,
+      label,
+      tone: "watch",
+      reason: "source-age",
+      summary: "The latest collected disclosure is older than this source’s accepted reporting window.",
+      rows,
+      retryable: false,
     };
   }
-  const rows = [`Status: ${sync.status}`];
-  if (sync.failureCategory) rows.push(`Failure category: ${sync.failureCategory}`);
-  if (sync.lastError) rows.push(`Last error: ${sync.lastError}`);
-  if (sync.uncertainWrite) rows.push("Latest write state uncertain");
-  rows.push(...(sync.warnings ?? []));
 
+  const reason = sync.failureCategory
+    ?? (sync.uncertainWrite
+      ? "uncertain-write"
+      : sync.lastError ? "unclassified" : sync.warnings?.length ? "warnings" : sync.status);
+  const base = sync.status === "error" ? "Reserve sync error" : "Reserve sync degraded";
+  const rows = [
+    `Reason: ${reason}`,
+    `Sync status: ${sync.status}`,
+    ...(sync.lastError ? [`Last error: ${humanizeDurations(sync.lastError)}`] : []),
+    ...(sync.uncertainWrite ? ["Latest write state uncertain"] : []),
+    ...(sync.warnings ?? []).map(humanizeDurations),
+  ];
   return {
-    title: sync.status === "error" ? "Live reserve sync error" : "Live reserve sync degraded",
+    label: reason === sync.status ? base : `${base} · ${reason}`,
+    tone: "watch",
+    reason,
+    summary: `Live reserve sync reported ${sync.status}. The reviewed reserve composition is unaffected.`,
     rows,
-    toneClass: sync.status === "error"
-      ? "border-destructive/50 bg-destructive/10 text-destructive"
-      : SEVERITY_TONE_CLASS.watch.pill,
+    retryable: false,
   };
+}
+
+/**
+ * The reserve feed's ops state as one amber/neutral header chip plus disclosure
+ * rows: a failed fetch first (it is the freshest signal), else the sync state.
+ * Never carries raw adapter error text; ages read in days.
+ */
+export function buildReserveFeedStatus(
+  reserves: ReserveResult | null,
+  fetchError: unknown | null,
+): ReserveFeedStatusModel | null {
+  const sync = reserves ? buildSyncFeedStatus(reserves) : null;
+  if (!fetchError) return sync;
+
+  const notice = buildReserveFetchNotice(fetchError, reserves);
+  const reason = fetchError instanceof ApiFetchError && fetchError.status === 503
+    ? "api-unavailable"
+    : isNetworkFetchError(fetchError) ? "network" : "fetch-failed";
+  return {
+    label: notice.title,
+    tone: notice.tone,
+    reason,
+    summary: notice.message,
+    rows: [`Reason: ${reason}`, notice.message, ...(sync?.rows ?? [])],
+    retryable: true,
+  };
+}
+
+/**
+ * A reserve name that is a contract/facilitator identifier ("GhoDirectFacilitator
+ * GSMs Mainnet", a bare address) rather than words a reader can parse: a long
+ * CamelCase token. A parenthetical expansion ("cbBTC (Coinbase Wrapped BTC)")
+ * counts as human, and short tickers ("wstETH", "stataUSDT") are left alone.
+ */
+function isIdentifierLike(name: string): boolean {
+  if (name.includes("(")) return false;
+  if (/0x[0-9a-f]{6,}/i.test(name)) return true;
+  return name.split(/\s+/).some((token) =>
+    token.length >= 12 && (token.match(/[a-z][A-Z]/g)?.length ?? 0) >= 2,
+  );
+}
+
+/**
+ * The label a reader sees on a tile or bar segment. Identifier-like names fall
+ * back to the reviewed obligor description ("Aave V3 Plasma market"), else to the
+ * name with its CamelCase split; contract identifiers never reach the visual.
+ */
+export function reserveSliceLabel(name: string, obligor: string | null | undefined): string {
+  if (!isIdentifierLike(name)) return name;
+  return obligor?.trim() ? obligor.trim() : name.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+export function reviewedCompositionSlices(summary: ReserveQualityClientSummary): ReserveCompositionSlice[] {
+  return summary.slices
+    .map((slice) => ({
+      key: slice.key,
+      label: reserveSliceLabel(slice.name, slice.obligor),
+      pct: slice.pct,
+      risk: slice.risk,
+      detail: [slice.obligor, slice.assetClassLabel, slice.horizonLabel].filter(Boolean).join(" · ") || null,
+    }))
+    .sort((a, b) => b.pct - a.pct);
+}
+
+export function compositionSlices(slices: readonly ReserveSlice[]): ReserveCompositionSlice[] {
+  return slices
+    .filter((slice) => Number.isFinite(slice.pct) && slice.pct > 0)
+    .map((slice, index) => ({
+      key: `${slice.name}:${index}`,
+      label: reserveSliceLabel(slice.name, slice.issuerOrObligor),
+      pct: slice.pct,
+      risk: slice.risk,
+      detail: slice.issuerOrObligor ?? null,
+    }))
+    .sort((a, b) => b.pct - a.pct);
+}
+
+/** Largest per-rank share gap, in points, below which two snapshots read as the same composition. */
+const SAME_COMPOSITION_TOLERANCE_PCT = 0.5;
+
+/** Identity key for a slice: lowercase alphanumerics of the name, ignoring any parenthetical expansion. */
+function sliceIdentity(label: string): string {
+  return label.replace(/\(.*?\)/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * Whether the live attestation/proof composition differs from the reviewed
+ * slices. It reads as the same only when, rank by rank, both the share (within
+ * half a point) and the slice identity (normalized name) match: 100% ETH against
+ * 100% USDC has identical shares and is still a different composition. Reviewed
+ * and live feeds often name the same asset differently, so a "differs" result
+ * means "not provably the same", which is the conservative wording.
+ */
+export function liveCompositionDiffers(
+  live: readonly ReserveCompositionSlice[],
+  reviewed: readonly ReserveCompositionSlice[],
+): boolean {
+  if (live.length !== reviewed.length) return true;
+  return live.some((slice, index) => {
+    const counterpart = reviewed[index]!;
+    return Math.abs(slice.pct - counterpart.pct) > SAME_COMPOSITION_TOLERANCE_PCT
+      || sliceIdentity(slice.label) !== sliceIdentity(counterpart.label);
+  });
 }

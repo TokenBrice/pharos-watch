@@ -5,6 +5,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
+import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
@@ -96,9 +97,7 @@ export function MobileStickySummary({
         />
       ) : null}
       {reportCard?.partialEvidence ? (
-        <span className="text-[10px] text-muted-foreground">
-          Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.join("/")}
-        </span>
+        <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} className="text-[10px]" />
       ) : null}
     </div>
   );

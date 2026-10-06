@@ -9,15 +9,25 @@ import { cn } from "@/lib/utils";
 
 /* Figma coin-template semicircular gauge (Mint & Burn Flows card).
  * Position scale 0..100: 0 = all burn, 50 = balanced, 100 = all mint.
- * Zones: burn (red) 0-45, balanced (gray) 45-65, mint (green) 65-100.
- * The traversed portion renders at full saturation, the rest dimmed, with a
- * white notch at the current position. Hex literals: CSS vars are unreliable
- * in SVG stroke/fill. */
-const ARC_ZONES = [
-  { from: 0, to: 45, hex: "#ef4444", dimOpacity: 0.28 },
-  { from: 45, to: 65, hex: "#6b7280", dimOpacity: 0.4 },
-  { from: 65, to: 100, hex: "#22c55e", dimOpacity: 0.45 },
-] as const;
+ * The track is one neutral arc. Only the filled span between the centre mark
+ * and the current position carries colour, and only one colour at a time:
+ * green for net minting, grey for balanced, red solely for burn-dominated
+ * flow. A routine minting reading therefore never draws red, which belongs to
+ * an active alarm state. A white notch marks the current position. Hex
+ * literals: CSS vars are unreliable in SVG stroke/fill. */
+const BALANCED_FROM = 45;
+const BALANCED_TO = 65;
+const CENTER = 50;
+const TRACK_HEX = "#6b7280";
+const BURN_HEX = "#ef4444";
+const BALANCED_HEX = "#6b7280";
+const MINT_HEX = "#22c55e";
+
+function fillHex(pos: number): string {
+  if (pos < BALANCED_FROM) return BURN_HEX;
+  if (pos < BALANCED_TO) return BALANCED_HEX;
+  return MINT_HEX;
+}
 const ARC_CX = 80;
 const ARC_CY = 78;
 const ARC_R = 60;
@@ -64,59 +74,21 @@ export function MintingPressureArcGauge({
             : `Minting pressure gauge at ${display} of 100 (0 all burns, 100 all mints)`
         }
       >
-        {ARC_ZONES.map((zone) => {
-          const capPosition = zone.from === 0 ? 0 : zone.to === 100 ? 100 : null;
-          const cap = capPosition == null ? null : arcPoint(capPosition);
-          return (
-            <g key={`dim-${zone.from}`} opacity={zone.dimOpacity}>
-              <path
-                d={arcPath(zone.from, zone.to)}
-                fill="none"
-                stroke={zone.hex}
-                strokeWidth={ARC_STROKE_WIDTH}
-                strokeLinecap="butt"
-              />
-              {/* Keep only the gauge's outer ends rounded; internal zone joins stay flush. */}
-              {cap ? (
-                <circle
-                  cx={cap.x}
-                  cy={cap.y}
-                  r={ARC_STROKE_WIDTH / 2}
-                  fill={zone.hex}
-                />
-              ) : null}
-            </g>
-          );
-        })}
-        {pos != null
-          ? ARC_ZONES.filter((zone) => zone.from < pos).map((zone) => {
-              const to = Math.min(pos, zone.to);
-              return (
-                <path
-                  key={`lit-${zone.from}`}
-                  d={arcPath(zone.from, to)}
-                  fill="none"
-                  stroke={zone.hex}
-                  strokeWidth={ARC_STROKE_WIDTH}
-                  strokeLinecap="butt"
-                />
-              );
-            })
-          : null}
-        {pos != null && pos > 0 ? (
-          <circle
-            cx={arcPoint(0).x}
-            cy={arcPoint(0).y}
-            r={ARC_STROKE_WIDTH / 2}
-            fill={ARC_ZONES[0].hex}
-          />
-        ) : null}
-        {pos === 100 ? (
-          <circle
-            cx={arcPoint(100).x}
-            cy={arcPoint(100).y}
-            r={ARC_STROKE_WIDTH / 2}
-            fill={ARC_ZONES[ARC_ZONES.length - 1].hex}
+        <path
+          d={arcPath(0, 100)}
+          fill="none"
+          stroke={TRACK_HEX}
+          strokeOpacity={0.25}
+          strokeWidth={ARC_STROKE_WIDTH}
+          strokeLinecap="round"
+        />
+        {pos != null && pos !== CENTER ? (
+          <path
+            d={arcPath(Math.min(pos, CENTER), Math.max(pos, CENTER))}
+            fill="none"
+            stroke={fillHex(pos)}
+            strokeWidth={ARC_STROKE_WIDTH}
+            strokeLinecap="butt"
           />
         ) : null}
         {notch ? (

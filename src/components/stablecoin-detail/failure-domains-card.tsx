@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard, RailCount } from "@/components/stablecoin-detail/rail-card";
 import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
+
+/** Rows beyond this many fold into the disclosure; wrappers can carry 25+ routes. */
+const VISIBLE_ROW_LIMIT = 5;
 
 function shareLabel(row: FailureDomainRow): string {
   if (row.exposureShare === null) return "Unquantified";
@@ -15,7 +17,7 @@ function shareLabel(row: FailureDomainRow): string {
   return `${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
 }
 
-function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
+function DomainRow({ row }: { row: FailureDomainRow }) {
   return (
     <li>
       <div className="flex items-baseline justify-between gap-2">
@@ -34,12 +36,6 @@ function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
           <span className="font-mono text-xs tabular-nums text-muted-foreground">{shareLabel(row)}</span>
         </div>
       </div>
-      {row.modeledExposureShare != null && row.modeledExposureShare !== row.exposureShare ? (
-        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-          Modeled contribution (capped): {Math.round(row.modeledExposureShare * 100)}%
-        </p>
-      ) : null}
-      {open ? <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{row.reason}</p> : null}
     </li>
   );
 }
@@ -51,14 +47,25 @@ function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
  *
  * A zero-point row is kept rather than filtered — an identified shared domain
  * that did not cost the score is still the fact a holder wants, and dropping it
- * would misread "no penalty" as "no exposure".
+ * would misread "no penalty" as "no exposure". Per-row measurement reasons and
+ * the capped modelling contribution sit behind "Review notes".
  */
-export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }) {
-  const [open, setOpen] = useState(false);
+export function FailureDomainsCard({
+  view,
+  frameless,
+}: {
+  view: FailureDomainsView | null;
+  /** Body-only render inside a `RailCopyFold` band (see `RailCard`). */
+  frameless?: boolean;
+}) {
   if (view === null) return null;
+
+  const visibleRows = view.rows.slice(0, VISIBLE_ROW_LIMIT);
+  const overflowRows = view.rows.slice(VISIBLE_ROW_LIMIT);
 
   return (
     <RailCard
+      frameless={frameless}
       title="Shared failure domains"
       titleAdornment={<RailCount>{view.rows.length}</RailCount>}
       ariaLabel="Shared failure domains"
@@ -69,14 +76,27 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
           Chains and bridges that more than one of this token&apos;s deployments depend on, so they can fail together.
         </p>
         <ul className="mt-3 space-y-2.5">
-          {view.rows.map((row) => <DomainRow key={row.key} row={row} open={open} />)}
+          {visibleRows.map((row) => <DomainRow key={row.key} row={row} />)}
         </ul>
-        <InlineDisclosureToggle
-          open={open}
-          onToggle={() => setOpen((value) => !value)}
-          collapsedLabel="How each was measured"
-          className="mt-2.5"
-        />
+        {overflowRows.length > 0 ? (
+          <ModuleDisclosure label="All domains" count={view.rows.length}>
+            <ul className="space-y-2.5 pb-1 pt-1">
+              {overflowRows.map((row) => <DomainRow key={row.key} row={row} />)}
+            </ul>
+          </ModuleDisclosure>
+        ) : null}
+        <ModuleDisclosure label="Review notes">
+          <ul className="space-y-2 pb-1 pt-1">
+            {view.rows.map((row) => (
+              <li key={row.key} className="text-[11px] leading-snug text-muted-foreground">
+                <span className="font-medium text-foreground">{row.label}</span>: {row.reason}
+                {row.modeledExposureShare != null && row.modeledExposureShare !== row.exposureShare
+                  ? ` Modeled contribution (capped): ${Math.round(row.modeledExposureShare * 100)}%.`
+                  : ""}
+              </li>
+            ))}
+          </ul>
+        </ModuleDisclosure>
       </div>
 
       {view.totalAdjustmentPoints > 0 ? (

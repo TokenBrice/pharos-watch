@@ -34,6 +34,7 @@ function makeCurrent(overrides: Partial<Current> = {}): Current {
     dewsBand: null,
     dewsScore: null,
     depegCount: null,
+    weakestPillar: null,
     ...overrides,
   };
 }
@@ -93,6 +94,7 @@ describe("AI summary V9 current-value projection", () => {
         exit: { score: 55 },
         control: { score: 45 },
       },
+      weakestPillar: { pillar: "control", score: 45 },
     }] as unknown as ReportCardsV9CurrentResponse["cards"];
     const stress = {
       "usdt-tether": { band: "WATCH", score: 23 },
@@ -121,6 +123,7 @@ describe("AI summary V9 current-value projection", () => {
       dewsBand: "WATCH",
       dewsScore: 23,
       depegCount: 8,
+      weakestPillar: "control",
     });
   });
 
@@ -227,6 +230,24 @@ describe("AI summary V9 current-value projection", () => {
     expect(extractFindings("$500 TVL", current)).toEqual([
       expect.objectContaining({ kind: "volatile-dollar-claim", claimed: "500", severity: "medium" }),
     ]);
+  });
+
+  it("flags a weakest-pillar claim only when it contradicts the published weakest pillar", () => {
+    const current = makeCurrent({ weakestPillar: "control" });
+    expect(extractFindings("Exit is the weakest of the three pillars.", current)).toEqual([
+      { kind: "weakest-pillar", claim: "Exit is the weakest", claimed: "exit", current: "control", severity: "medium" },
+    ]);
+    expect(extractFindings("The weakest pillar is economic control.", current)).toEqual([]);
+    expect(extractFindings("Exit is the weakest pillar.", makeCurrent())).toEqual([]);
+  });
+
+  it("flags superseded Safety Score majors but not protocol versions", () => {
+    const current = makeCurrent();
+    expect(extractFindings("The card flags the composition as older than v9's freshness bound.", current)).toEqual([
+      expect.objectContaining({ kind: "retired-methodology-version", claimed: "v9", severity: "medium" }),
+    ]);
+    expect(extractFindings("Liquity V2 grades its troves by interest rate.", current)).toEqual([]);
+    expect(extractFindings("The v9 router shipped in March.", current)).toEqual([]);
   });
 
   it("ignores lowercase articles, preserves signed grades, and deduplicates equivalent claims", () => {

@@ -33,6 +33,8 @@ export interface MintAuthorityClientSummary {
   authorityPosture: MintAuthorityPosture;
   confidence: MintAuthorityConfidence;
   summary: string;
+  /** Authored summary-layer verdict; overrides the generated one on the detail card. */
+  headline?: string;
   inheritedFrom?: string;
   mintIncidents?: MintAuthorityProfile["mintIncidents"];
   controls?: MintAuthorityClientControlSummary[];

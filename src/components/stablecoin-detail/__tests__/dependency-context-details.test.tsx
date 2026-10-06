@@ -27,21 +27,22 @@ describe("DependencyContextDetails", () => {
     expect(within(roles).getByRole("link", { name: "USDC" }).getAttribute("href")).toBe("/stablecoin/usdc-circle");
     expect(roles.textContent).toContain("Exit dependency");
     expect(roles.textContent).toContain("25%");
-    expect(screen.getByRole("region", { name: "What depends on me" }).textContent).toContain("0 direct dependents");
+    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
     expect(roles.textContent).toContain("Role score 84/100");
-    expect(screen.getByRole("region", { name: "What I depend on" }).textContent).toContain("No upstream links");
+    expect(screen.queryByRole("region", { name: "What I depend on" })).toBeNull();
   });
 
-  it("distinguishes unpublished coverage from a published empty list", () => {
-    const card = makeV9Card();
-    delete card.dependencyCoverage;
-    const { rerender } = render(<DependencyContextDetails card={card} context={EMPTY_CONTEXT} marketCapAsOf={null} />);
-    const region = () => screen.getByRole("region", { name: "Known, not in the scored graph" });
-    expect(region().textContent).toContain("not published for this generation");
-    card.dependencyCoverage = [];
-    rerender(<DependencyContextDetails card={card} context={EMPTY_CONTEXT} marketCapAsOf={null} />);
-    expect(region().textContent).toContain("No known relationships outside the scored graph published");
-    expect(region().textContent).not.toContain("not published for this generation");
+  it.each(["empty", "unpublished"] as const)("collapses all %s quadrants into one line without empty blocks", (state) => {
+    const card = makeV9Card({ dependencyCoverage: [] });
+    card.dependencies.roles = [];
+    if (state === "unpublished") {
+      delete card.dependencyCoverage;
+      delete card.dependencies.roles;
+    }
+    const { container } = render(<DependencyContextDetails card={card} context={EMPTY_CONTEXT} marketCapAsOf={null} />);
+    expect(screen.queryAllByRole("region")).toHaveLength(0);
+    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(container.querySelectorAll("h3")).toHaveLength(0);
   });
 
   it("discloses coverage shares and reasons without linking unverified identities or adding exposure", () => {
@@ -60,6 +61,6 @@ describe("DependencyContextDetails", () => {
     expect(coverage.textContent).toContain("2026-08-31");
     expect(coverage.textContent).toContain("Share unknown");
     expect(coverage.textContent).toContain("Identity unverified");
-    expect(screen.getByRole("region", { name: "What depends on me" }).textContent).toContain("0 direct dependents");
+    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
   });
 });

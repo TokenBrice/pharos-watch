@@ -9,6 +9,7 @@ import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
+import { describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
 
 export type StablecoinSafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
@@ -129,9 +130,11 @@ export interface StablecoinSafetyScoreV9Alternative {
 }
 
 export interface StablecoinSafetyScoreV9ExitHighlight {
-  primaryRouteLabel: string;
+  /** Reader venue ("Curve on Ethereum"); never the internal "AMM 10" ordinal. */
+  venueLabel: string;
   primaryRouteScore: number | null;
   redundancyCredit: number;
+  /** "$25M at 4 bps", with the settlement window when not immediate. */
   capacityLine: string | null;
 }
 
@@ -263,13 +266,6 @@ function fullUsd(value: number): string {
   return `$${value.toLocaleString("en-US", {
     maximumFractionDigits: value < 1 ? 2 : 0,
   })}`;
-}
-
-function completionLabel(ratio: number): string {
-  const percent = ratio * 100;
-  if (percent === 0) return "0%";
-  if (percent > 0 && percent < 1) return "<1%";
-  return `${percent.toFixed(percent < 10 ? 1 : 0)}%`;
 }
 
 function excludedRouteReason(
@@ -466,16 +462,20 @@ function parseExitBreakdown(
   const exitHighlight: StablecoinSafetyScoreV9ExitHighlight | null = primaryRoute === null
     ? null
     : {
-        primaryRouteLabel: primaryRoute.label,
+        venueLabel: describeExitRouteVenue(primaryRoute),
         primaryRouteScore: primaryRoute.score,
         redundancyCredit,
         capacityLine: primaryRoute.capacity === undefined || primaryRoute.capacity === null
           ? null
-          : `${completionLabel(primaryRoute.capacity.completionRatio)} of ${compactUsd(primaryRoute.capacity.requestedNotionalUsd)} executable ${
+          : `${compactUsd(primaryRoute.capacity.executableUsd)}${
+              primaryRoute.capacity.completionRatio < 1
+                ? ` of ${compactUsd(primaryRoute.capacity.requestedNotionalUsd)}`
+                : ""
+            } at ${costLabel(primaryRoute.capacity.executionCostBps)}${
               primaryRoute.capacity.settlementDelaySec === 0
-                ? "immediately"
-                : `within ${formatWholeUnitDurationSeconds(primaryRoute.capacity.settlementDelaySec, { minUnit: "minute" })}`
-            } · ${costLabel(primaryRoute.capacity.executionCostBps)}`,
+                ? ""
+                : ` within ${formatWholeUnitDurationSeconds(primaryRoute.capacity.settlementDelaySec, { minUnit: "minute" })}`
+            }`,
       };
 
   return {

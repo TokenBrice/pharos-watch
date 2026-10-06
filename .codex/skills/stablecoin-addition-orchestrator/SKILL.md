@@ -27,6 +27,7 @@ Cite its provenance record (keyless URL, block, timestamp); never cite `latest` 
 - Use `issuer-questionnaire` only for issuer-only unknowns, `write-ai-summaries` for editorial copy, and `pre-launch-update` for milestone/date maintenance.
 - Route reserves, mint authority, compliance, and risk-review fields to their sidecars per `docs/process/stablecoin-research-sidecars.md`. Generic scalar metadata remains in the base file.
 - Follow [Phase 5](../../../docs/process/adding-a-stablecoin.md#phase-5---evaluate-downstream-coverage-branches) for Mint Authority, blacklistability, bridge routes, yield, reserves, redemption, mint/burn, Bluechip, history, and current Safety Score coverage. Record every branch as added, not applicable, or an intentional gap.
+- Every new or promoted Mint Authority profile must author `mintAuthority.headline`: one verdict sentence of at most 25 words with no raw identifiers (addresses, block heights, second counts, gate codes, evaluator keys, version pins). Schema validation rejects anything else; the long reviewer narrative stays in `summary`.
 
 ## Apply And Finish
 

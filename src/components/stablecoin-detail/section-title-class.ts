@@ -30,5 +30,6 @@ export const DETAIL_MODULE_TITLE_CLASS = "text-sm font-semibold tracking-normal 
 export const DETAIL_MODULE_BODY_CLASS = "px-4 py-5 sm:px-5";
 
 /** Shared scroll-margin for anchored detail-page sections; clears the mobile
- *  sticky summary bar on small viewports and only needs breathing room on lg+. */
-export const SECTION_SCROLL_MT = "scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6";
+ *  sticky summary bar on small viewports and, on lg+, the global header plus the
+ *  sticky section nav (3.5rem + ~2.75rem). */
+export const SECTION_SCROLL_MT = "scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-28";

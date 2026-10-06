@@ -12,7 +12,12 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
-import type { RedemptionBackstopEntry } from "@shared/types";
+import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
+import {
+  REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
+  type RedemptionCoverageReasonCode,
+} from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
+import { describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -28,15 +33,15 @@ import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card
 
 const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
 
-/** The view model's real tone cutoffs (80/65/50/35) as an unlabeled score
- *  track — these tiers have no published names, so the spectrum shows only
- *  position and tone, never invented vocabulary. Worst → best, left → right. */
+/** The view model's tone cutoffs (80/65/50/35) as a range track. The tiers
+ *  have no published names, so each band is labelled by its score range.
+ *  Worst → best, left → right. */
 const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = [
-  { key: "t0", label: "", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
-  { key: "t35", label: "", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
-  { key: "t50", label: "", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
-  { key: "t65", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
-  { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+  { key: "t0", label: "<35", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
+  { key: "t35", label: "35–49", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
+  { key: "t50", label: "50–64", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
+  { key: "t65", label: "65–79", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
+  { key: "t80", label: "80+", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
 ];
 const REDEMPTION_SCORE_CUTOFFS = [0, 35, 50, 65, 80] as const;
 
@@ -64,8 +69,93 @@ function MetadataBadgeList({ items }: { items: readonly { label: string; value: 
   );
 }
 
-export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEntry }) {
+const NO_HOLDER_ROUTE_REASONS: Partial<Record<RedemptionCoverageReasonCode, string>> = {
+  "pegkeeper-only": "Only PegKeeper contracts redeem; holders exit through markets.",
+  "no-holder-route": "No issuer or protocol route lets ordinary holders redeem; holders exit through markets.",
+  "borrower-repay-only": "Only borrowers repaying debt reclaim collateral; holders exit through markets.",
+  "secondary-market-only": "Holders exit through secondary markets only.",
+};
+
+const NOT_RATED_REASONS: Record<RedemptionBackstopEntry["resolutionState"], string> = {
+  resolved: "Not rated: the route score could not be resolved.",
+  "missing-capacity": "Not rated: no executable redemption capacity could be measured.",
+  "missing-cache": "Not rated: the asset was missing from the current supply snapshot.",
+  impaired: "Not rated: current evidence contradicts par redemption on this route.",
+  failed: "Not rated: the route score could not be resolved.",
+};
+
+/** "Exit pillar uses the best available route (Curve on Ethereum, 97); this route scores 63." */
+function exitReconciliation(
+  reportCard: SafetyScoreV9CurrentCard | null | undefined,
+  entry: RedemptionBackstopEntry | null,
+): string | null {
+  const primaryRoute = reportCard?.breakdowns?.exit.primaryRoute ?? null;
+  if (primaryRoute === null || primaryRoute.score === null) return null;
+  const routeScore = Math.round(primaryRoute.score);
+  const venue = describeExitRouteVenue(primaryRoute);
+  if (entry === null) return `The Exit pillar relies on market routes instead (best: ${venue}, ${routeScore}).`;
+  const scoresThisRoute = primaryRoute.key.startsWith("redemption:") && primaryRoute.key.includes(`:${entry.routeFamily}`);
+  if (scoresThisRoute) return `The Exit pillar scores this route directly (${routeScore}).`;
+  return `The Exit pillar uses the best available route (${venue}, ${routeScore}); ${
+    entry.score == null ? "this route is not rated" : `this route scores ${entry.score}`
+  }.`;
+}
+
+/**
+ * Exit-evidence module: the scored redemption route, an explicit "No holder
+ * redemption route" state from the reviewed coverage dispositions, or nothing.
+ * Root keeps `id="redemption"` in every state (hero passport link target).
+ */
+export function RedemptionRouteSection({
+  entry,
+  reportCard,
+  coinId,
+}: {
+  entry: RedemptionBackstopEntry | null | undefined;
+  reportCard: SafetyScoreV9CurrentCard | null | undefined;
+  coinId: string;
+}) {
+  if (entry) return <RedemptionBackstopCard entry={entry} reconciliation={exitReconciliation(reportCard, entry)} />;
+  const disposition = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find((row) => row.id === coinId);
+  const verdict = disposition ? NO_HOLDER_ROUTE_REASONS[disposition.reasonCode] : undefined;
+  if (!disposition || verdict === undefined) return null;
+  const reconciliation = exitReconciliation(reportCard, null);
+  return (
+    <Card id="redemption" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <MethodologyLabel topic="redemptionBackstop">Redemption route</MethodologyLabel>
+        </StablecoinModuleTitle>
+        <ScorePill label="No holder route" title="No holder redemption route exists, so none is scored" />
+      </CardHeader>
+      <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
+        <p className="text-sm font-medium text-foreground">No holder redemption route</p>
+        <p className="text-sm text-muted-foreground">{verdict}</p>
+        {reconciliation ? <p className="text-xs text-muted-foreground">{reconciliation}</p> : null}
+        <ModuleDisclosure label="Review notes">
+          <p className="pb-1 text-xs leading-relaxed text-muted-foreground">{disposition.blocker}</p>
+        </ModuleDisclosure>
+        <EvidenceFooter
+          topic="redemptionBackstop"
+          sources={disposition.evidenceUrls.map((url) => ({ label: new URL(url).hostname, url }))}
+          trailing={`Reviewed ${disposition.reviewedDate}`}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function RedemptionBackstopCard({
+  entry,
+  reconciliation,
+}: {
+  entry: RedemptionBackstopEntry;
+  reconciliation: string | null;
+}) {
   const viewModel = buildRedemptionBackstopCardViewModel(entry);
+  const verdict = viewModel.score == null
+    ? NOT_RATED_REASONS[entry.resolutionState]
+    : `${viewModel.accessLabel} access; ${viewModel.settlementLabel.toLowerCase()} settlement into ${viewModel.outputAssetLabel.toLowerCase()}.`;
 
   return (
     <Card id="redemption" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
@@ -83,7 +173,7 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
             <ScorePill
               label={viewModel.heroScoreLabel}
               toneClass={viewModel.scoreToneClass}
-              title="Standalone route score"
+              title="Standalone route score. Tone follows the 80/65/50/35 score cutoffs on the track below."
               className={viewModel.isLowConfidence ? "border-dashed" : undefined}
             />
           </ScoreBadgeWrapper>
@@ -129,9 +219,9 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
         </div>
 
         {viewModel.resolutionSummary ? (
-          <div className={cn("rounded-lg border px-3 py-2 text-sm text-muted-foreground", SEVERITY_TONE_CLASS.watch.banner)}>
-            {viewModel.resolutionSummary}
-          </div>
+          <ModuleDisclosure label="Review notes">
+            <p className="pb-1 text-xs leading-relaxed text-muted-foreground">{viewModel.resolutionSummary}</p>
+          </ModuleDisclosure>
         ) : null}
 
         {/* ── the exit rail: holder → gate → venue → output; FactGrid below sm ── */}
@@ -142,6 +232,8 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           outputAssetLabel={viewModel.outputAssetLabel}
           routeFamilyLabel={viewModel.routeFamilyLabel}
         />
+        <p className="text-sm text-foreground">{verdict}</p>
+        {reconciliation ? <p className="text-xs text-muted-foreground">{reconciliation}</p> : null}
 
         {/* ── detail layer: capacity/fee/confidence fold behind the standard
                disclosure — the score, route chips, and access row above are

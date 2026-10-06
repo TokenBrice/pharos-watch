@@ -117,8 +117,8 @@ function resolveOracleRiskRole(coin: StablecoinMeta): OracleRiskRole {
 
 function roleNote(role: OracleRiskRole, symbol: string): string {
   return role === "collateral-pricing"
-    ? `Prices the collateral behind ${symbol} and drives liquidations. A wrong or stale price leaves debt undercollateralized, so this is core solvency machinery.`
-    : `Covers how ${symbol} and the assets behind it are priced, not borrower collateral in a liquidation engine. Failure here hits whoever consumes the price — including third-party integrators — rather than an internal liquidation path.`;
+    ? `Prices the collateral behind ${symbol} and drives liquidations; a stale or wrong price leaves debt undercollateralized.`
+    : `Covers how ${symbol} and the assets behind it are priced; a failure hits whoever consumes the price, not a liquidation engine.`;
 }
 
 const CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {

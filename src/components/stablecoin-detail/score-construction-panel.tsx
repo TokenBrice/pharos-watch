@@ -1,16 +1,17 @@
 "use client";
 
-import { ScanSearch, Sigma } from "lucide-react";
+import { ScanSearch } from "lucide-react";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import { buildScoreWaterfall, type ScoreWaterfallStep } from "@/lib/safety-score-v9-waterfall";
+import { describePartialEvidence } from "@/lib/safety-score-reason-labels";
 import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
 
 type ConstructionCard = SafetyScoreV9CurrentCard;
 
-function WaterfallStep({ step, showHint }: { step: ScoreWaterfallStep; showHint: boolean }) {
+function WaterfallStep({ step }: { step: ScoreWaterfallStep }) {
   const terminal = step.kind === "published";
   return (
     <li>
@@ -32,7 +33,7 @@ function WaterfallStep({ step, showHint }: { step: ScoreWaterfallStep; showHint:
           </span>
         </div>
       </div>
-      {showHint && step.detail ? (
+      {step.detail ? (
         <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{step.detail}</p>
       ) : null}
     </li>
@@ -41,42 +42,20 @@ function WaterfallStep({ step, showHint }: { step: ScoreWaterfallStep; showHint:
 
 /**
  * How the pillar bars become the headline number, and what is holding that
- * number down — the arithmetic and its causes read as one thought, so they
- * render as one module rather than two stacked sections.
- *
- * Lives in the summary rail at `xl+` (`compact`) and inside the Safety Score
- * card below `xl`, the same split `#price` and the access panel use, so the
- * rail's absence on narrow viewports does not lose either half.
- *
- * The per-step hint lines are dropped in the rail: at 22rem they triple the
- * module's height for labels that already read plainly.
+ * number down — the arithmetic and its causes read as one thought, folded
+ * behind one disclosure inside the Safety Score card at every breakpoint.
+ * Reasons render humanized and grouped (D13), three visible per list.
  */
-export function ScoreConstructionPanel({
-  card,
-  compact = false,
-}: {
-  card: ConstructionCard;
-  compact?: boolean;
-}) {
+export function ScoreConstructionPanel({ card }: { card: ConstructionCard }) {
   const steps = buildScoreWaterfall(card);
   const { adverseMessages, boundedGroups } = buildSafetyScoreV9Attribution(card);
   const coverageNotice = card.partialEvidence === null ? null : (
-    <p role="status" className="text-xs text-muted-foreground">
-      {card.ratingStatus === "pipeline-gap" ? "Pipeline gap — no Safety Score published. " : ""}
-      Partial evidence: pipeline gap · {card.partialEvidence.causes.map((cause) =>
-        cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
-      {card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded pillars: ${card.partialEvidence.excludedPillars.join(", ")} (0% effective weight)` : ""}
+    <p className="text-xs text-muted-foreground">
+      {card.ratingStatus === "pipeline-gap" ? "No Safety Score is published yet. " : ""}
+      {describePartialEvidence(card.partialEvidence).summary}
     </p>
   );
   if (steps.length === 0 && adverseMessages.length === 0 && boundedGroups.length === 0 && coverageNotice === null) return null;
-
-  const waterfall = steps.length > 0
-    ? (
-      <ul className="space-y-1.5">
-        {steps.map((step) => <WaterfallStep key={step.key} step={step} showHint={!compact} />)}
-      </ul>
-    )
-    : null;
 
   const whyNotHigher = adverseMessages.length > 0 || boundedGroups.length > 0
     ? (
@@ -90,51 +69,28 @@ export function ScoreConstructionPanel({
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
               Measured and adverse
             </p>
-            <ul className="mt-1 space-y-1 text-[11px] leading-snug text-muted-foreground">
-              {adverseMessages.map((message) => (
-                <li key={message} className="min-w-0 [overflow-wrap:anywhere]">{message}</li>
-              ))}
-            </ul>
+            <SafetyScoreReasonList messages={adverseMessages} className="mt-1" />
           </div>
         ) : null}
         {boundedGroups.map((group) => (
           <div key={group.key} className="mt-2.5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{group.label}</p>
-            <ul className="mt-1 space-y-1 text-[11px] leading-snug text-muted-foreground">
-              {group.messages.map((message) => (
-                <li key={message} className="min-w-0 [overflow-wrap:anywhere]">{message}</li>
-              ))}
-            </ul>
+            <SafetyScoreReasonList messages={group.messages} className="mt-1" />
           </div>
         ))}
       </>
     )
     : null;
 
-  if (compact) {
-    return (
-      <RailCard
-        title="How this score is built"
-        ariaLabel="How this score is built"
-        trailing={<Sigma className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
-      >
-        {coverageNotice ? <div className="px-4 pb-4">{coverageNotice}</div> : null}
-        {waterfall ? <div className="px-4 pb-4">{waterfall}</div> : null}
-        {whyNotHigher ? (
-          <div className={cn("px-4 pb-4", waterfall && "border-t border-border/50 pt-4")}>{whyNotHigher}</div>
-        ) : null}
-      </RailCard>
-    );
-  }
-
-  // In-flow (below xl) the construction arithmetic is detail, not verdict —
-  // it folds behind the standard disclosure; the rail keeps its at-a-glance
-  // expanded copy at xl+.
   return (
-    <section className="border-b border-border/40 pb-3 xl:hidden" aria-label="How this score is built">
+    <section className="border-b border-border/40 pb-3" aria-label="How this score is built">
       <ModuleDisclosure label="How this score is built">
         {coverageNotice}
-        {waterfall ? <div className="mt-2">{waterfall}</div> : null}
+        {steps.length > 0 ? (
+          <ul className={cn("space-y-1.5", coverageNotice && "mt-2")}>
+            {steps.map((step) => <WaterfallStep key={step.key} step={step} />)}
+          </ul>
+        ) : null}
         {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
       </ModuleDisclosure>
     </section>
