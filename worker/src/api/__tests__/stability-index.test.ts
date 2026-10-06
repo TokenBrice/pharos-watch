@@ -330,6 +330,33 @@ describe("handleStabilityIndex contract tests", () => {
       openDepegsWithoutPrice: 2,
     });
   });
+
+  it.each([false, true])("surfaces additive supply and trend omissions (detail=%s)", async (detail) => {
+    const omittedSample = {
+      ...sampleRow,
+      input_snapshot: JSON.stringify({
+        totalMcapUsd: 1e11, contributors: [],
+        supplyUnavailableIds: ["usdc-circle"],
+        trendUnavailableIds: ["usdt-tether"],
+      }),
+    };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [omittedSample], first: omittedSample },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+    const res = await handleStabilityIndex(db, new URL(`https://x/api/stability-index?detail=${detail}`));
+    const body = await readJsonResponse(res, 200);
+    const parsed = StabilityIndexResponseSchema.parse(body);
+    expect(parsed.current?.inputDegradation).toMatchObject({
+      supplyUnavailableIds: ["usdc-circle"], trendUnavailableIds: ["usdt-tether"],
+    });
+  });
+
+  it("keeps legacy input snapshots free of invented omission arrays", async () => {
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const parsed = StabilityIndexResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(parsed.current?.inputDegradation).toBeUndefined();
+  });
 });
 
 describe("daily PSI stored provenance compatibility", () => {

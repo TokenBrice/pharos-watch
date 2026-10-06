@@ -177,15 +177,16 @@ async function readDailyStressHistoryIds(
 }
 
 /**
- * Seal the producer-owned portion of one daily snapshot to the exact computed
- * identity set. Frozen rows are retained as historical evidence outside the
- * active producer's ownership boundary.
+ * Seal the admitted portion of one daily snapshot to the exact computed identity
+ * set. Frozen and quarantined rows remain historical evidence outside this run's
+ * ownership boundary.
  */
 export async function reconcileDailyDewsHistorySnapshot(
   db: D1Database,
   results: DewsComputedRow[],
   snapshotDate: number,
   signal?: AbortSignal,
+  quarantinedStablecoinIds?: ReadonlySet<string>,
 ): Promise<{ rewritten: boolean; previousOwnedRowCount: number; sealedRowCount: number }> {
   if (results.length === 0) {
     return { rewritten: false, previousOwnedRowCount: 0, sealedRowCount: 0 };
@@ -197,7 +198,9 @@ export async function reconcileDailyDewsHistorySnapshot(
   }
 
   const existingIds = await readDailyStressHistoryIds(db, snapshotDate, signal);
-  const existingOwnedIds = new Set([...existingIds].filter((stablecoinId) => !FROZEN_IDS.has(stablecoinId)));
+  const existingOwnedIds = new Set([...existingIds].filter(
+    (stablecoinId) => !FROZEN_IDS.has(stablecoinId) && !quarantinedStablecoinIds?.has(stablecoinId),
+  ));
   if (hasExactStablecoinIds(existingOwnedIds, expectedIds)) {
     return {
       rewritten: false,
@@ -206,17 +209,15 @@ export async function reconcileDailyDewsHistorySnapshot(
     };
   }
 
-  const frozenIds = [...FROZEN_IDS];
-  const frozenClause = frozenIds.length > 0
-    ? `AND stablecoin_id NOT IN (${buildInClause(frozenIds).sql})`
-    : "";
-  const deleteOwnedRows = db
-    .prepare(
-      `/* pharos:dews:stress-history-daily-replace */
-       DELETE FROM stress_signal_history
-        WHERE snapshot_date = ? ${frozenClause}`,
-    )
-    .bind(snapshotDate, ...frozenIds);
+  const deleteOwnedRows = chunkArray([...existingOwnedIds], D1_SAFE_SQL_IN_CHUNK_SIZE).map((ids) =>
+    db
+      .prepare(
+        `/* pharos:dews:stress-history-daily-replace */
+         DELETE FROM stress_signal_history
+          WHERE snapshot_date = ? AND stablecoin_id IN (${buildInClause(ids).sql})`,
+      )
+      .bind(snapshotDate, ...ids),
+  );
   const insertRows = results.map((result) => [
     result.stablecoinId,
     snapshotDate,
@@ -231,10 +232,12 @@ export async function reconcileDailyDewsHistorySnapshot(
        (stablecoin_id, snapshot_date, score, band, signals_json)`,
     insertRows,
   );
-  await executeAtomicBatch(db, [deleteOwnedRows, ...insertStatements], { signal });
+  await executeAtomicBatch(db, [...deleteOwnedRows, ...insertStatements], { signal });
 
   const sealedIds = await readDailyStressHistoryIds(db, snapshotDate, signal);
-  const sealedOwnedIds = new Set([...sealedIds].filter((stablecoinId) => !FROZEN_IDS.has(stablecoinId)));
+  const sealedOwnedIds = new Set([...sealedIds].filter(
+    (stablecoinId) => !FROZEN_IDS.has(stablecoinId) && !quarantinedStablecoinIds?.has(stablecoinId),
+  ));
   if (!hasExactStablecoinIds(sealedOwnedIds, expectedIds)) {
     throw new Error(
       `DEWS daily snapshot identity mismatch: sealed ${sealedOwnedIds.size}/${expectedIds.size} rows for ${snapshotDate}`,
@@ -328,6 +331,7 @@ export async function persistDewsResults(params: {
   results: DewsComputedRow[];
   eligibleIds: Set<string>;
   noCurrentSupplyIds?: string[];
+  quarantinedStablecoinIds?: string[];
   degradedSources: readonly string[];
   nowSec: number;
   signal?: AbortSignal;
@@ -390,6 +394,10 @@ export async function persistDewsResults(params: {
   );
   const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
   await deleteLatestStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
+  const quarantinedStablecoinIds = new Set((params.quarantinedStablecoinIds ?? []).filter(
+    (stablecoinId) => params.eligibleIds.has(stablecoinId) && !computedIds.has(stablecoinId),
+  ));
+  await deleteLatestStressSignalRowsForIds(params.db, quarantinedStablecoinIds, params.signal);
 
   const todayMidnight = startOfUtcDaySec(new Date());
   if (params.results.length > 0) {
@@ -398,6 +406,7 @@ export async function persistDewsResults(params: {
       params.results,
       todayMidnight,
       params.signal,
+      quarantinedStablecoinIds,
     );
     if (dailySnapshot.rewritten) {
       logWorkerEventArgs("lib", "info",

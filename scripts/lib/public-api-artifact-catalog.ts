@@ -508,7 +508,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stability-index",
     summary: "Pharos Stability Index",
-    description: "Latest Pharos Stability Index with optional detail payload and history.",
+    description: "Latest Pharos Stability Index with optional detail payload and history. Successful partial samples retain unpriced-event diagnostics and optional current.inputDegradation.supplyUnavailableIds/trendUnavailableIds from the stored snapshot. Unavailable current supply is omitted from denominators and contributors; unusable aggregate market-cap or paired trend inputs preserve the previous sample rather than inventing zero.",
     tags: ["Risk"],
     responseSchema: "StabilityIndexResponse",
     parameters: [
