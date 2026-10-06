@@ -329,6 +329,7 @@ export async function runDexExitRouteTurnoverWatchdog(
   let pendingAlert: PendingTurnoverAlert | undefined;
   if (comparable === null) {
     result = createCronResult({
+      status: "ok",
       itemCount: 0,
       metadata: {
         currentGenerationId: current.generationId,
@@ -430,13 +431,10 @@ export async function runDexExitRouteTurnoverWatchdog(
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
       carriedPendingAlert: carriedAlert,
       pendingAlertCleared: carriedAlert !== null && alerting.length === 0,
-      reason: alerting.length > 0
-        ? "dex-route-turnover-threshold"
-        : carriedAlert !== null ? "dex-route-turnover-pending-alert" : null,
+      ...(pendingAlert ? { quality: { reason: "dex-route-turnover-threshold" } } : {}),
+      firedRuleIds: pendingAlert ? ["dex-route-turnover"] : [],
     });
-    result = alerting.length === 0 && carriedAlert === null
-      ? { itemCount: evaluations.length, metadata }
-      : { status: "degraded", itemCount: evaluations.length, metadata };
+    result = { status: "ok", itemCount: evaluations.length, metadata };
   }
 
   await setCache(

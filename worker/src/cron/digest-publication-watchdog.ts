@@ -371,6 +371,7 @@ export async function runDigestPublicationWatchdog(
     sent: false,
     cooldown: false,
   };
+  let alertDeliveryFailed = false;
   if (stale.length > 0 || recovered.length > 0) {
     // The map check is deliberately advisory. It must not consume the shared
     // publication-alert cooldown, otherwise a 07:45 map notice could hide a
@@ -393,6 +394,8 @@ export async function runDigestPublicationWatchdog(
         if (hasBlockingTransition) {
           await setCache(db, DIGEST_WATCHDOG_ALERT_KEY, String(nowSec), signal);
         }
+      } else {
+        alertDeliveryFailed = true;
       }
     }
   } else {
@@ -403,9 +406,12 @@ export async function runDigestPublicationWatchdog(
     !observation.advisory && observation.state === "stale"
   ));
   return {
-    status: blockingStale.length > 0 ? "degraded" : "ok",
+    status: alertDeliveryFailed ? "degraded" : "ok",
     itemCount: blockingStale.length,
     metadata: JSON.stringify({
+      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+      ...(blockingStale.length > 0 ? { quality: { reason: "digest-publication-findings" } } : {}),
+      firedRuleIds: observations.filter((observation) => observation.state === "stale").map((observation) => observation.condition),
       date,
       cutoffs: { mapDue, dailyDue, weeklyDue },
       checked: observations.length,

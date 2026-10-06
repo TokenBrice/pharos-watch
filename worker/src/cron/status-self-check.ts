@@ -66,6 +66,8 @@ interface ProbeStats {
   failCount: number;
   latencySummary: ProbeLatencySummary;
   status: StatusLevel;
+  transportStatus: StatusLevel;
+  semanticStatus: StatusLevel;
 }
 
 interface ExternalProductionProbeTarget {
@@ -191,13 +193,18 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
     (worst, probe) => (probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst),
     "healthy",
   );
+  const transportStatus = classifyProbeStatus(connectivityProbes.length, failCount, latencySummary.p95Ms);
   return {
     connectivityProbes,
     passCount,
     failCount,
     latencySummary,
+    transportStatus,
+    semanticStatus: probes.reduce<StatusLevel>((worst, probe) =>
+      probe.semanticStatus && (probe.ok || probe.error?.startsWith("reported-"))
+        ? maxProbeStatus(worst, probe.semanticStatus) : worst, "healthy"),
     status: maxProbeStatus(
-      classifyProbeStatus(connectivityProbes.length, failCount, latencySummary.p95Ms),
+      transportStatus,
       semanticProbeStatus,
     ),
   };
@@ -715,7 +722,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
-  const { passCount, failCount, latencySummary, status: probeStatus } = computeProbeStats(probes);
+  const { passCount, failCount, latencySummary, status: probeStatus, transportStatus, semanticStatus } = computeProbeStats(probes);
   const hasProbeFailure = failCount > 0 || internalExternalDiscrepancy.hasDivergence;
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
@@ -740,6 +747,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   } satisfies StatusProbeSummary;
 
   await options.reportProgress?.({ stage: "probe-persistence" });
+  const failedOutputs = new Set<string>();
   const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
     status: probeSummary.status,
     sampleCount: probeSummary.sampleCount,
@@ -764,11 +772,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
     },
-  });
+  }, () => failedOutputs.add("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
   const raw = await computeRawStatus(db, now);
-  const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
+  const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
+    () => failedOutputs.add("status_state"));
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
   const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
     ?? (options.d1StatusConfig
@@ -797,23 +806,37 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   });
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
-  const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);
+  const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure,
+    () => failedOutputs.add("status_discrepancy_state"));
   const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
+  if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
+  if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
+  if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");
+  if (!discrepancyState.persistenceSucceeded) failedOutputs.add("status_discrepancy_state");
+  const evidenceReadFailed = raw.dbHealthy === false
+    || Object.values({ ...raw.sectionErrors, ...supplements.sectionErrors }).some((error) =>
+      error != null && /(?:failed|failure)/.test(error.code));
+  const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
+  const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
+    : evidenceReadFailed ? "status-self-check-evidence-read-failed"
+      : executionFailed ? "probe-execution-failed" : null;
 
   return {
-    // A degraded probe plane is a degraded monitoring run: the previous
-    // `stale`-only mapping reported `ok` while probes were already failing.
-    status: probeStatus === "healthy" ? "ok" : "degraded",
+    status: reason ? "degraded" : "ok",
     itemCount: sampleCount,
     metadata: JSON.stringify({
-      outputPublishedAt: rawSnapshotPersistenceSucceeded && probePersistenceSucceeded && statusPersistenceSucceeded ? now : null,
-      ...(probeStatus === "healthy" ? {} : { reason: `probe-plane-${probeStatus}` }),
+      outputPublishedAt: failedOutputs.size === 0 ? now : null,
+      failedOutputs: [...failedOutputs],
+      ...(reason ? { reason } : {}),
+      ...(semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
       sampleCount,
       passCount,
       failCount,
       p95LatencyMs,
       latencySummary,
       probeStatus,
+      transportStatus,
+      semanticStatus,
       rawOverallStatus: raw.rawOverallStatus,
       effectiveStatus,
       probePersistenceSucceeded,

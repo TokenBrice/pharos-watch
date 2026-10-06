@@ -321,6 +321,8 @@ export async function syncDexDiscovery(
   let deploymentOutcomesWritten = 0;
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
+  const persistenceFailedCoins = new Set<string>();
+  const persistenceFailures = new Set<string>();
   const tierBreakdown = { refresh: 0, t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
   // Coins the verified-empty census held above dormant this run. Observability
   // for the cadence rule: a green deploy proves nothing about a 20h cadence.
@@ -349,6 +351,8 @@ export async function syncDexDiscovery(
     windowedCoins,
     windowedDeploymentsDeferred,
     stalePoolRefresh,
+    persistenceFailedCoins: [...persistenceFailedCoins],
+    persistenceFailures: [...persistenceFailures],
     dexscreener: {
       attemptedRequests: dexScreenerRunState.attemptedRequests,
       successfulRequests: dexScreenerRunState.successfulRequests,
@@ -364,6 +368,7 @@ export async function syncDexDiscovery(
       targetCursorsChanged = false;
     } catch (err) {
       rethrowIfAborted(err, signal);
+      persistenceFailures.add("target-cursors");
       logWorkerEvent({
         scope: "lib",
         level: "warn",
@@ -378,6 +383,7 @@ export async function syncDexDiscovery(
     try {
       await finalizeDexScreenerDiscoveryRun(db, dexScreenerRunState);
     } catch (err) {
+      persistenceFailures.add("dexscreener-outcome");
       logWorkerEvent({
         scope: "lib",
         level: "warn",
@@ -531,17 +537,16 @@ export async function syncDexDiscovery(
       }
 
       try {
-        // Persist the attempt boundary before any network work. If the crawl is
-        // aborted, budget-discarded, or cannot persist its result, an older
-        // verified-empty outcome is already superseded without changing
-        // backoff counters.
-        await recordDiscoveryAttemptFence(
-          db,
-          candidate.stablecoinId,
-          targetWindow.targets,
-          nowSec,
-          signal,
-        );
+        // Fence old empty evidence before attempting any provider work.
+        await recordDiscoveryAttemptFence(db, candidate.stablecoinId, targetWindow.targets, nowSec, signal);
+      } catch (err) {
+        rethrowIfAborted(err, signal);
+        persistenceFailedCoins.add(candidate.stablecoinId);
+        failedCoins.push(candidate.stablecoinId);
+        failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
+        continue;
+      }
+      try {
         const coinDeadline = Math.min(deadlineMs, Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS);
         const result = await crawlCoin(
           db,
@@ -611,6 +616,7 @@ export async function syncDexDiscovery(
           // provider outage.
           logWorkerEventArgs("handler", "warn", "[dex-discovery] Persistence failed for", candidate.stablecoinId, persistErr);
           failedCoins.push(candidate.stablecoinId);
+          persistenceFailedCoins.add(candidate.stablecoinId);
           failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(persistErr);
         }
       } catch (err) {
@@ -618,13 +624,16 @@ export async function syncDexDiscovery(
         logWorkerEventArgs("handler", "warn", "[dex-discovery]", candidate.stablecoinId, err);
         failedCoins.push(candidate.stablecoinId);
         failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
-        deploymentOutcomesWritten += await fenceFailedDiscoveryAttempt(
-          db,
-          candidate,
-          targetWindow.targets,
-          nowSec,
-          signal,
-        );
+        try {
+          deploymentOutcomesWritten += await fenceFailedDiscoveryAttempt(
+            db, candidate, targetWindow.targets, nowSec, signal,
+          );
+        } catch (fenceErr) {
+          rethrowIfAborted(fenceErr, signal);
+          persistenceFailedCoins.add(candidate.stablecoinId);
+          failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(fenceErr);
+          continue;
+        }
         // The window was attempted and fenced as inaccessible, so advance past it.
         // Holding the cursor here would let one failing window block the rest of
         // the footprint from ever being crawled again.
@@ -644,6 +653,8 @@ export async function syncDexDiscovery(
           try {
             await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec, signal);
           } catch (err) {
+            rethrowIfAborted(err, signal);
+            persistenceFailedCoins.add(candidate.stablecoinId);
             logWorkerEventArgs("handler", "warn", `[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${toErrorMessage(err)}`);
           }
         }
@@ -672,20 +683,27 @@ export async function syncDexDiscovery(
       metadata: buildRunMetadata(),
     });
 
+    const persistenceFailed = persistenceFailedCoins.size > 0 || persistenceFailures.size > 0;
+    // Publishing a completed coin also advances the stale-first queue through
+    // its persisted discovery meta (and deployment-window cursor, if present).
+    const budgetMadeProgress = coinsCrawled > 0 && stagedRowsChanged > 0;
+    const reason = persistenceFailed ? "dex-discovery-persistence-failed"
+      : budgetExhausted && !budgetMadeProgress ? "dex-discovery-budget-exhausted"
+        : cleanup?.error != null ? "dex-discovery-cleanup-failed"
+          : stalePoolRefresh.outcome === "failed" ? "dex-discovery-stale-pool-refresh-failed" : null;
+    const qualityReasons = [
+      ...(failedCoins.some((id) => !persistenceFailedCoins.has(id)) ? ["dex-discovery-coins-failed"] : []),
+      ...(budgetExhausted && budgetMadeProgress ? ["dex-discovery-budget-exhausted"] : []),
+    ];
     return {
-      status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null || stalePoolRefresh.outcome === "failed"
-        ? "degraded"
-        : "ok",
+      status: reason ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
         outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 || stalePoolRefresh.rowsWritten > 0
           ? nowSec
           : null,
-        ...(failedCoins.length > 0 || budgetExhausted || cleanup?.error != null || stalePoolRefresh.outcome === "failed" ? {
-          reason: failedCoins.length > 0 ? "dex-discovery-coins-failed"
-            : budgetExhausted ? "dex-discovery-budget-exhausted"
-              : cleanup?.error != null ? "dex-discovery-cleanup-failed" : "dex-discovery-stale-pool-refresh-failed",
-        } : {}),
+        ...(reason ? { reason } : {}),
+        ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,

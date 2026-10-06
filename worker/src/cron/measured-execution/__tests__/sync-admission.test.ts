@@ -649,7 +649,7 @@ describe("measured execution overflow admission", () => {
     ).toBe(true);
   });
 
-  it("keeps newly empty score-eligible V4 pools blocking even with untracked counter assets", () => {
+  it("keeps empty score-eligible V4 failures blocking when positive read proof is missing", () => {
     const emptyPool = target("usdc-circle", 112_500, "empty-v4", {
       adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
       protocol: "uniswap-v4",
@@ -670,6 +670,28 @@ describe("measured execution overflow admission", () => {
       attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
       deferredCount: 0, admissionRotationCycles: 1, cursorWriteStatus: "not-needed",
     })).toBe("degraded");
+  });
+
+  it("excludes only proven empty pool outcomes and does not recount retained observations as attempts", () => {
+    const emptyPool = target("usdc-circle", 100_000, "proven-empty", {
+      adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, protocol: "uniswap-v4",
+      poolId: `0x${"11".repeat(32)}`,
+    });
+    const rawPayload = {
+      adapterProfileId: emptyPool.adapterProfileId, targetId: emptyPool.targetId,
+      emptyPoolObservation: { observedAtSec: 1_000, sourceQuoteGenerationId: "empty-generation", blockNumber: 123,
+        poolId: emptyPool.poolId, liquidity: "0", sqrtPriceX96: "100" },
+      reprobeEligibleAtSec: 4_600, reused: false,
+    };
+    const current = { target: emptyPool, status: "failed" as const, failureReason: "pool-uninitialized-or-empty", rawPayload };
+    expect(summarizeMeasuredExecutionQuoteFailures([current])).toMatchObject({
+      attemptedFailureCount: 1, positiveEmptyPoolCount: 1, scoreEligibleBlockingFailureCount: 0,
+    });
+    expect(summarizeMeasuredExecutionQuoteFailures([{ ...current, observedThisRun: false }])).toMatchObject({
+      attemptedFailureCount: 0, positiveEmptyPoolCount: 1, scoreEligibleBlockingFailureCount: 0,
+    });
+    expect(summarizeMeasuredExecutionQuoteFailures([{ ...current, rawPayload: { ...rawPayload,
+      emptyPoolObservation: { ...rawPayload.emptyPoolObservation, liquidity: "20" } } }]).scoreEligibleBlockingFailureCount).toBe(1);
   });
 
   it("keeps untracked pool-implied price mismatches diagnostic for cron status", () => {

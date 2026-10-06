@@ -4,7 +4,8 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import { batchExecute, prepareMultiRowInsertStatements } from "../../lib/db";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { batchExecute, prepareMultiRowInsertStatements, runChunkedInRead } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import {
@@ -38,6 +39,79 @@ export interface DexMeasuredQuoteOutcome {
   profile?: DexMeasuredExecutionProfile;
   /** Persisted only for failed outcomes; measured rows carry their evidence in the profile's quoteProof. */
   rawPayload?: unknown;
+  observedThisRun?: boolean;
+}
+
+export const DEX_MEASURED_EMPTY_POOL_REPROBE_SEC = 2 * CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution.intervalSec;
+
+export interface PositiveEmptyPoolProof {
+  adapterProfileId: string;
+  targetId: string;
+  emptyPoolObservation: {
+    observedAtSec: number;
+    sourceQuoteGenerationId: string;
+    blockNumber: number;
+    poolId: string;
+    liquidity: string;
+    sqrtPriceX96: string;
+  };
+  reprobeEligibleAtSec: number;
+  reused: boolean;
+}
+
+/** Only successful decoded pool-state reads can suppress a target's RPCs. */
+export function readPositiveEmptyPoolProof(value: unknown): PositiveEmptyPoolProof | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const observation = raw.emptyPoolObservation;
+  if (!observation || typeof observation !== "object") return null;
+  const proof = observation as Record<string, unknown>;
+  if (typeof raw.adapterProfileId !== "string" || typeof raw.targetId !== "string"
+    || typeof proof.observedAtSec !== "number" || !Number.isSafeInteger(proof.observedAtSec) || proof.observedAtSec <= 0
+    || typeof proof.blockNumber !== "number" || !Number.isSafeInteger(proof.blockNumber) || proof.blockNumber < 0
+    || typeof proof.sourceQuoteGenerationId !== "string" || !proof.sourceQuoteGenerationId
+    || typeof proof.poolId !== "string" || !/^0x[0-9a-f]{64}$/i.test(proof.poolId)
+    || typeof proof.liquidity !== "string" || !/^[0-9]{1,78}$/.test(proof.liquidity)
+    || typeof proof.sqrtPriceX96 !== "string" || !/^[0-9]{1,78}$/.test(proof.sqrtPriceX96)
+    || (BigInt(proof.liquidity) !== 0n && BigInt(proof.sqrtPriceX96) !== 0n)
+    || raw.reprobeEligibleAtSec !== proof.observedAtSec + DEX_MEASURED_EMPTY_POOL_REPROBE_SEC
+    || typeof raw.reused !== "boolean") return null;
+  return value as PositiveEmptyPoolProof;
+}
+
+export async function loadPositiveEmptyPoolQuarantines(
+  db: D1Database,
+  lane: "active" | "shadow",
+  targetIds: readonly string[],
+  signal?: AbortSignal,
+): Promise<Map<string, PositiveEmptyPoolProof>> {
+  const surface = lane === "shadow" ? DEX_SHADOW_MEASURED_QUOTE_SURFACE : DEX_MEASURED_QUOTE_SURFACE;
+  const rows = await runChunkedInRead(
+    targetIds,
+    (inClause) => `SELECT target_id, status, failure_reason, raw_quote_payload_json FROM (
+      SELECT q.target_id, q.status, q.failure_reason, q.raw_quote_payload_json,
+        ROW_NUMBER() OVER (PARTITION BY q.target_id ORDER BY g.published_at DESC, g.started_at DESC, g.generation_id DESC) AS outcome_rank
+      FROM dex_measured_execution_quotes q
+      JOIN surface_publication_generations g ON g.generation_id = q.generation_id
+      WHERE g.surface = '${surface}' AND g.state IN ('published', 'superseded')
+        AND q.target_id IN (${inClause})
+    ) WHERE outcome_rank = 1`,
+    async (sql, binds) => {
+      const result = await runWithOverloadRetry(() => db.prepare(sql).bind(...binds).all<{
+        target_id: string; status: string; failure_reason: string | null; raw_quote_payload_json: string | null;
+      }>(), 3, signal);
+      return result.results ?? [];
+    },
+  );
+  const held = new Map<string, PositiveEmptyPoolProof>();
+  for (const row of rows) {
+    if (row.status !== "failed" || row.failure_reason !== "pool-uninitialized-or-empty" || !row.raw_quote_payload_json) continue;
+    let raw: unknown;
+    try { raw = JSON.parse(row.raw_quote_payload_json); } catch { continue; }
+    const proof = readPositiveEmptyPoolProof(raw);
+    if (proof && proof.targetId === row.target_id) held.set(row.target_id, proof);
+  }
+  return held;
 }
 
 export interface NativeShadowQuote {

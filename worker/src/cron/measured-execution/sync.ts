@@ -24,6 +24,9 @@ import {
   publishDexMeasuredQuoteGeneration,
   publishDexShadowMeasuredQuoteGeneration,
   pruneDexMeasuredExecutionGenerations,
+  loadPositiveEmptyPoolQuarantines,
+  DEX_MEASURED_EMPTY_POOL_REPROBE_SEC,
+  type PositiveEmptyPoolProof,
   type DexMeasuredQuoteOutcome,
 } from "./persistence";
 import {
@@ -111,6 +114,7 @@ interface TargetQuoteState {
   failedReason: string | null;
   stopped: boolean;
   bracket: { lowerPassingUsd: number; upperFailingUsd: number } | null;
+  emptyPoolProof: PositiveEmptyPoolProof | null;
 }
 
 function markBudgetStop(states: readonly TargetQuoteState[], reason: string | null): void {
@@ -435,6 +439,18 @@ async function syncDexMeasuredExecutionLane(
   const quoteGenerationId = lane === "shadow"
     ? buildDexShadowMeasuredQuoteGenerationId(startedAt)
     : buildDexMeasuredQuoteGenerationId(startedAt);
+  const retainedEmpty = await loadPositiveEmptyPoolQuarantines(db, lane,
+    targetGeneration.targets.map((target) => target.targetId), signal);
+  const heldEmpty = new Map<string, PositiveEmptyPoolProof>();
+  for (const target of targetGeneration.targets) {
+    const proof = retainedEmpty.get(target.targetId);
+    if (proof && proof.adapterProfileId === target.adapterProfileId
+      && proof.emptyPoolObservation.poolId.toLowerCase() === target.poolId.toLowerCase()
+      && proof.emptyPoolObservation.observedAtSec <= startedAt && startedAt < proof.reprobeEligibleAtSec) {
+      heldEmpty.set(target.targetId, { ...proof, reused: true });
+    }
+  }
+  const eligibleTargets = targetGeneration.targets.filter((target) => !heldEmpty.has(target.targetId));
   const expiringPriority = lane === "active" && scoreBearingRoutes
     ? selectExpiringScoreBearingPriorityPacket(targetGeneration.targets, scoreBearingRoutes)
     : null;
@@ -455,12 +471,12 @@ async function syncDexMeasuredExecutionLane(
     estimatedSetupRpcRequests,
     estimatedQuoteRpcRequests,
     nextCursor,
-  } = admitTargetsWithinBudget(targetGeneration.targets, {
+  } = admitTargetsWithinBudget(eligibleTargets, {
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
   });
-  const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
+  const admissionRotationCycles = estimateAdmissionRotationCycles(eligibleTargets, {
     cursor: admissionCursor,
     priorityTargetIds,
     priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
@@ -495,13 +511,14 @@ async function syncDexMeasuredExecutionLane(
     curveCompositeProof: null,
     uniswapV4PoolProof: null,
     points: [],
-    failedReason: oversized.has(target.targetId)
+    failedReason: heldEmpty.has(target.targetId) ? "pool-uninitialized-or-empty" : oversized.has(target.targetId)
       ? "admission-coin-group-oversized"
       : deferred.has(target.targetId)
         ? "budget-deferred"
         : null,
     stopped: false,
     bracket: null,
+    emptyPoolProof: heldEmpty.get(target.targetId) ?? null,
   }));
   for (const state of states) {
     if (admitted.has(state.target.targetId) && !state.deployment) {
@@ -606,6 +623,17 @@ async function syncDexMeasuredExecutionLane(
     });
     outcomes.forEach((outcome, index) => {
       const state = rows[index]!;
+      if (outcome.emptyPoolState) {
+        state.emptyPoolProof = {
+          adapterProfileId: state.target.adapterProfileId, targetId: state.target.targetId,
+          emptyPoolObservation: {
+            observedAtSec: state.blockObservedAt!, sourceQuoteGenerationId: quoteGenerationId,
+            ...outcome.emptyPoolState,
+          },
+          reprobeEligibleAtSec: state.blockObservedAt! + DEX_MEASURED_EMPTY_POOL_REPROBE_SEC,
+          reused: false,
+        };
+      }
       if (outcome.proof) state.uniswapV4PoolProof = outcome.proof;
       else if (rpcBudget.stopReason) markBudgetStop([state], rpcBudget.stopReason);
       else state.failedReason = outcome.failureReason ?? "v4-pool-binding-failed";
@@ -833,7 +861,8 @@ async function syncDexMeasuredExecutionLane(
         target: state.target,
         status: "failed",
         failureReason: state.failedReason ?? "deployment-unavailable",
-        rawPayload: { adapterProfileId: state.target.adapterProfileId, targetId: state.target.targetId },
+        rawPayload: state.emptyPoolProof ?? { adapterProfileId: state.target.adapterProfileId, targetId: state.target.targetId },
+        observedThisRun: state.emptyPoolProof?.reused !== true,
       };
     }
     try {
@@ -949,6 +978,9 @@ async function syncDexMeasuredExecutionLane(
     scoreEligibleDiagnosticFailureCount: failureSummary.scoreEligibleDiagnosticFailureCount,
     scoreEligibleBlockingFailureCount: failureSummary.scoreEligibleBlockingFailureCount,
     diagnosticAttemptedFailureCount: failureSummary.diagnosticAttemptedFailureCount,
+    positiveEmptyPoolCount: failureSummary.positiveEmptyPoolCount,
+    quarantinedEmptyPoolCount: heldEmpty.size,
+    ...(failureSummary.positiveEmptyPoolCount > 0 ? { quality: { reason: "pool-uninitialized-or-empty" } } : {}),
     deferredCount: deferred.size,
     budgetDeferredCount,
     admissionEstimatedRpcRequests: estimatedRpcRequests,
@@ -979,6 +1011,12 @@ async function syncDexMeasuredExecutionLane(
         : []),
       ...(retention.error ? ["retention-cleanup-failed"] : []),
     ],
+    reason: retention.error ? "retention-cleanup-failed"
+      : failureSummary.scoreEligibleBlockingFailureCount > 0 ? "quote-failures"
+        : cursorWriteStatus === "write-failed" ? "admission-cursor-write-failed"
+          : budgetDeferredCount > 0 && cursorWriteStatus !== "written" ? "admission-cursor-not-persisted"
+            : admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
+              ? "admission-rotation-exceeds-freshness" : undefined,
     quoteCallCount,
     rpcRequestCount: rpcBudget.requestsUsed,
     runtimeBudgetStopReason: rpcBudget.stopReason,

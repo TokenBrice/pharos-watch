@@ -17,7 +17,7 @@ Use the evidence below before retriggering:
 | Style-gate block | A `daily_digest` row exists with `qualityGate = "blocked"`; `input_data.editorialAudit.qualityIssueCodes` includes `editorial-style`, and `digest_meta.editorialStyleGate` contains the bounded findings and retry result. | The copy was generated and held before publication. No channel replay is available for that copy. |
 | Missing row | No `daily_digest` row exists for the UTC date, and no blocked row exists. The `daily-digest` or `schedule_key = "digestTriggerPoll"` cron history shows an error, an abandoned slot, a skipped run, or no started child. | Treat this as a generation or scheduled-slot incident. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) when the history shows slot reconciliation. |
 | Delivery skip | A non-blocked digest row exists and the archive projection assigns it a daily or weekly edition number, but channel metadata is `skipped: ...`, `queued: ...`, `outbox-*`, or another non-delivered state. | The edition was published to the archive. Follow [`telegram-digest-outbox.md`](./telegram-digest-outbox.md) for Telegram and inspect the channel delivery metadata for X. |
-| Watchdog gap alert | `/api/status` or `cron-duration-watchdog` metadata reports `runtimeBreaching` or `slotAbandonmentBreaching`, or cron history contains a synthetic `scheduled-slot-abandoned` event. | The alert describes runtime or schedule evidence. It is not a style finding. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) and preserve the watchdog evidence. |
+| Watchdog gap alert | `/api/status` → `crons["cron-sentinel"]` → `metadata.sources.duration.metadata` reports `runtimeBreaching` or `slotAbandonmentBreaching`, or cron history contains a synthetic `scheduled-slot-abandoned` event. | Successful observation is `ok` plus quality; it is not a style finding or a failure of the watchdog. Follow [`cron-slot-abandonment.md`](./cron-slot-abandonment.md) and preserve the underlying schedule/runtime evidence. |
 
 ## Inspect
 
@@ -31,18 +31,18 @@ Use the evidence below before retriggering:
      "SELECT id, generated_at, digest_title, json_extract(digest_meta, '\$.qualityGate') AS quality_gate, json_extract(digest_meta, '\$.editorialStyleVersion') AS style_version, json_extract(digest_meta, '\$.editorialStyleHash') AS style_hash, json_extract(digest_meta, '\$.editorialStyleGate.mode') AS gate_mode, json_extract(digest_meta, '\$.editorialStyleGate.retry.outcome') AS retry_outcome, json_extract(input_data, '\$.editorialAudit.qualityIssueCodes') AS quality_issue_codes, json_extract(digest_meta, '\$.editorialStyleGate') AS editorial_style_gate FROM daily_digest WHERE generated_at >= unixepoch('${DIGEST_DATE} 00:00:00') AND generated_at < unixepoch('${DIGEST_DATE} 00:00:00', '+1 day') ORDER BY generated_at DESC;"
    ```
 
-2. Query the related cron history. Include `daily-digest`, `cron-duration-watchdog`, and rows with `schedule_key = "digestTriggerPoll"` so a missing row and a watchdog event are visible beside a style block.
+2. Query the related cron history. Include `daily-digest`, `cron-sentinel`, and rows with `schedule_key = "digestTriggerPoll"` so a missing row and a watchdog finding are visible beside a style block. Inspect sentinel `metadata.sources.duration.metadata` and `metadata.sources["digest-publication"].metadata`; standalone duration rows are retired.
 
    ```bash
    npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT job, schedule_key, status, started_at, duration_ms, error, substr(metadata, 1, 6000) AS metadata FROM cron_runs WHERE (job IN ('daily-digest', 'weekly-recap', 'cron-duration-watchdog') OR schedule_key = 'digestTriggerPoll') AND started_at >= unixepoch('${DIGEST_DATE} 00:00:00') ORDER BY started_at DESC LIMIT 50;"
+     "SELECT job, schedule_key, status, started_at, duration_ms, error, substr(metadata, 1, 6000) AS metadata FROM cron_runs WHERE (job IN ('daily-digest', 'weekly-recap', 'cron-sentinel') OR schedule_key = 'digestTriggerPoll') AND started_at >= unixepoch('${DIGEST_DATE} 00:00:00') ORDER BY started_at DESC LIMIT 50;"
    ```
 
 3. Read the relevant `daily-digest` or `weekly-recap` completion metadata. Confirm the gate mode, first-pass findings, rule ids, fields, excerpts, and hard or advisory severity. A row in shadow mode can carry style findings while remaining publishable.
 
 4. Read the retry details. Confirm whether the corrective retry was eligible, whether it ran, whether it resolved the finding, its latency, and its output-token use. A retry can be skipped after the first pass crosses the elapsed-time threshold or when the output-token budget cannot reserve another request.
 
-5. Check `/api/status` for `crons["daily-digest"]`, `crons["weekly-recap"]`, `crons["digestTriggerPoll"]`, and `crons["cron-duration-watchdog"]`. Check `/api/digest-archive` only after confirming that the row is not blocked. Public reads omit blocked rows by design.
+5. Check `/api/status` for `crons["daily-digest"]`, `crons["weekly-recap"]`, `crons["digestTriggerPoll"]`, and `crons["cron-sentinel"]` (duration/digest-publication source findings). Check `/api/digest-archive` only after confirming that the row is not blocked. Public reads omit blocked rows by design.
 
 ## Retrigger
 
