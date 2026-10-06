@@ -106,7 +106,7 @@ class InstrumentedRequestCache extends Map<string, Promise<unknown>> {
   private readonly backing: Map<string, Promise<unknown>>;
   private readonly collector: AdapterLatencyCollector;
   private readonly promiseStates = new WeakMap<Promise<unknown>, RequestCachePromiseState>();
-  private readonly lastDeleted = new Map<string, Promise<unknown>>();
+  private lastDeleted: { key: string; promises: WeakSet<Promise<unknown>> } | null = null;
 
   constructor(backing: Map<string, Promise<unknown>>, collector: AdapterLatencyCollector) {
     super();
@@ -144,13 +144,14 @@ class InstrumentedRequestCache extends Map<string, Promise<unknown>> {
 
   override set(key: string, promise: Promise<unknown>): this {
     const state = this.observePromise(promise, !this.promiseStates.has(promise));
-    if (this.lastDeleted.get(key) === promise) {
+    const deleted = this.lastDeleted;
+    this.lastDeleted = null;
+    if (deleted?.key === key && deleted.promises.has(promise)) {
       if (state.settled) {
         this.collector.recordRequestCacheHit();
       } else {
         state.unsettledReorders += 1;
       }
-      this.lastDeleted.delete(key);
     }
     super.set(key, promise);
     this.backing.set(key, promise);
@@ -161,14 +162,16 @@ class InstrumentedRequestCache extends Map<string, Promise<unknown>> {
     const promise = super.get(key);
     const deleted = super.delete(key);
     this.backing.delete(key);
-    if (deleted && promise) this.lastDeleted.set(key, promise);
+    // Only the immediately following delete/set pair is an LRU move. A weak
+    // identity marker must not retain evicted or oversized response payloads.
+    this.lastDeleted = deleted && promise ? { key, promises: new WeakSet([promise]) } : null;
     return deleted;
   }
 
   override clear(): void {
     super.clear();
     this.backing.clear();
-    this.lastDeleted.clear();
+    this.lastDeleted = null;
   }
 }
 

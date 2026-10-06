@@ -39,6 +39,46 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     recordOutcomeSafeMock.mockResolvedValue(undefined);
   });
 
+  it("does not strongly retain evicted or oversized payload promises and keeps LRU hit accounting", async () => {
+    function stronglyOwns(root: unknown, target: unknown, seen = new Set<unknown>()): boolean {
+      if (root === target) return true;
+      if (!root || typeof root !== "object" || seen.has(root) || root instanceof WeakMap || root instanceof WeakSet) return false;
+      seen.add(root);
+      const children = root instanceof Map ? [...root.keys(), ...root.values()] : [];
+      children.push(...Object.values(Object.getOwnPropertyDescriptors(root)).flatMap((descriptor) => "value" in descriptor ? [descriptor.value] : []));
+      return children.some((child) => stronglyOwns(child, target, seen));
+    }
+    let exercised = false;
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      ...LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey], key: adapterKey,
+      fetch: async (_coin: unknown, _config: unknown, _signal: AbortSignal, ctx?: AdapterContext) => {
+        if (!exercised) {
+          exercised = true;
+          const requests = [];
+          for (let index = 0; index < 20; index++) {
+            const promise = getCachedRequest(`payload-${index}`, async () => new Uint8Array(1024 * 1024), ctx);
+            requests.push(promise);
+            await promise;
+          }
+          const oversized = getCachedRequest("oversized", async () => new Uint8Array(5 * 1024 * 1024), ctx);
+          await oversized;
+          expect(ctx!.requestCache!.size).toBe(16);
+          expect(ctx!.requestCache!.has("oversized")).toBe(false);
+          for (const promise of [...requests.slice(0, 4), oversized]) expect(stronglyOwns(ctx!.requestCache, promise)).toBe(false);
+          await getCachedRequest("payload-19", async () => { throw new Error("cached request must not refetch"); }, ctx);
+          ctx!.requestCache!.delete("payload-19");
+          ctx!.requestCache!.set("payload-19", Promise.resolve(true));
+        }
+        return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }], metadata: { freshnessMode: "not-applicable" as const } };
+      },
+    }));
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const result = await syncLiveReserves(mockLiveReserveD1(), new AbortController().signal, {});
+    expect(exercised).toBe(true);
+    expect(metadataOf(result).adapterLatency.requestCacheHits).toBe(1);
+    expect(metadataOf(result).adapterLatency.requestCacheMisses).toBe(22);
+  });
+
   it("emits bounded, deterministically ordered histograms", () => {
     const collector = createAdapterLatencyCollector();
     for (let index = ADAPTER_LATENCY_MAX_GROUPS + 40; index >= 0; index--) {
