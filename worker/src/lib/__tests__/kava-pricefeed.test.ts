@@ -28,7 +28,7 @@ function installFixtureResponses(
   } = {},
 ): void {
   fetchJsonWithRetryMock.mockImplementation(async (url: string) => {
-    if (url === "https://rpc.data.kava.io/header") return ok(overrides.block ?? { result: structuredClone(fixture.block.block) });
+    if (url === "https://rpc.kava.io/header") return ok(overrides.block ?? { result: structuredClone(fixture.block.block) });
     if (url.endsWith("/markets")) return ok(overrides.markets ?? structuredClone(fixture.markets));
     if (url.endsWith("/prices/usdx:usd")) return ok(overrides.aggregate ?? structuredClone(fixture.aggregate));
     if (url.endsWith("/rawprices/usdx:usd")) return ok(overrides.raw ?? structuredClone(fixture.raw));
@@ -61,10 +61,10 @@ describe("Kava USDX pricefeed", () => {
     });
 
     expect(fetchJsonWithRetryMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://rpc.data.kava.io/header",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/markets",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
-      "https://api.data.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+      "https://rpc.kava.io/header",
+      "https://api.kava.io/kava/pricefeed/v1beta1/markets",
+      "https://api.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+      "https://api.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
     ]);
     for (const [, , retries, options] of fetchJsonWithRetryMock.mock.calls) {
       expect(retries).toBe(0);
@@ -246,5 +246,23 @@ describe("Kava USDX pricefeed", () => {
       body: null,
     });
     await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
+  });
+
+  it.each([
+    "https://rpc.kava.io/header",
+    "https://api.kava.io/kava/pricefeed/v1beta1/markets",
+    "https://api.kava.io/kava/pricefeed/v1beta1/prices/usdx:usd",
+    "https://api.kava.io/kava/pricefeed/v1beta1/rawprices/usdx:usd",
+  ])("fails closed without further requests when %s returns the incident's HTTP 502", async (failedUrl) => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    installFixtureResponses();
+    const fixtureResponse = fetchJsonWithRetryMock.getMockImplementation()!;
+    fetchJsonWithRetryMock.mockImplementation(async (url: string) => url === failedUrl
+      ? { response: new Response(null, { status: 502 }), body: null }
+      : fixtureResponse(url));
+
+    await expect(fetchKavaUsdxPrice()).resolves.toBeNull();
+    const calls = fetchJsonWithRetryMock.mock.calls;
+    expect(calls[calls.length - 1]?.[0]).toBe(failedUrl);
   });
 });

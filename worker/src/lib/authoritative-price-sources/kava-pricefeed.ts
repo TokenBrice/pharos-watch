@@ -7,8 +7,9 @@ import { fetchJsonWithRetry } from "../fetch-retry";
 import { KavaBlockSchema, parseFinitePositiveDecimal, parseTimestampSec, validateKavaBlockHeader } from "../kava-lcd";
 import type { CurrentPriceOverride, LivePriceContext, PriceSourceProvider } from "./helpers";
 
-const KAVA_API_BASE = "https://api.data.kava.io";
-const KAVA_HEADER_URL = "https://rpc.data.kava.io/header";
+// Live state needs the official pruning endpoints, not the archive service.
+const KAVA_API_BASE = "https://api.kava.io";
+const KAVA_HEADER_URL = "https://rpc.kava.io/header";
 const KavaRpcHeaderSchema = z.object({ result: KavaBlockSchema.shape.block });
 const KAVA_USDX_ID = "usdx-kava";
 const KAVA_USDX_MARKET_ID = "usdx:usd";
