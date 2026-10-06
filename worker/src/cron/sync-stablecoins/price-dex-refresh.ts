@@ -203,7 +203,10 @@ async function runAddressRefresh(params: {
   const deploymentHints = new Map(params.hints.map((hint) => [hint.id, { chain: hint.chain, address: hint.target }] as const));
   const targetsByProvider = buildAddressPriceTargetsByProvider({
     assets: [...params.previousAssetsById.values()]
-      .filter((asset) => ACTIVE_META_BY_ID.has(asset.id) && !params.reviewedGapIds.has(asset.id)),
+      .filter((asset) => ACTIVE_META_BY_ID.has(asset.id) &&
+        (!params.reviewedGapIds.has(asset.id) ||
+          (hasPublishableCurrentPrice(asset) &&
+            splitCompositePriceSource(asset.priceSource ?? "").includes("coingecko-onchain-address")))),
     previousAssetsById: params.previousAssetsById,
     providers,
     nowSec: params.syncStartSec,
