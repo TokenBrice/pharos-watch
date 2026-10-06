@@ -219,7 +219,9 @@ freshness verdict names the budget it used and the generation it describes, with
 fields — and **R4** (ADR-31) — a non-`ok` terminal status carries a machine-readable reason, and terminal
 status separates "did the work happen" from "were the inputs perfect". Their additive publication fields live
 in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMaxRatio` and `healthyMaxAge` for
-the band, `degraded` / `degradedReason` / `streakDegradedRuns` for the generation's input quality. The
+the band, yield `generationId` / `publishedAt` for the served generation and Unix publication time,
+and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Legacy generationless
+sentinels and table/cron fallbacks expose null yield identity/time rather than inventing them. The
 per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
 
 ### Timestamp admission
@@ -515,7 +517,7 @@ When one of those best-effort subqueries fails, `/api/status` keeps unaffected s
 
 Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers producer-owned `cache` sentinels (`freshness:*`) instead of live `MAX(...)` scans over the hot publish tables. If the sentinel is missing during rollout, `/api/status` falls back to the legacy table query; if the lookup itself fails, it can still fall back to the latest successful producer cron timestamp and adds a `cache_freshness_query_failed` info cause instead of auto-promoting the lane to public `stale`.
 
-`sync-yield-data` writes its sentinel only when the published generation carries no `yield-source:*` degradation reason. An expired selected source still publishes rankings by design, but it does not advance the lane's freshness claim; until cron-history quality is split from freshness, a missing sentinel can still use the table fallback and a recent last-good sentinel remains valid for its normal age window.
+`sync-yield-data` writes its sentinel inside every applied rankings publication batch, regardless of input quality. The sentinel's `generationId` and `updatedAt` match the winning rankings generation; CAS losers and failed batches cannot advance it. Coverage below 0.75 still gates quality via `safety-snapshot-coverage`; a held safety snapshot uses the nongating `safety-snapshot-held` advisory without renewing the safety clock or permitting destructive cleanup.
 
 **Per-cache availability overrides.** Availability ratio bands are the global `>8x` degraded / `>12x` stale by default, except where `STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts` tightens a specific cache. `yield-data` overrides to `>2x` degraded / `>4x` stale against its post-V9 `sync-yield-data` budget: two missed publishes flip the cache entry to `healthy:false` and degrade both public cache impact and the availability `statusFloor`, while a single missed publish stays healthy. This closes the honesty gap where the global bands let multi-hour-stale yield rankings still read publicly `healthy` even though the admin endpoint-budget lane already flags the lane at 1x. The override is threaded through `getCacheFreshnessStatus`/`getCacheImpactStatus` (public rollup in `shared/lib/public-health.ts`), the worker `buildCacheStatuses` `healthy` and `statusFloor` computation, and the status-page recompute in `src/lib/status/public-status.ts`; all other caches keep the global bands. See `docs/architecture.md` ADR-9.
 The public Cache Freshness table preserves each cache key through classification and labels overridden rows with their resolved degraded/stale ratios, so `yield-data` shows `>2x` / `>4x` rather than the global bands.

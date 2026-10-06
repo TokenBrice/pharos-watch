@@ -38,7 +38,7 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationHealth, loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
@@ -448,11 +448,18 @@ async function assessYieldSafetyAvailability(
     if (stamped == null) {
       return { impactStatus: "degraded", warning: "yield-safety-unrated-serving:safety-identity-missing" };
     }
-    const live = await loadSafetyScoreV9PublicationIdentityEnvelope(db);
-    if (live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
+    const [live, health] = await Promise.all([
+      loadSafetyScoreV9PublicationIdentityEnvelope(db),
+      loadSafetyScoreV9PublicationHealth(db),
+    ]);
+    if (!health || (live && health.acceptedPublicationGenerationId !== live.publicationGenerationId)) {
+      return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
+    }
+    const held = health.status === "held";
+    if (!held && live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
       return { impactStatus: "healthy", warning: null };
     }
-    const reason = live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
+    const reason = held ? "safety-snapshot-held" : live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
     const withinWindow = isYieldSafetyFallbackWithinWindow(row.updated_at, row.safety_published_at, now);
     return withinWindow
       ? { impactStatus: "healthy", warning: `yield-safety-publish-time-fallback:${reason}` }

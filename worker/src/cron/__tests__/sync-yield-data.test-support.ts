@@ -200,7 +200,7 @@ vi.mock("../../lib/constants", () => ({
 }));
 
 import { batchExecute } from "../../lib/db";
-import { getCache, getCaches, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
+import { getCache, getCaches, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
@@ -543,7 +543,7 @@ function testSafetyScoresSnapshot(fixture: {
   reason?: string;
   trackedCount?: number;
   scores?: Map<string, { score: number; grade: string }>;
-  publishedAt?: number;
+  publishedAt?: number | null;
   safetyScoreIdentity?: SafetyScoreV9PublicationIdentity | null;
   publicationGenerationId?: string | null;
 } = {}): PublishedSafetyScoresResultMap {
@@ -564,9 +564,9 @@ function testSafetyScoresSnapshot(fixture: {
     publicationGenerationId:
       fixture.publicationGenerationId ?? safetyScoreIdentity?.publicationGenerationId ?? null,
     methodologyVersion: safetyScoreIdentity?.methodologyVersion ?? null,
-    publishedAt:
-      fixture.publishedAt ??
-      (safetyScoreIdentity === null ? null : Math.floor(Date.now() / 1000)),
+    publishedAt: fixture.publishedAt === undefined
+      ? (safetyScoreIdentity === null ? null : Math.floor(Date.now() / 1000))
+      : fixture.publishedAt,
   };
 }
 
@@ -594,7 +594,6 @@ function resetSyncYieldDataTest() {
     });
   vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
   vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue({ written: true, skippedBecauseNewer: false });
-  vi.mocked(writeFreshnessSentinel).mockReset().mockResolvedValue(undefined);
   vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
   vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());

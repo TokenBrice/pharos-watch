@@ -4,6 +4,15 @@ import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusR
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it.each(["yield-winner", null])("preserves additive cache publication identity %s", (generationId) => {
+    const publishedAt = generationId ? 1_800_000_000 : null;
+    const parsed = StatusResponseSchema.parse({
+      ...statusResponse(), caches: { "yield-data": {
+        ageSeconds: 60, maxAge: 3600, healthy: true, generationId, publishedAt,
+      } },
+    });
+    expect(parsed.caches["yield-data"]).toMatchObject({ generationId, publishedAt });
+  });
   it("requires null measurements and a reason for unavailable reserve evidence", () => {
     const unavailable = makeReserveComposition({ status: "unavailable" });
     expect(StatusResponseSchema.parse({

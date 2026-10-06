@@ -111,8 +111,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
   }
 
   const degradationReasons = buildYieldDegradationReasons({
-    safetySnapshotDegraded: fetched.safetySnapshotDegraded,
-    safetySnapshotReason: fetched.safetySnapshot.reason ?? null,
+    safetyCoverageRatio: fetched.safetyCoverageRatio,
     riskFreeRateRegistryCacheState: fetched.riskFreeRateRegistryCacheState,
     defaultBenchmarkMeta: fetched.riskFreeRateMeta,
     selectedSources: normalized.evaluatedSources.filter(

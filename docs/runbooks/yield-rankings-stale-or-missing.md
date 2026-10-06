@@ -27,6 +27,8 @@ Rankings full and summary `_meta` report `assessedAt`, `freshBudgetSec: 7200`, `
 
 An applied `sync-yield-data` returns `ok` with `metadata.quality { degraded, reasons }`. Inspect those reasons for imperfect inputs and non-blocking coverage/quarantine alarms; use `metadata.reason` for unapplied `degraded` work. The top-level `fallbackMode` has been removed. `streakDegradedRuns` includes non-clean completed publications and exposes the latest concrete cause; Pendle-only advisory loss does not flip public producer quality.
 
+Check `freshness:yield-data` against `yield-rankings`: sentinel `generationId` / `updated_at` must match rankings `publication.generationId` / publication time after any applied publication, even with quality findings. `/api/status` and `/api/health` publish yield `generationId` / `publishedAt`, or null for legacy/fallback evidence. Do not confuse served yield age with the last clean run or the independent safety clock.
+
 ## Source Decision Evidence
 
 `GET /api/yield-source-decisions`, the admin-only read path that joined generations and decisions in one response, was retired on 2026-08-09. Every table it read is unchanged and still written by each publication run, so the same evidence is assembled from the `yield_publication_generations` and `yield_source_decisions` snippets in [Read-Only D1 Snippets](#read-only-d1-snippets) below, plus the typed alternates for one asset:
@@ -110,6 +112,8 @@ Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-s
 
 - `yield-safety-unrated-serving:safety-identity-missing`: the cached payload has no stamped safety identity. The last `sync-yield-data` publish predates identity stamping or published without a usable safety snapshot; check its `cron_runs` metadata `sourceCoverage.safetySnapshot`.
 - `yield-safety-unrated-serving:safety-identity-mismatch` / `:safety-snapshot-unavailable`: the publish-time fallback aged past the 24-hour stale-coherent window, meaning `sync-yield-data` has not published a compatible snapshot for over a day. Diagnose the cron (below), not the identity coupling.
+- `yield-safety-unrated-serving:safety-snapshot-held`: either the yield or original accepted safety clock exceeded 24 hours (or lacks a valid timestamp), even when identities match. The in-budget form is the healthy advisory `yield-safety-publish-time-fallback:safety-snapshot-held`.
+- `yield-safety-availability-unknown`: missing/unreadable validated publication health, or its accepted generation disagrees with the readable identity envelope. Investigate the sidecar; never bypass the identity guard.
 
 Compare the two identities directly:
 
@@ -161,6 +165,7 @@ Comparability requires equal `evaluationBuildDigest`, `policyId`, `policyDigest`
 - `GET /api/yield-rankings` returns `200`, non-empty `rankings`, and a fresh `_meta` / `updatedAt`.
 - Latest `yield_publication_generations` row is `published` or has an understood `failed` reason while the previous public cache remains valid.
 - `yield_data` best-row count is plausible relative to the previous good run, and current rows for the latest public generation carry `publication_state='published'`.
+- `freshness:yield-data` and served rankings share the winning generation/time; safety `publishedAt` remains original with `maxAgeSeconds: 86400`. Above-floor held coverage emits the held advisory, not `safety-snapshot-coverage`; below-floor coverage still gates public quality.
 - `GET /api/yield-history?stablecoin=<id>&days=30` works for a known ranked coin and does not return points newer than the rankings cutoff.
 - Every row serving a null PYS carries an explicit `pysNullReason` (the NR degrade path preserves the original reason), and no row serves `0` while a null reason is set.
 
