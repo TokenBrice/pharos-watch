@@ -128,7 +128,15 @@ export async function loadLatestNonSkippedReserveAttempt(
       WHERE stablecoin_id = ? AND status != 'skipped'
       ORDER BY attempted_at DESC, id DESC LIMIT 1`,
   ).bind(stablecoinId).first<AttemptHistoryRow>();
-  return row ? mapTimelineRow(row) : null;
+  if (!row || !parseJsonObject(row.metadata, "reserve-feed-review-attempt.metadata")) return null;
+  if (row.warnings) {
+    try {
+      const warnings: unknown = JSON.parse(row.warnings);
+      if (!Array.isArray(warnings) || warnings.some((warning) =>
+        warning == null || typeof warning !== "object" || typeof warning.code !== "string")) return null;
+    } catch { return null; }
+  }
+  return mapTimelineRow(row);
 }
 
 /**

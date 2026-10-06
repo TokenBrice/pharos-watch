@@ -67,6 +67,14 @@ describe("reserve feed review policy", () => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: null, ...(failed ? { throwError: new Error("read") } : {}) }]);
     expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
   });
+  it.each(["not-json", "{}", "[{}]"])("rejects unreadable warning evidence %s rather than assuming no warnings", async (warnings) => {
+    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
+      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
+      breaker_key: "test", status: "error", warnings, last_error: review.errorPrefix,
+      metadata: JSON.stringify({ failureCategory: review.failureCategory }),
+    } }]);
+    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
+  });
   it("uses adjusted numerator and denominator and retains raw counts", () => {
     const reserve = makeReserveComposition({ configuredCoins: 10, freshCoins: 8, independentFreshEligible: 8,
       healthConfiguredCoins: 8, healthFreshCoins: 6, healthAuthoritativeFreshCoins: 6, lastSuccessAt: now,
