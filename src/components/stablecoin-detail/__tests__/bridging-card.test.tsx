@@ -32,7 +32,8 @@ describe("BridgingCard", () => {
     expect(html).toContain("Reviewed 2026-07-15");
     expect(html).toContain("https://example.com/usdt0");
     expect(html).toContain('hidden=""'); // sources folded by default
-    expect(html).not.toContain("Read more"); // short summary stays un-collapsed
+    expect(html).toContain("Review notes");
+    expect(html).not.toContain("Read more");
   });
 
   it("renders nothing without a bridge review", () => {
@@ -40,11 +41,10 @@ describe("BridgingCard", () => {
     expect(renderToStaticMarkup(<BridgingCard />)).toBe("");
   });
 
-  it("cuts long summaries to a lead behind Read more", () => {
+  it("states a generated verdict and keeps the authored summary behind Review notes", () => {
     const longSummary = `${"Native routes are reviewed as issuer-native multichain issuance. ".repeat(12)}TAIL-MARKER`;
     const html = renderToStaticMarkup(<BridgingCard summary={{ ...SUMMARY, summary: longSummary }} />);
-    expect(html).toContain("Read more");
-    expect(html).toContain("…");
-    expect(html).not.toContain("TAIL-MARKER"); // collapsed lead only
+    expect(html).toContain("Issuer lock &amp; mint across 12 reviewed routes on 9 chains, 2 third-party.");
+    expect(html.indexOf("Review notes")).toBeLessThan(html.indexOf("TAIL-MARKER"));
   });
 });

@@ -17,12 +17,14 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   authorityPostureTone: "neutral",
   confidenceLabel: "Verified",
   confidenceVerified: true,
+  verdict: "Governed — facilitators mint GHO within bucket caps, controlled by DAO governance; admin powers are only partly bounded.",
   summary: "GHO supply is minted by DAO-approved facilitators within bucket capacity.",
   inheritedFrom: null,
   controls: [
     {
       key: "aave-governance",
       label: "Aave Ethereum Governance",
+      roleKey: "facilitator",
       roleLabel: "Facilitator",
       authorityTypeKey: "dao-governor",
       authorityTypeLabel: "DAO governor",
@@ -50,7 +52,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   score: {
     score: 70,
     scoreLabel: "70/100",
-    compactLabel: "70 Governed",
+    compactLabel: "70 · Governed",
     bandKey: "governed",
     bandLabel: "Governed",
     postureLabel: "Partially bounded admin",
@@ -63,7 +65,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   mintIncidents: [],
   sourceFreeRationale: null,
   unresolvedQuestions: [],
-  processEvidenceAvailable: false, processDiagnostics: [], processMetrics: [],
+  processDiagnostics: [], processMetrics: [],
 };
 
 describe("MintAuthoritySection", () => {
@@ -85,6 +87,7 @@ describe("MintAuthoritySection", () => {
           authorityPostureTone: "neutral",
           confidenceLabel: "Not reviewed",
           confidenceVerified: false,
+          verdict: null,
           summary: "Unknown does not mean no privileged mint authority.",
           inheritedFrom: null,
           controls: [],
@@ -94,7 +97,7 @@ describe("MintAuthoritySection", () => {
           mintIncidents: [],
           sourceFreeRationale: null,
           unresolvedQuestions: [],
-          processEvidenceAvailable: false, processDiagnostics: [], processMetrics: [],
+          processDiagnostics: [], processMetrics: [],
         }}
       />,
     );
@@ -104,26 +107,32 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Unknown does not mean no privileged mint authority.");
   });
 
-  it("renders unavailable process evidence at NR when a legacy profile lacks the issuance summary fields", () => {
-    const profile = {
-      ...REVIEWED_PROFILE,
-      score: null,
-      controls: REVIEWED_PROFILE.controls.map((control) => ({ ...control })),
-    };
-    // Pre-10.05 publications and their projections lack the additive process fields.
-    for (const field of ["processEvidenceAvailable", "processDiagnostics", "processMetrics"]) {
-      Reflect.deleteProperty(profile, field);
-    }
-    for (const control of profile.controls) {
-      Reflect.deleteProperty(control, "processDiagnostics");
-    }
+  it("keeps one verdict in the summary layer and folds the narrative after Primary controls", () => {
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
 
-    const html = renderToStaticMarkup(<MintAuthoritySection profile={profile} />);
+    expect(html).toContain(REVIEWED_PROFILE.verdict!);
+    const verdictAt = html.indexOf(REVIEWED_PROFILE.verdict!);
+    const controlsAt = html.indexOf(">Primary controls<");
+    const notesAt = html.indexOf(">Review notes<");
+    const narrativeAt = html.indexOf(REVIEWED_PROFILE.summary);
+    expect(verdictAt).toBeLessThan(controlsAt);
+    expect(controlsAt).toBeLessThan(notesAt);
+    expect(notesAt).toBeLessThan(narrativeAt);
+    // No issuance evidence published: no diagnostics fold at all.
+    expect(html).not.toContain("Issuance diagnostics");
+  });
 
-    expect(html).toContain(">NR<");
-    expect(html).toContain("Aave Ethereum Governance");
-    expect(html.match(/Published process diagnostics are unavailable\./g)).toHaveLength(1);
-    expect(html).not.toContain("Issuance process evidence (");
+  it("renders the band beside the score and links inherited mint risk to the parent review", () => {
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={{ ...REVIEWED_PROFILE, inheritedFrom: { symbol: "USDe", href: "/stablecoin/usde-ethena/#mint-authority" } }}
+        symbol="sUSDe"
+      />,
+    );
+
+    expect(html).toContain(">70 · Governed<");
+    expect(html).toContain("Inherits USDe mint risk");
+    expect(html).toMatch(/href="\/stablecoin\/usde-ethena\/?#mint-authority"/);
   });
 
   it("renders control and source link destinations with the V9 methodology stamp", () => {
@@ -152,7 +161,7 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain(`Primary controls</span>`);
     expect(html).toContain(`>(${total})</span>`);
     expect(html).toContain(`through ${total} controls`);
-    expect(html).toContain(`+${total - 3} more controls (full census linked below)`);
+    expect(html).toContain(`+${total - 3} more in Primary controls`);
     expect(html).toContain(`href="${view.controlCensusUrl}"`);
     expect(html).toMatch(/href="\/methodology\/?#mint-authority-score"/);
   });
@@ -174,7 +183,7 @@ describe("MintAuthoritySection", () => {
             ...REVIEWED_PROFILE.score!,
             score: 10,
             scoreLabel: "10/100",
-            compactLabel: "10 Exposed",
+            compactLabel: "10 · Exposed",
             bandLabel: "Exposed",
             badgeClassName: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
             textClassName: "text-red-700 dark:text-red-400",
@@ -284,8 +293,8 @@ describe("MintAuthoritySection", () => {
   });
 });
 
-describe("mint process diagnostic disclosure", () => {
-  it("renders native accessible expandable evidence and distinguishes missing proof from a failed screen at NR", () => {
+describe("mint issuance diagnostics fold", () => {
+  it("folds published groups after Primary controls and distinguishes missing proof from a failed screen at NR", () => {
     const base = { ...makePublishedProcessDiagnostic({
       code: "operational-cap-unproved", gate: "H2", controlRef: null, pathId: "redo", classId: "keeper-class", memberRef: null,
       field: "maxKeeperFixedRewardSupplyPpm", evidenceRefIds: ["read-code", "proof-2", "proof-3", "proof-4"],
@@ -295,18 +304,19 @@ describe("mint process diagnostic disclosure", () => {
       field: "operationalExposurePpm", evidenceRefIds: [],
     }), key: "failed-exposure", statusLabel: "Failed screen" as const };
     const html = renderToStaticMarkup(<MintAuthoritySection profile={{ ...REVIEWED_PROFILE, score: null,
-      processEvidenceAvailable: true, processMetrics: [{ label: "Actual operational exercise delay", value: "0 s" }],
+      processMetrics: [{ label: "Actual operational exercise delay", value: "0 s" }],
       processDiagnostics: [base, failed],
     }} />);
-    expect(html).toContain("<details");
-    expect(html).toContain("<summary");
+    expect(html).toContain("Issuance diagnostics");
+    expect(html.indexOf(">Primary controls<")).toBeLessThan(html.indexOf("Issuance diagnostics"));
+    expect(html).toContain(">(2)</span>");
+    expect(html).toContain("in 2 groups");
     expect(html).toContain("Missing evidence");
     expect(html).toContain("Failed screen");
     expect(html).toContain("Gate H3");
     expect(html).toContain("Class keeper-class");
     expect(html).toContain("operationalExposurePpm");
-    expect(html).toContain("Group total: 4");
-    expect(html).toContain("sampled exemplars, not an exhaustive member list");
+    expect(html).toContain("Group total: 4 across 1 control reference. Showing 1 sampled exemplar, not an exhaustive member list.");
     expect(html).toContain("3 sampled / 4 total references");
     expect(html).toContain("0 s");
     expect(html).toContain("NR");

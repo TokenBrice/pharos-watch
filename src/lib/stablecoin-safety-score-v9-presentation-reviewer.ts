@@ -57,15 +57,18 @@ export function buildStablecoinSafetyScoreV9Presentation(
     ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
+      // "Evidence: strong", not "Strong evidence": beside a D the latter reads
+      // as praise for the pillar rather than a statement about its inputs.
+      const evidenceLevel = `Evidence: ${humanizeSafetyScoreV9Value(pillar.evidenceLevel).toLowerCase()}${
+        key === "exit" ? " (selected route)" : ""
+      }`;
       const baseEvidenceSummary = pillar.aggregationDisposition === "excluded-a-b"
-        ? "excluded — pipeline gap / awaiting curation · 0% effective weight"
+        ? "Excluded until evidence is curated · 0% weight"
         : isUnknownSafetyScoreV9Value(pillar.freshness)
-        ? `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence`
-        : `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence · ${humanizeSafetyScoreV9Value(pillar.freshness)}`;
-      const evidenceSummary = key === "exit"
-        ? `${baseEvidenceSummary.replace(" evidence", " selected-route evidence")}${
-            hasIncompleteDexCoverage ? " · partial DEX coverage" : ""
-          }`
+        ? evidenceLevel
+        : `${evidenceLevel} · ${humanizeSafetyScoreV9Value(pillar.freshness).toLowerCase()}`;
+      const evidenceSummary = key === "exit" && hasIncompleteDexCoverage
+        ? `${baseEvidenceSummary} · partial DEX coverage`
         : baseEvidenceSummary;
       return {
         key,

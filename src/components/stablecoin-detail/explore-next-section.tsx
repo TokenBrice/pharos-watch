@@ -10,7 +10,7 @@ import {
   getMechanismArchetypeCtaNoun,
   resolveMechanismArchetype,
 } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
@@ -97,7 +97,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
     { href: "/liquidity/", label: "DEX liquidity rankings" },
     { href: "/depeg/", label: "Depeg tracker" },
   ];
-  const resolvedArchetype = resolveMechanismArchetype(coin, TRACKED_META_BY_ID);
+  const resolvedArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
   if (resolvedArchetype) {
     // key-info-card already has a "Learn how X stablecoins work" CTA adjacent to the diagram.
     // Use this slot for a screener deep-link instead to avoid a duplicate CTA.

@@ -8,21 +8,19 @@ export interface EvidenceRailCardProps {
   title: string;
   ariaLabel?: string;
   frameless?: boolean;
-  anchorTwin?: string;
   badge?: { label: string; className: string };
   evidence: React.ComponentProps<typeof EvidenceFooter>;
   children: ReactNode;
 }
 
 export function EvidenceRailCard({
-  title, ariaLabel = title, frameless, anchorTwin, badge, evidence, children,
+  title, ariaLabel = title, frameless, badge, evidence, children,
 }: EvidenceRailCardProps) {
   return (
     <RailCard
       frameless={frameless}
       title={title}
       ariaLabel={ariaLabel}
-      anchorTwin={anchorTwin}
       trailing={badge ? <Badge variant="outline" className={badge.className}>{badge.label}</Badge> : undefined}
     >
       <div className="space-y-3 px-4 pb-4">

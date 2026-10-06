@@ -1,5 +1,6 @@
 "use client";
 
+import { useId, useState } from "react";
 import { ContagionGraphInsights } from "@/components/contagion-graph/contagion-graph-insights";
 import { ContagionGraphStage } from "@/components/contagion-graph/contagion-graph-stage";
 import type { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
@@ -21,6 +22,8 @@ interface ContagionGraphBodyProps {
 }
 
 export function ContagionGraphBody({ graph, logos, detailNodePresentation, commonModeGroups }: ContagionGraphBodyProps) {
+  const helpId = useId();
+  const [hasInteracted, setHasInteracted] = useState(false);
   const tooltipContext = {
     activeHoveredId: graph.activeHoveredId,
     activeHoveredEdge: graph.activeHoveredEdge,
@@ -50,7 +53,16 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
   }
 
   return (
-    <>
+    <div
+      className={detailNodePresentation ? "pharos-focus-ring group/dependency-help min-w-0 rounded-sm lg:h-full" : "contents"}
+      role={detailNodePresentation ? "group" : undefined}
+      aria-label={detailNodePresentation ? "Interactive dependency graph" : undefined}
+      aria-describedby={detailNodePresentation ? helpId : undefined}
+      tabIndex={detailNodePresentation ? 0 : undefined}
+      data-help-interacted={detailNodePresentation && hasInteracted ? "true" : undefined}
+      onPointerDownCapture={detailNodePresentation ? () => setHasInteracted(true) : undefined}
+      onKeyDownCapture={detailNodePresentation ? () => setHasInteracted(true) : undefined}
+    >
       {graph.exposureOverlay && (
         <p className="px-3 py-2 text-xs" role="status">
           Showing {Array.from(graph.exposureOverlay.rows.keys()).filter(id => graph.visibleNodeIds.has(id)).length} of {graph.exposureOverlay.rows.size} linked coins
@@ -76,7 +88,15 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
           />
         }
       />
-      <div className="border-x border-b px-3 py-2 sm:hidden" style={{ borderColor: "var(--graph-grid-line)" }}>
+      {detailNodePresentation ? (
+        <p
+          id={helpId}
+          className="sr-only text-xs text-muted-foreground group-hover/dependency-help:not-sr-only group-hover/dependency-help:px-3 group-hover/dependency-help:py-2 group-focus-within/dependency-help:not-sr-only group-focus-within/dependency-help:px-3 group-focus-within/dependency-help:py-2 group-data-[help-interacted=true]/dependency-help:not-sr-only group-data-[help-interacted=true]/dependency-help:px-3 group-data-[help-interacted=true]/dependency-help:py-2"
+        >
+          Drag the background to pan. Tap a coin to select; use Tab and Enter with a keyboard. Mouse-drag a coin to pin it. Arrows point to the asset a coin depends on. Exposure halo: linked coin. Hatched halo: unknown supply.
+        </p>
+      ) : null}
+      {!detailNodePresentation || mobileInspectedNode ? <div className="border-x border-b px-3 py-2 sm:hidden" style={{ borderColor: "var(--graph-grid-line)" }}>
         {mobileInspectedNode ? (
           <ContagionGraphInsights
             inspectedNode={mobileInspectedNode}
@@ -89,12 +109,12 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             onUseAsExposureRoot={graph.onUseAsExposureRoot}
             variant="panel"
           />
-        ) : (
+        ) : !detailNodePresentation ? (
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            Tap a node to inspect dependencies.{!detailNodePresentation && " Use fullscreen for a larger touch canvas."}
+            Tap a node to inspect dependencies. Use fullscreen for a larger touch canvas.
           </p>
-        )}
-      </div>
+        ) : null}
+      </div> : null}
       <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-xs">
         {graph.smallLinkCount > 0 && (
           <button
@@ -133,6 +153,6 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
       <div className="sr-only" aria-label="Graph filter announcements" aria-live="polite" aria-atomic="true">
         {`Filter results: ${graph.visibleNodeIds.size} stablecoins and ${graph.visibleLinks.length} connections. Focus ${graph.focusMode}, type ${graph.edgeTypeFilter}, limit ${graph.effectiveNodeLimit}. ${graph.showSmallLinks ? 0 : graph.smallLinkCount} small links hidden.`}
       </div>
-    </>
+    </div>
   );
 }

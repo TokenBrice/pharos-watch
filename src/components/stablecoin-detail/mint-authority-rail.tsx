@@ -36,6 +36,20 @@ const AUTHORITY_GLYPHS: Record<string, { icon: LucideIcon; caution?: boolean }> 
 const MAX_RAIL_CONTROLS = 3;
 const MAX_SIGNER_DOTS = 8;
 
+/**
+ * Type nouns the glyph alone cannot carry: a role-first chip reads
+ * "Minter admin EOA" or "Governor Safe" instead of a bare "Contract".
+ */
+const RAIL_TYPE_NOUNS: Record<string, string> = {
+  safe: "Safe",
+  multisig: "multisig",
+  eoa: "EOA",
+  timelock: "timelock",
+};
+
+/** Roles too generic to name a chip; the chip falls back to the authority type. */
+const GENERIC_ROLE_KEYS: Record<string, true> = { other: true, unknown: true };
+
 function SignerDots({ threshold, signerCount }: { threshold: number; signerCount: number }) {
   if (signerCount > MAX_SIGNER_DOTS) {
     return <span className="pharos-numeric text-[10px] text-muted-foreground">{threshold}/{signerCount}</span>;
@@ -62,9 +76,16 @@ function ControlChip({ control }: { control: MintAuthorityDetailControlViewModel
   const glyph = AUTHORITY_GLYPHS[control.authorityTypeKey] ?? { icon: ShieldQuestion };
   const Icon = glyph.icon;
   const showDots = control.threshold != null && control.signerCount != null && control.signerCount > 0;
-  // "Externally owned account" would drown the chip; the short bounded forms
-  // stay recognizable at a glance and the row's title carries the full label.
+  // Name the chip by what the control does ("Minter admin", "Timelock");
+  // the type noun follows only where the glyph alone is ambiguous. Generic
+  // roles keep the short bounded type ("EOA", not "Externally owned account").
   const typeShort = control.authorityTypeKey === "eoa" ? "EOA" : control.authorityTypeLabel;
+  const typeNoun = RAIL_TYPE_NOUNS[control.authorityTypeKey];
+  const chipLabel = GENERIC_ROLE_KEYS[control.roleKey]
+    ? typeShort
+    : typeNoun && control.roleKey !== control.authorityTypeKey
+      ? `${control.roleLabel} ${typeNoun}`
+      : control.roleLabel;
 
   return (
     <span
@@ -84,7 +105,7 @@ function ControlChip({ control }: { control: MintAuthorityDetailControlViewModel
           glyph.caution ? "text-amber-700 dark:text-amber-400" : "text-foreground/90",
         )}
       >
-        {typeShort}
+        {chipLabel}
       </span>
       {showDots ? <SignerDots threshold={control.threshold!} signerCount={control.signerCount!} /> : null}
       {control.timelockLabel ? (
@@ -183,9 +204,7 @@ export function MintAuthorityRail({
               }}
               className="pharos-focus-ring rounded-sm text-[10px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
             >
-              +{hiddenControlCount}{totalControlCount > controls.length
-                ? " more controls (full census linked below)"
-                : " more in Primary controls"}
+              +{hiddenControlCount} more in Primary controls
             </button>
           ) : null}
         </span>

@@ -10,13 +10,15 @@ const INLINE_TOGGLE_TEXT_CLASS = { sm: "text-[11px]", md: "text-xs" } as const;
 export type InlineDisclosureToggleSize = keyof typeof INLINE_TOGGLE_TEXT_CLASS;
 
 /**
- * The in-module fold control: the frost-blue chevron button that reveals
- * reviewed detail in place ("Read more", "Why", "How each was measured").
+ * The in-module fold control for prose that folds in place ("Read the full
+ * note"): the `ModuleDisclosure` summary grammar — muted dashed label with a
+ * trailing chevron — on a button, because the text it folds is a paragraph the
+ * module owns rather than a named section.
  *
- * This is a control *inside* a module, not a module's own disclosure — modules
- * fold their named sections behind `ModuleDisclosure` and their citations
- * behind `EvidenceFooter`. Red styling is reserved for active issues, so this
- * control never carries tone.
+ * Modules fold named sections behind `ModuleDisclosure` and citations behind
+ * `EvidenceFooter`. Red styling is reserved for active issues, so this control
+ * never carries tone, and it never uses link color: cyan text reads as a link
+ * to somewhere else, not as a fold.
  */
 export function InlineDisclosureToggle({
   open,
@@ -40,13 +42,13 @@ export function InlineDisclosureToggle({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "pharos-focus-ring inline-flex min-h-7 items-center gap-1 rounded-sm font-medium text-frost-blue",
+        "pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-md text-muted-foreground",
         INLINE_TOGGLE_TEXT_CLASS[size],
         className,
       )}
     >
-      {open ? expandedLabel : collapsedLabel}
-      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
+      <span className="underline decoration-dashed underline-offset-2">{open ? expandedLabel : collapsedLabel}</span>
+      <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
     </button>
   );
 }

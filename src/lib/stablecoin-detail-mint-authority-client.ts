@@ -163,6 +163,8 @@ export function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAut
     summary: summaryText,
   };
 
+  const headline = stringValue(profile.headline);
+  if (headline) summary.headline = headline;
   const inheritedFrom = stringValue(profile.inheritedFrom);
   if (inheritedFrom) summary.inheritedFrom = inheritedFrom;
   const mintIncidents = buildMintIncidents(profile.mintIncidents);

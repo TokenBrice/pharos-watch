@@ -7,6 +7,7 @@ function makeControl(overrides: Partial<MintAuthorityDetailControlViewModel> = {
   return {
     key: "master-minter:ethereum:0xabc",
     label: "MasterMinter",
+    roleKey: "minter-admin",
     roleLabel: "Minter admin",
     authorityTypeKey: "multisig",
     authorityTypeLabel: "Multisig",
@@ -41,10 +42,19 @@ describe("MintAuthorityRail", () => {
 
     expect(html).toContain("Issuer direct");
     expect(html).toContain("Issuer direct mint"); // full label carried as the origin title
-    expect(html).toContain("Multisig");
     expect(html).toContain("3/6");
     expect(html).toContain("USDC");
     expect(html).toContain("Unbounded, supervised &amp; reconciled");
+  });
+
+  it.each([
+    { overrides: {}, expected: ">Minter admin multisig<" },
+    { overrides: { roleKey: "timelock", roleLabel: "Timelock", authorityTypeKey: "timelock", authorityTypeLabel: "Timelock" }, expected: ">Timelock<" },
+    { overrides: { roleKey: "governor", roleLabel: "Governor", authorityTypeKey: "contract", authorityTypeLabel: "Contract" }, expected: ">Governor<" },
+    { overrides: { roleKey: "other", roleLabel: "Other", authorityTypeKey: "contract", authorityTypeLabel: "Contract" }, expected: ">Contract<" },
+  ])("labels the control chip by role, falling back to type for generic roles ($expected)", ({ overrides, expected }) => {
+    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl(overrides)]} />);
+    expect(html).toContain(expected);
   });
 
   it("states the multisig threshold accessibly alongside the signer dots", () => {
@@ -63,26 +73,19 @@ describe("MintAuthorityRail", () => {
   });
 
   it("gives EOA controls the caution tone and short label", () => {
-    const html = renderToStaticMarkup(
-      <MintAuthorityRail
-        {...BASE_PROPS}
-        controls={[
-          makeControl({
-            authorityTypeKey: "eoa",
-            authorityTypeLabel: "Externally owned account",
-            threshold: null,
-            signerCount: null,
-          }),
-        ]}
-      />,
+    const eoa = { authorityTypeKey: "eoa", authorityTypeLabel: "Externally owned account", threshold: null, signerCount: null };
+    const roleNamed = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl(eoa)]} />);
+    expect(roleNamed).toContain(">Minter admin EOA<");
+    expect(roleNamed).toContain("text-amber-700");
+    const generic = renderToStaticMarkup(
+      <MintAuthorityRail {...BASE_PROPS} controls={[makeControl({ ...eoa, roleKey: "unknown", roleLabel: "Unknown" })]} />,
     );
-    expect(html).toContain(">EOA<");
-    expect(html).toContain("text-amber-700");
+    expect(generic).toContain(">EOA<");
   });
 
   it("caps rail controls at three and points to the disclosure for the rest", () => {
     const controls = [0, 1, 2, 3, 4].map((index) =>
-      makeControl({ key: `control-${index}`, authorityTypeLabel: `Ctl-${index}` }),
+      makeControl({ key: `control-${index}`, roleLabel: `Ctl-${index}`, authorityTypeKey: "contract" }),
     );
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
 
@@ -98,13 +101,13 @@ describe("MintAuthorityRail", () => {
     const controls = [0, 1, 2, 3].map((index) => makeControl({ key: `control-${index}` }));
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} totalControlCount={149} />);
     expect(html).toContain("through 149 controls");
-    expect(html).toContain("+146 more controls (full census linked below)");
+    expect(html).toContain("+146 more in Primary controls");
     expect(html).not.toContain("through 4 controls");
   });
 
   it("renders every control with no overflow notice at exactly the cap", () => {
     const controls = [0, 1, 2].map((index) =>
-      makeControl({ key: `control-${index}`, authorityTypeLabel: `Ctl-${index}` }),
+      makeControl({ key: `control-${index}`, roleLabel: `Ctl-${index}`, authorityTypeKey: "contract" }),
     );
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
 

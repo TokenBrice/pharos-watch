@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
+import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
@@ -210,10 +211,10 @@ function PillarBreakdownDetails({
 
       {contextRowCount > 0 ? (
         collapseContext ? (
-          <details className="group mt-2 border-y border-border/30 py-1.5">
+          <details className="group/measure mt-2 border-y border-border/30 py-1.5">
             <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
               <span>Measurement detail ({contextRowCount})</span>
-              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
+              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/measure:rotate-180" aria-hidden="true" />
             </summary>
             <div className="pt-2">{contextList}</div>
           </details>
@@ -227,11 +228,11 @@ function PillarBreakdownDetails({
       </div>
 
       {breakdown.alternatives.length > 0 ? (
-        <details className="group mt-3 border-t border-border/30 pt-2">
+        <details className="group/routes mt-3 border-t border-border/30 pt-2">
           <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
             <span>Other evaluated routes ({breakdown.alternatives.length})</span>
             <ChevronDown
-              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              className="h-3.5 w-3.5 transition-transform group-open/routes:rotate-180"
               aria-hidden="true"
             />
           </summary>
@@ -312,10 +313,7 @@ export function SafetyScoreV9PillarRow({
   cardId: string;
   pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
 }) {
-  // All pillars start folded on every viewport (owner decision 2026-08-11,
-  // superseding the 2026-08-08 desktop weakest-pillar auto-open): an expanded
-  // dimension left the card's left column far taller than the Reserve
-  // Composition right column at xl+.
+  // All pillars start folded on every viewport (owner decision 2026-08-11).
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? false;
   const detailsId = useId();
@@ -339,20 +337,13 @@ export function SafetyScoreV9PillarRow({
             <span className="block text-sm font-semibold text-foreground">{pillar.label}</span>
             <span className="mt-0.5 block text-[11px] text-muted-foreground">{pillar.evidenceSummary}</span>
             {pillar.breakdown?.exitHighlight ? (
-              <>
-                <span className="mt-1 block font-mono text-[10px] text-foreground/85">
-                  Primary V10 route: {pillar.breakdown.exitHighlight.primaryRouteLabel}{" "}
-                  {pillar.breakdown.exitHighlight.primaryRouteScore === null ? "Not scored" : pillar.breakdown.exitHighlight.primaryRouteScore.toFixed(1)}
-                  {pillar.breakdown.exitHighlight.redundancyCredit > 0
-                    ? ` · backup +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(1)}`
-                    : ""}
-                </span>
-                {pillar.breakdown.exitHighlight.capacityLine !== null ? (
-                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
-                    {pillar.breakdown.exitHighlight.capacityLine}
-                  </span>
-                ) : null}
-              </>
+              <span className="mt-1 block text-[11px] text-foreground/85">
+                Best exit: {pillar.breakdown.exitHighlight.venueLabel}
+                {pillar.breakdown.exitHighlight.capacityLine !== null ? ` · ${pillar.breakdown.exitHighlight.capacityLine}` : ""}
+                {pillar.breakdown.exitHighlight.redundancyCredit > 0
+                  ? ` · backup route +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(0)}`
+                  : ""}
+              </span>
             ) : null}
           </span>
           <span className="whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-foreground">
@@ -386,6 +377,15 @@ export function SafetyScoreV9PillarRow({
           />
         </span>
       </button>
+      <div className="-mt-1 flex justify-end">
+        <a
+          href={`#${pillar.key}-evidence`}
+          className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+          aria-label={`${pillar.label} evidence`}
+        >
+          Evidence ↓
+        </a>
+      </div>
       {hasDetails && open ? (
         <div
           id={detailsId}
@@ -397,11 +397,7 @@ export function SafetyScoreV9PillarRow({
           ) : (
             <PillarInputFallback pillar={pillar} />
           )}
-          {pillar.reasons.length > 0 ? (
-            <ul className="mt-2 space-y-1">
-              {pillar.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-            </ul>
-          ) : null}
+          {pillar.reasons.length > 0 ? <SafetyScoreReasonList messages={pillar.reasons} className="mt-2 text-xs" /> : null}
         </div>
       ) : null}
     </div>

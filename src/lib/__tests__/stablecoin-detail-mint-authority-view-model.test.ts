@@ -334,6 +334,26 @@ describe("mint-authority detail view-model builder", () => {
       { label: "Postmortem", url: "https://example.com/postmortem" },
     ]);
   });
+
+  it("lets an authored headline override the generated verdict", () => {
+    const summary: MintAuthorityClientSummary = {
+      mintPath: "issuer-direct-mint", authorityPosture: "concentrated-admin", confidence: "verified",
+      summary: "Long reviewer narrative about the issuer mint route.",
+    };
+    const published = { mint: { score: 40, posture: "concentrated-admin" }, caps: [] };
+    expect(buildMintAuthorityDetailViewModel(makeMintAuthorityCoin(summary), published).verdict)
+      .toMatch(/^Concentrated — the issuer mints /);
+    expect(buildMintAuthorityDetailViewModel(
+      makeMintAuthorityCoin({ ...summary, headline: "Authored issuer verdict." }),
+      published,
+    ).verdict).toBe("Authored issuer verdict.");
+  });
+
+  it("resolves the inheritance parent to its symbol and Mint Authority anchor", () => {
+    const view = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(TRACKED_META_BY_ID.get("susde-ethena")!));
+    expect(view.inheritedFrom).toEqual({ symbol: "USDe", href: "/stablecoin/usde-ethena/#mint-authority" });
+    expect(view.verdict).toContain("sUSDe wraps USDe and inherits its mint risk");
+  });
 });
 
 describe("published operational-governance detail", () => {
@@ -344,7 +364,7 @@ describe("published operational-governance detail", () => {
       mint: { score: 55, posture: "unbounded-operationally-governed" }, caps: [],
     });
     expect(view).toMatchObject({ authorityPostureLabel: "Unbounded, operationally governed",
-      authorityPostureTone: "neutral", score: { score: 55, bandLabel: "Governed" }, processEvidenceAvailable: false });
+      authorityPostureTone: "neutral", score: { score: 55, bandLabel: "Governed" }, processMetrics: [] });
   });
 
   it("matches normalized control identity rather than labels/index and keeps null/unmatched failures visible at NR", () => {
@@ -380,7 +400,6 @@ describe("published operational-governance detail", () => {
     ]);
     expect(view.processMetrics).toContainEqual({ label: "Discretionary public delay", value: "172800 s" });
     expect(view.processMetrics).toContainEqual({ label: "Max annual interest growth", value: "500000 ppm / year" });
-    expect(view.processEvidenceAvailable).toBe(true);
   });
 
   it("distinguishes proved absence of envelope transitions from a missing public-delay measurement", () => {

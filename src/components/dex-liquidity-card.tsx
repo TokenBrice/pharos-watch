@@ -25,7 +25,8 @@ import {
   getOrganicFractionTier,
   isLiquidityActivityNotRated,
 } from "@/components/dex-liquidity-card-model";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
@@ -380,7 +381,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <ShowYourWorkPanel kind="liquidity" scoreComponents={liq.scoreComponents} stablecoinId={stablecoinId} />
         ) : null}
 
-        <MethodologyCardActions topic="liquidityScore" showWorkToggle />
+        <EvidenceFooter topic="liquidityScore" showWorkToggle />
       </CardContent>
     </Card>
   );

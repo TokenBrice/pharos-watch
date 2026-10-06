@@ -3,6 +3,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -97,5 +100,51 @@ describe("ExploreNextSection", () => {
     expect(screen.getByRole("link", { name: /\+2 more comparison briefs/ }).getAttribute("href")).toBe(
       "/stablecoins/usd/",
     );
+  });
+});
+
+describe("Explore Next peer ranking", () => {
+  const current = { ...coin, flags: { ...coin.flags, pegCurrency: "CHF" as const } };
+
+  function peer(
+    id: string,
+    pegCurrency: StablecoinMeta["flags"]["pegCurrency"],
+    mechanismArchetype: StablecoinMeta["mechanismArchetype"],
+    flags: Partial<StablecoinMeta["flags"]> = {},
+  ): StablecoinClientListMeta {
+    return {
+      ...CLIENT_ACTIVE_STABLECOINS[0],
+      id,
+      name: id,
+      symbol: id,
+      variantOf: undefined,
+      mechanismArchetype,
+      flags: { ...coin.flags, pegCurrency, ...flags },
+    };
+  }
+
+  it("ranks currency first, resolved mechanism next, then previous similarity and candidate order", () => {
+    const candidates = [
+      peer("usd-vault", "USD", "protocol-position"),
+      peer("eur-cdp", "EUR", "cdp"),
+      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "fiat-backed" }),
+      peer("chf-cdp-first", "CHF", "cdp", { governance: "centralized" }),
+      peer("chf-cdp-second", "CHF", "cdp", { governance: "centralized" }),
+      peer("chf-cdp-best", "CHF", "cdp"),
+    ];
+    expect(getRelatedStablecoins(current, { candidates }).map((entry) => entry.id)).toEqual([
+      "chf-cdp-best", "chf-cdp-first", "chf-cdp-second", "chf-fiat", "eur-cdp", "usd-vault",
+    ]);
+  });
+
+  it("fills remaining slots with the existing candidates when currency matches are scarce", () => {
+    const candidates = [
+      ...Array.from({ length: 6 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position")),
+      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "fiat-backed" }),
+    ];
+    expect(getRelatedStablecoins(current, { candidates }).map((entry) => entry.id)).toEqual([
+      "chf-fiat", "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3", "usd-vault-4",
+    ]);
+    expect(getRelatedStablecoins(current, { candidates: candidates.slice(0, 6) })).toHaveLength(6);
   });
 });

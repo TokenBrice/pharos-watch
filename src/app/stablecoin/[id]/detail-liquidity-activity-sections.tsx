@@ -5,7 +5,6 @@ import { Droplet, HeartPulse } from "lucide-react";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
-import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
@@ -98,22 +97,17 @@ export function DetailLiquidityActivitySections({
           </SectionErrorBoundary>
         </section>
 
-        {(hasPriceTransparency || viewModel.redemptionBackstop) ? (
-          <div className="grid grid-cols-1 gap-6">
-            {viewModel.redemptionBackstop ? (
-              <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
-            ) : null}
-            {hasPriceTransparency ? (
-              <section id="price" aria-label="Price transparency" className="xl:hidden">
-                <PriceTransparencyCard
-                  coinData={viewModel.coinData}
-                  consensusSources={viewModel.consensusSources ?? []}
-                  agreeSources={viewModel.agreeSources ?? []}
-                  dexPriceCheck={viewModel.dexPriceCheck}
-                />
-              </section>
-            ) : null}
-          </div>
+        {/* The xl rail owns Price Transparency; this in-flow copy keeps it
+            reachable below xl. */}
+        {hasPriceTransparency ? (
+          <section id="price" aria-label="Price transparency" className="xl:hidden">
+            <PriceTransparencyCard
+              coinData={viewModel.coinData}
+              consensusSources={viewModel.consensusSources ?? []}
+              agreeSources={viewModel.agreeSources ?? []}
+              dexPriceCheck={viewModel.dexPriceCheck}
+            />
+          </section>
         ) : null}
       </div>
 

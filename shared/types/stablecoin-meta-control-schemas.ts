@@ -783,6 +783,12 @@ const MintAuthorityProfileObjectSchema = /* @__PURE__ */ (() => z
     authorityPosture: z.enum(MINT_AUTHORITY_POSTURE_VALUES),
     confidence: z.enum(MINT_AUTHORITY_CONFIDENCE_VALUES),
     summary: z.string().min(12),
+    /**
+     * Authored summary-layer verdict for the detail card (≤25 words, no raw
+     * identifiers); the word/identifier budget is enforced in
+     * `shared/lib/stablecoins/schema.ts`, which may import `shared/lib/summary-budget`.
+     */
+    headline: z.string().trim().min(1).optional(),
     inheritedFrom: z.string().min(1).optional(),
     upgradeability: z
       .object({

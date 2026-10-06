@@ -44,10 +44,24 @@ export function alignAnchorAfterHydration(sectionId: string): () => void {
   // Match the bounded passport-link cadence; instant also respects reduced motion.
   const frame = window.requestAnimationFrame(align);
   const timers = [160, 480, 960, 1800].map((delay) => window.setTimeout(align, delay));
+  // Lazy sections above a deep anchor (reserves, charts) can keep growing past the
+  // fixed cadence, so also re-align on every page-height change, for a bounded window.
+  let pending = 0;
+  const observer = typeof ResizeObserver === "undefined"
+    ? null
+    : new ResizeObserver(() => {
+        window.cancelAnimationFrame(pending);
+        pending = window.requestAnimationFrame(align);
+      });
+  observer?.observe(document.body);
+  const deadline = window.setTimeout(() => stop(), 6000);
   const stop = () => {
     cancelled = true;
     window.cancelAnimationFrame(frame);
+    window.cancelAnimationFrame(pending);
     timers.forEach((timer) => window.clearTimeout(timer));
+    window.clearTimeout(deadline);
+    observer?.disconnect();
     for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
       window.removeEventListener(event, stop);
     }

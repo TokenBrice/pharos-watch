@@ -28,7 +28,8 @@ import {
 } from "@/lib/mint-burn-coin-helpers";
 import { describeUnpricedEvents, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
-import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -325,7 +326,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 px-4 py-2 sm:px-5">
-        <MethodologyCardActions topic="mintBurnFlows" className="mt-0 border-t-0 pt-0" />
+        <EvidenceFooter topic="mintBurnFlows" className="border-t-0 pt-0" />
         <Link
           href="/flows/"
           className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"

@@ -85,19 +85,15 @@ describe("projectReserveQualityClientSummary", () => {
     ).toBeNull();
   });
 
-  it("projects the mix, ladder, review aggregates, and slice detail", () => {
+  it("projects the ladder, review aggregates, and slice detail", () => {
     const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW));
     expect(summary).not.toBeNull();
     expect(summary!.chipLabel).toBe("Highly liquid");
     expect(summary!.chipToneClass).toContain("emerald");
     expect(summary!.lede).toBe("2 reviewed reserve slices — 100% convertible within one day.");
-    expect(summary!.mix).toEqual([
-      { key: "treasury-bill", label: "Treasury bills", pct: 80, barClass: "bg-blue-500" },
-      { key: "bank-deposit", label: "Bank deposits", pct: 20, barClass: "bg-cyan-500" },
-    ]);
     expect(summary!.ladder).toEqual([
-      { key: "immediate", tone: "ok", label: "Immediate", pct: 20 },
-      { key: "one-day", tone: "info", label: "≤ 1 day", pct: 80 },
+      { key: "immediate", label: "Immediate", pct: 20 },
+      { key: "one-day", label: "≤ 1 day", pct: 80 },
     ]);
     expect(summary!.liquidWithinOneDayPct).toBe(100);
     expect(summary!.unknownHorizonPct).toBe(0);
@@ -116,6 +112,7 @@ describe("projectReserveQualityClientSummary", () => {
       assetClassLabel: "Treasury bills",
       horizonLabel: "≤ 1 day",
       riskLabel: "Very low",
+      risk: "very-low",
       obligor: "U.S. Treasury",
       riskFactorLabels: ["duration", "liquidity"],
     });
@@ -133,9 +130,9 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.ladder).toEqual([
-      { key: "immediate", tone: "ok", label: "Immediate", pct: 25 },
-      { key: "over-seven-days", tone: "alert", label: "> 7 days", pct: 30 },
-      { key: "unknown", tone: "neutral", label: "Unknown", pct: 45 },
+      { key: "immediate", label: "Immediate", pct: 25 },
+      { key: "over-seven-days", label: "> 7 days", pct: 30 },
+      { key: "unknown", label: "Unknown", pct: 45 },
     ]);
     expect(summary!.unknownHorizonPct).toBe(45);
     expect(summary!.liquidWithinOneDayPct).toBe(25);
@@ -164,79 +161,6 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.lede).toBe(
       "2 reviewed reserve slices — none of the disclosed basket converts within one day; 40% has no published exit timeline.",
     );
-  });
-
-  it("aggregates repeated asset classes and rounds shares", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "T-bill ladder A", pct: 40.02, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
-        { name: "T-bill ladder B", pct: 30.04, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
-        { name: "Cash", pct: 29.94, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-      ]),
-    );
-    expect(summary!.mix).toEqual([
-      { key: "treasury-bill", label: "Treasury bills", pct: 70.1, barClass: "bg-blue-500" },
-      { key: "cash", label: "Cash", pct: 29.9, barClass: "bg-cyan-500" },
-    ]);
-  });
-
-  it("labels slices without an asset class as unclassified", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "Undisclosed holdings", pct: 40, risk: "medium", liquidityHorizon: "unknown" },
-      ]),
-    );
-    expect(summary!.mix[1]).toEqual({
-      key: "unclassified",
-      label: "Unclassified",
-      pct: 40,
-      barClass: "bg-cyan-500",
-    });
-  });
-
-  it("folds a single tail class beyond the fifth segment under its own label", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 30, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "T-bills", pct: 25, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
-        { name: "Repo", pct: 20, risk: "low", assetClass: "repo", liquidityHorizon: "one-day" },
-        { name: "MMF", pct: 12, risk: "low", assetClass: "money-market-fund", liquidityHorizon: "one-day" },
-        { name: "Bank deposits", pct: 10, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "immediate" },
-        { name: "Gold", pct: 3, risk: "medium", assetClass: "commodity-allocated", liquidityHorizon: "seven-days" },
-      ]),
-    );
-    expect(summary!.mix).toHaveLength(6);
-    expect(summary!.mix[5]).toEqual({
-      key: "mix-tail",
-      label: "Allocated commodities",
-      pct: 3,
-      barClass: "bg-muted-foreground/40",
-    });
-  });
-
-  it("folds several tail classes into one counted segment", () => {
-    const summary = projectReserveQualityClientSummary(
-      coinWith([
-        { name: "Cash", pct: 30, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
-        { name: "T-bills", pct: 25, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
-        { name: "Repo", pct: 20, risk: "low", assetClass: "repo", liquidityHorizon: "one-day" },
-        { name: "MMF", pct: 12, risk: "low", assetClass: "money-market-fund", liquidityHorizon: "one-day" },
-        { name: "Bank deposits", pct: 8, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "immediate" },
-        { name: "Gold", pct: 3, risk: "medium", assetClass: "commodity-allocated", liquidityHorizon: "seven-days" },
-        { name: "Fund shares", pct: 2, risk: "medium", assetClass: "fund-share", liquidityHorizon: "seven-days" },
-      ]),
-    );
-    expect(summary!.mix).toHaveLength(6);
-    expect(summary!.mix.map((row) => row.barClass)).toEqual([
-      "bg-blue-500",
-      "bg-cyan-500",
-      "bg-violet-500",
-      "bg-amber-500",
-      "bg-teal-500",
-      "bg-muted-foreground/40",
-    ]);
-    expect(summary!.mix[5]).toMatchObject({ key: "mix-tail", label: "2 smaller classes", pct: 5 });
   });
 
   it("calls a basket highly liquid exactly at the 90% one-day boundary", () => {

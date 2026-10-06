@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { RedemptionBackstopCard } from "../redemption-backstop-card";
+import { RedemptionRouteSection } from "../redemption-backstop-card";
 import type { RedemptionBackstopEntry } from "@shared/types";
+
+function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEntry }) {
+  return <RedemptionRouteSection entry={entry} reportCard={null} coinId={entry.stablecoinId} />;
+}
 
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "eurc-circle",

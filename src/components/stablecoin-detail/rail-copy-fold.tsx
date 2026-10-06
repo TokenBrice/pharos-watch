@@ -16,19 +16,17 @@ export interface RailCopyFoldChip {
 }
 
 /**
- * Below-`xl` accordion for the shared rail-module in-flow copies. At `xl+` the
- * eight shared modules are a glanceable sidebar; below `xl` they used to stack
- * fully expanded into the main column — a ~2.3k px wall of identically shaped
- * review cards on phones. This wrapper keeps the scan-level signal (title +
- * status chip) in a collapsed card band and folds the card body.
+ * The single in-flow mount of a structural evidence card (custody, bridging,
+ * freeze & seizure, …) inside its Safety Score pillar group. At every
+ * breakpoint the card folds to a scan band — title + status chip + chevron —
+ * because the detail layer folds (design-language module contract); unfolded,
+ * the stack pushed DEWS thousands of pixels down. The `xl+` summary rail
+ * indexes each band with one link row.
  *
- * Native `<details>` keeps the folded card in the DOM — crawlable, and
- * Chromium auto-expands it on find-in-page. Most wrapped cards carry no anchor
- * ids (rail and in-flow copies coexist); the one that does — Mechanism review,
- * `#mechanism-review` — passes `id` here so the fold band itself is the anchor
- * target and opens on hash navigation. The rail instance at `xl+` renders the
- * bare card and is untouched; this wrapper only ever appears inside the
- * `xl:hidden` mounts.
+ * Native `<details>` keeps the folded body in the DOM — crawlable, and
+ * Chromium auto-expands it on find-in-page. `id` makes the band the anchor
+ * target: it opens on hash navigation and on rail-index jumps
+ * (`revealAnchorTarget` opens a targeted `<details>`).
  */
 export function RailCopyFold({
   title,

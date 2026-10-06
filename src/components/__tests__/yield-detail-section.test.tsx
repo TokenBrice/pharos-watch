@@ -71,7 +71,6 @@ vi.mock("@/components/table/client", () => ({
 
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  MethodologyCardActions: () => null,
   MethodologyHint: () => null,
   MethodologyTriggerButton: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));

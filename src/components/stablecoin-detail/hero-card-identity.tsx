@@ -6,6 +6,7 @@ import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
+import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import {
   BACKING_LABELS,
   BACKING_SENTENCE_LABELS,
@@ -267,14 +268,13 @@ export function SafetyGradeHero({
   );
 }
 
-/** Full-width partial-evidence qualifier for the hero grade. */
+/** Partial-evidence qualifier for the hero grade: an amber chip, detail on tap. */
 export function SafetyPartialEvidenceNote({ reportCard }: { reportCard: V9ConsumerCard | null }) {
   if (!reportCard?.partialEvidence) return null;
   return (
-    <p className="mt-1 text-xs text-muted-foreground">
-      Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.map((cause) =>
-        cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
-    </p>
+    <div className="mt-1">
+      <PartialEvidenceChip partialEvidence={reportCard.partialEvidence} />
+    </div>
   );
 }
 

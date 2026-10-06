@@ -75,6 +75,7 @@ export function DepegHistory({
   depegEventCoverageLimited = false,
   historyCoverage = null,
   recent90d = null,
+  scoreWindowIncidentCount = null,
 }: {
   stablecoinId: string;
   earliestTrackingDate?: number | null;
@@ -82,6 +83,8 @@ export function DepegHistory({
   depegEventCoverageLimited?: boolean;
   historyCoverage?: PegSummaryCoin["historyCoverage"];
   recent90d?: PegSummaryCoin["recent90d"];
+  /** Peg-summary `eventCount`: incidents inside the score coverage window, the figure the hero cites. */
+  scoreWindowIncidentCount?: number | null;
 }) {
   const {
     data,
@@ -99,7 +102,10 @@ export function DepegHistory({
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
-  const totalIncidents = data?.total ?? events.length;
+  // The cursor API skips the exact count (includeTotal=false); its `total` is then a page
+  // lower bound, so it is only a count once exact or once every page has loaded.
+  const knownTotal = data?.totalExact ? data.total : isFullyLoaded ? events.length : null;
+  const incidentCountLabel = knownTotal != null ? knownTotal.toLocaleString() : `${loadedCount.toLocaleString()}+`;
   const thresholdCrossings = isFullyLoaded
     ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
     : null;
@@ -109,14 +115,14 @@ export function DepegHistory({
   const [showAllIncidents, setShowAllIncidents] = useState(false);
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
     useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
-  const isHydratingFullHistory = !isAutoLoadCapped && totalIncidents > loadedCount;
+  const isHydratingFullHistory = !isAutoLoadCapped && !isFullyLoaded;
   const isCollapsible = sorted.length > DEPEG_HISTORY_COLLAPSED_COUNT;
   const isFolded = isCollapsible && !showAllIncidents;
   // Folded always shows the newest incidents, whichever page the reader left open.
   const visibleRows = isFolded ? sorted.slice(0, DEPEG_HISTORY_COLLAPSED_COUNT) : paginatedRows;
   // A capped traversal paginates what it loaded; the count it labels is the loaded count,
   // never the server-side total it never reached.
-  const paginationTotal = isFullyLoaded ? totalIncidents : loadedCount;
+  const paginationTotal = isFullyLoaded ? knownTotal ?? loadedCount : loadedCount;
   const showPagination = (isFullyLoaded || isAutoLoadCapped) && sorted.length > 0 && !isFolded;
 
   if (isLoading) {
@@ -178,7 +184,7 @@ export function DepegHistory({
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
           <span className="text-muted-foreground">Incidents </span>
-          <span className="font-mono font-semibold">{totalIncidents.toLocaleString()}</span>
+          <span className="font-mono font-semibold">{incidentCountLabel}</span>
         </div>
         {thresholdCrossings != null ? (
           <div>
@@ -228,20 +234,27 @@ export function DepegHistory({
       {historyCoverage ? (
         <p className="text-xs text-muted-foreground">
           Score coverage: {historyCoverage.status === "verified" ? "replay-verified" : "age-anchored"} since{" "}
-          <span className="font-mono">{formatEventDate(historyCoverage.startedAt)}</span>.
+          <span className="font-mono">{formatEventDate(historyCoverage.startedAt)}</span>
+          {scoreWindowIncidentCount != null ? (
+            <>
+              , with <span className="font-mono">{scoreWindowIncidentCount.toLocaleString()}</span>{" "}
+              {scoreWindowIncidentCount === 1 ? "incident" : "incidents"} in that window
+            </>
+          ) : null}
+          .
         </p>
       ) : null}
       {isAutoLoadCapped ? (
         <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">
-          Partial history: the newest {loadedCount.toLocaleString()} of{" "}
-          {totalIncidents.toLocaleString()} incidents are loaded. Peg-stability metrics need the
+          Partial history: the newest {loadedCount.toLocaleString()}
+          {knownTotal != null ? ` of ${knownTotal.toLocaleString()}` : ""} incidents are loaded. Peg-stability metrics need the
           full history and stay hidden until the rest is loaded.
         </p>
       ) : null}
       {isHydratingFullHistory ? (
         <p className="mb-3 text-xs text-muted-foreground">
-          Loading full history... {loadedCount.toLocaleString()} / {totalIncidents.toLocaleString()} incidents
-          {isFetchingNextPage ? "" : " loaded"}
+          Loading full history... {loadedCount.toLocaleString()}
+          {knownTotal != null ? ` / ${knownTotal.toLocaleString()}` : ""} incidents{isFetchingNextPage ? "" : " loaded"}
         </p>
       ) : null}
       <ol className="space-y-2 md:hidden" aria-label="Compact depeg event history">

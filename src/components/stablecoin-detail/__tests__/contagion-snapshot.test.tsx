@@ -303,7 +303,9 @@ describe("ContagionSnapshot", () => {
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
     expect(screen.queryByTestId("contagion-graph")).toBeNull();
     expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent).toContain("stale-evidence");
-    expect(screen.getByRole("region", { name: "What I depend on" }).textContent).toContain("No upstream links");
+    expect(screen.queryByRole("region", { name: "What I depend on" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Scored role dependencies (not drawn)" })).toBeNull();
   });
 
   it("renders an unavailable notice instead of falling back to V8", () => {

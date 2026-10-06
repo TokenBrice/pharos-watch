@@ -17,6 +17,30 @@ import { isThreeStepArchetype } from "@/components/stablecoin-detail/mechanism-d
 import { VerticalThreeStepDiagram } from "@/components/stablecoin-detail/mechanism-diagrams/vertical-three-step-diagram";
 import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import { findSummaryBudgetViolations, SUMMARY_PROSE_MAX_WORDS } from "@shared/lib/summary-budget";
+import { ReviewNotes } from "@/components/stablecoin-detail/collapsible-prose";
+import { deriveVerdictLine } from "@/components/stablecoin-detail/verdict-line";
+
+/**
+ * Curated collateral / peg prose is this card's primary content, so it carries
+ * the summary-layer prose budget (40 words, no raw identifiers) rather than the
+ * 25-word verdict budget: within budget it renders whole; past it, the first
+ * clean sentence stays visible and the full text folds into Review notes.
+ */
+function PegProse({ text }: { text: string }) {
+  if (findSummaryBudgetViolations(text, SUMMARY_PROSE_MAX_WORDS).length === 0) {
+    return <p className="text-base leading-relaxed">{text}</p>;
+  }
+  const line = deriveVerdictLine(text, SUMMARY_PROSE_MAX_WORDS);
+  return (
+    <>
+      {line ? <p className="text-base leading-relaxed">{line}</p> : null}
+      <ReviewNotes>
+        <p className="whitespace-pre-line">{text}</p>
+      </ReviewNotes>
+    </>
+  );
+}
 
 export interface PegStabilityCardProps {
   meta: StablecoinMeta;
@@ -153,12 +177,12 @@ export function PegStabilityCard({
           {meta.collateral ? (
             <div>
               <p className="pharos-kicker mb-1.5">Collateral</p>
-              <p className="text-base leading-relaxed">{meta.collateral}</p>
+              <PegProse text={meta.collateral} />
             </div>
           ) : null}
           <div>
             <p className="pharos-kicker mb-1.5">Peg Mechanism</p>
-            <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
+            <PegProse text={meta.pegMechanism} />
           </div>
         </div>
       </CardContent>

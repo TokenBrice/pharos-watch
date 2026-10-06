@@ -18,6 +18,8 @@ interface CollateralizationCardProps {
   liveFreshnessLabel?: string;
   liveBalanceSheetScope?: "shared-sky-maker";
   liveSharedBookAssetIds?: readonly string[];
+  /** Body-only render inside a `RailCopyFold` band (see `RailCard`). */
+  frameless?: boolean;
 }
 
 function formatRatioPct(ratio: number): string {
@@ -39,6 +41,25 @@ const TONE_BADGE_CLASSES: Record<"over" | "par" | "under", string> = {
   under: SEVERITY_TONE_CLASS.rose.pill,
 };
 
+/** Validated live ratio: the feed value only when it is a finite, non-negative number. */
+function validLiveRatio(liveRatio: number | null | undefined): number | null {
+  return typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio >= 0 ? liveRatio : null;
+}
+
+/**
+ * The card's header coverage chip (label + tone), exported so a fold band
+ * wrapping the frameless card can show the same verdict without drift.
+ */
+export function buildCollateralizationChip(
+  reviewed: MechanismCollateralizationView | null,
+  liveRatio: number | null | undefined,
+): { label: string; toneClass: string } | null {
+  const headlineRatio = validLiveRatio(liveRatio) ?? reviewed?.ratio ?? null;
+  if (headlineRatio == null) return null;
+  const coverage = coverageLabel(headlineRatio);
+  return { label: coverage.label, toneClass: TONE_BADGE_CLASSES[coverage.tone] };
+}
+
 /**
  * Right-rail collateralization module (issue #682). Headline prefers the live
  * reserve-feed ratio when the adapter emits one; otherwise it shows the dated
@@ -53,8 +74,9 @@ export function CollateralizationCard({
   liveFreshnessLabel,
   liveBalanceSheetScope,
   liveSharedBookAssetIds,
+  frameless,
 }: CollateralizationCardProps) {
-  const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio >= 0 ? liveRatio : null;
+  const live = validLiveRatio(liveRatio);
   const liveBackstop =
     typeof liveLiquidationCapacityRatio === "number"
     && Number.isFinite(liveLiquidationCapacityRatio)
@@ -87,6 +109,7 @@ export function CollateralizationCard({
 
   return (
     <RailCard
+      frameless={frameless}
       title="Collateralization"
       ariaLabel="Collateralization"
       trailing={

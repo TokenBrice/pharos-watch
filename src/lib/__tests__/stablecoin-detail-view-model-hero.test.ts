@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
@@ -193,12 +194,18 @@ describe("stablecoin detail hero view-model builder", () => {
       value: "NR",
       sub: "3d tracked",
     });
-    // DAI is not blacklist-tracked, so the upstream-freeze chip targets the
-    // mint-authority evidence section instead.
+    // DAI has no reviewed Freeze & seizure card and is not blacklist-tracked,
+    // so the chip leaves for the FreezeWatch coverage page — never the
+    // mint-authority section.
     expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
       value: "Upstream",
-      href: "#mint-authority",
+      href: buildCoinTrackerLink("dai-makerdao", "freezewatch", "DAI").href,
     });
+    const reviewedFreezeHero = buildDetailHero({
+      coin: { ...coin!, blacklistabilitySummary: {} as never },
+      reportCard: makeV9Card({ id: "dai-makerdao" }),
+    });
+    expect(reviewedFreezeHero.passportItems.find((item) => item.key === "freeze")?.href).toBe("#freeze-seizure");
     // No redemption backstop record -> the redeemability entry is omitted.
     expect(hero.passportItems.some((item) => item.key === "redeemability")).toBe(false);
   });

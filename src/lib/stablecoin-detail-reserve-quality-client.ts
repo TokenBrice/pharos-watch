@@ -1,4 +1,4 @@
-import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import type {
   ReserveAssetClass,
   ReserveLiquidityHorizon,
@@ -17,24 +17,14 @@ import { round1 } from "@shared/lib/math";
  * (asset class, liquidity horizon, obligor, risk factors) plus the server-only
  * `reserveReview` aggregates, in the `projectOracleRiskClientSummary` pattern:
  * bounded labels and formatted figures only. The review's rationale and
- * per-disposition prose stay server-side; the module renders the mix, the
- * liquidation ladder, and the review's own disclosure-quality numbers.
+ * per-disposition prose stay server-side; the module renders the reviewed-slice
+ * treemap, the liquidation ladder, and the review's own disclosure-quality numbers.
  *
  * Aggregates only the curated composition (`coin.reserves`) — never the live
  * reserve feed or category templates, which do not carry quality attributes.
  */
-export interface ReserveQualityMixClientRow {
-  key: string;
-  label: string;
-  pct: number;
-  /** Categorical data-series class by share rank; index 5 is the folded tail. */
-  barClass: string;
-}
-
 export interface ReserveQualityLadderClientRow {
   key: ReserveLiquidityHorizon;
-  /** Severity tone for the ladder bar fill; see `HORIZON_TONES`. */
-  tone: SeverityTone;
   label: string;
   pct: number;
 }
@@ -46,6 +36,8 @@ export interface ReserveQualitySliceClientRow {
   assetClassLabel: string | null;
   horizonLabel: string | null;
   riskLabel: string;
+  /** Reviewed risk tier, the treemap's tone channel. */
+  risk: ReserveRisk;
   obligor: string | null;
   riskFactorLabels: string[];
 }
@@ -54,7 +46,6 @@ export interface ReserveQualityClientSummary {
   chipLabel: string;
   chipToneClass: string;
   lede: string;
-  mix: ReserveQualityMixClientRow[];
   ladder: ReserveQualityLadderClientRow[];
   liquidWithinOneDayPct: number;
   unknownHorizonPct: number;
@@ -109,24 +100,6 @@ const HORIZON_LABELS: Record<ReserveLiquidityHorizon, string> = {
   unknown: "Unknown",
 };
 
-/**
- * The ladder is an ordinal *risk* ramp, not a composition: how fast the basket
- * can actually be turned into cash. It therefore takes severity tones (owner
- * feedback 2026-08-11) — a same-day horizon and a beyond-a-week horizon are not
- * two shades of the same grey.
- *
- * `unknown` stays `neutral`: an unestablished exit timeline is an absence of
- * evidence, and absence of data does not get an alarm colour (owner ruling
- * §5.4). Its amber row label already flags it.
- */
-const HORIZON_TONES: Record<ReserveLiquidityHorizon, SeverityTone> = {
-  immediate: "ok",
-  "one-day": "info",
-  "seven-days": "watch",
-  "over-seven-days": "alert",
-  unknown: "neutral",
-};
-
 const RISK_FACTOR_LABELS: Record<ReserveRiskFactor, string> = {
   credit: "credit",
   duration: "duration",
@@ -141,33 +114,6 @@ const RISK_FACTOR_LABELS: Record<ReserveRiskFactor, string> = {
   leverage: "leverage",
 };
 
-/** Distinct asset classes rendered inline before the tail folds into one segment. */
-const MIX_SEGMENT_LIMIT = 5;
-
-/**
- * Asset mix is a *categorical composition* (T-bills vs repo vs private credit),
- * so it takes the categorical data-series palette rather than the severity ramp
- * — the classes are distinct kinds, not degrees of risk. The previous
- * share-ranked `bg-foreground/80…/10` monochrome ramp made adjacent segments
- * indistinguishable (owner feedback 2026-08-11: "hard to read with those
- * nuances of grey-black").
- *
- * Hues are drawn from the same sequence the donut charts use, which the owner
- * ratified as a legitimate wide palette for data series (plan §5.6). Index 5 is
- * the folded tail and stays muted so it reads as "everything else". Static
- * strings per the Tailwind hard rule.
- */
-const MIX_BAR_CLASSES = [
-  "bg-blue-500",
-  "bg-cyan-500",
-  "bg-violet-500",
-  "bg-amber-500",
-  "bg-teal-500",
-  "bg-muted-foreground/40",
-] as const;
-
-const UNCLASSIFIED_MIX_KEY = "unclassified";
-
 /**
  * A single position at or above this share surfaces as a concentration fact —
  * but only when the slice itself carries medium-or-worse risk; a 61% T-bill
@@ -176,6 +122,14 @@ const UNCLASSIFIED_MIX_KEY = "unclassified";
 const TOP_POSITION_MIN_PCT = 20;
 
 const TOP_POSITION_RISKS: ReadonlySet<ReserveRisk> = new Set(["medium", "high", "very-high"]);
+
+/**
+ * The one-day liquidity fact turns amber below this share, and the verdict chip
+ * drops from the ok/info tones to watch at the same line: a basket converting
+ * less than 60% of itself within a day is the module's own "not mostly liquid"
+ * boundary, so the fact and the chip never disagree about breach.
+ */
+export const LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT = 60;
 
 // Chip tone strings match the oracle/bridge TIER_TONES palette byte-for-byte.
 const CHIP_TONES = {
@@ -202,7 +156,7 @@ interface ChipVerdict {
  */
 function resolveChip(liquidWithinOneDayPct: number, unknownHorizonPct: number): ChipVerdict {
   if (liquidWithinOneDayPct >= 90) return { label: "Highly liquid", toneClass: CHIP_TONES.ok };
-  if (liquidWithinOneDayPct >= 60) return { label: "Mostly liquid", toneClass: CHIP_TONES.info };
+  if (liquidWithinOneDayPct >= LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT) return { label: "Mostly liquid", toneClass: CHIP_TONES.info };
   if (unknownHorizonPct >= 40) return { label: "Opaque exit", toneClass: CHIP_TONES.watch };
   return { label: "Mixed liquidity", toneClass: CHIP_TONES.watch };
 }
@@ -252,39 +206,6 @@ function buildLede(
   return lede;
 }
 
-function buildMix(slices: readonly ReserveSlice[]): ReserveQualityMixClientRow[] {
-  const shares = new Map<string, { label: string; pct: number }>();
-  for (const slice of slices) {
-    const key = slice.assetClass ?? UNCLASSIFIED_MIX_KEY;
-    const label = slice.assetClass ? ASSET_CLASS_LABELS[slice.assetClass] : "Unclassified";
-    const existing = shares.get(key);
-    if (existing) existing.pct += slice.pct;
-    else shares.set(key, { label, pct: slice.pct });
-  }
-
-  const ranked = [...shares.entries()]
-    .map(([key, entry]) => ({ key, label: entry.label, pct: entry.pct }))
-    .sort((a, b) => b.pct - a.pct);
-
-  const inline = ranked.slice(0, MIX_SEGMENT_LIMIT);
-  const tail = ranked.slice(MIX_SEGMENT_LIMIT);
-  const rows = inline.map((row, index) => ({
-    key: row.key,
-    label: row.label,
-    pct: round1(row.pct),
-    barClass: MIX_BAR_CLASSES[index]!,
-  }));
-  if (tail.length > 0) {
-    rows.push({
-      key: "mix-tail",
-      label: tail.length === 1 ? tail[0]!.label : `${tail.length} smaller classes`,
-      pct: round1(tail.reduce((total, row) => total + row.pct, 0)),
-      barClass: MIX_BAR_CLASSES[MIX_SEGMENT_LIMIT]!,
-    });
-  }
-  return rows;
-}
-
 function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClientRow[] {
   const shares = new Map<ReserveLiquidityHorizon, number>();
   for (const slice of slices) {
@@ -293,7 +214,6 @@ function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClien
   }
   return LADDER_ORDER.filter((horizon) => (shares.get(horizon) ?? 0) > 0).map((horizon) => ({
     key: horizon,
-    tone: HORIZON_TONES[horizon],
     label: HORIZON_LABELS[horizon],
     pct: round1(shares.get(horizon)!),
   }));
@@ -339,7 +259,6 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     chipLabel: chip.label,
     chipToneClass: chip.toneClass,
     lede: buildLede(slices.length, liquidWithinOneDayPct, unknownHorizonPct, unidentifiedObligorsPct, selfExposurePct),
-    mix: buildMix(slices),
     ladder,
     liquidWithinOneDayPct,
     unknownHorizonPct,
@@ -358,6 +277,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
       key: `${slice.name}:${index}`,
       name: slice.name,
       pct: slice.pct,
+      risk: slice.risk,
       assetClassLabel: slice.assetClass ? ASSET_CLASS_LABELS[slice.assetClass] : null,
       horizonLabel: slice.liquidityHorizon ? HORIZON_LABELS[slice.liquidityHorizon] : null,
       riskLabel: RESERVE_RISK_PRESENTATION[slice.risk].shortLabel,

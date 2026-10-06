@@ -27,24 +27,22 @@ const VIEW: ControlPostureView = {
 };
 
 describe("ControlPostureCard", () => {
-  it("renders the full classification map with the active category, facts, folded detail, and methodology link", () => {
+  it("renders one posture chip with taxonomy and scope, folded detail, and the methodology link", () => {
     const html = renderToStaticMarkup(<ControlPostureCard view={VIEW} />);
 
     expect(html).toContain("Control posture");
     expect(html).toContain("Regulated entity");
-    expect(html).toContain("Control posture classification map. Regulated entity selected. This is not a score.");
-    expect(html).toContain('aria-current="true"');
-    expect(html).toContain("Taxonomy");
-    expect(html).toContain("CEFI");
-    expect(html).toContain("DESCRIPTIVE");
+    expect(html).toContain("Control posture: Regulated entity. This is a classification, not a score.");
+    expect(html).toContain(">CEFI<");
+    expect(html).toContain(">LOCAL<");
     expect(html).toContain("Classification details");
     expect(html).toContain("not a Safety Score input");
     expect(html).toContain('/methodology#safety-scores-methodology');
     expect(html).not.toContain("Sources");
     expect(html).not.toContain("/100");
-    expect(html).not.toContain("right = safer");
-    for (const label of ["Code", "DAO", "Multisig", "Regulated", "Operator", "Wrapper"]) {
-      expect(html).toContain(`>${label}<`);
+    // The six-tile map is gone: unselected postures are not drawn.
+    for (const label of ["Code", "DAO", "Multisig", "Operator", "Wrapper"]) {
+      expect(html).not.toContain(`>${label}<`);
     }
   });
 

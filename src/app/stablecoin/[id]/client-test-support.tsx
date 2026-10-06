@@ -55,7 +55,7 @@ export const createDetailLazySectionsMock = () => {
 
   return {
     ...placeholders,
-    ReservePanel: ({
+    ReservesSection: ({
       reserves,
       onRetry,
       isFetching,
@@ -66,7 +66,7 @@ export const createDetailLazySectionsMock = () => {
       isFetching?: boolean;
       isLoading?: boolean;
     }) => (
-      <section id="reserves" data-testid="reserve-panel">
+      <section id="reserves" data-testid="reserves-section">
         <span>{isLoading ? "loading-reserves" : reserves?.mode ?? "no-reserves"}</span>
         <button
           type="button"
@@ -79,9 +79,7 @@ export const createDetailLazySectionsMock = () => {
         </button>
       </section>
     ),
-    StablecoinSafetyScoreV9Card: ({ rightColumn }: { rightColumn?: ReactNode }) => (
-      <div data-testid="report-card">{rightColumn}</div>
-    ),
+    StablecoinSafetyScoreV9Card: () => <div data-testid="report-card" />,
     FlowsSection: () => <div data-testid="flows-section" />,
     FlowHistorySection: () => <div data-testid="flow-history-section" />,
     BlacklistSection: () => <div data-testid="blacklist-section" />,
@@ -131,7 +129,8 @@ function makeViewModelBase(coin: StablecoinMeta) {
     stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasBlacklist: false,
     supplyHistory: [], earliestTrackingDate: null, reserves: null, reserveFetchError: null,
     refetchReserves: null, isFetchingReserves: false, supplyError: null, staleQueries: [],
-    featureStates: makeFeatureStates(), mintAuthority: { status: "not-reviewed" as const },
+    featureStates: makeFeatureStates(),
+    mintAuthority: { status: "not-reviewed" as const, processDiagnostics: [], processMetrics: [] },
     hero: { signalRailItems: [] } as never, handleRetryAll: vi.fn(),
   };
 }
