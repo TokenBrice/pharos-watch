@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { enrichRaydiumStandardDiscoveryExecutionModels, parseRaydiumStandardDiscoveryPool } from "../raydium-standard-discovery";
 import { initMetrics } from "../pool-helpers";
 import type { PoolEntry } from "../types";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 
 const POOL = "CiRnB72qMDkrdPe1sxc5gmqGALKmnFG5AMncK1UZoogs";
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -25,13 +26,30 @@ function harness() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Raydium standard discovery identity", () => {
-  it("promotes an exact standard native pool and currencies without changing retained TVL", async () => {
+  it("retains standard provider diagnostics without changing TVL or making score evidence", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ success: true, data: [nativePool()] }))));
     const h = harness();
     await h.run();
     expect(h.pool.extra?.ammExecutionModel).toMatchObject({ source: "raydium", invariant: "constant-product", trackedTokenIndex: 0, feeRate: 0.0025 });
     expect(h.pool.tvlUsd).toBe(4_000_000);
     expect(h.pool.poolId).toBe(`solana:${POOL}`);
+    const observations = buildP4DexExitRouteObservations({ stablecoinId: "usdc-circle", observedAt: 1_791_241_200, retainedPools: [h.pool] });
+    expect(observations.observations).toHaveLength(1);
+    expect(observations.observations[0]).toMatchObject({ scoreEligible: false, confidence: "low" });
+    expect(observations.coverage.scoreEligiblePoolCount).toBe(0);
+  });
+
+  it("cannot turn a fabricated counter-mint into exact score proof", async () => {
+    const body = nativePool();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ success: true,
+      data: [{ ...body, mintB: { ...body.mintB, address: "11111111111111111111111111111111" } }] }))));
+    const h = harness();
+    await h.run();
+    expect(h.pool.extra?.ammExecutionModel).toBeDefined();
+    const result = buildP4DexExitRouteObservations({ stablecoinId: "usdc-circle", observedAt: 1_791_241_200, retainedPools: [h.pool] });
+    expect(result.observations).toHaveLength(1);
+    expect(result.observations.every((observation) => observation.scoreEligible === false && observation.confidence === "low")).toBe(true);
+    expect(result.coverage.scoreEligibleObservationCount).toBe(0);
   });
 
   it.each([

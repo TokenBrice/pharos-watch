@@ -19,6 +19,13 @@ export async function enrichMissingDetailPrice(
   try {
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
+    // Only the admitted canonical publication can set restoration provenance.
+    if ("currentSupplyRestored" in detail) {
+      delete detail.currentSupplyRestored;
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      response = new Response(JSON.stringify(detail), { status: response.status, statusText: response.statusText, headers });
+    }
     if (stablecoinId === LEGACY_SOLOMON_USDV_ID) {
       delete detail.price;
       delete detail.gecko_id;
@@ -55,6 +62,7 @@ export async function enrichMissingDetailPrice(
       admitSupplyBuckets(coin.circulating).status === "observed";
     if (hasCurrentSupply) {
       detail.currentCirculatingUSD = coin.circulating;
+      detail.currentSupplyRestored = coin.supplyRestored === true;
       detail.currentCirculatingPrevDayUSD = admitSupplyBuckets(coin.circulatingPrevDay).status === "observed"
         ? coin.circulatingPrevDay : {};
       const supplyObservedAt = coin.supplyObservedAt;

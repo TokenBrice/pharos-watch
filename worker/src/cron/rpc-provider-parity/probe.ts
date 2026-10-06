@@ -643,6 +643,10 @@ async function probeTokenFreshness(
     freshness.discriminating = freshness.numericValues!.some((entry) => entry.value !== freshness.numericValues![0].value);
     freshness.verdict = "fresh";
     freshness.reason = "matched-numeric-block";
+  } else if (headAfter !== headBefore) {
+    // Separate latest/numeric reads may straddle a reorg while the head moves.
+    // A stable H2 alone does not prove that it descends from the original H1.
+    freshness.reason = "moving-bracket-no-match";
   } else {
     freshness.verdict = "stale";
     freshness.reason = "no-bracket-match";

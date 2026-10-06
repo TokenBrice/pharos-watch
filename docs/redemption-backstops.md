@@ -8,12 +8,14 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.46`<!-- GENERATED-END: methodology-version-redemption-backstop -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.47`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.46` update: Morpho Vault V2 capacity checks the exact vault's `liquidityAdapter()` in the same run; a zero or unreadable adapter bounds capacity to independently measured fresh idle underlying. Generic non-USD ERC-4626 units are not published as USD without same-path FX valuation (`erc4626-capacity-non-usd-unvalued`), removing nominal TRY-as-USD telemetry from wiTRY while retaining its reserve evidence. Newly reviewed routes keep unmeasured liquidity unavailable rather than resolving a `fixed-usd` zero.
+Latest `v4.47` update: HBD's documented conversion cost is disclosed but unquantified because no extra fee does not establish full-value proceeds under debt-ratio haircuts or median-price settlement.
+
+The `v4.46` update: Morpho Vault V2 capacity checks the exact vault's `liquidityAdapter()` in the same run; a zero or unreadable adapter bounds capacity to independently measured fresh idle underlying. Generic non-USD ERC-4626 units are not published as USD without same-path FX valuation (`erc4626-capacity-non-usd-unvalued`), removing nominal TRY-as-USD telemetry from wiTRY while retaining its reserve evidence. Newly reviewed routes keep unmeasured liquidity unavailable rather than resolving a `fixed-usd` zero.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -472,6 +474,7 @@ Each row also carries:
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
 - Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
+- HBD conversion has no extra conversion fee, but the debt-ratio haircut and 3.5-day median-price window leave all-in USD payout cost unquantified. Its reviewed formula disposition therefore carries no numeric zero-cost bound until current payout valuation accounts for those effects.
 - Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
 - Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
 - Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound

@@ -50,20 +50,22 @@ function store(chain: string, rows: TestLog[]) {
   const first = rows[0]!;
   receipts[first.transactionHash] = { transactionHash: first.transactionHash, blockHash: first.blockHash, blockNumber: first.blockNumber, status: "0x1", logs: rows };
 }
-function opTransfer(deposit: boolean, amount: bigint, height = 1) {
+function opTransfer(deposit: boolean, amount: bigint, height = 1, nonce = 0n) {
   if (source.protocol !== "op-stack") throw new Error("fixture");
   const chain = deposit ? source.chainId : source.l2ChainId;
   const message = encodeFunctionData({ abi: bridgeAbi, functionName: "finalizeBridgeERC20", args: [deposit ? source.l2Token : source.l1Token, deposit ? source.l1Token : source.l2Token, user, recipient, amount, "0x"] });
   const bridge = deposit ? source.l1Bridge : source.l2Bridge;
   const init = eventLog(chain, bridge, "ERC20BridgeInitiated", { localToken: deposit ? source.l1Token : source.l2Token, remoteToken: deposit ? source.l2Token : source.l1Token, from: user }, "address,uint256,bytes", [recipient, amount, "0x"], 2, height);
   if (deposit) {
-    const sent = eventLog(chain, source.l1Messenger, "SentMessage", { target: source.l2Bridge }, "address,bytes,uint256,uint256", [source.l1Bridge, message, version, 200000n], 0, height);
+    const sent = eventLog(chain, source.l1Messenger, "SentMessage", { target: source.l2Bridge }, "address,bytes,uint256,uint256", [source.l1Bridge, message, version + nonce, 200000n], 0, height);
     const extension = eventLog(chain, source.l1Messenger, "SentMessageExtension1", { sender: source.l1Bridge }, "uint256", [0n], 1, height);
+    for (const row of [sent, extension, init]) { row.logIndex = toHex(Number(BigInt(row.logIndex)) + Number(nonce) * 3); row.transactionHash = hash(3000 + height + Number(nonce) * 100000); }
     store(chain, [sent, extension, init]);
   } else {
-    const data = encodeFunctionData({ abi: relayAbi, functionName: "relayMessage", args: [version, source.l2Bridge, source.l1Bridge, 0n, 200000n, message] });
-    const withdrawalHash = keccak256(encodeAbiParameters(parseAbiParameters("uint256,address,address,uint256,uint256,bytes"), [version, source.l2Messenger, source.l1Messenger, 0n, 300000n, data]));
-    const passed = eventLog(chain, source.messagePasser, "MessagePassed", { nonce: version, sender: source.l2Messenger, target: source.l1Messenger }, "uint256,uint256,bytes,bytes32", [0n, 300000n, data, withdrawalHash], 0, height);
+    const data = encodeFunctionData({ abi: relayAbi, functionName: "relayMessage", args: [version + nonce, source.l2Bridge, source.l1Bridge, 0n, 200000n, message] });
+    const withdrawalHash = keccak256(encodeAbiParameters(parseAbiParameters("uint256,address,address,uint256,uint256,bytes"), [version + nonce, source.l2Messenger, source.l1Messenger, 0n, 300000n, data]));
+    const passed = eventLog(chain, source.messagePasser, "MessagePassed", { nonce: version + nonce, sender: source.l2Messenger, target: source.l1Messenger }, "uint256,uint256,bytes,bytes32", [0n, 300000n, data, withdrawalHash], 0, height);
+    for (const row of [passed, init]) { row.logIndex = toHex(Number(BigInt(row.logIndex)) + Number(nonce) * 3); row.transactionHash = hash(4000 + height + Number(nonce) * 100000); }
     store(chain, [passed, init]);
   }
 }
@@ -82,17 +84,18 @@ function arbWithdrawal(amount: bigint) {
   const init = eventLog("arbitrum", source.l2Bridge, "WithdrawalInitiated", { from: user, to: recipient, l2ToL1Id: 0n }, "address,uint256,uint256", [source.l1Token, 0n, amount], 1);
   store("arbitrum", [sent, init]);
 }
-function arbDeposit(amount: bigint) {
+function arbDeposit(amount: bigint, nonce = 0n, height = 1) {
   if (source.protocol !== "arbitrum") throw new Error("fixture");
   const data = encodeFunctionData({ abi: bridgeAbi, functionName: "finalizeInboundTransfer", args: [source.l1Token, user, recipient, amount, "0x"] });
   const packed = concat([...[
     BigInt(source.l2Bridge), 0n, 1000000n, 10n, BigInt(user), BigInt(recipient), 200000n, 2n, BigInt((data.length - 2) / 2),
   ].map(value => toHex(value, { size: 32 })), data]);
   const alias = toHex((BigInt(source.l1Bridge) + 0x1111000000000000000000000000000000001111n) % (1n << 160n), { size: 20 });
-  const deliveredLog = eventLog("ethereum", source.rollupBridge, "MessageDelivered", { messageIndex: 0n, beforeInboxAcc: hash(0) },
-    "address,uint8,address,bytes32,uint256,uint64", [source.inbox, 9, alias, keccak256(packed), 3n, 100012n], 0);
-  const inboxLog = eventLog("ethereum", source.inbox, "InboxMessageDelivered", { messageNum: 0n }, "bytes", [packed], 1);
-  const initiated = eventLog("ethereum", source.l1Bridge, "DepositInitiated", { from: user, to: recipient, sequenceNumber: 0n }, "address,uint256", [source.l1Token, amount], 2);
+  const deliveredLog = eventLog("ethereum", source.rollupBridge, "MessageDelivered", { messageIndex: nonce, beforeInboxAcc: hash(0) },
+    "address,uint8,address,bytes32,uint256,uint64", [source.inbox, 9, alias, keccak256(packed), 3n, BigInt(100000 + height * 12)], 0, height);
+  const inboxLog = eventLog("ethereum", source.inbox, "InboxMessageDelivered", { messageNum: nonce }, "bytes", [packed], 1, height);
+  const initiated = eventLog("ethereum", source.l1Bridge, "DepositInitiated", { from: user, to: recipient, sequenceNumber: nonce }, "address,uint256", [source.l1Token, amount], 2, height);
+  for (const row of [deliveredLog, inboxLog, initiated]) { row.logIndex = toHex(Number(BigInt(row.logIndex)) + Number(nonce) * 3); row.transactionHash = hash(3000 + height + Number(nonce) * 100000); }
   store("ethereum", [deliveredLog, inboxLog, initiated]);
 }
 async function observe(checkpoint?: Parameters<typeof observeL2MessengerPending>[0]["checkpoint"]) {
@@ -251,6 +254,174 @@ describe("canonical messenger pending liabilities", () => {
     const data = encodeFunctionData({ abi: parseAbi(["function finalizeBridgeETH(address from,address to,uint256 amount,bytes extraData)"]), functionName: "finalizeBridgeETH", args: [user, recipient, 17n, "0x"] });
     store("ethereum", [eventLog("ethereum", source.l1Messenger, "SentMessage", { target: source.l2Bridge }, "address,bytes,uint256,uint256", [source.l1Bridge, data, version, 200000n], 0)]);
     expect(await observe()).toMatchObject({ status: "accepted", amount: "0" });
+  });
+});
+
+describe("bounded dense bridge histories", () => {
+  it.each([true, false])("converges across 257 same-block settled OP transfers (deposit=%s)", async deposit => {
+    for (let nonce = 0; nonce < 257; nonce++) opTransfer(deposit, 1n, 1, BigInt(nonce));
+    delivered = true; finalized = true; withdrawalRelayed = true;
+    let checkpoint: Parameters<typeof observe>[0];
+    let accepted = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const result = await observe(checkpoint);
+      expect(result).not.toMatchObject({ reason: "checkpoint-capacity" });
+      if (result.status === "accepted") { expect(result.amount).toBe("0"); accepted = true; break; }
+      expect(result.reason).toBe("history-incomplete");
+      expect(result.checkpoint).toBeDefined();
+      checkpoint = result.checkpoint;
+      expect(checkpoint!.messages).toHaveLength(0);
+      expect(checkpoint!.cursors[deposit ? 0 : 1].resume).not.toBeNull();
+    }
+    expect(accepted).toBe(true);
+  });
+  it("resumes dense failed Arbitrum retries before admitting a later successful redemption", async () => {
+    setupArbitrum(); arbDeposit(23n);
+    const first = await observe();
+    if (first.status !== "accepted" || source.protocol !== "arbitrum") throw new Error("fixture");
+    const id = first.checkpoint.messages[0]!.id;
+    receipts[id] = { transactionHash: id, blockNumber: "0x1", blockHash: header("arbitrum", 1).hash, status: "0x1", logs: [] };
+    for (let index = 0; index <= 128; index++) {
+      const retryTxHash = hash(6000 + index);
+      logs.arbitrum!.push(eventLog("arbitrum", source.retryableTx, "RedeemScheduled", { ticketId: id, retryTxHash, sequenceNum: BigInt(index) }, "uint64,address,uint256,uint256", [200000n, user, 0n, 0n], index, 1));
+      const finalization = eventLog("arbitrum", source.l2Bridge, "DepositFinalized", { l1Token: source.l1Token, from: user, to: recipient }, "uint256", [23n], 0, 2);
+      finalization.transactionHash = retryTxHash;
+      receipts[retryTxHash] = { transactionHash: retryTxHash, blockNumber: "0x2", blockHash: header("arbitrum", 2).hash, status: index === 128 ? "0x1" : "0x0", logs: index === 128 ? [finalization] : [] };
+    }
+    let checkpoint = first.checkpoint, settled = false;
+    const readRetryHashes = new Set<string>();
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const before = vi.mocked(fetchEvmRpcBatch).mock.calls.length;
+      const result = await observe(checkpoint);
+      const retryReads = vi.mocked(fetchEvmRpcBatch).mock.calls.slice(before).flatMap(([, calls]) => calls)
+        .filter(call => call.method === "eth_getTransactionReceipt" && BigInt(String(call.params[0])) >= 6000n && BigInt(String(call.params[0])) <= 6128n);
+      // A successful retry has one extra receipt read for application evidence;
+      // already authenticated failed prefixes are never replayed.
+      expect(retryReads.length).toBeLessThanOrEqual(9);
+      for (const call of retryReads) {
+        const tx = String(call.params[0]);
+        if (tx !== hash(6128)) { expect(readRetryHashes.has(tx)).toBe(false); readRetryHashes.add(tx); }
+      }
+      if (result.status === "accepted") { expect(result.amount).toBe("0"); settled = true; break; }
+      expect(result.reason).toBe("history-incomplete");
+      if (!result.checkpoint) throw new Error("Expected redemption prefix");
+      checkpoint = result.checkpoint;
+      expect(checkpoint.messages).toHaveLength(1);
+      expect(checkpoint.messages[0]!.redeemResume?.logIndex).toBe((attempt + 1) * 8 - 1);
+      if (attempt === 0) {
+        const changed = structuredClone(checkpoint); changed.messages[0]!.redeemResume!.blockHash = hash(999);
+        expect(await observe(changed)).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
+      }
+    }
+    expect(settled).toBe(true);
+    expect(readRetryHashes.size).toBe(128);
+  });
+  it("rechecks a scheduled redemption whose execution is beyond the holding pin", async () => {
+    setupArbitrum(); arbDeposit(23n);
+    const first = await observe();
+    if (first.status !== "accepted" || source.protocol !== "arbitrum") throw new Error("fixture");
+    const id = first.checkpoint.messages[0]!.id, retryTxHash = hash(5000);
+    receipts[id] = { transactionHash: id, blockNumber: "0x1", blockHash: header("arbitrum", 1).hash, status: "0x1", logs: [] };
+    logs.arbitrum!.push(eventLog("arbitrum", source.retryableTx, "RedeemScheduled", { ticketId: id, retryTxHash, sequenceNum: 0n }, "uint64,address,uint256,uint256", [200000n, user, 0n, 0n], 0, 1));
+    const finalization = eventLog("arbitrum", source.l2Bridge, "DepositFinalized", { l1Token: source.l1Token, from: user, to: recipient }, "uint256", [23n], 0, 3);
+    finalization.transactionHash = retryTxHash;
+    receipts[retryTxHash] = { transactionHash: retryTxHash, blockNumber: "0x3", blockHash: header("arbitrum", 3).hash, status: "0x1", logs: [finalization] };
+    const waiting = await observe(first.checkpoint);
+    expect(waiting).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (waiting.status !== "rejected" || !waiting.checkpoint) throw new Error("Expected deferred execution");
+    expect(waiting.checkpoint.messages[0]).toMatchObject({ redeemNextBlock: 1, redeemResume: null });
+    pinHeight = 3;
+    expect(await observe(waiting.checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
+  });
+  it("gives both dense source directions a resumable opportunity", async () => {
+    for (let nonce = 0; nonce < 64; nonce++) { opTransfer(true, 1n, 1, BigInt(nonce)); opTransfer(false, 1n, 1, BigInt(nonce)); }
+    delivered = true; finalized = true; withdrawalRelayed = true;
+    const first = await observe();
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected two resumable streams");
+    for (const cursor of first.checkpoint.cursors) expect(cursor.resume?.nextNonce).toBe("32");
+    expect(first.checkpoint.messages).toHaveLength(0);
+  });
+  it("never discards 257 genuinely unresolved transfers to fit checkpoint capacity", async () => {
+    for (let nonce = 0; nonce < 257; nonce++) opTransfer(true, 1n, 1, BigInt(nonce));
+    let checkpoint: Parameters<typeof observe>[0];
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const result = await observe(checkpoint);
+      expect(result).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+      if (result.status !== "rejected" || !result.checkpoint) throw new Error("Expected resumable unresolved prefix");
+      checkpoint = result.checkpoint;
+      expect(checkpoint.messages).toHaveLength((attempt + 1) * 32);
+    }
+    expect(await observe(checkpoint)).toMatchObject({ status: "rejected", reason: "checkpoint-capacity" });
+    delivered = true;
+    expect(await observe(checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
+  });
+  it("authenticates skipped same-block nonces before resuming and rejects changed settlement pins", async () => {
+    for (let nonce = 0; nonce < 33; nonce++) opTransfer(true, 1n, 1, BigInt(nonce));
+    delivered = true;
+    const first = await observe();
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected partial block");
+    first.checkpoint.cursors[0].resume!.nextNonce = "31";
+    expect(await observe(first.checkpoint)).toMatchObject({ status: "rejected", reason: "nonce-missing" });
+    first.checkpoint.cursors[0].resume!.nextNonce = "32";
+    pinHeight = 3;
+    const original = vi.mocked(fetchEvmBlockHeader).getMockImplementation()!;
+    vi.mocked(fetchEvmBlockHeader).mockImplementation(async (chain, n, options) => chain === "optimism" && n === 2
+      ? { ...header(chain, n), hash: hash(999) } : original(chain, n, options));
+    expect(await observe(first.checkpoint)).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
+  });
+  it("makes bounded Arbitrum retryable progress without treating incomplete redemption history as settled", async () => {
+    setupArbitrum();
+    for (let nonce = 0; nonce < 257; nonce++) arbDeposit(1n, BigInt(nonce), nonce + 1);
+    pinHeight = 257; finalityHeight = 257; source.scanPageBlocks = [50000, 50000];
+    if (source.protocol !== "arbitrum") throw new Error("fixture");
+    const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!, retryableTx = source.retryableTx;
+    const scheduledTopic = encodeEventTopics({ abi: eventAbi, eventName: "RedeemScheduled" })[0]!;
+    const finalization = eventLog("arbitrum", source.l2Bridge, "DepositFinalized", { l1Token: source.l1Token, from: user, to: recipient }, "uint256", [1n], 0, 2);
+    const scheduledData = encodeAbiParameters(parseAbiParameters("uint64,address,uint256,uint256"), [200000n, user, 0n, 0n]);
+    const scheduledByTicket = new Map<string, TestLog>();
+    // Every ticket already settled at these pins. Build its receipt/log evidence
+    // once, when the observer derives the Nitro ticket ID, instead of withholding
+    // settlement for another attempt and repeating the consumed send prefix.
+    // The first page still contains all 257 sends; the OP cases cover same-block
+    // source resumption and the retry case covers same-block redemption.
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, calls, options) => {
+      for (const call of calls) {
+        if (chain !== "arbitrum" || call.method !== "eth_getTransactionReceipt" || receipts[String(call.params[0])]) continue;
+        const id = String(call.params[0]), height = scheduledByTicket.size + 1, retryTxHash = hash(9000 + height);
+        const pin = header("arbitrum", height), blockNumber = toHex(height);
+        receipts[id] = { transactionHash: id, blockNumber, blockHash: pin.hash, status: "0x1", logs: [] };
+        scheduledByTicket.set(id, { address: retryableTx, topics: [scheduledTopic, id, retryTxHash, hash(0)], data: scheduledData,
+          transactionHash: hash(4000 + height), blockNumber, blockHash: pin.hash, logIndex: "0x0", removed: false });
+        receipts[retryTxHash] = { transactionHash: retryTxHash, blockNumber, blockHash: pin.hash, status: "0x1", logs: [{ ...finalization, blockNumber, blockHash: pin.hash, transactionHash: retryTxHash }] };
+      }
+      if (calls.length === 1 && chain === "arbitrum" && calls[0]!.method === "eth_getLogs") {
+        const filter = calls[0]!.params[0] as { address: string; topics: string[]; fromBlock: string; toBlock: string };
+        if (filter.address === retryableTx && filter.topics[0] === scheduledTopic) {
+          const row = scheduledByTicket.get(filter.topics[1]!);
+          return [row && BigInt(filter.fromBlock) <= BigInt(row.blockNumber) && BigInt(filter.toBlock) >= BigInt(row.blockNumber) ? [row] : []];
+        }
+      }
+      return original(chain, calls, options);
+    });
+    let checkpoint: Parameters<typeof observe>[0];
+    let accepted = false, incompleteAttempts = 0;
+    for (let attempt = 0; attempt < 45; attempt++) {
+      const before = vi.mocked(fetchEvmRpcBatch).mock.calls.length;
+      const result = await observe(checkpoint);
+      const logReads = vi.mocked(fetchEvmRpcBatch).mock.calls.slice(before).flatMap(([, calls]) => calls).filter(call => call.method === "eth_getLogs");
+      expect(logReads.length).toBeLessThanOrEqual(8);
+      expect(result).not.toMatchObject({ reason: "checkpoint-capacity" });
+      if (result.status === "accepted") { expect(result.amount).toBe("0"); accepted = true; break; }
+      expect(result.reason).toBe("history-incomplete");
+      checkpoint = result.checkpoint;
+      expect(checkpoint).toBeDefined();
+      expect(checkpoint!.messages.length).toBeGreaterThan(0);
+      incompleteAttempts++;
+    }
+    expect(accepted).toBe(true);
+    expect(incompleteAttempts).toBeGreaterThan(1);
+    expect(scheduledByTicket.size).toBe(257);
   });
 });
 

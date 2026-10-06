@@ -326,7 +326,10 @@ export async function fetchTronTransferWindow(
     if (!parsed.success) throw new TronReplayProviderError("provider_null", "transfer window payload invalid");
     const meta = parsed.data.meta;
     if (!meta) throw new TronReplayProviderError("provider_null", "transfer window watermark missing");
-    watermarkMs = Math.max(watermarkMs, meta.at);
+    // meta.at is response generation time, not an indexed-block proof. Retain
+    // the oldest page so a fresh page cannot hide stale response evidence.
+    // Keep zero when no page was read (including an early stop).
+    watermarkMs = pages === 1 ? meta.at : Math.min(watermarkMs, meta.at);
     for (const transfer of parsed.data.data) {
       if (transfer.type !== "Transfer") continue;
       transfers.push({

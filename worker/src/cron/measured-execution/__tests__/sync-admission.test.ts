@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { MAX_RUNTIME_MS, MAX_PACED_QUOTE_RUNTIME_MS } from "../sync";
+import { createDexMeasuredExecutionRpcBudget } from "../profiles";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
@@ -900,6 +902,24 @@ describe("measured profile score-eligibility contract", () => {
 });
 
 describe("measured execution quote pacing", () => {
+  it("stops RPC work at eight minutes and quote admission at five minutes", () => {
+    expect(MAX_RUNTIME_MS).toBe(480_000);
+    expect(MAX_PACED_QUOTE_RUNTIME_MS).toBe(300_000);
+    let nowMs = 479_999;
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100, deadlineMs: MAX_RUNTIME_MS, now: () => nowMs,
+    });
+    expect(budget.tryConsume()).toBe(true);
+    nowMs = 480_000;
+    expect(budget.tryConsume()).toBe(false);
+    expect(budget.stopReason).toBe("runtime-deadline-exceeded");
+    expect(projectMeasuredExecutionPacingStop({
+      nowMs: 0, softDeadlineMs: MAX_PACED_QUOTE_RUNTIME_MS,
+      observedQuoteRpcRequests: 100, observedQuoteElapsedMs: 100,
+      remainingEstimatedRpcRequests: 350_000,
+    })).toEqual({ stop: true, projectedFinishMs: 350_000 });
+  });
+
   interface PacingState {
     target: DexMeasuredExecutionTarget;
     failedReason: string | null;

@@ -58,14 +58,14 @@ describe("api endpoint registry", () => {
     }
   });
 
-  it("keeps cache-only build transport in the site lane without public artifacts or probes", () => {
+  it("keeps credentialed build transport outside browser proxy access and public probes", () => {
     const path = "/api/stablecoin-detail-snapshot-inputs";
     expect(getEndpointDefinitionByKey("stablecoin-detail-snapshot-inputs")).toMatchObject({
-      publicApiAccess: "site-only", siteDataAccess: "allowed", cacheBypass: true, methods: ["GET"],
+      publicApiAccess: "site-only", siteDataAccess: "denied", cacheBypass: true, methods: ["GET"],
     });
     expect(getPublicApiAccess(path)).toBe("site-only");
     expect(isProtectedPublicApiPath(path)).toBe(false);
-    expect(isSiteDataAllowedPath(path)).toBe(true);
+    expect(isSiteDataAllowedPath(path)).toBe(false);
     for (const group of ["public", "admin", "manual"] as const) {
       expect(getProbePaths(group).some((probe) => probe.split("?")[0] === path)).toBe(false);
     }

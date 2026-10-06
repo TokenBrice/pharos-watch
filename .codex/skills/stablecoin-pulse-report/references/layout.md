@@ -40,7 +40,7 @@ All fields below are required unless marked optional. Strings must be nonempty; 
 }
 ```
 
-Dates are valid UTC calendar dates; start precedes end; annotations must fall inside the period. Plain fields are escaped. HTML fields are trusted editorial copy, not untrusted input: use only `<b>`, `<i>`, and `<a href="https://…">`; no scripts, styles, images, or arbitrary markup. Preserve U+2060 word joiners between a sign and `$` (for example `−⁠$`), preventing broken monetary figures. Source prefixes are derived automatically: X, On-chain (Etherscan/Solscan/Tronscan/Basescan/Arbiscan), or Web.
+Dates are valid UTC calendar dates; start precedes end; annotations must fall inside the period. Plain fields are escaped. HTML fields are editorial copy with an enforced parser allowlist: use only `<b>`, `<i>`, and `<a href="https://…">`; no scripts, styles, images, arbitrary markup, or additional attributes. Unsupported markup fails the build before HTML is written. The renderer disables document JavaScript and external requests; exported HTML also carries a restrictive CSP. Preserve U+2060 word joiners between a sign and `$` (for example `−⁠$`), preventing broken monetary figures. Source prefixes are derived automatically: X, On-chain (Etherscan/Solscan/Tronscan/Basescan/Arbiscan), or Web.
 
 ### Visible-character targets
 

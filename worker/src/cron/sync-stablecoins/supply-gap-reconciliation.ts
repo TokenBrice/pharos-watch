@@ -101,7 +101,8 @@ export type CoinGeckoGapFillRejectionReason =
   | "multiple-missing-chains"
   | "baseline-mismatch"
   | "history-incomplete"
-  | "history-ratio-above-bound";
+  | "history-ratio-above-bound"
+  | "history-below-baseline";
 
 export interface CoinGeckoGapFillRejection {
   id: string;
@@ -537,7 +538,7 @@ const HISTORY_BUCKETS = [
  * DEC-01 supplemental aggregate raise for one tracked asset missing exactly one deployment. Fail-closed:
  * the DL chain baseline must reconcile with every attributed chain observed; the CoinGecko series must
  * supply current plus every compared historical bucket; and CG/DL must stay inside the policy band at
- * current (with hysteresis) and at or under the hard ceiling at every bucket DL also observed. When
+ * current (with hysteresis) and between the DL baseline and hard ceiling at every bucket DL also observed. When
  * admitted, every published aggregate bucket comes from the single CoinGecko series (never a per-bucket
  * max that splices providers into a flow); a bucket DL did not observe stays absent because its
  * supplemental contribution cannot be bounded. The missing chain carries only the nonnegative remainder,
@@ -600,9 +601,11 @@ function applySingleMissingChainGap(
     if (dlValue <= 0 || cgValue / dlValue > COINGECKO_GAP_FILL_POLICY.maxRatio) {
       return { reconciledCurrent: null, rejection: "history-ratio-above-bound" };
     }
+    if (cgValue < dlValue) {
+      return { reconciledCurrent: null, rejection: "history-below-baseline" };
+    }
     publishedHistory[key] = cgValue;
-    // A CoinGecko bucket below DL's cannot be attributed to the missing chain; leave that remainder absent.
-    if (cgValue >= dlValue) remainderHistory[key] = cgValue - dlValue;
+    remainderHistory[key] = cgValue - dlValue;
   }
 
   const remainderCurrent = totals.current - dlCurrent;

@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.47",
+    title: "Curated ownership for native receipt yield",
+    date: "2026-10-06",
+    effectiveAt: 1791295690,
+    summary:
+      "Auto-discovered pools remain lending opportunities unless an explicit source type is supplied; symbol and deployment matches alone do not establish native receipt ownership.",
+    impact: [
+      "Curated receipt sources retain holder-yield identity. Auto-discovered pools use lending-opportunity typing before eligibility and arbitration, preserving deposit requirements and source-risk treatment.",
+      "Contradictory supplied deposit addresses prevent symbol fallback; absent addresses retain the existing unambiguous-symbol discovery path. No APY provider or PYS weight changes.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.46",
     title: "Independent Yield Dependencies and Complete Weighted Components",
     date: "2026-09-27",

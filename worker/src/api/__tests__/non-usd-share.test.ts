@@ -243,6 +243,22 @@ describe("handleNonUsdShare", () => {
     const partial = unix("2026-08-06T00:00:00Z");
     const after = unix("2026-08-07T00:00:00Z");
 
+    it("omits the first window date when a dominant asset's predecessor is before cutoff", async () => {
+      vi.spyOn(Date, "now").mockReturnValue((before + 30 * 86400 + 12 * 3600) * 1000);
+      const { db, sqlite } = fixtures.open();
+      const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, 1)");
+      for (const date of [before, partial, after]) {
+        for (const [id, value] of Object.entries(completeDay)) {
+          if (date === partial && id === largeUsdId) continue;
+          insert.run(id, date, value);
+        }
+      }
+      const response = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share?days=30"));
+      const body = NonUsdShareResponseSchema.parse(await response.json());
+      expect(body.map(point => point.date)).toEqual([after]);
+      expect(body[0]!.total).toBe(1000);
+    });
+
     it.each([
       { name: "a small asset's hole", missing: [smallUsdId!], published: true },
       { name: "every asset but one small row", missing: [largeUsdId!, commodityId, fiatId], published: false },

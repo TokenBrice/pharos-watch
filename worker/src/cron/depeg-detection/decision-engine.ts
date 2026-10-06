@@ -696,9 +696,6 @@ function decideRecovery(
     poolRecoveryVetoGroupCount,
     poolRecoveryVetoCorroboratingGroupCount,
     poolRecoveryVetoHighTvl,
-    poolRecoverySupported,
-    poolRecoverySupportGroupCount,
-    poolRecoveryPrice,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
   } = ctx;
@@ -718,28 +715,17 @@ function decideRecovery(
 
   const trustedAggregateDexLane = isDexFresh(dexRow, dexAbsBps, now) && dexRow != null;
   const aggregateDexRecovery = trustedAggregateDexLane && dexSupportsRecovery;
-  const poolChallengerRecovery = !trustedAggregateDexLane && poolRecoverySupported;
+  // Challenger snapshots retain their publication clock, not the original
+  // pool-price observation clock. They can veto recovery conservatively but
+  // cannot establish fresh positive recovery evidence.
   const recovery = directRecovery ?? (
     aggregateDexRecovery && dexRow
       ? {
           recoveryPrice: recoveryPriceForEvent(existing, dexRow.dex_price_usd),
           closeReason: "recovered-dex" as const,
         }
-      : poolChallengerRecovery
-        ? {
-            recoveryPrice: recoveryPriceForEvent(existing, poolRecoveryPrice ?? price),
-            closeReason: "recovered-dex" as const,
-          }
-        : null
+      : null
   );
-  if (!directRecovery && poolChallengerRecovery) {
-    diagnostics.push(withDiagnostic(
-      "log",
-      `[depeg] Pool-challenger majority recovery for ${asset.symbol}: ` +
-      `${poolRecoverySupportGroupCount} independent group(s) inside the ${recoveryThreshold}bps recovery band ` +
-      `outvote ${poolRecoveryVetoGroupCount} diverging group(s)`,
-    ));
-  }
 
   if (recovery) {
     const recoveryFirstSeenAt = existing.recovery_first_seen_at;

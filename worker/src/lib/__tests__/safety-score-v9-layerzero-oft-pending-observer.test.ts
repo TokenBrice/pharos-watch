@@ -127,10 +127,76 @@ it("persists an authenticated prefix before a later discovery timeout", async ()
   expect(saved).toHaveBeenCalledTimes(1);
   expect(JSON.parse(saved.mock.calls[0]![2]).pathways[0]).toMatchObject({
     sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 },
+    destinationAnchor: 2_000_099, destinationAnchorHash: header(2_000_099).hash,
   });
 });
 
+it("anchors omitted delivered messages on every lane before a prefix is saved", async () => {
+  const f = fixture([
+    { nonce: 1n, amountSD: 9n, state: "delivered", height: 100 },
+    { nonce: 2n, amountSD: 1n, state: "unverified", height: 1_500_100 },
+  ]);
+  f.source.pathways.push({ sourceIndex: 1, destinationIndex: 0 });
+  f.setPin(2_000_099);
+  vi.spyOn(dbCache, "getCache").mockResolvedValue(null);
+  const saved = vi.spyOn(dbCache, "setCache").mockResolvedValue(undefined);
+  const original = f.fetcher.getMockImplementation()!;
+  let windows = 0;
+  f.fetcher.mockImplementation(async (raw, init) => {
+    if (String(raw).includes("/pathway/") && ++windows === 2) throw new Error("later failure");
+    return original(raw, init);
+  });
+  await observeLayerZeroOftPending({ source: f.source, headers: [header(2_000_099), header(2_000_099)], chainRpcs: new Map(), db: {} as D1Database });
+  expect(saved).toHaveBeenCalledTimes(1);
+  const prefix = JSON.parse(saved.mock.calls[0]![2]);
+  expect(prefix.pathways[0]).toMatchObject({ sentNonce: "1", messages: [] });
+  for (const lane of prefix.pathways) expect(lane).toMatchObject({ destinationAnchor: 2_000_099, destinationAnchorHash: header(2_000_099).hash });
+  expect(saved.mock.calls[0]![1]).toContain("layerzero-oft-pending:v2:");
+  f.setPin(2_000_100);
+  const originalHeader = f.headers.getMockImplementation()!;
+  f.headers.mockImplementation(async (chain, height, options) => chain === "base" && height === 2_000_099
+    ? { ...header(height), hash: word(999n) } : originalHeader(chain, height, options));
+  expect(await f.run(prefix)).toMatchObject({ status: "rejected", reason: "checkpoint-reorg" });
+});
+
+it("does not save a liability-removing prefix when its destination pin changed", async () => {
+  const f = fixture([{ nonce: 1n, amountSD: 9n, state: "delivered", height: 100 }]);
+  vi.spyOn(dbCache, "getCache").mockResolvedValue(null);
+  const saved = vi.spyOn(dbCache, "setCache").mockResolvedValue(undefined);
+  const originalHeader = f.headers.getMockImplementation()!;
+  let destinationReads = 0;
+  f.headers.mockImplementation(async (chain, height, options) => {
+    if (chain === "base" && height === 100 && ++destinationReads >= 3) return { ...header(height), hash: word(999n) };
+    return originalHeader(chain, height, options);
+  });
+  expect(await observeLayerZeroOftPending({ source: f.source, headers: [header(100), header(100)], chainRpcs: new Map(), db: {} as D1Database })).toMatchObject({ status: "rejected", reason: "pin-reorg" });
+  expect(saved).not.toHaveBeenCalled();
+});
+
 describe("authenticated LayerZero V2 OFT pending census", () => {
+  it.each(["0x6000f4", "0x6000f2", "0xef0100"])("rejects unsupported delegated OApp runtime %s even with a reviewed shell hash", async code => {
+    const f = fixture(), original = f.batch.getMockImplementation()!;
+    f.source.sides[0]!.oappRuntimeCodeSha256 = sha256Hex(code);
+    f.batch.mockImplementation(async (chain, calls, options) => calls[0]?.method === "eth_getCode" && calls[0]?.params[0] === f.source.sides[0]!.oappAddress
+      ? [code] : original(chain, calls, options));
+    expect(await f.run()).toMatchObject({ status: "rejected", reason: "delegated-runtime-unsupported" });
+  });
+  it("preserves immutable bytecode containing delegation bytes only inside PUSH data", async () => {
+    const f = fixture(), original = f.batch.getMockImplementation()!, code = "0x61f4f26000";
+    f.source.sides[0]!.oappRuntimeCodeSha256 = sha256Hex(code);
+    f.batch.mockImplementation(async (chain, calls, options) => calls[0]?.method === "eth_getCode" && calls[0]?.params[0] === f.source.sides[0]!.oappAddress
+      ? [code] : original(chain, calls, options));
+    expect(await f.run()).toMatchObject({ status: "accepted" });
+  });
+  it.each(["source", "destination"])("requires historical %s executable identity at the authenticated receipt block", async side => {
+    const f = fixture([{ nonce: 1n, amountSD: 9n, state: "delivered", height: 100 }]);
+    f.setPin(101);
+    const original = f.batch.getMockImplementation()!, changed = f.source.sides[side === "source" ? 0 : 1]!;
+    f.batch.mockImplementation(async (chain, calls, options) => calls[0]?.method === "eth_getCode" && calls[0]?.params[0] === changed.oappAddress &&
+      (calls[0]?.params[1] as { blockHash: string }).blockHash === header(100).hash ? ["0x6001"] : original(chain, calls, options));
+    expect(await f.run()).toMatchObject({ status: "rejected", reason: "runtime-mismatch" });
+  });
+
   it("converts shared decimals exactly beyond Number precision and supports adapter token identity", async () => {
     const f = fixture([{ nonce: 1n, amountSD: 2n ** 64n - 1n, state: "unverified" }]);
     f.source.sides[0]!.tokenAddress = address(999);

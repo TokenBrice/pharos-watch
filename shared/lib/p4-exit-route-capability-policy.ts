@@ -462,22 +462,22 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     limitations: ["Shadow-only measured adapters require an activation-pending gate and cannot satisfy completeness."],
   },
   {
-    id: "raydium-constant-product-exact",
+    id: "raydium-constant-product-diagnostic",
     sourceFamilies: ["direct_api"],
     model: "constant-product",
-    tokenIdentity: "exact",
-    exactBalancesOrReserves: "exact",
-    poolInvariantParameters: "exact",
-    outputIdentity: "exact",
-    fees: "exact",
+    tokenIdentity: "partial",
+    exactBalancesOrReserves: "partial",
+    poolInvariantParameters: "partial",
+    outputIdentity: "partial",
+    fees: "partial",
     observationTime: "producer-run",
     outputEvidenceKind: "reserve-based-amm-simulation",
-    confidence: "high",
+    confidence: "low",
     outputKinds: ["tracked-stablecoin", "collateral"],
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
-    scoreEligible: true,
+    scoreEligible: false,
     limitations: [
-      "Supports only Raydium standard constant-product pools with complete retained inputs.",
+      "Provider-reported Raydium inputs are diagnostic only until pool, mint, reserve and fee state is independently verified on chain.",
       "Untracked counter-asset reference prices may be pool-implied: derived from the same response's spot price and the other token's direct reference.",
     ],
   },
@@ -896,7 +896,7 @@ export function capabilityForPool(
   if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
     return capabilityById(
       pool.extra.ammExecutionModel.source === "raydium"
-        ? "raydium-constant-product-exact"
+        ? "raydium-constant-product-diagnostic"
         : "evm-v2-constant-product-exact",
     );
   }

@@ -11381,11 +11381,11 @@
       "reviewedAt": "2026-10-03T23:16:10Z",
       "expiresAt": "2027-10-03T23:16:10Z",
       "reviewer": "W1R83 unknown-wave research",
-      "notes": "Exact-token dated issuer launch establishes a conservative operating-history lower bound only. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
+      "notes": "The exact-token outstanding-liability report signed 2026-07-15 establishes a conservative two-completed-month operating-history lower bound through 2026-10-03. The publication/signature date is used as the evidence start; no earlier launch date is inferred. No independent continuity, stress redemptions, financial reconciliation or incident-free performance is asserted.",
       "sources": [
         {
           "sourceId": "exact-token-launch",
-          "label": "Exact token dated issuance/deployment evidence",
+          "label": "Exact token dated outstanding-liability evidence",
           "publisher": "Stablecorp and Davidson & Company",
           "publishedAt": "2026-07-15",
           "url": "https://web.archive.org/web/20260927045524id_/https://www.sedarplus.ca/csa-party/records/document.html?id=cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c",
@@ -11394,7 +11394,7 @@
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 5,
+          "minimumLiveHistoryMonths": 2,
           "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [

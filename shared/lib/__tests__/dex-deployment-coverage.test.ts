@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../stablecoins/registry";
 import {
   AQUARIUS_SUPPORTED_TOKEN_IDS,
   DEX_COVERAGE_WAIVERS,
@@ -213,9 +213,22 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(4);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(2);
+    for (const waiver of DEX_COVERAGE_WAIVERS) {
+      const coin = TRACKED_STABLECOINS.find((meta) => meta.id === waiver.stablecoinId);
+      expect(coin, `${waiver.stablecoinId}:${waiver.chain} must remain tracked`).toBeDefined();
+      const deployments = [...(coin?.contracts ?? []), ...(coin?.tradedContracts ?? [])];
+      expect(deployments.length).toBeGreaterThan(0);
+      expect(deployments.some((deployment) => deployment.chain === waiver.chain)).toBe(true);
+      expect(deployments.every((deployment) => getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)).toBe(true);
+    }
     expect(DEX_COVERAGE_WAIVERS.every((waiver) => waiver.owner.length > 0 && waiver.expiresAt > REVIEW_AT_SEC)).toBe(
       true,
     );
+  });
+  it("does not waive Arc after its provider registration", () => {
+    expect(getDexDiscoveryProviders("arc")).toContain("geckoterminal");
+    expect(getActiveDexCoverageWaiver("krusdc-keyrock", "arc", REVIEW_AT_SEC)).toBeNull();
+    expect(getActiveDexCoverageWaiver("arcusdc-galaxy", "arc", REVIEW_AT_SEC)).toBeNull();
   });
 });

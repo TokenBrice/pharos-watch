@@ -131,6 +131,15 @@ describe("resolveSupplementalPrice", () => {
     });
   });
 
+  it("rejects the known replacement-mint alias before legacy supply valuation", () => {
+    const address = "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C";
+    const meta = { ...makeMeta([{ chain: "solana", address, decimals: 9 }], "usdv-solomon"), symbol: "USDV" };
+    expect(getSupplementalDefiLlamaContractPriceKey(meta)).toBeNull();
+    expect(resolveSupplementalContractPrice({ coins: {
+      [`solana:${address}`]: { price: 0.8, symbol: "USDV", confidence: 1, timestamp: Math.floor(Date.now() / 1000) },
+    } }, meta)).toBeNull();
+  });
+
   it("resolves a fresh DefiLlama exact-contract quote for no-gecko supplemental assets", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const meta = makeMeta([

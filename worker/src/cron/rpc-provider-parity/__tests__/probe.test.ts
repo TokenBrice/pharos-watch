@@ -541,7 +541,7 @@ describe("rpc parity probe", () => {
 
   it.each([
     { h2: 100, latest: "0x7", numeric: "0x8", verdict: "stale", reason: "no-bracket-match", references: 4 },
-    { h2: 102, latest: "0x7", numeric: "0x8", verdict: "stale", reason: "no-bracket-match", references: 6 },
+    { h2: 102, latest: "0x7", numeric: "0x8", verdict: "indeterminate", reason: "moving-bracket-no-match", references: 6 },
     { h2: 102, latest: "0x7", numeric: "0x7", verdict: "fresh", reason: "matched-numeric-block", references: 6 },
     { h2: 108, latest: "0x7", numeric: "0x8", verdict: "indeterminate", reason: "bracket-too-wide", references: 0 },
     { h2: 99, latest: "0x7", numeric: "0x8", verdict: "indeterminate", reason: "head-regressed", references: 0 },
@@ -592,6 +592,39 @@ describe("rpc parity probe", () => {
       verdict: "fresh", method: "state-bracket", matchedBlock: 101, discriminating: true,
     });
     expect(sample.tokenFreshness?.numericValues).toHaveLength(6);
+  });
+
+  it("keeps a moving-fork token no-match inconclusive beside a fresh sentinel", async () => {
+    const checkedTarget = target("base");
+    let heads = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult(
+        isDwellir(call.url) && heads++ > 0 ? "0x66" : "0x64",
+      );
+      if (call.method === "eth_getBlockByNumber") return rpcResult({
+        number: call.params[0],
+        hash: `0x${(call.params[0] === "0x64" ? "a" : "b").repeat(64)}`,
+        parentHash: `0x${"c".repeat(64)}`,
+      });
+      if (call.method === "eth_call") {
+        if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x66");
+        return rpcResult(call.params[1] === "latest" ? "0x7" : "0x8");
+      }
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [checkedTarget], fetchText: transport.fetchText });
+    expect(sample.sentinelFreshness).toMatchObject({ verdict: "fresh", servedBlock: 102 });
+    expect(sample.tokenFreshness).toMatchObject({
+      verdict: "indeterminate", reason: "moving-bracket-no-match", headBefore: 100, headAfter: 102,
+    });
+    expect(sample.latestFreshness?.verdict).toBe("indeterminate");
+    const summary = buildRpcParityChainSummary({
+      chainId: checkedTarget.chainId, runs: [{ atSec: 0, samples: [sample] }], latest: null,
+      dwellirHost: sample.dwellirHost, fallbackComparator: sample.comparator, blockTimeSec: checkedTarget.blockTimeSec,
+      logsHistoryIsNone: false,
+    });
+    expect(summary.latestFreshness.tokenState.stale).toBe(0);
+    expect(summary.gate.failing).not.toContain("latest-state-freshness");
   });
 
   it("rejects frozen token latest state even when heads and the block sentinel are fresh", async () => {

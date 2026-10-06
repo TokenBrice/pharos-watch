@@ -133,6 +133,17 @@ export function handleMaintenanceMode(request: Request, env: Env): Response | nu
   );
 }
 
+async function limitAnonymousPublicationRead(request: Request, env: Env): Promise<Response | null> {
+  try {
+    const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({
+      key: request.headers.get("CF-Connecting-IP") ?? "unknown",
+    });
+    return result.success ? null : errorResponse(429, "Too many requests", { retryAfterSec: 60 });
+  } catch {
+    return publicApiUnavailableResponse();
+  }
+}
+
 export async function evaluateAccessGate(
   request: Request,
   url: URL,
@@ -144,17 +155,22 @@ export async function evaluateAccessGate(
     return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
-  const siteApiAllowed = (): AccessGateResult => ({
+  const siteApiAllowed = async (): Promise<AccessGateResult> => ({
     isAdmin: false,
     isSiteProxy: true,
     apiKey: null,
     requestLane: "site-api",
-    response: null,
+    // Pages is a public caller of this otherwise credentialed lane. Limit its
+    // uncached scenarios too, using the Worker-visible source bucket.
+    response: url.pathname === API_PATHS.dependencyScenarios()
+      ? await limitAnonymousPublicationRead(request, env) : null,
   });
 
   const isPreviewRequest = isWorkerPreviewRequest(request);
   const isSiteApiRequest = url.hostname === SITE_API_HOSTNAME;
   const hasSiteProxyCredential = await hasValidSiteProxyCredential(request, env);
+  // Internal builds share site authentication, but never browser proxy eligibility.
+  const isInternalBuildPath = url.pathname === API_PATHS.stablecoinDetailSnapshotInputs([]).split("?")[0];
   if (isSiteApiRequest) {
     if (!hasSiteProxyCredential) {
       return gateResult("site-api", errorResponse(401, "Unauthorized"));
@@ -165,7 +181,7 @@ export async function evaluateAccessGate(
       }
       return siteApiAllowed();
     }
-    if (!isSiteDataAllowedApiPath(url.pathname)) {
+    if (!isInternalBuildPath && !isSiteDataAllowedApiPath(url.pathname)) {
       return gateResult("site-api", notFoundResponse());
     }
     if (!isSiteDataAllowedMethod(request.method)) {
@@ -185,7 +201,7 @@ export async function evaluateAccessGate(
     isPreviewRequest
     && hasSiteProxyCredential
     && isSiteDataAllowedMethod(request.method)
-    && isSiteDataAllowedApiPath(url.pathname)
+    && (isInternalBuildPath || isSiteDataAllowedApiPath(url.pathname))
   ) {
     return siteApiAllowed();
   }
@@ -202,17 +218,10 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
-  if (url.pathname === API_PATHS.safetyGrades() || url.pathname === API_PATHS.dependencyGraph()) {
-    try {
-      const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({
-        key: request.headers.get("CF-Connecting-IP") ?? "unknown",
-      });
-      if (!result.success) {
-        return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
-      }
-    } catch {
-      return gateResult("public-api", publicApiUnavailableResponse());
-    }
+  if (url.pathname === API_PATHS.safetyGrades() || url.pathname === API_PATHS.dependencyGraph()
+    || url.pathname === API_PATHS.dependencyScenarios()) {
+    const limited = await limitAnonymousPublicationRead(request, env);
+    if (limited) return gateResult("public-api", limited);
   }
 
   if (getPublicApiAccess(url.pathname) === "exempt") {

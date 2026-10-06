@@ -353,6 +353,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "stablecoin-detail-snapshot-inputs",
     path: "/api/stablecoin-detail-snapshot-inputs",
+    siteDataAccess: "denied",
     cacheBypass: true,
     publicApiAccess: "site-only",
   }),

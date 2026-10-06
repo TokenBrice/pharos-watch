@@ -770,9 +770,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
-      costModel: fixedFee(
-        0,
-        "Hive's HBD page states the conversion turns set amounts of HBD into $1 USD worth of HIVE with no extra fees; the debt-ratio haircut and the 3.5-day median-price window affect output value, not a conversion fee",
+      costModel: documentedVariableFee(
+        "Hive HBD conversion has no extra conversion fee, but its debt-ratio haircut and 3.5-day median-price window leave all-in USD redemption cost unquantified without current payout valuation",
+        "formula",
       ),
       notes: [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",

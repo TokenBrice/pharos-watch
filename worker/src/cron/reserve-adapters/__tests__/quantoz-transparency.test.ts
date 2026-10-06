@@ -135,6 +135,12 @@ describe("adaptQuantozTransparency", () => {
     )).toThrow(/layout-changed/);
   });
 
+  it.each([".", ",", "<span></span>"])("rejects oversized raw numeric fields containing %s", (delimiter) => {
+    const html = QUANTOZ_HTML.replace(/(<dt>Tokens in circulation<\/dt><dd>)[\s\S]*?(<\/dd>)/,
+      (_match, start, end) => start + delimiter.repeat(10_000) + end);
+    expect(() => adaptQuantozTransparency(html, "EURQ")).toThrow(/oversized numeric field/);
+  });
+
   it("fails closed when the circulation label is renamed", () => {
     expect(() => adaptQuantozTransparency(
       QUANTOZ_HTML.replace("<dt>Tokens in circulation</dt>", "<dt>Circulating supply</dt>"),

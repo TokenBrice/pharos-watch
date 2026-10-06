@@ -44,12 +44,19 @@ export const L2MessengerPendingReadSchema = z.discriminatedUnion("protocol", [
 });
 export type L2MessengerPendingRead = z.infer<typeof L2MessengerPendingReadSchema>;
 const Cursor = z.strictObject({ nextBlock: z.number().int().positive(), anchorHash: Word.nullable(),
-  nextNonce: Uint, digest: Sha256Schema });
+  nextNonce: Uint, digest: Sha256Schema,
+  // Partial blocks retain the completed predecessor census and an authenticated
+  // log prefix; the block is rescanned before the remaining events are admitted.
+  resume: z.strictObject({ blockHash: Word, logIndex: z.number().int().nonnegative(), nextNonce: Uint }).nullable(),
+});
 export const L2MessengerPendingCheckpointSchema = z.strictObject({
-  schemaVersion: z.literal(1), sourceDigest: Sha256Schema, cursors: z.tuple([Cursor, Cursor]),
+  schemaVersion: z.literal(2), sourceDigest: Sha256Schema,
+  settlementPins: z.tuple([z.strictObject({ number: z.number().int().nonnegative(), hash: Word }), z.strictObject({ number: z.number().int().nonnegative(), hash: Word })]),
+  cursors: z.tuple([Cursor, Cursor]),
   messages: z.array(z.strictObject({ direction: z.enum(["deposit", "withdrawal"]), id: Word,
     nonce: Uint, amount: Uint, from: Address, to: Address, blockNumber: z.number().int().nonnegative(), transactionHash: Word,
     relayHash: Word.nullable(), redeemNextBlock: z.number().int().nonnegative(),
+    redeemResume: z.strictObject({ blockHash: Word, logIndex: z.number().int().nonnegative() }).nullable(),
   })).max(256),
 });
 export type L2MessengerPendingCheckpoint = z.infer<typeof L2MessengerPendingCheckpointSchema>;

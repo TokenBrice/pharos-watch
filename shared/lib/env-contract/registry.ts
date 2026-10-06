@@ -101,7 +101,7 @@ export const ENV_BINDINGS = [
   {
     key: "SAFETY_GRADES_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-IP rate limiter for public safety grades, checked before edge-cache reads.",
+    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, and uncached dependency scenarios, checked before reads.",
     runtimes: { worker: { status: "required" } },
   },
   {

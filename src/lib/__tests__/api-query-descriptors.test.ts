@@ -53,6 +53,36 @@ describe("frontend API query descriptors", () => {
     expect(summary.nativeSupply).toEqual({ current: 454_459_687.73, prevWeek: null, prevMonth: null });
   });
 
+  it("retains restored supply provenance through the registered response schema", async () => {
+    const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary("usdt-tether");
+    const schema = await resolveSchemaLike(descriptor.schema);
+    const parsed = schema.safeParse({
+      currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: 1_790_793_000,
+      currentSupplyRestored: true,
+    });
+    if (!parsed.success) throw new Error("Expected a restored live summary");
+    const summary = parsed.data;
+    expect(summary.supplyRestored).toBe(true);
+    expect(summary.supplyObservedAt).toBe(1_790_793_000);
+    expect(summary.circulating).toEqual({ peggedUSD: 100 });
+  });
+
+  it.each([false, undefined])("does not mark fresh or legacy current supply restored (%s)", (restored) => {
+    const summary = projectStablecoinLiveSummary({
+      currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyRestored: restored,
+    });
+    expect(summary.supplyRestored).not.toBe(true);
+  });
+
+  it("does not apply current restoration provenance to provider history fallback", () => {
+    const summary = projectStablecoinLiveSummary({
+      currentCirculatingUSD: {}, currentSupplyRestored: true,
+      tokens: [{ date: 1_790_726_400, totalCirculatingUSD: { peggedUSD: 100 } }],
+    });
+    expect(summary.circulating).toEqual({ peggedUSD: 100 });
+    expect(summary.supplyRestored).not.toBe(true);
+  });
+
   it.each([null, 0, -1])("does not value missing USD buckets at an unavailable price %s", (price) => {
     const summary = projectStablecoinLiveSummary({
       price, priceSource: "coingecko",

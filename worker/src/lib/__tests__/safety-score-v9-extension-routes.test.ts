@@ -676,6 +676,21 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it("keeps HBD payout cost unquantified even when a frozen row claims a zero fixed fee", () => {
+    const config = getRedemptionBackstopConfig("hbd-hive")!;
+    expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" });
+    const row = makeSupplyFullRedemption({
+      stablecoinId: "hbd-hive", settlementModel: "days", feeBps: 0,
+      feeConfidence: "fixed", feeModelKind: "fixed-bps",
+    });
+    const fixed = fixedInputStub(row, Date.UTC(2026, 9, 6) / 1_000);
+    const review = buildSafetyScoreV9RouteReviews(fixed, row.stablecoinId)[0]!;
+    expect(review).toMatchObject({ feeEvidence: "disclosed-unquantified", settlementSlaSec: 302_400 });
+    expect(review.executionCosts.length).toBeGreaterThan(0);
+    expect(review.executionCosts.every((point) => point.executionCostBps === point.maxCostBps)).toBe(true);
+    expect(row).toMatchObject({ feeBps: 0, feeModelKind: "fixed-bps" });
+  });
+
   it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
     const row = liveDirectRow("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);
@@ -686,9 +701,15 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it("does not turn positive unscored redemption capacity into measured exit failure when open status is unknown", () => {
-    const row = liveDirectRow("static-config");
-    row.routeStatus = "unknown";
+  it.each([
+    { routeStatus: "unknown", routeStatusSource: "static-config" },
+    { routeStatus: "unknown", routeStatusSource: "protocol-api" },
+    { routeStatus: "paused", routeStatusSource: "onchain" },
+    { routeStatus: "degraded", routeStatusSource: "protocol-api" },
+  ] as const)("keeps positive unscored $routeStatus/$routeStatusSource capacity diagnostic", ({ routeStatus, routeStatusSource }) => {
+    const row = liveDirectRow(routeStatusSource);
+    row.routeStatus = routeStatus;
+    if (routeStatus === "paused" || routeStatus === "degraded") row.resolutionState = "impaired";
     row.capacityProfile!.exitRouteObservations![0]!.scoreEligible = false;
     row.capacityProfile!.exitRouteObservations![0]!.observedAt = NOW;
     row.capacityProfile!.exitRouteObservations![0]!.freshnessSeconds = 0;
@@ -716,8 +737,10 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     }, V9_CANDIDATE_POLICY_V1);
 
     expect(compiled.exitRoutes[0]!.scoreEligible).toBe(false);
-    expect(result.routes[0]).toMatchObject({ included: true, exclusionReason: null });
-    expect(result.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(compiled.exitRoutes[0]!.coverageClass).toBe("diagnostic");
+    expect(compiled.exitRoutes[0]!.capacityCurve.some((point) => point.executableUsd > 0)).toBe(true);
+    expect(result.routes[0]).toMatchObject({ included: false });
+    expect(result.score).toBeLessThanOrEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
 

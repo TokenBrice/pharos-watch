@@ -190,12 +190,13 @@ async function runAddressRefresh(params: {
   previousAssetsById: Map<string, PeggedAsset>;
   reviewedGapIds: ReadonlySet<string>;
   hints: readonly ExactTarget[];
-}): Promise<{ summary: AddressRefreshSummary; observations: PriceCorroborationObservation[]; targets: ExactTarget[] }> {
+}): Promise<{ summary: AddressRefreshSummary; observations: PriceCorroborationObservation[]; targets: ExactTarget[]; unresolvedIds: string[] }> {
   const summary: AddressRefreshSummary = { enabled: false, cohortSize: 0, targetCount: 0, resolved: 0,
     attemptedRequests: 0, successfulRequests: 0, cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false };
   const observations: PriceCorroborationObservation[] = [];
   const resolvedTargets = new Map<string, ExactTarget>();
-  const none = { summary, observations, targets: [] as ExactTarget[] };
+  const definitiveIds = new Set<string>();
+  const none = { summary, observations, targets: [] as ExactTarget[], unresolvedIds: [] as string[] };
   const providers = resolveEnabledAddressPriceProviders(params.addressProvider);
   if (providers.length === 0 || !params.addressProvider) return none;
   summary.enabled = true;
@@ -250,6 +251,15 @@ async function runAddressRefresh(params: {
       }
     }
     summary.resolved = new Set(observations.map((observation) => observation.id)).size;
+    for (const diagnostic of result.diagnostics) {
+      if (!diagnostic.success && diagnostic.status !== 404) continue;
+      for (const attempt of diagnostic.assetAttempts ?? []) {
+        if (attempt.state === "attempted") definitiveIds.add(attempt.assetId);
+      }
+    }
+    const unresolvedLaneOwned = [...definitiveIds].some((id) => !resolvedTargets.has(id)
+      && splitCompositePriceSource(params.previousAssetsById.get(id)?.priceSource ?? "").includes("coingecko-onchain-address"));
+    if (unresolvedLaneOwned) summary.failureClasses.push("missing-quote");
   } catch (error) {
     rethrowIfAborted(error, params.signal);
     // A wall-clock abort is this lane's own deadline, not a provider verdict:
@@ -257,7 +267,8 @@ async function runAddressRefresh(params: {
     if (!timeout.isTimedOut()) throw error;
     summary.timedOut = true;
   } finally { timeout.dispose(); }
-  return { summary, observations, targets: [...resolvedTargets.values()] };
+  return { summary, observations, targets: [...resolvedTargets.values()],
+    unresolvedIds: [...definitiveIds].filter((id) => !resolvedTargets.has(id)) };
 }
 
 export async function runPriceDexRefresh(params: {
@@ -288,6 +299,8 @@ export async function runPriceDexRefresh(params: {
   });
   const addressObservations = address.observations;
   const addressTargets = new Map(previous.addressTargets.map((target) => [target.id, target] as const));
+  // Only definitive answered misses invalidate hints; capped, blocked and aborted work stays neutral.
+  for (const id of address.unresolvedIds) addressTargets.delete(id);
   for (const target of address.targets) addressTargets.set(target.id, target);
   const summary: DexRefreshSummary = { cohortSize: plan.cohort.length, resolved: 0, attemptedBatches: 0,
     deferredBatches: plan.allBatchCount, unsupportedAssets: plan.unsupportedAssets, missingQuotes: 0,

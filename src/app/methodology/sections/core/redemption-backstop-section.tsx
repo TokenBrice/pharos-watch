@@ -54,7 +54,9 @@ export function RedemptionBackstopMethodologySection() {
           minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result. An open
           downside incident is market-implied degraded only when a fresh authoritative current signed deviation remains
           at or below -2500 bps; if current evidence cannot be established, the route is unknown and its score is
-          withheld rather than inferred from the incident&apos;s historical peak.
+          withheld rather than inferred from the incident&apos;s historical peak. HBD&apos;s no-extra-fee conversion
+          statement does not establish full-value proceeds under the protocol haircut, so its documented cost
+          remains disclosed but unquantified until executable output value is established.
         </p>
         <p>
           Reserve-backed observations keep the validated source time, or the producing snapshot&apos;s fetch time

@@ -36,7 +36,7 @@ export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.41";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.46";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.47";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";
@@ -49,6 +49,6 @@ export const PSI_METHODOLOGY_VERSION = "3.65";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.46";
+export const YIELD_METHODOLOGY_VERSION = "8.47";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";

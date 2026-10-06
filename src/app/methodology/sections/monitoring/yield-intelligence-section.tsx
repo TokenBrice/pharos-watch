@@ -200,8 +200,9 @@ export function YieldIntelligenceMethodologySection() {
                     chain floor or 0.1% of current tracked supply; null or non-finite TVL fails closed, and
                     structured-tranche floors augment Royco&apos;s bespoke market/vault floors. The supply-relative floor
                     applies to every peg currency, including GOLD/SILVER, because tracked supply is USD-denominated.
-                    Holder-versus-deposit typing is assigned before this gate. A tracked vault receipt&apos;s own return
-                    is holder yield; a parent-token projection is a deposit opportunity, not passive yield on plain holdings.
+                    Holder-versus-deposit typing is assigned before this gate. Curated receipt sources retain holder yield;
+                    auto-discovered pools remain lending opportunities because symbol and deployment matches do not
+                    establish receipt ownership. A parent-token projection is a deposit opportunity, not passive yield on plain holdings.
                     An underlying-address match alone identifies the deposit asset, not ownership of a differently named
                     receipt: native fallback also requires the tracked instrument&apos;s exact symbol, so Royco&apos;s
                     senior tranche is not promoted into apyUSD holder yield. ZCHF&apos;s Frankencoin Savings row likewise

@@ -133,9 +133,9 @@ describe("cache-only detail snapshot inputs", () => {
     expect(body.entries.map((entry) => entry.id)).toEqual(ids);
   });
 
-  it("registers the GET-only Pages path and enforces ordinary site/public authentication gates", async () => {
+  it("denies the Pages path while preserving credentialed internal builds", async () => {
     const path = API_PATHS.stablecoinDetailSnapshotInputs(["usdt-tether"]);
-    expect(resolveSiteDataProxyPath(path)).toBe("/_site-data/stablecoin-detail-snapshot-inputs?ids=usdt-tether");
+    expect(resolveSiteDataProxyPath(path)).toBeNull();
     expect(PUBLIC_STATIC_ROUTES.some((route) => route.endpoint.key === "stablecoin-detail-snapshot-inputs")).toBe(true);
     const env = createWorkerEnv({ SITE_API_SHARED_SECRET: "site-secret" });
     for (const credential of [undefined, "wrong-secret", "site-secret"]) {
@@ -152,6 +152,10 @@ describe("cache-only detail snapshot inputs", () => {
       const publicRequest = new Request(`https://api.pharos.watch${path}`, { headers: key ? { "X-API-Key": key } : {} });
       expect((await evaluateAccessGate(publicRequest, new URL(publicRequest.url), env)).response?.status).toBe(404);
     }
+    const preview = new Request(`https://pharos-api.example.workers.dev${path}`, {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+    });
+    expect((await evaluateAccessGate(preview, new URL(preview.url), env)).response).toBeNull();
     const post = new Request(`https://site-api.pharos.watch${path}`, { method: "POST", headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" } });
     expect((await evaluateAccessGate(post, new URL(post.url), env)).response?.status).toBe(405);
   });

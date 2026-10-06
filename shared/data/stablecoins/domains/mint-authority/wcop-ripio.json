@@ -3,8 +3,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
-    "confidence": "verified",
-    "summary": "WCOP has seven reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis and Celo, with separate issuer-operated burn/mint transfer machinery. The first six retain the reviewed issuer EOA and Safe controls. On Celo the 4-of-7 Safe directly holds native MINTER, DEFAULT_ADMIN and UPGRADER roles, while the native LimitedMinter supplies a separately raiseable daily-limited facility. Celo native issuance is not a conserved bridge-only representation; LimitedMinterBridge and BridgeDeposit capabilities remain exclusively in Bridge Risk.",
+    "confidence": "unknown",
+    "summary": "WCOP has seven tracked and reviewed independent native issuance deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis and Celo, with separate issuer-operated burn/mint transfer machinery. The first six retain the reviewed issuer EOA and Safe controls. On Celo the 4-of-7 Safe directly holds native MINTER, DEFAULT_ADMIN and UPGRADER roles, while the native LimitedMinter supplies a separately raiseable daily-limited facility. Celo native issuance is not a conserved bridge-only representation; LimitedMinterBridge and BridgeDeposit capabilities remain exclusively in Bridge Risk. Ripio also announced WCOP live on Arc on September 16, 2026; its exact deployment, issuance controls and liability census remain unresolved, so these seven reviewed deployments are not a complete asset-wide census.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -227,7 +227,15 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Ripio announced WCOP live on Arc on September 16, 2026; establish the exact Arc deployment, native-versus-representation issuance, mint and upgrade authorities, and liability census before claiming complete asset-wide coverage."
+      ],
       "sources": [
+        {
+          "label": "Ripio Arc mainnet expansion announcement includes WCOP",
+          "url": "https://launchpad.ripio.com/blog/ripios-wfiat-stablecoins-go-live-on-arc-public-mainnet-from-day-one"
+        },
         {
           "label": "Ripio local stablecoins",
           "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
@@ -265,7 +273,7 @@
           "url": "https://forno.celo.org"
         }
       ],
-      "evidence": "The prior six-chain native scope and October 1 EOA-role rechecks are retained without re-dating their observation points. R17 adds Celo using block 79288027, hash 0xafbc5ef1f610ed1960fa502b44cf5df85b80f230fe2ada290b153ca0bc556b8b: token implementation matches the verified LatamStable; the local Safe directly holds MINTER, DEFAULT_ADMIN and UPGRADER, while native LimitedMinter is an additional mint path. Current local Safe owners differ from the historical Ethereum snapshot and are recorded separately. Celo's complete 41-event explorer census from token creation identifies four mints, all authenticated against RPC receipts: 100 and 30000000 WCOP are native facility issuance, and 999943 and 2999943 WCOP are BridgeDeposit fulfillments paired with published source burns. All 33999986 WCOP of current supply is accounted for without treating native issuance as source-burn conservation. No unexplained Celo issuance or token upgrade was identified in this review; issuer launch/release disclosures, bridge sources, audit material and independent incident-index searches were checked. This does not independently reconcile September fiat backing: reconciliation remains unknown, native issuance remains unbounded and immediately replaceable, and ad-hoc CPA certification still supplies only attestation-only supervision. Celo LimitedMinterBridge and BridgeDeposit powers are separately retained under Bridge Risk. No execution-scope certificate, signer independence or prudential uplift is asserted.",
+      "evidence": "The prior six-chain native scope and October 1 EOA-role rechecks are retained without re-dating their observation points. R17 adds Celo using block 79288027, hash 0xafbc5ef1f610ed1960fa502b44cf5df85b80f230fe2ada290b153ca0bc556b8b: token implementation matches the verified LatamStable; the local Safe directly holds MINTER, DEFAULT_ADMIN and UPGRADER, while native LimitedMinter is an additional mint path. Current local Safe owners differ from the historical Ethereum snapshot and are recorded separately. Celo's complete 41-event explorer census from token creation identifies four mints, all authenticated against RPC receipts: 100 and 30000000 WCOP are native facility issuance, and 999943 and 2999943 WCOP are BridgeDeposit fulfillments paired with published source burns. All 33999986 WCOP of current supply is accounted for without treating native issuance as source-burn conservation. No unexplained Celo issuance or token upgrade was identified in this review; issuer launch/release disclosures, bridge sources, audit material and independent incident-index searches were checked. This does not independently reconcile September fiat backing: reconciliation remains unknown, native issuance remains unbounded and immediately replaceable, and ad-hoc CPA certification still supplies only attestation-only supervision. Celo LimitedMinterBridge and BridgeDeposit powers are separately retained under Bridge Risk. No execution-scope certificate, signer independence or prudential uplift is asserted. The issuer-announced Arc WCOP deployment remains outside this reviewed seven-chain scope pending exact identity, authority and liability research.",
       "reviewer": "Prior mint-boundary and economic reviews retained; R17 Celo native/transfer scope and issuance review",
       "reviewedAt": "2026-10-05"
     }

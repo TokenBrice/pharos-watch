@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildRiskTape } from "../daily-digest/digest-risk-tape";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 
@@ -245,9 +246,21 @@ describe("market and risk collectors", () => {
     const unweighted = await withWithheld({ partialValuationInputs: 1 });
     for (const withheld of [large, unweighted]) {
       expect(withheld.value).toBeUndefined();
-      expect(withheld.degradedReasons).toEqual([]);
+      expect(withheld.degradedReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
       expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
     }
+
+    // Band-stable uncertainty still cannot cross numeric regime/tape cutoffs.
+    for (const score of [-48, -19, -10, 20]) {
+      const withheld = await withWithheld({ score, partialValuationInputs: 1, partialValuationMcapUsd: 5, scoredMcapUsd: 100 });
+      expect(withheld.value).toBeUndefined();
+      expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
+      const input: DigestInputData = { ...BASE_DIGEST_INPUT, topDepegs: [], dewsStress: undefined, mintBurnFlows: withheld.value, degradedSources: withheld.degradedReasons };
+      expect(classifyRegime(input)).toBe("WATCHFUL");
+      expect(buildRiskTape(input).some((item) => item.id === "risk-tape:gauge")).toBe(false);
+    }
+    const robustStress = await withWithheld({ score: -60, partialValuationInputs: 1, partialValuationMcapUsd: 1, scoredMcapUsd: 100 });
+    expect(robustStress.value?.gaugeScore).toBe(-60);
 
     // A publication predating completeness is unknown: nets and pressure are not restated.
     const legacy = publishedGaugePayload({

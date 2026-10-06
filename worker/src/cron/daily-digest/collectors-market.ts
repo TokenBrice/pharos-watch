@@ -14,13 +14,15 @@ import {
 } from "@shared/lib/digest-liquidity-admission";
 import { buildInClause } from "../../lib/db";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "../../lib/blacklist/shared";
-import { getGaugeBand, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-scoring";
+import { getGaugeBand, getGaugeScoreInterval, isGaugeBandRobustToWithheldWeight } from "../../lib/mint-burn-scoring";
 import {
   readPublishedMintBurnGauge,
   type PublishedGaugeChain,
   type PublishedGaugeCoin,
 } from "../../lib/mint-burn-published-gauge";
 import { SECONDS } from "../../lib/time-constants";
+import { classifyGaugeRegime } from "./prompt/regime";
+import { getGaugeRiskTapeTone } from "./digest-risk-tape";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 import {
   collectorDegraded,
@@ -405,7 +407,7 @@ export async function collectMintBurnFlows(
     if (gaugeScore === null) return collectorResult(undefined, degradedReasons);
     // Valuation completeness (D11-2): the digest never restates a flow claim
     // that missing USD valuation could alter. Weight withheld from the score is
-    // tolerated only when it cannot move the score across a band edge; a
+    // tolerated only when every possible score preserves bands, regime and tape tone; a
     // withheld count without published weights (older producer) is unbounded.
     // A publication predating completeness is used but named.
     const qualityReasons: string[] = [];
@@ -416,8 +418,14 @@ export async function collectMintBurnFlows(
           scoredMcapUsd: gauge.scoredMcapUsd,
           withheldMcapUsd: gauge.partialValuationMcapUsd,
         });
-      if (!bandRobust) {
-        return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-valuation-partial"]);
+      const interval = gauge.partialValuationMcapUsd !== null && gauge.scoredMcapUsd !== null
+        ? getGaugeScoreInterval({ score: gaugeScore, scoredMcapUsd: gauge.scoredMcapUsd, withheldMcapUsd: gauge.partialValuationMcapUsd })
+        : null;
+      const decisionsRobust = interval !== null && interval.every((bound) =>
+        classifyGaugeRegime(bound) === classifyGaugeRegime(gaugeScore)
+        && getGaugeRiskTapeTone(bound) === getGaugeRiskTapeTone(gaugeScore));
+      if (!bandRobust || !decisionsRobust) {
+        return collectorResult(undefined, [...degradedReasons, "mint-burn-gauge-valuation-partial"], ["mint-burn-gauge-valuation-partial"]);
       }
       qualityReasons.push("mint-burn-gauge-valuation-partial-band-stable");
     }

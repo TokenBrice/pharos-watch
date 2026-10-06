@@ -180,9 +180,9 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const nowMs = Date.now();
     const asset = makeAsset();
     mockCoinGeckoHistory([
-      [nowMs - (30 * DAY_MS), 65],
+      [nowMs - (30 * DAY_MS), 75],
       [nowMs - (7 * DAY_MS), 110],
-      [nowMs - DAY_MS, 85],
+      [nowMs - DAY_MS, 95],
       [nowMs, 130],
     ]);
 
@@ -190,13 +190,13 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
 
     expect(result.totalReconciled).toBe(1);
     expect(asset.supplySource).toBe("coingecko-gap-fill");
-    // Coherent single source: no per-bucket max splicing DL (90/70) with CG (130/110) into a synthetic flow.
+    // Every aggregate bucket comes from the admitted CoinGecko series.
     expect(asset.circulating).toEqual({ peggedEUR: 130 });
-    expect(asset.circulatingPrevDay).toEqual({ peggedEUR: 85 });
+    expect(asset.circulatingPrevDay).toEqual({ peggedEUR: 95 });
     expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 110 });
-    expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 65 });
-    // CG below DL for day/month cannot be attributed to the missing chain; those remainders stay absent.
-    expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevWeek: 30 });
+    expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 75 });
+    // Every history remainder conserves the observed DefiLlama baseline.
+    expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevDay: 5, circulatingPrevWeek: 30, circulatingPrevMonth: 5 });
     const chainCurrent = [...canonicalizeChainCirculating(asset.chainCirculating).values()]
       .reduce((sum, row) => sum + (row.current ?? 0), 0);
     expect(chainCurrent).toBe(getCirculatingRaw(asset));
@@ -283,6 +283,25 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(spiked.totalReconciled).toBe(0);
     expect(spikedWeek).toEqual(beforeSpiked);
     expect(spiked.gapFillRejections).toEqual([{ id: spikedWeek.id, reason: "history-ratio-above-bound", ratio: 1.3 }]);
+  });
+
+  it.each(["day", "week", "month"] as const)("rejects a %s history below the observed baseline before changing supply", async (bucket) => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    if (bucket === "week") asset.circulatingPrevWeek = { peggedEUR: 200 };
+    const before = structuredClone(asset);
+    mockCoinGeckoHistory([
+      [nowMs - (30 * DAY_MS), bucket === "month" ? 1 : 70],
+      [nowMs - (7 * DAY_MS), bucket === "week" ? 1 : 80],
+      [nowMs - DAY_MS, bucket === "day" ? 1 : 90],
+      [nowMs, 130],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(result.gapFillRejections).toEqual([{ id: asset.id, reason: "history-below-baseline", ratio: 1.3 }]);
+    expect(asset).toEqual(before);
   });
 
   it("keeps a bucket DefiLlama did not observe absent instead of admitting an unbounded contribution", async () => {
@@ -597,9 +616,9 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
             null,
             {},
             [nowMs - (30 * DAY_MS)],
-            [nowMs - (30 * DAY_MS), 65],
+            [nowMs - (30 * DAY_MS), 75],
             [nowMs - (7 * DAY_MS), 110],
-            [nowMs - DAY_MS, 85],
+            [nowMs - DAY_MS, 95],
             [nowMs, 130],
             [nowMs, "not-a-number"],
           ],

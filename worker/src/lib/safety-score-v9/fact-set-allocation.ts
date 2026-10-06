@@ -12,6 +12,7 @@ import {
 import type { V9EffectiveDependenciesV3, V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
 import { V9WrapperRiskAssessmentSchema, type V9WrapperRiskAssessment } from "@shared/types/safety-score-v9-wrapper";
 import { addEvidence, type AssetBuildContext } from "./fact-set-context";
+import { RESERVE_DENOMINATOR_FLOAT_TOLERANCE } from "./fact-set-backing";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 
 type AllocationPolicy = typeof V9_CANDIDATE_POLICY_V1;
@@ -80,7 +81,7 @@ export function buildAllocationScopeFacts(
   }
   const envelopeKnown = input.reserveStatus.observationState === "known" && input.reserveExposures.length > 0 &&
     sourceKeys.size === input.reserveExposures.length && input.reserveExposures.every((row) => row.status.observationState === "known") &&
-    input.reserveExposures.reduce((sum, row) => sum + row.weight, 0) === 1;
+    Math.abs(input.reserveExposures.reduce((sum, row) => sum + row.weight, 0) - 1) <= RESERVE_DENOMINATOR_FLOAT_TOLERANCE;
   const custody = context.asset.wrapperCustodyReview;
   const scopeFamily = input.reserveExposures.some((row) => row.assetClass === "private-credit") ? "privateCredit" :
     envelopeKnown && custody?.custodyModel === "onchain" && custody.knownUnknownExposureShare === 0 &&

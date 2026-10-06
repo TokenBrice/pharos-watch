@@ -265,10 +265,15 @@ describe("bounded same-chain provider census", () => {
       ...dependencies,
       resolveClosestBlockAtOrBeforeTimestamp: async chain => { chains.push(chain!); return 100; },
       fetchEvmBlockHeader: async () => ({ number: 100, timestamp: clock - 10, hash: `0x${"1".repeat(64)}` as `0x${string}` }),
-      fetchEvmMulticall3Aggregate3AtBlock: async (_chain, calls) => calls.map(call => ({
-        label: call.label, success: true,
-        returnData: `0x${(call.label.endsWith(":decimals") ? 6n : 100n).toString(16).padStart(64, "0")}` as `0x${string}`,
-      })),
+      fetchEvmMulticall3Aggregate3AtBlock: async (_chain, calls, block, options) => {
+        expect(block).toBe(100);
+        expect(options?.stateBlockHash).toBe(`0x${"1".repeat(64)}`);
+        expect(options?.multicallFallbackBlockHash).toBeUndefined();
+        return calls.map(call => ({
+          label: call.label, success: true,
+          returnData: `0x${(call.label.endsWith(":decimals") ? 6n : 100n).toString(16).padStart(64, "0")}` as `0x${string}`,
+        }));
+      },
     });
     expect(chains).toEqual(["xlayer"]);
     expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
@@ -299,6 +304,33 @@ describe("bounded same-chain provider census", () => {
     });
     expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
     expect(generation.observationsByAssetId["usdc-circle"]?.map(row => row.status)).toEqual(["accepted", "rejected"]);
+  });
+
+  it.each([false, true])("keeps the canonical hash on fallback and rejects unavailable pinned state (unavailable=%s)", async unavailable => {
+    const clock = 1791184659;
+    const hash = `0x${"1".repeat(64)}` as `0x${string}`;
+    let attempts = 0;
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      activeAssetIds: ["usdc-circle"], baseInputGenerationId: BASE_ID,
+      registryFingerprint: FINGERPRINT, scoringClockSec: clock, chainRpcs: new Map(),
+    }, {
+      ...censusDependencies(),
+      fetchEvmBlockHeader: async () => ({ number: 100, timestamp: clock - 10, hash }),
+      fetchEvmMulticall3Aggregate3AtBlock: async (_chain, calls, block, options) => {
+        attempts += 1;
+        expect(block).toBe(100);
+        expect(options?.stateBlockHash).toBe(hash);
+        expect(options?.multicallFallbackBlockHash).toBe(attempts === 1 ? undefined : hash);
+        if (attempts === 1 || unavailable) return null;
+        return calls.map(call => ({
+          label: call.label, success: true,
+          returnData: `0x${(call.label.endsWith(":decimals") ? 6n : 100n).toString(16).padStart(64, "0")}` as `0x${string}`,
+        }));
+      },
+    });
+    expect(attempts).toBe(2);
+    expect(generation.observationsByAssetId["usdc-circle"]).toHaveLength(2);
+    expect(generation.observationsByAssetId["usdc-circle"]?.every(row => row.status === (unavailable ? "rejected" : "accepted"))).toBe(true);
   });
 
   it("rejects catalog expansion before issuing any additional contract probes", async () => {

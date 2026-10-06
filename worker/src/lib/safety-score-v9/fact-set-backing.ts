@@ -479,7 +479,7 @@ function assertCompatibleReserveClassification(
  * float accumulation (e.g. 0.7 + 0.2 + 0.1), not an unidentified holding. Equal
  * to the fact schema's whole-asset denominator conservation tolerance.
  */
-const RESERVE_DENOMINATOR_FLOAT_TOLERANCE = 1e-9;
+export const RESERVE_DENOMINATOR_FLOAT_TOLERANCE = 1e-9;
 
 export function buildReserves(context: AssetBuildContext): {
   reserveStatus: V9FactStatusV2;

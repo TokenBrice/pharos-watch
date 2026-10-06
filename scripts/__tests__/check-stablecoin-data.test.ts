@@ -272,6 +272,21 @@ describe("listing class during unresolved mechanism review", () => {
     expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: review }], decisions)).toEqual([]);
   });
 
+  it.each(["core-stablecoin", "cash-equivalent"])("rejects unjustified %s promotion during unresolved review", (listingClass) => {
+    expect(getListingGovernanceIssues([{ ...coin, mechanismArchetypeReview: review }], {
+      ...decisions, listingClassById: { [coin.id]: listingClass },
+    })).toContain(`listing-decisions.json class for "fixture-usd" is ${listingClass}; expected stable-value-investment`);
+    expect(getListingGovernanceIssues([{ ...coin, variantOf: "usdc-circle", mechanismArchetypeReview: review }], {
+      ...decisions, listingClassById: { [coin.id]: listingClass },
+    })).toContain(`listing-decisions.json class for "fixture-usd" is ${listingClass}; expected stablecoin-variant`);
+  });
+
+  it("retains known NAV precedence during unresolved review", () => {
+    expect(getListingGovernanceIssues([{ ...coin, flags: { ...coin.flags, navToken: true }, mechanismArchetypeReview: review }], {
+      ...decisions, listingClassById: { [coin.id]: "cash-equivalent" },
+    })).toEqual([]);
+  });
+
   it("resumes normal core precedence once the review is resolved without an archetype", () => {
     const resolvedCoin = { ...coin, mechanismArchetypeReview: { ...review, disposition: "resolved" as const } };
     expect(getListingGovernanceIssues([resolvedCoin], decisions)).toEqual([

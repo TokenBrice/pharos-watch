@@ -526,9 +526,9 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
 ): number {
   const attribution =
     fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
-  if (!attribution) return fallbackObservedAtSec;
   const aggregateObservedAtSec =
     fixedInput.aggregateCirculatingById[assetId]?.observedAtSec;
+  if (!attribution) return aggregateObservedAtSec ?? fallbackObservedAtSec;
   return Math.min(
     attribution.observedAtSec,
     aggregateObservedAtSec ?? fallbackObservedAtSec,

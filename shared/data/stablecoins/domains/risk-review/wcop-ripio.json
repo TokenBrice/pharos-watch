@@ -82,10 +82,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "wCOP has seven independent native issuance deployments, including Celo, and separate issuer-operated burn/mint transfer machinery. Celo's complete issuance census distinguishes native LimitedMinter issuance from two receipt-authenticated BridgeDeposit transfers; it is not a conserved bridge-only claim. Native Safe and facility powers are recorded in Mint Authority, while bridge-adapter, operator, administration, pause and raiseable-cap powers remain here. Across is a separate liquidity/intent rail.",
+    "summary": "wCOP has seven tracked and reviewed independent native issuance deployments, including Celo, and separate issuer-operated burn/mint transfer machinery. Celo's complete issuance census distinguishes native LimitedMinter issuance from two receipt-authenticated BridgeDeposit transfers; it is not a conserved bridge-only claim. Native Safe and facility powers are recorded in Mint Authority, while bridge-adapter, operator, administration, pause and raiseable-cap powers remain here. Across is a separate liquidity/intent rail. Ripio announced WCOP live on Arc on September 16, 2026; its exact deployment identity, issuance and transfer controls, and liability census remain unresolved. This review covers the seven tracked deployments and does not establish complete asset-wide deployment coverage.",
     "reviewedAt": "2026-10-05",
     "reviewer": "Prior six-chain bridge reviews retained; R17 Celo native/transfer scope and incident review",
-    "confidence": "verified",
+    "confidence": "unknown",
     "protocols": [
       {
         "source": "l2beat",

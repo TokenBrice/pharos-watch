@@ -106,6 +106,7 @@ function projectLiveSummary(
     agreeSources: summary.agreeSources ?? [],
     supplySource: "stablecoin-detail",
     ...(summary.supplyObservedAt != null ? { supplyObservedAt: summary.supplyObservedAt } : {}),
+    ...(summary.supplyRestored === true ? { supplyRestored: true } : {}),
     circulating: summary.circulating,
     circulatingPrevDay: summary.circulatingPrevDay,
     circulatingPrevWeek: summary.circulatingPrevWeek,

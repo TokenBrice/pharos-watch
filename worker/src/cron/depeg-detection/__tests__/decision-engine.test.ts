@@ -1406,7 +1406,7 @@ describe("decideDepegAsset", () => {
     ]);
   });
 
-  it("closes a soft-source recovery on a corroborating challenger-pool majority when the aggregate DEX row is withheld", () => {
+  it.each([undefined, 1_790_231_400, 1_790_231_427 - 24 * 3600])("keeps soft-source recovery open with publication-only challenger time %s", (observedAt) => {
     // Reproduced 2026-09-24 from live D1 (event 90781, usdb-blast). The coin's
     // only primary lane is a fresh CoinGecko single-source print, and
     // computeDexPrices withholds its aggregate dex_prices row because
@@ -1449,33 +1449,20 @@ describe("decideDepegAsset", () => {
       pegRateSources: { peggedUSD: "median" },
       pegRateCounts: { peggedUSD: 4 },
       challengerPools: [
-        { price: 0.995936075327477, tvlUsd: 1_047_212.8546, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
-        { price: 0.997280614842842, tvlUsd: 290_687.4629, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
-        { price: 0.999821125971321, tvlUsd: 157_208.1985, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
-        { price: 1.0007739191, tvlUsd: 108_478.947, protocol: "monoswap-v3-blast", chain: "blast", sourceFamily: "cg_onchain" },
-        { price: 0.996110886724201, tvlUsd: 103_778.0611, protocol: "blasterswap", chain: "blast", sourceFamily: "cg_onchain" },
+        { price: 0.995936075327477, tvlUsd: 1_047_212.8546, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain", observedAt },
+        { price: 0.997280614842842, tvlUsd: 290_687.4629, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain", observedAt },
+        { price: 0.999821125971321, tvlUsd: 157_208.1985, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain", observedAt },
+        { price: 1.0007739191, tvlUsd: 108_478.947, protocol: "monoswap-v3-blast", chain: "blast", sourceFamily: "cg_onchain", observedAt },
+        { price: 0.996110886724201, tvlUsd: 103_778.0611, protocol: "blasterswap", chain: "blast", sourceFamily: "cg_onchain", observedAt },
       ],
     });
 
-    expect(decision.seenEventIds).toEqual([]);
-    expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 90781,
-        endedAt: now,
-        recoveryPrice: 0.995936075327477,
-        closeReason: "recovered-dex",
-      },
-    ]);
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pool-challenger majority recovery for USDB: 3 independent group(s) inside the 50bps recovery band outvote 0 diverging group(s)",
-      },
-    ]);
+    expect(decision.seenEventIds).toEqual([90781]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 90781 }]);
+    expect(decision.diagnostics).toEqual([]);
   });
 
-  it("closes a gold-peg recovery on a corroborating challenger-pool majority", () => {
+  it("keeps gold-peg recovery open without original challenger observation times", () => {
     // Reproduced 2026-09-24 from live D1 (event 90760, vnxau-vnx): the
     // CoinGecko single-source gram price sat inside the 75 bps commodity
     // recovery band while the published raydium and aerodrome pools confirmed.
@@ -1519,21 +1506,9 @@ describe("decideDepegAsset", () => {
       ],
     });
 
-    expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 90760,
-        endedAt: now,
-        recoveryPrice: 137.508294070839,
-        closeReason: "recovered-dex",
-      },
-    ]);
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pool-challenger majority recovery for VNXAU: 2 independent group(s) inside the 75bps recovery band outvote 0 diverging group(s)",
-      },
-    ]);
+    expect(decision.seenEventIds).toEqual([90760]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 90760 }]);
+    expect(decision.diagnostics).toEqual([]);
   });
 
   it("keeps an in-band soft-source event open when a high-TVL challenger pool still shows the depeg", () => {
@@ -1708,21 +1683,8 @@ describe("decideDepegAsset", () => {
       { price: 0.999, tvlUsd: 1_000_000, protocol: "orca", chain: "solana", sourceFamily: "cg_onchain" },
       { price: 0.9975, tvlUsd: 1_000_000, protocol: "meteora", chain: "solana", sourceFamily: "cg_onchain" },
     ]);
-    expect(outvoted.commands).toEqual([
-      {
-        type: "close-event",
-        id: 55,
-        endedAt: now,
-        recoveryPrice: 0.9985,
-        closeReason: "recovered-dex",
-      },
-    ]);
-    expect(outvoted.diagnostics).toEqual([
-      {
-        level: "log",
-        message: "[depeg] Pool-challenger majority recovery for DUSD: 3 independent group(s) inside the 50bps recovery band outvote 2 diverging group(s)",
-      },
-    ]);
+    expect(outvoted.commands).toEqual([{ type: "clear-recovery", id: 55 }]);
+    expect(outvoted.diagnostics).toEqual([]);
   });
 
   it("does not bypass a challenged aggregate DEX lane with the pool-challenger majority", () => {

@@ -94,8 +94,10 @@ interface StubOptions {
   balance?: bigint;
   ledgerComplete?: boolean;
   ledgerStopped?: boolean;
+  ledgerWatermarkMs?: number;
   settleComplete?: boolean;
   settleStopped?: boolean;
+  settleWatermarkMs?: number;
   receiptTimestampMs?: number;
   captureMaxPages?: number[];
   consumeLedgerPages?: number;
@@ -144,7 +146,7 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
         if (ledgerReads === 1) _ctx.pagesFetched.count += overrides.consumeLedgerPages ?? 0;
         return {
           transfers: toTransfers(flows),
-          watermarkMs: maxTimestampMs + 60_000,
+          watermarkMs: overrides.ledgerWatermarkMs ?? maxTimestampMs + 60_000,
           complete: overrides.ledgerComplete ?? true,
           stopped: overrides.ledgerStopped ?? false,
         };
@@ -152,7 +154,7 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
       const settleFlows = overrides.settleFlows ?? [];
       return {
         transfers: toTransfers(settleFlows),
-        watermarkMs: overrides.settleComplete === false ? SETTLE_HEAD_MS - 1 : maxTimestampMs + 60_000,
+        watermarkMs: overrides.settleWatermarkMs ?? (overrides.settleComplete === false ? SETTLE_HEAD_MS - 1 : maxTimestampMs + 60_000),
         complete: overrides.settleComplete ?? true,
         stopped: overrides.settleStopped ?? false,
       };
@@ -235,6 +237,37 @@ describe("resolveQueueOutcomeForFailure", () => {
 });
 
 describe("recoverTronFreezeAmountForRow", () => {
+  it.each([0n, 2_000_000n])("defers stale complete history with reconciled net %s", async (net) => {
+    // Old positive activity returns to zero. A stale index can omit a newer
+    // inflow before freeze and equal outflow after unfreeze without changing
+    // today's balance, while understating the freeze amount.
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 180_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "out" },
+      ...(net > 0n ? [{ timestampMs: FREEZE_MS - 90_000, value: net, direction: "in" as const }] : []),
+    ], { ledgerWatermarkMs: FREEZE_MS - 60_000, consumeLedgerPages: 2 });
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery).toMatchObject({ amount: null, lastErrorClass: "state_raced", pagesUsed: 2 });
+    expect(fetchTronRawTokenBalance).not.toHaveBeenCalled();
+    expect(fetchTronDestroyWindowClear).not.toHaveBeenCalled();
+  });
+
+  it("accepts history coverage exactly at the anchor", async () => {
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }], {
+      ledgerWatermarkMs: ANCHOR_MS,
+    });
+    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+      .toMatchObject({ amount: 2, lastErrorClass: null });
+  });
+
+  it("defers a complete settle history with stale coverage", async () => {
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }], {
+      settleWatermarkMs: SETTLE_HEAD_MS - 1,
+    });
+    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+      .toMatchObject({ amount: null, lastErrorClass: "state_raced" });
+  });
+
   it("resolves a non-trivial reconciled zero with a clear destroy window", async () => {
     await stubEvidence([
       { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
@@ -431,6 +464,26 @@ describe("recoverTronFreezeAmountForRow", () => {
 });
 
 describe("backfillTronBlacklistAmounts", () => {
+  it("keeps stale primary history queued without persisting an amount or an attempt", async () => {
+    const row = await makeRow();
+    await stubEvidence([
+      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+      { timestampMs: FREEZE_MS - 90_000, value: 3_000_000n, direction: "out" },
+    ], { ledgerWatermarkMs: FREEZE_MS - 60_000, consumeLedgerPages: 2 });
+    const db = mockD1([
+      { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
+      ...QUEUE_TABLES,
+    ]);
+    const result = await backfillTronBlacklistAmounts(db, {
+      trongridApiKey: "tron-key", limiter: createRateLimiter(1000), runBudget: makeRunBudget(),
+    });
+    expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("UPDATE blacklist_events") ||
+      entry.sql.includes("amount_attempt_count = COALESCE") || entry.sql.includes("blacklist-amount-repair-queue-finish"));
+    expect(writes).toEqual([]);
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
+  });
+
   it("persists a derived replay with provenance, closes the queue row, and reports the circuit outcome", async () => {
     const row = await makeRow();
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }]);

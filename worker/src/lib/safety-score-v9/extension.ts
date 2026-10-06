@@ -2029,10 +2029,10 @@ function adaptMintReview(
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
   const issuanceGovernance = compileMintIssuanceGovernance(
-    meta.id, profile, controlProjections, reviewComplete, freshScopedQuestionRefs.size > 0, clockSec,
+    meta.id, profile, controlProjections, reviewComplete, semanticQuestionRefs.size > 0, clockSec,
   );
   const issuanceProcess = compileMintIssuanceProcess(
-    meta.id, profile, controlProjections, reviewComplete, freshScopedQuestionRefs.size > 0, clockSec, issuanceGovernance,
+    meta.id, profile, controlProjections, reviewComplete, semanticQuestionRefs.size > 0, clockSec, issuanceGovernance,
   );
   const issuanceFacts: ExtensionAsset["issuanceFacts"] = issuanceGovernance || resolvedBook.diagnostics.length > 0 ? {
     ref: domainDigest("v1005-asset-issuance-facts", { assetId: meta.id, issuanceGovernance, issuanceProcess, diagnostics: resolvedBook.diagnostics }),

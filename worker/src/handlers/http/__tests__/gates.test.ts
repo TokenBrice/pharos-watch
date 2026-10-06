@@ -82,7 +82,7 @@ describe("evaluateAccessGate", () => {
     }
   });
 
-  it.each(["/api/safety-grades", "/api/dependency-graph/v1"])("limits anonymous %s before reading data and fails closed", async (path) => {
+  it.each(["/api/safety-grades", "/api/dependency-graph/v1", "/api/dependency-scenarios/v1"])("limits anonymous %s before reading data and fails closed", async (path) => {
     const env = makeEnv();
     const limit = vi.fn().mockResolvedValue({ success: true });
     env.SAFETY_GRADES_RATE_LIMIT = { limit };
@@ -97,6 +97,28 @@ describe("evaluateAccessGate", () => {
     env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
   });
+
+  it.each(["site-api.pharos.watch", "pharos-api.example.workers.dev"])(
+    "limits uncached scenarios on the credentialed Pages/preview lane %s", async (hostname) => {
+      const env = makeEnv();
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      env.SAFETY_GRADES_RATE_LIMIT = { limit };
+      const request = new Request(`https://${hostname}/api/dependency-scenarios/v1`, {
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret", "CF-Connecting-IP": "192.0.2.2" },
+      });
+      const denied = await evaluateAccessGate(request, new URL(request.url), env);
+      expect(denied.response?.status).toBe(429);
+      expect(denied.response?.headers.get("Retry-After")).toBe("60");
+      expect(limit).toHaveBeenCalledWith({ key: "192.0.2.2" });
+      expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+      limit.mockResolvedValueOnce({ success: true });
+      expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+      limit.mockRejectedValueOnce(new Error("unavailable"));
+      expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+      env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
+      expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+    },
+  );
 
   it("rejects adoption telemetry outside the trusted site-proxy lane even with a valid API key", async () => {
     apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });

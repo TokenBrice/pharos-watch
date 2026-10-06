@@ -69,6 +69,8 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook. Its optional `aggregateUniverse` marker preserves compatibility with archived pre-cutover rows.
 
+Partial mint/burn valuation is admitted only when the full-cohort score interval preserves the gauge band, all numeric gauge regime decisions (strict cutoffs at -50, -20, and -10), and risk-tape tone. Otherwise the mint/burn section is withheld with regime-critical degradation `mint-burn-gauge-valuation-partial`; missing valuation cannot imply CALM or produce an exact gauge tape value. Small robust partial cohorts retain their numeric scored-cohort value and named quality reason; withheld flow claims remain unavailable.
+
 Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
 
 A further enrichment pass added four more optional fields: `psiContributors`, `yieldAnomalies`, `liquidityShifts`, and `crossDayTrends`. All are populated only when their source data exists.

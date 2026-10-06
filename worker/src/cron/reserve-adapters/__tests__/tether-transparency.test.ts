@@ -97,6 +97,10 @@ describe("adaptTetherTransparency", () => {
       rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 1_000_000 } : row)],
     ["one-dollar mismatch", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
       rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 1 } : row)],
+    ["balanced redistribution", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row, index) => ({ ...row, dollars: row.dollars + (index === 0 ? 1 : index === 1 ? -1 : 0) }))],
+    ["all Treasury", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
+      rows.map((row) => ({ ...row, dollars: row.sourceKey === "tether:usdt:treasury-bills" ? 187751426411 : 0 }))],
     ["fractional dollars", (rows: typeof USDT_PARAMS.reviewedComposition.rows) =>
       rows.map((row, index) => index === 0 ? { ...row, dollars: row.dollars - 0.5 } : row)],
   ])("rejects %s instead of normalizing a partial book", (_label, changeRows) => {

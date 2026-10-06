@@ -186,7 +186,8 @@ export function MintAuthorityScoreMethodologySection() {
       <MethodologyDetails summary="Minority-veto issuance: gates V1–V7 (Safety Score v10.03)">
         <ul className="list-disc space-y-2 pl-5">
           <li>V1: complete runtime/state/typed-authority-bound individual or class-expanded execution-scope certificates
-            on every authored mint control, a fresh closed review, no scoped question, and no active incident.</li>
+            on every authored mint control, a fresh closed review, no semantic scoped question, and no active incident. Custody-only questions
+            retain unknown key custody without invalidating established issuance governance.</li>
           <li>V2: an explicit minority-veto decision rule and a minimum, never summed, unavoidable public window
             of 1,209,600 seconds across every reachable unbounded issuance path.</li>
           <li>V3: a unilateral veto quorum at most 200 bps of total flash-resistant holding-period-weighted,
@@ -237,8 +238,8 @@ export function MintAuthorityScoreMethodologySection() {
       <MethodologyDetails summary="Operationally governed issuance: H0–H4 and uniform D32 (Safety Score v10.05)">
         <ul className="list-disc space-y-2 pl-5">
           <li>H0: complete fresh reviewed reach, exact authorization/class/member census, executable runtime and
-            instance-state correspondence, typed authority and economic provenance closure, no scoped question
-            and no active compromise. Zero-current and latent/stopped-reactivatable controls remain in scope.</li>
+            instance-state correspondence, typed authority and economic provenance closure, no semantic scoped question
+            and no active compromise. Custody-only questions retain their separate key-custody gap. Zero-current and latent/stopped-reactivatable controls remain in scope.</li>
           <li>H1: every discretionary amount/recipient/admission/upgrade and envelope raise requires flash-resistant
             affirmative token governance and at least 172,800 seconds of public code/calldata-bound notice.
             All alternative routes must comply; proposal age and private cooldown are not public notice.

@@ -347,6 +347,25 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
+  it("limits Mento acknowledgement to the reviewed weekly UTC closure", () => {
+    const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ["chfm-mento", "copm-mento", "jpym-mento"].includes(entry.stablecoinId));
+    const ids = reviews.map((review) => review.stablecoinId);
+    for (const [nowSec, active] of [
+      [Date.UTC(2026, 9, 2, 20, 59, 59) / 1000, false],
+      [Date.UTC(2026, 9, 2, 21) / 1000, true],
+      [Date.UTC(2026, 9, 4, 22, 59, 59) / 1000, true],
+      [Date.UTC(2026, 9, 4, 23) / 1000, false],
+      [Date.UTC(2026, 9, 5, 12) / 1000, false],
+    ] as const) {
+      expect([...resolveStablecoinPriceGapReviews(ids, nowSec, reviews).activeById.keys()]).toEqual(active ? ids : []);
+    }
+    const assets = ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } }));
+    const closed = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: Date.UTC(2026, 9, 4, 22) / 1000, priceGapReviews: reviews });
+    const reopened = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: Date.UTC(2026, 9, 4, 23) / 1000, priceGapReviews: reviews, previousCoverage: closed });
+    expect(reopened.acknowledgedGapIds).toEqual([]);
+    expect(reopened.alertEligibleIds).toEqual(ids);
+  });
+
   it("fails closed on malformed review ownership, evidence, identity, and dates", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS[0]!;
     const invalidReviews = [
@@ -357,6 +376,8 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       { ...review, expiresAt: review.reviewedAt },
       { ...review, reviewedAt: Number.NaN },
       { ...review, stablecoinId: "inactive-unknown" },
+      { ...review, weeklyUtcWindow: { start: -1, end: 1 } },
+      { ...review, weeklyUtcWindow: { start: 1, end: 1 } },
     ];
     for (const invalid of invalidReviews) {
       const result = resolveStablecoinPriceGapReviews([review.stablecoinId], review.reviewedAt, [invalid]);
@@ -367,7 +388,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       ACTIVE_STABLECOINS.map((asset) => asset.id), review.reviewedAt,
     );
     expect(registry.invalidGapReviewIds).toEqual([]);
-    expect(registry.activeById.size).toBe(STABLECOIN_PRICE_GAP_REVIEWS.length);
+    expect(registry.activeById.size).toBe(STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => !entry.weeklyUtcWindow).length);
   });
 
   it("drops accepted observation timestamps outside the JavaScript Date range", () => {

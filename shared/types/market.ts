@@ -83,6 +83,8 @@ export const StablecoinDetailResponseSchema = z.object({
   currentCirculatingUSD: PegBucketsSchema.optional(),
   currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
   currentSupplyObservedAt: z.number().finite().positive().optional(),
+  /** Canonical carry-forward provenance for the admitted current supply overlay. */
+  currentSupplyRestored: z.boolean().optional(),
   tokens: z.array(StablecoinDetailTokenSchema).optional(),
 }).passthrough();
 export type StablecoinDetailResponse = z.infer<typeof StablecoinDetailResponseSchema>;

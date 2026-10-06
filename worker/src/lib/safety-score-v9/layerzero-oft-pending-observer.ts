@@ -29,6 +29,17 @@ const OFT_RECEIVED_TOPIC = keccak256(toHex("OFTReceived(bytes32,uint32,address,u
 const addressWord = (value: string): `0x${string}` => `0x${value.slice(2).padStart(64, "0")}`;
 const call = (signature: string, types: string, values: readonly unknown[]): string =>
   toFunctionSelector(signature) + encodeAbiParameters(parseAbiParameters(types), values as never).slice(2);
+// Review hashes authenticate executable contracts, not an upgradeable proxy's
+// stable dispatch shell. Skip PUSH data while conservatively rejecting runtime
+// delegation; unsupported proxy families require stronger execution evidence.
+function hasDelegatedExecution(code: string): boolean {
+  for (let offset = 2; offset < code.length; offset += 2) {
+    const opcode = Number.parseInt(code.slice(offset, offset + 2), 16);
+    if (opcode === 0xf4 || opcode === 0xf2) return true;
+    if (opcode >= 0x60 && opcode <= 0x7f) offset += (opcode - 0x5f) * 2;
+  }
+  return false;
+}
 function fail(reason: string): never { throw new Error(`oft-pending:${reason}`); }
 const uint = (value: unknown): bigint => typeof value === "string" && WORD.test(value) ? BigInt(value) : fail("state-unavailable");
 const ScanMessageSchema = z.object({
@@ -57,7 +68,7 @@ export async function observeLayerZeroOftPending(input: {
     if (!LayerZeroOftPendingReadSchema.safeParse(input.source).success) fail("review-invalid");
     const source = input.source, options = { chainRpcs: input.chainRpcs, signal: input.signal };
     const sourceDigest = sha256Hex(stableJsonStringifyV1(source));
-    const cacheKey = `safety-score-v9:layerzero-oft-pending:v1:${sourceDigest}`;
+    const cacheKey = `safety-score-v9:layerzero-oft-pending:v2:${sourceDigest}`;
     if (input.headers.length !== source.sides.length) fail("pin-missing");
     const cached = input.db ? await getCache(input.db, cacheKey, input.signal) : null;
     if (cached && cached.value.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
@@ -81,6 +92,30 @@ export async function observeLayerZeroOftPending(input: {
       return result[0];
     };
     const state = async (index: number, to: string, data: string) => rpc(source.sides[index]!.chainId, "eth_call", [{ to, data }, { blockHash: input.headers[index]!.hash, requireCanonical: true }]);
+    const authenticateRuntime = async (index: number, blockHash: string) => {
+      const side = source.sides[index]!;
+      for (const contract of [{ address: side.oappAddress, hash: side.oappRuntimeCodeSha256 }, { address: side.endpointAddress, hash: side.endpointRuntimeCodeSha256 }]) {
+        const code = await rpc(side.chainId, "eth_getCode", [contract.address, { blockHash, requireCanonical: true }]);
+        if (typeof code !== "string" || !/^0x[0-9a-f]+$/.test(code) || code.length % 2 !== 0 || sha256Hex(code) !== contract.hash) fail("runtime-mismatch");
+        if (code.startsWith("0xef") || hasDelegatedExecution(code)) fail("delegated-runtime-unsupported");
+      }
+    };
+    const saveCheckpoint = async () => {
+      // Refresh mutates every lane, so every delivery decision in the serialized
+      // checkpoint must bind the destination pin before ANY durable prefix write.
+      for (let index = 0; index < source.sides.length; index++) {
+        const pin = input.headers[index]!, rechecked = await fetchEvmBlockHeader(source.sides[index]!.chainId, pin.number, options);
+        if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
+      }
+      for (let index = 0; index < cp.pathways.length; index++) {
+        const pin = input.headers[source.pathways[index]!.destinationIndex]!;
+        cp.pathways[index]!.destinationAnchor = pin.number; cp.pathways[index]!.destinationAnchorHash = pin.hash;
+      }
+      const serialized = stableJsonStringifyV1(cp);
+      if (serialized.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
+      if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+      return serialized;
+    };
     const scan = async (url: string): Promise<{ data: ScanMessage[]; nextToken?: string }> => {
       // Scan rejects Worker-egress requests without an explicit User-Agent.
       const result = await fetchJsonWithRetry<unknown>(url, { headers: { "User-Agent": USER_AGENT }, signal: input.signal }, 0, { timeoutMs: 10_000, maxResponseBytes: 2 * 1024 * 1024 });
@@ -101,6 +136,7 @@ export async function observeLayerZeroOftPending(input: {
           typeof log.data !== "string" || !/^0x[0-9a-f]*$/.test(log.data) || log.data.length % 2 !== 0 || log.data.length > 32770 ||
           log.transactionHash !== hash || log.blockHash !== raw.blockHash || log.blockNumber !== raw.blockNumber || log.removed === true) fail("log-invalid");
       }
+      await authenticateRuntime(index, raw.blockHash);
       return raw;
     };
     const matches = (row: ScanMessage, sourceIndex: number, destinationIndex: number) => {
@@ -115,10 +151,7 @@ export async function observeLayerZeroOftPending(input: {
       const pinned = await fetchEvmBlockHeader(side.chainId, pin.number, options);
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock ||
         !pinned || pinned.hash !== pin.hash || pinned.timestamp !== pin.timestamp) fail("pin-not-finalized");
-      for (const contract of [{ address: side.oappAddress, hash: side.oappRuntimeCodeSha256 }, { address: side.endpointAddress, hash: side.endpointRuntimeCodeSha256 }]) {
-        const code = await rpc(side.chainId, "eth_getCode", [contract.address, { blockHash: pin.hash, requireCanonical: true }]);
-        if (typeof code !== "string" || !/^0x[0-9a-f]+$/.test(code) || code.length % 2 !== 0 || sha256Hex(code) !== contract.hash) fail("runtime-mismatch");
-      }
+      await authenticateRuntime(index, pin.hash);
       if (await state(index, side.oappAddress, toFunctionSelector("endpoint()")) !== addressWord(side.endpointAddress) ||
         uint(await state(index, side.endpointAddress, toFunctionSelector("eid()"))) !== BigInt(side.eid) ||
         await state(index, side.oappAddress, toFunctionSelector("token()")) !== addressWord(side.tokenAddress) ||
@@ -298,24 +331,12 @@ export async function observeLayerZeroOftPending(input: {
         cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash;
         // Save only a fully authenticated prefix; a later receipt timeout must
         // not force sparse bootstrap windows to be scanned again.
-        const prefix = stableJsonStringifyV1(cp);
-        if (prefix.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
-        if (input.db) await setCache(input.db, cacheKey, prefix, input.signal);
+        await saveCheckpoint();
       }
       if (cursor.nextBlock > pin.number && BigInt(checkpoint.sentNonce) !== pathStates[index]!.outbound) fail("send-census-mismatch");
     }
     const complete = cp.pathways.every((lane, index) => lane.sent.nextBlock === input.headers[source.pathways[index]!.sourceIndex]!.number + 1);
-    for (let index = 0; index < cp.pathways.length; index++) {
-      const pin = input.headers[source.pathways[index]!.destinationIndex]!;
-      cp.pathways[index]!.destinationAnchor = pin.number; cp.pathways[index]!.destinationAnchorHash = pin.hash;
-    }
-    for (let index = 0; index < source.sides.length; index++) {
-      const pin = input.headers[index]!, rechecked = await fetchEvmBlockHeader(source.sides[index]!.chainId, pin.number, options);
-      if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
-    }
-    const serialized = stableJsonStringifyV1(cp);
-    if (serialized.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
-    if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+    const serialized = await saveCheckpoint();
     if (!complete) return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
     let amountSD = 0n;
     const pathways = cp.pathways.map((lane, index) => {
