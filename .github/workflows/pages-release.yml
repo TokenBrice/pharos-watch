@@ -94,7 +94,7 @@ jobs:
           API_BASE_URL: ""
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
-          node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh
+          npm run generated:post-refresh
           npx --no-install next build --webpack
           npm run postbuild
       - name: Validate static SEO and published archive continuity

@@ -23,7 +23,8 @@ jobs:
       - name: Materialize compile-input artifacts
         # The refresh consumes the generated catalog. This lifecycle must never
         # acquire live snapshots: those belong to the Worker-gated release job.
-        run: node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input
+        # npm run puts node_modules/.bin on PATH for the generators' `tsx` children.
+        run: npm run generated:compile-input
       - name: Package prepared production workspace
         run: |
           mkdir -p "${RUNNER_TEMP}/pharos-pages-workspace"
