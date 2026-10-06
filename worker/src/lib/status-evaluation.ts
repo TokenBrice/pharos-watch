@@ -25,6 +25,7 @@ import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import { type CacheFreshnessDiagnostic } from "./api-freshness";
+import type { SchedulerLiveness } from "@shared/types/status/public-health";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -43,6 +44,7 @@ export interface RawStatusComputation {
   summary: StatusResponse["summary"];
   reserveComposition: StatusResponse["reserveComposition"];
   freshnessDiagnostics: CacheFreshnessDiagnostic[];
+  schedulerLiveness?: SchedulerLiveness;
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
@@ -107,10 +109,10 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
   }
 }
 
-export async function computeRawStatus(db: D1Database, now: number) {
-  const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status" });
+export async function computeRawStatus(db: D1Database, now: number, schedulerLiveness?: SchedulerLiveness) {
+  const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status", schedulerLiveness });
   if (!publicHealth.dbHealthy) {
-    return buildDbUnavailableRawStatus();
+    return { ...buildDbUnavailableRawStatus(), schedulerLiveness: publicHealth.schedulerLiveness };
   }
 
   // Independent status loads run in parallel. The repo's six-request outbound
@@ -162,6 +164,10 @@ export async function computeRawStatus(db: D1Database, now: number) {
     cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
   applyCronHealthSectionErrors(sectionErrors, cronHealth);
+  if (publicHealth.schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
+    code: "scheduler_liveness_unavailable",
+    message: `Scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.unavailableReason}).`,
+  };
 
   const availabilityEvaluation = evaluateAvailabilityStatus({
     publicHealth,
@@ -209,6 +215,7 @@ export async function computeRawStatus(db: D1Database, now: number) {
 
   return {
     dbHealthy: true,
+    schedulerLiveness: publicHealth.schedulerLiveness,
     availabilityStatus,
     dataQualityStatus,
     rawOverallStatus,

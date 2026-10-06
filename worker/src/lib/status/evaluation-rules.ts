@@ -43,16 +43,17 @@ export interface ReserveCompositionAssessment {
 export function evaluateReserveCompositionStatus(
   reserveComposition: Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>,
 ): ReserveCompositionAssessment {
-  const bootstrap = reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
-  const authoritativeFreshCoins =
-    reserveComposition.independentFreshEligible
-    + reserveComposition.independentFreshUnverified
-    + reserveComposition.staticValidatedFresh;
-  const freshCoverageRatio =
-    reserveComposition.configuredCoins > 0 ? reserveComposition.freshCoins / reserveComposition.configuredCoins : 0;
-  const authoritativeFreshCoverageRatio =
-    reserveComposition.configuredCoins > 0 ? authoritativeFreshCoins / reserveComposition.configuredCoins : 0;
-  const hasPersistentlyStaleIndependentFeeds = reserveComposition.persistentlyStaleIndependentCoins.length > 0;
+  const configured = reserveComposition.healthConfiguredCoins ?? reserveComposition.configuredCoins;
+  const fresh = reserveComposition.healthFreshCoins ?? reserveComposition.freshCoins;
+  const bootstrap = configured > 0 && reserveComposition.lastSuccessAt == null
+    && (reserveComposition.acknowledgedFeedIds?.length ?? 0) === 0;
+  const authoritativeFreshCoins = reserveComposition.healthAuthoritativeFreshCoins ??
+    (reserveComposition.independentFreshEligible
+      + reserveComposition.independentFreshUnverified + reserveComposition.staticValidatedFresh);
+  const freshCoverageRatio = configured > 0 ? fresh / configured : reserveComposition.configuredCoins > 0 ? 1 : 0;
+  const authoritativeFreshCoverageRatio = configured > 0 ? authoritativeFreshCoins / configured : reserveComposition.configuredCoins > 0 ? 1 : 0;
+  const hasPersistentlyStaleIndependentFeeds = (reserveComposition.unacknowledgedPersistentlyStaleIndependentCoins
+    ?? reserveComposition.persistentlyStaleIndependentCoins).length > 0;
   const deferredShare =
     reserveComposition.configuredCoins > 0 ? reserveComposition.deferredCoins / reserveComposition.configuredCoins : 0;
   const hasUncertainWrites = reserveComposition.writeTimeoutUncertain > 0;
@@ -60,9 +61,11 @@ export function evaluateReserveCompositionStatus(
     reserveComposition.runBudgetTruncated && deferredShare >= STATUS_RESERVE_HIGH_DEFERRED_RATIO;
   const hasReserveCapacityPressure = hasUncertainWrites || hasMaterialDeferredTail;
   const status: StatusResponse["reserveComposition"]["status"] =
-    bootstrap || reserveComposition.configuredCoins === 0
-      ? "healthy"
-      : reserveComposition.freshCoins === 0
+    hasReserveCapacityPressure
+      ? "degraded"
+      : bootstrap || configured === 0
+        ? "healthy"
+        : fresh === 0
         ? "stale"
         : freshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio
             || authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
@@ -363,7 +366,21 @@ export function rebuildCronDerivedAvailabilityCauses(
   ];
 }
 
+export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
+  if (scheduler.status === "healthy") return { status: "healthy", causes: [] };
+  const unavailable = scheduler.status === "unavailable";
+  const status = unavailable ? "degraded" : scheduler.status;
+  return { status, causes: [makeCause(
+    "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
+    status === "stale" ? "critical" : "warning",
+    unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}).`
+      : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
+    { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
+  )] };
+}
+
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
+  (input) => input.publicHealth.schedulerLiveness ? evaluateSchedulerLiveness(input.publicHealth.schedulerLiveness) : null,
   (input) => {
       const status = input.publicHealth.cacheImpactStatus;
       const worstCacheRatio = input.publicHealth.worstCacheRatio;
@@ -728,8 +745,10 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       if (reserve.status === "unavailable") return null; // The failed-read rule supplies the degrading cause.
       const status = reserve.status;
       if (status === "healthy") return null;
-      const persistent = reserve.persistentlyStaleIndependentCoins.length > 0
-        ? ` ${formatPersistentStaleIndependentFeeds(reserve.persistentlyStaleIndependentCoins)}.`
+      const unacknowledged = reserve.unacknowledgedPersistentlyStaleIndependentCoins
+        ?? reserve.persistentlyStaleIndependentCoins;
+      const persistent = unacknowledged.length > 0
+        ? ` Unacknowledged: ${formatPersistentStaleIndependentFeeds(unacknowledged)}.`
         : "";
       const runTail = reserve.runBudgetTruncated
         ? ` Last run was truncated by budget with ${reserve.deferredCoins} deferred coin(s)${reserve.nextCursorStablecoinId ? `; next cursor ${reserve.nextCursorStablecoinId}` : ""}.`
@@ -757,6 +776,23 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
   DATA_QUALITY_STATUS_RULES_CORE[4],
   DATA_QUALITY_STATUS_RULES_CORE[5],
   evaluateReserveOperationalDiagnostics,
+  (input) => {
+    const reserve = input.reserveComposition;
+    if (reserve.status === "unavailable") return null;
+    const causes: StatusCause[] = [];
+    if (reserve.acknowledgedFeeds?.length) causes.push(makeCause(
+      "data-quality", "reserve_feed_reviews_acknowledged", "info",
+      `Reviewed health exclusions: ${reserve.acknowledgedFeeds.map((review) =>
+        `${review.stablecoinId} (expires ${new Date(review.expiresAt * 1000).toISOString()})`).join(", ")}. Raw evidence remains quarantined.`,
+    ));
+    for (const [ids, code, label] of [
+      [reserve.expiredFeedReviewIds, "reserve_feed_reviews_expired", "Expired"],
+      [reserve.invalidFeedReviewIds, "reserve_feed_reviews_invalid", "Invalid"],
+    ] as const) {
+      if (ids?.length) causes.push(makeCause("data-quality", code, "info", `${label} reserve feed reviews: ${ids.join(", ")}; health gates re-armed.`));
+    }
+    return ruleResult("healthy", causes);
+  },
   DATA_QUALITY_STATUS_RULES_CORE[6],
 ];
 
@@ -774,6 +810,8 @@ function formatPersistentStaleIndependentFeeds(
 const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
 
 const RUNBOOK_BY_CODE: Record<string, string> = {
+  scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,

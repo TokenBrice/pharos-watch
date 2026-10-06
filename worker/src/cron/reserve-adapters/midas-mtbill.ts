@@ -35,8 +35,12 @@ const HOLDINGS = [
 export function adaptMidasMtbillTransparency(payload: unknown, nowSec: number, maxAgeSec = 259_200): AdapterResult {
   const { reports, updatedAt } = ReportSchema.parse(payload);
   const sourceTimestamp = Math.floor(Date.parse(updatedAt) / 1000);
-  if (sourceTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC || nowSec - sourceTimestamp > maxAgeSec) {
-    throw new Error("midas-mtbill: stale or future portfolio timestamp");
+  const ageSec = nowSec - sourceTimestamp;
+  if (sourceTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+    throw new Error(`midas-mtbill:future-portfolio-timestamp sourceTimestamp=${sourceTimestamp} nowSec=${nowSec} ageSec=${ageSec} maxFutureSkewSec=${MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC}`);
+  }
+  if (ageSec > maxAgeSec) {
+    throw new Error(`midas-mtbill:stale-portfolio-timestamp sourceTimestamp=${sourceTimestamp} nowSec=${nowSec} ageSec=${ageSec} maxAgeSec=${maxAgeSec}`);
   }
   const { pv_usd: positions, delta_usd: deltas } = reports.main_positions;
   if (Object.keys(positions).length !== HOLDINGS.length || Object.keys(deltas).length !== HOLDINGS.length

@@ -142,6 +142,7 @@ function makeMintBurnAssessmentDb(
   };
 
   return mockD1([
+    { match: "AS last_any", rows: [], first: { last_any: nowSec - 30, reserve: nowSec - 30, telegram: nowSec - 30, digest: nowSec - 30 } },
     {
       match: "job = 'sync-stablecoins'", rows: [],
       ...(options.publicationQueryError

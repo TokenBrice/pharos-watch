@@ -29,7 +29,7 @@ cpu_ms = 300000
 
 [observability]
 enabled = true
-head_sampling_rate = 0.1
+head_sampling_rate = 1
 
 [observability.logs]
 enabled = true
@@ -40,7 +40,7 @@ invocation_logs = true
 - `compatibility_date = "2026-04-18"` + `nodejs_compat`: top-level Wrangler runtime compatibility settings for the deployed Worker. Advancing the date is a gated standalone release; see [`worker-runtime-experiments.md`](./process/worker-runtime-experiments.md).
 - `global_fetch_strictly_public`: keeps Worker-origin fetches to the Worker's own public custom domains on the public edge path. `status-self-check` depends on that behavior for production-domain canaries; without it, same-Worker custom-domain self-fetches can return internal 522s while external clients remain healthy.
 - `observability.enabled`: enables Worker traces.
-- `head_sampling_rate = 0.1`: samples 10% of traces.
+- `head_sampling_rate = 1`: retains all traces while hardening shared heavy lanes; sampling hid cron failure context. Revisit cost after heavy lanes are isolated.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
 - `preview_urls = true`: keeps deployment-specific preview URLs available for explicit diagnostics without making them part of the production release gate.
 - `minify = true` + `keep_names = true`: reduce the deployed script's source footprint while preserving function and class names for diagnostics and exported entrypoints. A Node 24 Wrangler dry-run reduced the main script from 58.61 MiB to 38.16 MiB without removing registry evidence; this is a bundle-size result, not proof of Cloudflare peak-memory safety. The compiled minified entrypoint was exercised in local workerd with the existing compatibility flags.
@@ -984,6 +984,10 @@ Feature guides own producer-specific algorithms and schemas; this document owns 
 ## Health & Status Endpoints
 
 `status-self-check` records bounded progress before capacity/table-growth monitoring, each route probe, external probes, probe persistence, raw-status computation, supplements, and snapshot publication. Each selected registry path has a distinct `route-probe:<path>` stage so progress coalescing cannot retain the preceding probe; metadata includes only the path and probe counts. This adds at most 21 progress writes per run and leaves the last entered phase in the existing cron progress ledger after platform termination. A phase identifies the work in progress; it does not prove which allocation exceeded the isolate memory limit.
+
+Every `/api/health` and admin `/api/status` request reads actual `cron_slot_executions.started_at` via four scalar MAX index seeks (overall plus the three canonical five-minute lanes). `schedulerLiveness` carries clocks, age, budgets, per-lane diagnostics and unavailability reason; overall MAX cannot mask five-minute delivery loss. Strict >600s degrades and >1200s is stale; missing/future/failed evidence is unavailable. Cached scheduler floors are replaced with live observations, without mutating cron-owned effective state. Migration `0259` adds the indexes after reserve-lane's `0258`, before Worker deployment.
+
+Cloudflare GraphQL `workersInvocationsScheduled` is delivery/resource-outcome ground truth. `npm run ops:cron-delivery` requires Analytics-read `CLOUDFLARE_API_TOKEN` from the environment (no OAuth-file scraping). The external `.github/workflows/cron-liveness.yml` checks live public health every 15 minutes and upserts one incident issue before failing on stall/unavailability or transport/schema failure; this is not a ten-minute external SLA. See [delivery stall runbook](./runbooks/cron-delivery-stall.md).
 
 The V9 route probe shares the public projection path: the storage decoder checks integrity and validates the full publication, then the projector validates the constructed public response without reparsing and deep-copying the already-validated publication first.
 

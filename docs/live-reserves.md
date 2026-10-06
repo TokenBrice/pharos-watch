@@ -45,6 +45,8 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 
 The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe storage and overview functions. Public `resolveReserveResult` callers import `store-views.ts` directly; only that presentation layer keeps the full registry and curated-reserve fallback templates. This prevents a producer storage import from initializing the full evidence-heavy catalog.
 
+Operational feed reviews live separately in `worker/src/lib/reserve-feed-reviews.ts`, schema-derived from `ReserveFeedReviewSchema`: configured independent **or** static-validated identity, adapter, failure category, exact warning codes/error prefix, owner/reason, HTTPS sources with valid evidence dates, review and expiry. Reviews must be nonfuture and expire within 14 days; at `now >= expiresAt` the gate re-arms. Unknown/new failures do not inherit acknowledgement. Circuit-open inherits only the latest non-skipped attempt; unreadable/missing history fails closed.
+
 `LiveReservesConfig` fields:
 
 | Field              | Meaning                                                                               |
@@ -467,6 +469,9 @@ The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], 
 
 This fixes the HBD 164-versus-165 discrepancy: its later node-disagreement error remains an operational error, while its clean retained snapshot contributes to eligible coverage in all three consumers. Redemption capacity consumes the same structural, configuration-identity, and freshness rejections but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
 
+Feed acknowledgement is status policy only, never admission: raw status/counts, mode, stale labels, source clocks, scoring, and listing status are unchanged. Valid matched reviews exclude actual fresh/authoritative contributions and the matching feed from the health cohort only. Uncertain writes, corrupt evidence, budget deferrals, future timestamps, and BNUSD adapter-timeout are never acknowledged. The 2026-10-06 reviews expire 2026-10-13; yzUSD is an inactive research candidate until issuer-side versus mapping mismatch is established. mTBILL matches only `midas-mtbill:stale-portfolio-timestamp`, not its future token or the historical ambiguous error; rejected errors retain source timestamp, current clock, age, and applicable three-day/skew budget.
+STBT is also inactive: its configured `matrixdock-stbt` adapter is `weak-live-probe`, outside independent/static-validated review eligibility. Its raw missing/error evidence remains visible without an acknowledgement.
+
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
 - `configuredCoins`
@@ -508,6 +513,8 @@ When a coin has both an old latest-success snapshot and a newer failing attempt 
 - Tracked coin without live reserve support
 
 Known live-enabled IDs with no usable snapshot or curated/template fallback return HTTP `200` with `mode: "unavailable"`, empty `reserves`, and live `sync` state. This distinguishes supported coins awaiting usable data from unknown or unsupported IDs.
+
+When a review matches current attempt evidence, `sync.acknowledgedFeed` publishes the complete dated review. It does not change response mode, cache admission, reserves, provenance, or freshness; absence means no currently valid matching acknowledgement.
 
 Successful responses return `StablecoinReservesResponse` with one of these modes:
 
@@ -1094,6 +1101,8 @@ export async function fetchMyAdapterReserves(
 ## Frontend Consumers
 
 Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
+
+`buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to stale/error/bootstrap/fallback disclosure rows. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
 
 - `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`), while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model

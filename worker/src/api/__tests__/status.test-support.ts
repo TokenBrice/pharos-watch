@@ -11,6 +11,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
+import { resolveReserveFeedReviews } from "../../lib/reserve-feed-reviews";
 
 stubCryptoForAuth();
 
@@ -59,6 +60,12 @@ function makeDewsPublicationPointerRow(now: number, ageSec = 300) {
 function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown> = {}) {
   return {
     dbHealthy: true,
+    schedulerLiveness: {
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30,
+      lastFiveMinuteStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({ scheduleKey, lastStartedAt: now - 30 })),
+      unavailableReason: null,
+    },
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
     rawOverallStatus: "healthy",
@@ -107,7 +114,10 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       digest: now - 60,
     },
     summary: makeStatusSummary(),
-    reserveComposition: makeReserveComposition(),
+    reserveComposition: makeReserveComposition({
+      expiredFeedReviewIds: resolveReserveFeedReviews(now).expiredIds,
+      invalidFeedReviewIds: resolveReserveFeedReviews(now).invalidIds,
+    }),
     freshnessDiagnostics: [],
     ...overrides,
   };
@@ -131,6 +141,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
+    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30 } },
     { match: "cache WHERE key IN", rows: healthy
       ? [
           ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
@@ -304,9 +315,21 @@ function fixtureMockD1(
   };
   return mockD1(
     [
+      ...(!tables.some((table) => table.match.includes("AS last_any")) ? [{
+        match: "AS last_any", rows: [], allowUnused: true,
+        first: {
+          last_any: Math.floor(Date.now() / 1000) - 30,
+          reserve: Math.floor(Date.now() / 1000) - 30,
+          telegram: Math.floor(Date.now() / 1000) - 30,
+          digest: Math.floor(Date.now() / 1000) - 30,
+        },
+      }] : []),
       ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),
       ...(!includeStatusDefaults || hasDewsPointerFixture ? [] : [{ ...dewsPointerFixture, allowUnused: true }]),
       ...tables,
+      ...["FROM reserve_sync_state", "FROM reserve_composition", "FROM reserve_sync_attempt_history"].filter(
+        (match) => !tables.some((table) => table.match === match),
+      ).map((match) => ({ match, rows: [], allowUnused: true })),
     ],
     options,
   );

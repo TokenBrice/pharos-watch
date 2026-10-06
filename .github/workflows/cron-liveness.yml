@@ -1,0 +1,71 @@
+name: Cron Liveness Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: cron-liveness-monitor
+  cancel-in-progress: false
+
+jobs:
+  delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read live scheduler evidence
+        id: health
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H 'Cache-Control: no-cache' 'https://api.pharos.watch/api/health' -o "$RUNNER_TEMP/cron-health.json"
+          node - "$RUNNER_TEMP/cron-health.json" <<'NODE'
+          const fs = require('node:fs');
+          const health = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const s = health.schedulerLiveness;
+          if (!['healthy', 'degraded', 'stale'].includes(health.status) || !Number.isFinite(health.timestamp)
+              || !Array.isArray(health.warnings) || !health.warnings.every(w => typeof w === 'string')
+              || !s || !['healthy', 'degraded', 'stale', 'unavailable'].includes(s.status)
+              || !Number.isFinite(s.observedAt) || !Number.isFinite(s.warningAfterSec) || !Number.isFinite(s.staleAfterSec)
+              || !Array.isArray(s.lanes) || s.lanes.length !== 3
+              || !s.lanes.every(l => typeof l.scheduleKey === 'string' && (l.lastStartedAt === null || Number.isFinite(l.lastStartedAt)))) {
+            throw new Error('Scheduler health schema invalid');
+          }
+          const keys = new Set(s.lanes.map(l => l.scheduleKey));
+          if (!['fiveMinuteReserveRecovery', 'fiveMinuteTelegramAlerts', 'digestTriggerPoll'].every(k => keys.has(k))) throw new Error('Scheduler lanes missing');
+          if (s.status !== 'healthy' || health.warnings.some(w => w === 'scheduled_delivery_stalled' || w === 'scheduler_liveness_unavailable')) throw new Error('Scheduler delivery stalled or unavailable');
+          if (![s.lastAnyStartedAt, s.lastFiveMinuteStartedAt, s.ageSeconds].every(Number.isFinite)
+              || s.ageSeconds < 0 || s.ageSeconds > s.warningAfterSec || s.lastFiveMinuteStartedAt > s.observedAt
+              || Math.abs(Date.now() / 1000 - s.observedAt) > 120) throw new Error('Scheduler evidence invalid or not live');
+          console.log('Scheduled delivery healthy', s);
+          NODE
+      - name: Upsert delivery incident before failing
+        if: steps.health.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/cron-liveness-incident.md"
+          printf '%s\n' \
+            'The external scheduled-delivery monitor failed: transport, schema, missing evidence, or a delivery stall.' \
+            "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            'Runbook: https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/cron-delivery-stall.md' \
+            'Do not automatically PUT/reset schedules, leases, or checkpoints.' > "$body"
+          issue_number=$(gh issue list --state open --search 'in:title "Scheduled delivery incident"' --json number,title --jq '[.[] | select(.title == "Scheduled delivery incident")][0].number // empty')
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file "$body"
+          else
+            gh issue create --title 'Scheduled delivery incident' --body-file "$body"
+          fi
+      - name: Fail on unavailable or stalled delivery
+        if: steps.health.outcome == 'failure'
+        run: exit 1

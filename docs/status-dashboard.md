@@ -208,6 +208,7 @@ Related extracted loaders:
 - Requires a valid admin credential (`requireAdmin`)
 - Response cache policy: `Cache-Control: no-store`
 - Even when the 15-minute assessment snapshot is fresh, `/api/status` reads current cron history, progress, leases, and scheduled slots through `loadCronHealth()`. Per-job availability, cron/slot summary counts, and the informational cron availability causes (`degraded_cron_warning`, `watch_cron_error_runs`, `watch_unhealthy_crons_present`, and the `cron_*_query_failed` notices) all describe that one live read at the response `timestamp`, so a cause count never disagrees with its `summary` counterpart in the same response; the aggregate assessment, caches, and expensive supplements retain the persisted assessment generation. A failed live cron read remains unknown rather than replaying a cached success.
+- Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. Cached unhealthy scheduler floors force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
 
 `StatusResponseSchema` validates required fields for each retained nested section; malformed section payloads fail closed at the admin query boundary instead of being treated as typed-but-unchecked objects. Optional additive top-level fields remain passthrough-compatible, while the four retired projections listed above are not emitted.
 
@@ -344,6 +345,8 @@ For the split DEX pipeline:
 
 Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
 
+Scheduler delivery is an independent availability axis: the newest actual start across `fiveMinuteReserveRecovery`, `fiveMinuteTelegramAlerts`, and `digestTriggerPoll` must be within the shared 600-second warning / 1200-second stale budgets (strictly greater than the boundary escalates). `scheduled_delivery_stalled` is warning/critical; missing, future, or unreadable starts yield `scheduler_liveness_unavailable` and a degraded floor, never healthy. Overall MAX is diagnostic only: an hourly slot cannot mask five-minute delivery loss. Partial lane loss stays diagnostic while another canonical lane starts. See [delivery stall runbook](./runbooks/cron-delivery-stall.md).
+
 - `stale` if any of:
   - any shared cache impact is `stale`
   - the public mint/burn lane is `stale`
@@ -450,6 +453,8 @@ Ratio-based on-chain stale/degraded thresholds are also gated until the active m
 
 `overallStatus` is the **effective** status after hysteresis state-machine reconciliation:
 
+At request time the admin advertises the worse of persisted `state.currentStatus` and live scheduler impact, without writing state. The hysteresis state below remains cron-owned; a stall can therefore become visible before the next status cron.
+
 - `healthy -> degraded`: requires 2 consecutive raw degraded checks
 - `healthy -> stale`: immediate on raw stale
 - `degraded -> stale`: requires 2 consecutive raw stale checks
@@ -544,18 +549,18 @@ The public `/api/health` companion endpoint now returns a `warnings` array for t
 
 Behavior:
 
-- bootstrap is suppressed until the first successful live reserve sync exists
+- bootstrap health suppression remains until the first successful live reserve sync; thereafter a nonempty evaluable cohort with no fresh feed is stale
 - only matched `reserve_composition` + `reserve_sync_state.last_success_at` pairs count as live snapshots; orphaned or split-write rows are treated as missing
 - coins currently failing before their first successful snapshot count as `errorCoins`, not `missingCoins`
-- after bootstrap, reserve health is coverage-based:
-  - `status: "stale"` when `freshCoins === 0`
-  - `status: "degraded"` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, any independent feed is persistently stale, any write is uncertain, the cursor tail is incomplete, the deferred tail is high-share, or run-budget truncation repeats
-  - `status: "healthy"` otherwise
+- reserve health uses the matched-review-adjusted cohort, retaining the unchanged floors:
+  - `status: "stale"` when a nonempty health cohort has zero fresh feeds
+  - `status: "degraded"` when health-cohort fresh coverage is below 0.75, authoritative coverage below 0.5, an unacknowledged independent feed is persistently stale, any write is uncertain, or the run-budget-truncated deferred share is at least 0.25
+  - an empty all-acknowledged cohort is explicitly healthy unless unchanged capacity-pressure gates apply
 - low raw counts of degraded/missing reserve feeds no longer degrade `dataQualityStatus` on their own if coverage remains above those thresholds
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
 - an unavailable reserve overview renders **Unavailable / Unknown** in Live Reserve Sync, Score impact, triage and pipeline readiness; it never renders 0% coverage or a clear recovery queue
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
-- `persistentlyStaleIndependentCoins` lists independent feeds older than the persistent-stale threshold and keeps the reserve sync card/action cause degraded until the source recovers
+- `persistentlyStaleIndependentCoins` retains the complete raw list; `unacknowledgedPersistentlyStaleIndependentCoins` owns its health gate. `healthConfiguredCoins`, `healthFreshCoins`, and `healthAuthoritativeFreshCoins` exclude each matched review's actual contribution. `acknowledgedFeeds` carries reason, evidence, owner, review date, and expiry; expired/invalid IDs re-arm gates and emit info causes even on otherwise healthy observations.
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
 - `adapterReliability` is a 30-day per-adapter rollup computed with one grouped scan over `reserve_sync_attempt_history` (`attempts`, `ok`/`degraded`/`error`/`skipped` counts, and `successRate` = `ok / attempts`). It is cached with the hourly status snapshot and rendered as a compact table on the `Live Reserve Sync` card; rows are ordered by attempt count descending.
@@ -705,6 +710,8 @@ Response includes:
 6. `hasMore` completeness evidence (`true` when another matching row exists, `false` for a complete matching window, and `null` when completeness could not be determined)
 
 The incident-history workspace only makes negative deployment-correlation statements for a fresh response with `hasMore === false`. Row-limited, retained, fallback, and indeterminate results remain visibly partial and keep correlation Unknown.
+
+Delivery status is request-time evidence, but transition history is cron-sampled. A stall and recovery entirely between status observations cannot create invented historical transitions; the external monitor's issue/run is separate incident evidence.
 
 ---
 

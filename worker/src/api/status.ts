@@ -14,7 +14,7 @@ import { computeRawStatus } from "../lib/status-evaluation";
 import { loadCronHealth } from "../lib/status/cron-health";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
-import { rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
+import { evaluateSchedulerLiveness, rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
 import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
@@ -29,6 +29,10 @@ import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registr
 import type { ProducerHeadStatus } from "@shared/types/status";
 import { loadProducerHeads } from "../lib/producer-history";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
+import { loadSchedulerLiveness } from "../lib/status/scheduler-liveness";
+import type { SchedulerLiveness } from "@shared/types/status/public-health";
+import { maxStatus } from "../lib/status/evaluation-state";
+import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
 
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
@@ -129,23 +133,35 @@ async function resolveRawStatusForResponse(
   db: D1Database,
   now: number,
   request?: Request,
+  schedulerLiveness?: SchedulerLiveness,
 ): Promise<ResolvedRawStatus> {
   if (shouldBypassStatusSnapshot(request)) {
     return {
-      raw: await computeRawStatus(db, now),
+      raw: await computeRawStatus(db, now, schedulerLiveness),
       snapshotFallbackReason: "bypassed",
     };
   }
 
   const snapshot = await loadStatusRawSnapshot(db, now);
-  if (snapshot.kind === "fresh") {
+  const currentReserve = snapshot.kind === "fresh"
+    ? await computeReserveCompositionOverview(db, now).catch(() => null) : null;
+  const cachedReserve = snapshot.kind === "fresh" ? snapshot.raw.reserveComposition : null;
+  const reviewApplicabilityChanged = cachedReserve?.status === "unavailable" || !currentReserve
+    || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])
+      !== JSON.stringify([cachedReserve?.acknowledgedFeeds, cachedReserve?.expiredFeedReviewIds, cachedReserve?.invalidFeedReviewIds]);
+  const cachedSchedulerUnhealthy = snapshot.kind === "fresh"
+    && (snapshot.raw.schedulerLiveness?.status !== "healthy" || snapshot.raw.causes.availability.some((cause) =>
+      cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"));
+  if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged && schedulerLiveness) {
     // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
     const cronHealth = await loadCronHealth(db, now);
     // Informational cron causes (degraded_cron_warning and friends) must be
     // re-derived from the same live cron-health read that replaces `crons`
     // and rebuilds `summary` below; otherwise one response can show a cached
     // cause count next to a live summary count that disagrees with it (R5).
-    const availabilityCauses = rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability, {
+    const scheduler = evaluateSchedulerLiveness(schedulerLiveness);
+    const availabilityCauses = [...rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability.filter((cause) =>
+      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"), {
       degradedCronRuns: cronHealth.degradedCronRuns,
       cronErrorCount: cronHealth.cronErrorCount,
       availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,
@@ -153,13 +169,21 @@ async function resolveRawStatusForResponse(
       cronHistoryQueryFailed: cronHealth.cronHistoryQueryFailed,
       cronProgressQueryFailed: cronHealth.cronProgressQueryFailed,
       cronLeaseQueryFailed: cronHealth.cronLeaseQueryFailed,
-    });
+    }), ...scheduler.causes];
     const sectionErrors = { ...snapshot.raw.sectionErrors };
+    delete sectionErrors.schedulerLiveness;
+    if (schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
+      code: "scheduler_liveness_unavailable",
+      message: `Scheduler delivery evidence unavailable (${schedulerLiveness.unavailableReason}).`,
+    };
     delete sectionErrors.scheduledSlots;
     applyCronHealthSectionErrors(sectionErrors, cronHealth);
     return {
       raw: {
         ...snapshot.raw,
+        schedulerLiveness,
+        availabilityStatus: maxStatus(snapshot.raw.availabilityStatus, scheduler.status),
+        rawOverallStatus: maxStatus(snapshot.raw.rawOverallStatus, scheduler.status),
         crons: cronHealth.crons,
         causes: {
           availability: availabilityCauses,
@@ -181,9 +205,9 @@ async function resolveRawStatusForResponse(
   }
 
   return {
-    raw: await computeRawStatus(db, now),
-    snapshotFallbackReason: snapshot.kind,
-    snapshotError: snapshot.error,
+    raw: await computeRawStatus(db, now, schedulerLiveness),
+    snapshotFallbackReason: snapshot.kind === "fresh" ? "bypassed" : snapshot.kind,
+    snapshotError: snapshot.kind === "fresh" ? undefined : snapshot.error,
   };
 }
 
@@ -212,12 +236,13 @@ export function handleStatus({
     },
     async () => {
       const now = Math.floor(Date.now() / 1000);
+      const schedulerLiveness = await loadSchedulerLiveness(db, now);
       const {
         raw,
         supplements: snapshotSupplements,
         snapshotFallbackReason,
         snapshotError,
-      } = await resolveRawStatusForResponse(db, now, request);
+      } = await resolveRawStatusForResponse(db, now, request, schedulerLiveness);
       const persistenceIssues: StatusPersistenceIssue[] = [];
       const collectPersistenceIssue = (issue: StatusPersistenceIssue) => {
         persistenceIssues.push(issue);
@@ -243,7 +268,8 @@ export function handleStatus({
         isStale: statusStateReadFailed,
       };
 
-      const effectiveOverallStatus = resolvedState.currentStatus;
+      const effectiveOverallStatus = maxStatus(resolvedState.currentStatus,
+        schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status);
       const probeIssues: StatusPersistenceIssue[] = [];
       const discrepancyIssues: StatusPersistenceIssue[] = [];
       const timelineIssues: StatusPersistenceIssue[] = [];
@@ -300,6 +326,7 @@ export function handleStatus({
       const body: StatusResponse = {
         timestamp: now,
         dbHealthy: raw.dbHealthy,
+        schedulerLiveness,
         availabilityStatus: raw.availabilityStatus,
         dataQualityStatus: raw.dataQualityStatus,
         rawOverallStatus: raw.rawOverallStatus,

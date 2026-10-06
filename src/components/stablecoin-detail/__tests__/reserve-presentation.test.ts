@@ -47,6 +47,26 @@ function networkError(): TypeError {
 }
 
 describe("buildReserveFetchNotice", () => {
+  it("retains quarantine labels and dated review disclosure across fallback and stale modes", () => {
+    for (const mode of ["live-stale", "curated-fallback", "template-fallback", "unavailable"] as const) {
+      const reserves = makeReserves({ mode, sync: {
+        enabled: true, status: "error", stale: true, bootstrap: false, lastError: "source rejected",
+        acknowledgedFeed: {
+          stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "unknown",
+          warningCodes: [], errorPrefix: "source", owner: "ops", reason: "Await issuer update",
+          reviewedAt: 1791244800, expiresAt: 1791849600,
+          sources: [{ url: "https://example.com/report", evidenceDate: "2026-09-18" }],
+        },
+      } });
+      const status = buildReserveFeedStatus(reserves, null)!;
+      expect(status.label).toContain("error");
+      expect(status.rows.join(" ")).toContain("Await issuer update");
+      expect(status.rows.join(" ")).toContain("2026-09-18");
+      expect(status.rows.join(" ")).toContain("https://example.com/report");
+      expect(status.rows.join(" ")).toContain("expires:");
+      expect(reserves.sync?.stale).toBe(true);
+    }
+  });
   it("live-stale → amber refresh-delayed tone", () => {
     const notice = buildReserveFetchNotice(new Error("boom"), makeReserves({ mode: "live-stale" }));
     expect(notice.title).toBe("Live reserve refresh delayed");

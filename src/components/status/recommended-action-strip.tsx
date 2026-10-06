@@ -20,9 +20,9 @@ export function RecommendedActionStrip({
       <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
         <div className="space-y-2">
           <p className="pharos-kicker">Recommended Now</p>
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">No manual intervention.</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">No in-dashboard repair recommended; investigate active blockers.</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            The system is holding. Use the lane order below to sweep for softer pressure, not to chase an active breach.
+            An empty action list is not a health verdict. Review active causes and their runbooks before taking external action.
           </p>
         </div>
       </div>

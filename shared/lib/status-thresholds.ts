@@ -301,6 +301,14 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
   degradedAuthoritativeCoverageRatio: 0.5,
 } as const;
 
+/** Reviews suppress only matched operational health gates, never evidence admission. */
+export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
+
+export const STATUS_SCHEDULER_LIVENESS_THRESHOLDS = {
+  warningAfterSec: 600,
+  staleAfterSec: 1200,
+} as const;
+
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
 export interface ReserveScoreInputHoldInput {
   status: string;

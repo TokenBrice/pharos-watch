@@ -108,6 +108,17 @@ export function makePublicHealth(
       observedAt: null,
     },
     activePriceCoverageImpactStatus: "healthy",
+    schedulerLiveness: {
+      status: "healthy", observedAt: Math.floor(Date.now() / 1000),
+      lastAnyStartedAt: Math.floor(Date.now() / 1000) - 30,
+      lastFiveMinuteStartedAt: Math.floor(Date.now() / 1000) - 30, ageSeconds: 30,
+      warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: Math.floor(Date.now() / 1000) - 30,
+      })),
+      unavailableReason: null,
+    },
+    schedulerLivenessImpactStatus: "healthy",
     ...overrides,
   };
 }

@@ -303,6 +303,7 @@ describe("handleHealth", () => {
   });
 
   it("serves a fresh public-health projection from one snapshot read", async () => {
+    // A healthy cached aggregate still reads delivery evidence on this request.
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value) as Record<string, unknown>;
@@ -317,6 +318,7 @@ describe("handleHealth", () => {
       stablecoinPublication: null,
       activePriceCoverage: null,
     };
+    (snapshot.publicHealth as Record<string, unknown>).schedulerLiveness = (snapshot.raw as Record<string, unknown>).schedulerLiveness;
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({
       sections: [],
@@ -331,9 +333,9 @@ describe("handleHealth", () => {
     const response = await handleHealth(db);
     const body = await response.json() as { status: string; timestamp: number };
 
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       status: "healthy",
-      timestamp: now - 60,
+      timestamp: now,
       warnings: [],
       caches: {},
       blacklist: {},
@@ -342,8 +344,38 @@ describe("handleHealth", () => {
       stablecoinPublication: null,
       activePriceCoverage: null,
     });
-    expect(db.getHistory()).toHaveLength(1);
+    expect(db.getHistory()).toHaveLength(2);
     db.assertAllMatchesUsed();
+  });
+  it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    row.value = JSON.stringify(snapshot);
+    const db = buildStatusD1Scenario({ sections: [], overrides: [
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201 } },
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe("stale");
+    expect(body.warnings).toContain("scheduled_delivery_stalled");
+    expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
+  });
+  it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    snapshot.publicHealth.status = "stale";
+    snapshot.publicHealth.warnings = ["scheduled_delivery_stalled"];
+    snapshot.publicHealth.schedulerLiveness.status = "stale";
+    row.value = JSON.stringify(snapshot);
+    const db = makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.warnings).not.toContain("scheduled_delivery_stalled");
+    expect(body.status).toBe("stale");
   });
   const telegramCapacityRow = {
     total: 3,

@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
@@ -11,7 +11,31 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getReserves } from "@shared/lib/reserve-templates";
 
+import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
 describe("handleStablecoinReserves", () => {
+  it("publishes matched acknowledgement without admitting missing evidence", async () => {
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    vi.useFakeTimers();
+    vi.setSystemTime((review.reviewedAt + 1) * 1000);
+    try {
+      const state = {
+        ...reserveSyncRow(review.reviewedAt + 1, {
+          last_status: "error", last_success_at: null, last_error: review.errorPrefix,
+          metadata: JSON.stringify({ failureCategory: review.failureCategory }),
+        }),
+        stablecoin_id: review.stablecoinId, adapter_key: review.adapterKey,
+      };
+      const db = mockD1([
+        { match: "FROM reserve_composition", rows: [] },
+        { match: "FROM reserve_sync_state", rows: [], first: state },
+      ]);
+      const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(await handleStablecoinReserves(db, review.stablecoinId), 200));
+      expect(body.sync?.acknowledgedFeed).toEqual(review);
+      expect(body.sync?.status).toBe("error");
+      expect(body.mode).not.toBe("live");
+      expect(body.provenance?.scoringEligible).not.toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
   it("preserves every configured feed's reserve display and admission inputs in the Worker projection", () => {
     for (const coin of TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig)) {
       const projected = WORKER_TRACKED_META_BY_ID.get(coin.id);
