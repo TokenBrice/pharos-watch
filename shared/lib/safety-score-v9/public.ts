@@ -1060,7 +1060,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
   return internV9PublicCauseGaps({
     id: input.trace.assetId,
     supply: input.supply ?? { circulatingUsdAtEvaluation: null, asOfSec: null, generationId: null },
-    sharedBookId: input.sharedBookId ?? null,
+    ...(input.sharedBookId == null ? {} : { sharedBookId: input.sharedBookId }),
     ...(input.dependencyCoverage === undefined ? {} : { dependencyCoverage: input.dependencyCoverage }),
     ...(input.backingFromLiveReserves === undefined
       ? {}
@@ -1091,7 +1091,7 @@ function projectSafetyScoreV9CardUnchecked(input: V9PublicCardProjectionInput): 
       unknownFields: uniqueSorted(input.access.unknownFields),
       signals: uniqueSorted(input.access.signals),
       reasons: canonicalPublicReasons(input.access.reasons ?? []),
-      freezeLookthrough: input.access.freezeLookthrough ?? null,
+      ...(input.access.freezeLookthrough == null ? {} : { freezeLookthrough: input.access.freezeLookthrough }),
     },
     dependencies: projectDependencies(input),
     scoreTrace: projectScoreTrace(input),

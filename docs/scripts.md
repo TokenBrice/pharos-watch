@@ -44,23 +44,12 @@ New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.
 ## Safety Score Capture-Time Replay
 
 `npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
-exports a registry-bound wrapper with normalized `fixedInput` and a verified
-`registrySnapshot`. `--registry-ref <git-sha>` loads the trusted local commit
-that produced a historical capture; otherwise export requires a matching local
-registry. `--normalized-only` emits plain input for current-curation workflows
-and cannot be combined with `--registry-ref`.
+exports a registry-bound wrapper with normalized `fixedInput` and a verified `registrySnapshot`.
 
 `npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
-uses that commit's verified registry metadata and transfer reviews. Embedded
-snapshots are selected automatically when no ref is supplied. A missing or
-mismatched snapshot never falls back to local classifications. The separate
-`--allow-registry-mismatch` mode still means code-plus-current-curation and
-cannot be combined with `--registry-ref`; on a wrapper it explicitly ignores
-the snapshot for scoring while checking its integrity.
+replays against the capture-time registry.
 
-Use `jq '(.fixedInput // .).clockSec'` to read either export shape. See the
-[equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay)
-for integrity, trusted-Git execution, and production-digest limitations.
+Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay) owns snapshot admission, trusted-Git execution, production-digest limitations, and the `--registry-ref`, `--normalized-only`, and `--allow-registry-mismatch` mode contracts.
 
 ## D1 Insights Capture
 

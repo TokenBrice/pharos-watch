@@ -430,6 +430,10 @@ Methodology **9.96** makes two score-semantic changes. Issuer routes honor revie
 
 ## Canonical Publication
 
+See [Compile hot path and its memory budget](#compile-hot-path-and-its-memory-budget) for compilation resource constraints and regression measurements.
+
+The publisher omits optional `sharedBookId` and `accessPosture.freezeLookthrough` when null; populated identity and diagnostic evidence remain intact, and known empty `dependencyCoverage` remains an explicit array because its presence establishes coverage availability.
+
 Bridge-materiality diagnosis requires accepted publication identity and matching retained base/enrichment ([replay contract](./process/safety-score-equivalence-harness.md#why-the-replay-is-a-fair-test)). Prepare-time `report-cards:fixed-input:exact` omits compute-time attribution/transfer materiality; base-only replay can falsely report unavailable facts. Complete route metadata, a sole representation or parent chain distribution cannot prove liability shares. Same-chain multi-contract rows need admitted deployment attribution except the [reviewed native-cohort applicability](#supply-attribution-and-in-flight-accounting) lane: every candidate must be native issuance without bridge control. That lane preserves one chain aggregate with unknown contract shares; it grants no deployment/control/transfer materiality. Rejected raw-unit observations never become zero supply.
 
 USDT precision replay must consume adapter-emitted unrounded slices under matching configuration and capture provenance. Fresh live totals may not be backdated into a frozen capture. An isolated replay can replace only the retained composition weights from the same June 30 signed-report packet while preserving captured totals and clocks, explicitly labelling the input as a counterfactual. It should remove `usdt-tether:gap:reserve-residual:unidentified` and its inherited `partial-reserve-review` views, not unrelated U facts. Check USDT and all affected descendants for score, completeness and premium changes.
@@ -491,7 +495,7 @@ This operational gate does not change score arithmetic, grade thresholds, or evi
 
 Deleting the superseded D1 cache keys still requires a coordinated cleanup migration, because migrations run before the new Worker is active.
 
-### Compile hot path and its memory budget
+## Compile hot path and its memory budget
 
 The shadow Workflow disables accepted replay retention in the canonical runner: replay base/delta serialization belongs to the authoritative cron publication and is never included in the shadow result. Its write-capturing facade retains only the publication envelope and three health/attempt sidecars, recording auxiliary cache keys without retaining their values. This removes avoidable replay serialization and retained cache values while preserving the same candidate, admission gate and publication-envelope bytes. Focused regression checks establish that allocation removal; first production execution and platform outcomes remain required to establish Workflow memory fit.
 

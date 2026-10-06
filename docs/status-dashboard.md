@@ -185,6 +185,8 @@ Probe groups are sourced from `shared/lib/api-endpoints/`:
 
 Source: `worker/src/api/status.ts`
 
+The [history endpoint](#history-endpoint-get-apistatus-history) owns timeline responses and completeness evidence.
+
 Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
@@ -675,7 +677,7 @@ Those rows are pruned by the daily `0 3 * * *` `prune-status-probe-runs` job (`w
 `consecutive_divergent`, `last_divergent_at`, `consecutive_probe_failures`, and `last_probe_failure_at`.
 The legacy `last_alert_at` / `last_probe_alert_at` columns remain in the baseline schema but are no longer written since the alert transport was removed.
 
-### History endpoint (`GET /api/status-history`)
+## History endpoint (`GET /api/status-history`)
 
 Admin machine-readable timeline endpoint for internal tooling and incident audits.
 
