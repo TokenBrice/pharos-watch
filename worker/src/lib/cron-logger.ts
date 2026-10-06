@@ -1,3 +1,6 @@
+import { describeError } from "@shared/lib/error-utils";
+import type { ErrorDescriptor } from "@shared/types/error";
+import type { CronResultStatus } from "@shared/types/status/cron";
 import { sleep } from "./abort";
 import {
   CRON_ABANDONED_JOB_GRACE_MS,
@@ -55,25 +58,22 @@ export interface CronFailureRecord {
   failureCount: number;
 }
 
-function classifyError(error: unknown): { name: string; message: string; stack?: string } {
-  if (error instanceof Error) {
-    return {
-      name: error.name || "Error",
-      message: stripSensitive(error.message || String(error)),
-      stack: error.stack ? stripSensitive(error.stack) : undefined,
-    };
-  }
-  return { name: "NonError", message: stripSensitive(String(error)) };
+function classifyError(error: unknown): ErrorDescriptor {
+  return describeError(error, stripSensitive);
 }
 
-function serializeTerminalCronMetadata(error: unknown): string | null {
-  if (error instanceof CronJobAbandonedError) {
-    return JSON.stringify(sanitizeBoundedMetadata(error.metadata, CRON_EVENT_METADATA_OPTIONS));
-  }
-  if (error instanceof CronTimeoutError && error.metadata) {
-    return JSON.stringify(sanitizeBoundedMetadata(error.metadata, CRON_EVENT_METADATA_OPTIONS));
-  }
-  return null;
+function serializeTerminalCronMetadata(error: unknown, descriptor: ErrorDescriptor): string {
+  const sanitized = error instanceof CronJobAbandonedError || error instanceof CronTimeoutError
+    ? sanitizeBoundedMetadata(error.metadata ?? {}, CRON_EVENT_METADATA_OPTIONS) : {};
+  const existing = sanitized && typeof sanitized === "object" && !Array.isArray(sanitized)
+    ? sanitized as Record<string, unknown> : {};
+  const metadata = {
+    ...existing,
+    reason: typeof existing.reason === "string" && existing.reason.trim()
+      ? existing.reason : descriptor.code || (descriptor.name === "NonError" ? "non-error-throw" : descriptor.name),
+    errorDescriptor: descriptor,
+  };
+  return JSON.stringify(metadata);
 }
 
 type CronJobOutcome =
@@ -212,7 +212,7 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
 export interface CronResult {
   itemCount?: number;
   metadata?: string;
-  status?: "ok" | "degraded" | "error" | "skipped_locked" | "skipped_neutral";
+  status?: CronResultStatus;
   /** Human-readable failure summary persisted to cron_runs.error when present; preferred over metadata in the alert body for "error" statuses. */
   error?: string;
   /**
@@ -224,6 +224,35 @@ export interface CronResult {
   aborted?: true;
   /** Explicit productive-output/publication contract for durable producer history. */
   productivity?: CronProductivity;
+}
+
+export class CronTerminalAccountingError extends Error {
+  readonly code = "cron-terminal-accounting-failed";
+  readonly reason = this.code;
+  readonly cause: unknown;
+  readonly completedResult?: CronResult;
+  readonly stage: "cron-run" | "producer-history";
+  readonly outputPublishedAt: number | null;
+  readonly productive: boolean;
+  readonly originalError?: ErrorDescriptor;
+
+  constructor(input: {
+    cause: unknown;
+    completedResult?: CronResult | void;
+    stage: "cron-run" | "producer-history";
+    outputPublishedAt: number | null;
+    productive: boolean;
+    originalError?: ErrorDescriptor;
+  }) {
+    super(`Cron terminal accounting failed at ${input.stage}: ${describeError(input.cause, stripSensitive).message}`.slice(0, 500));
+    this.name = "CronTerminalAccountingError";
+    this.cause = input.cause;
+    this.completedResult = input.completedResult || undefined;
+    this.stage = input.stage;
+    this.outputPublishedAt = input.outputPublishedAt;
+    this.productive = input.productive;
+    this.originalError = input.originalError;
+  }
 }
 
 export interface CronProgressUpdate {
@@ -421,6 +450,9 @@ export async function logCronRun(
   const timeoutError = new CronTimeoutError(job, timeoutMs, getCronTimeoutBudgetMetadata(timeoutBudget));
   let resolvedResult: CronResult | void = undefined;
   let persistingCompletedTelemetry = false;
+  let stage: "cron-run" | "producer-history" = "cron-run";
+  let outputPublishedAt: number | null = null;
+  let productivity: CronProductivity = { productive: false, reason: "no-confirmed-output" };
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   let progressActivated = false;
   let progressState: CronProgressState = {
@@ -522,8 +554,8 @@ export async function logCronRun(
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
     const parsedMetadata = parseJsonObject(resolvedResult?.metadata);
-    const outputPublishedAt = confirmedCronOutputAt(resolvedResult, parsedMetadata, completedAt);
-    const productivity = inferCronProductivity(resolvedResult, parsedMetadata, outputPublishedAt);
+    outputPublishedAt = confirmedCronOutputAt(resolvedResult, parsedMetadata, completedAt);
+    productivity = inferCronProductivity(resolvedResult, parsedMetadata, outputPublishedAt);
     const publicationCount = productivity.publications?.length ?? 0;
     const publicationMetadata = {
       ...(parsedMetadata ?? (resolvedResult?.metadata ? { legacyMetadata: resolvedResult.metadata } : {})),
@@ -532,7 +564,7 @@ export async function logCronRun(
     const persistedMetadata = compactCronMetadataForPersistence(
       JSON.stringify(publicationMetadata), publicationMetadata,
     ).metadata;
-    const resolvedError = resolvedResult?.error == null ? null : stripSensitive(resolvedResult.error);
+    const resolvedError = resolvedResult?.error == null ? null : describeError(resolvedResult.error, stripSensitive).message;
     const degradedReason = resolveCronDegradedReason(job, resultStatus, resolvedResult, parsedMetadata);
     const producer = options?.producer;
     persistingCompletedTelemetry = true;
@@ -566,6 +598,7 @@ export async function logCronRun(
           degradedReason,
         ).run(),
       );
+      stage = "producer-history";
       await recordProducerOutcome(db, {
         ...producer,
         job,
@@ -606,13 +639,14 @@ export async function logCronRun(
     persistingCompletedTelemetry = false;
   } catch (e) {
     if (persistingCompletedTelemetry) {
-      const { name, message } = classifyError(e);
-      console.error(`[db] Failed to persist completed cron result for ${job}: ${name}: ${message}`);
-      return resolvedResult;
+      throw new CronTerminalAccountingError({
+        cause: e, stage, completedResult: resolvedResult, outputPublishedAt, productive: productivity.productive,
+      });
     }
-    const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
     const classifiedError = classifyError(e);
-    const terminalReason = classifiedError.name.slice(0, MAX_CRON_DEGRADED_REASON_CHARS);
+    const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e, classifiedError)).metadata;
+    const terminalReason = resolveCronDegradedReason(job, "error", undefined, parseJsonObject(terminalMetadata));
+    stage = "cron-run";
     try {
       const completedAt = Math.floor(Date.now() / 1000);
       const producer = options?.producer;
@@ -648,6 +682,7 @@ export async function logCronRun(
             terminalReason,
           ).run(),
         );
+        stage = "producer-history";
         await recordProducerOutcome(db, {
           ...producer,
           job,
@@ -685,7 +720,9 @@ export async function logCronRun(
         );
       }
     } catch (logErr) {
-      console.error(`[db] Failed to log cron error for ${job}:`, logErr);
+      throw new CronTerminalAccountingError({
+        cause: logErr, stage, outputPublishedAt: null, productive: false, originalError: classifiedError,
+      });
     }
     throw e;
   } finally {

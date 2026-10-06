@@ -11,12 +11,14 @@ export const CRON_RUN_STATUS_VALUES = [
 ] as const;
 export const CronRunStatusSchema = z.enum(CRON_RUN_STATUS_VALUES);
 export type CronRunStatus = z.infer<typeof CronRunStatusSchema>;
+export type CronResultStatus = Exclude<CronRunStatus, "skipped_duplicate" | "skipped_running">;
 
 export const CronRunSchema = z.object({
   startedAt: z.number(),
   durationMs: z.number(),
   status: CronRunStatusSchema,
   error: z.string().optional(),
+  degradedReason: z.string().optional(),
   itemCount: z.number().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

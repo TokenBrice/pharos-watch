@@ -61,14 +61,14 @@ describe("confirmed output versus attempted work", () => {
     }));
     const health = await loadCronHealth(db, NOW);
     expect(health.crons["cron-sentinel"].healthy).toBe(true);
-    expect(health.degradedCronRuns).toBe(1);
+    expect(health.degradedCronRuns).toBe(0);
     vi.setSystemTime((NOW + 1) * 1000);
     await logCronRun(db, "cron-sentinel", async () => ({
       status: "skipped_neutral", metadata: JSON.stringify({ reason: "not-due" }),
     }));
     const inherited = await loadCronHealth(db, NOW + 1);
     expect(inherited.crons["cron-sentinel"].healthy).toBe(true);
-    expect(inherited.degradedCronRuns).toBe(1);
+    expect(inherited.degradedCronRuns).toBe(0);
   });
 
   it("does not let compaction lose a no-publication marker or reset an actual generation clock", () => {

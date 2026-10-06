@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
+import { CronRunSchema } from "../status/cron";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("accepts additive cron reasons without requiring them on legacy runs", () => {
+    const run = { startedAt: 1, durationMs: 2, status: "degraded" };
+    expect(CronRunSchema.parse(run)).not.toHaveProperty("degradedReason");
+    expect(CronRunSchema.parse({ ...run, degradedReason: "publication-held" }).degradedReason).toBe("publication-held");
+  });
   it("requires null measurements and a reason for unavailable reserve evidence", () => {
     const unavailable = makeReserveComposition({ status: "unavailable" });
     expect(StatusResponseSchema.parse({

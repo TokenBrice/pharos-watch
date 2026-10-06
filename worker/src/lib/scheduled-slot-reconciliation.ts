@@ -7,7 +7,10 @@ import {
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome, type ProducerOutcome } from "./producer-history";
-import { cronEventCacheKey, logCronEvent } from "./cron-logger";
+import { cronEventCacheKey, logCronEvent, resolveCronDegradedReason } from "./cron-logger";
+import type { CronResultStatus } from "@shared/types/status/cron";
+import { parseJsonObject } from "./json-parse";
+import { stripSensitive } from "./safe-error-message";
 import {
   getWorkerVersionActivatedAt,
   getWorkerVersionFirstSeenAt,
@@ -290,7 +293,7 @@ type SyntheticCronRunSpec = {
   idempotencyKey: string;
   startedAt: number;
   durationMs: number;
-  status: string;
+  status: CronResultStatus;
   error: string | null;
   itemCount: number | null;
   metadata: string;
@@ -316,6 +319,10 @@ async function insertSyntheticCronRun(
 ): Promise<boolean> {
   const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, spec.job);
   const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
+  const metadata = parseJsonObject(spec.metadata);
+  const degradedReason = resolveCronDegradedReason(spec.job, spec.status, { error: spec.error ?? undefined }, metadata);
+  const error = spec.status === "degraded" || spec.status === "error"
+    ? `${spec.error ? `${stripSensitive(spec.error)} ` : ""}[${degradedReason}]`.slice(0, 500) : null;
   if (
     !(await canPersistSyntheticProducerOutcome(db, {
       scheduleKey: slot.slot_key,
@@ -334,8 +341,8 @@ async function insertSyntheticCronRun(
         `INSERT INTO cron_runs
            (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
             schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-            productive, publication_count, calendar_period)
-         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
+            productive, publication_count, calendar_period, degraded_reason)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL, ?
           WHERE NOT EXISTS (
             SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
           )
@@ -359,7 +366,7 @@ async function insertSyntheticCronRun(
         spec.startedAt,
         spec.durationMs,
         spec.status,
-        spec.error,
+        error,
         spec.itemCount,
         spec.metadata,
         slot.slot_started_at,
@@ -368,6 +375,7 @@ async function insertSyntheticCronRun(
         descriptor.producerPath,
         invocationId,
         slot.worker_version ?? null,
+        degradedReason,
         spec.job,
         slot.slot_started_at,
         spec.job,
@@ -399,7 +407,7 @@ async function insertSyntheticCronRun(
     outcome: spec.outcome,
     itemCount: spec.itemCount,
     metadata: spec.metadata,
-    error: spec.error,
+    error,
     productivity: { productive: false, reason: spec.productivityReason },
   });
   return inserted;

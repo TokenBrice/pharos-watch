@@ -26,11 +26,16 @@ The synthetic child row retains `progressSnapshot`; the abandonment event expose
 
 ## First checks
 
+Synthetic abandonment and deploy-interruption rows persist `degraded_reason` alongside `metadata.reason`.
+Error text preserves the operational abandonment prefix and appends `[reason]`; neutral deploy
+interruptions keep null error text. Inspect both the column and metadata, including reconciled rows
+whose `started_at` still names an older slot.
+
 1. **Is it an evidenced deploy interruption or an in-place kill?** Compare `metadata.slotWorkerVersion` with `metadata.reconciledByWorkerVersion`, then compare the latest of the child's last progress write (`metadata.progressUpdatedAt`) and the slot's own last heartbeat with `metadata.reconciledByWorkerVersionActivatedAt`: it must fall no earlier than 15 seconds before and no later than 120 seconds after activation. Child progress may lead the slot timestamp by one fence-heartbeat interval, but a slot heartbeat more than 15 seconds newer than the child disproves co-death. Different versions are necessary but not sufficient: missing activation evidence, out-of-window latest life evidence, or excessive directional heartbeat separation remains an abandoned error. A non-null `slotWorkerVersion` may come from the dying invocation's own progress metadata when the slot row had none, so it does not prove the slot row recorded a version. **Equal versions or missing activation evidence** means the event needs the checks below (CPU class, memory, or a D1 stall).
 
    ```bash
    npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-     "SELECT job, slot_started_at, duration_ms, substr(metadata, 1, 400) AS metadata
+     "SELECT job, slot_started_at, duration_ms, degraded_reason, substr(metadata, 1, 400) AS metadata
         FROM cron_runs
        WHERE error LIKE 'scheduled slot%'
          AND started_at >= unixepoch() - 86400

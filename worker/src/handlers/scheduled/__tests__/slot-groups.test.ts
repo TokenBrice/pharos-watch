@@ -146,7 +146,7 @@ describe("scheduled slot groups", () => {
     });
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["snapshot-supply", "ok", undefined],
-      ["snapshot-safety-grade-history", "error", undefined],
+      ["snapshot-safety-grade-history", "error", "Error"],
       ["snapshot-psi", "skipped", "upstream-failure:snapshot-safety-grade-history"],
     ]);
   });
@@ -267,11 +267,13 @@ describe("logSkippedCronRun", () => {
     expect(metadata).toMatchObject({
       circuitSource: "dex-liquidity",
       skippedReason: "circuit-open",
+      reason: "circuit-open",
       message: "DEX circuit open",
       slotStartedAt: 1_772_000_000,
       scheduleKey: "halfHourlyChartsOffset",
     });
     expect(metadata).not.toHaveProperty("skipped");
+    expect(binds[0][12]).toBe("circuit-open");
   });
 
   it("allows explicitly benign skip rows", async () => {
@@ -285,5 +287,16 @@ describe("logSkippedCronRun", () => {
 
     expect(binds[0]).toContain("ok");
     expect(binds[0]).not.toContain("degraded");
+    expect(binds[0][12]).toBeNull();
+  });
+
+  it("preserves a canonical reason on neutral direct skips", async () => {
+    const { runtime, binds } = recordingRuntime();
+    await logSkippedCronRun(runtime, {
+      job: "sync-dex-liquidity", reason: "producer-priority", status: "skipped_neutral",
+      metadata: { reason: "legacy-override" },
+    });
+    expect(binds[0][12]).toBe("producer-priority");
+    expect(skipMetadata(binds[0])).toMatchObject({ reason: "producer-priority", skippedReason: "producer-priority" });
   });
 });

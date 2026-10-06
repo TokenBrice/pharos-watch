@@ -260,6 +260,12 @@ fallbacks and lost CAS writes cannot advance that clock. A deliberately publishe
 Direct `CronResult` producers retain the logger's runtime defense: unresolved degraded/error reasons become
 `unspecified-<status>` and warn in the Worker log. `cron_runs.degraded_reason` remains the terminal reason;
 successful-run quality reasons remain visible in status diagnostics and operator night-watch findings.
+Every retained cron run projects a nonblank `cron_runs.degraded_reason` as optional `degradedReason`.
+The admin detail summary prefers that column over legacy metadata and appends a generic reason for
+unknown jobs or column-only rows; canonical quality findings append without replacing specialized
+summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
+behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
+warnings. Errors and freshness remain independently evaluated.
 
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
 `worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
