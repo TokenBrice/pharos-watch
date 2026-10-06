@@ -401,6 +401,23 @@ describe("exact-address coverage refresh", () => {
     expect(summary.addressRefresh).toMatchObject({ targetCount: 1, resolved: 1, cappedTargets: 0, successfulRequests: 1 });
   });
 
+  it("refreshes a published address quote despite its gap review while excluding acknowledged missing rows", async () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "usda-avalon")!;
+    const slot = review.reviewedAt + 60;
+    prepareAddressRefresh({ ...usda(), priceObservedAt: slot - 600 },
+      makePeggedAsset({ id: "wusd-worldwide", symbol: "WUSD", price: null }));
+    const cg = mockFetch(onchainRoutes());
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: slot, addressProvider });
+
+    expect(summary.addressRefresh).toMatchObject({ cohortSize: 1, resolved: 1 });
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    expect(state.observations.filter((row: { source: string }) => row.source === "coingecko-onchain-address"))
+      .toEqual([expect.objectContaining({ id: "usda-avalon", chain: "berachain", price: 0.9822 })]);
+    expect(cg.getHistory().filter((entry) => onchainRequest(entry.url)).every((entry) =>
+      !entry.url.includes("0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"))).toBe(true);
+  });
+
   it.each(["404", "missing", "thin"])("evicts a definitively unresolved %s address hint and broadens the next slot", async (kind) => {
     prepareAddressRefresh(usda());
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0,
