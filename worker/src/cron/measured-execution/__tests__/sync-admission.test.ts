@@ -647,6 +647,29 @@ describe("measured execution overflow admission", () => {
     ).toBe(true);
   });
 
+  it("keeps newly empty score-eligible V4 pools blocking even with untracked counter assets", () => {
+    const emptyPool = target("usdc-circle", 112_500, "empty-v4", {
+      adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+      protocol: "uniswap-v4",
+      tokenOut: {
+        address: "0x9ce84f6a69986a83d92c324df10bc8e64771030f",
+        symbol: "CHEX", decimals: 18, referencePriceUsd: 0.01753347,
+      },
+    });
+    const summary = summarizeMeasuredExecutionQuoteFailures([{
+      target: emptyPool, status: "failed", failureReason: "pool-uninitialized-or-empty",
+    }]);
+    expect(summary).toMatchObject({
+      scoreEligibleAttemptedFailureCount: 1,
+      scoreEligibleDiagnosticFailureCount: 0,
+      scoreEligibleBlockingFailureCount: 1,
+    });
+    expect(resolveMeasuredExecutionCronStatus({
+      attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
+      deferredCount: 0, admissionRotationCycles: 1, cursorWriteStatus: "not-needed",
+    })).toBe("degraded");
+  });
+
   it("keeps untracked pool-implied price mismatches diagnostic for cron status", () => {
     const poolImpliedDrift = target("coin-a", 100_000, "untracked-output", {
       tokenOut: {

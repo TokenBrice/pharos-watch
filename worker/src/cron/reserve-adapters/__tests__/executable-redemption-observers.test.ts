@@ -5,6 +5,7 @@ import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
 } from "../../../lib/evm-rpc";
+import { buildChainRpcs } from "../../../lib/chain-registry";
 import {
   getStableObservationBlockNumber,
   observeExecutableRedemptionRoute,
@@ -486,6 +487,27 @@ const observeLido = (overrides: Record<string, Hex | null> = {}) => observeExecu
 );
 
 describe("Lido earnUSD queue observation", () => {
+  it("passes the cron RPC transport and request guard through every direct queue read", async () => {
+    const client = lidoClient();
+    const chainRpcs = buildChainRpcs();
+    const beforeRequest = vi.fn(() => true);
+    const extraRpcUrls = ["https://rpc.example.test"];
+    const spies = [
+      vi.spyOn(client, "blockNumber"), vi.spyOn(client, "blockTimestamp"),
+      vi.spyOn(client, "codeHash"), vi.spyOn(client, "storage"), vi.spyOn(client, "multicall"),
+    ];
+    await observeExecutableRedemptionRoute(
+      "earnusd-lido", lidoPin.identities.shares.address, new AbortController().signal, undefined,
+      { client, nowSec: lidoPin.blockTimestamp, rpcOptions: { chainRpcs, beforeRequest, extraRpcUrls } },
+    );
+    for (const spy of spies) {
+      expect(spy).toHaveBeenCalled();
+      for (const args of spy.mock.calls) {
+        expect(args[args.length - 1]).toMatchObject({ chainRpcs, beforeRequest, extraRpcUrls, maxRetries: 0, timeoutMs: 3_000 });
+      }
+    }
+  });
+
   it("observes the actual Mellow rail without crediting liquidity, rolling limits or unpaid requests as capacity", async () => {
     const observation = await observeLido();
     expect(observation).toMatchObject({

@@ -16,6 +16,7 @@ import {
 } from "./redemption-backstop-sources.test-support";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { buildChainRpcs } from "../chain-registry";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -183,7 +184,9 @@ describe("buildRedemptionBackstopEntry", () => {
         diagnostics: { syncLiquidAssetsRaw: "129641670774", capacityQuantified: false },
       } satisfies ExecutableRedemptionObservation);
       const config = getRedemptionBackstopConfig("earnusd-lido")!;
-      const entry = await buildEntry("earnusd-lido", config, supplyUsd, null);
+      const rpcOptions = { chainRpcs: buildChainRpcs(), beforeRequest: vi.fn(() => true) };
+      const signal = new AbortController().signal;
+      const entry = await buildEntry("earnusd-lido", config, supplyUsd, null, { rpcOptions, signal });
       expect(entry).toMatchObject({
         feeBps: 27, feeConfidence: "formula", routeStatus: "open", routeStatusSource: "onchain",
         capacitySemantics: "eventual-only", resolutionState: "missing-capacity",
@@ -209,7 +212,8 @@ describe("buildRedemptionBackstopEntry", () => {
       expect(entry.notes?.some((note) => note.includes("queue diagnostics:"))).toBe(true);
       expect(getLatestSuccessfulReserveSnapshotMetadataMock).not.toHaveBeenCalled();
       expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledWith(
-        "earnusd-lido", "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", expect.any(AbortSignal),
+        "earnusd-lido", "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", signal,
+        undefined, { rpcOptions },
       );
     },
   );

@@ -269,6 +269,7 @@ interface ObserverOptions {
   client?: ExecutableRedemptionReadClient;
   nowSec?: number;
   extraRpcUrls?: string[];
+  rpcOptions?: EvmRpcOptions;
 }
 
 export function getStableObservationBlockNumber(
@@ -1021,8 +1022,9 @@ export async function observeExecutableRedemptionRoute(
   // compare the block against the wall clock unless a test explicitly pins it.
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1_000);
   const rpcOptions: EvmRpcOptions = {
-    chainRpcs: ctx?.chainRpcs,
-    extraRpcUrls: options.extraRpcUrls,
+    ...options.rpcOptions,
+    chainRpcs: ctx?.chainRpcs ?? options.rpcOptions?.chainRpcs,
+    extraRpcUrls: options.extraRpcUrls ?? options.rpcOptions?.extraRpcUrls,
     signal,
     timeoutMs: 3_000,
     deadlineMs: Date.now() + RPC_DEADLINE_MS,
