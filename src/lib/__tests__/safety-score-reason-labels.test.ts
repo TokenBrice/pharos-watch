@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   describeEvaluatorKey,
@@ -8,6 +9,42 @@ import {
 } from "@/lib/safety-score-reason-labels";
 
 describe("safety score reason labels", () => {
+  it("drops integer and decimal version pins while preserving malformed tokens", () => {
+    for (const version of ["v9", "v10.09", "v12.345"]) {
+      expect(humanizeSafetyScoreReason(`${version}\tExit routes remain unresolved.`))
+        .toBe("Exit routes remain unresolved.");
+    }
+    for (const token of ["v10X", "v10.09X", "v10.", "av10.09", "v10.09"]) {
+      expect(humanizeSafetyScoreReason(`${token}X`)).toBe(`${token}X`);
+    }
+    expect(humanizeSafetyScoreReason("v10.09")).toBe("v10.09");
+  });
+
+  it("rounds embedded and adjacent long decimals without losing their prefixes", () => {
+    expect(humanizeSafetyScoreReason("1.23456, -2.34567, a3.45678; 4.56789.5.67891"))
+      .toBe("1.235, -2.346, a3.457; 4.568.5.679");
+    expect(humanizeSafetyScoreReason("1.234 stays; 12.345X stays; .12345 stays"))
+      .toBe("1.234 stays; 12.345X stays; .12345 stays");
+  });
+
+  it("handles long malformed digit runs through the public humanizer in a bounded child", () => {
+    // A process timeout contains a regression in either synchronous regex;
+    // this is a generous safety bound, not a machine-speed microbenchmark.
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", `
+      import assert from "node:assert/strict";
+      import { humanizeSafetyScoreReason, groupSafetyScoreReasons } from "./src/lib/safety-score-reason-labels.ts";
+      const digits = "1".repeat(200_000);
+      for (const token of ["v" + digits + "X", "v" + digits + ".12X", "a" + digits + "X"]) {
+        const message = "The reserve factor for " + token + " is unresolved.";
+        assert.equal(humanizeSafetyScoreReason(message), message);
+        assert.deepEqual(groupSafetyScoreReasons([message, message]).map(({ text, count }) => ({ text, count })),
+          [{ text: message, count: 1 }]);
+      }
+    `], { cwd: process.cwd(), timeout: 15_000, encoding: "utf8" });
+    expect(result.error, result.stderr).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+  }, 20_000);
+
   it("resolves evaluator keys to display names", () => {
     expect(describeEvaluatorKey("chain:solana")).toBe("Solana");
     expect(describeEvaluatorKey("bridge-route:protocol:chainlink-ccip")).toBe("Chainlink CCIP");

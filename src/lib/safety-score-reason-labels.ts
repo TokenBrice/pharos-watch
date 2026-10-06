@@ -68,7 +68,9 @@ const ROUTE_TYPE_LABELS: Record<string, string> = {
 const EVALUATOR_KEY_PATTERN =
   /\b(?:chain|bridge-meta|bridge-route|mint-meta|mint-control|upgrade-control|mechanism|oracle|redemption-rail|redemption|dex-protocol|dex|common-mode|venue|reserve):[A-Za-z0-9%_~+:-]+/g;
 const CAMEL_CASE_PATTERN = /\b[a-z]+[A-Z][A-Za-z0-9]*\b/g;
-const VERSION_PIN_PATTERN = /\bv\d+(?:\.\d)?\d*\s+/g;
+// The decimal and integer alternatives have distinct terminators, so a failed
+// pin cannot repartition one long digit run between overlapping quantifiers.
+const VERSION_PIN_PATTERN = /\bv(?:\d+\.\d+|\d+)\s+/g;
 
 function describeKeyToken(token: string): string {
   const key = token.replace(/:+$/, "");
@@ -156,7 +158,11 @@ export function describeEvaluatorKey(key: string): string {
 }
 
 function roundLongDecimals(text: string): string {
-  return text.replace(/\d+\.\d{4,}/g, (value) => Number(value).toFixed(3));
+  // Start only at the first digit of a run; otherwise a missing decimal point
+  // retries every digit suffix. Preserve the prefix without lookbehind so the
+  // expression also works on the supported Safari 15.4 browser floor.
+  return text.replace(/(^|[^\d])(\d+\.\d{4,})/g, (_match, prefix: string, value: string) =>
+    `${prefix}${Number(value).toFixed(3)}`);
 }
 
 /** Inline fallback: resolve keys, split camelCase datums, drop version pins. */
