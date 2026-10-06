@@ -14,7 +14,7 @@ const RAW_IDENTIFIER_PATTERNS: ReadonlyArray<{ id: string; pattern: RegExp }> = 
   { id: "raw-seconds", pattern: /\b\d[\d,]*[-\s]seconds?\b/i },
   { id: "gate-code", pattern: /\bD\d{2}(?:-[A-Z])?\b/ },
   { id: "evaluator-key", pattern: /\b(?:chain|bridge-route|bridge-meta|mechanism|reserve|parent):[a-z0-9]/ },
-  { id: "version-pin", pattern: /\bv\d+\.\d+\s+(?:campaign\s+)?pin\b/i },
+  { id: "version-pin", pattern: /\bv\d+\.\d+\s+(?:campaign\s)?\s*pin\b/i },
 ];
 
 export type SummaryBudgetViolation =

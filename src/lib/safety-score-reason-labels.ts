@@ -60,11 +60,20 @@ const ROUTE_TYPE_LABELS: Record<string, string> = {
   "physical-to-usd": "physical redemption",
 };
 
-/** Embedded evaluator keys. `.` is excluded so a sentence period never joins the key. */
+/**
+ * Embedded evaluator keys. `.` is excluded so a sentence period never joins the
+ * key; segments are one flat character class (no nested quantifiers), and a
+ * trailing `:` is handed back to the sentence by `describeKeyToken`.
+ */
 const EVALUATOR_KEY_PATTERN =
-  /\b(?:chain|bridge-meta|bridge-route|mint-meta|mint-control|upgrade-control|mechanism|oracle|redemption-rail|redemption|dex-protocol|dex|common-mode|venue|reserve)(?::[A-Za-z0-9%_~+-]+)+/g;
-const CAMEL_CASE_PATTERN = /\b[a-z]+(?:[A-Z][a-z0-9]*)+\b/g;
-const VERSION_PIN_PATTERN = /\bv\d+(?:\.\d+)?\s+/g;
+  /\b(?:chain|bridge-meta|bridge-route|mint-meta|mint-control|upgrade-control|mechanism|oracle|redemption-rail|redemption|dex-protocol|dex|common-mode|venue|reserve):[A-Za-z0-9%_~+:-]+/g;
+const CAMEL_CASE_PATTERN = /\b[a-z]+[A-Z][A-Za-z0-9]*\b/g;
+const VERSION_PIN_PATTERN = /\bv\d+(?:\.\d)?\d*\s+/g;
+
+function describeKeyToken(token: string): string {
+  const key = token.replace(/:+$/, "");
+  return `${describeEvaluatorKey(key)}${token.slice(key.length)}`;
+}
 
 function capitalize(value: string): string {
   return value.length === 0 ? value : `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
@@ -153,7 +162,7 @@ function roundLongDecimals(text: string): string {
 /** Inline fallback: resolve keys, split camelCase datums, drop version pins. */
 function humanizeInline(message: string): string {
   return roundLongDecimals(message)
-    .replace(EVALUATOR_KEY_PATTERN, (key) => describeEvaluatorKey(key))
+    .replace(EVALUATOR_KEY_PATTERN, describeKeyToken)
     .replace(CAMEL_CASE_PATTERN, (token) => describeEvidenceDatum(token))
     .replace(VERSION_PIN_PATTERN, "")
     .trim();
@@ -197,7 +206,7 @@ function humanizeReasonParts(rawMessage: string): HumanizedReason {
   }
 
   const ownShare =
-    /^This asset's own reviewed share is ([\d.]+%) at (\S+?), (.+?) \(also (\d+) reviewed paths across (\d+) (assets|independent root liabilities) share \S+?(?:;[^)]*)?\)\.?$/
+    /^This asset's own reviewed share is ([\d.]+%) at (\S+?), (.+?) \(also (\d+) reviewed paths across (\d+) (assets|independent root liabilities) share [^)]+\)\.?$/
       .exec(message);
   if (ownShare) {
     const [, share, key, qualifier, paths, holders, holderNoun] = ownShare;
