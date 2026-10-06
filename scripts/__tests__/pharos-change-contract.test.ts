@@ -153,6 +153,13 @@ describe("classifyChangedFiles", () => {
       docs: ["docs/deployment-process.md#ci-deploy-sequence"],
     },
     {
+      name: "PR partition timing inputs to CI policy ownership",
+      files: ["scripts/data/pr-test-timings.json", "scripts/lib/shard-timing-reporter.mts", "scripts/maintenance/refresh-pr-test-timings.ts"],
+      mappings: ["validation-ci-policy"],
+      docs: ["docs/testing.md#ci-pipeline", "docs/scripts.md#pr-and-release-gates"],
+      checks: ["npx vitest run scripts/__tests__"],
+    },
+    {
       name: "Telegram delivery changes to the unified Telegram contract",
       files: ["worker/src/lib/telegram/mini-app-auth.ts", "shared/lib/telegram-delivery-policy.ts"],
       mappings: ["telegram"],
@@ -339,6 +346,7 @@ describe("representative --file routing", () => {
   it.each([
     "scripts/maintenance/run-focused-checks.ts",
     "scripts/maintenance/build-annotation-candidates.ts",
+    "scripts/maintenance/compare-detail-snapshot-sources.ts",
     "scripts/__tests__/pharos-change-contract.test.ts",
   ])("keeps ordinary script reads bounded for %s", (file) => {
     const contract = route(file);
@@ -351,8 +359,26 @@ describe("representative --file routing", () => {
     expect(contract.scopedContext).toContain("scripts/AGENTS.md");
   });
 
+  it("routes bulk detail transport and its shared contracts through the existing owners", () => {
+    const worker = route("worker/src/api/stablecoin-detail/snapshot-inputs.ts");
+    expect(worker.mappings.map((mapping) => mapping.id)).toContain("worker-api-auth");
+    expect(docKeys(worker)).toContain("docs/api-reference.md#public-endpoints");
+    for (const file of [
+      "shared/lib/stablecoin-live-summary.ts",
+      "shared/lib/detail-snapshot-inputs.ts",
+      "shared/types/stablecoin-live-summary.ts",
+      "shared/types/detail-snapshot-inputs.ts",
+    ]) {
+      const contract = route(file);
+      expect(contract.mappings.map((mapping) => mapping.id)).toContain("shared-runtime");
+      expect(contract.deploy.workerImpact).toBe(true);
+      expect(contract.deploy.pagesImpact).toBe(true);
+    }
+  });
+
   it.each([
     ".github/workflows/pages-release.yml",
+    ".github/workflows/pages-prepare.yml",
     "scripts/ci/classify-deploy-changes.ts",
     "scripts/lib/automation-registry.mjs",
     "scripts/lib/deploy-impact.mts",

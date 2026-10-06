@@ -207,6 +207,88 @@ describe("adaptive PR checks", () => {
     expect(standalone).toContain("check:doc-sync");
   });
 
+  it.each([
+    [],
+    ["docs/testing.md"],
+    ["docs/editorial-style.md"],
+    ["package.json", "package-lock.json"],
+    ["src/app/page.tsx", "shared/lib/classification.ts"],
+    ["worker/src/lib/safety-score-v9/extension.ts"],
+    ["worker/src/cron/__tests__/x.test.ts"],
+    ["worker/src/cron/x.ts", "worker/src/cron/__tests__/x.test.ts"],
+    ["scripts/ci/check-provider-resilience.ts"],
+  ].map((changedFiles) => ({ changedFiles })))("partitions the unchanged static plan for $changedFiles into disjoint compile and guards groups", ({ changedFiles }) => {
+    for (const skipDocSync of [false, true]) {
+      const full = buildPrStaticCheckPlan(changedFiles, { skipDocSync });
+      const compile = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group: "compile" });
+      const guards = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group: "guards" });
+      expect([...compile.commands, ...guards.commands].sort((left, right) => left.name.localeCompare(right.name)))
+        .toEqual([...full.commands].sort((left, right) => left.name.localeCompare(right.name)));
+      expect(compile.classification).toEqual(full.classification);
+      expect(guards.classification).toEqual(full.classification);
+      expect(guards.commands.some((guard) => compile.commands.some((command) => command.name === guard.name)))
+        .toBe(false);
+    }
+  });
+
+  it("keeps both compilers concurrent while moving every non-compile check to guards", () => {
+    const changedFiles = ["worker/src/lib/safety-score-v9/extension.ts", "docs/editorial-style.md"];
+    const compile = buildPrStaticCheckPlan(changedFiles, { group: "compile" });
+    expect(compile.commands.map((command) => command.name)).toEqual([
+      "lint:changed", "typecheck", "typecheck:worker",
+    ]);
+    const partition = partitionPrStaticCheckPlan(compile.commands);
+    expect(partition.parallel.map((command) => command.name)).toEqual(["typecheck", "typecheck:worker"]);
+    expect(partition.sequential.map((command) => command.name)).toEqual(["lint:changed"]);
+
+    const guards = buildPrStaticCheckPlan(changedFiles, { group: "guards" });
+    expect(guards.commands.map((command) => command.name)).toEqual(expect.arrayContaining([
+      "check:table-primitives", "check:env-contract", "check:shared-types-imports",
+      "check:critical-coverage-completeness", "check:structural", "check:generated-artifacts",
+      "check:cron-connections", "check:cron-sync", "check:migrations", "check:sql-safety",
+      "check:worker-config", "check:worker-package",
+    ]));
+    expect(partitionPrStaticCheckPlan(guards.commands).parallel.map((command) => command.name)).toEqual([
+      "check:structural", "check:generated-artifacts",
+    ]);
+  });
+
+  it.each(["compile", "guards"] as const)("executes only the %s group with unchanged range arguments", async (group) => {
+    const stdout = { write: vi.fn<(chunk: string) => unknown>() };
+    const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const runCommandImpl = vi.fn(async (_command: { scriptName: string }) => ({ status: 0, aborted: false, output: "" }));
+    await expect(runPrStaticChecks({
+      argv: ["--json", `--group=${group}`, "--skip-doc-sync", "--base=HEAD", "--head=HEAD"],
+      env: process.env,
+      runCommandImpl,
+      stderr,
+      stdout,
+    })).resolves.toBe(0);
+    const expected = buildPrStaticCheckPlan([], { group, skipDocSync: true }).commands;
+    expect(runCommandImpl.mock.calls.map(([command]) => command.scriptName).sort())
+      .toEqual(expected.map((command) => command.name).sort());
+    const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join(""));
+    expect(report.lanes.map((lane: { id: string }) => lane.id)).toEqual(expected.map((command) => command.name));
+    if (group === "compile") {
+      expect(runCommandImpl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scriptName: "lint:changed", args: ["run", "lint:changed", "--", "--base=HEAD", "--head=HEAD"],
+        }),
+        process.env,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    }
+  });
+
+  it.each(["", "all", "typo"])("rejects unsupported static group %j before running checks", async (group) => {
+    const runCommandImpl = vi.fn(async () => ({ status: 0, aborted: false }));
+    await expect(runPrStaticChecks({
+      argv: [`--group=${group}`, "--base=HEAD", "--head=HEAD"],
+      runCommandImpl,
+    })).rejects.toThrow(/Unknown --group value.*Expected compile or guards/);
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
   it("accepts --skip-doc-sync as a composition-only static runner option", async () => {
     const stdout = { write: vi.fn<(chunk: string) => unknown>() };
     const stderr = { write: vi.fn<(chunk: string) => unknown>() };

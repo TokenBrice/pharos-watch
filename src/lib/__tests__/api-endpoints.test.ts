@@ -58,6 +58,19 @@ describe("api endpoint registry", () => {
     }
   });
 
+  it("keeps cache-only build transport in the site lane without public artifacts or probes", () => {
+    const path = "/api/stablecoin-detail-snapshot-inputs";
+    expect(getEndpointDefinitionByKey("stablecoin-detail-snapshot-inputs")).toMatchObject({
+      publicApiAccess: "site-only", siteDataAccess: "allowed", cacheBypass: true, methods: ["GET"],
+    });
+    expect(getPublicApiAccess(path)).toBe("site-only");
+    expect(isProtectedPublicApiPath(path)).toBe(false);
+    expect(isSiteDataAllowedPath(path)).toBe(true);
+    for (const group of ["public", "admin", "manual"] as const) {
+      expect(getProbePaths(group).some((probe) => probe.split("?")[0] === path)).toBe(false);
+    }
+  });
+
   it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
     expect(getProbePaths("public")).not.toContain("/api/digest-snapshot");
     expect(getProbePaths("public")).not.toContain("/api/snapshots/:date.json");

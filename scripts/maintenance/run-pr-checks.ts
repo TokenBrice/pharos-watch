@@ -182,17 +182,18 @@ export function createLaneCommand(
     lane,
   });
 
-  const manifestCommand = getPrLane(
-    ["classifier-smoke", "gitleaks"].includes(lane)
-      ? "preflight"
-      : DOC_CHECK_LANES.includes(lane)
-        ? "docs"
-        : lane === "pr-static"
-          ? "static"
-          : lane === "pr-tests"
-            ? "tests"
-            : "critical-coverage",
-  ).commands.find((command) => command.id === lane);
+  // Local check:pr runs the ungrouped static command, preserving its full plan.
+  const manifestCommand = lane === "pr-static"
+    ? { ...getPrLane("static-compile").commands[0], id: "pr-static", args: ["run", "check:pr:static", "--"] }
+    : getPrLane(
+        ["classifier-smoke", "gitleaks"].includes(lane)
+          ? "preflight"
+          : DOC_CHECK_LANES.includes(lane)
+            ? "docs"
+            : lane === "pr-tests"
+              ? "tests"
+              : "critical-coverage",
+      ).commands.find((command) => command.id === lane);
   if (!manifestCommand) throw new Error(`Missing PR lane command: ${lane}`);
   const command = manifestCommand.program === "npm"
     ? createSpawnCommand("npm", buildPrLaneCommandArgs(manifestCommand, {

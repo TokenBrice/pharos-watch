@@ -1,4 +1,6 @@
 import { relative } from "node:path";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 export interface VitestJsonAssertion {
   duration?: number | null;
@@ -10,6 +12,7 @@ export interface VitestJsonTestResult {
   name: string;
   startTime?: number;
   status?: string;
+  testCount?: number;
 }
 
 export interface VitestJsonReport {
@@ -71,7 +74,7 @@ export function summarizeShardTimings(
   const files = (report.testResults ?? []).map((result) => ({
     durationMs: Math.round(fileDurationMs(result)),
     file: (relative(cwd, result.name) || result.name).replaceAll("\\", "/"),
-    tests: result.assertionResults?.length ?? 0,
+    tests: result.testCount ?? result.assertionResults?.length ?? 0,
   })).sort((left, right) => right.durationMs - left.durationMs || left.file.localeCompare(right.file));
   return {
     fileCount: files.length,
@@ -107,4 +110,24 @@ export function formatShardTimingSummary(summary: ShardTimingSummary, topLimit =
     lines.push("", `_${summary.fileCount - topLimit} further files in the \`pr-test-timings-${summary.shard}\` run artifact._`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+export function rawShardReportPath(timingsFile: string): string {
+  return `${timingsFile.replace(/\.json$/, "")}.vitest.json`;
+}
+
+/** Reporting does not alter a lane's result if Vitest never produced a report. */
+export function publishShardTimings(
+  timingsFile: string,
+  coordinates: ShardCoordinates,
+  wallMs: number,
+  env: NodeJS.ProcessEnv,
+): void {
+  const rawReport = rawShardReportPath(timingsFile);
+  if (!existsSync(rawReport)) return;
+  const report = JSON.parse(readFileSync(rawReport, "utf8")) as VitestJsonReport;
+  const summary = summarizeShardTimings(report, { ...coordinates, wallMs });
+  mkdirSync(dirname(timingsFile), { recursive: true });
+  writeFileSync(timingsFile, `${JSON.stringify(summary, null, 2)}\n`);
+  if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, formatShardTimingSummary(summary));
 }

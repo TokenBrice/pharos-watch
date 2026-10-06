@@ -1,7 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
+import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
 import { buildStablecoinDetailViewModel } from "@/lib/stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];

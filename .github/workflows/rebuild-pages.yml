@@ -14,7 +14,12 @@ permissions:
   contents: read
 
 jobs:
+  pages-prepare:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    uses: $/.github/workflows/pages-prepare.yml
+
   pages-release:
+    needs: pages-prepare
     if: ${{ github.ref == 'refs/heads/main' }}
     uses: $/.github/workflows/pages-release.yml
     with:

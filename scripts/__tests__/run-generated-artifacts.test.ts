@@ -40,6 +40,11 @@ describe("generated-artifact runner lifecycle selection", () => {
     const expected = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds([file]));
     const step = buildPrStaticCheckPlan([file]).commands.find((command) => command.name === "check:generated-artifacts");
     expect(step?.args).toEqual(expected.length ? [`--only=${expected.join(",")}`] : undefined);
+    const guardsStep = buildPrStaticCheckPlan([file], { group: "guards" }).commands
+      .find((command) => command.name === "check:generated-artifacts");
+    expect(guardsStep).toEqual(step);
+    expect(buildPrStaticCheckPlan([file], { group: "compile" }).commands
+      .some((command) => command.name === "check:generated-artifacts")).toBe(false);
     expect(selectGeneratedArtifacts({ check: true, only: expected }).map((artifact) => artifact.id))
       .not.toContain("sitemap-dates");
     expect(expected).not.toContain("docs-metadata");
@@ -58,14 +63,11 @@ describe("generated-artifact runner lifecycle selection", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("no checks executed"));
   });
 
-  it("parses and de-duplicates lifecycle filters", () => {
-    expect(
-      parseGeneratedArtifactsArgs([
-        "--build-lifecycle=compile-input,post-refresh",
-        "--build-lifecycle",
-        "compile-input",
-      ]).buildLifecycles,
-    ).toEqual(["compile-input", "post-refresh"]);
+  it.each([
+    ["--build-lifecycle=compile-input,post-refresh", "--build-lifecycle", "compile-input"],
+    ["--build-lifecycle=compile-input", "--build-lifecycle=post-refresh", "--build-lifecycle=compile-input"],
+  ])("parses and de-duplicates lifecycle filters for %j", (...argv) => {
+    expect(parseGeneratedArtifactsArgs(argv).buildLifecycles).toEqual(["compile-input", "post-refresh"]);
   });
 
   it("includes declared dependencies for a post-refresh selection", () => {
@@ -76,8 +78,19 @@ describe("generated-artifact runner lifecycle selection", () => {
       })),
     ).toEqual([
       { phase: 0, ids: ["stablecoin-catalog", "depeg-event-search-data"] },
-      { phase: 1, ids: ["report-card-registry-fingerprint"] },
+      { phase: 1, ids: ["report-card-registry-fingerprint", "stablecoin-detail-snapshots"] },
       { phase: 2, ids: ["llms-txt"] },
+    ]);
+  });
+
+  it("selects only the catalog dependency when narrowing post-refresh to snapshots", () => {
+    expect(buildGeneratedArtifactExecutionPhases({
+      buildLifecycles: ["post-refresh"], only: ["stablecoin-detail-snapshots"],
+    }).map(({ phase, units }) => ({
+      phase, ids: units.map(({ id }) => id),
+    }))).toEqual([
+      { phase: 0, ids: ["stablecoin-catalog"] },
+      { phase: 1, ids: ["stablecoin-detail-snapshots"] },
     ]);
   });
 
@@ -101,6 +114,9 @@ describe("generated-artifact runner lifecycle selection", () => {
     expect(result.results).toEqual([]);
     expect(log.join("\n")).toContain("generate-depeg-event-search-data.ts");
     expect(log.join("\n")).toContain("generate-llms-txt.ts");
+    expect(log.join("\n")).toContain("build-stablecoin-detail-snapshots.ts");
+    expect(log.join("\n")).not.toContain("generate-sitemap-dates.ts");
+    expect(log.join("\n")).not.toContain("generate-docs-metadata.ts");
     expect(log.join("\n")).not.toContain("build-og-editorial.mjs");
   });
 
@@ -123,12 +139,14 @@ describe("generated-artifact runner lifecycle selection", () => {
     });
     await entered;
     expect(commands.some((command) => command.includes("generate-report-card-registry-fingerprint"))).toBe(false);
+    expect(commands.some((command) => command.includes("build-stablecoin-detail-snapshots"))).toBe(false);
     expect(commands.some((command) => command.includes("generate-llms-txt"))).toBe(false);
     release(0);
     const result = await pending;
     expect(result.status).toBe(0);
     expect(result.results.map(({ id }) => id)).toEqual([
-      "stablecoin-catalog", "depeg-event-search-data", "report-card-registry-fingerprint", "llms-txt",
+      "stablecoin-catalog", "depeg-event-search-data", "report-card-registry-fingerprint",
+      "stablecoin-detail-snapshots", "llms-txt",
     ]);
   });
 
@@ -143,6 +161,7 @@ describe("generated-artifact runner lifecycle selection", () => {
     });
     expect(result.status).toBe(7);
     expect(commands.some((command) => command.includes("generate-report-card-registry-fingerprint"))).toBe(false);
+    expect(commands.some((command) => command.includes("build-stablecoin-detail-snapshots"))).toBe(false);
     expect(commands.some((command) => command.includes("generate-llms-txt"))).toBe(false);
   });
 
@@ -156,6 +175,7 @@ describe("generated-artifact runner lifecycle selection", () => {
       { id: "stablecoin-catalog", statusLabel: "failed", taintedBy: [] },
       { id: "depeg-event-search-data", statusLabel: "passed", taintedBy: [] },
       { id: "report-card-registry-fingerprint", statusLabel: "tainted", taintedBy: ["stablecoin-catalog"] },
+      { id: "stablecoin-detail-snapshots", statusLabel: "tainted", taintedBy: ["stablecoin-catalog"] },
       { id: "llms-txt", statusLabel: "tainted", taintedBy: ["stablecoin-catalog"] },
     ]);
     expect(result.failures.map(({ status }) => status)).toEqual([7]);

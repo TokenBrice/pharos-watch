@@ -2,7 +2,8 @@ export type PrLaneSelector = "always" | "code" | "critical-coverage" | "docs";
 
 export type PrLaneId =
   | "preflight"
-  | "static"
+  | "static-compile"
+  | "static-guards"
   | "tests"
   | "critical-coverage-shards"
   | "critical-coverage"
@@ -13,12 +14,7 @@ export interface PrLaneDefinition {
   commands: readonly PrLaneCommandDefinition[];
   id: PrLaneId;
   selector: PrLaneSelector;
-  /**
-   * Even fan-out: Vitest's own `--shard=<n>/<count>` owns file assignment.
-   * Duration weighting stays out of this manifest until the published shard
-   * timings (`PR_SHARD_TIMINGS_FILE`, uploaded as `pr-test-timings-<shard>`)
-   * show a wall spread above 25% of the median shard.
-   */
+  /** Maximum fan-out; the tests lane takes its count from the prepared test plan. */
   shards?: number;
   timeoutMinutes: number;
 }
@@ -34,19 +30,19 @@ export interface PrLaneSelection {
   criticalCoverageShards: number;
   docsChanged: boolean;
   docsOnly: boolean;
+  testShards?: number;
 }
 
 export interface PrLaneCommandContext {
   base?: string;
   forwardedTestArgs?: readonly string[];
   head?: string;
-  /**
-   * Composition context set when the docs lane owns `check:doc-sync` in the
-   * same plan (mixed docs/source PR): the static lane then skips its own
-   * doc-sync execution. Standalone static plans never set it.
-   */
   shard?: number;
   shardCount?: number;
+  /**
+   * When docs owns doc-sync in the same composed plan, guards (or the local
+   * ungrouped static command) skips its duplicate. Compile never runs doc-sync.
+   */
   skipDocSync?: boolean;
 }
 
@@ -61,22 +57,28 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     ],
   },
   {
-    id: "static",
+    id: "static-compile",
     selector: "code",
     timeoutMinutes: 20,
-    commands: [{ id: "pr-static", program: "npm", args: ["run", "check:pr:static", "--"] }],
+    commands: [{ id: "pr-static-compile", program: "npm", args: ["run", "check:pr:static", "--", "--group=compile"] }],
+  },
+  {
+    id: "static-guards",
+    selector: "code",
+    timeoutMinutes: 20,
+    commands: [{ id: "pr-static-guards", program: "npm", args: ["run", "check:pr:static", "--", "--group=guards"] }],
   },
   {
     id: "tests",
     selector: "code",
-    shards: 4,
+    shards: 8,
     timeoutMinutes: 15,
     commands: [{ id: "pr-tests", program: "npm", args: ["run", "test:pr", "--"] }],
   },
   {
     id: "critical-coverage-shards",
     selector: "critical-coverage",
-    shards: 4,
+    shards: 8,
     timeoutMinutes: 15,
     commands: [{ id: "critical-coverage-shard", program: "npm", args: ["run", "coverage:critical:shard", "--"] }],
   },
@@ -139,9 +141,11 @@ export function buildPrLaneCommandArgs(
       args.push(`--shard=${context.shard}/${context.shardCount}`);
       break;
     case "pr-static":
+    case "pr-static-compile":
+    case "pr-static-guards":
       if (context.base) args.push(`--base=${context.base}`);
       if (context.head) args.push(`--head=${context.head}`);
-      if (context.skipDocSync) args.push("--skip-doc-sync");
+      if (context.skipDocSync && command.id !== "pr-static-compile") args.push("--skip-doc-sync");
       break;
   }
   return args;

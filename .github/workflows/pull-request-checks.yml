@@ -13,15 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  preflight:
+  secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    outputs:
-      critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
-      docs_changed: ${{ steps.classify.outputs.docs_changed }}
-      docs_only: ${{ steps.classify.outputs.docs_only }}
-      matrix: ${{ steps.matrix.outputs.matrix }}
-      playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,13 +25,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24.16.0"
+      - name: Snapshot the trusted base scanner and policy
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --snapshot-trusted="$RUNNER_TEMP/trusted-gitleaks"
       - name: Scan PR commits with the trusted base scanner and policy
         env:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: |
           git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"
-          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range
+          node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --range --policy-root="$RUNNER_TEMP/trusted-gitleaks"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -46,30 +42,24 @@ jobs:
         env:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --tree
-      - name: Run manifest preflight
-        id: classify
+        run: node "$RUNNER_TEMP/trusted-gitleaks/scripts/ci/run-gitleaks.ts" --tree --policy-root="$RUNNER_TEMP/trusted-gitleaks"
+      - name: Check changed candidate scanner and policy
         env:
-          DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          DEPLOY_EVENT_NAME: push
-          DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --preflight
-      - name: Generate validation matrix from the lane manifest
-        id: matrix
-        env:
-          CRITICAL_COVERAGE_CHANGED: ${{ steps.classify.outputs.critical_coverage_changed }}
-          DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
-          DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: echo "matrix=$(node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix)" >> "$GITHUB_OUTPUT"
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range --candidate-policy --trusted-root="$RUNNER_TEMP/trusted-gitleaks"
 
   prepare:
-    needs: preflight
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
+    outputs:
+      critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
+      docs_changed: ${{ steps.classify.outputs.docs_changed }}
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+      docs_inline_succeeded: ${{ steps.docs.outcome == 'success' }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      coverage_matrix: ${{ steps.matrix.outputs.coverage_matrix }}
+      playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -79,16 +69,51 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
+          install-ripgrep: "true"
+          workspace-artifact: none
+      - name: Classify PR changes
+        id: classify
+        env:
+          DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEPLOY_EVENT_NAME: push
+          DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --classify
+      - name: Plan PR tests once
+        if: ${{ steps.classify.outputs.docs_only != 'true' }}
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: npm run test:pr -- --base=$PR_BASE_SHA --plan-out=.tmp/pr-test-plan.json
+      - name: Generate validation and coverage matrices
+        id: matrix
+        env:
+          CRITICAL_COVERAGE_CHANGED: ${{ steps.classify.outputs.critical_coverage_changed }}
+          DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
+          DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix
+      - name: Run docs-only validation inline
+        id: docs
+        if: ${{ steps.classify.outputs.docs_only == 'true' }}
+        env:
+          PR_LANE_ID: docs
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
+      - uses: $/.github/actions/setup-workspace
+        with:
+          install-deps: "false"
+          cache-npm: "false"
           workspace-artifact: publish
 
   validation:
     name: ${{ matrix.lane }}${{ matrix.shard && format(' ({0}/{1})', matrix.shard, matrix.shardCount) || '' }}
-    needs: [preflight, prepare]
+    needs: prepare
+    if: ${{ needs.prepare.outputs.docs_only != 'true' && fromJSON(needs.prepare.outputs.matrix).include[0] != null }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.preflight.outputs.matrix) }}
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -97,10 +122,12 @@ jobs:
           filter: blob:none
       - uses: $/.github/actions/setup-workspace
         with:
-          browser-cache: ${{ matrix.lane == 'static' && needs.preflight.outputs.playwright_firefox_required || 'false' }}
+          browser-cache: ${{ matrix.lane == 'static-guards' && needs.prepare.outputs.playwright_firefox_required || 'false' }}
+          cache-npm: "false"
           install-deps: "false"
-          install-playwright-firefox: ${{ matrix.lane == 'static' && needs.preflight.outputs.playwright_firefox_required || 'false' }}
-          static-cache: ${{ matrix.lane == 'static' && 'true' || 'false' }}
+          install-playwright-firefox: ${{ matrix.lane == 'static-guards' && needs.prepare.outputs.playwright_firefox_required || 'false' }}
+          install-ripgrep: ${{ (matrix.lane == 'static-guards' || matrix.lane == 'docs') && 'true' || 'false' }}
+          static-cache: ${{ matrix.lane == 'static-compile' && 'true' || 'false' }}
           workspace-artifact: restore
       - name: Run manifest lane
         env:
@@ -110,6 +137,7 @@ jobs:
           PR_SKIP_DOC_SYNC: ${{ matrix.skipDocSync }}
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
+          PR_TEST_PLAN_FILE: ${{ matrix.lane == 'tests' && '.tmp/pr-test-plan.json' || '' }}
           # Observability only: the tests lane writes its Vitest wall time and
           # per-file durations for shard-balance review. Never gates the lane.
           PR_SHARD_TIMINGS_FILE: ${{ matrix.lane == 'tests' && format('.tmp/pr-test-timings-{0}.json', matrix.shard) || '' }}
@@ -122,8 +150,37 @@ jobs:
           path: .tmp/pr-test-timings-${{ matrix.shard }}.json
           if-no-files-found: warn
           retention-days: 7
+
+  critical-coverage-shards:
+    name: Critical coverage (${{ matrix.shard }}/${{ matrix.shardCount }})
+    needs: prepare
+    if: ${{ needs.prepare.outputs.critical_coverage_changed == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.prepare.outputs.coverage_matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: $/.github/actions/setup-workspace
+        with:
+          cache-npm: "false"
+          install-deps: "false"
+          workspace-artifact: restore
+      - name: Run manifest coverage shard
+        env:
+          PR_LANE_ID: critical-coverage-shards
+          PR_LANE_SHARD: ${{ matrix.shard }}
+          PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
+          PR_SHARD_TIMINGS_FILE: .tmp/pr-coverage-timings-${{ matrix.shard }}.json
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
       - name: Upload critical coverage blob
-        if: ${{ always() && matrix.lane == 'critical-coverage-shards' }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: critical-coverage-${{ matrix.shard }}
@@ -131,11 +188,19 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+      - name: Upload critical coverage shard timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-coverage-timings-${{ matrix.shard }}
+          path: .tmp/pr-coverage-timings-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 7
 
   critical-coverage:
     name: Touched critical coverage
-    needs: [preflight, prepare, validation]
-    if: ${{ needs.preflight.outputs.critical_coverage_changed == 'true' }}
+    needs: [prepare, critical-coverage-shards]
+    if: ${{ needs.prepare.outputs.critical_coverage_changed == 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
@@ -147,6 +212,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
+          cache-npm: "false"
           install-deps: "false"
           workspace-artifact: restore
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -163,24 +229,42 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs: [preflight, prepare, validation, critical-coverage]
+    needs: [secrets, prepare, validation, critical-coverage-shards, critical-coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+      SECRETS_RESULT: ${{ needs.secrets.result }}
       PREPARE_RESULT: ${{ needs.prepare.result }}
+      DOCS_ONLY: ${{ needs.prepare.outputs.docs_only }}
+      DOCS_INLINE_SUCCEEDED: ${{ needs.prepare.outputs.docs_inline_succeeded }}
       VALIDATION_RESULT: ${{ needs.validation.result }}
-      CRITICAL_COVERAGE_CHANGED: ${{ needs.preflight.outputs.critical_coverage_changed }}
+      CRITICAL_COVERAGE_CHANGED: ${{ needs.prepare.outputs.critical_coverage_changed }}
+      CRITICAL_COVERAGE_SHARDS_RESULT: ${{ needs.critical-coverage-shards.result }}
       CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
     steps:
       - name: Require the manifest-selected validation path
         run: |
-          if [ "${PREFLIGHT_RESULT}" != "success" ] || [ "${PREPARE_RESULT}" != "success" ] || [ "${VALIDATION_RESULT}" != "success" ]; then
-            echo "Required PR validation failed: preflight=${PREFLIGHT_RESULT}, prepare=${PREPARE_RESULT}, validation=${VALIDATION_RESULT}."
+          if [ "${SECRETS_RESULT}" != "success" ] || [ "${PREPARE_RESULT}" != "success" ]; then
+            echo "Required PR jobs failed: secrets=${SECRETS_RESULT}, prepare=${PREPARE_RESULT}."
             exit 1
           fi
 
-          if [ "${CRITICAL_COVERAGE_CHANGED}" = "true" ] && [ "${CRITICAL_COVERAGE_RESULT}" != "success" ]; then
-            echo "Touched critical coverage failed: ${CRITICAL_COVERAGE_RESULT}."
+          if [ "${DOCS_ONLY}" = "true" ]; then
+            if [ "${VALIDATION_RESULT}" != "skipped" ] || [ "${DOCS_INLINE_SUCCEEDED}" != "true" ]; then
+              echo "Docs-only validation failed: validation=${VALIDATION_RESULT}, inline=${DOCS_INLINE_SUCCEEDED}."
+              exit 1
+            fi
+          elif [ "${VALIDATION_RESULT}" != "success" ]; then
+            echo "Required PR validation failed: ${VALIDATION_RESULT}."
+            exit 1
+          fi
+
+          if [ "${CRITICAL_COVERAGE_CHANGED}" = "true" ]; then
+            if [ "${CRITICAL_COVERAGE_SHARDS_RESULT}" != "success" ] || [ "${CRITICAL_COVERAGE_RESULT}" != "success" ]; then
+              echo "Touched critical coverage failed: shards=${CRITICAL_COVERAGE_SHARDS_RESULT}, merge=${CRITICAL_COVERAGE_RESULT}."
+              exit 1
+            fi
+          elif [ "${CRITICAL_COVERAGE_CHANGED}" != "false" ] || [ "${CRITICAL_COVERAGE_SHARDS_RESULT}" != "skipped" ] || [ "${CRITICAL_COVERAGE_RESULT}" != "skipped" ]; then
+            echo "Unexpected unselected coverage state: selected=${CRITICAL_COVERAGE_CHANGED}, shards=${CRITICAL_COVERAGE_SHARDS_RESULT}, merge=${CRITICAL_COVERAGE_RESULT}."
             exit 1
           fi

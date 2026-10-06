@@ -8,7 +8,7 @@ import { z } from "zod";
 import { execFileSync } from "node:child_process";
 import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { buildPrWorkflowMatrix } from "../maintenance/generate-pr-workflow-matrix.ts";
+import { buildPrCoverageMatrix, buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
 
 const stepSchema = z.object({
   name: z.string().optional(), id: z.string().optional(), uses: z.string().optional(), run: z.string().optional(),
@@ -30,41 +30,51 @@ describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
     expect(PR_LANES.map((lane) => lane.id)).toEqual([
       "preflight",
-      "static",
+      "static-compile",
+      "static-guards",
       "tests",
       "critical-coverage-shards",
       "critical-coverage",
       "docs",
       "gate",
     ]);
-    const preflight = WORKFLOW.jobs.preflight;
+    const prepare = WORKFLOW.jobs.prepare;
     const validation = WORKFLOW.jobs.validation;
-    const generator = preflight.steps.find((step) => step.id === "matrix");
-    expect(generator?.run).toMatch(/^echo "matrix=\$\(node [^\n]*generate-pr-workflow-matrix\.ts --matrix\)" >> "\$GITHUB_OUTPUT"$/);
-    expect(preflight.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
-    expect(validation.needs).toEqual(expect.arrayContaining(["preflight", "prepare"]));
-    expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.preflight.outputs.matrix) }}");
+    const generator = prepare.steps.find((step) => step.id === "matrix");
+    expect(generator?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --matrix$/);
+    expect(prepare.outputs?.matrix).toBe("${{ steps.matrix.outputs.matrix }}");
+    expect(prepare.outputs?.coverage_matrix).toBe("${{ steps.matrix.outputs.coverage_matrix }}");
+    expect(validation.needs).toBe("prepare");
+    expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.prepare.outputs.matrix) }}");
     const runner = validation.steps.find((step) => step.env.PR_LANE_ID === "${{ matrix.lane }}");
     expect(runner?.run).toMatch(/^node [^\n]*generate-pr-workflow-matrix\.ts --run$/);
     expect(runner?.env.PR_LANE_SHARD).toBe("${{ matrix.shard }}");
     expect(runner?.env.PR_LANE_SHARD_COUNT).toBe("${{ matrix.shardCount }}");
   });
 
-  it("generates four test shards and the selected number of coverage shards", () => {
-    const matrix = buildPrWorkflowMatrix({
-      criticalCoverageChanged: true,
-      criticalCoverageShards: 2,
-      docsChanged: true,
-      docsOnly: false,
-    }).include;
-    expect(matrix.filter((entry) => entry.lane === "tests")).toHaveLength(4);
-    expect(matrix.filter((entry) => entry.lane === "critical-coverage-shards")).toEqual([
-      { lane: "critical-coverage-shards", shard: 1, shardCount: 2, timeout: 15 },
-      { lane: "critical-coverage-shards", shard: 2, shardCount: 2, timeout: 15 },
-    ]);
-    expect(matrix.map((entry) => entry.lane)).toContain("static");
-    expect(matrix.map((entry) => entry.lane)).toContain("docs");
-    expect(matrix.every((entry) => entry.timeout <= 20)).toBe(true);
+  it.each([4, 8])("generates %i planned test shards separately from coverage", (testShards) => {
+    const selection = {
+      criticalCoverageChanged: true, criticalCoverageShards: 8,
+      docsChanged: true, docsOnly: false, testShards,
+    };
+    const matrix = buildPrWorkflowMatrix(selection).include;
+    expect(matrix.filter((entry) => entry.lane === "tests")).toEqual(
+      Array.from({ length: testShards }, (_, index) => ({
+        lane: "tests", shard: index + 1, shardCount: testShards, timeout: 15,
+      })),
+    );
+    expect(matrix.some((entry) => entry.lane === "critical-coverage-shards")).toBe(false);
+    expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
+    expect(matrix.at(-1)?.lane).toBe("docs");
+    const coverage = buildPrCoverageMatrix(selection).include;
+    expect(coverage).toEqual(Array.from({ length: 8 }, (_, index) => ({
+      lane: "critical-coverage-shards", shard: index + 1, shardCount: 8, timeout: 15,
+    })));
+    const outputs = Object.fromEntries(formatPrWorkflowOutputs(selection).trim().split("\n").map((line) => {
+      const separator = line.indexOf("=");
+      return [line.slice(0, separator), JSON.parse(line.slice(separator + 1))];
+    }));
+    expect(outputs).toEqual({ matrix: { include: matrix }, coverage_matrix: { include: coverage } });
   });
 
   it("keeps docs-only PRs out of code lanes", () => {
@@ -73,7 +83,10 @@ describe("PR lane manifest", () => {
       criticalCoverageShards: 0,
       docsChanged: true,
       docsOnly: true,
-    })).toEqual({ include: [{ lane: "docs", timeout: 15 }] });
+    })).toEqual({ include: [] });
+    expect(buildPrCoverageMatrix({
+      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: true, docsOnly: true,
+    })).toEqual({ include: [] });
   });
 
   it("gives the docs lane sole doc-sync ownership in the mixed matrix", () => {
@@ -83,7 +96,8 @@ describe("PR lane manifest", () => {
       docsChanged: true,
       docsOnly: false,
     }).include;
-    expect(mixed.find((entry) => entry.lane === "static")).toMatchObject({ skipDocSync: true });
+    expect(mixed.find((entry) => entry.lane === "static-guards")).toMatchObject({ skipDocSync: true });
+    expect(mixed.find((entry) => entry.lane === "static-compile")?.skipDocSync).toBeUndefined();
     expect(mixed.find((entry) => entry.lane === "docs")).toBeDefined();
   });
 
@@ -94,19 +108,25 @@ describe("PR lane manifest", () => {
       docsChanged: false,
       docsOnly: false,
     }).include;
-    const staticEntry = sourceOnly.find((entry) => entry.lane === "static");
+    const staticEntry = sourceOnly.find((entry) => entry.lane === "static-guards");
     expect(staticEntry).toBeDefined();
     expect(staticEntry?.skipDocSync).toBeUndefined();
     expect(sourceOnly.some((entry) => entry.lane === "docs")).toBe(false);
+    expect(buildPrCoverageMatrix({
+      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: false, docsOnly: false,
+    })).toEqual({ include: [] });
   });
 
-  it("forwards skipDocSync to the static lane command only when set", () => {
-    const staticCommand = getPrLane("static").commands[0];
-    expect(buildPrLaneCommandArgs(staticCommand, { base: "base", head: "HEAD", skipDocSync: true })).toEqual([
-      "run", "check:pr:static", "--", "--base=base", "--head=HEAD", "--skip-doc-sync",
+  it("forwards base/head to both static groups and skipDocSync only to guards", () => {
+    const context = { base: "base", head: "HEAD", skipDocSync: true };
+    expect(buildPrLaneCommandArgs(getPrLane("static-compile").commands[0], context)).toEqual([
+      "run", "check:pr:static", "--", "--group=compile", "--base=base", "--head=HEAD",
     ]);
-    expect(buildPrLaneCommandArgs(staticCommand, { base: "base", head: "HEAD" })).toEqual([
-      "run", "check:pr:static", "--", "--base=base", "--head=HEAD",
+    expect(buildPrLaneCommandArgs(getPrLane("static-guards").commands[0], context)).toEqual([
+      "run", "check:pr:static", "--", "--group=guards", "--base=base", "--head=HEAD", "--skip-doc-sync",
+    ]);
+    expect(buildPrLaneCommandArgs(getPrLane("static-guards").commands[0], { base: "base", head: "HEAD" })).toEqual([
+      "run", "check:pr:static", "--", "--group=guards", "--base=base", "--head=HEAD",
     ]);
   });
 
@@ -126,8 +146,8 @@ describe("PR lane manifest", () => {
       shardCount: 3,
     })).toEqual(["run", "coverage:critical:shard", "--", "--shard=2/3"]);
     // npm swallows bare `--base=` flags; the separator is what delivers them.
-    expect(buildPrLaneCommandArgs(getPrLane("static").commands[0], { base: "base", head: "HEAD" })).toEqual([
-      "run", "check:pr:static", "--", "--base=base", "--head=HEAD",
+    expect(buildPrLaneCommandArgs(getPrLane("static-compile").commands[0], { base: "base", head: "HEAD" })).toEqual([
+      "run", "check:pr:static", "--", "--group=compile", "--base=base", "--head=HEAD",
     ]);
   });
 
@@ -140,9 +160,41 @@ describe("PR lane manifest", () => {
   });
 
   it("fails closed instead of dropping a selected coverage lane with no shards", () => {
-    expect(() => buildPrWorkflowMatrix({
+    expect(() => buildPrCoverageMatrix({
       criticalCoverageChanged: true, criticalCoverageShards: 0, docsChanged: false, docsOnly: false,
     })).toThrow(/shard/);
+  });
+
+  it("rejects invalid test and coverage fan-out", () => {
+    const selection = { criticalCoverageChanged: true, criticalCoverageShards: 8, docsChanged: false, docsOnly: false };
+    for (const shards of [0, -1, 1.5, 9]) {
+      expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
+      expect(() => buildPrCoverageMatrix({ ...selection, criticalCoverageShards: shards })).toThrow(/shard/);
+    }
+  });
+
+  it("enforces every selected job and only accepts legitimate skips at the required gate", () => {
+    const gate = WORKFLOW.jobs["pr-gate"].steps[0].run!;
+    const code = {
+      SECRETS_RESULT: "success", PREPARE_RESULT: "success", VALIDATION_RESULT: "success",
+      DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false", CRITICAL_COVERAGE_CHANGED: "false",
+      CRITICAL_COVERAGE_SHARDS_RESULT: "skipped", CRITICAL_COVERAGE_RESULT: "skipped",
+    };
+    const covered = { ...code, CRITICAL_COVERAGE_CHANGED: "true", CRITICAL_COVERAGE_SHARDS_RESULT: "success", CRITICAL_COVERAGE_RESULT: "success" };
+    const docs = { ...code, DOCS_ONLY: "true", DOCS_INLINE_SUCCEEDED: "true", VALIDATION_RESULT: "skipped" };
+    const run = (env: Record<string, string>) => execFileSync("bash", ["-e", "-c", gate], {
+      cwd: REPO_ROOT, env: { ...process.env, ...env }, stdio: "pipe",
+    });
+    for (const env of [code, covered, docs]) expect(() => run(env)).not.toThrow();
+    for (const key of ["SECRETS_RESULT", "PREPARE_RESULT", "VALIDATION_RESULT", "CRITICAL_COVERAGE_SHARDS_RESULT", "CRITICAL_COVERAGE_RESULT"]) {
+      for (const result of ["failure", "cancelled", "skipped"]) {
+        expect(() => run({ ...covered, [key]: result }), `${key}=${result}`).toThrow();
+      }
+    }
+    expect(() => run({ ...docs, DOCS_INLINE_SUCCEEDED: "false" })).toThrow();
+    expect(() => run({ ...docs, VALIDATION_RESULT: "cancelled" })).toThrow();
+    expect(() => run({ ...code, CRITICAL_COVERAGE_RESULT: "failure" })).toThrow();
+    expect(() => run({ ...code, CRITICAL_COVERAGE_SHARDS_RESULT: "cancelled" })).toThrow();
   });
 
   it("transports every ignored bootstrap output through the required archive, not optional caches", () => {
@@ -173,10 +225,11 @@ describe("PR lane manifest", () => {
     expect(upload!.with.name).toContain("github.run_attempt");
     expect(upload!.with.name).toContain("github.sha");
     for (const step of [upload, download]) expect(step!["continue-on-error"]).toBeUndefined();
-    for (const job of ["validation", "critical-coverage"]) {
+    for (const job of ["validation", "critical-coverage-shards", "critical-coverage"]) {
       const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
       expect(setup!.with["workspace-artifact"]).toBe("restore");
       expect(setup!.with["install-deps"]).toBe("false");
+      expect(setup!.with["cache-npm"]).toBe("false");
     }
     expect(steps.find((step) => step.id === "static-cache")!.uses).toMatch(/^actions\/cache\/restore@/);
   });
@@ -189,7 +242,7 @@ describe("PR lane manifest", () => {
       mkdirSync(source);
       mkdirSync(destination);
       const packaging = SETUP_WORKSPACE.runs.steps.find((step) => step.name === "Package required workspace")!;
-      const restoring = SETUP_WORKSPACE.runs.steps.find((step) => step.run?.startsWith("tar -xzf"))!;
+      const restoring = SETUP_WORKSPACE.runs.steps.find((step) => step.run?.startsWith("tar --zstd -xf"))!;
       const paths = packaging.env.WORKSPACE_PATHS.trim().split("\n");
       for (const file of paths) {
         mkdirSync(dirname(join(source, file)), { recursive: true });
@@ -199,13 +252,17 @@ describe("PR lane manifest", () => {
       writeFileSync(join(source, "node_modules/tool"), "#!/bin/sh\nexit 0\n");
       chmodSync(join(source, "node_modules/tool"), 0o755);
       symlinkSync("tool", join(source, "node_modules/link"));
+      const plan = '{"version":1,"base":"base","fileCount":0,"shardCount":4,"shards":[[],[],[],[]]}';
+      mkdirSync(join(source, ".tmp"));
+      writeFileSync(join(source, ".tmp/pr-test-plan.json"), plan);
       const env = { ...process.env, RUNNER_TEMP: root, ...packaging.env };
       execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" });
       execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" });
       expect(readFileSync(join(destination, paths[1]), "utf8")).toBe(paths[1]);
       expect(statSync(join(destination, "node_modules/tool")).mode & 0o777).toBe(0o755);
       expect(readlinkSync(join(destination, "node_modules/link"))).toBe("tool");
-      rmSync(join(root, "pharos-workspace/workspace.tar.gz"));
+      expect(readFileSync(join(destination, ".tmp/pr-test-plan.json"), "utf8")).toBe(plan);
+      rmSync(join(root, "pharos-workspace/workspace.tar.zst"));
       expect(() => execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" })).toThrow();
       rmSync(join(source, paths[1]));
       expect(() => execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" })).toThrow();

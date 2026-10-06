@@ -11,6 +11,6 @@ export function isProtectedPublicApiCacheableGetRequest(request: Request, url: U
     && url.pathname !== API_PATHS.telegramWebhook()
     && url.hostname !== OPS_API_HOSTNAME
     && url.hostname !== SITE_API_HOSTNAME
-    && getPublicApiAccess(url.pathname) !== "exempt"
+    && getPublicApiAccess(url.pathname) === "protected"
     && !isAdminLikePath(url.pathname);
 }

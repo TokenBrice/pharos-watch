@@ -3,11 +3,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   type ActiveWorkerDeployment,
   type ListedWorkerDeployment,
+  fetchWorkerDeployments,
+  readWorkerScriptName,
+  runWorkerDeploymentVerification,
   selectWorkerActivationAt,
   verifyActiveWorkerDeployment,
   workerDeployMessage,
@@ -44,12 +47,6 @@ function unorderedHistory(): ListedWorkerDeployment[] {
     { created_on: ACTIVATED_AT, id: "deployment-1", versions: [{ version_id: "version-1" }] },
     { created_on: ACTIVATED_AT, id: "deployment-2", versions: [{ version_id: "version-2" }] },
   ];
-}
-
-function writeJson(dir: string, name: string, value: unknown): string {
-  const path = join(dir, name);
-  writeFileSync(path, JSON.stringify(value));
-  return path;
 }
 
 function runCli(env: Record<string, string | undefined>) {
@@ -160,71 +157,114 @@ describe("selectWorkerActivationAt", () => {
   });
 });
 
-describe("verify-worker-deployment CLI", () => {
-  it("publishes the verified version and Cloudflare activation second as step outputs", () => {
-    const workDir = tempDir();
-    const result = runCli({
-      DEPLOYMENTS_FILE: writeJson(workDir, "deployments.json", unorderedHistory()),
-      DEPLOYMENT_HISTORY_AVAILABLE: "true",
-      DEPLOYMENT_STATUS_FILE: writeJson(workDir, "status.json", activeDeployment()),
-    });
+describe("Cloudflare deployment API verification", () => {
+  function apiFixture(deployments: (ActiveWorkerDeployment & ListedWorkerDeployment & {
+    source?: string; strategy?: string;
+  })[] = [
+    { ...activeDeployment(), created_on: ACTIVATED_AT, source: "api", strategy: "percentage" },
+    ...unorderedHistory(),
+  ]) {
+    // Official Workers deployments list envelope, not Wrangler's flattened JSON.
+    return { success: true, errors: [], messages: [], result: { deployments } };
+  }
 
-    expect(result.status).toBe(0);
-    expect(result.githubOutput).toBe(
+  function apiEnv(): NodeJS.ProcessEnv {
+    return {
+      NODE_ENV: "test",
+      CLOUDFLARE_ACCOUNT_ID: "test-account",
+      CLOUDFLARE_API_TOKEN: "test-token",
+      GITHUB_OUTPUT: join(tempDir(), "github-output.txt"),
+      GITHUB_SHA: SHA,
+    };
+  }
+
+  it("reads the script name from the production Wrangler config", () => {
+    expect(readWorkerScriptName()).toBe("stablecoin-api");
+  });
+
+  it("uses one authenticated GET for active status and history and publishes the activation second", async () => {
+    const env = apiEnv();
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture()));
+    await runWorkerDeploymentVerification(env, fetchApi);
+
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    expect(fetchApi).toHaveBeenCalledWith(
+      "https://api.cloudflare.com/client/v4/accounts/test-account/workers/scripts/stablecoin-api/deployments",
+      {
+        headers: { Authorization: "Bearer test-token" },
+        signal: expect.any(AbortSignal),
+      },
+    );
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe(
       `worker_version=version-2\nworker_activation_at=${Date.parse(ACTIVATED_AT) / 1000}\n`,
     );
-    expect(result.stdout).toContain(`created_on=${ACTIVATED_AT}`);
   });
 
-  it("publishes the version without an activation second when deployment history is unavailable", () => {
-    const workDir = tempDir();
-    const result = runCli({
-      DEPLOYMENTS_FILE: join(workDir, "missing-deployments.json"),
-      DEPLOYMENT_HISTORY_AVAILABLE: "false",
-      DEPLOYMENT_STATUS_FILE: writeJson(workDir, "status.json", activeDeployment()),
-    });
-
-    expect(result.status).toBe(0);
-    expect(result.githubOutput).toBe("worker_version=version-2\n");
-    expect(result.stdout).toContain(
-      "::warning::Cloudflare deployment deployment-2 had no valid matching created_on",
+  it("uses the first API entry as active even when a later entry has a newer timestamp", async () => {
+    const env = apiEnv();
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture()));
+    await runWorkerDeploymentVerification(env, fetchApi);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain(
+      `worker_activation_at=${Date.parse(ACTIVATED_AT) / 1000}`,
     );
   });
 
-  it("warns and skips the marker when the deployment history file is unreadable JSON", () => {
-    const workDir = tempDir();
-    const deploymentsFile = join(workDir, "deployments.json");
-    writeFileSync(deploymentsFile, "<html>gateway timeout</html>");
-    const result = runCli({
-      DEPLOYMENTS_FILE: deploymentsFile,
-      DEPLOYMENT_HISTORY_AVAILABLE: "true",
-      DEPLOYMENT_STATUS_FILE: writeJson(workDir, "status.json", activeDeployment()),
-    });
-
-    expect(result.status).toBe(0);
-    expect(result.githubOutput).toBe("worker_version=version-2\n");
-    expect(result.stdout).toContain("::warning::Cloudflare deployment history JSON was unavailable");
+  it("keeps version verification but skips the D1 marker when created_on is invalid", async () => {
+    const env = apiEnv();
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json(apiFixture([{ ...activeDeployment(), created_on: "invalid", source: "api", strategy: "percentage" }])),
+    );
+    await runWorkerDeploymentVerification(env, fetchApi);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("worker_version=version-2\n");
   });
 
-  it("fails the deploy job and records no outputs when the active deployment does not match", () => {
-    const workDir = tempDir();
-    const result = runCli({
-      DEPLOYMENTS_FILE: writeJson(workDir, "deployments.json", unorderedHistory()),
-      DEPLOYMENT_HISTORY_AVAILABLE: "true",
-      DEPLOYMENT_STATUS_FILE: writeJson(workDir, "status.json", activeDeployment({
-        versions: [{ percentage: 100, version_id: "version-2" }, { percentage: 0, version_id: "version-1" }],
-      })),
-    });
+  it.each<[string, () => Response, RegExp]>([
+    ["HTTP error", () => new Response("unavailable", { status: 503 }), /HTTP 503/],
+    ["API failure", () => Response.json({ success: false, errors: [{ code: 10000, message: "Authentication error" }] }), /unsuccessful or malformed/],
+    ["missing history", () => Response.json({ success: true, result: {} }), /unsuccessful or malformed/],
+    ["Wrangler array", () => Response.json(unorderedHistory()), /unsuccessful or malformed/],
+    ["empty history", () => Response.json(apiFixture([])), /history is empty/],
+    ["invalid JSON", () => new Response("<html>gateway timeout</html>"), /JSON/],
+  ])("fails closed without outputs on %s", async (_case, response, error) => {
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(response());
+    await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(error);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+  });
 
+  it("fails with no outputs when the first deployment does not match the release SHA", async () => {
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
+    const fixture = apiFixture();
+    fixture.result.deployments[0].annotations = { "workers/message": workerDeployMessage("other-sha") };
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(fixture));
+    await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(/did not match this release/);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+  });
+
+  it("propagates network failures instead of claiming history or active identity is available", async () => {
+    const fetchApi = vi.fn<typeof fetch>().mockRejectedValue(new Error("network unavailable"));
+    await expect(fetchWorkerDeployments(apiEnv(), fetchApi)).rejects.toThrow("network unavailable");
+  });
+
+  it.each(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "GITHUB_SHA"])(
+    "requires %s before requesting production",
+    async (key) => {
+      const env = apiEnv();
+      delete env[key];
+      const fetchApi = vi.fn<typeof fetch>();
+      await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(key);
+      expect(fetchApi).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("verify-worker-deployment CLI", () => {
+  it("fails without credentials using Node alone, before any production request", () => {
+    const result = runCli({ CLOUDFLARE_API_TOKEN: undefined, CLOUDFLARE_ACCOUNT_ID: undefined });
     expect(result.status).not.toBe(0);
     expect(result.githubOutput).toBe("");
-    expect(result.stderr).toContain("Active Worker deployment did not match this release");
-  });
-
-  it("fails when the deploy step captured no deployment status file", () => {
-    const result = runCli({ DEPLOYMENT_HISTORY_AVAILABLE: "false" });
-
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("DEPLOYMENT_STATUS_FILE");
+    expect(result.stderr).toContain("CLOUDFLARE_ACCOUNT_ID");
   });
 });

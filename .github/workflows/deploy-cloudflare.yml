@@ -109,19 +109,7 @@ jobs:
           --message "GitHub Actions deploy ${GITHUB_SHA}"
       - id: verify-worker-deployment
         name: Verify active Worker deployment
-        env:
-          DEPLOYMENT_STATUS_FILE: ${{ runner.temp }}/worker-deployment-status.json
-          DEPLOYMENTS_FILE: ${{ runner.temp }}/worker-deployments.json
-        run: |
-          deployment_history_available=true
-          (cd worker && npx --no-install wrangler deployments status --json) > "${DEPLOYMENT_STATUS_FILE}"
-          if ! (cd worker && npx --no-install wrangler deployments list --json) > "${DEPLOYMENTS_FILE}"; then
-            deployment_history_available=false
-            echo "::warning::Cloudflare deployment history was unavailable; the activation marker will be skipped."
-          fi
-
-          DEPLOYMENT_HISTORY_AVAILABLE="${deployment_history_available}" \
-            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
       - name: Record Worker activation marker
         env:
           WORKER_ACTIVATED_AT: ${{ steps.verify-worker-deployment.outputs.worker_activation_at }}
@@ -152,15 +140,22 @@ jobs:
             echo "- Warning: Worker rollback does not reverse D1 migrations or other bound-resource changes."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  pages-prepare:
+    needs: plan
+    if: ${{ needs.plan.outputs.pages_required == 'true' }}
+    uses: $/.github/workflows/pages-prepare.yml
+
   pages-release:
     needs:
       - plan
       - deploy-worker
+      - pages-prepare
     if: >-
       ${{
         always()
         && needs.plan.result == 'success'
         && needs.plan.outputs.pages_required == 'true'
+        && needs.pages-prepare.result == 'success'
         && (
           needs.plan.outputs.worker_required != 'true'
           || needs.deploy-worker.result == 'success'
@@ -206,6 +201,7 @@ jobs:
         with:
           node-version: "24.16.0"
           cache-npm: "false"
+          install-deps: "false"
           bootstrap-generated: "false"
       - id: verify-worker-identity
         name: Re-verify active Worker release identity
@@ -213,13 +209,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DEPLOYMENT_STATUS_FILE: ${{ runner.temp }}/acceptance-worker-deployment-status.json
-          DEPLOYMENTS_FILE: ${{ runner.temp }}/acceptance-worker-deployments.json
-          DEPLOYMENT_HISTORY_AVAILABLE: "true"
-        run: |
-          (cd worker && npx --no-install wrangler deployments status --json) > "${DEPLOYMENT_STATUS_FILE}"
-          (cd worker && npx --no-install wrangler deployments list --json) > "${DEPLOYMENTS_FILE}"
-          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
       - id: acceptance
         name: Record read-only operational acceptance
         env:

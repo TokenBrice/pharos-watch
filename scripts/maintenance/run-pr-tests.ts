@@ -1,15 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { localBin } from "../lib/local-bin.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
-import {
-  formatShardTimingSummary,
-  parseShardCoordinates,
-  summarizeShardTimings,
-  type VitestJsonReport,
-} from "../lib/shard-timings.mts";
+import { createPrTestPlan, partitionTestFiles, readPrTestPlan, readPrTestTimings, takeTestShard } from "../lib/pr-test-plan.mts";
+import { publishShardTimings } from "../lib/shard-timings.mts";
 import { hasVitestOption, withCiVitestArgs } from "../lib/vitest-ci-args.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 
@@ -37,28 +33,6 @@ function collectChangedFilePaths(
   });
 }
 
-function rawReportPath(timingsFile: string): string {
-  return `${timingsFile.replace(/\.json$/, "")}.vitest.json`;
-}
-
-/**
- * Publishes this shard's Vitest wall time and per-file durations so PR shard
- * imbalance is observable from the run page and comparable across runs.
- * Reporting never changes the lane result: a missing report is skipped.
- */
-function publishShardTimings(
-  timingsFile: string,
-  vitestArgs: readonly string[],
-  wallMs: number,
-  env: NodeJS.ProcessEnv,
-): void {
-  const rawReport = rawReportPath(timingsFile);
-  if (!existsSync(rawReport)) return;
-  const report = JSON.parse(readFileSync(rawReport, "utf8")) as VitestJsonReport;
-  const summary = summarizeShardTimings(report, { ...parseShardCoordinates(vitestArgs), wallMs });
-  writeFileSync(timingsFile, `${JSON.stringify(summary, null, 2)}\n`);
-  if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, formatShardTimingSummary(summary));
-}
 
 export function runPrTests({
   argv = process.argv.slice(2),
@@ -66,26 +40,46 @@ export function runPrTests({
   spawn = spawnSync,
 }: RunPrTestsOptions = {}): number {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
+  const planArg = rest.find((arg) => arg === "--plan-out" || arg.startsWith("--plan-out="));
+  const planIndex = planArg === undefined ? -1 : rest.indexOf(planArg);
+  const planOut = planArg === "--plan-out" ? rest[planIndex + 1] : planArg?.slice("--plan-out=".length);
+  if (planArg !== undefined && (!planOut || planOut.startsWith("--"))) throw new Error("--plan-out requires a path");
+  const runArgs = planIndex < 0 ? rest : rest.filter((_, index) => index !== planIndex && (planArg !== "--plan-out" || index !== planIndex + 1));
+  const { args, shard } = takeTestShard(runArgs);
   const vitest = localBin("vitest");
-  const listResult = spawn(vitest, ["list", "--changed", base, "--filesOnly"], {
-    encoding: "utf8",
-    env,
-  });
-  if (listResult.error) throw listResult.error;
-  if (listResult.status !== 0) {
-    process.stderr.write(listResult.stderr ?? "");
-    throw new Error(`Vitest could not resolve tests changed since ${base}.`);
+  let files: string[];
+  if (env.PR_TEST_PLAN_FILE && !planOut) {
+    if (!shard) throw new Error("PR_TEST_PLAN_FILE requires --shard=i/k");
+    const plan = readPrTestPlan(env.PR_TEST_PLAN_FILE);
+    if (plan.shardCount !== shard.shardCount) throw new Error(`PR test plan shard count ${plan.shardCount} does not match ${shard.shardCount}`);
+    if (plan.base !== base) throw new Error(`PR test plan base ${plan.base} does not match ${base}`);
+    files = plan.shards[shard.shard - 1];
+  } else {
+    const listResult = spawn(vitest, ["list", "--changed", base, "--filesOnly"], { encoding: "utf8", env });
+    if (listResult.error) throw listResult.error;
+    if (listResult.status !== 0) {
+      process.stderr.write(listResult.stderr ?? "");
+      throw new Error(`Vitest could not resolve tests changed since ${base}.`);
+    }
+    const changedFiles = collectChangedFilePaths(base, head, env, spawn);
+    files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles);
+    if (planOut) {
+      if (shard) throw new Error("--plan-out cannot be combined with --shard");
+      const plan = createPrTestPlan(base, files);
+      mkdirSync(dirname(planOut), { recursive: true });
+      writeFileSync(planOut, `${JSON.stringify(plan, null, 2)}\n`);
+      return 0;
+    }
+    if (shard) files = partitionTestFiles(files, shard.shardCount, readPrTestTimings().tests)[shard.shard - 1];
   }
-
-  const changedFiles = collectChangedFilePaths(base, head, env, spawn);
-  const files = selectPrTestFiles(parseVitestFileList(String(listResult.stdout ?? "")), undefined, changedFiles);
-  const vitestArgs = withCiVitestArgs(["run", ...files, ...rest], env);
+  // An empty explicit shard must not turn into Vitest's unrestricted full run.
+  if (files.length === 0) return 0;
+  const vitestArgs = withCiVitestArgs(["run", ...files, ...args], env);
   const timingsFile = env.PR_SHARD_TIMINGS_FILE;
   const reportArgs: string[] = [];
   if (timingsFile) {
-    mkdirSync(dirname(rawReportPath(timingsFile)), { recursive: true });
     if (!hasVitestOption(vitestArgs, "--reporter")) reportArgs.push("--reporter=default");
-    reportArgs.push("--reporter=json", `--outputFile.json=${rawReportPath(timingsFile)}`);
+    reportArgs.push("--reporter=./scripts/lib/shard-timing-reporter.mts");
   }
   const startedAt = Date.now();
   const result = spawn(vitest, [...vitestArgs, ...reportArgs], {
@@ -94,7 +88,7 @@ export function runPrTests({
   });
   const wallMs = Date.now() - startedAt;
   if (result.error) throw result.error;
-  if (timingsFile) publishShardTimings(timingsFile, vitestArgs, wallMs, env);
+  if (timingsFile) publishShardTimings(timingsFile, shard ?? { shard: 1, shardCount: 1 }, wallMs, env);
   return result.status ?? 1;
 }
 

@@ -6,6 +6,7 @@ import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../lib/cli-arg
 import { collectGitPaths } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { countCriticalCoverageShards } from "../lib/critical-test-files.mts";
+import { PR_TEST_PLAN_PATH, readPrTestPlan } from "../lib/pr-test-plan.mts";
 import {
   PR_LANES,
   buildPrLaneCommandArgs,
@@ -25,25 +26,41 @@ export interface WorkflowMatrixEntry {
 
 export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: WorkflowMatrixEntry[] } {
   const include: WorkflowMatrixEntry[] = [];
-  // When the docs lane is selected alongside the static lane (mixed docs/source
-  // PR), the docs job owns `check:doc-sync`; the static job skips its own copy.
+  if (selection.docsOnly) return { include };
+  // The docs lane owns doc-sync for mixed docs/source PRs.
   const docsLaneSelected = isPrLaneSelected(getPrLane("docs"), selection);
   for (const lane of PR_LANES) {
-    if (["preflight", "critical-coverage", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
-    const shards = lane.id === "critical-coverage-shards"
-      ? selection.criticalCoverageShards
-      : lane.shards ?? 1;
-    if (!Number.isInteger(shards) || shards < 1) throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
+    if (["preflight", "critical-coverage-shards", "critical-coverage", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
+    const shards = lane.id === "tests" ? selection.testShards ?? 4 : 1;
+    if (!Number.isInteger(shards) || shards < 1 || (lane.shards !== undefined && shards > lane.shards)) {
+      throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
+    }
     for (let shard = 1; shard <= shards; shard += 1) {
       include.push({
         lane: lane.id,
         ...(lane.shards ? { shard, shardCount: shards } : {}),
-        ...(lane.id === "static" && docsLaneSelected ? { skipDocSync: true } : {}),
+        ...(lane.id === "static-guards" && docsLaneSelected ? { skipDocSync: true } : {}),
         timeout: lane.timeoutMinutes,
       });
     }
   }
   return { include };
+}
+
+export function buildPrCoverageMatrix(selection: PrLaneSelection): { include: WorkflowMatrixEntry[] } {
+  if (!selection.criticalCoverageChanged) return { include: [] };
+  const lane = getPrLane("critical-coverage-shards");
+  const shards = selection.criticalCoverageShards;
+  if (!Number.isInteger(shards) || shards < 1 || shards > lane.shards!) {
+    throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
+  }
+  return { include: Array.from({ length: shards }, (_, index) => ({
+    lane: lane.id, shard: index + 1, shardCount: shards, timeout: lane.timeoutMinutes,
+  })) };
+}
+
+export function formatPrWorkflowOutputs(selection: PrLaneSelection): string {
+  return `matrix=${JSON.stringify(buildPrWorkflowMatrix(selection))}\ncoverage_matrix=${JSON.stringify(buildPrCoverageMatrix(selection))}\n`;
 }
 
 function bool(value: string | undefined): boolean {
@@ -70,30 +87,29 @@ function runLane(laneId: PrLaneId, env: NodeJS.ProcessEnv): number {
   return 0;
 }
 
-function runPreflight(env: NodeJS.ProcessEnv): number {
-  const [classifier, gitleaks] = getPrLane("preflight").commands;
+function runClassify(env: NodeJS.ProcessEnv): number {
+  const [classifier] = getPrLane("preflight").commands;
   const classifierResult = spawnSync(process.execPath, classifier.args, { env, encoding: "utf8" });
+  if (classifierResult.error) throw classifierResult.error;
   if (classifierResult.stderr) process.stderr.write(classifierResult.stderr);
   if (classifierResult.status !== 0) return classifierResult.status ?? 1;
   const outputPath = env.GITHUB_OUTPUT;
-  if (!outputPath) throw new Error("GITHUB_OUTPUT is required for preflight");
+  if (!outputPath) throw new Error("GITHUB_OUTPUT is required for classification");
   appendFileSync(outputPath, classifierResult.stdout);
-  const scanResult = spawnSync(process.execPath, gitleaks.args, { env, stdio: "inherit" });
-  if (scanResult.error) throw scanResult.error;
-  return scanResult.status ?? 1;
+  return 0;
 }
 
 function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env): number {
   const { values } = parseStrictCliArgs(argv, {
-    conflicts: [["matrix", "preflight", "run"]],
+    conflicts: [["matrix", "classify", "run"]],
     options: {
       matrix: { type: "boolean" },
-      preflight: { type: "boolean" },
+      classify: { type: "boolean" },
       run: { type: "boolean" },
     },
   });
-  const selectedModes = [values.matrix, values.preflight, values.run].filter(Boolean);
-  assertCliUsage(selectedModes.length === 1, "Exactly one of --matrix, --preflight, or --run is required");
+  const selectedModes = [values.matrix, values.classify, values.run].filter(Boolean);
+  assertCliUsage(selectedModes.length === 1, "Exactly one of --matrix, --classify, or --run is required");
   if (values.matrix) {
     const criticalCoverageChanged = bool(env.CRITICAL_COVERAGE_CHANGED);
     let criticalCoverageShards = 0;
@@ -108,15 +124,19 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
         : undefined;
       criticalCoverageShards = countCriticalCoverageShards({ changedFiles: changedCriticalFiles });
     }
-    process.stdout.write(JSON.stringify(buildPrWorkflowMatrix({
+    const docsOnly = bool(env.DOCS_ONLY);
+    const outputs = formatPrWorkflowOutputs({
       criticalCoverageChanged,
       criticalCoverageShards,
       docsChanged: bool(env.DOCS_CHANGED),
-      docsOnly: bool(env.DOCS_ONLY),
-    })));
+      docsOnly,
+      ...(docsOnly ? {} : { testShards: readPrTestPlan(PR_TEST_PLAN_PATH).shardCount }),
+    });
+    if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, outputs);
+    else process.stdout.write(outputs);
     return 0;
   }
-  if (values.preflight) return runPreflight(env);
+  if (values.classify) return runClassify(env);
   return runLane(env.PR_LANE_ID as PrLaneId, env);
 }
 

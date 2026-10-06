@@ -1,4 +1,4 @@
-import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
+import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";

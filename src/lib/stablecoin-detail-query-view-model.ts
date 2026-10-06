@@ -1,5 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
+import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";

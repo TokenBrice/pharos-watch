@@ -1,5 +1,5 @@
 import type { SupplyHistoryPoint } from "@shared/types";
-import type { NativeSupplyCheckpoints } from "@/lib/api-query-descriptors";
+import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
 import type { ApiMeta } from "@/lib/api";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-hero-view-model";

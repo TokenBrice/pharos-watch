@@ -15,8 +15,8 @@ import { buildRequestUrl } from "@/lib/api-url";
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
-  type StablecoinLiveSummary,
 } from "@/lib/api-query-descriptors";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { formatSchemaLikeIssues, type SchemaLike } from "@shared/lib/schema-like";
 import { requestResponse } from "@/lib/request";
 

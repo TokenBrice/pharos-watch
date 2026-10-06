@@ -5,6 +5,7 @@ import {
   type CriticalOwnership,
 } from "./critical-ownership.mts";
 import { CRITICAL_FILES, CRITICAL_OWNERSHIP, criticalCoverageFilesForChanges, selectChangedCriticalSources } from "./critical-coverage.mjs";
+import { partitionTestFiles, readPrTestTimings, takeTestShard } from "./pr-test-plan.mts";
 
 export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
@@ -78,6 +79,7 @@ export interface CriticalCoverageBuildOptions {
   ownership?: CriticalOwnership;
   exists?: (path: string) => boolean;
   baseRef?: string;
+  durations?: Readonly<Record<string, number>>;
 }
 
 function selectCriticalCoverageFiles(options: CriticalCoverageBuildOptions): string[] {
@@ -126,19 +128,24 @@ export function buildCriticalCoverageArgs(
   const ownership = options.ownership ?? CRITICAL_OWNERSHIP;
   // Keep the execution suite comparable to the checked-in full-suite baseline:
   // other critical owners can exercise a touched source through indirect imports.
-  const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
-  assertExecutableTestFiles(selectedTests, { exists: options.exists });
+  const ownerTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);
+  assertExecutableTestFiles(ownerTests, { exists: options.exists });
+  const { args, shard } = takeTestShard(extraArgs);
+  const selectedTests = shard
+    ? partitionTestFiles(ownerTests, shard.shardCount, options.durations ?? readPrTestTimings().coverage)[shard.shard - 1]
+    : ownerTests;
+  if (selectedTests.length === 0) throw new Error("Empty critical coverage shard selection");
   return [
     "run",
     ...buildCriticalCoverageOptions(selectedSources),
     ...selectedTests,
-    ...extraArgs,
+    ...args,
   ];
 }
 
 export function countCriticalCoverageShards(
   options: CriticalCoverageBuildOptions = {},
-  maxShards = 4,
+  maxShards = 8,
 ): number {
   const ownership = options.ownership ?? CRITICAL_OWNERSHIP;
   const selectedTests = collectOwningTests(options.criticalFiles ?? CRITICAL_FILES, ownership);

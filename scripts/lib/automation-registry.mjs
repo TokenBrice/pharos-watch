@@ -58,7 +58,11 @@ export const DEPLOY_IMPACT_REGISTRY = {
   pages: {
     exactPaths: uniqueSorted([...PAGES_EXTRA_EXACT_PATHS, ...PUBLIC_DOC_SOURCE_PATHS]),
     prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
-    workflowOnlyExactPaths: [".github/workflows/pages-release.yml", ".github/workflows/rebuild-pages.yml"],
+    workflowOnlyExactPaths: [
+      ".github/workflows/pages-prepare.yml",
+      ".github/workflows/pages-release.yml",
+      ".github/workflows/rebuild-pages.yml",
+    ],
   },
   worker: {
     exactPaths: ["shared/data/funding/donations.json"],
@@ -382,7 +386,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "stablecoin-detail-snapshots",
-    buildLifecycle: "compile-input",
+    buildLifecycle: "post-refresh",
     checkCommand: "PHAROS_DETAIL_SNAPSHOT_CHECK=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
     command: "node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
     bootstrapCommand: "PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
@@ -396,6 +400,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "scripts/lib/sync-from-api.ts",
       "shared/data/stablecoins/coins.generated.json",
       "shared/lib/api-endpoints/paths.ts",
+      "shared/lib/detail-snapshot-inputs.ts",
+      "shared/lib/stablecoin-live-summary.ts",
+      "shared/types/detail-snapshot-inputs.ts",
+      "shared/types/stablecoin-live-summary.ts",
       "shared/types/market.ts",
       "src/lib/api-query-descriptors.ts",
       "worker/src/api/stablecoin-detail.ts",

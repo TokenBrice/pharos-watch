@@ -97,6 +97,7 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
+    expect(hasPagesDeployImpact([".github/workflows/pages-prepare.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-llms-txt.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-docs-metadata.ts"])).toBe(true);
@@ -266,8 +267,17 @@ describe("classifyDeployChanges", () => {
   });
 
   it("self-tests changes to the critical coverage workflow and manifests", () => {
-    expect(classifyChangedFiles(["scripts/lib/critical-test-files.mts"]).criticalCoverageChanged).toBe(true);
-    expect(classifyChangedFiles([".github/workflows/pull-request-checks.yml"]).criticalCoverageChanged).toBe(true);
+    for (const file of [
+      "scripts/lib/critical-test-files.mts",
+      ".github/workflows/pull-request-checks.yml",
+      "scripts/lib/pr-lanes.mts",
+      "scripts/lib/pr-test-plan.mts",
+      "scripts/data/pr-test-timings.json",
+      "scripts/maintenance/refresh-pr-test-timings.ts",
+      "scripts/maintenance/generate-pr-workflow-matrix.ts",
+    ]) {
+      expect(classifyChangedFiles([file]).criticalCoverageChanged, file).toBe(true);
+    }
   });
 
   it("requests Firefox only when changed sources select a browser-rendered artifact", () => {
@@ -307,6 +317,7 @@ describe("classifyDeployChanges", () => {
       "scripts/maintenance/run-pr-static-checks.ts", "scripts/maintenance/smoke-ui.mjs",
       "shared/lib/public-docs.ts", "src/app/pharosville/page.tsx"], worker: true, pages: true, publish: true, docsOnly: false },
     { name: "Pages workflow", files: [".github/workflows/pages-release.yml"], worker: false, pages: true, publish: true, docsOnly: false },
+    { name: "Pages preparation workflow", files: [".github/workflows/pages-prepare.yml"], worker: false, pages: true, publish: true, docsOnly: false },
     { name: "internal docs", files: ["docs/testing.md", "docs/process/notes.md"], worker: false, pages: false, publish: false, docsOnly: true },
     { name: "Pages tests", files: ["src/components/__tests__/header.test.tsx"], worker: false, pages: true, publish: false, docsOnly: false },
     { name: "source renamed to test", files: ["src/components/header.tsx", "src/components/__tests__/header.test.tsx"],

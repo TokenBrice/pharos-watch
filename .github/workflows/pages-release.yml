@@ -38,19 +38,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # sitemap-dates and docs-metadata derive per-route and per-doc
-          # timestamps from commit history during prebuild. A shallow checkout
-          # makes their guard fail rather than publish wrong lastmod values.
+          # Keep history for post-refresh git fallbacks and artifact checks;
+          # history-derived compile inputs arrive in the prepared workspace.
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
-      - name: Materialize compile-input artifacts
-        # The dataset refresh consumes the generated stablecoin catalog, so
-        # compile inputs must exist before the refresh runs.
-        run: npm run prebuild -- --build-lifecycle=compile-input
+          install-deps: "false"
+          cache-npm: "false"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: ${{ runner.temp }}/pharos-pages-workspace
+      - name: Restore prepared production workspace
+        run: tar --zstd -xf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" --same-permissions
       - name: Resolve release-data refresh result path
         # runner.temp is not available in job-level env; export it per step.
         run: echo "PAGES_REFRESH_RESULT_PATH=${RUNNER_TEMP}/pages-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/result.json" >> "$GITHUB_ENV"
@@ -91,7 +94,7 @@ jobs:
           API_BASE_URL: ""
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
-          npm run prebuild -- --build-lifecycle=post-refresh
+          node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh
           npx --no-install next build --webpack
           npm run postbuild
       - name: Validate static SEO and published archive continuity

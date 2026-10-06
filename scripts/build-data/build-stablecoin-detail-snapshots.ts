@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN, PAGES_APP_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
-import { isRecord } from "@shared/lib/type-guards";
+import {
+  detailSnapshotSourceUpdatedAt,
+} from "@shared/lib/detail-snapshot-inputs";
+import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema } from "@shared/types/detail-snapshot-inputs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   StablecoinDetailResponseSchema,
@@ -14,18 +17,16 @@ import {
   type SupplyHistoryPoint,
 } from "@shared/types/market";
 import type { StablecoinDetailSnapshot } from "../../src/lib/api";
-import {
-  STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
-  StablecoinLiveSummarySchema,
-  projectStablecoinLiveSummary,
-  type StablecoinLiveSummary,
-} from "../../src/lib/api-query-descriptors";
+import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "../../src/lib/api-query-descriptors";
 import {
   fetchWithRetry,
   generatorFetchHeaders,
   resolveApiPathUrl,
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const DETAIL_SNAPSHOT_OUTPUT_DIR = resolve(REPO_ROOT, "src/generated/stablecoin-detail-snapshots");
@@ -160,17 +161,7 @@ async function fetchDetailSnapshotJson(url: string): Promise<{ data: unknown; up
     throw new DetailSnapshotHttpError(url, response.status, body);
   }
   const data: unknown = await response.json();
-  const meta = isRecord(data) && isRecord(data._meta) ? data._meta : null;
-  const sourceUpdatedAt = meta?.updatedAt ?? (isRecord(data) ? data.updatedAt : undefined);
-  if (typeof sourceUpdatedAt === "number" && Number.isFinite(sourceUpdatedAt) && sourceUpdatedAt >= 0) {
-    return { data, updatedAt: sourceUpdatedAt * 1000 };
-  }
-  const date = Date.parse(response.headers.get("Date") ?? "");
-  const age = Number(response.headers.get("X-Data-Age") ?? 0);
-  const edgeAge = Number(response.headers.get("Age") ?? 0);
-  // A server Date already predates edge residence. Without it, subtract both ages.
-  const acquiredAt = Number.isFinite(date) ? date : Date.now() - (Number.isFinite(edgeAge) ? edgeAge * 1000 : 0);
-  return { data, updatedAt: Math.max(0, acquiredAt - (Number.isFinite(age) ? age * 1000 : 0)) };
+  return { data, updatedAt: detailSnapshotSourceUpdatedAt(data, response.headers) };
 }
 
 export async function fetchOptionalDetailSnapshotLane<T>(
@@ -207,8 +198,21 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+export interface DetailSnapshotGenerationOptions {
+  source?: "per-coin" | "bulk";
+  generatedAt?: number;
+}
+
+interface SnapshotCoinLanes {
+  id: string;
+  liveSummary: StablecoinLiveSummary | null;
+  supplyHistory: SupplyHistoryPoint[] | null;
+  updatedAt: StablecoinDetailSnapshot["updatedAt"];
+}
+
 export async function generateSnapshots(
   bootstrap = process.env.PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP === "1",
+  options: DetailSnapshotGenerationOptions = {},
 ): Promise<StablecoinDetailSnapshot[]> {
   if (bootstrap) {
     // Bootstrap needs valid importable envelopes, not live data or credentials.
@@ -224,7 +228,11 @@ export async function generateSnapshots(
   const liveIds = TRACKED_STABLECOINS
     .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen")
     .map((coin) => coin.id);
-  const lanes = await mapWithConcurrency(liveIds, MAX_PARALLEL_COIN_REQUESTS, async (id) => {
+  const source = options.source ?? process.env.PHAROS_DETAIL_SNAPSHOT_SOURCE ?? "per-coin";
+  if (source !== "per-coin" && source !== "bulk") {
+    throw new Error(`Invalid PHAROS_DETAIL_SNAPSHOT_SOURCE: ${source}`);
+  }
+  const fetchCoin = async (id: string): Promise<SnapshotCoinLanes> => {
     const detail = await fetchOptionalDetailSnapshotLane(
       `coin detail for ${id}`,
       resolveApiPathUrl(apiBase, API_PATHS.stablecoinDetail(id)),
@@ -238,19 +246,56 @@ export async function generateSnapshots(
     if (!detail && !history) {
       throw new Error(`No detail snapshot lanes were available for live stablecoin ${id}.`);
     }
-    return [id, detail, history] as const;
-  });
-  return buildStablecoinDetailSnapshots({
-    generatedAt: Date.now(),
-    liveSummariesById: new Map(lanes.map(([id, detail]) => [
+    return {
       id,
-      detail ? projectStablecoinLiveSummary(detail.data) : null,
-    ])),
-    supplyHistoryById: new Map(lanes.map(([id, , history]) => [id, history?.data ?? null])),
-    updatedAtById: new Map(lanes.map(([id, detail, history]) => [id, {
-      ...(detail ? { liveSummary: detail.updatedAt } : {}),
-      ...(history ? { supplyHistory: history.updatedAt } : {}),
-    }])),
+      liveSummary: detail ? projectStablecoinLiveSummary(detail.data) : null,
+      supplyHistory: history?.data ?? null,
+      updatedAt: {
+        ...(detail ? { liveSummary: detail.updatedAt } : {}),
+        ...(history ? { supplyHistory: history.updatedAt } : {}),
+      },
+    };
+  };
+  const lanes: SnapshotCoinLanes[] = [];
+  if (source === "per-coin") {
+    lanes.push(...await mapWithConcurrency(liveIds, MAX_PARALLEL_COIN_REQUESTS, fetchCoin));
+  } else {
+    // Bulk is an internal site-only transport even when ordinary per-coin reads
+    // use the public API key lane. Explicit site/preview bases remain supported.
+    const bulkApiBase = apiBase === API_ORIGIN
+      ? process.env.SITE_API_SHARED_SECRET?.trim() ? SITE_API_ORIGIN : `${PAGES_APP_ORIGIN}${SITE_DATA_PATH_PREFIX}`
+      : apiBase;
+    for (let offset = 0; offset < liveIds.length; offset += DETAIL_SNAPSHOT_INPUT_BATCH_SIZE) {
+      const ids = liveIds.slice(offset, offset + DETAIL_SNAPSHOT_INPUT_BATCH_SIZE);
+      const payload = await fetchDetailSnapshotJson(
+        resolveApiPathUrl(bulkApiBase, API_PATHS.stablecoinDetailSnapshotInputs(ids)),
+      );
+      const { entries } = DetailSnapshotInputsResponseSchema.parse(payload.data);
+      const requested = new Set(ids);
+      const received = new Set(entries.map((entry) => entry.id));
+      if (entries.length !== ids.length || received.size !== ids.length || entries.some((entry) => !requested.has(entry.id))) {
+        throw new Error("Bulk detail snapshot response did not account for every requested coin exactly once");
+      }
+      const batch = await mapWithConcurrency(entries, MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
+        if (entry.status === "unavailable") {
+          console.warn(`[stablecoin-detail-snapshots] Bulk unavailable for ${entry.id}: ${entry.reason}; fetching per-coin`);
+          return fetchCoin(entry.id);
+        }
+        return {
+          id: entry.id,
+          liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
+          supplyHistory: entry.supplyHistory,
+          updatedAt: entry.updatedAt,
+        };
+      });
+      lanes.push(...batch);
+    }
+  }
+  return buildStablecoinDetailSnapshots({
+    generatedAt: options.generatedAt ?? Date.now(),
+    liveSummariesById: new Map(lanes.map((lane) => [lane.id, lane.liveSummary])),
+    supplyHistoryById: new Map(lanes.map((lane) => [lane.id, lane.supplyHistory])),
+    updatedAtById: new Map(lanes.map((lane) => [lane.id, lane.updatedAt])),
   });
 }
 
@@ -308,11 +353,5 @@ export async function runCli(check = process.env.PHAROS_DETAIL_SNAPSHOT_CHECK ==
   console.log(`[stablecoin-detail-snapshots] ${check ? "validated" : "wrote"} ${snapshots.length} snapshots`);
 }
 
-// This file is both the registered entrypoint and the unit-test import surface.
-// Vitest sets VITEST for module imports; every registered command runs the CLI.
-if (!process.env.VITEST) {
-  runCli().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
+// Importing this module from the equivalence tool must never write repo outputs.
+runDirectCli(import.meta.url, runCli, { label: "stablecoin-detail-snapshots" });

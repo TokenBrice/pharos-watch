@@ -206,12 +206,17 @@ describe("dependency-audit exceptions", () => {
     );
   });
 
-  it("adds the production audit only for root dependency inputs", () => {
+  it("adds the production audit only to guards for root dependency inputs", () => {
     for (const path of ["package.json", "package-lock.json"]) {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("audit:deps");
+      expect(buildPrStaticCheckPlan([path], { group: "guards" }).commands.map((command) => command.name))
+        .toContain("audit:deps");
+      expect(buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name))
+        .not.toContain("audit:deps");
     }
-    expect(buildPrStaticCheckPlan(["worker/package.json"]).commands.map((command) => command.name)).not.toContain(
-      "audit:deps",
-    );
+    for (const group of [undefined, "compile", "guards"] as const) {
+      expect(buildPrStaticCheckPlan(["worker/package.json"], { group }).commands.map((command) => command.name))
+        .not.toContain("audit:deps");
+    }
   });
 });

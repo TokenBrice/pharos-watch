@@ -75,7 +75,7 @@ npm run check:frozen-invariants
 npm run lint
 npm test -- --run
 cd worker && npx tsc --noEmit && cd ..
-npm run prebuild  # regenerates compile-input artifacts only
+npm run prebuild  # regenerates compile-input and post-refresh artifacts, including live detail snapshots
 npx --no-install tsx scripts/maintenance/generate-cemetery-dataset.ts  # regenerates the maintenance-only cemetery dataset
 npm run logos:cemetery-atlas  # regenerates the maintenance-only cemetery logo atlas
 npm run build:og-cemetery  # regenerates the /cemetery/ OG card (plot map; no-op when current)

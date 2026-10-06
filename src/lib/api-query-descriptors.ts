@@ -2,10 +2,9 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
 import type { ChainsResponse } from "@shared/types/chains";
-import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { admitSupplyBuckets, sumPegBucketsOrNull } from "@shared/lib/supply";
-import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
+import { normalizeStablecoinLiveSummary, projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { StablecoinDetailResponseSchema } from "@shared/types/market";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
@@ -65,7 +64,6 @@ import {
   CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@shared/lib/schema-like";
-import { z } from "zod";
 
 export type { NonUsdSharePoint } from "@shared/types/market";
 
@@ -73,131 +71,6 @@ export type { NonUsdSharePoint } from "@shared/types/market";
 export const STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS = 90;
 /** Expanded window fetched only when a detail chart selects 1Y or All. */
 export const STABLECOIN_DETAIL_FULL_SUPPLY_HISTORY_DAYS = 1825;
-
-const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number());
-
-/**
- * Token-count supply checkpoints read from the detail history's native `totalCirculating`
- * series. All three come from one series, so their ratios never mix token counts with USD
- * market cap; `null` means unavailable, never zero.
- */
-const NativeSupplyCheckpointsSchema = z.object({
-  current: z.number().nullable(),
-  prevWeek: z.number().nullable(),
-  prevMonth: z.number().nullable(),
-});
-export type NativeSupplyCheckpoints = z.infer<typeof NativeSupplyCheckpointsSchema>;
-
-export const StablecoinLiveSummarySchema = z.object({
-  price: z.number().nullable(),
-  priceSource: z.string().nullable(),
-  priceConfidence: PriceConfidenceSchema.nullable(),
-  priceUpdatedAt: z.number().nullable(),
-  priceObservedAt: z.number().nullable(),
-  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
-  priceSyncedAt: z.number().nullable().optional(),
-  nominalPriceReference: NominalPriceReferenceSchema.optional(),
-  consensusSources: z.array(z.string()).optional(),
-  agreeSources: z.array(z.string()).optional(),
-  supplyObservedAt: z.number().nullable(),
-  circulating: StablecoinDetailPegBucketsSchema,
-  circulatingPrevDay: StablecoinDetailPegBucketsSchema,
-  circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
-  circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
-  nativeSupply: NativeSupplyCheckpointsSchema,
-}).transform((summary) => isObservedPrice(summary) ? summary : {
-  ...summary,
-  price: null,
-  priceConfidence: null,
-  priceUpdatedAt: null,
-  priceObservedAt: null,
-  ...(summary.priceSyncedAt !== undefined ? { priceSyncedAt: null } : {}),
-  ...(summary.consensusSources !== undefined ? { consensusSources: [] } : {}),
-  ...(summary.agreeSources !== undefined ? { agreeSources: [] } : {}),
-});
-export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;
-
-/**
- * Detail history is a daily series, so a sample more than one daily bucket older than the
- * target is not a stand-in for it.
- */
-const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
-
-/**
- * Newest sample at or before `targetDate`. A later sample never substitutes for an earlier
- * one, and a gap wider than one daily bucket reads as unavailable (`{}`, the no-bucket
- * discriminant `sumPegBucketsOrNull` resolves to `null`) rather than as a real reading.
- */
-function detailBucketsAt(
-  detail: StablecoinDetailResponse,
-  targetDate: number,
-  field: "totalCirculatingUSD" | "totalCirculating",
-): Record<string, number> {
-  let chosen: Record<string, number> | undefined;
-  let chosenDate = Number.NEGATIVE_INFINITY;
-  for (const token of detail.tokens ?? []) {
-    const date = token.date;
-    if (date == null || date > targetDate) continue;
-    if (targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
-    if (date > chosenDate) {
-      chosenDate = date;
-      chosen = token[field];
-    }
-  }
-  return chosen ?? {};
-}
-
-/** Project the history-heavy endpoint into only the fields consumed above the fold. */
-export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): StablecoinLiveSummary {
-  const datedTokens = (detail.tokens ?? []).filter(
-    (token): token is typeof token & { date: number } => token.date != null,
-  );
-  const latest = datedTokens.reduce<(typeof datedTokens)[number] | undefined>(
-    (candidate, token) => !candidate || token.date > candidate.date ? token : candidate,
-    undefined,
-  );
-  const latestDate = latest?.date ?? null;
-  const hasCurrentSupply = admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
-  let circulating = hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
-  // Older detail responses may have only native history. Never assume a $1 peg.
-  if (admitSupplyBuckets(circulating).status !== "observed") {
-    const native = latest?.totalCirculating;
-    const price = isObservedPrice(detail) ? detail.price : null;
-    circulating = native && admitSupplyBuckets(native).status === "observed" &&
-      typeof price === "number" && Number.isFinite(price) && price > 0
-      ? Object.fromEntries(Object.entries(native).map(([peg, amount]) => [peg, amount * price]))
-      : {};
-    if (admitSupplyBuckets(circulating).status !== "observed") circulating = {};
-  }
-
-  return StablecoinLiveSummarySchema.parse({
-    price: detail.price ?? null,
-    priceSource: detail.priceSource ?? null,
-    priceConfidence: detail.priceConfidence ?? null,
-    priceUpdatedAt: detail.priceUpdatedAt ?? null,
-    priceObservedAt: detail.priceObservedAt ?? detail.priceUpdatedAt ?? null,
-    priceObservedAtMode: detail.priceObservedAtMode,
-    priceSyncedAt: detail.priceSyncedAt,
-    ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
-    consensusSources: detail.consensusSources,
-    agreeSources: detail.agreeSources,
-    supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : latestDate,
-    circulating,
-    circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
-      : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
-    circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculatingUSD"),
-    circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculatingUSD"),
-    nativeSupply: {
-      current: sumPegBucketsOrNull(latest?.totalCirculating),
-      prevWeek: latestDate == null
-        ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 7 * 86_400, "totalCirculating")),
-      prevMonth: latestDate == null
-        ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, latestDate - 30 * 86_400, "totalCirculating")),
-    },
-  });
-}
 
 /**
  * Project a frozen coin's archived list row (captured at freeze time) into the same compact
@@ -225,7 +98,7 @@ export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): Stab
     // Archived list rows carry USD peg buckets only, so native token-count checkpoints are unavailable.
     nativeSupply: { current: null, prevWeek: null, prevMonth: null },
   });
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? normalizeStablecoinLiveSummary(parsed.data) : null;
 }
 
 const StablecoinLiveSummaryResponseSchema = StablecoinDetailResponseSchema.transform(

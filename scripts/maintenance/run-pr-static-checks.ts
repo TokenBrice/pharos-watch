@@ -50,6 +50,14 @@ interface PrStaticCheckCommand {
   args?: string[];
 }
 
+export type PrStaticCheckGroup = "compile" | "guards";
+
+const COMPILE_STATIC_CHECKS: Record<string, true> = {
+  "lint:changed": true,
+  typecheck: true,
+  "typecheck:worker": true,
+};
+
 const PARALLEL_STATIC_CHECKS = new Set([
   "typecheck",
   "typecheck:worker",
@@ -96,7 +104,7 @@ export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckComma
 
 export function buildPrStaticCheckPlan(
   changedFiles: readonly string[],
-  { skipDocSync = false }: { skipDocSync?: boolean } = {},
+  { skipDocSync = false, group }: { skipDocSync?: boolean; group?: PrStaticCheckGroup } = {},
 ) {
   const classification = classifyChangedFiles(changedFiles);
   const commands: PrStaticCheckCommand[] = [
@@ -160,7 +168,13 @@ export function buildPrStaticCheckPlan(
     commands.push({ name: "check:telegram-load" });
   }
 
-  return { classification, commands };
+  // Select the complete plan first: grouping changes scheduling, not ownership.
+  return {
+    classification,
+    commands: group
+      ? commands.filter((command) => Boolean(COMPILE_STATIC_CHECKS[command.name]) === (group === "compile"))
+      : commands,
+  };
 }
 
 export async function runPrStaticChecks({
@@ -175,15 +189,22 @@ export async function runPrStaticChecks({
   if (staged) throw new Error("check:pr:static requires a --base/--head range; use check:focused --staged for index-selected checks.");
   const json = rest.includes("--json");
   const skipDocSync = rest.includes("--skip-doc-sync");
-  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync");
+  const groupOption = rest.find((arg) => arg.startsWith("--group="));
+  const groupValue = groupOption?.slice("--group=".length);
+  if (groupValue !== undefined && groupValue !== "compile" && groupValue !== "guards") {
+    throw new Error(`Unknown --group value: ${groupValue}. Expected compile or guards.`);
+  }
+  const group: PrStaticCheckGroup | undefined = groupValue;
+  const unknownOptions = rest.filter((arg) => arg !== "--json" && arg !== "--skip-doc-sync" && arg !== groupOption);
   if (unknownOptions.length > 0) throw new Error(`Unknown option(s): ${unknownOptions.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });
-  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { skipDocSync });
+  const { classification, commands } = buildPrStaticCheckPlan(changedFiles, { skipDocSync, group });
   const logOutput = json ? stderr : stdout;
   const log = (message: string) => logOutput.write(message + "\n");
   log(
     `[check:pr:static] ${changedFiles.length} changed file(s); ` +
       `pages=${classification.pagesChanged}, worker=${classification.workerChanged}` +
+      `${group ? `, group=${group}` : ""}` +
       `${skipDocSync ? ", doc-sync owned by the docs lane" : ""}.`,
   );
   const runnableCommands = commands.map((command) => ({
