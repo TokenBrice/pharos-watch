@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -41,6 +42,15 @@ const {
   ZERO_SEND_STREAK_THRESHOLD,
   WATCHDOG_KEYS,
 } = await import("../telegram-degradation-watchdog");
+
+function safetyDiagnostics(assessedAtSec = Math.floor(Date.now() / 1000)) {
+  return {
+    sourcePublicationGenerationId: "accepted-generation",
+    acceptedPublicationGenerationId: "accepted-generation",
+    freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    assessedAtSec,
+  };
+}
 
 interface CacheStore {
   values: Map<string, { value: string; updatedAt: number }>;
@@ -136,6 +146,7 @@ beforeEach(() => {
   mockDeleteCache.mockReset();
   mockLoadActiveAlertSafetySourceAssessment.mockReset();
   mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+    ...safetyDiagnostics(),
     state: "ok",
     ageSeconds: 60,
     generation: getAlertSafetyV9SourceGeneration(),
@@ -226,6 +237,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
         dispatchIntervalSec: 300,
       },
       safetySourceAssessment: {
+        ...safetyDiagnostics(),
         state: "ok",
         ageSeconds: 60,
         generation: getAlertSafetyV9SourceGeneration(),
@@ -347,6 +359,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      ...safetyDiagnostics(),
       state: "corrupt",
       ageSeconds: null,
       generation: null,
@@ -378,6 +391,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      ...safetyDiagnostics(),
       state: "missing",
       ageSeconds: null,
       generation: null,
@@ -401,6 +415,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      ...safetyDiagnostics(),
       state: "missing",
       ageSeconds: null,
       generation: null,
@@ -451,6 +466,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const episodeSince = nowSec - 4000;
     const assessment = {
+      ...safetyDiagnostics(),
       state: "corrupt" as const,
       ageSeconds: null,
       generation: null,
@@ -476,6 +492,41 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     expect(secondMeta.safetySource.detail).toBe(firstDetail);
     expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(episodeSince));
     expect(mockSetCache.mock.calls.some(([, key]) => key === WATCHDOG_KEYS.safetySourceSince)).toBe(false);
+  });
+
+  it.each(["newly-tripped", "sustained", "pending-masked", "recovered"] as const)("retains preloaded source provenance on %s outcomes", async (phase) => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const assessment = {
+      ...safetyDiagnostics(nowSec - 300),
+      state: phase === "recovered" ? "ok" as const : "corrupt" as const,
+      ageSeconds: 1_200,
+      generation: getAlertSafetyV9SourceGeneration(),
+      sourcePublicationGenerationId: "source-generation",
+      acceptedPublicationGenerationId: "accepted-generation",
+      envelope: null,
+      ...(phase === "recovered" ? {} : { failureReason: "v9-snapshot-invalid" }),
+    };
+    if (phase !== "newly-tripped") store.values.set(WATCHDOG_KEYS.safetySourceSince, { value: String(nowSec - 4_000), updatedAt: nowSec - 4_000 });
+    if (phase === "pending-masked") store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 4_000), updatedAt: nowSec - 4_000 });
+    const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: phase === "pending-masked" ? PENDING_BACKLOG_THRESHOLD + 1 : 0 }), undefined, { safetySourceAssessment: assessment });
+    const meta = JSON.parse(result.metadata ?? "{}");
+    expect(meta.safetySource).toMatchObject({
+      state: assessment.state, ageSeconds: 1_200, generation: assessment.generation,
+      sourcePublicationGenerationId: "source-generation", acceptedPublicationGenerationId: "accepted-generation",
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, assessedAtSec: nowSec - 300,
+      failureReason: phase === "recovered" ? null : "v9-snapshot-invalid",
+      triggered: phase === "sustained" || phase === "pending-masked",
+      recovered: phase === "recovered",
+    });
+    expect(mockLoadActiveAlertSafetySourceAssessment).not.toHaveBeenCalled();
+    if (phase === "newly-tripped") expect(meta.safetySource.detail).toBe("state=corrupt (newly tripped)");
+    if (phase === "pending-masked") {
+      expect(meta.pendingBacklog.triggered).toBe(true);
+      expect(result.metadata).toContain("v9-snapshot-invalid");
+    }
+    if (phase === "recovered") expect(store.values.has(WATCHDOG_KEYS.safetySourceSince)).toBe(false);
+    else expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(nowSec - (phase === "newly-tripped" ? 0 : 4_000)));
   });
 });
 
