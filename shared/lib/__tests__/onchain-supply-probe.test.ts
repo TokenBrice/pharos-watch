@@ -547,7 +547,7 @@ describe("hasRuntimeOnchainSupplyPath", () => {
 });
 
 
-it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "syrupusdc-maple", "susdt-spark"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
+it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
   expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(

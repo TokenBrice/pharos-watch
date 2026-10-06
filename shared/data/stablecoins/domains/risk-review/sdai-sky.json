@@ -241,6 +241,48 @@
             "url": "https://optimistic.etherscan.io/block/154536455"
           }
         ]
+      },
+      {
+        "id": "worldchain:0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d",
+        "sourceChain": "ethereum",
+        "destinationChain": "worldchain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x859dbe24b90c9f2f7742083d3cf59ca41f55be5d",
+        "protocol": "World Chain Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:worldchain-canonical-messaging",
+          "contract:worldchain:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned public RPC reads on 2026-10-06: at World Chain block 35966146, totalSupply() was 1501957412171447854742323 raw units (18 decimals), BRIDGE() was the L2StandardBridge predeploy 0x4200000000000000000000000000000000000010, and REMOTE_TOKEN() was Ethereum sDAI 0x83f20f44975d03b1b09e64809b757c47f942beea. The Superchain registry identifies L1StandardBridgeProxy 0x470458c91978d2d929704489ad730dc3e3001113; canonical sDAI balanceOf that bridge at Ethereum block 26131543 was 1501984502171447854742433 raw units. These independently pinned blocks do not prove exact custody/receipt equality or pending liabilities; the escrow-minus-supply difference is not observed pending. Complete route history and economic supply-plan admission remain unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-06",
+        "observedBlock": 35966146,
+        "sources": [
+          {
+            "label": "Superchain World Chain registry: canonical L1StandardBridgeProxy",
+            "url": "https://github.com/ethereum-optimism/superchain-registry/blob/main/superchain/configs/mainnet/worldchain.toml"
+          },
+          {
+            "label": "Optimism Standard Bridge documentation",
+            "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+          },
+          {
+            "label": "Pinned World Chain block 35966146: supply, decimals, BRIDGE and REMOTE_TOKEN",
+            "url": "https://worldscan.org/block/35966146"
+          },
+          {
+            "label": "Pinned Ethereum block 26131543: canonical sDAI held by the World Chain L1 bridge",
+            "url": "https://etherscan.io/block/26131543"
+          }
+        ]
       }
     ],
     "controls": [

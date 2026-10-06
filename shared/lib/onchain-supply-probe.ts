@@ -190,12 +190,24 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "xofm-mento": [{ chain: "celo" }],
   // sUSDS and sDAI are Sky savings NAV wrappers with no DefiLlama market row
   // (llamaId null), so upstream supplies no per-chain breakdown and the
-  // CoinGecko intake lanes leave chainCirculating empty. Aggregate the verified
-  // native + canonical-bridge deployments (contracts sourced from the coin JSONs)
-  // so the V9 supply review reconciles real per-chain rows instead of capping on
-  // runtime-bridge-materiality-unavailable.
-  "susds-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }, { chain: "arbitrum" }],
-  "sdai-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }],
+  // CoinGecko intake lanes leave chainCirculating empty. Read Ethereum and all
+  // cataloged canonical-bridge deployments: Base/Optimism/Arbitrum/Unichain for
+  // sUSDS and Base/Optimism/World Chain for sDAI. Ethereum totalSupply already
+  // includes their L1 escrow; the canonical policy below reallocates remote
+  // supply instead of adding it. This roster is not an economic supply plan.
+  "susds-sky": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "optimism" },
+    { chain: "arbitrum" },
+    supplyProbeChain("unichain"),
+  ],
+  "sdai-sky": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "optimism" },
+    supplyProbeChain("worldchain"),
+  ],
   // sUSDe has the same shape (llamaId null, CoinGecko detail provider), but its
   // representations are LayerZero OFTs minted against the Ethereum OFT adapter
   // 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, which escrows canonical sUSDe.

@@ -72,6 +72,7 @@ function makeSkyMeta(): StablecoinMeta {
       { chain: "base", address: "0x0000000000000000000000000000000000000002", decimals: 18 },
       { chain: "optimism", address: "0x0000000000000000000000000000000000000003", decimals: 18 },
       { chain: "arbitrum", address: "0x0000000000000000000000000000000000000004", decimals: 18 },
+      { chain: "unichain", address: "0x0000000000000000000000000000000000000005", decimals: 18 },
     ],
     flags: {
       backing: "crypto-backed",
@@ -299,6 +300,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       if (input?.chain === "base") return 100n * 10n ** 18n;
       if (input?.chain === "optimism") return 50n * 10n ** 18n;
       if (input?.chain === "arbitrum") return 25n * 10n ** 18n;
+      if (input?.chain === "unichain") return 10n * 10n ** 18n;
       return 0n;
     });
 
@@ -310,10 +312,11 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       mcap: 1_000,
       supplySource: "onchain-total-supply",
       chainCirculating: {
-        Ethereum: { current: 825, chainId: "ethereum" },
+        Ethereum: { current: 815, chainId: "ethereum" },
         Base: { current: 100, chainId: "base" },
         Optimism: { current: 50, chainId: "optimism" },
         Arbitrum: { current: 25, chainId: "arbitrum" },
+        Unichain: { current: 10, chainId: "unichain" },
       },
     });
     expect(result?.observedAt).toBeGreaterThanOrEqual(observedBefore);
