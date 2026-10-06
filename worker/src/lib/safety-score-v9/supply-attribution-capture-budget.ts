@@ -15,11 +15,18 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
     assetTimeoutMs?: (asset: TAsset) => number;
+    /** Rotate execution only; results retain their original asset indexes. */
+    startIndex?: number;
   } = {},
 ): Promise<BudgetedSupplyAttributionResult<TResult>[]> {
   if (assets.length > SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS) {
     throw new Error("Supply attribution capture exceeds the bounded cohort");
   }
+  const requestedStartIndex = options.startIndex ?? 0;
+  if (!Number.isSafeInteger(requestedStartIndex) || requestedStartIndex < 0) {
+    throw new Error("Supply attribution start index must be a nonnegative safe integer");
+  }
+  const startIndex = assets.length === 0 ? 0 : requestedStartIndex % assets.length;
   throwIfAborted(options.signal);
   const budget = SUPPLY_ATTRIBUTION_CAPTURE_BUDGET;
   const deadlineMs = Math.min(
@@ -31,7 +38,7 @@ export async function runBudgetedSupplyAttributionAssets<TAsset, TResult>(
   async function worker(): Promise<void> {
     while (cursor < assets.length) {
       throwIfAborted(options.signal);
-      const index = cursor++;
+      const index = (startIndex + cursor++) % assets.length;
       const remainingMs = deadlineMs - Date.now();
       if (remainingMs <= 0) {
         results[index] = { status: "rejected", reason: "capture-window-exhausted" };

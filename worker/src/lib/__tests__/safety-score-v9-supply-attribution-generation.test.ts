@@ -43,6 +43,7 @@ import {
 import { captureSafetyScoreV9SupplyAttribution, safetyScoreV9SupplyAttributionExpectedAssetIds } from "../safety-score-v9/supply-attribution";
 import { runBudgetedSupplyAttributionAssets } from "../safety-score-v9/supply-attribution-capture-budget";
 import { sleepWithSignal } from "../abort";
+import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import * as wmObserver from "../safety-score-v9/wm-supply-observer";
 import * as xautObserver from "../safety-score-v9/xaut-supply-observer";
 
@@ -462,6 +463,73 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it("rotates execution deterministically while preserving original result order", async () => {
+    const assets = ["a", "b", "c", "d"];
+    const orders: string[][] = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const order: string[] = [];
+      const results = await runBudgetedSupplyAttributionAssets(assets, async asset => {
+        order.push(asset);
+        return asset;
+      }, { startIndex: 6 });
+      orders.push(order);
+      expect(results).toEqual(assets.map(value => ({ status: "completed", value })));
+    }
+    expect(orders).toEqual([["c", "d", "a", "b"], ["c", "d", "a", "b"]]);
+  });
+
+  it("gives all ten cold assets first opportunity over consecutive buckets within the same deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const assets = Array.from({ length: 10 }, (_, index) => index);
+      const admitted = new Set<number>();
+      let active = 0, maximum = 0;
+      for (let bucket = 100; bucket < 110; bucket++) {
+        const startedAtMs = Date.now();
+        const observed: number[] = [];
+        const pending = runBudgetedSupplyAttributionAssets(assets, async (asset, signal, deadlineMs) => {
+          active++; maximum = Math.max(maximum, active);
+          observed.push(asset);
+          expect(deadlineMs).toBe(startedAtMs + 100);
+          try {
+            // Cold observers all fit when first; a second observer consumes
+            // the remainder, recreating a capture that admits only one asset.
+            await sleepWithSignal(60, signal);
+            return asset;
+          } finally { active--; }
+        }, {
+          startIndex: bucket,
+          executionWindow: {
+            deadlineMs: startedAtMs + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 100,
+            minimumRemainingMs: 0,
+          },
+        });
+        await vi.runAllTimersAsync();
+        const results = await pending;
+        expect(observed).toEqual([bucket % 10, (bucket + 1) % 10]);
+        expect(results[bucket % 10]).toEqual({ status: "completed", value: bucket % 10 });
+        expect(results[(bucket + 1) % 10]).toEqual({ status: "rejected", reason: "asset-timeout" });
+        expect(results.filter(result => result.status === "completed")).toHaveLength(1);
+        expect(results.filter(result => result.status === "rejected" && result.reason === "capture-window-exhausted")).toHaveLength(8);
+        admitted.add(bucket % 10);
+        expect(Date.now() - startedAtMs).toBe(100);
+        expect(active).toBe(0);
+      }
+      expect(maximum).toBe(1);
+      expect([...admitted].sort((a, b) => a - b)).toEqual(assets);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("rejects invalid rotation indexes and handles an empty cohort", async () => {
+    const observe = vi.fn();
+    for (const startIndex of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(runBudgetedSupplyAttributionAssets([0], observe, { startIndex }))
+        .rejects.toThrow("nonnegative safe integer");
+    }
+    expect(await runBudgetedSupplyAttributionAssets([], observe, { startIndex: Number.MAX_SAFE_INTEGER })).toEqual([]);
+    expect(observe).not.toHaveBeenCalled();
+  });
+
   it("admits a wM maturity wait beyond the default asset timeout and exposes the clipped child deadline", async () => {
     vi.useFakeTimers();
     const startedAtMs = Date.now();
@@ -548,6 +616,35 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       expect(generation.outcomesById["wm-m0"]).toMatchObject({
         status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
       });
+    } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+
+  it("derives capture rotation from the exact source bucket and keeps retry journal order", async () => {
+    vi.useFakeTimers();
+    try {
+      let order: string[] = [];
+      vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt").mockImplementation(async () => {
+        order.push("wm-m0");
+        return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
+      });
+      vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt").mockImplementation(async () => {
+        order.push("xaut-tether");
+        return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null, rejectedSourceObservedAtSec: null };
+      });
+      const interval = SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC;
+      const baseBucket = Math.floor(SOURCE_CLOCK_SEC / interval);
+      for (let bucket = baseBucket; bucket < baseBucket + 2; bucket++) {
+        const input = { ...withWmAggregate(fixtures.acceptedFixture.fixedInput, WM_SOURCE_AGGREGATE_USD), clockSec: bucket * interval };
+        for (let retry = 0; retry < 2; retry++) {
+          order = [];
+          vi.setSystemTime((input.clockSec + 60 + retry) * 1_000);
+          const capture = await captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
+            chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+          }]]));
+          expect(order).toEqual(bucket % 2 === 0 ? ["xaut-tether", "wm-m0"] : ["wm-m0", "xaut-tether"]);
+          expect(capture.journalRecords.map(record => record.assetId)).toEqual(["xaut-tether", "wm-m0"]);
+        }
+      }
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
 

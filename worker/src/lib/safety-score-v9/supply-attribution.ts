@@ -1,6 +1,7 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import {
   admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
@@ -447,6 +448,10 @@ export async function captureSafetyScoreV9SupplyAttribution(
     },
     {
       signal, executionWindow: options.executionWindow,
+      // Retries of the same exact input keep the same execution order. Each
+      // consecutive producer bucket gives a different asset the first chance
+      // before the shared capture deadline; result indexes remain unchanged.
+      startIndex: Math.floor(fixedInput.clockSec / SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC),
       assetTimeoutMs: descriptor => descriptor.assetId === "wm-m0"
         ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
         : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
