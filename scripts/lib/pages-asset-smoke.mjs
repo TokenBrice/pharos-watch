@@ -65,7 +65,8 @@ export function buildYieldDeepRoutes(rankingIds, representativeIds = REPRESENTAT
 
 export function extractScriptUrls(html, documentUrl) {
   const scriptUrls = [];
-  const lowerHtml = html.toLowerCase();
+  // ASCII-only lowercasing keeps indexes aligned with `html` ("İ" lowercases to two units).
+  const lowerHtml = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
   let offset = 0;
   while (offset < html.length) {
     const scriptStart = lowerHtml.indexOf("<script", offset);
