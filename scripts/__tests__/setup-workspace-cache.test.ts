@@ -13,8 +13,9 @@ const stepSchema = z.object({
   env: z.record(z.string(), z.unknown()).default({}),
 });
 const readYaml = (path: string): unknown => parseYaml(readFileSync(resolve(process.cwd(), path), "utf8"));
-const { inputs, runs: { steps } } = z.object({
+const { inputs, outputs, runs: { steps } } = z.object({
   inputs: z.record(z.string(), z.object({ default: z.string() })),
+  outputs: z.record(z.string(), z.object({ value: z.string() })),
   runs: z.object({ steps: z.array(stepSchema) }),
 })
   .parse(readYaml(".github/actions/setup-workspace/action.yml"));
@@ -47,12 +48,51 @@ describe("setup-workspace caches", () => {
     expect(upload.with.path).toBe("${{ runner.temp }}/pharos-workspace/workspace.tar.zst");
     expect(upload.with["compression-level"]).toBe(0);
     expect(upload.with["if-no-files-found"]).toBe("error");
-    expect(upload.with.name).toBe("pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}");
+    expect(upload.with.name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
     expect(download.with.name).toBe(upload.with.name);
+    expect(outputs["workspace-artifact-name"].value).toBe(upload.with.name);
     expect(pack.run).not.toContain("--dereference");
     expect(z.string().parse(pack.env.WORKSPACE_PATHS).trim().split("\n")).toContain("node_modules");
     expect(pack.run).toContain("if [ -d worker/node_modules ]; then paths+=(worker/node_modules); fi");
     expect(pack.run).toContain("if [ -f .tmp/pr-test-plan.json ]; then paths+=(.tmp/pr-test-plan.json); fi");
+  });
+
+  it("publishes the producer attempt and restores that name unchanged on a partial rerun", () => {
+    const resolver = steps.find((step) => step.id === "workspace-artifact-name")!;
+    const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"))!;
+    expect(resolver.env.WORKSPACE_ARTIFACT_NAME).toBe("${{ inputs.workspace-artifact-name }}");
+    expect(resolver.run).not.toContain("${{");
+    expect(steps.indexOf(resolver)).toBeLessThan(steps.indexOf(download));
+    const root = mkdtempSync(join(tmpdir(), "pharos-workspace-name-"));
+    try {
+      const output = join(root, "output");
+      const env = {
+        ...process.env, GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2",
+        GITHUB_SHA: "a".repeat(40), GITHUB_OUTPUT: output,
+      };
+      const run = (mode: string, name: string) => spawnSync("bash", ["-e", "-c", resolver.run!], {
+        env: { ...env, WORKSPACE_ARTIFACT_MODE: mode, WORKSPACE_ARTIFACT_NAME: name },
+        encoding: "utf8",
+      });
+      expect(run("publish", "").status).toBe(0);
+      expect(readFileSync(output, "utf8")).toBe(`name=pr-workspace-123-2-${env.GITHUB_SHA}\n`);
+      rmSync(output);
+      const producerName = `pr-workspace-123-1-${env.GITHUB_SHA}`;
+      expect(run("restore", producerName).status).toBe(0);
+      expect(readFileSync(output, "utf8")).toBe(`name=${producerName}\n`);
+      rmSync(output);
+      for (const name of [
+        "", `pr-workspace-456-1-${env.GITHUB_SHA}`, "pr-workspace-123-1-" + "b".repeat(40),
+        `pr-workspace-123-0-${env.GITHUB_SHA}`, `${producerName}\ninjected=value`,
+        `$(touch ${join(root, "injected")})`,
+      ]) {
+        expect(run("restore", name).status).toBe(1);
+      }
+      expect(() => readFileSync(output)).toThrow();
+      expect(() => readFileSync(join(root, "injected"))).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("supports a second publish-only invocation without reinstalling dependencies or caching npm", () => {

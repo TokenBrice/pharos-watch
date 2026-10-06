@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -38,7 +39,7 @@ describe("CI workflow scope", () => {
     const release = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
     const artifactName = "pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}";
     const steps = prepare.jobs["pages-prepare"].steps as Array<{
-      uses?: string; run?: string; with?: Record<string, unknown>;
+      id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
 
     expect(deploy.jobs["deploy-worker"].needs).toBe("plan");
@@ -64,15 +65,51 @@ describe("CI workflow scope", () => {
     expect(steps.some((step) => step.run === "npm run generated:compile-input")).toBe(true);
     expect(steps.some((step) => /refresh-pages-release-data|post-refresh|next build|pages deploy/.test(step.run ?? ""))).toBe(false);
     const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    const name = steps.find((step) => step.id === "workspace-artifact-name")!;
+    expect(name.env?.WORKSPACE_ARTIFACT_NAME).toBe(artifactName);
+    expect(name.run).not.toContain("${{");
+    expect(prepare.jobs["pages-prepare"].outputs.workspace_artifact_name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
+    expect(prepare.on.workflow_call.outputs.workspace_artifact_name.value).toBe("${{ jobs.pages-prepare.outputs.workspace_artifact_name }}");
+    for (const caller of [deploy, rebuild]) {
+      expect(caller.jobs["pages-release"].with.workspace_artifact_name).toBe("${{ needs.pages-prepare.outputs.workspace_artifact_name }}");
+    }
+    expect(release.on.workflow_call.inputs.workspace_artifact_name).toMatchObject({ required: true, type: "string" });
     expect(upload?.with).toMatchObject({
-      name: artifactName, "compression-level": 0, "if-no-files-found": "error",
+      name: "${{ steps.workspace-artifact-name.outputs.name }}", "compression-level": 0, "if-no-files-found": "error",
     });
     expect(steps.find((step) => step.run?.includes("tar -I"))?.run).toContain("zstd -T0 -3");
     const download = release.jobs["pages-release"].steps.find(
       (step: { uses?: string }) => step.uses?.startsWith("actions/download-artifact@"),
     );
-    expect(download.with.name).toBe(artifactName);
+    expect(download.with.name).toBe("${{ inputs.workspace_artifact_name }}");
+    expect(download.with.name).not.toContain("run_attempt");
     expect(release.jobs["pages-release"].environment.name).toBe("production");
+  });
+
+  it("accepts the earlier Pages producer attempt while rejecting unsafe or unrelated names", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
+    const steps = workflow.jobs["pages-release"].steps as Array<{
+      name?: string; run?: string; uses?: string; env?: Record<string, string>;
+    }>;
+    const validation = steps.find((step) => step.name === "Validate prepared workspace artifact name")!;
+    const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"))!;
+    expect(steps.indexOf(validation)).toBeLessThan(steps.indexOf(download));
+    expect(validation.env?.WORKSPACE_ARTIFACT_NAME).toBe("${{ inputs.workspace_artifact_name }}");
+    expect(validation.run).not.toContain("${{");
+    const sha = "a".repeat(40);
+    const producerName = `pages-workspace-production-123-1-${sha}`;
+    for (const [name, status] of [
+      [producerName, 0], ["", 1], [`pages-workspace-production-456-1-${sha}`, 1],
+      ["pages-workspace-production-123-1-" + "b".repeat(40), 1],
+      [`pages-workspace-production-123-0-${sha}`, 1], [`${producerName}\ninjected=value`, 1],
+      ["$(exit 0)", 1],
+    ] as const) {
+      const result = spawnSync("bash", ["-e", "-c", validation.run!], {
+        env: { ...process.env, GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "2", GITHUB_SHA: sha, WORKSPACE_ARTIFACT_NAME: name },
+        encoding: "utf8",
+      });
+      expect(result.status).toBe(status);
+    }
   });
 
   it("prepares validation independently of secrets and merges only coverage shards", () => {
@@ -96,6 +133,8 @@ describe("CI workflow scope", () => {
     expect(setups).toHaveLength(2);
     expect(setups[0].with).toMatchObject({ "bootstrap-history": "true", "workspace-artifact": "none", "install-ripgrep": "true" });
     expect(setups[1].with).toMatchObject({ "install-deps": "false", "cache-npm": "false", "workspace-artifact": "publish" });
+    expect(setups[1].id).toBe("publish-workspace");
+    expect(jobs.prepare.outputs.workspace_artifact_name).toBe("${{ steps.publish-workspace.outputs.workspace-artifact-name }}");
     const docs = prepareSteps.find((step: { id?: string }) => step.id === "docs");
     expect(docs.if).toBe("${{ steps.classify.outputs.docs_only == 'true' }}");
     expect(docs.env.PR_LANE_ID).toBe("docs");
@@ -108,6 +147,7 @@ describe("CI workflow scope", () => {
       expect(checkout.with).toMatchObject({ "fetch-depth": 0, filter: "blob:none", "persist-credentials": false });
       const setup = steps.find((step: { uses?: string }) => step.uses === "$/.github/actions/setup-workspace");
       expect(setup.with).toMatchObject({ "install-deps": "false", "cache-npm": "false", "workspace-artifact": "restore" });
+      expect(setup.with["workspace-artifact-name"]).toBe("${{ needs.prepare.outputs.workspace_artifact_name }}");
     }
     expect(workflow).toContain("PR_TEST_PLAN_FILE: ${{ matrix.lane == 'tests' && '.tmp/pr-test-plan.json' || '' }}");
     expect(workflow).toContain("merge-multiple: true");
@@ -117,6 +157,13 @@ describe("CI workflow scope", () => {
     expect(workflow).toContain("matrix.lane == 'static-guards' || matrix.lane == 'docs'");
     const timings = jobs["critical-coverage-shards"].steps.find((step: { with?: { name?: string } }) => step.with?.name === "pr-coverage-timings-${{ matrix.shard }}");
     expect(timings.with["retention-days"]).toBe(7);
+    for (const job of ["validation", "critical-coverage-shards"]) {
+      for (const step of jobs[job].steps.filter((step: { uses?: string }) => step.uses?.startsWith("actions/upload-artifact@"))) {
+        expect(step.with.overwrite).toBe(true);
+      }
+    }
+    const blobs = jobs["critical-coverage"].steps.find((step: { uses?: string }) => step.uses?.startsWith("actions/download-artifact@"));
+    expect(blobs.with).toMatchObject({ pattern: "critical-coverage-*", "merge-multiple": true });
   });
 
   it("packages the Worker before production D1 mutation", () => {

@@ -220,14 +220,18 @@ describe("PR lane manifest", () => {
     const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     const download = steps.find((step) => step.uses?.startsWith("actions/download-artifact@"));
     expect(upload!.with["if-no-files-found"]).toBe("error");
-    expect(download!.with.name).toBe(upload!.with.name);
-    expect(upload!.with.name).toContain("github.run_id");
-    expect(upload!.with.name).toContain("github.run_attempt");
-    expect(upload!.with.name).toContain("github.sha");
+    expect(download!.with.name).toBe("${{ steps.workspace-artifact-name.outputs.name }}");
+    expect(upload!.with.name).toBe(download!.with.name);
+    const resolver = steps.find((step) => step.id === "workspace-artifact-name")!;
+    expect(resolver.env.WORKSPACE_ARTIFACT_NAME).toBe("${{ inputs.workspace-artifact-name }}");
+    expect(resolver.run).toContain('WORKSPACE_ARTIFACT_NAME="pr-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}"');
+    expect(WORKFLOW.jobs.prepare.outputs?.workspace_artifact_name).toBe("${{ steps.publish-workspace.outputs.workspace-artifact-name }}");
+    expect(WORKFLOW.jobs.prepare.steps.find((step) => step.id === "publish-workspace")?.with["workspace-artifact"]).toBe("publish");
     for (const step of [upload, download]) expect(step!["continue-on-error"]).toBeUndefined();
     for (const job of ["validation", "critical-coverage-shards", "critical-coverage"]) {
       const setup = WORKFLOW.jobs[job].steps.find((step) => step.uses === "$/.github/actions/setup-workspace");
       expect(setup!.with["workspace-artifact"]).toBe("restore");
+      expect(setup!.with["workspace-artifact-name"]).toBe("${{ needs.prepare.outputs.workspace_artifact_name }}");
       expect(setup!.with["install-deps"]).toBe("false");
       expect(setup!.with["cache-npm"]).toBe("false");
     }

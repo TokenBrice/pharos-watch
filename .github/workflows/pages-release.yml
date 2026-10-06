@@ -3,6 +3,10 @@ name: Pages Release
 on:
   workflow_call:
     inputs:
+      workspace_artifact_name:
+        description: Exact prepared workspace artifact name supplied by pages-prepare.
+        required: true
+        type: string
       refresh_data:
         description: Refresh API-backed release data before building.
         required: false
@@ -48,9 +52,17 @@ jobs:
           bootstrap-generated: "false"
           install-deps: "false"
           cache-npm: "false"
+      - name: Validate prepared workspace artifact name
+        env:
+          WORKSPACE_ARTIFACT_NAME: ${{ inputs.workspace_artifact_name }}
+        run: |
+          if [[ ! "${WORKSPACE_ARTIFACT_NAME}" =~ ^pages-workspace-production-"${GITHUB_RUN_ID}"-[1-9][0-9]*-"${GITHUB_SHA}"$ ]]; then
+            echo "::error::Invalid prepared workspace artifact name."
+            exit 1
+          fi
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          name: ${{ inputs.workspace_artifact_name }}
           path: ${{ runner.temp }}/pharos-pages-workspace
       - name: Restore prepared production workspace
         run: tar --zstd -xf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" --same-permissions

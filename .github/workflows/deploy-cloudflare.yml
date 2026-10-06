@@ -163,6 +163,7 @@ jobs:
       }}
     uses: $/.github/workflows/pages-release.yml
     with:
+      workspace_artifact_name: ${{ needs.pages-prepare.outputs.workspace_artifact_name }}
       # Code deploys refresh digest/depeg/public-dataset snapshots so digest
       # detail pages, sitemap, and RSS do not regress to the committed
       # snapshot's age on every merge. The refresh step is fail-open: on

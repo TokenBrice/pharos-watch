@@ -60,6 +60,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       coverage_matrix: ${{ steps.matrix.outputs.coverage_matrix }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
+      workspace_artifact_name: ${{ steps.publish-workspace.outputs.workspace-artifact-name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -99,6 +100,7 @@ jobs:
           PR_LANE_ID: docs
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
       - uses: $/.github/actions/setup-workspace
+        id: publish-workspace
         with:
           install-deps: "false"
           cache-npm: "false"
@@ -129,6 +131,7 @@ jobs:
           install-ripgrep: ${{ (matrix.lane == 'static-guards' || matrix.lane == 'docs') && 'true' || 'false' }}
           static-cache: ${{ matrix.lane == 'static-compile' && 'true' || 'false' }}
           workspace-artifact: restore
+          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - name: Run manifest lane
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -147,6 +150,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pr-test-timings-${{ matrix.shard }}
+          overwrite: true
           path: .tmp/pr-test-timings-${{ matrix.shard }}.json
           if-no-files-found: warn
           retention-days: 7
@@ -172,6 +176,7 @@ jobs:
           cache-npm: "false"
           install-deps: "false"
           workspace-artifact: restore
+          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - name: Run manifest coverage shard
         env:
           PR_LANE_ID: critical-coverage-shards
@@ -184,6 +189,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: critical-coverage-${{ matrix.shard }}
+          overwrite: true
           path: .vitest-reports/*.json
           include-hidden-files: true
           if-no-files-found: error
@@ -193,6 +199,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pr-coverage-timings-${{ matrix.shard }}
+          overwrite: true
           path: .tmp/pr-coverage-timings-${{ matrix.shard }}.json
           if-no-files-found: warn
           retention-days: 7
@@ -215,6 +222,7 @@ jobs:
           cache-npm: "false"
           install-deps: "false"
           workspace-artifact: restore
+          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: critical-coverage-*
