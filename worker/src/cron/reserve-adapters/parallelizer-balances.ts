@@ -1,6 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
@@ -225,7 +225,7 @@ async function readDeployment(
 }
 
 export async function fetchParallelizerBalancesReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -2,7 +2,7 @@ import { pinnedBlockPlan } from "./evm-observation-plan";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
@@ -561,7 +561,7 @@ async function observeHoneyFactoryRedemptionCapacity(
 }
 
 export async function fetchEvmBranchBalancesReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

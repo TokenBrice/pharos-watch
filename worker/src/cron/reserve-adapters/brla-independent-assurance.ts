@@ -5,7 +5,7 @@ import {
   type IndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { computeUnknownExposurePct, normalizeSlices } from "./helpers";
 import {
@@ -346,7 +346,7 @@ export function buildBrlaReserveSlices(manifest: IndependentAssuranceManifest): 
 }
 
 export async function fetchBrlaIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -392,7 +392,7 @@ export function adaptAttestationPdfIndex(
 }
 
 export async function fetchAttestationPdfIndexReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

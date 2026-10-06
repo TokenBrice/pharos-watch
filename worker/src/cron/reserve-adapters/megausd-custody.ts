@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -111,7 +111,7 @@ export function adaptMegausdCustody(payload: MegausdBackingAndSupplyPayload): Ad
 }
 
 export async function fetchMegausdCustodyReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

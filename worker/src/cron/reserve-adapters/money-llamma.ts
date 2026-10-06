@@ -1,5 +1,5 @@
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
@@ -510,7 +510,7 @@ function adaptMoneyCensuses(
 }
 
 export async function fetchMoneyReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

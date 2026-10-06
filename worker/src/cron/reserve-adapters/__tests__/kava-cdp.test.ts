@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
 import {
   adaptKavaCdpState,
   type KavaBankSupplyPayload,
@@ -14,7 +14,7 @@ import {
 import { runAdapter } from "./reserve-adapter.test-support";
 
 
-const LCD_ORIGIN = "https://api.data.kava.io";
+const LCD_ORIGIN = "https://api.kava.io";
 const TOTAL_COLLATERAL_URL = `${LCD_ORIGIN}/kava/cdp/v1beta1/totalCollateral`;
 
 // Captured 2026-09-09 from the public Kava LCD (https://api.data.kava.io).
@@ -103,19 +103,7 @@ function makeState(overrides: Partial<KavaCdpState> = {}): KavaCdpState {
 }
 
 function makeCoin(): StablecoinMeta {
-  return { id: "usdx-kava", name: "USDX", symbol: "USDX", liveReservesConfig: makeConfig() } as unknown as StablecoinMeta;
-}
-
-function makeConfig(): LiveReservesConfig {
-  return {
-    adapter: "kava-cdp",
-    version: 1,
-    semantics: "collateral-mix",
-    inputs: {
-      primary: { kind: "http-json", url: TOTAL_COLLATERAL_URL },
-    },
-    params: {},
-  } as unknown as LiveReservesConfig;
+  return { id: "usdx-kava", name: "USDX", symbol: "USDX", liveReservesConfig: structuredClone(usdx.liveReservesConfig) } as unknown as StablecoinMeta;
 }
 
 const PRICE = (marketId: string): number => Number(PRICEFEED_PRICES.prices.find((p) => p.market_id === marketId)!.price);
@@ -230,7 +218,7 @@ function kavaNetwork(overrides: Record<string, unknown> = {}) {
 }
 
 describe("fetchKavaCdpReserves", () => {
-  it("reads the six LCD endpoints through the shared network harness", async () => {
+  it("reads the six pruning LCD endpoints from the production coin config", async () => {
     const { result, network } = await runAdapter("kava-cdp", makeCoin(), {
       network: kavaNetwork(),
       nowSec: BLOCK_TIME_SEC,
@@ -239,6 +227,7 @@ describe("fetchKavaCdpReserves", () => {
     expect(result.metadata).toMatchObject({ freshnessMode: "not-applicable" });
     expect(result.slices.length).toBeGreaterThan(0);
     expect(network.requests.map((request) => request.url)).toEqual(Object.keys(KAVA_LCD_FIXTURES));
+    expect(usdx.liveReservesConfig.display.url).toBe(TOTAL_COLLATERAL_URL);
   });
 
   it("propagates an LCD failure", async () => {

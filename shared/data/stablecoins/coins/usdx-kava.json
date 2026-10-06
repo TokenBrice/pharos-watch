@@ -65,13 +65,13 @@
     "version": 1,
     "semantics": "collateral-mix",
     "display": {
-      "url": "https://api.data.kava.io/kava/cdp/v1beta1/totalCollateral",
+      "url": "https://api.kava.io/kava/cdp/v1beta1/totalCollateral",
       "label": "Kava CDP module (total collateral)"
     },
     "inputs": {
       "primary": {
         "kind": "http-json",
-        "url": "https://api.data.kava.io/kava/cdp/v1beta1/totalCollateral"
+        "url": "https://api.kava.io/kava/cdp/v1beta1/totalCollateral"
       }
     },
     "params": {}

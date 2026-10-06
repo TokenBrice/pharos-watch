@@ -1,5 +1,5 @@
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
-import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   computePegScore,
   computeRecentPegStats,
@@ -60,10 +60,10 @@ export function deriveCurrentPegObservationMap(options: {
     rates: pegRates,
     sources: pegRateSources = {},
     counts: pegRateCounts = {},
-  } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
+  } = derivePegRates(options.peggedAssets, WORKER_TRACKED_META_BY_ID, options.fxFallbackRates);
   const result = new Map<string, CurrentPegObservation>();
 
-  for (const meta of ACTIVE_STABLECOINS) {
+  for (const meta of WORKER_ACTIVE_STABLECOINS) {
     const asset = priceById.get(meta.id);
     const supply = getCirculatingRawOrNull(asset);
     const currentSupplyUnavailable = !meta.flags.navToken && supply === null;
@@ -126,7 +126,7 @@ function parseLaunchDateSec(dateText: string | undefined): number | null {
 type PegHistoryCoverage = NonNullable<PegSummaryCoin["historyCoverage"]>;
 
 function resolveTrackingAnchor(
-  meta: (typeof ACTIVE_STABLECOINS)[number],
+  meta: (typeof WORKER_ACTIVE_STABLECOINS)[number],
   events: DepegEvent[],
   firstObservedAtSec: number | undefined,
   fourYearsAgoSec: number,
@@ -224,7 +224,7 @@ export async function derivePegAnalyticsSnapshot(
   const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
-  for (const meta of ACTIVE_STABLECOINS) {
+  for (const meta of WORKER_ACTIVE_STABLECOINS) {
     if (!includeNavTokens && meta.flags.navToken) continue;
 
     const asset = priceById.get(meta.id);

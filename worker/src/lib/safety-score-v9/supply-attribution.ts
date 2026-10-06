@@ -4,6 +4,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
+  SUPPLY_ATTRIBUTION_CAPTURE_BUDGET,
   type SupplyAttributionRejectionCode,
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -171,6 +172,7 @@ interface SupplyAttributionAssetDescriptor {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
+    assetDeadlineMs?: number;
     db?: D1Database;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
@@ -301,6 +303,7 @@ async function runSupplyAttributionAssetCapture(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   executionWindow?: V9ExecutionWindow;
+  assetDeadlineMs?: number;
   db?: D1Database;
   observationClockSec: (attemptedAtSec: number) => number;
   attributionById: V9SupplyAttributionById;
@@ -327,6 +330,7 @@ async function runSupplyAttributionAssetCapture(input: {
             chainRpcs: input.chainRpcs,
             signal: input.signal,
             executionWindow: input.executionWindow,
+            assetDeadlineMs: input.assetDeadlineMs,
             db: input.db,
           })
         : {
@@ -429,18 +433,24 @@ export async function captureSafetyScoreV9SupplyAttribution(
   );
   const results = await runBudgetedSupplyAttributionAssets(
     descriptors,
-    async (descriptor, assetSignal) => {
+    async (descriptor, assetSignal, assetDeadlineMs) => {
       const assetAttributionById: V9SupplyAttributionById = {};
       const assetJournalRecords: SupplyAttributionJournalV1[] = [];
       await runSupplyAttributionAssetCapture({
         descriptor, fixedInput, chainRpcs, signal: assetSignal,
         executionWindow: options.executionWindow, db: options.db,
+        assetDeadlineMs,
         observationClockSec, attributionById: assetAttributionById,
         journalRecords: assetJournalRecords,
       });
       return { attributionById: assetAttributionById, journalRecords: assetJournalRecords };
     },
-    { signal, executionWindow: options.executionWindow },
+    {
+      signal, executionWindow: options.executionWindow,
+      assetTimeoutMs: descriptor => descriptor.assetId === "wm-m0"
+        ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
+        : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
+    },
   );
   for (let index = 0; index < descriptors.length; index++) {
     const result = results[index];

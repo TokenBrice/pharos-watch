@@ -233,6 +233,17 @@ describe("reviewed deployment supply attribution contract", () => {
     ).toBeNull();
   });
 
+  it("attributes a cross-chain skew to the earliest lagging route, not the freshest peer", () => {
+    const deployments = [
+      { routeId: "lagging", blockTimeSec: CLOCK_SEC - 121 },
+      { routeId: "fresh", blockTimeSec: CLOCK_SEC },
+    ];
+    expect(reviewedDeploymentObservationTimingIssue({
+      clockSec: CLOCK_SEC, captureStartedAtSec: CLOCK_SEC - 121,
+      captureEndedAtSec: CLOCK_SEC, observedAtSec: CLOCK_SEC, deployments,
+    })).toEqual({ code: "cross-chain-skew", failedRouteId: "lagging" });
+  });
+
   it("invalidates a packet when registry or route-inventory identity drifts", () => {
     const attribution = derive()!;
     expect(

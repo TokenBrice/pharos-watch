@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeUint256 } from "../../lib/evm-selectors";
@@ -283,7 +283,7 @@ async function probeRiverChain(
  * run could not observe; the fee is the highest verified branch rate.
  */
 async function probeRiverRedemption(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<RiverRedemptionProbe | null> {
@@ -363,7 +363,7 @@ function buildRiverRedemptionMetadata(
 }
 
 export async function fetchRiverProtocolInfoReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

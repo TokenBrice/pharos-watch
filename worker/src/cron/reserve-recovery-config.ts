@@ -1,5 +1,5 @@
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { selectConfigRecoveryTargets } from "../lib/live-reserves/config-recovery-targets";
 import { throwIfAborted } from "../lib/abort";
 import { runCronWithLease } from "../lib/cron-lease-primitives";
@@ -69,7 +69,7 @@ export async function recoverLiveReserveConfigChanges(
     const fingerprints = new Map((rows.results ?? []).map((row) => [row.stablecoin_id, row.config_fingerprint]));
     const currentFingerprints = new Map(CONFIGURED_COINS.map((coin) => [coin.id, computeLiveReserveConfigFingerprint(coin.liveReservesConfig!)]));
     const selection = selectConfigRecoveryTargets(fingerprints, currentFingerprints, (id) => {
-      const config = TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
+      const config = WORKER_TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
       return config != null && getReserveAdapter(config.adapter) != null;
     });
     const targetIds = new Set([...selection.targets, ...selection.missingFetcherIds]);

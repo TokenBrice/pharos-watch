@@ -16,6 +16,7 @@ import {
   type NativePegQuoteSession,
 } from "../../lib/native-peg-quotes";
 import type { DepegDetectionRow, HydratedDepegDetection } from "./types";
+import { persistActiveNativeEventQuotes } from "../../lib/native-peg-quote-cache";
 
 export async function hydrateDepegDetection(
   db: D1Database,
@@ -64,6 +65,9 @@ export async function hydrateDepegDetection(
   const openRowsLimitReached = openRows.length >= MAX_OPEN_DEPEG_EVENTS;
   if (openRowsLimitReached) {
     logOpenDepegEventLimitReached("detection");
+  }
+  if (!openRowsLimitReached) {
+    await persistActiveNativeEventQuotes(db, nativePegQuotes, signal);
   }
 
   return {

@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { toTokenUnits } from "@shared/lib/math";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
@@ -229,7 +229,7 @@ function adaptDjedCardanoState(
 }
 
 export async function fetchDjedCardanoReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -258,7 +258,7 @@ export async function fetchDjedCardanoReserves(
 }
 
 async function loadDjedListCirculating(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   ctx: AdapterContext | undefined,
 ): Promise<number | undefined> {
   if (!ctx?.db) return undefined;

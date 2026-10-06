@@ -6,6 +6,7 @@ import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
 import usdu from "@shared/data/stablecoins/coins/usdu-unitas.json";
+import xgld from "@shared/data/stablecoins/coins/xgld-unitas.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
@@ -200,6 +201,49 @@ describe("adaptAccountableDashboard", () => {
     }));
   });
 
+  it("recognizes the Hyperliquid deployment label without inheriting the older HYPE-only identity", async () => {
+    const result = await runAccountablePayload(usn.liveReservesConfig as LiveReservesConfig, {
+      collateralization: 1,
+      ts: "2026-10-06T06:00:00Z",
+      reserves: {
+        total_reserves: 100,
+        deployment: { "Private Credit (Fasanara FTAC)": 83.42, "Funding Rate Arb (Hyperliquid)": 16.58 },
+      },
+    });
+
+    expect(result.slices).toContainEqual({
+      name: "Funding Rate Arb (Hyperliquid)",
+      sourceKey: "accountable:noon:deployment:funding-rate-arb-hyperliquid",
+      pct: 16.6,
+      risk: "high",
+    });
+    expect(result.slices.some((slice) => slice.sourceKey === "accountable:noon:deployment:funding-rate-arb-hype")).toBe(false);
+    expect(result.slices.every((slice) => slice.coinId == null && slice.depType == null)).toBe(true);
+    expect(result.metadata).toMatchObject({ breakdownCount: 2, mappedBucketCount: 2 });
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.warnings?.some((warning) => warning.code === "unmapped-bucket")).not.toBe(true);
+  });
+
+  it.each([
+    ["Noon deployment", usn.liveReservesConfig, { deployment: { "Funding Rate Arb (Hyperliquid)": 70, "Unreviewed strategy": 30 } }],
+    ["XGLD location", xgld.liveReservesConfig, { reserves_split: [{ name: "Binance", value: 70 }, { name: "Unreviewed venue", value: 30 }] }],
+  ])("still degrades material unknown exposure in %s", async (_name, config, buckets) => {
+    const result = await runAccountablePayload(config as LiveReservesConfig, {
+      collateralization: 1,
+      ts: "2026-10-06T06:00:00Z",
+      reserves: { total_reserves: 100, ...buckets },
+    });
+
+    expect(result.metadata?.unknownExposurePct).toBe(30);
+    expect(result.slices).toContainEqual({
+      name: "Unknown / unmapped Accountable buckets", pct: 30, risk: "high",
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unmapped-bucket", effect: "degraded",
+    }));
+  });
+
+
 
 
 
@@ -353,6 +397,27 @@ describe("adaptAccountableDashboard", () => {
       { sourceKey: "accountable:unitas:deployment:bnb-smartchain", name: "Bnb_smartchain", pct: 1.1, risk: "high" },
     ]);
   });
+
+  it("maps XGLD's reviewed gross location labels without claiming net backing or custody", async () => {
+    const result = await runAccountablePayload(xgld.liveReservesConfig as LiveReservesConfig, {
+      collateralization: 1,
+      ts: "2026-10-06T06:00:00Z",
+      reserves: {
+        total_reserves: 100,
+        reserves_split: [{ name: "Binance", value: 98.08 }, { name: "Bnb_smartchain", value: 1.92 }],
+      },
+    });
+
+    expect(result.slices).toEqual([
+      { sourceKey: "accountable:unitas:xgld:binance", name: "Binance", pct: 98.1, risk: "high" },
+      { sourceKey: "accountable:unitas:xgld:bnb-smartchain", name: "Bnb_smartchain", pct: 1.9, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({ breakdownCount: 2, mappedBucketCount: 2 });
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.warnings?.some((warning) => warning.code === "unmapped-bucket")).not.toBe(true);
+    expect(result.slices.every((slice) => slice.coinId == null && slice.depType == null && slice.assetClass == null)).toBe(true);
+  });
+
 
   it("fails closed on an unparseable Apyx Accountable reserves_split value", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;

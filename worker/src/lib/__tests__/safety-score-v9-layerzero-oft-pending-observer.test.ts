@@ -7,6 +7,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { ChainRpcConfig } from "../chain-registry";
 import { USER_AGENT } from "../constants";
 import * as evmRpc from "../evm-rpc";
+import * as dbCache from "../db-cache";
 import { observeLayerZeroOftPending } from "../safety-score-v9/layerzero-oft-pending-observer";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
 
@@ -102,6 +103,33 @@ function fixture(sends: Send[] = [{ nonce: 1n, amountSD: 1234567n, state: "unver
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+it("persists an authenticated prefix before a later discovery timeout", async () => {
+  const f = fixture([
+    { nonce: 1n, amountSD: 0n, state: "unverified", height: 100 },
+    { nonce: 2n, amountSD: 0n, state: "unverified", height: 1_500_100 },
+  ]);
+  f.setPin(2_000_099);
+  vi.spyOn(dbCache, "getCache").mockResolvedValue(null);
+  const saved = vi.spyOn(dbCache, "setCache").mockResolvedValue(undefined);
+  const controller = new AbortController(), original = f.fetcher.getMockImplementation()!;
+  let windows = 0;
+  f.fetcher.mockImplementation(async (raw, init) => {
+    if (String(raw).includes("/pathway/") && ++windows === 2) {
+      controller.abort(new Error("test timeout"));
+      throw controller.signal.reason;
+    }
+    return original(raw, init);
+  });
+  await expect(observeLayerZeroOftPending({
+    source: f.source, headers: [header(2_000_099), header(2_000_099)],
+    chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal,
+  })).rejects.toThrow("test timeout");
+  expect(saved).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(saved.mock.calls[0]![2]).pathways[0]).toMatchObject({
+    sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 },
+  });
+});
+
 describe("authenticated LayerZero V2 OFT pending census", () => {
   it("converts shared decimals exactly beyond Number precision and supports adapter token identity", async () => {
     const f = fixture([{ nonce: 1n, amountSD: 2n ** 64n - 1n, state: "unverified" }]);
@@ -172,14 +200,30 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
     expect(await f.run()).toEqual({ status: "rejected", reason: "history-start-unproved" });
   });
   it("resumes bounded inclusive pages and reauthenticates the predecessor", async () => {
-    const f = fixture([{ nonce: 1n, amountSD: 0n, state: "unverified", height: 16900 }]); f.setPin(17000);
+    const f = fixture([{ nonce: 1n, amountSD: 0n, state: "unverified", height: 8_000_900 }]); f.setPin(8_001_000);
     const first = await f.run();
-    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete", checkpoint: { pathways: [expect.objectContaining({ sent: expect.objectContaining({ nextBlock: 16100 }) })] } });
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete", checkpoint: { pathways: [expect.objectContaining({ sent: expect.objectContaining({ nextBlock: 8_000_100 }) })] } });
     if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected resumable checkpoint");
     expect(await f.run(first.checkpoint)).toMatchObject({ status: "accepted", amount: "0" });
-    expect(f.headers).toHaveBeenCalledWith("ethereum", 16099, expect.anything());
+    expect(f.headers).toHaveBeenCalledWith("ethereum", 8_000_099, expect.anything());
     first.checkpoint.pathways[0]!.sent.anchorHash = word(999n);
     expect(await f.run(first.checkpoint)).toEqual({ status: "rejected", reason: "checkpoint-reorg" });
+  });
+  it("subdivides dense discovery windows before starting receipt work", async () => {
+    const f = fixture(Array.from({ length: 9 }, (_, index) => ({
+      nonce: BigInt(index + 1), amountSD: 0n, state: "unverified" as const, height: 100 + index * 100_000,
+    })));
+    f.setPin(1_000_099);
+    const first = await f.run();
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected bounded dense prefix");
+    expect(await f.run(first.checkpoint)).toMatchObject({ status: "accepted", amount: "0", proof: {
+      pathways: [expect.objectContaining({ sentNonce: "9" })],
+    } });
+    expect(f.headers).toHaveBeenCalledWith("ethereum", 100_099, expect.anything());
+    const receiptCalls = f.batch.mock.calls.flatMap(([, requests]) => requests)
+      .filter(request => request.method === "eth_getTransactionReceipt");
+    expect(receiptCalls).toHaveLength(9);
   });
   it("refreshes checkpoint messages when they complete without rescanning source history", async () => {
     const f = fixture(); const first = await f.run();

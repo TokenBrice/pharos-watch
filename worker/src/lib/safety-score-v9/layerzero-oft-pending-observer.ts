@@ -11,13 +11,14 @@ import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 
-// Same bounded, inclusive page and predecessor-hash checkpoint convention as
-// Curve. Discovery pages never authorize a quantity: receipted consecutive
-// EndpointV2 sends plus the pinned outbound nonce prove the complete census.
-const HISTORY_PAGE_BLOCKS = 2000;
+// Discovery window width is independent of provider eth_getLogs limits: Scan
+// returns identifiers, never an exhaustive quantity. Dense windows subdivide;
+// consecutive receipted nonces still reconcile against the pinned counter.
+const HISTORY_PAGE_BLOCKS = 1_000_000;
 const HISTORY_PAGES_PER_ATTEMPT = 8;
 const CHECKPOINT_MAX_BYTES = 512 * 1024;
 const MAX_MESSAGES = 512;
+const HISTORY_PAGE_MESSAGES = 8;
 const SCAN_ORIGIN = "https://scan.layerzero-api.com/v1";
 const WORD = /^0x[0-9a-f]{64}$/;
 const ADDRESS_WORD = /^0x0{24}[0-9a-f]{40}$/;
@@ -207,6 +208,7 @@ export async function observeLayerZeroOftPending(input: {
     for (let index = 0; index < source.pathways.length; index++) {
       const path = source.pathways[index]!, a = source.sides[path.sourceIndex]!, b = source.sides[path.destinationIndex]!, pin = input.headers[path.sourceIndex]!;
       const checkpoint = cp.pathways[index]!, cursor = checkpoint.sent;
+      let pageBlocks = HISTORY_PAGE_BLOCKS;
       while (cursor.nextBlock <= pin.number) {
         // A receipted consecutive census equal to the pinned outbound nonce
         // proves the remaining interval empty, including a genuinely unused lane.
@@ -216,7 +218,7 @@ export async function observeLayerZeroOftPending(input: {
           break;
         }
         if (pages >= HISTORY_PAGES_PER_ATTEMPT) break;
-        const from = cursor.nextBlock, end = Math.min(pin.number, from + HISTORY_PAGE_BLOCKS - 1);
+        const from = cursor.nextBlock, end = Math.min(pin.number, from + pageBlocks - 1);
         const beginHeader = await fetchEvmBlockHeader(a.chainId, from, options), endHeader = await fetchEvmBlockHeader(a.chainId, end, options);
         if (!beginHeader || !endHeader) fail("history-unavailable");
         // Overlap accommodates indexer ingestion timestamps. Exact receipt
@@ -226,13 +228,26 @@ export async function observeLayerZeroOftPending(input: {
         url.searchParams.set("start", new Date(Math.max(0, beginHeader.timestamp - 3600) * 1000).toISOString());
         url.searchParams.set("end", new Date((endHeader.timestamp + 3600) * 1000).toISOString());
         const discovered: ScanMessage[] = [], tokens = new Set<string>();
+        let discoveryComplete = true;
         for (let count = 0; ; count++) {
-          if (count >= 8) fail("discovery-capacity");
+          if (count >= 8) { discoveryComplete = false; break; }
           const result = await scan(url.toString());
           discovered.push(...result.data.filter(row => matches(row, path.sourceIndex, path.destinationIndex)));
           if (!result.nextToken) break;
           if (tokens.has(result.nextToken)) fail("discovery-pagination-gap");
           tokens.add(result.nextToken); url.searchParams.set("nextToken", result.nextToken);
+        }
+        pages++;
+        let inWindowCount = 0;
+        for (const row of discovered) {
+          const hint = Number(row.source.tx.blockNumber);
+          if (!Number.isSafeInteger(hint) || hint < 0) fail("discovery-invalid");
+          if (hint >= from && hint <= end) inWindowCount++;
+        }
+        if (!discoveryComplete || inWindowCount > HISTORY_PAGE_MESSAGES) {
+          if (end === from) fail("discovery-capacity");
+          pageBlocks = Math.max(1, Math.floor((end - from + 1) / 10));
+          continue;
         }
         const messages: Array<{ message: Message; discovery: ScanMessage }> = [];
         const seen = new Set<string>();
@@ -280,7 +295,12 @@ export async function observeLayerZeroOftPending(input: {
         }
         if ((await fetchEvmBlockHeader(a.chainId, end, options))?.hash !== endHeader.hash) fail("history-reorg");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, end, header: endHeader, messages: messages.map(row => row.message) }));
-        cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash; pages++;
+        cursor.nextBlock = end + 1; cursor.anchor = end; cursor.anchorHash = endHeader.hash;
+        // Save only a fully authenticated prefix; a later receipt timeout must
+        // not force sparse bootstrap windows to be scanned again.
+        const prefix = stableJsonStringifyV1(cp);
+        if (prefix.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
+        if (input.db) await setCache(input.db, cacheKey, prefix, input.signal);
       }
       if (cursor.nextBlock > pin.number && BigInt(checkpoint.sentNonce) !== pathStates[index]!.outbound) fail("send-census-mismatch");
     }

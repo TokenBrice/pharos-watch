@@ -1,6 +1,6 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { decodeAbiParameters } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveSnapshotMetadata,
   LiveReservesConfig,
@@ -857,7 +857,7 @@ export function buildLiquityV2Warnings(
 }
 
 export async function fetchLiquityV2BranchReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

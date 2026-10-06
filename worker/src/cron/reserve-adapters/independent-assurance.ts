@@ -12,7 +12,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { collectPdfAnchors, normalizeSlices } from "./helpers";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
@@ -519,7 +519,7 @@ export function buildIndependentAssuranceReserveResult(args: {
 }
 
 export async function fetchIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   profile: IndependentAssuranceProfile,

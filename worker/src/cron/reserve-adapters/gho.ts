@@ -1,5 +1,5 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
@@ -573,7 +573,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
 }
 
 export async function fetchGhoReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

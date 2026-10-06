@@ -40,6 +40,41 @@ afterEach(() => {
 });
 
 describe("handleRemediateBlacklistAmountGaps", () => {
+  it.each([true, false])("rejects explicit Tron remediation before reads or writes (dryRun=%s)", async (dryRun) => {
+    const db = mockD1([], { requireMatch: true });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?chainId=tron&dryRun=${dryRun}`),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      chainRpcs: testChainRpcs,
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Tron event amounts require confirmed transfer replay, not EVM historical-balance remediation",
+    });
+    expect(db.getHistory()).toEqual([]);
+    expect(fetchEvmTokenBalance).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("excludes Tron before the bounded default candidate selection (dryRun=%s)", async (dryRun) => {
+    const db = mockD1([
+      { match: "FROM blacklist_events", rows: [] },
+      { match: "DELETE FROM cache", rows: [] },
+    ], { requireMatch: true });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?dryRun=${dryRun}`),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      chainRpcs: testChainRpcs,
+    });
+
+    expect(response.status).toBe(200);
+    const selection = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
+    expect(selection?.sql).toContain("chain_id != 'tron'");
+    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE blacklist_events"))).toBe(false);
+  });
+
 
   it("rejects a write-mode limit that would not fit one atomic batch", async () => {
     // This route is idempotency-wrapped, so a chunked write that failed partway would

@@ -381,8 +381,8 @@ describe("authenticated CCIP pending quantities", () => {
     expect(result).toMatchObject({ status: "accepted", amount: "10", checkpoint: { schemaVersion: 2 } });
     expect(logRanges).toEqual([{ chain: "ethereum", from: 100, to: 105 }]);
   });
-  it("resumes complete source history with the smallest eligible inclusive endpoint span", async () => {
-    pinNumber = 8105; sent = [send(1, 10n, 100), send(2, 20n, 8100)]; expectedNext = 3;
+  it("resumes complete history using the widest eligible declared endpoint span", async () => {
+    pinNumber = 12105; sent = [send(1, 10n, 100), send(2, 20n, 12100)]; expectedNext = 3;
     const args = input();
     const endpoint = { url: "https://rpc.example", operator: "public" as const, keyed: false, position: "registry" as const, stateHistory: "archive" as const, logsHistory: "full" as const };
     args.chainRpcs.set("ethereum", { chainId: "ethereum", chainName: "ethereum", type: "evm", explorerUrl: "https://explorer.example",
@@ -391,13 +391,47 @@ describe("authenticated CCIP pending quantities", () => {
     const first = await observeCcipPending(args);
     expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
     if (first.status !== "rejected" || !first.checkpoint) throw new Error("Missing bounded checkpoint");
-    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(8100);
-    expect(logRanges.every(range => range.to - range.from + 1 <= 1000)).toBe(true);
-    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 100, to: 1099 });
+    expect(first.checkpoint.lanes[0]!.sent.nextBlock).toBe(12100);
+    expect(logRanges.every(range => range.to - range.from + 1 <= 1500)).toBe(true);
+    expect(logRanges[0]).toEqual({ chain: "ethereum", from: 100, to: 1599 });
     logRanges = [];
     const resumed = { ...args, checkpoint: first.checkpoint };
     expect(await observeCcipPending(resumed)).toMatchObject({ status: "accepted", amount: "30" });
-    expect(logRanges).toEqual([{ chain: "ethereum", from: 8100, to: 8105 }]);
+    expect(logRanges).toEqual([{ chain: "ethereum", from: 12100, to: 12105 }]);
+  });
+  it("uses a reviewed large endpoint span without the old 2,000-block ceiling", async () => {
+    pinNumber = 2_000_105; finalized = pinNumber;
+    const args = input();
+    args.chainRpcs.set("ethereum", { chainId: "ethereum", chainName: "ethereum", type: "evm", explorerUrl: "https://explorer.example",
+      endpoints: [{ url: "https://archive.example", operator: "alchemy", keyed: true, position: "registry",
+        stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 2_000_000 }] });
+    expect(await observeCcipPending(args)).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges.filter(range => range.chain === "ethereum")).toEqual([
+      { chain: "ethereum", from: 100, to: 2_000_099 },
+      { chain: "ethereum", from: 2_000_100, to: 2_000_105 },
+    ]);
+  });
+  it("subdivides unavailable wide pages without admitting an unproved prefix", async () => {
+    pinNumber = 4105;
+    const original = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+      const request = requests[0];
+      if (request?.method === "eth_getLogs") {
+        const filter = request.params[0] as { fromBlock: string; toBlock: string };
+        if (Number(BigInt(filter.toBlock) - BigInt(filter.fromBlock)) >= 2000) return null;
+      }
+      return original(chain, requests, options);
+    });
+    const args = input();
+    args.chainRpcs.set("ethereum", { chainId: "ethereum", chainName: "ethereum", type: "evm", explorerUrl: "https://explorer.example",
+      endpoints: [{ url: "https://archive.example", operator: "alchemy", keyed: true, position: "registry",
+        stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 20_000 }] });
+    expect(await observeCcipPending(args)).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges.filter(range => range.chain === "ethereum")).toEqual([
+      { chain: "ethereum", from: 100, to: 2099 },
+      { chain: "ethereum", from: 2100, to: 4099 },
+      { chain: "ethereum", from: 4100, to: 4105 },
+    ]);
   });
   it("caps resumed execution pages independently of the source chain defaults", async () => {
     const first = await observeCcipPending(input());

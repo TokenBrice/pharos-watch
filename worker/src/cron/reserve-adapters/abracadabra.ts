@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
@@ -115,7 +115,7 @@ export function adaptAbracadabraReserves(
  * reserve breakdown.
  */
 export async function fetchAbracadabraReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

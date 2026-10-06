@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
@@ -535,7 +535,7 @@ export async function fetchSolanaTokenSupply(
  * and validates it is non-zero. Throws with descriptive error on any failure.
  */
 export async function probeOnchainTotalSupply(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   input: LiveReserveInput,
   signal: AbortSignal,
   adapterName: string,
@@ -560,7 +560,7 @@ export async function probeOnchainTotalSupply(
  * validates that the published token supply is non-zero.
  */
 export async function probeTrackedTokenSupply(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   input: LiveReserveInput,
   signal: AbortSignal,
   adapterName: string,

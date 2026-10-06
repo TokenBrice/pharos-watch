@@ -1406,7 +1406,7 @@ The 2026-10-05T23:26Z two-target diagnostic rerun reproduced Dwellir `latest`-ca
 
 ### `POST /api/remediate-blacklist-amount-gaps`
 
-Admin-only bounded remediation endpoint for recoverable blacklist rows.
+Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. Default candidate selection excludes Tron before applying the row limit; explicit `chainId=tron` returns `400` without reading or updating events. Tron event-time amounts require the scheduled confirmed transfer-replay lane or the guarded evidence-based operator CLI in [Blacklist Tracker](./blacklist-tracker.md), not this historical-balance route.
 
 **Authentication:** same admin auth as other ops endpoints.
 

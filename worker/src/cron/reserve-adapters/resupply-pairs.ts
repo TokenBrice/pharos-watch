@@ -1,6 +1,6 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { decodeAbiParameters } from "viem/utils";
@@ -262,7 +262,7 @@ export function adaptResupplyPairSnapshots(
 }
 
 export async function fetchResupplyPairsReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

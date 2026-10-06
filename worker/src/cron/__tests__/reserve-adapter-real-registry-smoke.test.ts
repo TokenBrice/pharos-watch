@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getReserveAdapter } from "../reserve-adapters";
 import { syncReserveCoin } from "../sync-live-reserves-core";
@@ -49,7 +49,7 @@ describe("reserve adapter real-registry smoke", () => {
   });
 
   it("syncs a real mento-configured coin through syncReserveCoin and persists the validated snapshot", async () => {
-    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "ceur-celo");
+    const coin = CONFIGURED_COINS.find((entry) => entry.id === "ceur-celo");
     expect(coin?.liveReservesConfig?.adapter).toBe("mento");
 
     const adapter = getReserveAdapter("mento");

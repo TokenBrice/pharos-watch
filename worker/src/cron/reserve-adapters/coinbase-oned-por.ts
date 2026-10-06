@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -99,7 +99,7 @@ export function parseCoinbaseOnedPor(payload: unknown, nowSec: number): AdapterR
 }
 
 export async function fetchCoinbaseOnedPorReserves(
-  _coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
+  _coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primary = requireJsonInput(config.inputs.primary, KEY);
   if (primary.url !== COINBASE_ONED_POR_URL) fail("persisted-query-drift", "configured query identity differs from reviewed endpoint");

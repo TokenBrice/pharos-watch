@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "a9c862979f76303cb2ab1b51298a51ba3370173cb2ca1d735a6da5f9e8d642b4"
+      "sha256": "36920db6503b124e4f8e0d02c8d64a1722aca1a69ed720fc4913444f86af40e6"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -222,7 +222,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-docs.ts",
-      "sha256": "b63f514a43b4e6cd3b3e15698e2978bc1e5bd9d5a0237bbdd57f18273f42920e"
+      "sha256": "5c7f125194c01d8134cf29029dbbc362a49a8a0516755de6aa6149a636f80ede"
     },
     {
       "path": "shared/lib/redemption-backstop-providers.ts",
@@ -234,11 +234,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstops.ts",
-      "sha256": "511cdcc1281256be80a5d8962c33eecdc4ecfc2d0b36a0c5693e511c766a5d46"
+      "sha256": "691ac40ba68ecfde70c5292c0ce4697a74ac6d9ab5128818a484bb13a0199d0e"
     },
     {
       "path": "shared/lib/report-card-policy.ts",
-      "sha256": "05abb7ad0e0da49b2dabaeddb8402eb02a0ac3a9f6a0e0258c3505304e99903e"
+      "sha256": "0f0924437c1003636febed39cbb198eb78737c07a979e755ed6bf48bdf77c1eb"
     },
     {
       "path": "shared/lib/report-cards-base-input-identity.ts",
@@ -250,7 +250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9-supply-attribution-journal.ts",
-      "sha256": "cf1f2a45a203ff93a96e6379e0ce0d157361d2e9b0e49edf412232c8fcee3096"
+      "sha256": "8e746e3518c34eaffcebd3e5afe7dbc1ad204d420b6b20e469a6f15bcc5be3d4"
     },
     {
       "path": "shared/lib/safety-score-v9/access-lookthrough.ts",
@@ -454,7 +454,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "ad9324153a01b968b0ce0f9c8120cb5151733d01230316243d6efdedca1d5d92"
+      "sha256": "aa549fc70149a8764498646ff657d31e849efa9d70be9808f511221a2133a7c7"
     },
     {
       "path": "shared/types/dependency-types.ts",
@@ -646,7 +646,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/cron/reserve-adapters/origin-vault-balances.ts",
-      "sha256": "3f09a645709fe4c8fc7de9bdd35fa2a42b51e6c6bf14533e84ddf070d880c3ea"
+      "sha256": "adea4a7da8057f4d0818d843bb11a4891983791e2c07a02b97f6c4dfaedd084a"
     },
     {
       "path": "worker/src/cron/reserve-adapters/redemption.ts",
@@ -662,7 +662,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/cron/reserve-adapters/xdai-bridge.ts",
-      "sha256": "fe93eb5fbf8273ece319509d85a13d73803b94333eb17a1721578414346947dd"
+      "sha256": "732f78a91e4a74118f87b14e04b1bbe0426014910ecd7052883b73876edc263e"
     },
     {
       "path": "worker/src/cron/sync-redemption-backstops.ts",
@@ -694,15 +694,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/redemption-backstop-capacity/profile.ts",
-      "sha256": "9f27bd4c59b8df26377f56238148ce6d8023e351744bd422b2bb570b0de5d088"
+      "sha256": "815498a00d7bc9f32118ba7c403a8b91f1134acac611e57dbedbb1d19e825fa1"
     },
     {
       "path": "worker/src/lib/redemption-backstop/sources.ts",
-      "sha256": "91daf1d87b641e36459f60b265f11e53d13cb3bceec36dbb407e9654241607d6"
+      "sha256": "9eddcde4ba9fd4552f2e3abae7730e25d59de8237c8a8f4ed892d1bbc7ca15b7"
     },
     {
       "path": "worker/src/lib/redemption-exit-route-observations.ts",
-      "sha256": "099878838861fb7e554ac1578c28a6d5ea78098b29b40c55ae3f90bbd50056f5"
+      "sha256": "f9008e08821940e40a462bb760554b5c1cd3412013bde5784fe2ffa17b726461"
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input-contract.ts",
@@ -722,7 +722,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "e59a637be25e1d37f65cdbe3583115628c4ec8a936448d7f17d556a7fab0f89e"
+      "sha256": "bc441736c251b0f24e13baf5224b568a93504c97afd31149e4957b50e81d8496"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
@@ -830,7 +830,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "cd7612bbf83ff3c81722efe06aa90a644df8bb76cba0d9db8cf7e1cd0cb887d9"
+      "sha256": "d8075018755a87238b3c58f186f8a1bf9afbbb894006ff51e54036ef8cbfa1e1"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-generation.ts",
@@ -842,7 +842,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution.ts",
-      "sha256": "1c2da82bdc5229e66e4d9a221069045b94744800da2fd4e4c3a4068e53a68988"
+      "sha256": "3cce5268782c08841af09f90cc9b87bb60519159112d5fe57f9f59fe8d3a652f"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-observation-primitives.ts",
@@ -858,7 +858,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/wm-supply-observer.ts",
-      "sha256": "0592e4ec244bc37c747103b24fe2659bac0699c83518f978e2a325539d507176"
+      "sha256": "219b7923bd36c401c95aff858e86963916714effd299bac4d11cddf797672ec7"
     },
     {
       "path": "worker/src/lib/safety-score-v9/xaut-supply-attribution-contract.ts",
@@ -883,7 +883,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-05-block-26125584-shock-coverage.json.gz"
     }
   ],
-  "digest": "195338462b04d2d3b128e0792df4bdd65f889b56fac416cb5aaaccadff22c4f8"
+  "digest": "a0b6628e577e9ee6d1c5580af22e37487fa7adceef49a8d13316c6798ccec5ee"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

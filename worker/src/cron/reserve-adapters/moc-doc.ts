@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { fetchEvmRpcBatch, parseUint256Hex, type EvmRpcBatchCall } from "../../lib/evm-rpc";
@@ -47,7 +47,7 @@ function header(value: unknown): { number: string; hash: string; timestamp: numb
 }
 
 export async function fetchMocDocReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

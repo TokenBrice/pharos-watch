@@ -127,8 +127,16 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     if (stablecoinInput && !VALID_STABLECOINS.has(stablecoinInput as BlacklistStablecoin)) {
       return errorResponse(400, "Invalid stablecoin parameter");
     }
+    if (chainId === "tron") {
+      return errorResponse(400, "Tron event amounts require confirmed transfer replay, not EVM historical-balance remediation");
+    }
 
-    const conditions = [`amount_status IN (${RECOVERABLE_GAP_STATUSES.map(() => "?").join(", ")})`];
+    // Match the scheduled EVM repair lane: Tron has its own receipt/ledger
+    // completeness proof and must not lose that evidence to provider_unsupported.
+    const conditions = [
+      `amount_status IN (${RECOVERABLE_GAP_STATUSES.map(() => "?").join(", ")})`,
+      "chain_id != 'tron'",
+    ];
     const binds: Array<string | number> = [...RECOVERABLE_GAP_STATUSES];
     if (onlyMissingProvenance) {
       conditions.push("(contract_address IS NULL OR config_key IS NULL)");

@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -240,7 +240,7 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
 }
 
 export async function fetchSolomonProtocolReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

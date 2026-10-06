@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { fetchTextWithRetry, parseFiniteNumber, requireHtmlInput, slicesFromValues, verifiedFreshnessMetadata } from "./helpers";
@@ -46,7 +46,7 @@ export function parseBlackrockBrsrvHoldings(body: string, nowSec: number): Adapt
   };
 }
 
-export async function fetchBlackrockBrsrvHoldingsReserves(coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
+export async function fetchBlackrockBrsrvHoldingsReserves(coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "blackrock-brsrv-holdings");
   if (coin.id !== "brsrv-blackrock" || input.url !== BLACKROCK_BRSRV_HOLDINGS_URL) throw new Error("blackrock-brsrv-holdings coin or endpoint mismatch");
   return parseBlackrockBrsrvHoldings(await fetchTextWithRetry(input.url, signal, 10_000, ctx, { headers: { Accept: "text/csv" }, maxResponseBytes: 512 * 1024 }), ctx?.nowSec ?? Math.floor(Date.now() / 1000));

@@ -78,3 +78,18 @@ export function mockRegistry(options: MockRegistryOptions): MockRegistryExports 
     READABLE_META_BY_ID: readable.metaById,
   };
 }
+
+/** The same fixture universe exposed through the bounded Worker registry. */
+export function mockWorkerRuntimeRegistry(options: MockRegistryOptions) {
+  const registry = mockRegistry(options);
+  return {
+    WORKER_TRACKED_STABLECOINS: registry.TRACKED_STABLECOINS,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
+    WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
+    WORKER_ACTIVE_META_BY_ID: registry.ACTIVE_META_BY_ID,
+    WORKER_FROZEN_IDS: registry.FROZEN_IDS,
+    WORKER_READABLE_IDS: registry.READABLE_IDS,
+    hasWorkerLiveReserves: (coin: MockRegistryStablecoin) => coin.liveReservesConfig != null,
+  };
+}

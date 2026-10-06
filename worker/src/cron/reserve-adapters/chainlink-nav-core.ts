@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveRedemptionTelemetry,
   LiveReservesConfig,
@@ -252,7 +252,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
  * `superstate-liquidity` registry-bound adapters.
  */
 export async function fetchChainlinkNavCore(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

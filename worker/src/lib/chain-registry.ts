@@ -90,6 +90,15 @@ const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
   berachain: "berachain-mainnet",
 };
 
+/** Existing supply-profile RPC; 10,000-block historical ramp logs and canonical
+ * hash-pinned pool code verified 2026-10-06. No new credential is required. */
+const CCIP_ARCHIVE_PUBLIC_ENDPOINTS: Readonly<Record<string, readonly RpcEndpoint[]>> = {
+  berachain: [{
+    url: "https://rpc.berachain.com", operator: "public", keyed: false, position: "registry",
+    stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-06",
+  }],
+};
+
 export type RpcAuthProvider = "alchemy" | "dwellir";
 
 // Keep auth separate from the URL so request/log metadata never contains the API key.
@@ -157,8 +166,20 @@ function drpcRpcUrl(slug: string, apiKey: string): string {
 
 type RegistryRpcOperator = "alchemy" | "drpc" | "public";
 
+/** Inclusive CCIP ramp-log ranges probed against the keyed endpoints 2026-10-06.
+ * Result/body limits still require the observer to subdivide dense pages. */
+const ALCHEMY_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
+  "eth-mainnet": 10_000,
+  "arb-mainnet": 2_000_000,
+  "base-mainnet": 100_000,
+  "opt-mainnet": 2_000_000,
+};
+
 /** Today's registry behaviour: every endpoint is archive-capable with full log history. */
 function registryEndpoint(url: string, operator: RegistryRpcOperator): RpcEndpoint {
+  const maxLogBlockSpan = operator === "alchemy"
+    ? ALCHEMY_LOG_BLOCK_SPANS[new URL(url).hostname.split(".")[0]!]
+    : undefined;
   return {
     url,
     operator,
@@ -166,6 +187,7 @@ function registryEndpoint(url: string, operator: RegistryRpcOperator): RpcEndpoi
     position: "registry",
     stateHistory: "archive",
     logsHistory: "full",
+    ...(maxLogBlockSpan ? { maxLogBlockSpan } : {}),
   };
 }
 
@@ -373,7 +395,7 @@ export function buildChainRpcs(
       const existing = map.get(chainId);
       map.set(chainId, {
         chainId, chainName: meta.name, type: "evm", explorerUrl: meta.explorerUrl,
-        endpoints: [endpoint, ...(existing?.endpoints ?? [])],
+        endpoints: [endpoint, ...(existing?.endpoints ?? []), ...(CCIP_ARCHIVE_PUBLIC_ENDPOINTS[chainId] ?? [])],
       });
     }
   }

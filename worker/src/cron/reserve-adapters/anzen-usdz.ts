@@ -1,5 +1,5 @@
 import { decodeAbiParameters, keccak256 } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { encodeAddressCallData } from "../../lib/evm-selectors";
@@ -131,7 +131,7 @@ interface LayerZeroMetadata {
   }>;
 }
 
-function getRequiredContract(coin: StablecoinMeta, chain: SupportedSupplyChain): { address: string; decimals: number } {
+function getRequiredContract(coin: ReserveAdapterCoin, chain: SupportedSupplyChain): { address: string; decimals: number } {
   const contract = coin.contracts?.find((entry) => entry.chain === chain);
   if (!contract) throw new Error(`${ADAPTER_KEY} missing ${chain} contract metadata for ${coin.id}`);
   const expected = EXPECTED_DEPLOYMENTS[chain];
@@ -141,7 +141,7 @@ function getRequiredContract(coin: StablecoinMeta, chain: SupportedSupplyChain):
   return { address: contract.address, decimals: contract.decimals };
 }
 
-function assertContractInventory(coin: StablecoinMeta): void {
+function assertContractInventory(coin: ReserveAdapterCoin): void {
   const contracts = coin.contracts ?? [];
   const actual = contracts.map((entry) => `${entry.chain}:${entry.address.toLowerCase()}`).sort();
   const expected = SUPPLY_CHAINS.map((chain) => `${chain}:${EXPECTED_DEPLOYMENTS[chain].address}`).sort();
@@ -434,7 +434,7 @@ function observeAnzenRedemption(values: ReadonlyMap<string, `0x${string}`>): Anz
 }
 
 export async function fetchAnzenUsdzReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   _config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

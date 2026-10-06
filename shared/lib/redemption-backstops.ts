@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "./stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "./stablecoins/worker-runtime-registry";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "./redemption-backstop-configs";
 import type { ExitRouteOutput } from "../types/exit-route";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
@@ -48,7 +48,7 @@ export function validateRedemptionOutputIdentity(
   const issues: RedemptionOutputIdentityIssue[] = [];
   if (output.kind === "tracked-stablecoin") {
     for (const key of output.trackedAssetIds ?? []) {
-      if (!TRACKED_META_BY_ID.has(key)) issues.push({ code: "unknown-tracked-output-id", key });
+      if (!WORKER_TRACKED_META_BY_ID.has(key)) issues.push({ code: "unknown-tracked-output-id", key });
     }
     const expected = config?.outputAssets ?? [];
     if (expected.length > 0 && !sameOutputIdentitySet(output.trackedAssetIds ?? [], expected)) {
@@ -85,7 +85,7 @@ export function validateRedemptionBackstopConfigOutputIdentity(
     config.outputAssets
   ) {
     for (const key of config.outputAssets) {
-      if (!TRACKED_META_BY_ID.has(key)) issues.push({ code: "unknown-tracked-output-id", key });
+      if (!WORKER_TRACKED_META_BY_ID.has(key)) issues.push({ code: "unknown-tracked-output-id", key });
     }
   }
   if (
@@ -109,7 +109,7 @@ export {
 export type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel } from "./redemption-backstop-configs/shared";
 
 for (const stablecoinId of Object.keys(REDEMPTION_BACKSTOP_CONFIGS)) {
-  if (!TRACKED_META_BY_ID.has(stablecoinId)) {
+  if (!WORKER_TRACKED_META_BY_ID.has(stablecoinId)) {
     throw new Error(`Unknown redemption backstop config id "${stablecoinId}"`);
   }
 }

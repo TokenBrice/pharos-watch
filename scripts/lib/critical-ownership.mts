@@ -96,7 +96,6 @@ export const CRITICAL_OWNERSHIP_WAIVERS: Readonly<Record<string, CriticalOwnersh
   "worker/src/lib/geckoterminal-price-probe-stats.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/live-reserves/store-overview.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/live-reserves/store-read.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/live-reserves/store-views.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/curated-single-route-supply.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/extension-oracle.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/safety-score-v9/extension-wrapper-allocation.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },

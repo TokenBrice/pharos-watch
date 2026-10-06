@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext } from "../reserve-adapters/index";
 import { getCachedRequest } from "../reserve-adapters/request";
@@ -18,11 +18,11 @@ import {
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
 
-vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
   const registry = await importOriginal<typeof StablecoinRegistry>();
   return {
     ...registry,
-    ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS.filter((coin) =>
+    WORKER_ACTIVE_STABLECOINS: registry.WORKER_ACTIVE_STABLECOINS.filter((coin) =>
       ["usdc-circle", "eurc-circle"].includes(coin.id)),
   };
 });
@@ -154,7 +154,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       {},
     );
     const { adapterLatency } = metadataOf(result);
-    const configuredCoins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
+    const configuredCoins = WORKER_ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
     const cacheHitAttempts = adapterLatency.groups
       .filter((group) => group.cacheHit)
       .reduce((sum, group) => sum + group.attemptCount, 0);

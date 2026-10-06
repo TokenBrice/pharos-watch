@@ -18,8 +18,9 @@ import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
+import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
 
-type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string };
+type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string; current_native_quote: string | null };
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
@@ -71,8 +72,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   try {
     activeDepegs = await db
       .prepare(`SELECT e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source,
-                       e.start_price, e.ended_at, e.recovery_price, p.quote_mode
+                       e.start_price, e.ended_at, e.recovery_price, p.quote_mode,
+                       nq.value AS current_native_quote
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
                 WHERE e.ended_at IS NULL`)
       .all<PsiActiveDepegRow>();
   } catch (err) {
@@ -218,7 +221,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     let earliestStart = Infinity;
     let missingPrice = false;
     for (const e of events) {
-      const price = isNativePegEvent(e) ? getNativeEventPrice(e, now) : usdPrice;
+      const price = isNativePegEvent(e)
+        ? getNativeEventPrice(e, now, decodeNativeEventQuote(e.current_native_quote))
+        : usdPrice;
       const depegSignal = price != null ? deriveDepegSignal(price, e.peg_reference) : null;
       if (!depegSignal) {
         missingPrice = true;

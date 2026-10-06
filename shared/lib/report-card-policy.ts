@@ -15,7 +15,7 @@ const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
   "very-high": 5,
 };
 
-export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
+export function computeCollateralQualityFromReserves(reserves: readonly Pick<ReserveSlice, "pct" | "risk">[]): number {
   const totalPct = reserves.reduce((sum, reserve) => sum + reserve.pct, 0);
   if (totalPct === 0) return 0;
   const weighted = reserves.reduce((sum, reserve) => sum + reserve.pct * (RESERVE_QUALITY_SCORE[reserve.risk] ?? 0), 0);

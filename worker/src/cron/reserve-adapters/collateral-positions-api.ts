@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveRpcMode, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
@@ -664,7 +664,7 @@ async function fetchBridgeImmediateRedeemableUsd(
 }
 
 export async function fetchCollateralPositionsApiReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

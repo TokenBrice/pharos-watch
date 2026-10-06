@@ -19,6 +19,7 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_CAPTURE_BUDGET = Object.freeze({
   assetConcurrency: 1,
   assetTimeoutMs: 30_000,
+  wmAssetTimeoutMs: 90_000,
   wallTimeoutMs: 180_000,
   publicationReserveMs: 15_000,
 });

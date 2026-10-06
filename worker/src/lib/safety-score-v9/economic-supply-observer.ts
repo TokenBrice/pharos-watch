@@ -357,10 +357,18 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
       ? await readReviewedApiAmount(plan.referencePriceSource, input.signal)
       : economicSupplyInputReferencePrice(input.fixedInput, input.assetId);
     if (!referencePrice || Number(referencePrice.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: plan.sourceId };
-    const finalizedOftChains = new Set([
+    // Every reviewed in-flight source with `finality: "finalized"` rejects a
+    // holding pin above the chain's actual finalized head, so the shared pin
+    // must be capped there for all of its chains, not only OFT sides.
+    const finalizedChains = new Set([
       plan.liabilityInFlightSource, ...plan.escrows.map(escrow => escrow.inFlightSource),
-    ].flatMap(source => source && "kind" in source && source.kind === "evm-layerzero-oft-pending"
-      ? source.sides.map(side => side.chainId) : []));
+    ].flatMap(source => {
+      if (!source || !("kind" in source)) return [];
+      if (source.kind === "evm-layerzero-oft-pending" || source.kind === "evm-curve-lz-pending") return source.sides.map(side => side.chainId);
+      if (source.kind === "evm-ccip-pending") return source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]);
+      if (source.kind === "evm-l2-messenger-pending") return [source.chainId, source.l2ChainId];
+      return [source.chainId];
+    }));
     const headers = new Map<string, EvmBlockHeader>();
     const cosmosPins = new Map<string, CosmosBankPin>();
     const readCosmos = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
@@ -413,10 +421,10 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(input: {
           "safeBlockLag" in other.read ? other.read.safeBlockLag : 0));
         if (head === null || lag <= 0 || head < lag) return null;
         // A reviewed lag is not a finality proof: rollup finalized heads can
-        // trail it. Holdings and OFT history must share an actually finalized pin.
-        const finalized = finalizedOftChains.has(row.chainId)
+        // trail it. Holdings and in-flight history must share an actually finalized pin.
+        const finalized = finalizedChains.has(row.chainId)
           ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
-        if (finalizedOftChains.has(row.chainId) && !finalized) return null;
+        if (finalizedChains.has(row.chainId) && !finalized) return null;
         const block = await rewindEvmBlockHeaderToScoringClock({
           initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag), scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),

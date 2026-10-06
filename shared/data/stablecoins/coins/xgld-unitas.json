@@ -7,7 +7,17 @@
     "scoring": { "maxSourceAgeSec": 259200 },
     "display": { "url": "https://accountable.unitas.so/?type=xgld", "label": "Unitas Accountable location observations" },
     "inputs": { "primary": { "kind": "http-json", "url": "https://api-accountable.unitas.so/v1/dashboard?type=xgld" } },
-    "params": { "bucket": "reserves_split", "riskMap": {} }
+    "params": {
+      "bucket": "reserves_split",
+      "riskMap": {
+        "Binance": "high",
+        "Bnb_smartchain": "high"
+      },
+      "sourceKeyMap": {
+        "Binance": "accountable:unitas:xgld:binance",
+        "Bnb_smartchain": "accountable:unitas:xgld:bnb-smartchain"
+      }
+    }
   },
   "id": "xgld-unitas",
   "name": "Unitas Gold",

@@ -110,6 +110,28 @@ describe("detectDepegEvents", () => {
     vi.restoreAllMocks();
   });
 
+
+  it("persists the existing native hydration quote for an active event without fetching again", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite, {
+      id: 90738, stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR",
+      started_at: now - 77 * 86400,
+    });
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValueOnce(new Map([["eurc-circle", {
+      stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR",
+      vsCurrency: "eur", price: 0.98, updatedAt: now - 60,
+    }]]));
+    await detectDepegEvents(db, [makeAsset({
+      id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.0584,
+      priceConfidence: "high",
+    })]);
+    expect(fetchCurrentNativePegQuotes).toHaveBeenCalledTimes(1);
+    const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .get("depeg-native-quote:90738") as { value: string; updated_at: number };
+    expect(JSON.parse(row.value)).toEqual({ value: 0.98, observedAt: now - 60, source: "coingecko" });
+    expect(row.updated_at).toBe(now - 60);
+  });
   it("records a sticky coverage gap for an omitted asset without closing its incident", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);

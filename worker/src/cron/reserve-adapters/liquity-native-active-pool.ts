@@ -1,5 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import {
@@ -30,7 +30,7 @@ function ratio18(raw: bigint | null): number | null {
 }
 
 export async function fetchLiquityNativeActivePoolReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

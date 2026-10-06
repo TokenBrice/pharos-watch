@@ -2,7 +2,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -580,7 +580,7 @@ function readParams(config: LiveReservesConfig): XdaiBridgeParams {
 }
 
 export async function fetchXdaiBridgeReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

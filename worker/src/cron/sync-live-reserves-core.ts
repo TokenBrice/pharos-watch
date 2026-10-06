@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
@@ -39,7 +39,7 @@ export const PRIMARY_FALLBACK_USED_WARNING_CODE = "primary-fallback-used";
 /** A score-ineligible fallback read was not persisted because the stored snapshot is still admissible. */
 export const FALLBACK_WITHHELD_WARNING_CODE = "fallback-withheld-score-grade-retained";
 
-const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
+const TRACKED_STABLECOIN_IDS = new Set(WORKER_TRACKED_META_BY_ID.keys());
 export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
   1, 5, 10, 25, 50, 100, 250, 500, 1_000, 2_000, 5_000, 10_000, 20_000,
 ] as const;
@@ -473,6 +473,21 @@ export async function syncReserveCoin(args: {
     });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
+      const staleOnly = validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")
+        && validation.warnings.every((warning) => warning.effect !== "fatal" || warning.code === "stale-redemption-source-timestamp")
+        && !(result.warnings ?? []).some((warning) => warning.effect === "fatal");
+      if (staleOnly) {
+        // The source was read successfully, but its evidence cannot be published.
+        // Heal transport failure debt without refreshing the retained snapshot.
+        const { finalized } = await recordFailure(
+          "degraded", `Validation failed: ${message}`, "source-stale", validation.warnings,
+          { durationMs, failureCategory: "validation", sourceTimestamp: result.metadata?.sourceTimestamp },
+        );
+        return timedResult({
+          breakerKey, status: "failed", ...(finalized ? { breakerOutcome: true } : {}),
+          warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true,
+        });
+      }
       logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
       await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
       return timedResult({ breakerKey, status: "failed", warningMessages: validation.warnings.map((warning) => `${coin.id}:${warning.code}`), hasWarnings: true });

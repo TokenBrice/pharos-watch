@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { PAUSED_SELECTOR, encodeUint256 } from "../../lib/evm-selectors";
@@ -574,7 +574,7 @@ const INFINIFI_REDEEM_CONTROLLER_DOC_URL = "https://docs.infinifi.xyz/dev-docs/f
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
 export async function fetchInfiniFiReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,6 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { DECIMALS_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";
@@ -60,7 +60,7 @@ export function readBranchBalanceParams<K extends BranchBalanceAdapterKey>(
 function isUsdPeggedBranch(branch: BranchConfig): boolean {
   if (branch.depType === "wrapper") return false;
   if (!branch.coinId) return false;
-  const meta = TRACKED_META_BY_ID.get(branch.coinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(branch.coinId);
   // Yield-bearing wrappers (sUSDe, sDAI, sfrxUSD) rise above $1 by design; the peg
   // check would generate false-positive wrapper-depeg warnings for them.
   if (meta?.flags.yieldBearing) return false;
@@ -71,7 +71,7 @@ function findUnderlyingContract(
   branch: BranchConfig,
 ): { chain: string; address: string } | null {
   if (!branch.coinId || branch.underlyingPrice1to1 !== true) return null;
-  const meta = TRACKED_META_BY_ID.get(branch.coinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(branch.coinId);
   if (!meta?.contracts) return null;
   const sameChain = meta.contracts.find((c) => c.chain === branch.token.chain);
   if (sameChain) return { chain: sameChain.chain, address: sameChain.address };

@@ -170,6 +170,15 @@ describe("buildChainRpcs", () => {
     expect(getRpcAuthHeaders(primaryRpcUrl(keyed)!)).toBeDefined();
   });
 
+  it("keeps keyed Berachain state primary and admits its probed wider public archive fallback", () => {
+    const config = buildChainRpcs(ALCHEMY_KEY).get("berachain")!;
+    expect(primaryRpcUrl(config)).toBe("https://berachain-mainnet.g.alchemy.com/v2/");
+    expect(logScanRpcEndpoints(config)[1]).toMatchObject({
+      url: "https://rpc.berachain.com", operator: "public", keyed: false,
+      stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-06",
+    });
+  });
+
   it("maps registry operators to alchemy/drpc keyed and public unkeyed", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY);
 
@@ -181,6 +190,7 @@ describe("buildChainRpcs", () => {
         position: "registry",
         stateHistory: "archive",
         logsHistory: "full",
+        maxLogBlockSpan: 10_000,
       },
       {
         url: "https://ethereum-rpc.publicnode.com",
@@ -199,6 +209,15 @@ describe("buildChainRpcs", () => {
       keyed: false,
     });
   });
+
+  it.each([["ethereum", 10_000], ["arbitrum", 2_000_000], ["base", 100_000], ["optimism", 2_000_000]] as const)(
+    "declares only the live-probed keyed %s log range", (chain, span) => {
+      expect(buildChainRpcs(ALCHEMY_KEY).get(chain)!.endpoints[0]).toMatchObject({
+        operator: "alchemy", maxLogBlockSpan: span,
+      });
+      expect(buildChainRpcs().get(chain)!.endpoints.every(endpoint => endpoint.maxLogBlockSpan === undefined)).toBe(true);
+    },
+  );
 
   it("appends one supplemental Dwellir endpoint per chain, after every registry endpoint", () => {
     const withKey = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY });

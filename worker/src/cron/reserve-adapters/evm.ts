@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 export { normalizeEvmAddress } from "../../lib/evm-selectors";
 
 
@@ -7,7 +7,7 @@ export { normalizeEvmAddress } from "../../lib/evm-selectors";
  * when the coin declares no contract for that chain.
  */
 export function resolveCoinContractAddress(
-  coin: StablecoinMeta,
+  coin: Pick<ReserveAdapterCoin, "contracts">,
   chainId: string,
 ): string | null {
   const contract = coin.contracts?.find((entry) => entry.chain === chainId);

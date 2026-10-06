@@ -814,6 +814,7 @@ export function projectWorkerRuntimeCoin(coin, index) {
       pegCurrency: coin.flags.pegCurrency,
       governance: coin.flags.governance,
       ...(coin.flags.navToken == null ? {} : { navToken: coin.flags.navToken }),
+      ...(coin.flags.yieldBearing == null ? {} : { yieldBearing: coin.flags.yieldBearing }),
     },
   };
   if (typeof coin.geckoId === "string" && coin.geckoId.length > 0) {
@@ -862,12 +863,35 @@ export function projectWorkerRuntimeCoin(coin, index) {
       }),
     };
   }
-  if (coin.reserves) projected.reserves = coin.reserves.map(({ risk, pct }) => ({ risk, pct }));
+  if (coin.reserves) projected.reserves = coin.reserves.map(({ risk, pct, coinId }) => ({
+    risk, pct, ...(coinId == null ? {} : { coinId }),
+  }));
   if (coin.blacklistabilityReview) {
     projected.blacklistabilityReview = { reviewedStatus: coin.blacklistabilityReview.reviewedStatus };
   }
   if (coin.dependencies) projected.dependencies = coin.dependencies.map(({ id, weight }) => ({ id, weight }));
   if (coin.obituary) projected.obituary = { deathDate: coin.obituary.deathDate };
+  // Recovery's redemption/peg sidecars need identity and documentation, not
+  // the full issuer/research trees or unrelated link categories.
+  for (const key of ["variantOf", "pegReferenceId", "protocolSlug", "launchDate"]) {
+    if (Object.prototype.hasOwnProperty.call(coin, key)) projected[key] = coin[key];
+  }
+  if (coin.pegScoreCoverage) projected.pegScoreCoverage = { startDate: coin.pegScoreCoverage.startDate };
+  if (coin.proofOfReserves) projected.proofOfReserves = {
+    url: coin.proofOfReserves.url,
+    ...(coin.proofOfReserves.provider == null ? {} : { provider: coin.proofOfReserves.provider }),
+  };
+  if (coin.links) projected.links = coin.links
+    .filter(({ label }) => ["Docs", "Proof of Reserve", "Transparency", "Website"].includes(label))
+    .map(({ label, url }) => ({ label, url }));
+  // Only configured, non-suspended feeds need complete adapter inputs. Keep
+  // DDR's smaller flags/reserve slice for the rest of the catalog.
+  if (isPlainObject(coin.liveReservesConfig) && !coin.liveReservesConfig.suspended) {
+    projected.liveReservesConfig = coin.liveReservesConfig;
+    projected.flags = coin.flags;
+    if (coin.reserves) projected.reserves = coin.reserves;
+    if (coin.reserveReview) projected.reserveReview = coin.reserveReview;
+  }
   if (
     (coin.status == null || coin.status === "active")
     && isPlainObject(coin.liveReservesConfig)

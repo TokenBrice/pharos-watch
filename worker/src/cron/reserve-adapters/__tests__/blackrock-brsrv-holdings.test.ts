@@ -28,4 +28,10 @@ describe("BlackRock BRSRV disclosed securities", () => {
     expect(() => parseBlackrockBrsrvHoldings(body, now + 6 * 86400)).toThrow(/stale/);
     expect(() => parseBlackrockBrsrvHoldings(body.replace("01-Oct-2026", "30-Feb-2026"), now)).toThrow(/invalid/);
   });
+  it("does not refresh an October 1 disclosure merely because it was fetched on October 6", () => {
+    const sourceTimestamp = Date.parse("2026-10-01T00:00:00Z") / 1000;
+    expect(() => parseBlackrockBrsrvHoldings(body, sourceTimestamp + 5 * 86400)).not.toThrow();
+    expect(() => parseBlackrockBrsrvHoldings(body, sourceTimestamp + 5 * 86400 + 1)).toThrow(/stale/);
+    expect(() => parseBlackrockBrsrvHoldings(body, 1791272210)).toThrow(/stale/);
+  });
 });

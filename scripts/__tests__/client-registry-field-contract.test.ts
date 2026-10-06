@@ -40,6 +40,27 @@ describe("client registry field contract", () => {
     expect(projected.tradedContracts).toEqual([native]);
   });
 
+  it("retains full reserve inputs only for configured, non-suspended feeds", () => {
+    const coin = {
+      id: "reserve-test", symbol: "RES", name: "Reserve Test",
+      flags: { pegCurrency: "USD", governance: "centralized", backing: "rwa", navToken: true },
+      reserves: [{ name: "Treasuries", pct: 100, risk: "low", coinId: "usdc-circle" }],
+      reserveReview: { reviewedAt: "2026-10-06", notes: "Reviewed reserve inputs" },
+      liveReservesConfig: { adapter: "curated-validated", version: 1 },
+    };
+    const projected = projectWorkerRuntimeCoin(coin, 0);
+    for (const field of ["flags", "reserves", "reserveReview", "liveReservesConfig"] as const) {
+      expect(projected[field]).toEqual(coin[field]);
+    }
+    for (const config of [undefined, { ...coin.liveReservesConfig, suspended: true }]) {
+      const unconfigured = projectWorkerRuntimeCoin({ ...coin, liveReservesConfig: config }, 0);
+      expect(unconfigured).not.toHaveProperty("liveReservesConfig");
+      expect(unconfigured).not.toHaveProperty("reserveReview");
+      expect(unconfigured.flags).toEqual({ pegCurrency: "USD", governance: "centralized", navToken: true });
+      expect(unconfigured.reserves).toEqual([{ risk: "low", pct: 100, coinId: "usdc-circle" }]);
+    }
+  });
+
   it("rejects a length-preserving duplicate canonical ID before projecting either ordered output", ({ onTestFinished }) => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-client-registry-order-"));
     onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));

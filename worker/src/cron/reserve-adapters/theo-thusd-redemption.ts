@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { FullReserveCompositionSchema } from "@shared/types/reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -33,7 +33,7 @@ const call = (functionName: "thusd" | "redeemDestination" | "paused" | "maxRedee
 const sixDecimals = (value: bigint) => value === 6n ? null : "reviewed six-decimal units drifted";
 
 export async function fetchTheoThusdRedemptionReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

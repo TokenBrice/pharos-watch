@@ -61,6 +61,7 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
 // minimum RPC/publication reserve after this wait. No extra connection fanout.
 const WM_SKEW_REPAIR_MAX_WAIT_MS = 120_000;
 const WM_SKEW_REPAIR_MARGIN_MS = 15_000;
+const WM_SKEW_REPAIR_RPC_RESERVE_MS = 15_000;
 
 export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode |
   Extract<SupplyAttributionRejectionCode, "deployment-observation-window-insufficient">;
@@ -177,6 +178,7 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
+    assetDeadlineMs?: number;
   },
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<WmReviewedDeploymentObservationAttempt> {
@@ -235,7 +237,9 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   const window = input.executionWindow;
   if (requiredWaitMs > WM_SKEW_REPAIR_MAX_WAIT_MS || !window ||
     !Number.isFinite(window.deadlineMs) || !Number.isFinite(window.minimumRemainingMs) ||
-    window.minimumRemainingMs < 0 || window.deadlineMs - Date.now() - waitMs < window.minimumRemainingMs) {
+    window.minimumRemainingMs < 0 || window.deadlineMs - Date.now() - waitMs < window.minimumRemainingMs ||
+    (input.assetDeadlineMs !== undefined && (!Number.isFinite(input.assetDeadlineMs) ||
+      input.assetDeadlineMs - Date.now() - waitMs < WM_SKEW_REPAIR_RPC_RESERVE_MS))) {
     return { status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
       failedRouteId: attempt.failedRouteId };
   }
@@ -254,6 +258,7 @@ export async function observeWmReviewedDeploymentUnitPartition(
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     executionWindow?: V9ExecutionWindow;
+    assetDeadlineMs?: number;
   },
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<ReviewedDeploymentUnitPartitionV1 | null> {

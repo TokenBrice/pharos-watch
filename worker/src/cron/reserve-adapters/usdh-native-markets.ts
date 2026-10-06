@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchPrimaryHtmlInput, htmlLayoutChangedError } from "./helpers";
@@ -38,7 +38,7 @@ export function adaptUsdhNativeMarkets(html: string): AdapterResult {
 }
 
 export async function fetchUsdhNativeMarketsReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

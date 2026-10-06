@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
-import { mockRegistry } from "../../test-helpers/cron";
+import { mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 
 const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   STABLECOINS_MOCK: [
@@ -22,7 +22,7 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: STABLECOINS_MOCK }));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry({ stablecoins: STABLECOINS_MOCK }));
 
 vi.mock("@shared/lib/peg-score", () => ({
   PEG_SCORE_LOOKBACK_SEC: 126_230_400,

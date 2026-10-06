@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { decodeStrictAddressWord } from "./abi-decode";
@@ -41,7 +41,7 @@ const BRANCH_PARAMS = {
 
 /** The LVUSD-only registry is authoritative; LVMON and MON staking are excluded. */
 export async function fetchLeverupLvusdReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

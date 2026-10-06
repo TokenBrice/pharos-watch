@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
@@ -231,7 +231,7 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
 }
 
 export async function fetchThreeJaneUsd3Reserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
@@ -175,7 +175,7 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
 }
 
 export async function fetchBtcfiReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

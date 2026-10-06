@@ -25,8 +25,18 @@ export interface WorkerRuntimeStablecoinMeta {
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];
   liveReserveCircuitSource?: string;
+  liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
+  reserveReview?: StablecoinMeta["reserveReview"];
+  variantOf?: StablecoinMeta["variantOf"];
+  pegReferenceId?: StablecoinMeta["pegReferenceId"];
+  protocolSlug?: StablecoinMeta["protocolSlug"];
+  launchDate?: StablecoinMeta["launchDate"];
+  pegScoreCoverage?: Pick<NonNullable<StablecoinMeta["pegScoreCoverage"]>, "startDate">;
+  proofOfReserves?: Pick<NonNullable<StablecoinMeta["proofOfReserves"]>, "url" | "provider">;
+  links?: Pick<NonNullable<StablecoinMeta["links"]>[number], "label" | "url">[];
   // DDR consumes these small structural/lifecycle slices, not issuer evidence.
-  flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "governance" | "navToken">;
+  flags: Pick<StablecoinMeta["flags"], "pegCurrency" | "governance" | "navToken">
+    & Partial<StablecoinMeta["flags"]>;
   mechanismArchetype?: StablecoinMeta["mechanismArchetype"];
   windDownAnnouncedAt?: string;
   collateralQuality?: StablecoinMeta["collateralQuality"];
@@ -35,11 +45,23 @@ export interface WorkerRuntimeStablecoinMeta {
     mintIncidents?: Pick<NonNullable<NonNullable<StablecoinMeta["mintAuthority"]>["mintIncidents"]>[number],
       "date" | "status" | "resolvedAt">[];
   };
-  reserves?: Pick<NonNullable<StablecoinMeta["reserves"]>[number], "risk" | "pct">[];
+  reserves?: Pick<NonNullable<StablecoinMeta["reserves"]>[number], "risk" | "pct" | "coinId">[]
+    | StablecoinMeta["reserves"];
   blacklistabilityReview?: Pick<NonNullable<StablecoinMeta["blacklistabilityReview"]>, "reviewedStatus">;
   dependencies?: Pick<NonNullable<StablecoinMeta["dependencies"]>[number], "id" | "weight">[];
   frozenAt?: string;
   obituary?: Pick<NonNullable<StablecoinMeta["obituary"]>, "deathDate">;
+}
+
+/** Configured feeds retain the complete adapter input slice in the projection. */
+export type WorkerLiveReserveStablecoinMeta = Omit<WorkerRuntimeStablecoinMeta, "flags" | "reserves" | "liveReservesConfig">
+  & Pick<StablecoinMeta, "flags" | "reserves">
+  & { liveReservesConfig: NonNullable<StablecoinMeta["liveReservesConfig"]> };
+
+export function hasWorkerLiveReserves(
+  coin: WorkerRuntimeStablecoinMeta,
+): coin is WorkerLiveReserveStablecoinMeta {
+  return coin.liveReservesConfig != null;
 }
 
 const registry = buildStablecoinRegistryIndexes(workerRuntimeAsset as WorkerRuntimeStablecoinMeta[], {

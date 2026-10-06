@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
@@ -102,7 +102,7 @@ export function fiddIndependentAssuranceProfile(
 }
 
 export async function fetchFiddIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

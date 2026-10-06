@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -175,7 +175,7 @@ export function adaptFrntLedgerlens(payload: unknown): AdapterResult {
 }
 
 export async function fetchFrntLedgerlensReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

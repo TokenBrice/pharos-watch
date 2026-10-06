@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveRedemptionTelemetry,
   LiveReservesConfig,
@@ -352,7 +352,7 @@ async function fetchEthenaRedemptionTelemetry(
 }
 
 export async function fetchEthenaReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

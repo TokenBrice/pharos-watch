@@ -749,6 +749,12 @@ export interface StablecoinMeta {
   dateHistory?: DateHistoryEntry[];
 }
 
+/** Lossless registry slice consumed by live-reserve adapters. */
+export type ReserveAdapterCoin = Pick<
+  StablecoinMeta,
+  "id" | "name" | "symbol" | "flags" | "contracts" | "reserves" | "reserveReview" | "liveReservesConfig"
+>;
+
 type PegCurrencyFilterTag = `${Lowercase<PegCurrency>}-peg`;
 type InfrastructureFilterTag = `infrastructure-${Infrastructure}`;
 type VariantFilterTag = "variant-tracked" | `variant-${VariantKind}`;

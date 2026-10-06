@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
@@ -163,7 +163,7 @@ export function adaptAfiProof(payload: AfiProofPayload, params: AfiProofParams):
 }
 
 export async function fetchAfiProofReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -5,11 +5,9 @@ import {
   retireSupersededLiveReserveCheckpoints,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
-import { runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
-import { recoverLiveReserveConfigChanges } from "../../cron/reserve-recovery-config";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -41,6 +39,9 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     };
   }
 
+  // Config-only polls must not initialize the checkpoint replay's redemption
+  // and sentinel graphs alongside reserve adapters on the 128 MB isolate.
+  const { recoverLiveReserveConfigChanges } = await import("../../cron/reserve-recovery-config");
   const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
     etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
     alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
@@ -104,6 +105,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     recoveryCheckpoint: checkpoint,
   });
   recoveryRuntime.slotSignal = signal;
+  const { runFourHourlyReserveSyncSlot } = await import("./hourly-live-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const recoveryDeferred = summary.jobsSkipped > 0;
   return {

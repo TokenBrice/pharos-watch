@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeUint256Word } from "./abi-decode";
 import { callHederaContractAtBlock, fetchHederaLatestBlock } from "./hedera-mirror";
@@ -240,7 +240,7 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
  * reference rate; a missing or stale franc rate fails the attempt closed.
  */
 export async function fetchHliquityHederaReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

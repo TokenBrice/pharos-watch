@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -76,7 +76,7 @@ function readChronicleNavParams(config: LiveReservesConfig): ChronicleNavParams 
  * deployment rather than a failure.
  */
 async function aggregateChronicleSupply(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   input: ReturnType<typeof requireOnchainInput>,
   params: ChronicleNavParams,
   signal: AbortSignal,
@@ -198,7 +198,7 @@ export function adaptChronicleNavResponse(data: ChronicleNavData, params: Chroni
 }
 
 export async function fetchChronicleNavReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

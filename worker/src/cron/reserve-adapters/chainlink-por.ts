@@ -1,5 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
-import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ContractDeployment, ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -108,7 +108,7 @@ export type ChainlinkPorCirculationOutcome =
   | { aggregate: ChainlinkPorCirculationAggregate; failure?: undefined }
   | { aggregate?: undefined; failure: ChainlinkPorCirculationProbeFailure };
 
-function inferReserveUnit(coin: StablecoinMeta, params: ChainlinkPorParams): ChainlinkPorReserveUnit {
+function inferReserveUnit(coin: ReserveAdapterCoin, params: ChainlinkPorParams): ChainlinkPorReserveUnit {
   if (params.reserveUnit) return params.reserveUnit;
   if (coin.flags.pegCurrency === "GOLD") return "XAU";
   if (coin.flags.pegCurrency === "SILVER") return "XAG";
@@ -286,7 +286,7 @@ export function parseBackedRawUnits(value: unknown): bigint | null {
 }
 
 async function fetchVerifiedBackedCirculation(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   params: ChainlinkPorParams,
   feedChain: string,
   probe: ChainlinkPorIssuerCirculationProbe,
@@ -543,7 +543,7 @@ export function adaptChainlinkPorResponse(
 }
 
 export async function fetchChainlinkPorReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

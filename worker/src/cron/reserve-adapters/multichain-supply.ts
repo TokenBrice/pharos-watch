@@ -1,4 +1,4 @@
-import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
+import type { ContractDeployment, ReserveAdapterCoin } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -91,7 +91,7 @@ interface SupplyRead {
  * adapter keeps its own RPC override and block-pinning strategy.
  */
 export async function aggregateMultichainErc20Supply(options: {
-  coin: StablecoinMeta;
+  coin: ReserveAdapterCoin;
   adapterKey: string;
   signal: AbortSignal;
   ctx?: AdapterContext;
@@ -304,7 +304,7 @@ async function readIncludedSupply(
  * deployment. Throws only when no included read succeeds.
  */
 export async function aggregateScopedLiabilitySupply(options: {
-  coin: StablecoinMeta;
+  coin: ReserveAdapterCoin;
   scope: IssuerNativeLiabilityScope;
   adapterKey: string;
   signal: AbortSignal;
