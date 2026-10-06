@@ -47,6 +47,7 @@ function createDeferred<T>(): {
 describe("subgraph source families", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("returns empty Uni V3 lookups when Graph API key is missing", async () => {
@@ -150,6 +151,7 @@ describe("subgraph source families", () => {
   });
 
   it("names a failed exact identity source without accepting a broad copy", async () => {
+    const warnings = vi.spyOn(console, "warn");
     mockFetch([{
       match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
       respond: async (request) => {
@@ -162,8 +164,37 @@ describe("subgraph source families", () => {
     const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", [THUSD_POOL.id]]]));
     expect(result.failedChains).toEqual(["ethereum"]);
     expect(result.failedChainReasons.ethereum).toBe("graphql");
+    const diagnostic = warnings.mock.calls.map(([message]) => JSON.parse(String(message)))
+      .find((event) => event.event === "uniswap-v4-exact-source-failed");
+    expect(diagnostic?.metadata).toEqual({
+      chain: "ethereum", failureReason: "graphql", timedOut: false,
+      batchOffset: 0, batchSize: 1, requestedPoolCount: 1,
+    });
     expect([...result.uniswapV4ExecutionCandidates.values()].flat()
       .some((candidate) => candidate.chain === "ethereum" && candidate.poolId === THUSD_POOL.id)).toBe(false);
+  });
+
+  it("logs a safe exact timeout diagnostic without exposing the authenticated URL", async () => {
+    const warnings = vi.spyOn(console, "warn");
+    const createTimeout = AbortSignal.timeout.bind(AbortSignal);
+    let timeoutCount = 0;
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) =>
+      ++timeoutCount > Object.keys(UNISWAP_V4_SUBGRAPHS).length
+        ? AbortSignal.abort(new DOMException("Exact lookup timed out", "TimeoutError"))
+        : createTimeout(milliseconds));
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      const query = (JSON.parse(init.body as string) as { query: string }).query;
+      expect(query).not.toContain("id_in");
+      return new Response(JSON.stringify({ data: { pools: [] } }));
+    }));
+    const result = await fetchUniswapV4Data("private-key", new Map([["ethereum", [THUSD_POOL.id]]]));
+    expect(result.failedChains).toEqual(["ethereum"]);
+    const diagnostics = warnings.mock.calls.map(([message]) => JSON.parse(String(message)))
+      .filter((event) => event.event === "uniswap-v4-exact-source-failed");
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].metadata).toMatchObject({ chain: "ethereum", failureReason: "http", timedOut: true });
+    expect(JSON.stringify(diagnostics)).not.toContain("private-key");
+    expect(JSON.stringify(diagnostics)).not.toContain("https://");
   });
 
   it("paginates the Uni V3 query by embedding the skip offset and page size", () => {

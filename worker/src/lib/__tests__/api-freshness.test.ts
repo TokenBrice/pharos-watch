@@ -165,6 +165,20 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
 
 
 describe("buildCacheStatuses sentinel validation", () => {
+  it.each([0, 1])("validates concurrent DEWS publication against the cache read clock (future offset %s)", async (futureOffset) => {
+    const now = 1_800_000_000;
+    const observedAt = now + 20;
+    const db = freshnessDb({ cacheRows: [{
+      ...sentinelRow("dews", observedAt + futureOffset),
+      observed_at: observedAt,
+    }] });
+    const { caches } = await buildCacheStatuses(db, now);
+    expect(caches.dews).toMatchObject(futureOffset === 0
+      ? { freshnessSource: "freshness-sentinel", degraded: false, ageSeconds: 0 }
+      : { degraded: true, degradedReason: "freshness-sentinel-invalid:future-updated-at" });
+    expect(db.getHistory().some((entry) => entry.sql.includes("unixepoch() AS observed_at"))).toBe(true);
+  });
+
   it("ignores newer non-best yield sources when measuring fallback freshness", async () => {
     const now = 1_800_000_000;
     const { db, sqlite } = createLatestSchemaSqlite();
@@ -191,7 +205,7 @@ describe("buildCacheStatuses sentinel validation", () => {
   });
 
   it("reads completed yield input quality and its latest cause without changing producer status", async () => {
-    const now = 1_800_000_000;
+    const now = Math.floor(Date.now() / 1000);
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
       const sentinel = sentinelRow("yield-data", now - 60);

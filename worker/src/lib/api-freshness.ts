@@ -80,6 +80,7 @@ interface CacheRow {
   key: string;
   updated_at: number;
   value?: string | null;
+  observed_at?: number;
 }
 
 interface ProducerCronObservation {
@@ -288,7 +289,10 @@ async function resolveSentinelBackedFreshness(params: {
         value: sentinelRow.value,
         rowUpdatedAt: sentinelRow.updated_at,
         expectedSource: getFreshnessSentinelProducerJob(params.key),
-        now: params.now,
+        // The caller may retain its scheduled/run-start clock across probes.
+        // Compare against this read's clock so concurrent publication is not
+        // mislabeled as future; no future-skew allowance is introduced.
+        now: sentinelRow.observed_at ?? params.now,
       })
     : null;
 
@@ -430,7 +434,7 @@ export async function buildCacheStatuses(
     try {
       const inClause = buildInClause(cacheLookupKeys);
       cacheRows = await db
-        .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${inClause.sql})`)
+        .prepare(`SELECT key, value, updated_at, unixepoch() AS observed_at FROM cache WHERE key IN (${inClause.sql})`)
         .bind(...inClause.binds)
         .all<CacheRow>();
     } catch (err) {

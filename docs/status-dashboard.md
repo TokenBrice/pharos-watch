@@ -231,6 +231,12 @@ existing freshness bands. Captured-run consumers can supply a separate read cloc
 allowance: DEWS uses wall time during hydration so an overlapping producer published after run
 start is not falsely rejected.
 
+Cache freshness sentinels retain strict future-clock rejection with no skew allowance.
+Their validation clock is D1 `unixepoch()` from the same cache SELECT, rather than
+the earlier self-check run clock. A generation published during endpoint probes is
+therefore admissible, while a timestamp ahead of the database read remains invalid.
+The existing caller clock and freshness budgets still own age-band assessment.
+
 Raw status snapshots validate both cache and payload generation clocks, returning `unreadable`
 with a timestamp reason on invalid evidence. Persisted status-state reads return unavailable
 state/staleness and report `status_state_invalid_timestamp`. Invalid probes cannot establish

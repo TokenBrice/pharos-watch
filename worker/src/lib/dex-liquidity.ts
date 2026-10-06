@@ -88,6 +88,11 @@ export interface DexLiquidityLoadResult {
   latestUpdatedAt: number | null;
 }
 
+export interface DexLiquidityScoresLoadResult {
+  map: Record<string, Pick<DexLiquiditySnapshot, "liquidityScore">>;
+  latestUpdatedAt: number | null;
+}
+
 type DeploymentCoverage = NonNullable<DexLiquiditySnapshot["deploymentCoverage"]>;
 
 export function deploymentKey(stablecoinId: string, chain: string, address: string): string {
@@ -236,6 +241,59 @@ async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> 
       )
       .all<DexLiquidityRow>();
   return rows.results ?? [];
+}
+
+/** Preserve snapshot admission while bounding rows and discarding unused route graphs. */
+export async function loadDexLiquidityScores(db: D1Database): Promise<DexLiquidityScoresLoadResult> {
+  type RowIdentity = { stablecoin_id: string; updated_at: number; publication_generation_id: string | null };
+  const loadIdentities = async () => (await db.prepare(
+    `SELECT dl.stablecoin_id, dl.updated_at, dl.publication_generation_id
+     FROM dex_liquidity dl WHERE ${dexLiquidityPublishedRowFilter("dl")}
+     ORDER BY dl.stablecoin_id`,
+  ).all<RowIdentity>()).results ?? [];
+  const identities = await loadIdentities();
+  const expectedById = new Map(identities.map((row) => [row.stablecoin_id, row]));
+  let readCount = 0;
+  const map: DexLiquidityScoresLoadResult["map"] = {};
+  let latestUpdatedAt: number | null = null;
+  let cursor = "";
+  const pageSize = 64;
+  for (;;) {
+    const page = await db.prepare(
+      `SELECT dl.stablecoin_id, dl.liquidity_score, dl.total_tvl_usd, dl.effective_tvl_usd,
+              dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
+              dl.organic_measured_tvl_usd, dl.score_components_json, dl.updated_at, dl.publication_generation_id
+       FROM dex_liquidity dl
+       WHERE ${dexLiquidityPublishedRowFilter("dl")} AND dl.stablecoin_id > ?
+       ORDER BY dl.stablecoin_id LIMIT ?`,
+    ).bind(cursor, pageSize).all<DexLiquidityRow & RowIdentity>();
+    const rows = page.results ?? [];
+    for (const row of rows) {
+      const expected = expectedById.get(row.stablecoin_id);
+      if (!expected || expected.updated_at !== row.updated_at
+        || expected.publication_generation_id !== row.publication_generation_id) {
+        throw new Error("DEX liquidity publication changed during score preload");
+      }
+      readCount += 1;
+      try {
+        normalizeDexLiquidityEvidence(row);
+        parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
+      } catch (error) {
+        logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+        continue;
+      }
+      map[row.stablecoin_id] = { liquidityScore: row.liquidity_score };
+      if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {
+        latestUpdatedAt = row.updated_at;
+      }
+    }
+    if (rows.length < pageSize) break;
+    cursor = rows[rows.length - 1].stablecoin_id;
+  }
+  if (readCount !== identities.length || JSON.stringify(identities) !== JSON.stringify(await loadIdentities())) {
+    throw new Error("DEX liquidity publication changed during score preload");
+  }
+  return { map, latestUpdatedAt };
 }
 
 export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {

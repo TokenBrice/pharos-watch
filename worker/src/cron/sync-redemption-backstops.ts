@@ -12,11 +12,11 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
-import type { CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
-import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
+import { loadDexLiquidityScores } from "../lib/dex-liquidity";
 import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves/store";
-import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
+import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
 import {
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
@@ -99,9 +99,15 @@ function buildRegistryMetadata(
   };
 }
 
-export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal, rpcOptions?: EvmRpcOptions): Promise<CronResult> {
+export async function syncRedemptionBackstops(
+  db: D1Database,
+  signal: AbortSignal,
+  rpcOptions?: EvmRpcOptions,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
   throwIfAborted(signal);
 
+  await reportProgress?.({ stage: "loading-redemption-stablecoins" });
   const stablecoinsCache = await loadStablecoinsCache(db, {
     mode: "strict",
   });
@@ -127,10 +133,11 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     now,
   });
   const preloadWarnings: string[] = [];
-  let dexLiquidityMap: Awaited<ReturnType<typeof loadDexLiquiditySnapshot>>["map"] = {};
+  let dexLiquidityMap: Awaited<ReturnType<typeof loadDexLiquidityScores>>["map"] = {};
   let latestUpdatedAt: number | null = null;
+  await reportProgress?.({ stage: "loading-redemption-liquidity" });
   try {
-    const dexSnapshot = await loadDexLiquiditySnapshot(db);
+    const dexSnapshot = await loadDexLiquidityScores(db);
     dexLiquidityMap = dexSnapshot.map;
     latestUpdatedAt = dexSnapshot.latestUpdatedAt;
   } catch (error) {
@@ -140,6 +147,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   }
 
   let reserveSnapshotMetadataById = new Map<string, ReserveSnapshotMetadataRecord>();
+  await reportProgress?.({ stage: "loading-redemption-reserves" });
   try {
     reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   } catch (error) {
@@ -151,6 +159,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     preloadWarnings.push(`reserve-metadata:${message}`);
   }
 
+  await reportProgress?.({ stage: "loading-redemption-availability" });
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
     db,
     formatUtcDate(now),
@@ -177,6 +186,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const snapshots = [];
   const failedIds: string[] = [];
 
+  await reportProgress?.({ stage: "resolving-redemption-backstops", itemsDone: 0, itemsTotal: configuredIds.length });
   for (const stablecoinId of configuredIds) {
     throwIfAborted(signal);
 
@@ -321,6 +331,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       : {}),
   };
 
+  await reportProgress?.({ stage: "publishing-redemption-backstops", itemsDone: configuredIds.length, itemsTotal: configuredIds.length });
   const writeResult = await upsertRedemptionBackstopSnapshots(db, snapshots, {
     expectedCount: configuredIds.length,
     metadata: runMetadata,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadDexLiquidityMap, loadDexLiquiditySnapshot } from "../dex-liquidity";
+import { loadDexLiquidityMap, loadDexLiquiditySnapshot, loadDexLiquidityScores } from "../dex-liquidity";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 function mockDb(rows: Record<string, unknown>[]): D1Database {
@@ -40,6 +40,59 @@ function liquidityRow(overrides: Record<string, unknown> = {}): Record<string, u
     ...overrides,
   };
 }
+
+describe("loadDexLiquidityScores", () => {
+  it("fails closed when publication identity changes during paginated reads", async () => {
+    const row = liquidityRow({ publication_generation_id: "old" });
+    let manifestReads = 0;
+    const db = makeNoopD1({ prepare: vi.fn((sql: string) => {
+      if (!sql.includes("score_components_json")) return { all: async () => ({ results: [{
+        stablecoin_id: row.stablecoin_id,
+        updated_at: row.updated_at,
+        publication_generation_id: manifestReads++ === 0 ? "old" : "new",
+      }] }) };
+      return { bind: () => ({ all: async () => ({ results: [row] }) }) };
+    }) });
+    await expect(loadDexLiquidityScores(db)).rejects.toThrow("publication changed");
+  });
+
+  it("matches full snapshot quarantine and freshness across bounded pages without reading deployment census", async () => {
+    const rows = Array.from({ length: 140 }, (_, index) => liquidityRow({
+      stablecoin_id: `coin-${String(index).padStart(3, "0")}`,
+      updated_at: index,
+    }));
+    rows[65] = { ...rows[65], coverage_confidence: null, updated_at: 10_000 };
+    rows[130] = { ...rows[130], score_components_json: JSON.stringify({ exitRouteObservations: [{}] }), updated_at: 20_000 };
+    const full = await loadDexLiquiditySnapshot(mockDb(rows));
+    const pages: number[] = [];
+    const db = makeNoopD1({
+      prepare: vi.fn((sql: string) => {
+        expect(sql).not.toContain("dex_deployment_outcomes");
+        if (!sql.includes("score_components_json")) return {
+          all: async () => ({ results: rows.map(({ stablecoin_id, updated_at, publication_generation_id }) => ({
+            stablecoin_id, updated_at, publication_generation_id,
+          })) }),
+        };
+        expect(sql).toContain("score_components_json");
+        expect(sql).toContain("ORDER BY dl.stablecoin_id LIMIT ?");
+        return { bind: (cursor: string, limit: number) => ({
+          all: async () => {
+            const results = rows.filter((row) => String(row.stablecoin_id) > cursor).slice(0, limit);
+            pages.push(results.length);
+            return { results };
+          },
+        }) };
+      }),
+    });
+    const scores = await loadDexLiquidityScores(db);
+    expect(scores).toEqual({
+      map: Object.fromEntries(Object.entries(full.map).map(([id, row]) => [id, { liquidityScore: row.liquidityScore }])),
+      latestUpdatedAt: full.latestUpdatedAt,
+    });
+    expect(pages).toEqual([64, 64, 12]);
+    expect(scores.latestUpdatedAt).toBe(139);
+  });
+});
 
 describe("loadDexLiquiditySnapshot", () => {
   it("preserves republished evidence and deployment coverage", async () => {

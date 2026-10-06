@@ -10,7 +10,7 @@ const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
 const mockD1 = createMockD1Preset(DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES);
 
 const loadStablecoinsCacheMock = vi.fn();
-const loadDexLiquiditySnapshotMock = vi.fn();
+const loadDexLiquidityScoresMock = vi.fn();
 const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
@@ -67,7 +67,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
 }));
 
 vi.mock("../../lib/dex-liquidity", () => ({
-  loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
+  loadDexLiquidityScores: loadDexLiquidityScoresMock,
 }));
 
 vi.mock("../../lib/redemption-backstop/sources", () => ({
@@ -76,7 +76,7 @@ vi.mock("../../lib/redemption-backstop/sources", () => ({
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
 }));
 
-vi.mock("../../lib/redemption-backstops-store", () => ({
+vi.mock("../../lib/redemption-backstops-store-write", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
@@ -115,7 +115,7 @@ describe("syncRedemptionBackstops", () => {
         ],
       },
     });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {
         "cusd-cap": { liquidityScore: 29 },
         "iusd-infinifi": { liquidityScore: 47 },
@@ -246,7 +246,13 @@ describe("syncRedemptionBackstops", () => {
 
     const db = mockD1();
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+    const reportProgress = vi.fn().mockResolvedValue(undefined);
+    const result = await syncRedemptionBackstops(db, new AbortController().signal, undefined, reportProgress);
+
+    expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
+      "loading-redemption-stablecoins", "loading-redemption-liquidity", "loading-redemption-reserves",
+      "loading-redemption-availability", "resolving-redemption-backstops", "publishing-redemption-backstops",
+    ]);
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
@@ -302,7 +308,7 @@ describe("syncRedemptionBackstops", () => {
   });
 
   it("continues with degraded static rows when optional DEX preload fails", async () => {
-    loadDexLiquiditySnapshotMock.mockRejectedValueOnce(new Error("dex unavailable"));
+    loadDexLiquidityScoresMock.mockRejectedValueOnce(new Error("dex unavailable"));
 
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
@@ -462,7 +468,7 @@ describe("syncRedemptionBackstops", () => {
         ),
       },
     });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},
       latestUpdatedAt: now,
     });
@@ -571,7 +577,7 @@ describe("syncRedemptionBackstops", () => {
         peggedAssets: [makeAsset({ id: cachedId, symbol: "COIN1", circulating: { peggedUSD: 1_000_000 } })],
       },
     });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},
       latestUpdatedAt: now,
     });
@@ -689,7 +695,7 @@ describe("syncRedemptionBackstops", () => {
         ),
       },
     });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},
       latestUpdatedAt: now,
     });
@@ -802,7 +808,7 @@ describe("syncRedemptionBackstops", () => {
         ),
       },
     });
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},
       latestUpdatedAt: now,
     });
@@ -822,7 +828,7 @@ describe("syncRedemptionBackstops", () => {
     // longer suppresses effectiveExitScore. Matches the report-cards path,
     // which also uses the last-known DEX score when stale.
     const staleNow = Math.floor(Date.now() / 1000);
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {
         "cusd-cap": { liquidityScore: 29 },
         "iusd-infinifi": { liquidityScore: 47 },
@@ -847,7 +853,7 @@ describe("syncRedemptionBackstops", () => {
   });
 
   it("marks missing DEX liquidity snapshots as stale", async () => {
-    loadDexLiquiditySnapshotMock.mockResolvedValue({
+    loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},
       latestUpdatedAt: null,
     });

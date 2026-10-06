@@ -83,7 +83,7 @@ Frozen replay retains captured fee evidence, eligibility and any numeric `execut
 The cron reads:
 
 1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`, including its generation timestamp, underlying price-observation timestamps and provenance, FX references, and same-generation prices used to derive current signed deviations
-2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
+2. Published DEX liquidity scores and their latest admitted timestamp via `loadDexLiquidityScores(db)`: 64-row pages preserve the full snapshot's coverage and exit-route quarantine rules while discarding unused route graphs and omitting deployment census reads. Row update/publication identities are fenced before, during and after pagination; concurrent publication drift fails closed through the existing preload-warning path.
 3. A preloaded map of the latest authoritative reserve snapshot metadata for routes that use live reserve telemetry for capacity or fee inputs
 
 Live reserve telemetry is reused from D1 without refetching reserve adapters. The configured earnUSD Mellow queue is the exception: its direct observer performs bounded, same-run Ethereum RPC reads using the scheduled runtime's transport.

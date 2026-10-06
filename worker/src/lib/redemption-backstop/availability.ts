@@ -7,7 +7,7 @@ import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
-import { deriveCurrentPegObservationMap } from "../peg-analytics";
+import { deriveCurrentPegObservationMap } from "../current-peg-observations";
 
 export { formatIsoDate as formatUtcDate } from "@shared/lib/format";
 
