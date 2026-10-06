@@ -26,6 +26,8 @@ The synthetic child row retains `progressSnapshot`; the abandonment event expose
 
 ## First checks
 
+Reserve recovery `producer-slot-priority` / `heavy-slot-co-tenancy` rows are neutral admission deferrals, not publication proof or abandonment. Inspect the protected slot's state and finished clock and the actual `blockedBy` holder, not the requester owner or lease key. Missing producer delivery remains protected; follow the delivery-stall procedure rather than manufacturing a slot or resetting a checkpoint. Incompatible debt retires only against a newer real finished full cohort with exact `superseded_by_json`; an operator-only cohort cannot supersede it. See [lease safety](./lease-and-breaker-recovery.md#safety-precondition).
+
 Synthetic abandonment and deploy-interruption rows persist `degraded_reason` alongside `metadata.reason`.
 Error text preserves the operational abandonment prefix and appends `[reason]`; neutral deploy
 interruptions keep null error text. Inspect both the column and metadata, including reconciled rows
