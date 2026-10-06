@@ -15,11 +15,34 @@ describe("safety score reason labels", () => {
     expect(describeEvaluatorKey("mechanism:loss-absorption")).toBe("the loss absorption review");
   });
 
-  it("rewrites known templates without leaking keys", () => {
+  it("keeps a conservative upper bound and its band instead of stating it as a measurement", () => {
     const share = humanizeSafetyScoreReason(
       "This asset's own reviewed share is 10% at chain:solana, conservative non-mature exposure upper bound from 10% to below 25% (also 73 reviewed paths across 57 assets share chain:solana).",
     );
-    expect(share).toBe("10% of reviewed supply depends on Solana, shared by 73 paths across 57 assets");
+    expect(share).toBe(
+      "Up to 10% of reviewed supply is deployed on Solana (conservative upper bound; deployment exposure; 10%–25% band), shared by 73 paths across 57 assets",
+    );
+    expect(share).not.toMatch(/depends on|chain:/);
+  });
+
+  it("states a measured share as measured and keeps its deployment scope", () => {
+    const proven = humanizeSafetyScoreReason(
+      "This asset's own reviewed share is 12.5% at mint-control:usdc-minter-admin, proven deployment exposure from 10% to below 25% (also 4 reviewed paths across 3 independent root liabilities share mint-control:usdc-minter-admin).",
+    );
+    expect(proven).toMatch(/^12\.5% of reviewed supply sits on deployments controlled by /);
+    expect(proven).toContain("(deployment exposure; 10%–25% band)");
+    expect(proven).not.toMatch(/Up to|upper bound/);
+    expect(proven).toMatch(/across 3 issuers$/);
+
+    const floor = humanizeSafetyScoreReason(
+      "This asset's own reviewed share is 31% at chain:tron, conservative exposure upper bound at or above 25% (also 10 reviewed paths across 10 assets share chain:tron).",
+    );
+    expect(floor).toBe(
+      "Up to 31% of reviewed supply is deployed on Tron (conservative upper bound; deployment exposure; at or above the 25% threshold), shared by 10 paths across 10 assets",
+    );
+  });
+
+  it("rewrites condition reasons without leaking keys", () => {
     expect(humanizeSafetyScoreReason("unsafe-backing condition at mechanism:loss-absorption."))
       .toBe("Unsafe backing condition flagged in the loss absorption review");
   });

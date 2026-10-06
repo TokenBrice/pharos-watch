@@ -193,11 +193,11 @@ function humanizeReasonParts(rawMessage: string): HumanizedReason {
   }
 
   const ownShare =
-    /^This asset's own reviewed share is ([\d.]+)% at (\S+?), .*?\(also (\d+) reviewed paths across (\d+) (assets|independent root liabilities) share \S+?(?:;[^)]*)?\)\.?$/
+    /^This asset's own reviewed share is ([\d.]+%) at (\S+?), (.+?) \(also (\d+) reviewed paths across (\d+) (assets|independent root liabilities) share \S+?(?:;[^)]*)?\)\.?$/
       .exec(message);
   if (ownShare) {
-    const [, share, key, paths, holders, holderNoun] = ownShare;
-    const text = `${share}% of reviewed supply depends on ${describeEvaluatorKey(key!)}, shared by ${paths} paths across ${holders} ${
+    const [, share, key, qualifier, paths, holders, holderNoun] = ownShare;
+    const text = `${describeCommonModeShare(share!, key!, qualifier!)}, shared by ${paths} paths across ${holders} ${
       holderNoun === "assets" ? "assets" : "issuers"
     }`;
     return { groupKey: text, one: text, many: null };
@@ -236,6 +236,32 @@ function humanizeReasonParts(rawMessage: string): HumanizedReason {
   // embedded keys, camelCase datums and version pins are rewritten.
   const text = humanizeInline(message);
   return { groupKey: text, one: text, many: null };
+}
+
+/**
+ * The evaluator's common-mode share is not always a measurement: for chain
+ * domains it is the conservative upper bound of reviewed exposure, and every
+ * share is deployment- or access-scoped, never a claim on reserves. The
+ * producer's qualifier (`commonModeReasonQualifier` in evaluate-set.ts) carries
+ * the bound, the severity band and the scope, so the reader text keeps all three.
+ */
+function describeCommonModeShare(share: string, key: string, qualifier: string): string {
+  const upperBound = /\bupper bound\b/.test(qualifier);
+  const name = describeEvaluatorKey(key);
+  const [verb, scope] = key.startsWith("chain:")
+    ? [`is deployed on ${name}`, "deployment exposure"]
+    : key.startsWith("bridge-route:")
+      ? [`relies on ${name} for bridging`, "deployment exposure"]
+      : key.startsWith("mint-control:") || key.startsWith("upgrade-control:")
+        ? [`sits on deployments controlled by ${name}`, "deployment exposure"]
+        : key.startsWith("dex:")
+          ? [`trades through ${name}`, "exit-access exposure"]
+          : [`is exposed to ${name}`, /\bdeployment\b/.test(qualifier) ? "deployment exposure" : "reviewed exposure"];
+  const range = /from ([\d.]+%) to below ([\d.]+%)/.exec(qualifier);
+  const floor = /at or above ([\d.]+%)/.exec(qualifier);
+  const band = range ? `${range[1]}–${range[2]} band` : floor ? `at or above the ${floor[1]} threshold` : null;
+  const notes = [upperBound ? "conservative upper bound" : null, scope, band].filter(Boolean).join("; ");
+  return `${upperBound ? "Up to " : ""}${share} of reviewed supply ${verb} (${notes})`;
 }
 
 /** One reason, rewritten for readers. */
