@@ -474,6 +474,54 @@ describe("wrapper-local loss absorption and custody scope", () => {
     );
   });
 
+  it.each(["same-terms", "queued-terms"] as const)(
+    "canonicalizes shared withdrawal signals across distinct redemption routes (%s)",
+    (terms) => {
+      const fixture = wrapperFixture("strategy-vault");
+      const routesWithTerms = (route: V9ExitRouteFactV2): V9ExitRouteFactV2[] => {
+        const first: V9ExitRouteFactV2 = {
+          ...route,
+          routeKey: "redemption:fixture:execution:instant",
+          lane: "redemption",
+          routeFamily: "issuer-redemption",
+          status: { ...route.status, observationState: "known" },
+          holderAccess: "permissionless",
+          executionModel: "atomic",
+          executionCertainty: "deterministic",
+          settlementModel: "atomic",
+          settlementSlaSec: null,
+        };
+        return [
+          first,
+          {
+            ...first,
+            routeKey: "redemption:fixture:protocol:terms",
+            scoreEligible: false,
+            ...(terms === "queued-terms" ? {
+              executionModel: "queued" as const,
+              settlementModel: "queued" as const,
+              settlementSlaSec: 14 * 86_400,
+            } : {}),
+          },
+        ];
+      };
+      const forward = compile(fixture, routesWithTerms);
+      const reversed = compile(fixture, (route) => routesWithTerms(route).reverse());
+      expect(forward.facts.facts.withdrawalTerms).toEqual(reversed.facts.facts.withdrawalTerms);
+      expect(forward.facts.facts.withdrawalTerms).toMatchObject({
+        disposition: "reviewed",
+        assessment: terms === "queued-terms" ? "high" : "low",
+        signals: [
+          "wrapper-withdrawal-access:permissionless",
+          "wrapper-withdrawal-execution:atomic",
+          ...(terms === "queued-terms" ? ["wrapper-withdrawal-execution:queued"] : []),
+          "wrapper-withdrawal-settlement:atomic:atomic",
+          ...(terms === "queued-terms" ? ["wrapper-withdrawal-settlement:queued:1209600"] : []),
+        ],
+      });
+    },
+  );
+
   it("keeps a published but unquantified formula fee bounded, not issuer-undisclosed or cost-admitted", () => {
     const fixture = wrapperFixture("strategy-vault");
     const entry = structuredClone(makeV9QueuedRedemptionFixedInput().redemptionBackstopMap.alpha!);

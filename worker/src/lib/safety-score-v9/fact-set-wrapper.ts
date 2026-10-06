@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/safety-score-v9/exit";
 import { createV9EvidenceReference } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest, uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import type {
   V9AssetFactsV2,
   V9DeploymentControlFactV2,
@@ -104,7 +104,8 @@ function reviewedWrapperFact(
   return {
     disposition: "reviewed",
     assessment,
-    signals: [...signals],
+    // Distinct routes can establish the same access, execution, or settlement term.
+    signals: uniqueSorted(signals),
     evidenceRefIds: evidence.length > 0 ? evidence : [fallbackResearchEvidence(context)],
   };
 }
