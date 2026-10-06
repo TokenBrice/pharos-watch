@@ -21,6 +21,12 @@ vi.mock("@shared/data/stablecoins/coins.generated.json", async () => {
     }),
   ] };
 });
+vi.mock("@shared/data/stablecoins/coins.worker-runtime.generated.json", async () => {
+  // Both real registry derivations must see the same lifecycle fixture. Live
+  // feeds retain full flags/config/display reserves in the Worker projection.
+  const { default: catalog } = await import("@shared/data/stablecoins/coins.generated.json");
+  return { default: catalog };
+});
 vi.mock("../lib/mint-burn-contracts", () => ({
   MINT_BURN_CONFIGS: [{
     stablecoinId: "fixture-frozen",
@@ -37,6 +43,7 @@ import { shouldCloseOrphanedDepeg } from "../cron/depeg-detection/repair";
 import { computeDexPruneSet } from "../cron/dex-liquidity/persistence";
 import { computeStressSignalPruneIds } from "../lib/dews/persistence";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
 import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
 
@@ -75,6 +82,8 @@ describe("frozen lifecycle consumers", () => {
   });
 
   it("reserves handler reads preserved reserve data for a frozen coin", async () => {
+    expect(WORKER_READABLE_IDS.has("fixture-frozen")).toBe(true);
+    expect(WORKER_ACTIVE_IDS.has("fixture-frozen")).toBe(false);
     const db = mockD1([
       { match: "FROM reserve_composition", matchBinds: ["fixture-frozen"], rows: [] },
       { match: "FROM reserve_sync_state", matchBinds: ["fixture-frozen"], rows: [] },
