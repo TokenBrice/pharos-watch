@@ -77,6 +77,9 @@ interface JsonRetryOptions {
   headers?: HeadersInit;
   maxResponseBytes?: number;
   maxRetries?: number;
+  /** Transport-owned observer; invoked for every response, including retries. */
+  onResponse?: (response: Response) => void;
+  redirect?: RequestInit["redirect"];
 }
 
 interface TextRetryOptions {
@@ -286,6 +289,7 @@ export async function fetchJsonWithRetry<T>(
         url,
         {
           signal,
+          ...(options?.redirect ? { redirect: options.redirect } : {}),
           headers: buildRequestHeaders(
             {
               Accept: "application/json",
@@ -295,7 +299,7 @@ export async function fetchJsonWithRetry<T>(
           ),
         },
         maxRetries,
-        fetchBodyOptions(timeoutMs, options?.maxResponseBytes),
+        { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse },
       );
       if (!result) {
         throw new Error(`Fetch failed for ${url}`);
@@ -330,6 +334,7 @@ export async function fetchJsonPostWithRetry<T>(
       const result = await fetchTextBodyWithRetry(
         url,
         {
+          ...(options?.redirect ? { redirect: options.redirect } : {}),
           method: "POST",
           headers: buildRequestHeaders(
             {
@@ -342,7 +347,7 @@ export async function fetchJsonPostWithRetry<T>(
           signal,
         },
         maxRetries,
-        fetchBodyOptions(timeoutMs, options?.maxResponseBytes),
+        { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse },
       );
       if (!result) {
         throw new Error(`POST fetch failed for ${url}`);

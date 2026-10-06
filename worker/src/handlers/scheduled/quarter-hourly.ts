@@ -99,6 +99,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
         cmcApiKey: runtime.env.CMC_API_KEY,
         coingeckoApiKey: runtime.coingeckoApiKey,
         chainRpcs: runtime.chainRpcs,
+        dwellirNative: runtime.dwellirNative,
         reportProgress,
         jupiterApiKey: runtime.env.JUPITER_API_KEY,
       },

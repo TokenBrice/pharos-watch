@@ -1,6 +1,7 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
@@ -57,6 +58,7 @@ interface StablecoinsIntakeStageOptions {
   jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
 }
 
 export type StablecoinsIntakeStageResult =
@@ -97,6 +99,7 @@ export async function runStablecoinsIntakeStage(
     fxFallbackRates: freshFxFallbackRates,
     coingeckoApiKey: options.coingeckoApiKey,
     chainRpcs: options.chainRpcs,
+    dwellirNative: options.dwellirNative,
     fallbackToCoingecko: (cgData) =>
       syncViaCoingeckoFallback(
         options.db,
@@ -108,6 +111,7 @@ export async function runStablecoinsIntakeStage(
         options.reportProgress,
         options.jupiterApiKey,
         options.chainRpcs,
+        options.dwellirNative,
       ),
   });
 

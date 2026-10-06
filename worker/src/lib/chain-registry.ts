@@ -1,4 +1,5 @@
 import { CHAIN_META } from "@shared/types/chain-identity";
+import { DWELLIR_CHAINS, dwellirRpcUrl, type DwellirChainEntry } from "@shared/lib/dwellir-chains";
 import {
   getPublicRpcUrl,
   getSecondaryFallbackRpcUrl,
@@ -18,8 +19,8 @@ export {
 export type RpcOperator = "alchemy" | "dwellir" | "drpc" | "public";
 export type RpcEndpointPosition = "registry" | "supplemental";
 /** "archive": any historical block. "recent": latest/safe/finalized tags and near-head only. */
-export type RpcStateHistory = "archive" | "recent";
-export type RpcLogsHistory = "full" | "none" | { readonly retainedBlocks: number };
+export type RpcStateHistory = DwellirChainEntry["stateHistory"];
+export type RpcLogsHistory = DwellirChainEntry["logsHistory"];
 
 export interface RpcEndpoint {
   /** Never contains a key; keys travel as request headers only. */
@@ -190,63 +191,6 @@ function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcE
 const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "morph-l2", "abcore", "xlayer", "sonic", "etherlink", "arc", "hemi", "robinhood"] as const;
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
-
-export interface DwellirChainEntry {
-  /** CHAIN_META key */
-  readonly chainId: string;
-  /** Dwellir host label, e.g. "api-ethereum-mainnet-erigon" */
-  readonly host: string;
-  /** Endpoint path on the host, e.g. avalanche's "/ext/bc/C/rpc" */
-  readonly pathSuffix?: string;
-  /** Must equal CHAIN_META[chainId].evmChainId */
-  readonly evmChainId: number;
-  readonly stateHistory: RpcStateHistory;
-  readonly logsHistory: RpcLogsHistory;
-  readonly verifiedAt: string;
-}
-
-/** Capability-probe date for every entry below (Dwellir Developer plan). */
-const DWELLIR_VERIFIED_AT = "2026-09-23";
-
-/**
- * Dwellir mainnet endpoints verified 2026-09-23. Entries are additive: each one
- * is appended after all registry endpoints and never replaces an operator.
- */
-export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
-  { chainId: "ethereum", host: "api-ethereum-mainnet-erigon", evmChainId: 1, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "arbitrum", host: "api-arbitrum-mainnet-archive", evmChainId: 42161, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "base", host: "api-base-mainnet-archive", evmChainId: 8453, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "optimism", host: "api-optimism-mainnet-archive", evmChainId: 10, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "polygon", host: "api-polygon-mainnet-full", evmChainId: 137, stateHistory: "recent", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "avalanche", host: "api-avalanche-mainnet-archive", pathSuffix: "/ext/bc/C/rpc", evmChainId: 43114, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "bsc", host: "api-bsc-mainnet-full", evmChainId: 56, stateHistory: "recent", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "gnosis", host: "api-gnosis-mainnet", evmChainId: 100, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "celo", host: "api-celo-mainnet-archive", evmChainId: 42220, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "tempo", host: "api-tempo-mainnet", evmChainId: 4217, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "plasma", host: "api-plasma-mainnet", evmChainId: 9745, stateHistory: "recent", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "monad", host: "api-monad-mainnet-full", evmChainId: 143, stateHistory: "recent", logsHistory: { retainedBlocks: 10000 }, verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "mantle", host: "api-mantle-mainnet", evmChainId: 5000, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "sonic", host: "api-sonic-mainnet-archive", evmChainId: 146, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "hyperevm", host: "api-hyperliquid-mainnet-evm", evmChainId: 999, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "linea", host: "api-linea-mainnet-archive", evmChainId: 59144, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "berachain", host: "api-berachain-mainnet", evmChainId: 80094, stateHistory: "recent", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "ink", host: "api-ink-mainnet", evmChainId: 57073, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "zksync", host: "api-zksync-era-mainnet-full", evmChainId: 324, stateHistory: "recent", logsHistory: "none", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "stable", host: "api-stable-mainnet", evmChainId: 988, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "megaeth", host: "api-megaeth-mainnet", evmChainId: 4326, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "worldchain", host: "api-worldchain-mainnet", evmChainId: 480, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "scroll", host: "api-scroll-mainnet", evmChainId: 534352, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "unichain", host: "api-unichain-mainnet", evmChainId: 130, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "xdc", host: "api-xdc-mainnet", evmChainId: 50, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "blast", host: "api-blast-mainnet-archive", evmChainId: 81457, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "manta", host: "api-manta-pacific-archive", evmChainId: 169, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "robinhood", host: "api-robinhood-mainnet-archive", evmChainId: 4663, stateHistory: "archive", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-  { chainId: "arc", host: "api-arc-mainnet", evmChainId: 5042, stateHistory: "recent", logsHistory: "full", verifiedAt: DWELLIR_VERIFIED_AT },
-];
-
-export function dwellirRpcUrl(entry: DwellirChainEntry): string {
-  return `https://${entry.host}.n.dwellir.com${entry.pathSuffix ?? ""}`;
-}
 
 /**
  * Appends one supplemental Dwellir endpoint per entry, after every registry

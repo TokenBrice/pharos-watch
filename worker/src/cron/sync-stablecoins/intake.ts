@@ -6,6 +6,7 @@ import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import type { PeggedAsset } from "./enrich-prices";
@@ -204,6 +205,7 @@ export async function loadStablecoinsIntake(
     fxFallbackRates?: Record<string, number>;
     coingeckoApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
+    dwellirNative?: DwellirNativeCapability;
     fallbackToCoingecko: (cgData: CoinGeckoMcapData) => Promise<CronResult>;
   },
 ): Promise<StablecoinsIntakeResult> {
@@ -234,6 +236,7 @@ export async function loadStablecoinsIntake(
     input.fxFallbackRates,
     input.db,
     previousAssetsById,
+    input.dwellirNative,
   );
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([
@@ -499,6 +502,7 @@ export async function loadStablecoinsIntake(
     input.chainRpcs,
     input.fxFallbackRates,
     previousAssetsById,
+    input.dwellirNative,
   );
   if (supplyGapReconciliation.gapFillRejections.length > 0) {
     logWorkerEvent({

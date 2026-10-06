@@ -322,6 +322,48 @@
             "url": "https://arbiscan.io/block/486322344"
           }
         ]
+      },
+      {
+        "id": "unichain:0xa06b10db9f390990364a3984c04fadf1c13691b5",
+        "sourceChain": "ethereum",
+        "destinationChain": "unichain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa06b10db9f390990364a3984c04fadf1c13691b5",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned public RPC reads on 2026-10-06: at Unichain block 60518930, totalSupply() was 149319487138067408946997 raw units (18 decimals), and wards(0xa13152006d0216fe4627a0d3b006087a6a55d752) returned 1. Both SkyLink bridges' l1ToL2Token(Ethereum sUSDS) mapped to this token and otherBridge() identified the reciprocal bridge. At Ethereum block 26131543, L1 bridge 0xdf0535a4c96c9cd8921d8fec92a7680b281681d2 returned escrow 0x1196f688c585d3e5c895ef8954ffb0dcdafc566a; canonical sUSDS balanceOf(escrow) equaled the observed Unichain supply. This establishes the cataloged lock/mint route, not complete pending history, zero in-flight liability, or admission of an economic supply plan.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "unichain",
+        "controllerAddress": "0xa13152006d0216fe4627a0d3b006087a6a55d752",
+        "failureDomainKeys": [
+          "protocol:unichain-canonical-messaging",
+          "contract:unichain:0xa13152006d0216fe4627a0d3b006087a6a55d752"
+        ],
+        "observedAt": "2026-10-06",
+        "observedBlock": 60518930,
+        "sources": [
+          {
+            "label": "Sky ChainLog Unichain L1 bridge and escrow",
+            "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+          },
+          {
+            "label": "SkyLink OP Token Bridge source",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          },
+          {
+            "label": "Pinned Unichain block 60518930: supply, decimals, ward and bridge token mapping",
+            "url": "https://uniscan.xyz/block/60518930"
+          },
+          {
+            "label": "Pinned Ethereum block 26131543: SkyLink bridge wiring and canonical escrow balance",
+            "url": "https://etherscan.io/block/26131543"
+          }
+        ]
       }
     ],
     "controls": [

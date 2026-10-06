@@ -8,6 +8,9 @@ user_invocable: true
 
 Read [categories.md](references/categories.md) before reviewing. Code, checked data, and the schema are authoritative; the reference is a review rubric, not a snapshot of the corpus.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Coverage ceiling
 
 Local discovery establishes internal consistency only. Unflagged stored URLs, issuer facts, deployments, and identifiers are not externally verified or proven current. For a requested factual audit, include explicit specialist source checks across the requested categories/cohort (identity/contracts, compliance, reserves, or lifecycle research), including rows with no local contradiction. Report each category as `checked` with evidence and scope, `unverified` when no external check was performed, or `unavailable` when a required source failed; do not count unavailable sources as clean results.

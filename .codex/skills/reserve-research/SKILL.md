@@ -9,6 +9,9 @@ Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
 Read the current methodology version, `docs/process/stablecoin-research-sidecars.md`, `docs/report-cards.md`, the coin’s base/merged entry, and its reserves sidecar. `shared/lib/stablecoins/schema.ts` and `shared/types/reserves.ts` own shapes/tolerances. Write `reserves`, `reserveReview`, and `custodyProfile` only to `shared/data/stablecoins/domains/reserves/<id>.json`; create it when absent.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Workflow
 
 1. Inventory collateral, peg mechanism, backing/governance flags, proof configuration, existing reserve slices/review, and custody profile. Preserve non-reserve fields unless explicitly in scope.

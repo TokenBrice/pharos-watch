@@ -11,7 +11,7 @@ import {
   type EvmRpcBatchError,
 } from "../../lib/evm-rpc";
 import { tronBase58ToHex } from "../../lib/tron-address";
-import { rethrowIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
@@ -476,30 +476,37 @@ export async function fetchTronErc20TotalSupply(
   const headers: Record<string, string> = {};
   if (ctx?.trongridApiKey) headers["TRON-PRO-API-KEY"] = ctx.trongridApiKey;
 
-  try {
-    const json = await fetchJsonPostWithRetry<TronTriggerConstantContractResponse>(
-      "https://api.trongrid.io/wallet/triggerconstantcontract",
-      {
-        owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
-        contract_address: contractHex41,
-        function_selector: TRON_TOTAL_SUPPLY_FUNCTION_SELECTOR,
-        parameter: "",
-        visible: false,
-      },
-      signal,
-      10_000,
-      ctx,
-      { headers },
-    );
+  const request = {
+    owner_address: TRON_ZERO_OWNER_ADDRESS_HEX41,
+    contract_address: contractHex41,
+    function_selector: TRON_TOTAL_SUPPLY_FUNCTION_SELECTOR,
+    parameter: "",
+    visible: false,
+  };
+  for (const provider of ctx?.dwellirNative ? ["trongrid", "dwellir"] : ["trongrid"]) {
+    throwIfAborted(signal);
+    try {
+      const json = provider === "dwellir"
+        ? await ctx!.dwellirNative!.readJson<TronTriggerConstantContractResponse>(
+          "tron", "/wallet/triggerconstantcontract", signal, ctx, request,
+        )
+        : await fetchJsonPostWithRetry<TronTriggerConstantContractResponse>(
+          "https://api.trongrid.io/wallet/triggerconstantcontract",
+          request,
+          signal,
+          10_000,
+          ctx,
+          { headers },
+        );
 
-    if (json.result?.result !== true) return null;
-    const raw = json.constant_result?.[0];
-    if (!raw) return null;
-    return BigInt(`0x${raw}`);
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    // Null feeds the caller's omittedReadFailureChains degraded warning, which
-    // already surfaces the failing chain on status surfaces.
-    return null;
+      if (json.result?.result !== true) continue;
+      const raw = json.constant_result?.[0];
+      if (!raw) continue;
+      return BigInt(`0x${raw}`);
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+    }
   }
+  // Null feeds the caller's omittedReadFailureChains degraded warning.
+  return null;
 }

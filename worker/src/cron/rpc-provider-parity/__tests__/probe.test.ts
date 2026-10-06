@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChainRpcs, type ChainRpcConfig } from "../../../lib/chain-registry";
+import { buildAlchemyRpcUrl, buildChainRpcs, type ChainRpcConfig } from "../../../lib/chain-registry";
 import { USER_AGENT } from "../../../lib/constants";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import {
@@ -13,6 +13,7 @@ import {
   RPC_PARITY_PRUNED_LOG_DEPTH_BLOCKS,
 } from "../probe";
 import { RPC_PARITY_TARGETS, type RpcParityTarget } from "../../../lib/rpc-provider-parity/targets";
+import { buildRpcParityChainSummary } from "../../../lib/rpc-provider-parity/report";
 
 const API_KEY = "dwellir-parity-test-key";
 const START_MS = 1_789_000_000_000;
@@ -31,6 +32,10 @@ type FakeReply =
 
 function rpcResult(result: unknown): FakeReply {
   return { kind: "json", body: { jsonrpc: "2.0", id: 1, result } };
+}
+
+function rpcBlockHeader(block: unknown): FakeReply {
+  return rpcResult({ number: block, hash: `0x${"a".repeat(64)}`, parentHash: `0x${"a".repeat(64)}` });
 }
 
 /** Transport double that records every call and measures how many were open at once. */
@@ -75,6 +80,7 @@ function runProbe(options: {
   nowMs?: () => number;
   deadlineMs?: number;
   signal?: AbortSignal;
+  atSec?: number;
   credits?: { count: number };
 }) {
   const credits = options.credits ?? { count: 0 };
@@ -83,6 +89,7 @@ function runProbe(options: {
     chainRpcs: options.chainRpcs ?? buildChainRpcs(),
     dwellirApiKey: API_KEY,
     signal: options.signal ?? new AbortController().signal,
+    atSec: options.atSec ?? 0,
     deadlineMs: options.deadlineMs ?? START_MS + 60_000,
     deps: {
       fetchText: options.fetchText,
@@ -100,7 +107,10 @@ describe("rpc parity probe", () => {
     const transport = createFakeTransport((call) => {
       const dwellir = isDwellir(call.url);
       if (call.method === "eth_blockNumber") return rpcResult(dwellir ? "0x64" : "0x66");
-      if (call.method === "eth_call") return rpcResult("0x0de0b6b3a7640000");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") return rpcResult(
+        (call.params[0] as { data: string }).data === "0x42cbb15c" ? "0x64" : "0x0de0b6b3a7640000",
+      );
       return rpcResult(
         dwellir
           ? [{ transactionHash: "0xAA", logIndex: "0x1" }, { transactionHash: "0xaa", logIndex: "0x0" }]
@@ -112,8 +122,8 @@ describe("rpc parity probe", () => {
 
     expect(result).toMatchObject({ attempted: 1, headOk: 1, deadlineHit: false, aborted: false, skipped: [] });
     expect(transport.peakInFlight()).toBe(1);
-    expect(transport.calls).toHaveLength(6);
-    expect(credits.count).toBe(3); // one credit per Dwellir request, none for the comparator
+    expect(transport.calls).toHaveLength(17);
+    expect(credits.count).toBe(14); // sentinel and full token bracket, historical state/logs
 
     const [sample] = result.samples;
     expect(sample).toMatchObject({
@@ -138,7 +148,7 @@ describe("rpc parity probe", () => {
     }
     const dwellirCalls = transport.calls.filter((call) => isDwellir(call.url));
     const comparatorCalls = transport.calls.filter((call) => !isDwellir(call.url));
-    expect(dwellirCalls).toHaveLength(3);
+    expect(dwellirCalls).toHaveLength(14);
     for (const call of dwellirCalls) {
       expect(call.headers["x-api-key"]).toBe(API_KEY);
     }
@@ -147,7 +157,7 @@ describe("rpc parity probe", () => {
     }
 
     // State and log parity read the same historical block on both operators.
-    const ethCall = transport.calls.find((call) => call.method === "eth_call");
+    const ethCall = transport.calls.find((call) => call.method === "eth_call" && call.params[1] === "0x62");
     expect(ethCall?.params).toEqual([
       { to: target("base").contract, data: "0x18160ddd" },
       "0x62",
@@ -169,6 +179,7 @@ describe("rpc parity probe", () => {
   it("narrows the log window on high-volume chains and reports an all-clear sample", async () => {
     const transport = createFakeTransport((call) => {
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -184,8 +195,8 @@ describe("rpc parity probe", () => {
     expect(ethereum.logChecked).toBe(true);
     expect(ethereum.logMatched).toBe(true);
     expect(ethereum.failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false },
-      comparator: { head: false, state: false, logs: false },
+      dwellir: { head: false, state: false, logs: false, latest: false },
+      comparator: { head: false, state: false, logs: false, latest: false },
     });
     expect(ethereum.comparatorErrorClass).toBeNull();
     expect(ethereum.comparatorHttpStatus).toBeNull();
@@ -228,6 +239,7 @@ describe("rpc parity probe", () => {
         return { kind: "raw", body: "error code: 1010", status: 403 };
       }
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -246,8 +258,8 @@ describe("rpc parity probe", () => {
     expect(sample.stateChecked).toBe(false);
     expect(sample.logChecked).toBe(false);
     expect(sample.failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false },
-      comparator: { head: true, state: false, logs: false },
+      dwellir: { head: false, state: false, logs: false, latest: false },
+      comparator: { head: true, state: false, logs: false, latest: false },
     });
     expect(sample.comparatorErrorClass).toBe("capability");
     expect(sample.comparatorHttpStatus).toBe(403);
@@ -265,6 +277,7 @@ describe("rpc parity probe", () => {
         return { kind: "raw", body: "error code: 1010", status: 403 };
       }
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -283,6 +296,7 @@ describe("rpc parity probe", () => {
     // Only the state step is written off: the window still compares logs, so
     // the sample keeps the evidence it could gather.
     expect(sample.logChecked).toBe(true);
+    expect(sample.calls?.dwellir.filter((call) => call.step === "state")).toHaveLength(1);
   });
 
   it("treats an unavailable operator read as unchecked rather than as a mismatch (R1)", async () => {
@@ -295,6 +309,7 @@ describe("rpc parity probe", () => {
         return { kind: "throw", error: new DOMException("fetch timed out after 8000ms", "TimeoutError") };
       }
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([{ transactionHash: "0xaa", logIndex: "0x0" }]);
     });
@@ -343,6 +358,7 @@ describe("rpc parity probe", () => {
     const alchemyKey = "parity-test-alchemy-key";
     const transport = createFakeTransport((call) => {
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -377,7 +393,7 @@ describe("rpc parity probe", () => {
     }
 
     const dwellirCalls = transport.calls.filter((call) => isDwellir(call.url));
-    expect(dwellirCalls).toHaveLength(6);
+    expect(dwellirCalls).toHaveLength(22);
     for (const call of dwellirCalls) {
       expect(call.headers["x-api-key"]).toBe(API_KEY);
       expect(call.headers.authorization).toBeUndefined();
@@ -392,6 +408,7 @@ describe("rpc parity probe", () => {
     const transport = createFakeTransport((call) => {
       const dwellir = isDwellir(call.url);
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult(dwellir ? "0x1" : "0x2");
       return rpcResult(dwellir ? [{ transactionHash: "0xaa", logIndex: "0x0" }] : [
         { transactionHash: "0xaa", logIndex: "0x0" },
@@ -419,6 +436,7 @@ describe("rpc parity probe", () => {
         return { kind: "raw", body: "<html>This method does not support this operation</html>", status: 403 };
       }
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -513,9 +531,377 @@ describe("rpc parity probe", () => {
 
     expect(result.aborted).toBe(true);
     expect(result.samples).toEqual([]);
-    expect(result.skipped).toEqual([{ chainId: "base", reason: "aborted" }]);
+    expect(result.skipped).toEqual([
+      { chainId: "base", reason: "aborted" },
+      { chainId: "megaeth", reason: "aborted" },
+    ]);
     expect(transport.calls).toHaveLength(1);
     expect(transport.peakInFlight()).toBe(1);
+  });
+
+  it.each([
+    { h2: 100, latest: "0x7", numeric: "0x8", verdict: "stale", reason: "no-bracket-match", references: 4 },
+    { h2: 102, latest: "0x7", numeric: "0x8", verdict: "stale", reason: "no-bracket-match", references: 6 },
+    { h2: 102, latest: "0x7", numeric: "0x7", verdict: "fresh", reason: "matched-numeric-block", references: 6 },
+    { h2: 108, latest: "0x7", numeric: "0x8", verdict: "indeterminate", reason: "bracket-too-wide", references: 0 },
+    { h2: 99, latest: "0x7", numeric: "0x8", verdict: "indeterminate", reason: "head-regressed", references: 0 },
+  ])("brackets latest state without mistaking an unchanged value for staleness: $reason", async (scenario) => {
+    let heads = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") {
+        if (!isDwellir(call.url)) return rpcResult("0x64");
+        return rpcResult(`0x${(heads++ === 0 ? 100 : scenario.h2).toString(16)}`);
+      }
+      if (call.method === "eth_call") {
+        return rpcResult(call.params[1] === "latest" ? scenario.latest : scenario.numeric);
+      }
+      if (call.method === "eth_getBlockByNumber") return rpcResult({
+        number: call.params[0], hash: `0x${"a".repeat(64)}`, parentHash: `0x${"a".repeat(64)}`,
+      });
+      return rpcResult([]);
+    });
+    const result = await runProbe({ targets: [{ ...target("base"), latestStateProbe: "state-bracket" }], fetchText: transport.fetchText });
+    const sample = result.samples[0];
+    expect(sample.tokenFreshness).toMatchObject({
+      verdict: scenario.verdict, reason: scenario.reason, headBefore: 100, headAfter: scenario.h2,
+    });
+    expect(sample.tokenFreshness?.numericValues).toHaveLength(scenario.references);
+    expect(sample.calls?.dwellir[0]).toMatchObject({ step: "head", phase: "firstTouch" });
+    expect(sample.calls?.dwellir.slice(1).every((call) => call.phase === "warm")).toBe(true);
+    if (scenario.verdict === "fresh") expect(sample.tokenFreshness?.discriminating).toBe(false);
+  });
+
+  it("marks a matched token check discriminating only when its covered window changes", async () => {
+    let heads = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult(
+        isDwellir(call.url) && heads++ > 0 ? "0x66" : "0x64",
+      );
+      if (call.method === "eth_getBlockByNumber") return rpcResult({
+        number: call.params[0], hash: `0x${"a".repeat(64)}`, parentHash: `0x${"a".repeat(64)}`,
+      });
+      if (call.method === "eth_call") return rpcResult(
+        call.params[1] === "latest" || call.params[1] === "0x65" ? "0x7" : "0x8",
+      );
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [{ ...target("base"), latestStateProbe: "state-bracket" }], fetchText: transport.fetchText,
+    });
+    expect(sample.tokenFreshness).toMatchObject({
+      verdict: "fresh", method: "state-bracket", matchedBlock: 101, discriminating: true,
+    });
+    expect(sample.tokenFreshness?.numericValues).toHaveLength(6);
+  });
+
+  it("rejects frozen token latest state even when heads and the block sentinel are fresh", async () => {
+    const checkedTarget = target("base");
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") {
+        if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x64");
+        return rpcResult(call.params[1] === "latest" ? "0x1" : "0x2");
+      }
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [checkedTarget], fetchText: transport.fetchText });
+    expect(sample.sentinelFreshness).toMatchObject({ verdict: "fresh", servedBlock: 100 });
+    expect(sample.tokenFreshness).toMatchObject({
+      verdict: "stale", reason: "no-bracket-match", headBefore: 100, headAfter: 100,
+      referenceEndBlock: 100, toleranceBlocks: 3,
+      call: { to: checkedTarget.contract, data: "0x18160ddd" },
+    });
+    expect(sample.tokenFreshness?.numericValues?.map((entry) => entry.block)).toEqual([100, 99, 98, 97]);
+    expect(sample.latestFreshness?.verdict).toBe("stale");
+    const summary = buildRpcParityChainSummary({
+      chainId: checkedTarget.chainId, runs: [{ atSec: 0, samples: [sample] }], latest: null,
+      dwellirHost: sample.dwellirHost, fallbackComparator: sample.comparator, blockTimeSec: checkedTarget.blockTimeSec,
+      logsHistoryIsNone: false,
+    });
+    expect(summary.latestFreshness.sentinel.fresh).toBe(1);
+    expect(summary.latestFreshness.tokenState.stale).toBe(1);
+    expect(summary.gate.failing).toContain("latest-state-freshness");
+  });
+
+  it.each(["available", "unknown-block"])("includes HyperEVM's H2+2 sentinel state in its token window (%s)", async (mode) => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return call.params[0] === "0x66"
+        ? rpcResult(null) : rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") {
+        if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x66");
+        if (call.params[1] === "0x66" && mode === "unknown-block") return {
+          kind: "json", body: { jsonrpc: "2.0", id: 1, error: { code: -32000, message: "unknown block" } },
+        };
+        return rpcResult(call.params[1] === "latest" || call.params[1] === "0x66" ? "0x8" : "0x7");
+      }
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [target("hyperevm")], fetchText: transport.fetchText, chainRpcs: buildChainRpcs("hyper-freshness-test-key"),
+    });
+    expect(sample.sentinelFreshness).toMatchObject({ verdict: "fresh", servedBlock: 102, headAfter: 100 });
+    expect(sample.tokenFreshness).toMatchObject({
+      verdict: mode === "available" ? "fresh" : "indeterminate",
+      reason: mode === "available" ? "matched-numeric-block" : "step-failed",
+      headBefore: 100, headAfter: 100, referenceEndBlock: 102, toleranceBlocks: 6,
+      matchedBlock: mode === "available" ? 102 : null, discriminating: mode === "available",
+    });
+    expect(sample.latestFreshness?.verdict).toBe(mode === "available" ? "fresh" : "indeterminate");
+    expect(transport.calls.some((call) => call.method === "eth_getBlockByNumber" && call.params[0] === "0x66")).toBe(false);
+    if (mode === "available") expect(sample.tokenFreshness?.numericValues?.map((entry) => entry.block))
+      .toEqual([102, 101, 100, 99, 98, 97, 96, 95, 94]);
+  });
+
+  it.each([
+    { h2: 102, served: 100, verdict: "fresh", reason: "served-block-in-range", lag: 0 },
+    { h2: 100, served: 102, verdict: "fresh", reason: "served-block-in-range", lag: -2 },
+    { h2: 100, served: 98, verdict: "fresh", reason: "served-block-in-range", lag: 2 },
+    { h2: 100, served: 97, verdict: "fresh", reason: "served-block-in-range", lag: 3 },
+    { h2: 100, served: 96, verdict: "stale", reason: "served-block-behind", lag: 4 },
+    { h2: 107, served: 107, verdict: "fresh", reason: "served-block-in-range", lag: -7 },
+    { h2: 100, served: 103, verdict: "fresh", reason: "served-block-in-range", lag: -3 },
+    { h2: 100, served: 104, verdict: "indeterminate", reason: "served-block-ahead", lag: -4 },
+    { h2: 97, served: 97, verdict: "indeterminate", reason: "head-regressed", lag: 3 },
+    { h2: 99, served: 97, verdict: "indeterminate", reason: "head-regressed", lag: 3 },
+  ])("uses a served-block latest sentinel: $reason / $lag", async (scenario) => {
+    let heads = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult(
+        `0x${(!isDwellir(call.url) || heads++ === 0 ? 100 : scenario.h2).toString(16)}`,
+      );
+      if (call.method === "eth_call") return rpcResult(
+        call.params[1] === "latest" ? `0x${scenario.served.toString(16)}` : "0x7",
+      );
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.sentinelFreshness).toMatchObject({
+      method: "multicall3-block-number", verdict: scenario.verdict, reason: scenario.reason,
+      servedBlock: scenario.served, lagBlocks: scenario.lag, toleranceBlocks: 3, numericValues: [],
+    });
+    expect(transport.calls.find((call) => call.params[1] === "latest")?.params[0]).toEqual({
+      to: "0xca11bde05977b3631167028862be2a173976ca11", data: "0x42cbb15c",
+    });
+  });
+
+  it.each(["arbitrum", "robinhood"])("uses ArbSys, not L1-numbered Multicall3, on %s", async (chainId) => {
+    const localHead = chainId === "arbitrum" ? 512_015_100 : 81_024_812;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult(`0x${localHead.toString(16)}`);
+      if (call.method === "eth_call" && call.params[1] === "latest") {
+        const state = call.params[0];
+        const usesArbSys = state !== null && typeof state === "object"
+          && "to" in state && state.to === "0x0000000000000000000000000000000000000064";
+        // The old sentinel returns an Ethereum height: it must never be requested.
+        return rpcResult(usesArbSys ? `0x${localHead.toString(16)}` : "0x18eb11e");
+      }
+      return rpcResult(call.method === "eth_call" ? "0x7" : []);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target(chainId)], fetchText: transport.fetchText });
+    expect(sample.sentinelFreshness).toMatchObject({
+      method: "arbsys-block-number", verdict: "fresh", reason: "served-block-in-range",
+      servedBlock: localHead, lagBlocks: 0, discriminating: true, toleranceBlocks: chainId === "arbitrum" ? 24 : 6,
+    });
+    expect(transport.calls.find((call) => call.params[1] === "latest")?.params[0]).toEqual({
+      to: "0x0000000000000000000000000000000000000064", data: "0xa3b1b31d",
+    });
+  });
+
+  it.each([
+    { chainId: "arbitrum", offset: 11, tolerance: 24, verdict: "fresh", reason: "served-block-in-range" },
+    { chainId: "arbitrum", offset: 24, tolerance: 24, verdict: "fresh", reason: "served-block-in-range" },
+    { chainId: "arbitrum", offset: 25, tolerance: 24, verdict: "indeterminate", reason: "served-block-ahead" },
+    { chainId: "arbitrum", offset: -24, tolerance: 24, verdict: "fresh", reason: "served-block-in-range" },
+    { chainId: "arbitrum", offset: -25, tolerance: 24, verdict: "stale", reason: "served-block-behind" },
+    { chainId: "robinhood", offset: 6, tolerance: 6, verdict: "fresh", reason: "served-block-in-range" },
+    { chainId: "robinhood", offset: 7, tolerance: 6, verdict: "indeterminate", reason: "served-block-ahead" },
+    { chainId: "robinhood", offset: -6, tolerance: 6, verdict: "fresh", reason: "served-block-in-range" },
+    { chainId: "robinhood", offset: -7, tolerance: 6, verdict: "stale", reason: "served-block-behind" },
+  ])("uses the shared chain-time tolerance on $chainId at offset $offset", async (scenario) => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult(
+        call.params[1] === "latest" ? `0x${(100 + scenario.offset).toString(16)}` : "0x7",
+      );
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target(scenario.chainId)], fetchText: transport.fetchText });
+    expect(sample.sentinelFreshness).toMatchObject({
+      verdict: scenario.verdict, reason: scenario.reason, lagBlocks: -scenario.offset,
+      toleranceBlocks: scenario.tolerance, servedBlock: 100 + scenario.offset,
+    });
+  });
+
+  it.each(["0x11", "0x10"])("splits HyperEVM state/logs baselines without normalizing log indices (%s)", async (alchemyIndex) => {
+    const alchemyKey = "hyper-parity-test-alchemy-key";
+    const alchemyUrl = "https://hyperliquid-mainnet.g.alchemy.com/v2/";
+    const logRef = { operator: "alchemy", host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" };
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult(
+        call.params[1] === "latest" ? "0x64" : call.url === alchemyUrl ? "0x999" : "0x7",
+      );
+      return rpcResult([{ transactionHash: "0x6ff9", logIndex: isDwellir(call.url) ? "0x11" : alchemyIndex }]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [target("hyperevm")], fetchText: transport.fetchText, chainRpcs: buildChainRpcs(alchemyKey),
+    });
+    expect(sample.comparator).toEqual({ operator: "public", host: "hyperliquid.drpc.org", source: "pin" });
+    expect(sample.logsComparator).toEqual(logRef);
+    expect(sample.stateMatched).toBe(true);
+    expect(sample.logChecked).toBe(true);
+    expect(sample.logMatched).toBe(alchemyIndex === "0x11");
+    const stateCalls = transport.calls.filter((call) => call.url === "https://hyperliquid.drpc.org");
+    expect(stateCalls.map((call) => call.method)).toEqual(["eth_blockNumber", "eth_call"]);
+    expect(stateCalls.every((call) => !call.headers.authorization && !call.headers["x-api-key"])).toBe(true);
+    const logCalls = transport.calls.filter((call) => call.url === alchemyUrl);
+    expect(logCalls.map((call) => call.method)).toEqual(["eth_blockNumber", "eth_getLogs"]);
+    for (const call of logCalls) {
+      expect(call.headers.authorization).toBe(`Bearer ${alchemyKey}`);
+      expect(call.headers["x-api-key"]).toBeUndefined();
+    }
+    expect(sample.calls?.comparator.map((call) => ({
+      step: call.step, phase: call.phase, comparator: call.comparator,
+    }))).toEqual([
+      { step: "head", phase: "firstTouch", comparator: undefined },
+      { step: "state", phase: "warm", comparator: undefined },
+      { step: "head", phase: "firstTouch", comparator: logRef },
+      { step: "logs", phase: "warm", comparator: logRef },
+    ]);
+    for (const call of transport.calls.filter((entry) => isDwellir(entry.url))) {
+      expect(call.headers["x-api-key"]).toBe(API_KEY);
+      expect(call.headers.authorization).toBeUndefined();
+    }
+  });
+
+  it.each(["unconfigured", "missing-auth"])("checks HyperEVM state when its log comparator is %s", async (mode) => {
+    const chainRpcs = mode === "unconfigured" ? buildChainRpcs() : buildChainRpcs("hyper-test-key");
+    if (mode === "missing-auth") buildAlchemyRpcUrl("hyperliquid-mainnet");
+    const transport = createFakeTransport((call) => rpcResult(
+      call.method === "eth_blockNumber" ? "0x64" : call.params[1] === "latest" ? "0x64" : "0x7",
+    ));
+    const result = await runProbe({ targets: [target("hyperevm")], fetchText: transport.fetchText, chainRpcs });
+    expect(result.skipped).toEqual([]);
+    expect(result.samples[0]).toMatchObject({
+      headOk: true, comparatorHeadOk: true, stateChecked: true, stateMatched: true,
+      logsComparator: null, logChecked: false, logMatched: false, comparatorErrorClass: null,
+    });
+    expect(transport.calls.some((call) => call.method === "eth_getLogs")).toBe(false);
+    expect(transport.calls.some((call) => call.url.includes("alchemy"))).toBe(false);
+  });
+
+  it("keeps the Worldchain public comparator keyless with census Alchemy configured", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") return rpcResult(call.params[1] === "latest" ? "0x64" : "0x7");
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [target("worldchain")], fetchText: transport.fetchText,
+      chainRpcs: buildChainRpcs("worldchain-parity-test-alchemy-key"),
+    });
+    expect(sample).toMatchObject({
+      comparator: { operator: "public", host: "worldchain.drpc.org", source: "pin" },
+      stateChecked: true, stateMatched: true, logChecked: true, logMatched: true,
+    });
+    const comparatorCalls = transport.calls.filter((call) => !isDwellir(call.url));
+    expect(comparatorCalls.map((call) => call.method)).toEqual(["eth_blockNumber", "eth_call", "eth_getLogs"]);
+    for (const call of comparatorCalls) {
+      expect(call.url).toBe("https://worldchain.drpc.org");
+      expect(call.headers.authorization).toBeUndefined();
+      expect(call.headers["x-api-key"]).toBeUndefined();
+    }
+  });
+
+  it("does not turn a fallback reorganization into a stale verdict", async () => {
+    let headers = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcResult({
+        number: call.params[0], hash: `0x${(headers++ < 2 ? "a" : "b").repeat(64)}`,
+      });
+      if (call.method === "eth_call") return rpcResult(call.params[1] === "latest" ? "0x7" : "0x8");
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [{ ...target("base"), latestStateProbe: "state-bracket" }], fetchText: transport.fetchText,
+    });
+    expect(sample.latestFreshness).toMatchObject({ verdict: "indeterminate", reason: "bracket-reorg" });
+  });
+
+  it("rotates the first target each scheduled hour, including deadline skips", async () => {
+    const firstChains: string[] = [];
+    for (const atSec of [0, 3600]) {
+      let clock = START_MS;
+      const transport = createFakeTransport(() => {
+        clock += 20_000;
+        return rpcResult("0x64");
+      });
+      const result = await runProbe({
+        targets: [target("base"), target("megaeth")], fetchText: transport.fetchText,
+        nowMs: () => clock, deadlineMs: START_MS + 30_000, atSec,
+      });
+      firstChains.push(result.skipped[0].chainId);
+      expect(result.skipped.every((entry) => entry.reason === "deadline")).toBe(true);
+    }
+    expect(firstChains).toEqual(["base", "megaeth"]);
+  });
+
+  it("rejects a uint256 that is not a safe sentinel block height", async () => {
+    const transport = createFakeTransport((call) => (
+      rpcResult(call.method === "eth_blockNumber" ? "0x64" : call.method === "eth_call"
+        ? call.params[1] === "latest" ? `0x${"f".repeat(64)}` : "0x7" : [])
+    ));
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.latestFreshness).toMatchObject({ verdict: "indeterminate", reason: "step-failed" });
+    expect(sample.failedSteps.dwellir.latest).toBe(true);
+    expect(sample.calls?.dwellir.find((call) => call.step === "latest")?.errorClass).toBe("invalid-response");
+  });
+
+  it("records a failed post-sentinel head as unavailable, not a stale latest result", async () => {
+    let heads = 0;
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") {
+        if (isDwellir(call.url) && heads++ > 0) return { kind: "raw", body: "upstream unavailable", status: 503 };
+        return rpcResult("0x64");
+      }
+      if (call.method === "eth_call") return rpcResult(call.params[1] === "latest" ? "0x64" : "0x7");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.latestFreshness).toMatchObject({ verdict: "indeterminate", reason: "step-failed" });
+    expect(sample.failedSteps.dwellir.head).toBe(true);
+    expect(sample.failedSteps.dwellir.latest).toBe(false);
+    expect(sample.calls?.dwellir.filter((call) => call.step === "head")[1].errorClass).toBe("server-error");
+  });
+
+  it("records a failed latest call as unavailable and indeterminate, not stale", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.params[1] === "latest") return rpcResult("0x");
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.latestFreshness).toMatchObject({ verdict: "indeterminate", reason: "step-failed" });
+    expect(sample.calls?.dwellir.find((call) => call.step === "latest")?.errorClass).toBe("invalid-response");
+    expect(sample.failedSteps.dwellir.latest).toBe(true);
+  });
+
+  it("classifies first touch by origin across chains, not by target", async () => {
+    const transport = createFakeTransport((call) => (
+      rpcResult(call.method === "eth_blockNumber" ? "0x64" : call.method === "eth_call" ? "0x1" : [])
+    ));
+    const targets = ["base", "ethereum"].map((chainId) => ({
+      ...target(chainId), comparator: { source: "pin" as const, url: "https://shared-comparator.example/rpc" },
+    }));
+    const { samples } = await runProbe({ targets, fetchText: transport.fetchText });
+    expect(samples[0].calls?.comparator[0].phase).toBe("firstTouch");
+    expect(samples[1].calls?.comparator.every((call) => call.phase === "warm")).toBe(true);
   });
 });
 
@@ -527,6 +913,9 @@ describe("rpc parity failure classification", () => {
     expect(classifyRpcParityHttpFailure(403, "This method does not support this operation")).toBe("capability");
     expect(classifyRpcParityHttpFailure(404, "not found")).toBe("capability");
     expect(classifyRpcParityHttpFailure(503, "upstream unavailable")).toBe("server-error");
+    expect(classifyRpcParityHttpFailure(502, "unsupported upstream operation")).toBe("server-error");
+    expect(classifyRpcParityHttpFailure(400, "block range too large")).toBe("range-cap");
+    expect(classifyRpcParityHttpFailure(400, "too many logs in the requested range")).toBe("result-cap");
     expect(classifyRpcParityHttpFailure(400, "bad request")).toBe("invalid-response");
   });
 

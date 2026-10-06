@@ -46,6 +46,7 @@ vi.mock("../preflight-skip", () => ({
 }));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
@@ -125,6 +126,14 @@ describe("runFourHourlyReserveSyncSlot", () => {
       sourceAttemptNo: attemptNo - 1,
     });
   }
+
+  it.each([true, false])("forwards native adapter capability only when admitted: %s", async admitted => {
+    const runtime = buildRuntime();
+    const capability = admitted ? createDwellirNativeCapability("native-test-key-placeholder") : undefined;
+    runtime.dwellirNative = capability;
+    await runFourHourlyReserveSyncSlot(runtime);
+    expect(vi.mocked(syncLiveReserves).mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
+  });
 
   it("keeps recovery's two-connection head separate from independent Kinesis I/O", async () => {
     // The Worker TS target lacks Promise.withResolvers; use the suite's gates.

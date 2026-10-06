@@ -586,6 +586,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
         Base: { current: 11_478_000, chainId: "base" },
         Optimism: { current: 4_876_000, chainId: "optimism" },
         Arbitrum: { current: 346_620_000, chainId: "arbitrum" },
+        Unichain: { current: 3_706_000, chainId: "unichain" },
       },
     });
     const susds = makeAsset({
@@ -611,12 +612,13 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
 
     expect(susds.supplySource).toBe("onchain-total-supply");
     expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });
-    expect(susds.chains).toEqual(["Ethereum", "Base", "Optimism", "Arbitrum"]);
+    expect(susds.chains).toEqual(["Ethereum", "Base", "Optimism", "Arbitrum", "Unichain"]);
     expect(susds.chainCirculating).toEqual({
       Ethereum: { current: 4_517_720_000, chainId: "ethereum", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
       Base: { current: 11_478_000, chainId: "base", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
       Optimism: { current: 4_876_000, chainId: "optimism", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
       Arbitrum: { current: 346_620_000, chainId: "arbitrum", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
+      Unichain: { current: 3_706_000, chainId: "unichain", circulatingPrevDay: undefined, circulatingPrevWeek: undefined, circulatingPrevMonth: undefined },
     });
     expect(other.chainCirculating).toEqual({ Ethereum: { current: 1 } });
   });

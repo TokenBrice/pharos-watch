@@ -3,6 +3,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
+import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -72,6 +73,7 @@ function makeSkyMeta(): StablecoinMeta {
       { chain: "base", address: "0x0000000000000000000000000000000000000002", decimals: 18 },
       { chain: "optimism", address: "0x0000000000000000000000000000000000000003", decimals: 18 },
       { chain: "arbitrum", address: "0x0000000000000000000000000000000000000004", decimals: 18 },
+      { chain: "unichain", address: "0x0000000000000000000000000000000000000005", decimals: 18 },
     ],
     flags: {
       backing: "crypto-backed",
@@ -262,6 +264,20 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     });
   });
 
+  it("threads admitted native transport into Movement without changing xReserve reconciliation", async () => {
+    const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
+      rawSupply: 100_000_000n, decimals: 6, ledgerVersion: "199722477",
+    });
+    fetchOnchainUint256Mock.mockResolvedValue(100_000_000n);
+    const result = await fetchCuratedAggregateOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(), undefined, dwellirNative,
+    );
+    expect(result?.mcap).toBe(100);
+    expect(fetchMoveFungibleAssetSupplyMock.mock.calls[0]?.[3]).toEqual({ dwellirNative });
+    expect(fetchOnchainUint256Mock).toHaveBeenCalled();
+  });
+
   it("fails Movement USDCx closed when xReserve differs by more than one basis point", async () => {
     fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
       rawSupply: 1_739_632_096_715n,
@@ -299,6 +315,7 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       if (input?.chain === "base") return 100n * 10n ** 18n;
       if (input?.chain === "optimism") return 50n * 10n ** 18n;
       if (input?.chain === "arbitrum") return 25n * 10n ** 18n;
+      if (input?.chain === "unichain") return 10n * 10n ** 18n;
       return 0n;
     });
 
@@ -310,10 +327,11 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       mcap: 1_000,
       supplySource: "onchain-total-supply",
       chainCirculating: {
-        Ethereum: { current: 825, chainId: "ethereum" },
+        Ethereum: { current: 815, chainId: "ethereum" },
         Base: { current: 100, chainId: "base" },
         Optimism: { current: 50, chainId: "optimism" },
         Arbitrum: { current: 25, chainId: "arbitrum" },
+        Unichain: { current: 10, chainId: "unichain" },
       },
     });
     expect(result?.observedAt).toBeGreaterThanOrEqual(observedBefore);

@@ -1,3 +1,4 @@
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { throwIfAborted } from "../../lib/abort";
 import type { AdapterContext } from "./types";
 import { fetchJsonPostWithRetry } from "./request";
@@ -6,12 +7,12 @@ import { fetchJsonPostWithRetry } from "./request";
 const STARKNET_TOTAL_SUPPLY_SELECTOR = "0x1557182e4359a1f0c6301278e8f5b35a776ab58d39892581e357578fb287836";
 
 /**
- * Public Starknet JSON-RPC endpoints, both verified 2026-07-29 to serve
- * `starknet_call` unauthenticated and to agree on the tracked supplies. The
- * historical `blastapi.io` endpoints are permanently retired (HTTP 403).
+ * Public Starknet JSON-RPC endpoint, verified 2026-07-29 to serve
+ * `starknet_call` unauthenticated. The historical `blastapi.io` endpoints are
+ * permanently retired (HTTP 403), and `rpc.starknet.lava.build` answers
+ * HTTP 410 "This endpoint has been discontinued" since 2026-10-05.
  */
 const STARKNET_RPC_URLS = [
-  "https://rpc.starknet.lava.build",
   "https://api.cartridge.gg/x/starknet/mainnet",
 ] as const;
 
@@ -52,17 +53,18 @@ export async function fetchStarknetTotalSupply(options: {
     throw new Error(`starknet total_supply probe requires a felt contract address (${options.contract})`);
   }
 
-  const rpcUrls = [options.rpcUrl, options.fallbackRpcUrl, ...STARKNET_RPC_URLS].filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
-  );
+  const dwellirUrl = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === "starknet")!.baseUrl;
+  const rpcUrls = [...new Set([
+    options.rpcUrl, options.fallbackRpcUrl, ...STARKNET_RPC_URLS,
+  ].filter((url): url is string => typeof url === "string" && url.length > 0 &&
+    (!options.ctx?.dwellirNative || url !== dwellirUrl)))];
+  if (options.ctx?.dwellirNative) rpcUrls.push(dwellirUrl);
   let lastError: unknown = null;
 
   for (const rpcUrl of rpcUrls) {
     throwIfAborted(options.signal);
     try {
-      const body = await fetchJsonPostWithRetry<StarknetCallResponse>(
-        rpcUrl,
-        {
+      const request = {
           jsonrpc: "2.0",
           id: 1,
           method: "starknet_call",
@@ -74,11 +76,14 @@ export async function fetchStarknetTotalSupply(options: {
             },
             block_id: "latest",
           },
-        },
-        options.signal,
-        options.timeoutMs ?? 10_000,
-        options.ctx,
-      );
+        };
+      const body = rpcUrl === dwellirUrl && options.ctx?.dwellirNative
+        ? await options.ctx!.dwellirNative!.readJson<StarknetCallResponse>(
+          "starknet", "", options.signal, options.ctx, request, options.timeoutMs,
+        )
+        : await fetchJsonPostWithRetry<StarknetCallResponse>(
+          rpcUrl, request, options.signal, options.timeoutMs ?? 10_000, options.ctx,
+        );
 
       if (body.error) {
         lastError = new Error(`starknet_call failed on ${rpcUrl}: ${body.error.message ?? "unknown error"}`);

@@ -307,9 +307,9 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
     sourcePath: "worker/src/lib/rpc-provider-budget.ts",
     stateNames: ["pendingDwellirCredits"],
-    owner: "Dwellir supplemental-RPC credit accounting",
+    owner: "Dwellir supplemental EVM/native credit accounting",
     kind: "counter",
-    resetOrTtl: "Credits recorded per JSON-RPC response item accumulate until the next flushDwellirCredits() drains them through a successful month-ledger compare-and-swap; a failed flush restores them, and isolate recycle drops the remainder.",
+    resetOrTtl: "Credits recorded per JSON-RPC response item or native HTTP response accumulate until the next flushDwellirCredits() drains them through a successful month-ledger compare-and-swap; a failed flush restores them, and isolate recycle drops the remainder.",
     durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; the pending counter is a per-isolate write buffer only.",
   },
   {
@@ -347,9 +347,9 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   {
     sourcePath: "worker/src/handlers/scheduled/context.ts",
     stateNames: ["dwellirEnablementByChainRpcs"],
-    owner: "Scheduled-runtime Dwellir enablement (provider trial)",
+    owner: "Scheduled-runtime Dwellir EVM/native admission (provider trial)",
     kind: "cache",
-    resetOrTtl: "WeakMap keyed by each scheduled runtime's chainRpcs Map; memoizes one budget + circuit read per runtime and dies with that map object or the isolate.",
+    resetOrTtl: "WeakMap keyed by each scheduled runtime's chainRpcs Map; memoizes one shared EVM/native budget + circuit admission per runtime and dies with that map object or the isolate.",
     durableTruth: "The Dwellir credit ledger row and the dwellir-evm circuit row are authoritative; the memo only prevents repeat reads within one runtime.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];

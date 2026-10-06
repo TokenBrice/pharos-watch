@@ -24,6 +24,7 @@
     "check:bootstrap": "node --import tsx scripts/maintenance/run-bootstrap-rehearsal.ts",
     "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates,docs-metadata",
     "verify:coingecko-ids": "python3 scripts/maintenance/verify-coingecko-ids.py",
+    "research:dwellir-rpc": "node scripts/maintenance/dwellir-rpc.mjs",
     "prebuild": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
     "build": "next build --webpack",
     "build:world-map": "tsx scripts/maintenance/build-world-map-svg.ts",

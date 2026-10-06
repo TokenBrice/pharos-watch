@@ -22,6 +22,7 @@ import {
   parityRunWindow,
   PARITY_REGISTRY_CHAIN_HEIGHTS,
   stepFailures,
+  paritySample,
   type ParityRunFixture,
 } from "./rpc-parity-test-support";
 
@@ -120,7 +121,7 @@ describe("rpc parity gate math", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
     expect(summary.dwellirSuccessRate).toBeCloseTo(healthy / (healthy + 40), 5);
     expect(summary.dwellirSuccessRate).toBeLessThan(RPC_PARITY_GATE_MIN_SUCCESS_RATE);
-    expect(summary.gate.failing).toContain("success-rate");
+    expect(summary.gate.failing).toContain("success-rate:head");
   });
 
   it("refuses head-lag and latency on too few comparable samples", () => {
@@ -222,14 +223,15 @@ describe("rpc parity gate math", () => {
     expect(summary.errorClasses).toEqual({});
     expect(summary.comparatorErrorClasses).toEqual({ capability: RPC_PARITY_GATE_MIN_RUNS });
     expect(summary.failedSteps).toEqual({
-      dwellir: { head: 0, state: 0, logs: 0 },
-      comparator: { head: RPC_PARITY_GATE_MIN_RUNS, state: 0, logs: 0 },
+      dwellir: { head: 0, state: 0, logs: 0, latest: 0 },
+      comparator: { head: RPC_PARITY_GATE_MIN_RUNS, state: 0, logs: 0, latest: 0 },
     });
     expect(summary.lastComparatorFailure).toEqual({
       atSec: PARITY_NOW_SEC,
       step: "head",
       errorClass: "capability",
       httpStatus: 1010,
+      comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
     });
     // No comparator baseline means no lag evidence, so the lag gate stays failed.
     expect(summary.headLagBlocks.p95).toBeNull();
@@ -267,14 +269,15 @@ describe("rpc parity gate math", () => {
     expect(summary.gate.failing).toEqual(expect.arrayContaining([
       "insufficient-state-checks",
       "insufficient-log-checks",
-      "success-rate",
+      "success-rate:state",
+      "success-rate:logs",
     ]));
     expect(summary.gate.failing).not.toContain("state-parity");
     expect(summary.gate.failing).not.toContain("log-parity");
     // Availability is where the failed reads belong.
     expect(summary.dwellirSuccessRate).toBeCloseTo((RPC_PARITY_GATE_MIN_RUNS - 2) / RPC_PARITY_GATE_MIN_RUNS, 6);
     expect(summary.errorClasses).toEqual({ timeout: 2 });
-    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 1, logs: 1 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 1, logs: 1, latest: 0 });
   });
 
   it("does not count a plan refusal as a Dwellir availability failure", () => {
@@ -293,7 +296,7 @@ describe("rpc parity gate math", () => {
     // Refusals leave the denominator, so the rate still describes served calls.
     expect(summary.dwellirSuccessRate).toBe(1);
     expect(summary.errorClasses).toEqual({ capability: 2 });
-    expect(summary.gate.failing).not.toContain("success-rate");
+    expect(summary.gate.failing).not.toContain("success-rate:head");
   });
 
   it("reports the newest comparator failure with its step, class, and status", () => {
@@ -314,13 +317,14 @@ describe("rpc parity gate math", () => {
     ));
 
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
-    expect(summary.failedSteps.comparator).toEqual({ head: 0, state: 1, logs: 1 });
-    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 0, logs: 1 });
+    expect(summary.failedSteps.comparator).toEqual({ head: 0, state: 1, logs: 1, latest: 0 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 0, logs: 1, latest: 0 });
     expect(summary.lastComparatorFailure).toEqual({
       atSec: PARITY_NOW_SEC,
       step: "logs",
       errorClass: "server-error",
       httpStatus: 502,
+      comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
     });
   });
 
@@ -328,8 +332,8 @@ describe("rpc parity gate math", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
     expect(summary.comparatorErrorClasses).toEqual({});
     expect(summary.failedSteps).toEqual({
-      dwellir: { head: 0, state: 0, logs: 0 },
-      comparator: { head: 0, state: 0, logs: 0 },
+      dwellir: { head: 0, state: 0, logs: 0, latest: 0 },
+      comparator: { head: 0, state: 0, logs: 0, latest: 0 },
     });
     expect(summary.lastComparatorFailure).toBeNull();
   });
@@ -365,6 +369,7 @@ describe("rpc parity gate math", () => {
     expect(summary.stateParity.lastMismatch).toEqual({
       atSec: PARITY_NOW_SEC,
       block: PARITY_REGISTRY_CHAIN_HEIGHTS.commonBlock,
+      comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
     });
     expect(summary.logParity.mismatched).toBe(1);
     expect(summary.gate.failing).toEqual(expect.arrayContaining(["state-parity", "log-parity"]));
@@ -395,7 +400,7 @@ describe("rpc parity gate math", () => {
       chainId === PARITY_REGISTRY_CHAIN ? { dwellirLatencyMs: 1_501, comparatorLatencyMs: 1_000 } : {}
     ));
     const slow = summaryFor(PARITY_REGISTRY_CHAIN, overTolerance);
-    expect(slow.latency.dwellir.p95Ms).toBe(1_501);
+    expect(slow.latency.dwellir.warmRunMedian.p95Ms).toBe(1_501);
     expect(slow.gate.failing).toContain("latency");
   });
 
@@ -404,11 +409,10 @@ describe("rpc parity gate math", () => {
       chainId === PARITY_REGISTRY_CHAIN ? { comparatorLatencyMs: null, dwellirLatencyMs: null } : {}
     ));
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
-    expect(summary.latency).toEqual({
-      dwellir: { p50Ms: null, p95Ms: null, samples: 0 },
-      comparator: { p50Ms: null, p95Ms: null, samples: 0 },
-    });
-    expect(summary.gate.failing).toContain("latency");
+    expect(summary.latency.dwellir.warmRunMedian).toEqual({ p50Ms: null, p95Ms: null, samples: 0 });
+    expect(summary.latency.comparator.warmRunMedian).toEqual({ p50Ms: null, p95Ms: null, samples: 0 });
+    expect(summary.gate.failing).toContain("insufficient-warm-samples");
+    expect(summary.gate.failing).not.toContain("latency");
   });
 
   it("scales the head-lag threshold from the chain's nominal block time", () => {
@@ -427,6 +431,249 @@ describe("rpc parity gate math", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
     expect(evaluateRpcParityGate(summary, 2).passed).toBe(true);
     expect(evaluateRpcParityGate({ ...summary, runs: 1 }, 2).failing).toContain("runs");
+  });
+
+  it.each([
+    { chainId: "base", tolerance: 3 },
+    { chainId: "arbitrum", tolerance: 24 },
+    { chainId: "robinhood", tolerance: 6 },
+  ])("reports the shared chain-time freshness budget for $chainId", ({ chainId, tolerance }) => {
+    const summary = summaryFor(chainId, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
+    expect(summary.latestFreshness.blockTolerance).toBe(tolerance);
+  });
+
+  it("attributes split and historical comparator observations without rewriting the old state mismatch", () => {
+    const stateRef = { operator: "public" as const, host: "hyperliquid.drpc.org", source: "pin" as const };
+    const logRef = { operator: "alchemy" as const, host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" as const };
+    const oldSample = paritySample("hyperevm", { comparator: logRef, stateMatched: false });
+    const newSample = paritySample("hyperevm", { comparator: stateRef, logsComparator: logRef });
+    newSample.calls!.comparator = [
+      { step: "head", phase: "firstTouch", latencyMs: 100, errorClass: null },
+      { step: "state", phase: "warm", latencyMs: 50, errorClass: null },
+      { step: "head", phase: "firstTouch", latencyMs: 120, errorClass: null, comparator: logRef },
+      { step: "logs", phase: "warm", latencyMs: 60, errorClass: null, comparator: logRef },
+    ];
+    const runs = [
+      { atSec: PARITY_NOW_SEC - 3600, samples: [oldSample] },
+      { atSec: PARITY_NOW_SEC, samples: [newSample] },
+    ];
+    const summary = summaryFor("hyperevm", runs);
+    expect(summary.comparator).toEqual(stateRef);
+    expect(summary.logsComparator).toEqual(logRef);
+    expect(summary.comparatorsByStep).toEqual({
+      head: [logRef, stateRef], state: [logRef, stateRef], logs: [logRef], latest: [],
+    });
+    expect(summary.stateParity.lastMismatch).toEqual({
+      atSec: PARITY_NOW_SEC - 3600, block: oldSample.commonBlock, comparator: logRef,
+    });
+    expect(summary.latency.comparator.warmRunMedian.samples).toBe(2);
+    expect(summary.gate.failing).toContain("state-parity");
+  });
+
+  it("fails closed when the newest log comparator is unavailable despite a full historical window", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
+    const unavailable = paritySample("hyperevm", { logsComparator: null, logChecked: false, logMatched: false });
+    unavailable.calls!.comparator = unavailable.calls!.comparator.filter((call) => call.step !== "logs");
+    unavailable.calls!.dwellir = unavailable.calls!.dwellir.filter((call) => call.step !== "logs");
+    runs.push({ atSec: PARITY_NOW_SEC + 3600, samples: [unavailable] });
+    const summary = summaryFor("hyperevm", runs);
+    expect(summary.stateParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS + 1);
+    expect(summary.logParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.logsComparator).toBeNull();
+    expect(summary.logParity.skippedReason).toBe("no-comparator");
+    expect(summary.gate.failing).toContain("no-log-comparator");
+  });
+
+  it("names the failing log origin rather than the successful primary head baseline", () => {
+    const logRef = { operator: "alchemy" as const, host: "hyperliquid-mainnet.g.alchemy.com", source: "pin" as const };
+    const sample = paritySample("hyperevm", {
+      logsComparator: logRef, comparatorErrorClass: "server-error", comparatorHttpStatus: 502,
+      failedSteps: { dwellir: stepFailures(), comparator: stepFailures({ head: true }) },
+    });
+    sample.calls!.comparator = [
+      { step: "head", phase: "firstTouch", latencyMs: 100, errorClass: null },
+      { step: "state", phase: "warm", latencyMs: 50, errorClass: null },
+      { step: "head", phase: "firstTouch", latencyMs: 120, errorClass: "server-error", comparator: logRef },
+      { step: "logs", phase: "warm", latencyMs: 60, errorClass: null, comparator: logRef },
+    ];
+    const summary = summaryFor("hyperevm", [{ atSec: PARITY_NOW_SEC, samples: [sample] }]);
+    expect(summary.lastComparatorFailure).toEqual({
+      atSec: PARITY_NOW_SEC, step: "head", errorClass: "server-error", httpStatus: 502, comparator: logRef,
+    });
+  });
+
+  it("does not turn legacy samples into method availability, warm latency or freshness passes", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, () => ({ calls: undefined, latestFreshness: undefined }));
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.availability.dwellir.state).toMatchObject({
+      attempts: 0, unknownRuns: RPC_PARITY_GATE_MIN_RUNS, successRate: null,
+    });
+    expect(summary.latestFreshness.unknown).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate.failing).toEqual(expect.arrayContaining([
+      "insufficient-state-attempts", "success-rate:state", "insufficient-warm-samples",
+      "insufficient-latest-freshness-checks",
+    ]));
+  });
+
+  it("holds any stale latest verdict and reports its block/value example", () => {
+    const freshness = {
+      verdict: "stale" as const, reason: "no-bracket-match" as const,
+      headBefore: 100, headAfter: 101, matchedBlock: null, latestValue: "10",
+      numericValues: [{ block: 101, value: "11" }, { block: 100, value: "11" }],
+    };
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, index) => (
+      chainId === PARITY_REGISTRY_CHAIN && index === RPC_PARITY_GATE_MIN_RUNS - 1
+        ? { latestFreshness: freshness } : {}
+    ));
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.stale).toBe(1);
+    expect(summary.latestFreshness.lastStale).toEqual({ ...freshness, atSec: PARITY_NOW_SEC });
+    expect(summary.gate.failing).toContain("latest-state-freshness");
+  });
+  it.each([false, undefined])("does not count a nondiscriminating or legacy fresh match toward the floor: %s", (discriminating) => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, () => ({
+      latestFreshness: {
+        verdict: "fresh", reason: "matched-numeric-block",
+        method: discriminating === undefined ? undefined : "state-bracket", discriminating,
+        headBefore: 100, headAfter: 100, matchedBlock: 100,
+      },
+    }));
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness).toMatchObject({
+      fresh: RPC_PARITY_GATE_MIN_RUNS, discriminatingFresh: 0, nonDiscriminatingFresh: RPC_PARITY_GATE_MIN_RUNS,
+    });
+    expect(summary.gate.failing).toContain("insufficient-latest-freshness-checks");
+  });
+
+  it.each(["inconclusive", "constant", "legacy"])("uses sufficient sentinel evidence despite %s token coverage", (mode) => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      const token = paritySample(chainId).tokenFreshness!;
+      return mode === "legacy" ? { tokenFreshness: undefined } : {
+        tokenFreshness: {
+          ...token,
+          verdict: mode === "constant" ? "fresh" as const : "indeterminate" as const,
+          reason: mode === "constant" ? "matched-numeric-block" as const : "bracket-too-wide" as const,
+          discriminating: false,
+          ...(mode === "constant" ? {
+            numericValues: token.numericValues?.map((entry) => ({ ...entry, value: token.latestValue! })),
+          } : {
+            headAfter: token.headBefore! + 20, referenceEndBlock: token.headBefore! + 20,
+            matchedBlock: null, numericValues: [],
+          }),
+        },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState[mode === "legacy" ? "unknown" : mode === "constant" ? "fresh" : "indeterminate"])
+      .toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate.passed).toBe(true);
+    expect(summary.gate.failing).not.toContain("insufficient-latest-freshness-checks");
+  });
+
+  it("does not replace an unreadable configured sentinel with discriminating token evidence", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      if (chainId !== PARITY_REGISTRY_CHAIN) return {};
+      return {
+        sentinelFreshness: {
+          ...paritySample(chainId).sentinelFreshness!, verdict: "indeterminate" as const, reason: "step-failed" as const,
+          headAfter: null, servedBlock: null, lagBlocks: null, latestValue: null, discriminating: false,
+        },
+        failedSteps: { dwellir: stepFailures({ latest: true }), comparator: stepFailures() },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate.failing).toContain("insufficient-latest-freshness-checks");
+  });
+
+  it.each([false, true])("uses the token discrimination floor only without a configured sentinel: %s", (discriminating) => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => {
+      if (chainId !== "xdc") return {};
+      const token = paritySample(chainId).tokenFreshness!;
+      return {
+        tokenFreshness: {
+          ...token, discriminating,
+          numericValues: discriminating ? token.numericValues
+            : token.numericValues?.map((entry) => ({ ...entry, value: token.latestValue! })),
+        },
+      };
+    });
+    const summary = summaryFor("xdc", runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(0);
+    expect(summary.latestFreshness.tokenState.discriminatingFresh).toBe(discriminating ? RPC_PARITY_GATE_MIN_RUNS : 0);
+    expect(summary.gate.failing.includes("insufficient-latest-freshness-checks")).toBe(!discriminating);
+    expect(summary.gate.failing).not.toContain("latest-state-freshness");
+  });
+
+  it("keeps a stale token defect failing after the sentinel floor is satisfied", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, index) => {
+      if (chainId !== PARITY_REGISTRY_CHAIN || index !== RPC_PARITY_GATE_MIN_RUNS - 1) return {};
+      return {
+        tokenFreshness: {
+          ...paritySample(chainId).tokenFreshness!, verdict: "stale" as const, reason: "no-bracket-match" as const,
+          matchedBlock: null, latestValue: "0xfe", discriminating: true,
+        },
+      };
+    });
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latestFreshness.sentinel.discriminatingFresh).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.latestFreshness.tokenState.stale).toBe(1);
+    expect(summary.gate.failing).not.toContain("insufficient-latest-freshness-checks");
+    expect(summary.gate.failing).toContain("latest-state-freshness");
+  });
+
+  it("exposes per-chain skip reasons without inventing reasons for legacy gaps", () => {
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, [
+      { atSec: PARITY_NOW_SEC - 7200, samples: [] },
+      { atSec: PARITY_NOW_SEC - 3600, samples: [], skipped: [{ chainId: PARITY_REGISTRY_CHAIN, reason: "deadline" }] },
+      { atSec: PARITY_NOW_SEC, samples: [], skipped: [{ chainId: PARITY_REGISTRY_CHAIN, reason: "aborted" }] },
+    ]);
+    expect(summary.runs).toBe(0);
+    expect(summary.skips).toEqual({ "no-comparator": 0, "no-dwellir-entry": 0, deadline: 1, aborted: 1, unknown: 1 });
+    expect(summary.lastSkip).toEqual({ atSec: PARITY_NOW_SEC, reason: "aborted" });
+  });
+
+
+  it("reports first-touch latency without using it to fail the warm gate", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
+    for (const run of runs) {
+      const sample = run.samples.find((entry) => entry.chainId === PARITY_REGISTRY_CHAIN)!;
+      for (const call of sample.calls!.dwellir) if (call.phase === "firstTouch") call.latencyMs = 8_000;
+    }
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latency.dwellir.firstTouch.head.p95Ms).toBe(8_000);
+    expect(summary.latency.dwellir.warm.state.p95Ms).toBeLessThan(8_000);
+    expect(summary.gate.failing).not.toContain("latency");
+  });
+
+  it("excludes capability refusals only from the method that refused them", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
+    const last = runs[runs.length - 1].samples.find((sample) => sample.chainId === PARITY_REGISTRY_CHAIN)!;
+    const state = last.calls!.dwellir.find((call) => call.step === "state")!;
+    const logs = last.calls!.dwellir.find((call) => call.step === "logs")!;
+    state.errorClass = "capability";
+    logs.errorClass = "timeout";
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.availability.dwellir.state).toMatchObject({ capabilityRefusals: 1, successRate: 1 });
+    expect(summary.availability.dwellir.logs.successRate).toBeCloseTo(23 / 24);
+    expect(summary.gate.failing).toContain("success-rate:logs");
+    expect(summary.gate.failing).not.toContain("success-rate:state");
+  });
+
+  it("takes each run's actual warm median before the window percentile", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
+    for (const run of runs) {
+      const sample = run.samples.find((entry) => entry.chainId === PARITY_REGISTRY_CHAIN)!;
+      const warm = sample.calls!.comparator.filter((call) => call.phase === "warm");
+      warm[0].latencyMs = 100;
+      warm[1].latencyMs = 900;
+    }
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.latency.comparator.warmRunMedian).toEqual({ p50Ms: 500, p95Ms: 500, samples: RPC_PARITY_GATE_MIN_RUNS });
   });
 });
 

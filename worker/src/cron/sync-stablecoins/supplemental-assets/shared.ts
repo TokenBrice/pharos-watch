@@ -5,6 +5,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import {
@@ -270,6 +271,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
   cgData: CoinGeckoMcapData,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<{
   mcap: number;
   supplySource: string;
@@ -279,7 +281,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
   const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
   if (!priceResolution) return null;
 
-  const aggregate = await fetchCuratedAggregateOnChainMcap(meta, priceResolution.price, chainRpcs, signal);
+  const aggregate = await fetchCuratedAggregateOnChainMcap(meta, priceResolution.price, chainRpcs, signal, dwellirNative);
   if (!aggregate) return null;
 
   return {

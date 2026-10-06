@@ -21,6 +21,7 @@ vi.mock("../preflight-skip", () => ({ logSkippedCronRun: vi.fn(async () => undef
 
 import { runQuarterHourlySlot } from "../quarter-hourly";
 import { logSkippedCronRun } from "../preflight-skip";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 interface SnapshotPresence {
   psi: boolean;
@@ -72,6 +73,17 @@ describe("runQuarterHourlySlot", () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+
+  it.each([true, false])("forwards native capability into supply only when admitted: %s", async admitted => {
+    mocks.syncStablecoins.mockResolvedValue({
+      status: "degraded", itemCount: 0, metadata: JSON.stringify({ downstreamSafe: false }),
+    });
+    const value = runtime([]);
+    const capability = admitted ? createDwellirNativeCapability("native-test-key-placeholder") : undefined;
+    value.dwellirNative = capability;
+    await runQuarterHourlySlot(value);
+    expect(mocks.syncStablecoins.mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
+  });
 
   it("skips all snapshot jobs when sync-stablecoins reports an unsafe cache", async () => {
     mocks.syncStablecoins.mockResolvedValue({

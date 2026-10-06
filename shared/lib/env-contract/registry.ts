@@ -220,7 +220,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_API_KEY",
     valueType: "string",
-    description: "Dwellir credential for supplemental multi-chain RPC endpoints during the provider trial; sent only as the X-Api-Key header.",
+    description: "Dwellir credential for last-position supplemental EVM and native state-read endpoints during the provider trial; sent only as the X-Api-Key header.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -229,7 +229,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_MAX_CREDITS_PER_MONTH",
     valueType: "string",
-    description: "Optional positive integer local cap for Dwellir JSON-RPC credit units consumed during one UTC month; unset or invalid values fall back to the built-in 20,000,000 credit default.",
+    description: "Optional positive integer local cap for Dwellir response credit units consumed during one UTC month (JSON-RPC items and native HTTP responses); unset or invalid values fall back to the built-in 20,000,000 credit default.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

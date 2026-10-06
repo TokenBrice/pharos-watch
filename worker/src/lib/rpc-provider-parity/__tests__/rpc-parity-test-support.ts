@@ -1,6 +1,7 @@
 import { RPC_PARITY_TARGETS } from "../targets";
 import { mergeRpcParityRun, type RpcParityStoreRow } from "../store";
-import type { RpcParityChainSample, RpcParityRunSamples, RpcParityStepFailures } from "../types";
+import { combineRpcParityLatestFreshness, RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, type RpcParityChainSample, type RpcParityRunSamples, type RpcParityStepFailures } from "../types";
+import { headLagThresholdBlocks } from "../report";
 
 /**
  * Shared fixtures for the parity lane's tests. Heights and latencies use
@@ -18,7 +19,9 @@ export function paritySample(
   chainId: string,
   overrides: Partial<RpcParityChainSample> = {},
 ): RpcParityChainSample {
-  return {
+  const target = RPC_PARITY_TARGETS.find((entry) => entry.chainId === chainId);
+  if (!target) throw new Error(`missing parity target for ${chainId}`);
+  const sample: RpcParityChainSample = {
     chainId,
     comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
     dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
@@ -42,11 +45,54 @@ export function paritySample(
     failedSteps: { dwellir: stepFailures(), comparator: stepFailures() },
     ...overrides,
   };
+  if (!("latestFreshness" in overrides)) {
+    const head = sample.dwellirHead ?? 380_000_000;
+    const tolerance = headLagThresholdBlocks(target.blockTimeSec);
+    const covered = tolerance + 1 <= RPC_PARITY_LATEST_MAX_NUMERIC_CALLS;
+    if (!("sentinelFreshness" in overrides)) sample.sentinelFreshness = target.latestStateProbe === "state-bracket" ? null : {
+      verdict: "fresh", reason: "served-block-in-range", headBefore: head, headAfter: head,
+      matchedBlock: null, method: target.latestStateProbe, discriminating: true,
+      servedBlock: head, lagBlocks: 0, toleranceBlocks: tolerance, latestValue: `0x${head.toString(16)}`, numericValues: [],
+      call: target.latestStateProbe === "arbsys-block-number"
+        ? { to: "0x0000000000000000000000000000000000000064", data: "0xa3b1b31d" }
+        : { to: "0xca11bde05977b3631167028862be2a173976ca11", data: "0x42cbb15c" },
+    };
+    if (!("tokenFreshness" in overrides)) sample.tokenFreshness = {
+      verdict: covered ? "fresh" : "indeterminate", reason: covered ? "matched-numeric-block" : "bracket-too-wide",
+      headBefore: head, headAfter: head, referenceEndBlock: head,
+      matchedBlock: covered ? head : null, method: "state-bracket", discriminating: covered, toleranceBlocks: tolerance,
+      latestValue: "0x100",
+      numericValues: covered ? Array.from({ length: tolerance + 1 }, (_, index) => ({
+        block: head - index, value: index === 0 ? "0x100" : "0xff",
+      })) : [],
+      call: { to: target.contract, data: "0x18160ddd" },
+    };
+    sample.latestFreshness = sample.tokenFreshness
+      ? combineRpcParityLatestFreshness(sample.sentinelFreshness ?? null, sample.tokenFreshness)
+      : sample.sentinelFreshness ?? undefined;
+  }
+  if (!("calls" in overrides)) {
+    sample.calls = { dwellir: [], comparator: [] };
+    for (const operator of ["dwellir", "comparator"] as const) {
+      for (const step of ["head", "state", "logs", "latest"] as const) {
+        if (operator === "comparator" && step === "latest") continue;
+        const latencyMs = operator === "dwellir" ? sample.dwellirLatencyMs : sample.comparatorLatencyMs;
+        if (latencyMs === null) continue;
+        const failed = sample.failedSteps[operator][step] || (step === "head"
+          && !(operator === "dwellir" ? sample.headOk : sample.comparatorHeadOk));
+        sample.calls[operator].push({
+          step, phase: step === "head" ? "firstTouch" : "warm", latencyMs,
+          errorClass: failed ? (operator === "dwellir" ? sample.errorClass : sample.comparatorErrorClass) ?? "timeout" : null,
+        });
+      }
+    }
+  }
+  return sample;
 }
 
 /** Step-failure flags for one operator; every step is healthy unless named. */
 export function stepFailures(overrides: Partial<RpcParityStepFailures> = {}): RpcParityStepFailures {
-  return { head: false, state: false, logs: false, ...overrides };
+  return { head: false, state: false, logs: false, latest: false, ...overrides };
 }
 
 export function fullParityRun(
@@ -83,6 +129,7 @@ export function buildParityRow(atSecs: readonly number[]): RpcParityStoreRow {
 export interface ParityRunFixture {
   atSec: number;
   samples: RpcParityChainSample[];
+  skipped?: RpcParityRunSamples["skipped"];
 }
 
 /** A run window of `runCount` hourly runs ending at `PARITY_NOW_SEC`, index 0 oldest. */

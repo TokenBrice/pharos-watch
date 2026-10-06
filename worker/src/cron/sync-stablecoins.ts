@@ -13,6 +13,7 @@ import {
   runStablecoinsPricingStage,
 } from "./sync-stablecoins/stages";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { createBinanceFetchSession } from "../lib/cex-tickers";
 import { createNativePegQuoteSession } from "../lib/native-peg-quotes";
@@ -21,6 +22,7 @@ export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   reportProgress?: CronProgressReporter;
   jupiterApiKey?: string | null;
 }
@@ -34,6 +36,7 @@ export async function syncStablecoins(
     cmcApiKey,
     coingeckoApiKey,
     chainRpcs,
+    dwellirNative,
     reportProgress,
     jupiterApiKey,
   } = options;
@@ -52,6 +55,7 @@ export async function syncStablecoins(
     signal,
     coingeckoApiKey,
     chainRpcs,
+    dwellirNative,
     reportProgress,
   });
   if (!("kind" in intake)) return intake;

@@ -15,6 +15,9 @@ Read routed docs and scoped instructions, `docs/dependency-map.md`, `docs/runboo
 
 Use `skill://reserve-research` for reserve evidence, provenance, custody, backing dependencies, and source freshness. Read the relevant adapter and authored reserves before changing a claim. Verified docs own durable policy; `/agents/` holds scratch evidence only.
 
+Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
+Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
+
 ## Queue Snapshot
 
 Run the read-only production report:

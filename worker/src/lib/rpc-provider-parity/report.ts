@@ -10,16 +10,23 @@ import {
   dwellirHostForChain,
   plannedRpcParityComparator,
 } from "./targets";
-import type {
-  RpcParityChainSample,
-  RpcParityChainSummary,
-  RpcParityComparatorRef,
-  RpcParityErrorClass,
-  RpcParityFailedStepCounts,
-  RpcParityLatencySummary,
-  RpcParityProbeStep,
-  RpcParityStepFailures,
-  RpcProviderTrialReport,
+import {
+  combineRpcParityLatestFreshness,
+  RPC_PARITY_PROBE_STEPS,
+  RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
+  type RpcParityChainSample,
+  type RpcParityChainSummary,
+  type RpcParityComparatorRef,
+  type RpcParityErrorClass,
+  type RpcParityFailedStepCounts,
+  type RpcParityLatencySummary,
+  type RpcParityProbeStep,
+  type RpcParityStepFailures,
+  type RpcProviderTrialReport,
+  type RpcParityOperatorLatency,
+  type RpcParityMethodAvailability,
+  type RpcParityFreshnessCheckSummary,
+  type RpcParityLatestFreshness,
 } from "./types";
 
 /**
@@ -37,14 +44,14 @@ import type {
  * checks, log checks) before the corresponding gate may pass.
  */
 export const RPC_PARITY_GATE_MIN_RUNS = 24;
-/** Dwellir head-read success rate over the window, with plan-capability refusals excluded. */
+/** Per-method availability, excluding only that method's capability refusals. */
 export const RPC_PARITY_GATE_MIN_SUCCESS_RATE = 0.995;
-/** Accepted p95 head-read latency gap between Dwellir and the comparator. */
+/** Accepted gap between p95s of per-run warm medians, not first-touch calls. */
 const RPC_PARITY_GATE_LATENCY_TOLERANCE_MS = 500;
-/** Head-lag tolerance in chain time; the gate never requires fewer than three blocks. */
+/** Shared head/sentinel tolerance in chain time, with a minimum of three blocks. */
 const RPC_PARITY_HEAD_LAG_WINDOW_SEC = 6;
 
-/** Blocks of chain time the gate tolerates before a chain's head lag fails. */
+/** Single block-budget authority for head lag and latest served-block freshness. */
 export function headLagThresholdBlocks(blockTimeSec: number): number {
   if (!Number.isFinite(blockTimeSec) || blockTimeSec <= 0) return 3;
   return Math.max(3, Math.ceil(RPC_PARITY_HEAD_LAG_WINDOW_SEC / blockTimeSec));
@@ -58,10 +65,10 @@ export function percentileNearestRank(values: readonly number[], percentile: num
   return sorted[rank] ?? null;
 }
 
-const PROBE_STEPS: readonly RpcParityProbeStep[] = ["head", "state", "logs"];
+const PROBE_STEPS = RPC_PARITY_PROBE_STEPS;
 
 function emptyFailedStepCounts(): RpcParityFailedStepCounts {
-  return { head: 0, state: 0, logs: 0 };
+  return { head: 0, state: 0, logs: 0, latest: 0 };
 }
 
 /** The first failing step in probe order, which is the one whose call lost the comparison. */
@@ -78,24 +85,46 @@ function summarizeLatency(values: readonly (number | null)[]): RpcParityLatencyS
   };
 }
 
+function countFreshnessCheck(
+  summary: RpcParityFreshnessCheckSummary,
+  freshness: RpcParityLatestFreshness | null | undefined,
+): void {
+  if (!freshness) summary.unknown++;
+  else {
+    summary[freshness.verdict]++;
+    if (freshness.verdict === "fresh" && freshness.discriminating === true) summary.discriminatingFresh++;
+  }
+}
+
 /**
  * Gate ids reported in `gate.failing`. Each one is an observable claim about
  * the retained window, evaluated per chain.
  *
- * Sufficiency is gated separately from the measured values: a comparison the
- * lane could not perform is never a passing gate, so `head-lag` and `latency`
- * need `RPC_PARITY_GATE_MIN_RUNS` comparable samples, `state-parity` needs that
- * many state checks, and — where the chain is expected to serve logs at all —
- * `log-parity` needs that many log checks.
+ * Sufficiency is separate from values: comparable heads, state/log checks,
+ * method attempts, determinate latest checks, and warm run medians each need
+ * their own evidence floor. Missing measurements never satisfy a gate.
  */
 export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeSec: number): { passed: boolean; failing: string[] } {
   const failing: string[] = [];
   if (summary.runs < RPC_PARITY_GATE_MIN_RUNS) {
     failing.push("runs");
   }
-  if (summary.dwellirSuccessRate === null || summary.dwellirSuccessRate < RPC_PARITY_GATE_MIN_SUCCESS_RATE) {
-    failing.push("success-rate");
+  for (const step of PROBE_STEPS) {
+    const method = summary.availability.dwellir[step];
+    if (method.attempts - method.capabilityRefusals < RPC_PARITY_GATE_MIN_RUNS) {
+      failing.push(`insufficient-${step}-attempts`);
+    }
+    if (method.successRate === null || method.successRate < RPC_PARITY_GATE_MIN_SUCCESS_RATE) {
+      failing.push(`success-rate:${step}`);
+    }
   }
+  // The configured sentinel owns sufficiency; token changes are opportunistic.
+  const freshnessEvidence = RPC_PARITY_TARGETS.find((target) => target.chainId === summary.chainId)?.latestStateProbe === "state-bracket"
+    ? summary.latestFreshness.tokenState : summary.latestFreshness.sentinel;
+  if (freshnessEvidence.discriminatingFresh + freshnessEvidence.stale < RPC_PARITY_GATE_MIN_RUNS) {
+    failing.push("insufficient-latest-freshness-checks");
+  }
+  if (summary.latestFreshness.stale > 0) failing.push("latest-state-freshness");
   if (summary.headLagBlocks.samples < RPC_PARITY_GATE_MIN_RUNS) {
     failing.push("insufficient-comparable-samples");
   }
@@ -109,7 +138,8 @@ export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeS
   if (summary.stateParity.mismatched > 0) {
     failing.push("state-parity");
   }
-  if (summary.logParity.skippedReason === null) {
+  if (summary.logParity.skippedReason !== "logs-history-none") {
+    if (summary.logParity.skippedReason === "no-comparator") failing.push("no-log-comparator");
     if (summary.logParity.checked < RPC_PARITY_GATE_MIN_RUNS) {
       failing.push("insufficient-log-checks");
     }
@@ -117,9 +147,13 @@ export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeS
       failing.push("log-parity");
     }
   }
-  const dwellirP95 = summary.latency.dwellir.p95Ms;
-  const comparatorP95 = summary.latency.comparator.p95Ms;
-  if (dwellirP95 === null || comparatorP95 === null || dwellirP95 > comparatorP95 + RPC_PARITY_GATE_LATENCY_TOLERANCE_MS) {
+  const dwellirWarm = summary.latency.dwellir.warmRunMedian;
+  const comparatorWarm = summary.latency.comparator.warmRunMedian;
+  if (dwellirWarm.samples < RPC_PARITY_GATE_MIN_RUNS || comparatorWarm.samples < RPC_PARITY_GATE_MIN_RUNS) {
+    failing.push("insufficient-warm-samples");
+  }
+  if (dwellirWarm.p95Ms !== null && comparatorWarm.p95Ms !== null
+    && dwellirWarm.p95Ms > comparatorWarm.p95Ms + RPC_PARITY_GATE_LATENCY_TOLERANCE_MS) {
     failing.push("latency");
   }
   return { passed: failing.length === 0, failing };
@@ -145,6 +179,13 @@ function collectChainSamples(
   return { runCount, samples };
 }
 
+function addComparatorRef(refs: RpcParityComparatorRef[], ref: RpcParityComparatorRef): void {
+  for (const entry of refs) {
+    if (entry.operator === ref.operator && entry.host === ref.host && entry.source === ref.source) return;
+  }
+  refs.push(ref);
+}
+
 /** Builds one chain's window summary from the retained samples for that chain. */
 export function buildRpcParityChainSummary(input: {
   chainId: string;
@@ -152,19 +193,32 @@ export function buildRpcParityChainSummary(input: {
   latest: RpcParityLatestState | null;
   dwellirHost: string;
   fallbackComparator: RpcParityComparatorRef;
+  fallbackLogsComparator?: RpcParityComparatorRef;
   logsHistoryIsNone: boolean;
   blockTimeSec: number;
 }): RpcParityChainSummary {
   const { runCount, samples } = collectChainSamples(input.runs, input.chainId);
   const newest = samples[samples.length - 1]?.sample ?? null;
   const comparator = newest?.comparator ?? input.fallbackComparator;
+  const skips: RpcParityChainSummary["skips"] = { "no-comparator": 0, "no-dwellir-entry": 0, deadline: 0, aborted: 0, unknown: 0 };
+  let lastSkip: RpcParityChainSummary["lastSkip"] = null;
+  for (const run of input.runs) {
+    const skipped = run.skipped?.find((entry) => entry.chainId === input.chainId);
+    if (skipped) {
+      skips[skipped.reason]++;
+      if (lastSkip === null || run.atSec >= lastSkip.atSec) lastSkip = { atSec: run.atSec, reason: skipped.reason };
+    } else if (!run.samples.some((sample) => sample.chainId === input.chainId)) {
+      // Legacy rows have no skip evidence; absence does not prove a deadline.
+      skips.unknown++;
+    }
+  }
 
   // Availability, not parity: Dwellir is credited only for runs in which every
   // read it was asked for answered. Plan refusals leave the denominator, so the
   // rate describes the calls the key was entitled to serve.
   const capabilitySamples = samples.filter(({ sample }) => sample.errorClass !== "capability");
   const servedSamples = capabilitySamples.filter(({ sample }) => (
-    sample.headOk && !sample.failedSteps.dwellir.state && !sample.failedSteps.dwellir.logs
+    sample.headOk && !sample.failedSteps.dwellir.state && !sample.failedSteps.dwellir.logs && !sample.failedSteps.dwellir.latest
   ));
   const dwellirSuccessRate =
     capabilitySamples.length === 0 ? null : servedSamples.length / capabilitySamples.length;
@@ -175,7 +229,7 @@ export function buildRpcParityChainSummary(input: {
 
   let stateChecked = 0;
   let stateMismatched = 0;
-  let lastMismatch: { atSec: number; block: number } | null = null;
+  let lastMismatch: RpcParityChainSummary["stateParity"]["lastMismatch"] = null;
   let logChecked = 0;
   let logMatched = 0;
   let prunedChecked = 0;
@@ -184,14 +238,87 @@ export function buildRpcParityChainSummary(input: {
   const comparatorErrorClasses: Partial<Record<RpcParityErrorClass, number>> = {};
   const failedSteps = { dwellir: emptyFailedStepCounts(), comparator: emptyFailedStepCounts() };
   let lastComparatorFailure: RpcParityChainSummary["lastComparatorFailure"] = null;
+  const availability = {} as RpcParityChainSummary["availability"];
+  const latency = {} as RpcParityChainSummary["latency"];
+  const comparatorsByStep: RpcParityChainSummary["comparatorsByStep"] = { head: [], state: [], logs: [], latest: [] };
+  for (const operator of ["dwellir", "comparator"] as const) {
+    const methods = {} as Record<RpcParityProbeStep, RpcParityMethodAvailability>;
+    const timing: RpcParityOperatorLatency = {
+      firstTouch: {} as RpcParityOperatorLatency["firstTouch"],
+      warm: {} as RpcParityOperatorLatency["warm"],
+      warmRunMedian: summarizeLatency([]),
+    };
+    for (const step of PROBE_STEPS) {
+      const calls = samples.flatMap(({ sample }) => {
+        const observed = sample.calls?.[operator].filter((call) => call.step === step) ?? [];
+        if (operator === "comparator") {
+          const refs = comparatorsByStep[step];
+          for (const call of observed) addComparatorRef(refs, call.comparator ?? sample.comparator);
+          if (observed.length === 0 && (step === "head" ? sample.comparatorHeadOk || sample.failedSteps.comparator.head
+            : step === "state" ? sample.stateChecked || sample.failedSteps.comparator.state || sample.failedSteps.dwellir.state
+              : step === "logs" ? sample.logChecked || sample.prunedLogChecked || sample.failedSteps.comparator.logs || sample.failedSteps.dwellir.logs : false)) {
+            addComparatorRef(refs, step === "logs" ? sample.logsComparator ?? sample.comparator : sample.comparator);
+          }
+        }
+        return observed;
+      });
+      const capabilityRefusals = calls.filter((call) => call.errorClass === "capability").length;
+      const successes = calls.filter((call) => call.errorClass === null).length;
+      methods[step] = {
+        attempts: calls.length, successes, capabilityRefusals,
+        unknownRuns: samples.filter(({ sample }) => !sample.calls
+          || !sample.calls[operator].some((call) => call.step === step)).length,
+        successRate: calls.length === capabilityRefusals ? null : successes / (calls.length - capabilityRefusals),
+      };
+      for (const phase of ["firstTouch", "warm"] as const) {
+        // Failed calls remain visible in per-call timing; the readiness latency
+        // statistic uses successful reads, with failures gated by availability.
+        timing[phase][step] = summarizeLatency(calls.filter((call) => call.phase === phase).map((call) => call.latencyMs));
+      }
+    }
+    const medians = samples.map(({ sample }) => {
+      const warm = sample.calls?.[operator].filter((call) => call.phase === "warm" && call.errorClass === null) ?? [];
+      if (warm.length < 2) return null;
+      const sorted = warm.map((call) => call.latencyMs).sort((left, right) => left - right);
+      const middle = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+    });
+    timing.warmRunMedian = summarizeLatency(medians);
+    availability[operator] = methods;
+    latency[operator] = timing;
+  }
+  const latestFreshness: RpcParityChainSummary["latestFreshness"] = {
+    fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0, nonDiscriminatingFresh: 0, reasons: {},
+    maxNumericCalls: RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, blockTolerance: headLagThresholdBlocks(input.blockTimeSec), lastStale: null,
+    sentinel: { fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0 },
+    tokenState: { fresh: 0, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 0 },
+  };
   for (const { atSec, sample } of samples) {
+    const sentinel = sample.sentinelFreshness === undefined
+      ? sample.latestFreshness?.method === "multicall3-block-number" || sample.latestFreshness?.method === "arbsys-block-number"
+        ? sample.latestFreshness : null
+      : sample.sentinelFreshness;
+    countFreshnessCheck(latestFreshness.sentinel, sentinel);
+    countFreshnessCheck(latestFreshness.tokenState, sample.tokenFreshness);
+    const freshness = sample.tokenFreshness
+      ? combineRpcParityLatestFreshness(sentinel, sample.tokenFreshness) : sample.latestFreshness;
+    if (!freshness) latestFreshness.unknown++;
+    else {
+      latestFreshness[freshness.verdict]++;
+      if (freshness.verdict === "fresh") {
+        if (freshness.discriminating === true) latestFreshness.discriminatingFresh++;
+        else latestFreshness.nonDiscriminatingFresh++;
+      }
+      latestFreshness.reasons[freshness.reason] = (latestFreshness.reasons[freshness.reason] ?? 0) + 1;
+      if (freshness.verdict === "stale") latestFreshness.lastStale = { ...freshness, atSec };
+    }
     if (sample.stateChecked) {
       stateChecked += 1;
       if (sample.stateMatched) {
         // matched
       } else {
         stateMismatched += 1;
-        if (sample.commonBlock !== null) lastMismatch = { atSec, block: sample.commonBlock };
+        if (sample.commonBlock !== null) lastMismatch = { atSec, block: sample.commonBlock, comparator: sample.comparator };
       }
     }
     if (sample.logChecked) {
@@ -213,13 +340,15 @@ export function buildRpcParityChainSummary(input: {
         if (sample.failedSteps[operator][step]) failedSteps[operator][step] += 1;
       }
     }
-    const comparatorStep = firstFailedStep(sample.failedSteps.comparator);
+    const failedCall = sample.calls?.comparator.find((call) => call.errorClass !== null);
+    const comparatorStep = failedCall?.step ?? firstFailedStep(sample.failedSteps.comparator);
     if (comparatorStep !== null) {
       lastComparatorFailure = {
         atSec,
         step: comparatorStep,
         errorClass: sample.comparatorErrorClass ?? "invalid-response",
         httpStatus: sample.comparatorHttpStatus,
+        comparator: failedCall?.comparator ?? sample.comparator,
       };
     }
   }
@@ -228,7 +357,12 @@ export function buildRpcParityChainSummary(input: {
     chainId: input.chainId,
     dwellirHost: newest?.dwellirHost ?? input.dwellirHost,
     comparator: { operator: comparator.operator, host: comparator.host, source: comparator.source },
+    logsComparator: newest ? newest.logsComparator === undefined ? newest.comparator : newest.logsComparator
+      : input.fallbackLogsComparator ?? input.fallbackComparator,
+    comparatorsByStep,
     runs: runCount,
+    skips,
+    lastSkip,
     dwellirSuccessRate,
     headLagBlocks: {
       p50: percentileNearestRank(lagValues, 0.5),
@@ -245,19 +379,14 @@ export function buildRpcParityChainSummary(input: {
       checked: logChecked,
       matched: logMatched,
       mismatched: logChecked - logMatched,
-      skippedReason: input.logsHistoryIsNone ? "logs-history-none" : null,
+      skippedReason: input.logsHistoryIsNone ? "logs-history-none" : newest?.logsComparator === null ? "no-comparator" : null,
     },
     prunedLogProbe: input.logsHistoryIsNone
       ? { checked: prunedChecked, dwellirEmptyWhileComparatorNonEmpty: prunedTraps }
       : null,
-    latency: {
-      dwellir: summarizeLatency(
-        samples.map(({ sample }) => (sample.headOk ? sample.dwellirLatencyMs : null)),
-      ),
-      comparator: summarizeLatency(
-        samples.map(({ sample }) => (sample.comparatorHeadOk ? sample.comparatorLatencyMs : null)),
-      ),
-    },
+    latency,
+    availability,
+    latestFreshness,
     errorClasses,
     comparatorErrorClasses,
     failedSteps,
@@ -285,6 +414,7 @@ function emptyChainSummary(chainId: string, blockTimeSec: number): RpcParityChai
     latest: null,
     dwellirHost: `${entry?.host ?? chainId}.n.dwellir.com`,
     fallbackComparator: target ? plannedRpcParityComparator(target) : { operator: "public", host: "", source: "registry" },
+    fallbackLogsComparator: target ? plannedRpcParityComparator(target, "logs") : undefined,
     logsHistoryIsNone: entry?.logsHistory === "none",
     blockTimeSec,
   });
@@ -360,6 +490,7 @@ export async function loadRpcProviderTrialReport(
       latest: row.latest[target.chainId] ?? null,
       dwellirHost: dwellirHostForChain(target.chainId) ?? `${target.chainId}.n.dwellir.com`,
       fallbackComparator: plannedRpcParityComparator(target),
+      fallbackLogsComparator: plannedRpcParityComparator(target, "logs"),
       logsHistoryIsNone: entry?.logsHistory === "none",
       blockTimeSec: target.blockTimeSec,
     });

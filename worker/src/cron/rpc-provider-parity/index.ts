@@ -82,6 +82,7 @@ export async function syncRpcProviderParity(
       dwellirApiKey: env.DWELLIR_API_KEY,
       signal,
       deadlineMs,
+      atSec: nowSec,
       onChainProbed: async (chainId, probed) => {
         if (probed % 5 !== 0) return;
         await reportProgress?.({
@@ -112,7 +113,7 @@ export async function syncRpcProviderParity(
 
   // Evidence is written even for a truncated or abandoned run: the samples that
   // were collected are real observations, and the store merge is append-only.
-  const write = await recordRpcParityRun(db, { atSec: nowSec, samples: probe.samples });
+  const write = await recordRpcParityRun(db, { atSec: nowSec, samples: probe.samples, skipped: probe.skipped });
 
   const circuitOutcome = rpcParityCircuitOutcome(probe.attempted, probe.headOk);
   let circuitRecorded = false;

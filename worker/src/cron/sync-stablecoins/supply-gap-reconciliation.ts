@@ -9,6 +9,7 @@ import { getCirculatingRaw, getCirculatingRawOrNull, getPrevDayRawOrNull, getPre
 import type { SupplyGapFillProvenance } from "@shared/types/market";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
@@ -655,6 +656,7 @@ function getPegReferencePriceUsd(
 async function applyCuratedOnChainSupplyGap(input: {
   candidate: ZeroSupplyCollapseCandidate;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   fxFallbackRates?: Record<string, number>;
   signal?: AbortSignal;
 }): Promise<{ mcap: number; observedAt: number | null } | null> {
@@ -669,6 +671,7 @@ async function applyCuratedOnChainSupplyGap(input: {
     priceUsd,
     input.chainRpcs,
     input.signal,
+    input.dwellirNative,
   );
   if (!onChainMcap) return null;
 
@@ -695,6 +698,7 @@ export async function reconcileTrackedSupplyGaps(
   fxFallbackRates?: Record<string, number>,
   /** Previous publication; its `coingecko-gap-fill` rows select the DEC-01 retain (hysteresis) band. */
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<SupplyGapReconciliationResult> {
   const candidateGeckoIds = [...new Set(
     assets.flatMap((asset) => {
@@ -783,6 +787,7 @@ export async function reconcileTrackedSupplyGaps(
       const onChainMcap = await applyCuratedOnChainSupplyGap({
         candidate,
         chainRpcs,
+        dwellirNative,
         fxFallbackRates,
         signal,
       });

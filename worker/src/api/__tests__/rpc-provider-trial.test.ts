@@ -26,6 +26,9 @@ const env = makeScheduledEnv({
   DWELLIR_MAX_CREDITS_PER_MONTH,
 });
 
+const EMPTY_LATENCY = { p50Ms: null, p95Ms: null, samples: 0 };
+const METHOD_LATENCY = { p50Ms: 80, p95Ms: 160, samples: 6 };
+const SERVED_METHOD = { attempts: 6, successes: 6, capabilityRefusals: 0, unknownRuns: 0, successRate: 1 };
 const TRIAL_REPORT = {
   provider: "dwellir",
   generatedAtSec: 1_772_000_000,
@@ -48,18 +51,61 @@ const TRIAL_REPORT = {
         chainId: "base",
         dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
         comparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
+        logsComparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
+        comparatorsByStep: {
+          head: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
+          state: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
+          logs: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
+          latest: [],
+        },
         runs: 6,
+        skips: { "no-comparator": 0, "no-dwellir-entry": 0, deadline: 0, aborted: 0, unknown: 0 },
+        lastSkip: null,
         dwellirSuccessRate: 1,
-        headLagBlocks: { p50: 0, p95: 1 },
+        headLagBlocks: { p50: 0, p95: 1, samples: 6 },
         stateParity: { checked: 6, matched: 6, mismatched: 0, lastMismatch: null },
         logParity: { checked: 6, matched: 6, mismatched: 0, skippedReason: null },
         prunedLogProbe: null,
         latency: {
-          dwellir: { p50Ms: 180, p95Ms: 420, samples: 6 },
-          comparator: { p50Ms: 140, p95Ms: 300, samples: 6 },
+          dwellir: {
+            firstTouch: { head: { p50Ms: 180, p95Ms: 420, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY },
+            warm: {
+              head: { ...METHOD_LATENCY, samples: 12 }, state: METHOD_LATENCY, logs: METHOD_LATENCY,
+              latest: { ...METHOD_LATENCY, samples: 54 },
+            },
+            warmRunMedian: METHOD_LATENCY,
+          },
+          comparator: {
+            firstTouch: { head: { p50Ms: 140, p95Ms: 300, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY },
+            warm: { head: EMPTY_LATENCY, state: METHOD_LATENCY, logs: METHOD_LATENCY, latest: EMPTY_LATENCY },
+            warmRunMedian: METHOD_LATENCY,
+          },
+        },
+        availability: {
+          dwellir: {
+            head: { ...SERVED_METHOD, attempts: 18, successes: 18 }, state: SERVED_METHOD, logs: SERVED_METHOD,
+            latest: { ...SERVED_METHOD, attempts: 54, successes: 54 },
+          },
+          comparator: {
+            head: SERVED_METHOD, state: SERVED_METHOD, logs: SERVED_METHOD,
+            latest: { attempts: 0, successes: 0, capabilityRefusals: 0, unknownRuns: 6, successRate: null },
+          },
+        },
+        latestFreshness: {
+          fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6, nonDiscriminatingFresh: 0,
+          reasons: { "served-block-in-range": 6 }, maxNumericCalls: 10, blockTolerance: 3, lastStale: null,
+          sentinel: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
+          tokenState: { fresh: 6, stale: 0, indeterminate: 0, unknown: 0, discriminatingFresh: 6 },
         },
         errorClasses: {},
-        gate: { passed: true, failing: [] },
+        comparatorErrorClasses: {},
+        failedSteps: { dwellir: { head: 0, state: 0, logs: 0, latest: 0 }, comparator: { head: 0, state: 0, logs: 0, latest: 0 } },
+        lastComparatorFailure: null,
+        gate: { passed: false, failing: [
+          "runs", "insufficient-head-attempts", "insufficient-state-attempts", "insufficient-log-attempts",
+          "insufficient-latest-freshness-checks", "insufficient-comparable-samples",
+          "insufficient-state-checks", "insufficient-log-checks", "insufficient-warm-samples",
+        ] },
         last: { atSec: 1_771_999_000, dwellirHead: 21_000_000, comparatorHead: 21_000_000, commonBlock: 21_000_000 },
       },
     ],

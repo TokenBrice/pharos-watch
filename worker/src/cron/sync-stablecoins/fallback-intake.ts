@@ -3,6 +3,7 @@ import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/r
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { CronResult } from "./shared";
@@ -132,6 +133,7 @@ export async function runFallbackIntakePhase(
 export async function overlayFallbackCuratedAggregateSupply(
   assets: PeggedAsset[],
   signal?: AbortSignal,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<void> {
   for (const asset of assets) {
     throwIfAborted(signal);
@@ -141,7 +143,7 @@ export async function overlayFallbackCuratedAggregateSupply(
     const priceUsd = toPositiveFiniteNumber(asset.price);
     if (priceUsd == null) continue;
 
-    const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal);
+    const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
     if (!onChainMcap?.chainCirculating) continue;
 
     const pegKey = pegTypeKey(meta);

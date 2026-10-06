@@ -4,7 +4,8 @@ import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
+import { APTOS_PUBLIC_REST_URL, PUBLIC_RPC_URLS } from "@shared/lib/chain-rpc-registry";
+import { DWELLIR_NATIVE_ENDPOINTS, type DwellirNativeEndpoint } from "@shared/lib/dwellir-native-endpoints";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getRpcAuthHeaders, registryRpcUrls } from "../../lib/chain-registry";
@@ -38,6 +39,7 @@ interface MoveLedgerResponse {
   chain_id?: number;
   ledger_version?: string;
   ledger_timestamp?: string;
+  oldest_ledger_version?: string;
 }
 
 interface MoveBlockResponse {
@@ -79,6 +81,14 @@ export interface MoveFungibleAssetSupplyReadOptions {
   expectedDecimals?: number;
 }
 
+type DwellirMoveEndpoint = Extract<DwellirNativeEndpoint, { protocol: "aptos-rest" }>;
+
+interface MoveReadPin {
+  network?: "aptos" | "movement";
+  ledgerVersion?: string;
+  ledgerTimestampSec?: number;
+}
+
 /**
  * Reads an Aptos-framework fungible asset's supply and decimals at one pinned
  * ledger version. Serves every Move chain on the Aptos framework REST API
@@ -90,23 +100,81 @@ export async function fetchMoveFungibleAssetSupply(
   rpcUrl: string,
   ctx?: AdapterContext,
   options?: MoveFungibleAssetSupplyReadOptions,
+  network?: "aptos" | "movement",
+): Promise<MoveFungibleAssetSupplyObservation | null> {
+  if (!ctx?.dwellirNative) {
+    return fetchMoveSupplyAtEndpoint(metadataAddress, signal, rpcUrl, ctx, options);
+  }
+  const knownEndpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
+    entry.protocol === "aptos-rest" && (options?.expectedChainId !== undefined
+      ? entry.expectedChainId === options.expectedChainId
+      : PUBLIC_RPC_URLS[entry.network] === rpcUrl.replace(/\/$/, "")),
+  );
+  const pin: MoveReadPin = { network: network ?? knownEndpoint?.network };
+  let lastError: unknown;
+  const tryIncumbent = async (url: string) => {
+    try {
+      return await fetchMoveSupplyAtEndpoint(metadataAddress, signal, url, ctx, options, pin);
+    } catch (error) {
+      throwIfAborted(signal);
+      lastError = error;
+      return null;
+    }
+  };
+  const primary = await tryIncumbent(rpcUrl);
+  if (primary) return primary;
+  if (!pin.network) {
+    if (lastError) throw lastError;
+    return null;
+  }
+  const defaultUrl = PUBLIC_RPC_URLS[pin.network];
+  if (rpcUrl.replace(/\/$/, "") !== defaultUrl) {
+    const fallback = await tryIncumbent(defaultUrl);
+    if (fallback) return fallback;
+  }
+  const endpoint = DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
+    entry.protocol === "aptos-rest" && entry.network === pin.network,
+  )!;
+  return fetchMoveSupplyAtEndpoint(metadataAddress, signal, endpoint.baseUrl, ctx, options, pin, endpoint);
+}
+
+async function fetchMoveSupplyAtEndpoint(
+  metadataAddress: string,
+  signal: AbortSignal,
+  rpcUrl: string,
+  ctx?: AdapterContext,
+  options?: MoveFungibleAssetSupplyReadOptions,
+  pin?: MoveReadPin,
+  nativeEndpoint?: DwellirMoveEndpoint,
 ): Promise<MoveFungibleAssetSupplyObservation | null> {
   if (!/^0x[0-9a-fA-F]{1,64}$/.test(metadataAddress)) return null;
   const baseUrl = rpcUrl.replace(/\/$/, "");
   const bounded = options?.expectedMetadataAddress !== undefined
     ? { maxResponseBytes: 128 * 1024, maxRetries: 0, headers: getRpcAuthHeaders(baseUrl) }
     : undefined;
-  const ledger = await fetchJsonWithRetry<MoveLedgerResponse>(baseUrl, signal, 10_000, ctx, bounded);
+  const read = <T>(url: string) => nativeEndpoint
+    ? ctx!.dwellirNative!.readJson<T>(nativeEndpoint.network, url.slice(baseUrl.length), signal, ctx)
+    : fetchJsonWithRetry<T>(url, signal, 10_000, ctx, bounded);
+  const ledger = await read<MoveLedgerResponse>(baseUrl);
   if (!ledger.ledger_version || !MOVE_INTEGER_RE.test(ledger.ledger_version)) return null;
   if (options?.expectedChainId !== undefined && ledger.chain_id !== options.expectedChainId) return null;
-  let ledgerVersion = ledger.ledger_version;
-  let ledgerTimestampSec = moveTimestampSec(ledger.ledger_timestamp);
-  if (options) {
+  if (pin && !pin.network) {
+    pin.network = DWELLIR_NATIVE_ENDPOINTS.find((entry): entry is DwellirMoveEndpoint =>
+      entry.protocol === "aptos-rest" && entry.expectedChainId === ledger.chain_id,
+    )?.network;
+  }
+  if (nativeEndpoint && ledger.chain_id !== nativeEndpoint.expectedChainId) return null;
+  const oldest = nativeEndpoint?.requiresRetainedLedgerFloor ? ledger.oldest_ledger_version : "0";
+  if (oldest === undefined || !MOVE_INTEGER_RE.test(oldest)) return null;
+  let ledgerVersion = pin?.ledgerVersion ?? ledger.ledger_version;
+  let ledgerTimestampSec = pin?.ledgerVersion ? pin.ledgerTimestampSec : moveTimestampSec(ledger.ledger_timestamp);
+  if (BigInt(ledgerVersion) < BigInt(oldest) || BigInt(ledgerVersion) > BigInt(ledger.ledger_version)) return null;
+  if (options && !pin?.ledgerVersion) {
     if (!Number.isSafeInteger(options.clockSec) || options.clockSec <= 0 || ledgerTimestampSec === undefined) return null;
     if (ledgerTimestampSec > options.clockSec) {
       // Locate the newest complete block at/before the scoring clock. Never
       // attach an old clock to the latest supply, or read partial block state.
-      let low = 0n;
+      let low = BigInt(oldest);
       let high = BigInt(ledgerVersion);
       let historicalVersion: string | null = null;
       let historicalTimestamp: number | undefined;
@@ -118,8 +186,9 @@ export async function fetchMoveFungibleAssetSupply(
         // probe. Walk back exponentially before bisecting the retained bracket.
         const middle = bracketed ? (low + high) / 2n
           : BigInt(ledgerVersion) > offset ? BigInt(ledgerVersion) - offset : 0n;
-        const block = await fetchJsonWithRetry<MoveBlockResponse>(
-          `${baseUrl}/blocks/by_version/${middle}?with_transactions=false`, signal, 10_000, ctx, bounded,
+        if (middle < BigInt(oldest)) return null;
+        const block = await read<MoveBlockResponse>(
+          `${baseUrl}/blocks/by_version/${middle}?with_transactions=false`,
         );
         const timestamp = moveTimestampSec(block.block_timestamp);
         if (!block.first_version || !block.last_version || !MOVE_INTEGER_RE.test(block.first_version) ||
@@ -143,11 +212,14 @@ export async function fetchMoveFungibleAssetSupply(
       ledgerTimestampSec = historicalTimestamp;
     }
   }
+  if (pin && !pin.ledgerVersion) {
+    pin.ledgerVersion = ledgerVersion;
+    pin.ledgerTimestampSec = ledgerTimestampSec;
+  }
   if (options?.identityKind === "oft-package") {
     const packageType = `${metadataAddress}::oft_fa::OftImpl`;
-    const oft = await fetchJsonWithRetry<MoveResourceResponse>(
+    const oft = await read<MoveResourceResponse>(
       `${baseUrl}/accounts/${metadataAddress}/resource/${packageType}?ledger_version=${ledgerVersion}`,
-      signal, 10_000, ctx, bounded,
     );
     if (oft.type !== packageType) return null;
     const inner = (value: unknown): unknown =>
@@ -166,12 +238,8 @@ export async function fetchMoveFungibleAssetSupply(
 
   const resourceUrl = (type: string) =>
     `${baseUrl}/accounts/${metadataAddress}/resource/${type}?ledger_version=${ledgerVersion}`;
-  const supply = await fetchJsonWithRetry<MoveResourceResponse>(
-    resourceUrl(MOVE_CONCURRENT_SUPPLY_TYPE), signal, 10_000, ctx, bounded,
-  );
-  const metadata = await fetchJsonWithRetry<MoveResourceResponse>(
-    resourceUrl(MOVE_METADATA_TYPE), signal, 10_000, ctx, bounded,
-  );
+  const supply = await read<MoveResourceResponse>(resourceUrl(MOVE_CONCURRENT_SUPPLY_TYPE));
+  const metadata = await read<MoveResourceResponse>(resourceUrl(MOVE_METADATA_TYPE));
   if (supply.type !== MOVE_CONCURRENT_SUPPLY_TYPE || metadata.type !== MOVE_METADATA_TYPE) return null;
 
   const current = supply.data?.current;
@@ -182,9 +250,7 @@ export async function fetchMoveFungibleAssetSupply(
   if (options?.expectedDecimals !== undefined && decimals !== options.expectedDecimals) return null;
   let identity: MoveResourceResponse | undefined;
   if (options?.expectedMetadataAddress !== undefined) {
-    identity = await fetchJsonWithRetry<MoveResourceResponse>(
-      resourceUrl("0x1::object::ObjectCore"), signal, 10_000, ctx, bounded,
-    );
+    identity = await read<MoveResourceResponse>(resourceUrl("0x1::object::ObjectCore"));
     const events = identity.data?.transfer_events as { guid?: { id?: { addr?: unknown } } } | undefined;
     if (identity.type !== "0x1::object::ObjectCore" || events?.guid?.id?.addr !== metadataAddress) return null;
   }

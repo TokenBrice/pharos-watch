@@ -20,6 +20,7 @@ import {
   type ChainRpcConfig,
 } from "../../../lib/chain-registry";
 import { throwIfAborted } from "../../../lib/abort";
+import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import { logWorkerEvent } from "../../../lib/structured-log";
 import {
@@ -117,6 +118,7 @@ async function readContractSupplyRaw(input: {
   allowZeroSupply: boolean;
   signal: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
 }): Promise<bigint | null> {
@@ -135,6 +137,7 @@ async function readContractSupplyRaw(input: {
       signal: input.signal,
       rpcUrl: input.rpcUrl,
       fallbackRpcUrl: input.fallbackRpcUrl,
+      ...(input.dwellirNative ? { ctx: { dwellirNative: input.dwellirNative } } : {}),
     });
   }
 
@@ -153,6 +156,9 @@ async function readContractSupplyRaw(input: {
       supplyContract.address,
       input.signal,
       input.rpcUrl,
+      input.dwellirNative ? { dwellirNative: input.dwellirNative } : undefined,
+      undefined,
+      "aptos",
     );
     if (!observation) throw new Error("Aptos supply probe returned no pinned-ledger observation");
     if (observation.decimals !== supplyContract.decimals) {
@@ -169,6 +175,9 @@ async function readContractSupplyRaw(input: {
       supplyContract.address,
       input.signal,
       input.rpcUrl,
+      input.dwellirNative ? { dwellirNative: input.dwellirNative } : undefined,
+      undefined,
+      "movement",
     );
     if (!observation) throw new Error("Movement supply probe returned no pinned-ledger observation");
     if (observation.decimals !== supplyContract.decimals) {
@@ -267,6 +276,7 @@ async function fetchOnChainSupplyForContract(input: {
   supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
   priceUsd: number;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
   signal?: AbortSignal;
   curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean };
 }): Promise<{
@@ -303,6 +313,7 @@ async function fetchOnChainSupplyForContract(input: {
       // A reviewed supply pin retains its original route; the full map would
       // otherwise prepend registry endpoints ahead of that pin.
       chainRpcs: input.curated?.rpcUrl ? undefined : input.chainRpcs,
+      dwellirNative: input.dwellirNative,
       rpcUrl,
       fallbackRpcUrl,
     });
@@ -417,6 +428,7 @@ export async function fetchOnChainMcap(
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<SingleContractOnChainMcapResult | null> {
   const supplyContract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!supplyContract) {
@@ -434,6 +446,7 @@ export async function fetchOnChainMcap(
     priceUsd,
     chainRpcs,
     signal,
+    dwellirNative,
   });
   return result
     ? {
@@ -452,6 +465,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<OnChainMcapResult | null> {
   const selectedContracts = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
   if (!selectedContracts) {
@@ -473,6 +487,7 @@ export async function fetchCuratedAggregateOnChainMcap(
       priceUsd,
       chainRpcs,
       signal,
+      dwellirNative,
       curated,
     });
     if (!result || result.supplySource !== "onchain-total-supply") {

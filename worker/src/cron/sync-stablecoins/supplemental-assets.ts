@@ -6,6 +6,7 @@ import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { PeggedAsset } from "./enrich-prices";
 import { FIAT_CG_METAS, fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
 import { fetchGoldTokens } from "./supplemental-assets/gold";
@@ -81,6 +82,7 @@ export async function fetchSupplementalTrackedTokens(
   fxFallbackRates?: Record<string, number>,
   db?: D1Database,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -90,9 +92,9 @@ export async function fetchSupplementalTrackedTokens(
   // Keep supplemental families serial. This path overlaps with the main
   // DefiLlama stablecoins fetch, so gold's batched protocol reads, silver's CG
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
-  const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs);
-  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs);
-  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById);
+  const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs, dwellirNative);
+  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs, dwellirNative);
+  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative);
 
   return { goldTokens, silverTokens, fiatCgTokens };
 }

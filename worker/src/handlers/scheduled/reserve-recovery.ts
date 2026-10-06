@@ -47,6 +47,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     trongridApiKey: runtime.env.TRONGRID_API_KEY,
     m0ApiKey: runtime.env.M0_API_KEY,
     chainRpcs: runtime.chainRpcs,
+    dwellirNative: runtime.dwellirNative,
   });
   const configRecoveryDegraded = configRecovery.failed.length > 0
     || ("deferredCount" in configRecovery && configRecovery.deferredCount > 0)

@@ -119,6 +119,7 @@ function buildReserveSyncSlotGroups(
                 trongridApiKey: runtime.env.TRONGRID_API_KEY,
                 m0ApiKey: runtime.env.M0_API_KEY,
                 chainRpcs: runtime.chainRpcs,
+                dwellirNative: runtime.dwellirNative,
               },
               reportProgress,
               undefined,
