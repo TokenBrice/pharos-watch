@@ -22,9 +22,7 @@ describe("CI workflow scope", () => {
     expect(steps.some((step) => step.uses?.startsWith("actions/cache"))).toBe(false);
     const restore = steps.findIndex((step) => step.run?.includes("tar --zstd -xf"));
     const refresh = steps.findIndex((step) => step.run === "node --import tsx scripts/maintenance/refresh-pages-release-data.ts");
-    const build = steps.findIndex((step) => step.run?.split("\n").includes(
-      "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh",
-    ));
+    const build = steps.findIndex((step) => step.run?.split("\n").includes("npm run generated:post-refresh"));
     const check = steps.findIndex((step) => step.run === "npm run check:pages-release");
     expect(restore).toBeGreaterThanOrEqual(0);
     expect(refresh).toBeGreaterThan(restore);
@@ -63,8 +61,7 @@ describe("CI workflow scope", () => {
     expect(prepare.jobs["pages-prepare"].environment).toBeUndefined();
     expect(prepare.on.workflow_call?.secrets).toBeUndefined();
     expect(steps.find((step) => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(0);
-    expect(steps.some((step) => step.run ===
-      "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input")).toBe(true);
+    expect(steps.some((step) => step.run === "npm run generated:compile-input")).toBe(true);
     expect(steps.some((step) => /refresh-pages-release-data|post-refresh|next build|pages deploy/.test(step.run ?? ""))).toBe(false);
     const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     expect(upload?.with).toMatchObject({

@@ -23,6 +23,8 @@
     "bootstrap:generated": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap",
     "check:bootstrap": "node --import tsx scripts/maintenance/run-bootstrap-rehearsal.ts",
     "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates,docs-metadata",
+    "generated:compile-input": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
+    "generated:post-refresh": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh",
     "verify:coingecko-ids": "python3 scripts/maintenance/verify-coingecko-ids.py",
     "verify:detail-snapshot-sources": "node --import tsx scripts/maintenance/compare-detail-snapshot-sources.ts",
     "research:dwellir-rpc": "node scripts/maintenance/dwellir-rpc.mjs",
