@@ -89,6 +89,18 @@ describe("pricing application helpers", () => {
       priceObservedAt: observedAt, priceObservedAtMode: "upstream", priceSyncedAt: 1791304218 });
   });
 
+  it("repairs an already inflated retained low-volume confidence without renewing its observation", () => {
+    const asset = makeAsset({ id: "fusd-freedom-dollar", price: 0.9979057499084988,
+      priceSource: "coingecko-low-volume", priceConfidence: "single-source",
+      priceObservedAt: 1790853290, priceUpdatedAt: 1790853290, priceObservedAtMode: "upstream",
+      supplyRestored: true });
+    applyConsensusResults({ assets: [asset], primaryPriceResults: new Map(),
+      validationContexts: createValidationContextResolver(), syncStartSec: 1791309661, reason: "primary" });
+    expect(asset).toMatchObject({ price: 0.9979057499084988, priceSource: "coingecko-low-volume",
+      priceConfidence: "fallback", priceObservedAt: 1790853290, priceObservedAtMode: "upstream",
+      priceSyncedAt: 1791309661, supplyRestored: true });
+  });
+
   it.each([900, 901])("bounds missing-candidate retention at the CG budget (age=%i)", (age) => {
     const assets = [
       makeAsset({

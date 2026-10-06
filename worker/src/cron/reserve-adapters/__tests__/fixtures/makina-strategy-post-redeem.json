@@ -1,0 +1,101 @@
+{
+  "data": {
+    "slug": "dusd",
+    "address": "0x6b006870C83b1Cd49E766Ac9209f8d68763Df721",
+    "hubChainId": 1,
+    "name": "Dialectic USD",
+    "featured": true,
+    "visibility": "featured",
+    "tags": [],
+    "tag": "Stablecoin Yield",
+    "isGated": false,
+    "displayOrder": null,
+    "description": "DUSD provides diversified access to onchain yield generation across AMMs and money markets. The strategy emphasizes sustainable, liquidity-driven returns by allocating capital to high-quality pools while actively managing risk through Dialectic's robust framework. Selective rotation across chains, pools, and incentive programs enables DUSD to capture attractive, scalable yields with no marginal directional exposure.",
+    "tagline": "Diversified USD yield, executed fully onchain by Dialectic.",
+    "logoURI": "https://pudyjo4profep1fb.public.blob.vercel-storage.com/dusd-3UVLQoE4LaVjLEb3Wjqn0N5fQs1JqB.png",
+    "targetApyBps": null,
+    "operator": {
+      "id": 1,
+      "slug": "dialectic",
+      "name": "Dialectic",
+      "description": "Dialectic is a DeFi-native asset management platform focused on building transparent, onchain investment strategies. Known for its secure infrastructure and data-driven approach.",
+      "logoURI": "https://pudyjo4profep1fb.public.blob.vercel-storage.com/dialectic_logo-wyi6a98zUHVJga0Ukip1QWwgTrrBzQ.png",
+      "darkLogoURI": null
+    },
+    "shareLimit": "75000000000000000000000000",
+    "type": "MACHINE",
+    "ntt": [
+      {
+        "network": 1,
+        "token": "0x1e33E98aF620F1D563fcD3cfd3C75acE841204ef",
+        "manager": "0xaBa79e9b4238e85B75A5812CeD64B4f6527E9ADB",
+        "transceivers": [
+          {
+            "name": "wormhole",
+            "address": "0x5BBE375969712252A75C5762Af85455B79FCBf08"
+          }
+        ]
+      },
+      {
+        "network": 57073,
+        "token": "0xa95C8ff7Be2A1C898fe01B90Fdc9621E8ea5c9FC",
+        "manager": "0xaBa79e9b4238e85B75A5812CeD64B4f6527E9ADB",
+        "transceivers": [
+          {
+            "name": "wormhole",
+            "address": "0x5BBE375969712252A75C5762Af85455B79FCBf08"
+          }
+        ]
+      }
+    ],
+    "apy7d": 0.15318708153536237,
+    "apy30d": 0.07034588387370821,
+    "apyYtd": 0.05241900816998873,
+    "shareToken": {
+      "address": "0x1e33E98aF620F1D563fcD3cfd3C75acE841204ef",
+      "chainId": 1,
+      "name": "Dialectic USD",
+      "symbol": "DUSD",
+      "decimals": 18,
+      "logoURI": null
+    },
+    "accountingToken": {
+      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "chainId": 1,
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "decimals": 6,
+      "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+    },
+    "depositToken": null,
+    "aum": "1924089285301",
+    "lastReportedAum": "1932195260321",
+    "lastReportedAumBlock": "26132449",
+    "sharePrice": 1.049996,
+    "shareSupply": "1805165940663565179304666",
+    "calibers": [
+      {
+        "chainId": 1,
+        "address": "0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC"
+      },
+      {
+        "chainId": 42161,
+        "address": "0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC"
+      },
+      {
+        "chainId": 8453,
+        "address": "0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC"
+      },
+      {
+        "chainId": 143,
+        "address": "0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC"
+      }
+    ]
+  },
+  "meta": {
+    "schema_version": "1.0.0",
+    "annualization_basis": "ACT/365",
+    "compounding": "continuous",
+    "generated_at": "2026-10-06T17:16:49.786Z"
+  }
+}

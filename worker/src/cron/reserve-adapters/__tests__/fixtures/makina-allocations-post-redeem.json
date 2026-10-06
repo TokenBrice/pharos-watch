@@ -1,0 +1,798 @@
+{
+  "data": {
+    "base_tokens": [
+      {
+        "balance": "1379",
+        "type": null,
+        "protocol": "pendle",
+        "token": {
+          "address": "0x3EAA0F0f0A5d3D595ae4e4b0D27f439d01c3E7b2",
+          "chainId": 1,
+          "name": "PT reUSD 25JUN2026",
+          "symbol": "PT-reUSD-25JUN2026",
+          "decimals": 6,
+          "logoURI": null
+        },
+        "accounting_token_value": "1379",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 7.27e-10
+      },
+      {
+        "balance": "70820224",
+        "type": "stablecoin",
+        "protocol": null,
+        "token": {
+          "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "chainId": 8453,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "accounting_token_value": "70820224",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 3.7368617e-05
+      },
+      {
+        "balance": "23539",
+        "type": null,
+        "protocol": null,
+        "token": {
+          "address": "0xe343167631d89B6Ffc58B88d6b7fB0228795491D",
+          "chainId": 1,
+          "name": "Global Dollar",
+          "symbol": "USDG",
+          "decimals": 6,
+          "logoURI": null
+        },
+        "accounting_token_value": "23543",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 1.2422e-08
+      },
+      {
+        "balance": "657",
+        "type": null,
+        "protocol": null,
+        "token": {
+          "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+          "chainId": 1,
+          "name": "PayPal USD",
+          "symbol": "PYUSD",
+          "decimals": 6,
+          "logoURI": null
+        },
+        "accounting_token_value": "657",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 3.46e-10
+      },
+      {
+        "balance": "1151043728134828277",
+        "type": null,
+        "protocol": null,
+        "token": {
+          "address": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+          "chainId": 1,
+          "name": "Frax USD",
+          "symbol": "frxUSD",
+          "decimals": 18,
+          "logoURI": null
+        },
+        "accounting_token_value": "1151287",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 6.07481e-07
+      }
+    ],
+    "positions": [
+      {
+        "id": "5371229124908624150131427880782716527",
+        "value": "13746771984",
+        "created_at_block": "25644981",
+        "created_at": 1785406175,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "PRIME/AUSD Morpho Collateral (PRIME)",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-5",
+        "percentage": null
+      },
+      {
+        "id": "37645447233873664515981871938816299267",
+        "value": "1495960867122",
+        "created_at_block": "25645284",
+        "created_at": 1785409823,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "PRIME/PYUSD Morpho Collateral (PRIME)",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-4",
+        "percentage": null
+      },
+      {
+        "id": "64048496748963625189377001215830228790",
+        "value": "28673915",
+        "created_at_block": "25496290",
+        "created_at": 1783615355,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "aave-v4",
+        "market_id": "",
+        "strategy": "AaveV4 Supply frxUSD",
+        "type": "lending",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-2",
+        "percentage": null
+      },
+      {
+        "id": "82274847838354216265357335302519678531",
+        "value": "1161479552769",
+        "created_at_block": "25645289",
+        "created_at": 1785409883,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "PRIME/PYUSD Morpho Debt (PYUSD)",
+        "type": null,
+        "is_debt": true,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-4",
+        "percentage": null
+      },
+      {
+        "id": "105364652794375054965418306805151713337",
+        "value": "10987164440",
+        "created_at_block": "25644994",
+        "created_at": 1785406331,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "PRIME/AUSD Morpho Debt (AUSD)",
+        "type": null,
+        "is_debt": true,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-5",
+        "percentage": null
+      },
+      {
+        "id": "114955068982582201733330879397746119865",
+        "value": "302513600396",
+        "created_at_block": "25704497",
+        "created_at": 1786122683,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "makina",
+        "market_id": "",
+        "strategy": "Makina DMW Machine",
+        "type": "",
+        "is_debt": false,
+        "url": "https://makina.finance/strategy/dmw",
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.15962269541
+      },
+      {
+        "id": "133495794982505815817947498041694656764",
+        "value": "993993883875",
+        "created_at_block": "25983702",
+        "created_at": 1789485407,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "aave-v3",
+        "market_id": "",
+        "strategy": "AaveV3 Horizon Borrow RLUSD",
+        "type": "",
+        "is_debt": true,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-7",
+        "percentage": null
+      },
+      {
+        "id": "165433007824915924341521454650476721637",
+        "value": "54079367578",
+        "created_at_block": "25645016",
+        "created_at": 1785406595,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "reUSD/AUSD Morpho Debt (AUSD)",
+        "type": null,
+        "is_debt": true,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-6",
+        "percentage": null
+      },
+      {
+        "id": "199708234830348815037617604080094469854",
+        "value": "86080096346",
+        "created_at_block": "25704586",
+        "created_at": 1786123763,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "Morpho USDC loan (market: 0x1e9d...fc64)",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.045420559545
+      },
+      {
+        "id": "203030304645823465903198375540780571081",
+        "value": "1229538225877",
+        "created_at_block": "25977455",
+        "created_at": 1789410095,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "aave-v3",
+        "market_id": null,
+        "strategy": "AaveV3 Horizon Supply JAAA",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-7",
+        "percentage": null
+      },
+      {
+        "id": "233812392305217120018639900280612878694",
+        "value": "47915433677",
+        "created_at_block": "25060634",
+        "created_at": 1778367239,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "Morpho USDC loan (market: 0xacc4...2c67)",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.025282799402
+      },
+      {
+        "id": "244003111842323732524710741252875629950",
+        "value": "384811740785",
+        "created_at_block": "25218014",
+        "created_at": 1780262579,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "Morpho Vault PYUSD Sentora PRIME Main",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.203047688465
+      },
+      {
+        "id": "273739676753663843967743313854543738189",
+        "value": "313246047885",
+        "created_at_block": "24634318",
+        "created_at": 1773233183,
+        "updated_at_block": "26132909",
+        "updated_at": 1791284603,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": "",
+        "strategy": "Sentora PYUSD Main",
+        "type": "yield",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.165285720789
+      },
+      {
+        "id": "278484858964719262695357945750068730966",
+        "value": "91824410668",
+        "created_at_block": "26082109",
+        "created_at": 1790672687,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "makina",
+        "market_id": "",
+        "strategy": "Makina DCM",
+        "type": "",
+        "is_debt": false,
+        "url": "https://makina.finance/strategy/dcm",
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.04845157347
+      },
+      {
+        "id": "318274659201837465920183746592018374659",
+        "value": "5075",
+        "created_at_block": "24592296",
+        "created_at": 1772726063,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": "syrupusdt:usdt",
+        "strategy": "Morpho - syrupUSDT/USDT Loop",
+        "type": "lending",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 2.677e-09
+      },
+      {
+        "id": "324471518229524566118053937012927109991",
+        "value": "8281181590",
+        "created_at_block": "25087566",
+        "created_at": 1778691623,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "royco",
+        "market_id": "",
+        "strategy": "Royco Junior Tranche syrupUSDC",
+        "type": "",
+        "is_debt": false,
+        "url": "https://www.royco.org/market/1/0xde1ce2cf64808e50d000f93058784270e412b3a4/underlying",
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.00436960363
+      },
+      {
+        "id": "328350624757279255217968622283478199222",
+        "value": "64403225700",
+        "created_at_block": "25645004",
+        "created_at": 1785406451,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "reUSD/AUSD Morpho Collateral (reUSD)",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "group": "1-6",
+        "percentage": null
+      },
+      {
+        "id": "335772134702432832947493967330354731301",
+        "value": "77292841477",
+        "created_at_block": "25387102",
+        "created_at": 1782299615,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "royco",
+        "market_id": "",
+        "strategy": "Royco Junior Tranche DMG (Makina DMG machine)",
+        "type": "",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 0.040783924016
+      },
+      {
+        "id": "417385760312948576721304958672130495867",
+        "value": "4599",
+        "created_at_block": "24634252",
+        "created_at": 1773232391,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": "wsrusd:usdc",
+        "strategy": "wsrUSD/USDC Morpho Loop",
+        "type": "lending",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 2.426e-09
+      },
+      {
+        "id": "615507982534160798943526170894352617089",
+        "value": "3859331",
+        "created_at_block": "24735269",
+        "created_at": 1774450235,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": "susds/usdt",
+        "strategy": "sUSDS/USDT Morpho Loop",
+        "type": "",
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 2.036393e-06
+      },
+      {
+        "id": "813730204756382920165748392016574839201",
+        "value": "110694",
+        "created_at_block": "25061082",
+        "created_at": 1778372615,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "syrupUSDC/RLUSD Morpho Loop",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 5.8408e-08
+      },
+      {
+        "id": "912841315826493817206538461275893042156",
+        "value": "561",
+        "created_at_block": "25060980",
+        "created_at": 1778371391,
+        "updated_at_block": "26132446",
+        "updated_at": 1791278963,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "market_id": null,
+        "strategy": "sUSDe/USDtb Morpho Loop",
+        "type": null,
+        "is_debt": false,
+        "url": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        },
+        "percentage": 2.96e-10
+      }
+    ],
+    "groups": {
+      "1-5": {
+        "id": 36,
+        "name": null,
+        "type": null,
+        "protocol": "morpho",
+        "value": "2759607544",
+        "percentage": 0.001456119638,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        }
+      },
+      "1-4": {
+        "id": 37,
+        "name": null,
+        "type": null,
+        "protocol": "morpho",
+        "value": "334481314353",
+        "percentage": 0.176490607006,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        }
+      },
+      "1-2": {
+        "id": 25,
+        "name": null,
+        "type": null,
+        "protocol": "aave-v4",
+        "value": "28673915",
+        "percentage": 1.5129923e-05,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        }
+      },
+      "1-7": {
+        "id": 42,
+        "name": null,
+        "type": null,
+        "protocol": "aave-v3",
+        "value": "235544342002",
+        "percentage": 0.124286057585,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        }
+      },
+      "1-6": {
+        "id": 38,
+        "name": null,
+        "type": null,
+        "protocol": "morpho",
+        "value": "10323858122",
+        "percentage": 0.005447431316,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6,
+          "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+        }
+      }
+    },
+    "stats": {
+      "by_chain": [
+        {
+          "chain_id": 1,
+          "value": "1895108305886"
+        },
+        {
+          "chain_id": 8453,
+          "value": "70820224"
+        }
+      ],
+      "by_protocol": [
+        {
+          "protocol": "aave-v3",
+          "value": "235544342002"
+        },
+        {
+          "protocol": "aave-v4",
+          "value": "28673915"
+        },
+        {
+          "protocol": "makina",
+          "value": "394338011064"
+        },
+        {
+          "protocol": "morpho",
+          "value": "1179622078972"
+        },
+        {
+          "protocol": "pendle",
+          "value": "1379"
+        },
+        {
+          "protocol": "royco",
+          "value": "85574023067"
+        },
+        {
+          "protocol": "unknown",
+          "value": "71995711"
+        }
+      ],
+      "accounting_token": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "chainId": 1,
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": 6,
+        "logoURI": "https://raw.githubusercontent.com/cowprotocol/token-lists/main/src/public/images/8453/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913/logo.png"
+      }
+    }
+  },
+  "meta": {
+    "schema_version": "1.0.0",
+    "annualization_basis": "ACT/365",
+    "compounding": "continuous",
+    "generated_at": "2026-10-06T17:16:50.587Z"
+  }
+}

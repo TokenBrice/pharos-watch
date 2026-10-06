@@ -18,6 +18,7 @@ vi.mock("../sync-live-reserves-shared", () => ({
 }));
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
   WORKER_TRACKED_META_BY_ID: new Map([["coin", { liveReservesConfig: mocks.config }]]),
+  WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES: [],
 }));
 vi.mock("../../lib/live-reserves/store", () => ({ loadReserveSyncStateMap: mocks.states }));
 vi.mock("../../lib/cron-lease-primitives", () => ({
@@ -46,7 +47,7 @@ it("checks a backed-off mismatch without initializing adapters or producer execu
     configFingerprint: fingerprint, lastAttemptedAt: Math.floor(Date.now() / 1000),
   }]]));
   const db = {
-    prepare: () => ({ all: async () => ({ results: [{ stablecoin_id: "coin", config_fingerprint: "old-config" }] }) }),
+    prepare: () => ({ all: async () => ({ results: [{ stablecoin_id: "coin", config_fingerprint: "old-config", binding_source: "snapshot" }] }) }),
   } as unknown as D1Database;
   expect(await recoverLiveReserveConfigChanges(db, new AbortController().signal, {})).toMatchObject({
     mismatchCount: 1, missingFetcherCount: 0, backoffCount: 1, dueCount: 0, attempted: [],

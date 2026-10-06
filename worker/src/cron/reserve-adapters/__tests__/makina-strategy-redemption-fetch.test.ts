@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { runAdapter, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import {
@@ -28,7 +31,52 @@ async function runRedemptionReplay(rpcOverrides: Record<string, AdapterRpcValue>
   });
 }
 
+function capturedPostRedeemNetwork(rpc: Record<string, AdapterRpcValue> = {}) {
+  const networkSpec = makinaNetworkSpec({ rpc: {
+      [`${MAKINA_MACHINE}:0x74c59381`]: 1895417733106n,
+      [`${MAKINA_MACHINE}:0x1182570e`]: 1791278999,
+      ...rpc,
+    } });
+    networkSpec.json!["https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721"] =
+      JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures/makina-strategy-post-redeem.json"), "utf8"));
+    networkSpec.json!["https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"] =
+      JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures/makina-allocations-post-redeem.json"), "utf8"));
+    networkSpec.block = { number: 26134765, timestamp: 1791306971 };
+    return networkSpec;
+}
+
 describe("fetchMakinaStrategyReserves redemption telemetry", () => {
+  it("uses identity-verified pinned Machine AUM when issuer API AUM lags a finalized redeem", async () => {
+    const networkSpec = capturedPostRedeemNetwork();
+    const { result } = await runAdapter("makina-strategy", "dusd-dialectic", { network: networkSpec, nowSec: 1791307011 });
+    expect(result.metadata?.details?.onchainMachineAumUsd).toBe(1895417.733106);
+    expect(result.metadata?.details?.onchainMachineAccountingBlock).toBe(26134765);
+    expect(result.warnings?.map(({ code }) => code)).toContain("makina-api-aum-disagreement");
+    expect(result.metadata?.sourceTimestamp).toBe(1791278963);
+  });
+
+  it.each([
+    ["AUM getter unavailable", { [`${MAKINA_MACHINE}:0x74c59381`]: null }],
+    ["accounting timestamp unavailable", { [`${MAKINA_MACHINE}:0x1182570e`]: null }],
+    ["accounting timestamp after pinned block", { [`${MAKINA_MACHINE}:0x1182570e`]: 1791306972 }],
+    ["denomination wiring mismatch", { [`${MAKINA_MACHINE}:0xda68cf8b`]: UNRELATED_ADDRESS }],
+  ])("fails closed for API-disagreeing books when %s", async (_label, rpc) => {
+    await expect(runAdapter("makina-strategy", "dusd-dialectic", {
+      network: capturedPostRedeemNetwork(rpc), nowSec: 1791307011,
+    })).rejects.toThrow(/differs from current AUM/);
+  });
+
+  it.each([
+    ["future", 1791307011 + 61, 1791307011 + 60],
+    ["stale", 1791307011 - 601, 1791278999],
+  ])("withholds the authoritative anchor from a %s pinned header despite older API timestamps", async (_label, blockTimestamp, accountedAt) => {
+    const network = capturedPostRedeemNetwork({ [`${MAKINA_MACHINE}:0x1182570e`]: accountedAt });
+    network.block = { number: 26134765, timestamp: blockTimestamp };
+    await expect(runAdapter("makina-strategy", "dusd-dialectic", {
+      network, nowSec: 1791307011,
+    })).rejects.toThrow(/differs from current AUM/);
+  });
+
   it("publishes same-block backlog-adjusted DUSD queue capacity after validating the redeemer identity", async () => {
     const { result, network } = await runRedemptionReplay();
 

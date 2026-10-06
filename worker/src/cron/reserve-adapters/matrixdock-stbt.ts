@@ -1,8 +1,11 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchTextWithRetry, parseFiniteNumber, requireHtmlInput, requireRecord, slicesFromValues, unverifiedFreshnessMetadata } from "./helpers";
+import { fetchJsonWithRetry, fetchTextWithRetry, parseFiniteNumber, requireJsonInput, requireHtmlInput, requireRecord, slicesFromValues, unverifiedFreshnessMetadata } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
 
+export const MATRIXDOCK_STBT_STATS_URL = "https://www.matrixdock.com/bond/anon/website/api/v1/stats";
+export const MATRIXDOCK_STBT_STATS_FALLBACK_URL = "https://app.matrixdock.com/bond/anon/website/api/v1/stats";
+const MATRIXDOCK_STBT_STATS_URLS = new Set([MATRIXDOCK_STBT_STATS_URL, MATRIXDOCK_STBT_STATS_FALLBACK_URL]);
 const MATRIXDOCK_STBT_URL = "https://www.matrixdock.com/stbt";
 const BUCKETS: Record<string, { name: string; risk: "low" | "medium" }> = {
   asset_nav_t_bill: { name: "U.S. Treasury bills (STBT issuer reserves)", risk: "low" },
@@ -27,7 +30,10 @@ export function parseMatrixdockStbt(html: string): AdapterResult {
     if (record.asset_nav != null && record.stbt_total_supply != null) candidates.push(record);
   }
   if (candidates.length !== 1) throw new Error("matrixdock-stbt missing or ambiguous asset census");
-  const data = candidates[0];
+  return normalizeMatrixdockStbtCensus(candidates[0], MATRIXDOCK_STBT_URL, "issuer-flight-state");
+}
+
+function normalizeMatrixdockStbtCensus(data: Record<string, unknown>, sourceUrl: string, freshnessSource: string): AdapterResult {
   const amount = (key: string) => parseFiniteNumber(data[key], { label: `matrixdock-stbt ${key}`, min: 0 });
   const total = amount("asset_nav");
   const supply = amount("stbt_total_supply");
@@ -39,13 +45,38 @@ export function parseMatrixdockStbt(html: string): AdapterResult {
     slices: slicesFromValues(rows, null),
     metadata: {
       supplyTokens: supply, collateralizationRatio: total / supply, freshnessMode: "unverified",
-      details: { ...unverifiedFreshnessMetadata("issuer-flight-state", "No reserve observation timestamp published").details, sourceUrl: MATRIXDOCK_STBT_URL, issuerReportedAssetNavUsd: total, sourceTimestampPublished: false, scope: "Undated issuer reserve NAV and token stock. STBT is an unsecured issuer claim; asset buckets do not establish direct token-holder title, audited coverage, exclusive allocation or redemption capacity." },
+      details: { ...unverifiedFreshnessMetadata(freshnessSource, "No reserve observation timestamp published").details, sourceUrl, issuerReportedAssetNavUsd: total, sourceTimestampPublished: false, scope: "Undated issuer reserve NAV and token stock. STBT is an unsecured issuer claim; asset buckets do not establish direct token-holder title, audited coverage, exclusive allocation or redemption capacity." },
     },
   };
 }
 
+export function parseMatrixdockStbtStats(payload: unknown, sourceUrl: string): AdapterResult {
+  if (!MATRIXDOCK_STBT_STATS_URLS.has(sourceUrl)) throw new Error("matrixdock-stbt unreviewed stats endpoint");
+  const envelope = requireRecord(payload, "matrixdock-stbt invalid stats envelope");
+  if (envelope.code !== 0 || typeof envelope.message !== "string"
+    || Object.keys(envelope).some((key) => !["code", "data", "message"].includes(key))) {
+    throw new Error("matrixdock-stbt unsuccessful or unreviewed stats envelope");
+  }
+  const data = requireRecord(envelope.data, "matrixdock-stbt invalid asset census");
+  // This reviewed product-scoped endpoint reports USD NAV. New currency,
+  // product, clock or allocation fields need a scope review, never an inference.
+  const reviewedFields = new Set([
+    "asset_nav", ...Object.keys(BUCKETS),
+    "asset_repo_per", "asset_t_bill_per", "asset_buidl_per", "asset_ustb_per", "asset_cash_reserve_per",
+    "stbt_total_supply", "stbt_por", "stbt", "reserve",
+  ]);
+  if (Object.keys(data).some((key) => !reviewedFields.has(key))) throw new Error("matrixdock-stbt unreviewed stats census scope");
+  return normalizeMatrixdockStbtCensus(data, sourceUrl, "issuer-stats-json");
+}
+
 export async function fetchMatrixdockStbtReserves(coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
+  if (coin.id !== "stbt-matrixdock") throw new Error("matrixdock-stbt coin or endpoint mismatch");
+  if (config.inputs.primary.kind === "http-json") {
+    const input = requireJsonInput(config.inputs.primary, "matrixdock-stbt");
+    if (!MATRIXDOCK_STBT_STATS_URLS.has(input.url)) throw new Error("matrixdock-stbt coin or endpoint mismatch");
+    return parseMatrixdockStbtStats(await fetchJsonWithRetry(input.url, signal, 10_000, ctx), input.url);
+  }
   const input = requireHtmlInput(config.inputs.primary, "matrixdock-stbt");
-  if (coin.id !== "stbt-matrixdock" || input.url !== MATRIXDOCK_STBT_URL) throw new Error("matrixdock-stbt coin or endpoint mismatch");
+  if (input.url !== MATRIXDOCK_STBT_URL) throw new Error("matrixdock-stbt coin or endpoint mismatch");
   return parseMatrixdockStbt(await fetchTextWithRetry(input.url, signal, 10_000, ctx, { maxResponseBytes: 1024 * 1024 }));
 }

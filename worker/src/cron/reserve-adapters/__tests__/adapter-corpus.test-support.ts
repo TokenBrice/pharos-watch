@@ -15,6 +15,8 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
+import MATRIXDOCK_STBT_CAPTURE from "./fixtures/matrixdock-stbt-stats.json";
+import { MATRIXDOCK_STBT_STATS_URL } from "../matrixdock-stbt";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import { BLOX_ATTESTATIONS } from "./fixtures/blox-attestations";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
@@ -27,8 +29,11 @@ import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
 const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
   .replace(/<!--[^]*?-->\r?\n/g, "");
-const MATRIXDOCK_STBT_URL = "https://www.matrixdock.com/stbt";
-const MATRIXDOCK_STBT_CAPTURE = readFileSync(new URL("./fixtures/matrixdock-stbt.html", import.meta.url), "utf8");
+const MATRIXDOCK_STBT_MISSING_SUPPLY_CAPTURE = {
+  ...MATRIXDOCK_STBT_CAPTURE,
+  data: Object.fromEntries(Object.entries(MATRIXDOCK_STBT_CAPTURE.data)
+    .filter(([key]) => key !== "stbt_total_supply")),
+};
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -771,15 +776,12 @@ CORPUS_CASES["blackrock-brsrv-holdings"] = {
 CORPUS_CASES["matrixdock-stbt"] = {
   coinId: "stbt-matrixdock",
   nowSec: Date.parse("2026-10-03T07:00:00Z") / 1000,
-  network: { html: { [MATRIXDOCK_STBT_URL]: MATRIXDOCK_STBT_CAPTURE } },
+  network: { json: { [MATRIXDOCK_STBT_STATS_URL]: MATRIXDOCK_STBT_CAPTURE } },
   drift: {
     label: "STBT supply is removed while reserve buckets remain",
     outcome: "error",
     network: {
-      html: {
-        [MATRIXDOCK_STBT_URL]: MATRIXDOCK_STBT_CAPTURE
-          .replace("stbt_total_supply", "unknown_supply"),
-      },
+      json: { [MATRIXDOCK_STBT_STATS_URL]: MATRIXDOCK_STBT_MISSING_SUPPLY_CAPTURE },
     },
   },
 };

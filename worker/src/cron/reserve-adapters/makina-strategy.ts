@@ -6,6 +6,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import {
   fetchEvmBlockNumber,
+  fetchEvmBlockHeader,
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
   fetchEvmStorageAtBlock,
@@ -119,7 +120,16 @@ interface MakinaStrategyParams {
   reconciliationTolerancePct?: number;
 }
 
+export interface MakinaMachineAccounting {
+  aumUsd: number;
+  accountedAt: number;
+  blockNumber: number;
+  blockTimestamp: number;
+  blockHash?: string;
+}
+
 export interface MakinaRedemptionState {
+  machineAccounting?: MakinaMachineAccounting;
   whitelistEnabled: boolean;
   sanctionsCheckEnabled: boolean;
   minimumFinalizationDelaySec: number;
@@ -144,6 +154,10 @@ interface MakinaRedemptionRead {
 }
 
 const DEFAULT_ACCOUNTING_DECIMALS = 6;
+// Match executable-redemption-observers.ts observation windows; this bounds
+// the read block independently of the older reserve-accounting source clock.
+const MACHINE_ACCOUNTING_BLOCK_MAX_AGE_SEC = 10 * 60;
+const MACHINE_ACCOUNTING_BLOCK_FUTURE_SKEW_SEC = 60;
 const DEFAULT_OTHER_THRESHOLD_PCT = 2;
 const DEFAULT_RECONCILIATION_TOLERANCE_PCT = 0.5;
 const ETHEREUM_CHAIN = "ethereum";
@@ -153,6 +167,8 @@ const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH =
   "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
 const REVIEWED_PENDLE_PT_AUSD_MONAD = "143:0x9fc74f8ed616b5baf52a170caa97d6d3898602d1";
 const REDEEMER_MACHINE_SELECTOR = "0x75c60225";
+const MACHINE_LAST_TOTAL_AUM_SELECTOR = "0x74c59381";
+const MACHINE_LAST_GLOBAL_ACCOUNTING_TIME_SELECTOR = "0x1182570e";
 const MACHINE_ACCOUNTING_TOKEN_SELECTOR = "0xda68cf8b";
 const MACHINE_SHARE_TOKEN_SELECTOR = "0x6c9fa59e";
 const IS_WHITELIST_ENABLED_SELECTOR = "0x184d69ab";
@@ -265,6 +281,13 @@ async function fetchMakinaRedemptionState(
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: Ethereum block pin failed");
     }
 
+    const blockHeader = await runAdapterIo(
+      ctx,
+      `makina-accounting-block-header:${blockNumber}`,
+      () => fetchEvmBlockHeader(ETHEREUM_CHAIN, blockNumber, rpcOptions),
+      { signal },
+    );
+
     const [reads, beaconSlot] = await Promise.all([
       fetchOnchainMulticall3({
         chain: ETHEREUM_CHAIN,
@@ -274,6 +297,8 @@ async function fetchMakinaRedemptionState(
         calls: [
           { label: "redeemer-machine", contract: asyncRedeemerAddress, data: REDEEMER_MACHINE_SELECTOR },
           { label: "machine-accounting-token", contract: machineAddress, data: MACHINE_ACCOUNTING_TOKEN_SELECTOR },
+          { label: "machine-last-total-aum", contract: machineAddress, data: MACHINE_LAST_TOTAL_AUM_SELECTOR },
+          { label: "machine-last-global-accounting-time", contract: machineAddress, data: MACHINE_LAST_GLOBAL_ACCOUNTING_TIME_SELECTOR },
           { label: "machine-share-token", contract: machineAddress, data: MACHINE_SHARE_TOKEN_SELECTOR },
           { label: "machine-idle-usdc", contract: CANONICAL_ETHEREUM_USDC, data: encodeBalanceOfCallData(machineAddress) },
           { label: "redeemer-locked-shares", contract: shareTokenAddress, data: encodeBalanceOfCallData(asyncRedeemerAddress) },
@@ -401,8 +426,26 @@ async function fetchMakinaRedemptionState(
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: route amounts failed decimal normalization");
     }
 
+    const machineAumRaw = decodeUint256Word(multicallResultByLabel(reads, "machine-last-total-aum"));
+    const machineAccountedAt = readSafeOnchainNumber(decodeUint256Word(
+      multicallResultByLabel(reads, "machine-last-global-accounting-time"),
+    ));
+    const machineAumUsd = machineAumRaw == null ? null : decimalNumberFromRaw(machineAumRaw, 6);
+    const readClockSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+    // The identity checks above prove canonical Ethereum USDC and the tracked
+    // share token. Incomplete accounting evidence cannot create another anchor.
+    const machineAccounting = accountingDecimals === 6 && blockHeader != null &&
+      Number.isFinite(readClockSec) && readClockSec > 0 &&
+      blockHeader.timestamp <= readClockSec + MACHINE_ACCOUNTING_BLOCK_FUTURE_SKEW_SEC &&
+      readClockSec - blockHeader.timestamp <= MACHINE_ACCOUNTING_BLOCK_MAX_AGE_SEC &&
+      machineAumUsd != null && machineAumUsd > 0 && machineAccountedAt != null &&
+      machineAccountedAt > 0 && machineAccountedAt <= blockHeader.timestamp
+      ? { aumUsd: machineAumUsd, accountedAt: machineAccountedAt, blockNumber, blockTimestamp: blockHeader.timestamp, blockHash: blockHeader.hash }
+      : undefined;
+
     return {
       state: {
+        ...(machineAccounting ? { machineAccounting } : {}),
         whitelistEnabled,
         sanctionsCheckEnabled,
         minimumFinalizationDelaySec,
@@ -744,7 +787,31 @@ export function adaptMakinaStrategyReserves(
     params.reconciliationTolerancePct ?? DEFAULT_RECONCILIATION_TOLERANCE_PCT;
   let reconciliationAumUsd = currentAumUsd;
   let reconciliationKind = "allocation-net-value-equals-current-aum";
-  if (reconciliationDiffPct > reconciliationTolerancePct) {
+  const machineAccounting = redemptionState?.machineAccounting;
+  const onchainDiffPct = machineAccounting
+    ? Math.abs(netReserveUsd - machineAccounting.aumUsd) / machineAccounting.aumUsd * 100
+    : null;
+  if (machineAccounting) {
+    // lastTotalAum is the actual mint/redeem authority, adjusted for flows.
+    // Never choose an older issuer anchor when the same-run authority disagrees.
+    if (onchainDiffPct == null || onchainDiffPct > reconciliationTolerancePct) {
+      throw new Error(`makina-strategy allocation net value differs from onchain Machine AUM by ${onchainDiffPct?.toFixed(3)}%`);
+    }
+    reconciliationAumUsd = machineAccounting.aumUsd;
+    reconciliationKind = "allocation-net-value-equals-onchain-machine-aum";
+    sourceTimestamp = Math.min(sourceTimestamp, machineAccounting.accountedAt);
+    const reportedDiffPct = lastReportedAumUsd != null && lastReportedAumUsd > 0
+      ? Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100
+      : null;
+    if (reconciliationDiffPct > reconciliationTolerancePct ||
+      (reportedDiffPct != null && reportedDiffPct > reconciliationTolerancePct)) {
+      warnings.push(reserveDegradedWarning(
+        "makina-api-aum-disagreement",
+        `Allocation book reconciles to same-block Machine AUM; issuer current AUM differs by ${reconciliationDiffPct.toFixed(3)}%`
+          + (reportedDiffPct != null ? ` and issuer last reported AUM by ${reportedDiffPct.toFixed(3)}%` : ""),
+      ));
+    }
+  } else if (reconciliationDiffPct > reconciliationTolerancePct) {
     // Makina assembles `aum` on demand from idle balances plus Caliber
     // accounting (docs.makina.finance/concepts/architecture/machine/share-price),
     // so deposits and redemptions move it immediately, while allocation
@@ -857,6 +924,15 @@ export function adaptMakinaStrategyReserves(
         reconciliationKind,
         reconciliationDiffPct,
         reconciliationAumUsd,
+        ...(machineAccounting ? {
+          onchainMachineAumUsd: machineAccounting.aumUsd,
+          onchainMachineAumDiffPct: onchainDiffPct,
+          onchainMachineAccountingTimestamp: machineAccounting.accountedAt,
+          onchainMachineAccountingBlock: machineAccounting.blockNumber,
+          onchainMachineAccountingBlockTimestamp: machineAccounting.blockTimestamp,
+          onchainMachineAccountingBlockHash: machineAccounting.blockHash,
+          onchainMachineAccountingSource: `https://eth.blockscout.com/address/${params.machineAddress}?tab=contract`,
+        } : {}),
         ...(lastReportedAumUsd != null && lastReportedAumUsd > 0
           ? { lastReportedAumDiffPct: Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100 }
           : {}),

@@ -382,6 +382,8 @@ The reserve API and its snapshot display resolver use the existing Worker runtim
 
 Full-catalog consumers use the unchanged shared registry through the private `#pharos-full-catalog` import. Frontend/tooling resolves its canonical JSON wrapper; Wrangler's `[alias]` redirects only the Worker build to the lossless per-record packed loader. That loader inflates complete records sequentially into one reusable buffer before ordinary registry initialization; the generated artifact and decoder are covered by full-cohort equality/hash/registry-view checks and V9 evaluation-build identity. The packed/minified Node 24 Wrangler dry-run reduced the main script from 58.61 MiB to 23.83 MiB. Actual local workerd exercised full 488-record hydration plus all six redemption phases and serial resolution/publication serialization with bounded offline evidence. This does not certify Cloudflare peak-memory fit or production health. [ADR-37](./architecture.md#adr-37) owns the transport contract.
 
+The V9 shadow write facade supports the canonical three-binding cache inserts and the exact held-publication no-op CAS and guarded-health insert. Held guards verify the retained publication clock with read-only queries; no captured write reaches live D1. Batch capture commits only after every statement succeeds and still retains only the four shadow result values, so held attempts neither fail on legitimate binding shapes nor retain another full publication graph.
+
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
 ### D1 Read Snapshots And Pagination

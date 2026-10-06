@@ -15,7 +15,11 @@ const RESERVE_CONFIG_RECOVERY_MAX_COINS = 6;
 const RESERVE_CONFIG_RECOVERY_BUDGET_MS = 2 * 60_000;
 export const RESERVE_CONFIG_RECOVERY_BACKOFF_SEC = 10 * 60;
 
-type FingerprintRow = { stablecoin_id: string; config_fingerprint: string | null };
+type FingerprintRow = {
+  stablecoin_id: string;
+  config_fingerprint: string;
+  binding_source: "snapshot" | "attempt";
+};
 
 /** Partition each proven mismatch once so operator counts name its actual hold. */
 function partitionReserveConfigRecoveries(
@@ -60,9 +64,20 @@ export async function recoverLiveReserveConfigChanges(
     throwIfAborted(leaseSignal);
     const startedMs = Date.now();
     const deadlineMs = startedMs + RESERVE_CONFIG_RECOVERY_BUDGET_MS;
-    // No composition payloads are loaded for the fleet: just fingerprint pairs.
+    // Published bindings take priority. Without one, a recorded prior attempt
+    // still proves a changed existing config; never bootstrap unattempted feeds.
+    // No composition or attempt payloads are loaded, only compact binding rows.
     const rows = await runWithOverloadRetry(() => db.prepare(
-      "SELECT stablecoin_id, config_fingerprint FROM reserve_composition WHERE config_fingerprint IS NOT NULL",
+      `SELECT stablecoin_id, config_fingerprint, 'snapshot' AS binding_source
+         FROM reserve_composition WHERE config_fingerprint IS NOT NULL
+       UNION ALL
+       SELECT s.stablecoin_id, s.config_fingerprint, 'attempt' AS binding_source
+         FROM reserve_sync_state s
+        WHERE s.config_fingerprint IS NOT NULL AND s.last_attempted_at > 0
+          AND NOT EXISTS (
+            SELECT 1 FROM reserve_composition c
+             WHERE c.stablecoin_id = s.stablecoin_id AND c.config_fingerprint IS NOT NULL
+          )`,
     ).all<FingerprintRow>(), 3, leaseSignal);
     const fingerprints = new Map((rows.results ?? []).map((row) => [row.stablecoin_id, row.config_fingerprint]));
     const currentFingerprints = new Map(CONFIGURED_COINS.map((coin) => [coin.id, computeLiveReserveConfigFingerprint(coin.liveReservesConfig!)]));
@@ -77,6 +92,10 @@ export async function recoverLiveReserveConfigChanges(
       })
       : candidates;
     const targetIds = new Set([...selection.targets, ...selection.missingFetcherIds]);
+    const priorBindingSources = { snapshot: 0, attempt: 0 };
+    for (const row of rows.results ?? []) {
+      if (targetIds.has(row.stablecoin_id)) priorBindingSources[row.binding_source]++;
+    }
     const mismatched = CONFIGURED_COINS.filter((coin) => targetIds.has(coin.id));
     const states = await loadReserveSyncStateMap(db, mismatched.map((coin) => coin.id));
     const partition = partitionReserveConfigRecoveries(
@@ -143,6 +162,7 @@ export async function recoverLiveReserveConfigChanges(
     return {
       disposition: warnings.length > 0 ? "config-recovery-partial" : "config-recovery-checked",
       mismatchCount: mismatched.length,
+      priorBindingSources,
       suspendedCount: partition.suspended.length,
       missingFetcherCount: partition.missingFetchers.length,
       backoffCount: partition.backoff.length,
