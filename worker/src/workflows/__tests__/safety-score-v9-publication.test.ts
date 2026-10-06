@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
+import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -62,6 +65,48 @@ function createWorkflowDb() {
   );
   return fixture;
 }
+
+describe("canonical shadow persistence", () => {
+  it("captures a real held write and an accepted replacement without changing live cache rows", async () => {
+    const { db, sqlite } = fixtures.open();
+    const accepted = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 100, publicationGenerationId: "report-cards:v9:accepted" });
+    await persistSafetyScoreV9Publication(db, currentInput(accepted));
+    const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+    const capture = createSafetyScoreV9ShadowCaptureDatabase(db);
+    const health = { schemaVersion: 2 as const, status: "held" as const,
+      acceptedPublicationGenerationId: accepted.publicationGenerationId, acceptedAtSec: 100,
+      attemptedAtSec: 120, heldSinceSec: 120, reasons: [{ code: "redemption-stale" as const }] };
+    await persistSafetyScoreV9Publication(capture.db, {
+      publicationHealth: health, publicationClockSec: 120,
+      publicationAttempt: { schemaVersion: 1, attemptedAtSec: 120, outcome: "held",
+        publicationGenerationId: null, quarantines: [], affectedAssetIds: [] },
+    });
+    expect(JSON.parse(capture.state.cacheWrites.get(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)!.value)).toEqual(health);
+    expect(capture.state.cacheWrites.has(SAFETY_SCORE_V9_CACHE_KEYS.publication)).toBe(false);
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    const replacement = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 200, publicationGenerationId: "report-cards:v9:replacement" });
+    await persistSafetyScoreV9Publication(capture.db, currentInput(replacement));
+    expect(capture.state.cacheWrites.has(SAFETY_SCORE_V9_CACHE_KEYS.publication)).toBe(true);
+    expect(capture.state.cacheKeys.has(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)).toBe(true);
+    expect(capture.state.cacheWrites.has(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)).toBe(false);
+    expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+  });
+
+  it("fails a held clock fence atomically without capturing preceding sidecars or writing live rows", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(SAFETY_SCORE_V9_CACHE_KEYS.publication, "retained", 200);
+    const capture = createSafetyScoreV9ShadowCaptureDatabase(db);
+    await expect(capture.db.batch([
+      capture.db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt, "pending", 210),
+      capture.db.prepare("UPDATE cache SET value = value WHERE key = ? AND updated_at = ?")
+        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication, 100),
+    ])).rejects.toThrow("retained publication clock changed");
+    expect(capture.state.cacheWrites.size).toBe(0);
+    expect(capture.state.cacheKeys.size).toBe(0);
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache").all()).toEqual([{ value: "retained", updated_at: 200 }]);
+  });
+});
 
 async function compileCanonicalPublication(compilerDb: D1Database) {
   for (const [key, value] of [

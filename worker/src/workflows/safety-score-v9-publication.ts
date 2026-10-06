@@ -94,19 +94,41 @@ function isWriteQuery(query: string): boolean {
   );
 }
 
-function captureCacheWrite(
+async function captureCacheWrite(
   statement: CapturedStatement,
   state: ShadowCaptureState,
-): D1Result {
+  db: D1Database,
+): Promise<D1Result> {
   if (!/\bcache\b/iu.test(statement.query)) {
     throw new Error(
       "Safety Score V9 shadow compiler attempted a non-cache D1 write",
     );
   }
 
-  const [key, value, updatedAt] = statement.bindings;
+  const query = statement.query.trim().replace(/\s+/gu, " ");
+  const retainedPublicationGuard = /^UPDATE cache SET value = value WHERE key = \? AND updated_at = \?$/iu.test(query);
+  const heldHealthGuard = /^INSERT INTO cache \(key, value, updated_at\) VALUES \( \?, CASE WHEN EXISTS \( SELECT 1 FROM cache WHERE key = \? AND updated_at = \? \) THEN \? ELSE NULL END, \? \) ON CONFLICT\(key\) DO UPDATE SET /iu.test(query);
+  const key = statement.bindings[0];
+  let value = statement.bindings[1];
+  let updatedAt = statement.bindings[2];
+  if (retainedPublicationGuard || heldHealthGuard) {
+    const publicationKey = retainedPublicationGuard ? key : statement.bindings[1];
+    const acceptedAtSec = retainedPublicationGuard ? value : statement.bindings[2];
+    if (statement.bindings.length !== (retainedPublicationGuard ? 2 : 5)
+      || publicationKey !== SAFETY_SCORE_V9_CACHE_KEYS.publication
+      || typeof acceptedAtSec !== "number"
+      || (heldHealthGuard && key !== SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)) {
+      throw new Error("Safety Score V9 shadow compiler attempted a cache write with unsupported bindings");
+    }
+    const retained = await db.prepare("SELECT updated_at FROM cache WHERE key = ? AND updated_at = ?")
+      .bind(publicationKey, acceptedAtSec).first<{ updated_at: number }>();
+    if (!retained) throw new Error("Safety Score V9 shadow retained publication clock changed");
+    if (retainedPublicationGuard) return emptyD1Result();
+    value = statement.bindings[3];
+    updatedAt = statement.bindings[4];
+  }
   if (
-    statement.bindings.length !== 3 ||
+    (!heldHealthGuard && statement.bindings.length !== 3) ||
     typeof key !== "string" ||
     typeof value !== "string" ||
     typeof updatedAt !== "number"
@@ -156,9 +178,10 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
           )
         ) {
           return async () => {
-            const result = captureCacheWrite(
+            const result = await captureCacheWrite(
               { query, bindings, delegate: target },
               state,
+              db,
             );
             if (property === "first") return null;
             if (property === "raw") return [];
@@ -198,9 +221,12 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
               captured.map((statement) => statement!.delegate),
             );
           }
-          return captured.map((statement) =>
-            captureCacheWrite(statement!, state),
-          );
+          const pending: ShadowCaptureState = { cacheWrites: new Map(state.cacheWrites), cacheKeys: new Set(state.cacheKeys) };
+          const results = [];
+          for (const statement of captured) results.push(await captureCacheWrite(statement!, pending, db));
+          state.cacheWrites = pending.cacheWrites;
+          state.cacheKeys = pending.cacheKeys;
+          return results;
         };
       }
       const value = Reflect.get(target, property, target);
