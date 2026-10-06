@@ -72,6 +72,7 @@ interface PendingDrainOptions {
   maxPriority?: number | null;
   softDeadlineAtMs?: number | null;
   markTelegramDeliveryStarted?: () => void;
+  maintenanceResult?: PendingQueueMaintenanceResult;
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
@@ -129,24 +130,32 @@ function appendPendingTargetStatus(
 }
 
 
-async function reconcileTerminalTargetRows(db: D1Database, nowSec: number): Promise<void> {
-  await db
+async function reconcileTerminalTargetRows(db: D1Database, nowSec: number): Promise<number> {
+  const result = await db
     .prepare(
       `UPDATE telegram_pending_alerts
           SET delivery_state = 'sent',
               delivery_completed_at = COALESCE(delivery_completed_at, ?),
               updated_at = ?
         WHERE delivery_state = 'pending'
-          AND dedupe_key IS NOT NULL
-          AND EXISTS (
-            SELECT 1
-              FROM telegram_alert_job_targets t
-             WHERE t.pending_dedupe_key = telegram_pending_alerts.dedupe_key
-               AND t.status IN ('sent', 'expired')
+          AND id IN (
+            SELECT p.id
+              FROM telegram_pending_alerts p
+             WHERE p.delivery_state = 'pending'
+               AND p.dedupe_key IS NOT NULL
+               AND EXISTS (
+                 SELECT 1
+                   FROM telegram_alert_job_targets t
+                  WHERE t.pending_dedupe_key = p.dedupe_key
+                    AND t.status IN ('sent', 'expired')
+               )
+             ORDER BY p.id ASC
+             LIMIT ?
           )`,
     )
-    .bind(nowSec, nowSec)
+    .bind(nowSec, nowSec, PENDING_DELETE_CHUNK_SIZE)
     .run();
+  return Number(result.meta?.changes ?? 0);
 }
 
 async function selectPendingClaimCandidateIds(
@@ -417,12 +426,27 @@ export async function reconcileStalePendingSending(
       PENDING_CLAIM_TTL_SEC,
       nowSec,
     )));
-  if (changed > 0) {
-    await reconcileTelegramJobTargetFinalDeliveryFromPending(db, nowSec);
-    await reconcileRecapPendingTerminalOutcomes(db, nowSec);
-  }
   return changed;
 }
+export interface PendingQueueMaintenanceResult {
+  staleSendingReconciled: number;
+  targetOutcomesProjected: number;
+  terminalPendingReconciled: number;
+  recapOutcomesProjected: number;
+}
+
+/** Bounded, idempotent queue repair independent of transport eligibility. */
+export async function reconcilePendingQueueMaintenance(
+  db: D1Database,
+  nowSec: number,
+): Promise<PendingQueueMaintenanceResult> {
+  const staleSendingReconciled = await reconcileStalePendingSending(db, nowSec);
+  const targetOutcomesProjected = await reconcileTelegramJobTargetFinalDeliveryFromPending(db, nowSec);
+  const terminalPendingReconciled = await reconcileTerminalTargetRows(db, nowSec);
+  const recapOutcomesProjected = await reconcileRecapPendingTerminalOutcomes(db, nowSec);
+  return { staleSendingReconciled, targetOutcomesProjected, terminalPendingReconciled, recapOutcomesProjected };
+}
+
 
 
 async function claimDuePendingRows(
@@ -459,10 +483,7 @@ export async function drainPendingQueue(
 ): Promise<PendingDrainResult> {
   if (limit <= 0) return emptyDrainResult();
   const nowSec = Math.floor(Date.now() / 1000);
-  await reconcileStalePendingSending(db, nowSec);
-  await reconcileTelegramJobTargetFinalDeliveryFromPending(db, nowSec);
-  await reconcileTerminalTargetRows(db, nowSec);
-  await reconcileRecapPendingTerminalOutcomes(db, nowSec);
+  if (!options.maintenanceResult) await reconcilePendingQueueMaintenance(db, nowSec);
   const globalBackoffUntil = await readTelegramGlobalBackoff(db, nowSec);
   if (globalBackoffUntil != null) {
     return {

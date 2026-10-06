@@ -11,9 +11,11 @@ import {
   cleanupExpiredPendingAlerts,
   drainPendingQueue,
   emptyDrainResult,
+  reconcilePendingQueueMaintenance,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   type PendingCapacitySnapshot,
   type PendingDrainResult,
+  type PendingQueueMaintenanceResult,
 } from "./telegram-pending";
 
 /**
@@ -72,6 +74,8 @@ export interface PendingQueueLifecycleContext {
    * the drain itself.
    */
   drainResult?: PendingDrainResult;
+  /** Pre-plan maintenance already performed by the authoritative path. */
+  maintenanceResult?: PendingQueueMaintenanceResult;
   /** Drain configuration when the lifecycle owns the (due-gated) drain. */
   drain?: {
     botToken: string;
@@ -106,11 +110,14 @@ export async function runPendingQueueLifecycle(
 ): Promise<PendingQueueLifecycleResult> {
   const { db, nowSec, pendingCapacityBefore } = context;
   const pendingEnqueued = context.pendingEnqueued ?? 0;
+  const maintenanceResult = context.maintenanceResult
+    ?? await reconcilePendingQueueMaintenance(db, nowSec);
 
   const drainResult = context.drainResult
     ?? (context.drain && pendingCapacityBefore.due > 0
       ? await drainPendingQueue(db, context.drain.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.drain.signal, {
         softDeadlineAtMs: context.drain.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+        maintenanceResult,
         ...(context.drain.markTelegramDeliveryStarted
           ? { markTelegramDeliveryStarted: context.drain.markTelegramDeliveryStarted }
           : {}),
@@ -130,6 +137,10 @@ export async function runPendingQueueLifecycle(
     context.forceCapacityRefresh === true ||
     archivedExecutionUnknownCount > 0 ||
     expiredCount > 0 ||
+    maintenanceResult.staleSendingReconciled > 0 ||
+    maintenanceResult.targetOutcomesProjected > 0 ||
+    maintenanceResult.terminalPendingReconciled > 0 ||
+    maintenanceResult.recapOutcomesProjected > 0 ||
     changed;
   const pendingCapacityAfter = shouldRefresh
     ? await readTelegramPendingCapacitySnapshot(db, nowSec)

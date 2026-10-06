@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAlertContextLines } from "../telegram-alert-context";
 import { TELEGRAM_CONTEXT_BUDGET_SEC } from "../../lib/telegram/context-freshness";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 const mocks = vi.hoisted(() => ({
   loadActiveAlertSafetySourceAssessment: vi.fn(),
@@ -24,6 +25,10 @@ function safetyAssessment(
     state,
     ageSeconds: 60,
     generation: "safety-v9-alert-source-v1",
+    sourcePublicationGenerationId: "report-cards:v9:v1:test",
+    acceptedPublicationGenerationId: "report-cards:v9:v1:test",
+    freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    assessedAtSec: 61,
     envelope: {
       generation: "safety-v9-alert-source-v1",
       safetyScoreIdentity: { model: "v9", schemaVersion: 1, methodologyVersion: "9.0" },

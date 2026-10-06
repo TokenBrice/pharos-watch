@@ -1,4 +1,5 @@
 import type { DispatchSourceData, DispatchSnapshotState } from "../dispatch-telegram-state";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 export function eventSources(overrides: Partial<DispatchSourceData> = {}): DispatchSourceData {
   return {
@@ -19,6 +20,8 @@ export function eventSnapshots(overrides: Partial<DispatchSnapshotState> = {}): 
     safetySourceAssessment: {
       state: "missing", ageSeconds: null, generation: null, envelope: null,
       failureReason: "v9-snapshot-unavailable",
+      sourcePublicationGenerationId: null, acceptedPublicationGenerationId: null,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, assessedAtSec: 1_800_000_000,
     },
     reserveSourceAssessment: {
       state: "missing", ageSeconds: null, generation: null, envelope: null,

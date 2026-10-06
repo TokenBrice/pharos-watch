@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 import {
   alertSafetyIdentitiesAreComparable,
+  assessAlertSafetyEnvelope,
   assessActiveAlertSafetySource,
   buildActiveAlertSafetyV9SourceEnvelope,
   buildAlertSafetySnapshotEnvelope,
@@ -69,6 +71,12 @@ describe("canonical V9 alert safety source", () => {
     )).toMatchObject({
       state: "corrupt",
       failureReason: "v9-publication-held",
+      sourcePublicationGenerationId: current.safetyScoreIdentity.publicationGenerationId,
+      acceptedPublicationGenerationId: current.publicationHealth.acceptedPublicationGenerationId,
+      generation: getAlertSafetyV9SourceGeneration(),
+      ageSeconds: 0,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      assessedAtSec: held.updatedAt,
       heldSinceSec: current.updatedAt + 60,
       holdReasonCodes: ["dex-stale"],
     });
@@ -239,6 +247,12 @@ describe("persisted V9 alert source envelope", () => {
       envelope: null,
       failureReason: "v9-publication-held",
       heldSinceSec: response.updatedAt,
+      ageSeconds: 60,
+      generation: envelope.generation,
+      sourcePublicationGenerationId: envelope.publicationGenerationId,
+      acceptedPublicationGenerationId: envelope.publicationGenerationId,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      assessedAtSec: response.updatedAt + 60,
       holdReasonCodes: [
         "dex-stale",
         "dex-unavailable",
@@ -267,7 +281,54 @@ describe("persisted V9 alert source envelope", () => {
       failureReason: kind === "legacy" ? "publication-schema-cutover-pending"
         : kind === "missing" ? "v9-snapshot-unavailable" : "v9-snapshot-invalid",
     });
+    const assessment = await loadActiveAlertSafetySourceAssessment(db, response.updatedAt + 60);
+    expect(assessment).toMatchObject({
+      sourcePublicationGenerationId: kind === "mismatched" ? "different-generation" : null,
+      acceptedPublicationGenerationId: envelope.publicationGenerationId,
+      ageSeconds: kind === "mismatched" ? 60 : null,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      assessedAtSec: response.updatedAt + 60,
+    });
     expect(readKeys).not.toContain("report-cards:v9");
+  });
+
+  it.each(["health-read", "source-read", "both-read", "health-invalid", "source-invalid"] as const)("retains successful sibling provenance for %s", async (failure) => {
+    const response = makeWorkerReportCardsV9Response({ updatedAt: 1_700_000_000 });
+    const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+    const db = makeNoopD1({ prepare: () => ({ bind: (key: string) => ({ first: async () => {
+      if (key === "report-cards:v9:publication-health") {
+        if (failure === "health-read" || failure === "both-read") throw new Error("health read failed");
+        return { value: failure === "health-invalid" ? "{" : stableJsonStringifyV1(response.publicationHealth), updated_at: response.publicationHealth.attemptedAtSec };
+      }
+      if (key === "alert-safety-v9-source") {
+        if (failure === "source-read" || failure === "both-read") throw new Error("source read failed");
+        // Cache-write recency must never replace the publication timestamp.
+        return { value: failure === "source-invalid" ? "{" : JSON.stringify(envelope), updated_at: response.updatedAt + 299 };
+      }
+      throw new Error("Full publication must not be read");
+    } }) }) });
+    expect(await loadActiveAlertSafetySourceAssessment(db, response.updatedAt + 300)).toMatchObject({
+      state: "corrupt", envelope: null,
+      failureReason: failure.endsWith("invalid") ? "v9-snapshot-invalid" : "v9-snapshot-read-failed",
+      acceptedPublicationGenerationId: failure === "health-read" || failure === "health-invalid" || failure === "both-read" ? null : envelope.publicationGenerationId,
+      sourcePublicationGenerationId: failure === "source-read" || failure === "source-invalid" || failure === "both-read" ? null : envelope.publicationGenerationId,
+      ageSeconds: failure === "source-read" || failure === "source-invalid" || failure === "both-read" ? null : 300,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      assessedAtSec: response.updatedAt + 300,
+    });
+  });
+
+  it("admits the exact consumer budget boundary and rejects the next second", () => {
+    const response = makeWorkerReportCardsV9Response();
+    const envelope = buildActiveAlertSafetyV9SourceEnvelope(response)!;
+    const boundary = envelope.publishedAt + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
+    expect(assessAlertSafetyEnvelope(envelope, boundary)).toMatchObject({
+      state: "ok", ageSeconds: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      sourcePublicationGenerationId: envelope.publicationGenerationId,
+      acceptedPublicationGenerationId: envelope.publicationGenerationId,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, assessedAtSec: boundary,
+    });
+    expect(assessAlertSafetyEnvelope(envelope, boundary + 1)).toMatchObject({ state: "stale", failureReason: "v9-snapshot-stale" });
   });
 
   it("assesses a persisted envelope with the same staleness rules as the live source", async () => {

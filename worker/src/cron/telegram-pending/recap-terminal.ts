@@ -3,6 +3,7 @@ import {
   type TelegramRecapTerminalOutcome,
 } from "../../lib/telegram/recap-store";
 import type { DeadLetterPendingRow, PendingAlertRow } from "./types";
+import { PENDING_DELETE_CHUNK_SIZE } from "./dead-letter";
 
 type RecapPendingRow = Pick<
   PendingAlertRow | DeadLetterPendingRow,
@@ -22,10 +23,10 @@ export async function projectRecapPendingTerminalOutcome(
   outcome: TelegramRecapTerminalOutcome,
   nowSec: number,
   reason?: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const recapKey = recapKeyForPending(row);
-  if (!recapKey) return;
-  await projectTelegramRecapTerminalOutcome(db, recapKey, outcome, nowSec, reason);
+  if (!recapKey) return false;
+  return projectTelegramRecapTerminalOutcome(db, recapKey, outcome, nowSec, reason);
 }
 
 /**
@@ -45,7 +46,8 @@ export async function reconcileRecapPendingTerminalOutcomes(
        AND pending.delivery_state IN ('sent', 'execution_unknown')
        AND t.status IN ('planned', 'queued')
      ORDER BY pending.id ASC
-  `).all<{
+     LIMIT ?
+  `).bind(PENDING_DELETE_CHUNK_SIZE).all<{
     source_type: string | null;
     source_event_id: string | null;
     delivery_state: "sent" | "execution_unknown";
@@ -54,8 +56,7 @@ export async function reconcileRecapPendingTerminalOutcomes(
   let projected = 0;
   for (const row of rows.results ?? []) {
     const outcome = row.delivery_state === "sent" ? "accepted" : "execution_unknown";
-    await projectRecapPendingTerminalOutcome(db, row, outcome, nowSec, row.last_error_class);
-    projected++;
+    if (await projectRecapPendingTerminalOutcome(db, row, outcome, nowSec, row.last_error_class)) projected++;
   }
   return projected;
 }

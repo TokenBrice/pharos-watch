@@ -35,6 +35,7 @@ import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 import { loadTelegramPendingCapacity } from "../../lib/telegram/pending-capacity";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 const NOW = 1_800_000_000;
 const { open: setupLatestSchema, closeAll } = createLatestSchemaFixtureTracker();
@@ -1246,7 +1247,11 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       snapshotState: {
         reserveSourceAssessment: { state: "ok", ageSeconds: 0, generation: "test", envelope: null },
         reserveSourceUnavailable: false,
-        safetySourceAssessment: { state: "ok", ageSeconds: 0, generation: "test", envelope: null },
+        safetySourceAssessment: {
+          state: "ok", ageSeconds: 0, generation: "test", envelope: null,
+          sourcePublicationGenerationId: null, acceptedPublicationGenerationId: null,
+          freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, assessedAtSec: NOW,
+        },
         safetySnapshotNeedsSeed: false,
       } as never,
       events: sourceEvent!.events,
