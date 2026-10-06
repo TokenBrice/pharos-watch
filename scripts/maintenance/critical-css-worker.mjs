@@ -1,8 +1,11 @@
 import { parentPort, workerData } from "node:worker_threads";
-import { tsImport } from "tsx/esm/api";
+import { register as registerCommonJs } from "tsx/cjs/api";
+import { register as registerEsm } from "tsx/esm/api";
 
-// tsImport registers tsx in this thread (including CommonJS TS support). A .mjs
-// entry also works when the parent uses node --import tsx rather than tsx's CLI.
-const { optimizeCriticalCssBatch } = await tsImport("./inline-homepage-critical-css.ts", import.meta.url);
+// Register in this thread explicitly: Node 24's --import tsx registration is
+// main-thread-only. Avoid tsImport namespaces so Beasties resolves normally.
+registerCommonJs();
+registerEsm();
+const { optimizeCriticalCssBatch } = await import("./inline-homepage-critical-css.ts");
 const results = await optimizeCriticalCssBatch(workerData.outDir, workerData.filePaths);
 parentPort.postMessage(results);
