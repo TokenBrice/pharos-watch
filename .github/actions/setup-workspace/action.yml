@@ -93,14 +93,15 @@ runs:
         package="ripgrep-${version}-x86_64-unknown-linux-musl"
         archive="${RUNNER_TEMP}/${package}.tar.gz"
         root="${RUNNER_TEMP}/pharos-ripgrep-${version}"
-        mkdir -p "${root}/bin"
+        mkdir -p "${root}"
         curl --fail --location --silent --show-error \
           "https://github.com/BurntSushi/ripgrep/releases/download/${version}/${package}.tar.gz" \
           --output "${archive}"
         printf '%s  %s\n' "${sha256}" "${archive}" | sha256sum --check --strict
         tar -xzf "${archive}" -C "${root}" --strip-components=1 "${package}/rg"
-        install -m 755 "${root}/rg" "${root}/bin/rg"
-        echo "${root}/bin" >> "${GITHUB_PATH}"
+        # /usr/local/bin is already on the hosted runner PATH; avoid GITHUB_PATH writes (zizmor github-env).
+        sudo install -m 755 "${root}/rg" /usr/local/bin/rg
+        rg --version
 
     - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key

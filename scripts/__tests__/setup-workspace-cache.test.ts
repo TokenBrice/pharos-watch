@@ -85,8 +85,8 @@ describe("setup-workspace caches", () => {
     const verify = run.indexOf(`printf '%s  %s\\n' "\${sha256}" "\${archive}" | sha256sum --check --strict`);
     expect(verify).toBeGreaterThan(run.indexOf("curl --fail"));
     expect(run.indexOf('tar -xzf "${archive}"')).toBeGreaterThan(verify);
-    expect(run.indexOf('install -m 755 "${root}/rg" "${root}/bin/rg"')).toBeGreaterThan(verify);
-    expect(run).toContain('echo "${root}/bin" >> "${GITHUB_PATH}"');
+    expect(run.indexOf('sudo install -m 755 "${root}/rg" /usr/local/bin/rg')).toBeGreaterThan(verify);
+    expect(run).not.toContain("GITHUB_PATH");
     expect(install["continue-on-error"]).toBeUndefined();
   });
 
