@@ -94,6 +94,10 @@ export function PegScoreDewsOverview() {
             pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
             source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
             is unavailable and recorded as stale.
+            Malformed core persisted inputs quarantine the affected asset before scoring and contagion, while healthy
+            peers publish an exact admitted generation. Its latest row is removed without rewriting sparse or daily
+            history; optional unreadable pool detail only makes that component unavailable. Whole-source failures still
+            withhold the generation, and an empty admitted cohort preserves the previous publication.
           </p>
           <p>
             Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
@@ -130,7 +134,7 @@ export function PegScoreDewsOverview() {
             },
             {
               label: "Failure behavior",
-              value: "PegScore can be null; DEWS returns null when signal coverage is below threshold; stablecoins-cache failure aborts writes, while other source failures or stale DEX liquidity/mint-burn freshness publish partial rows and mark the cron degraded",
+              value: "PegScore can be null; DEWS returns null below signal coverage. Malformed core asset inputs are quarantined with named quality diagnostics while healthy peers publish; unavailable cohort dependencies or no admitted rows hold the previous generation",
             },
         ]}
       />

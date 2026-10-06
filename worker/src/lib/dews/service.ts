@@ -57,9 +57,9 @@ import type {
  * 10. Delete orphan rows for coins removed from the PSI universe.
  * 11. Prune stale rows (signals > 7d, history > 365d).
  *
- * Returns "degraded" status if any non-bootstrap-allowed source failed.
- * Partial results are always written — a failed source reduces coverage but
- * does not abort the entire run.
+ * Whole-source or unscopable cohort failures withhold the accepted generation.
+ * Malformed eligible-asset core inputs are quarantined before scoring and
+ * contagion, so healthy peers can publish with named quality findings.
  *
  * @param db - D1 database handle bound to the Worker environment.
  * @param signal - AbortSignal used for cron timeout and lease-loss propagation.
@@ -76,6 +76,7 @@ export async function computeAndStoreDEWS(
   const sourceFailures: SourceFailure[] = [];
   const sourceCoverage: Record<string, number> = {};
   const malformedPersistedInputs: MalformedPersistedInput[] = [];
+  const quarantinedStablecoinIds = new Set<string>();
   let validationFailures = 0;
   let malformedCoreInputRows = 0;
 
@@ -98,15 +99,18 @@ export async function computeAndStoreDEWS(
     degradesRun: boolean;
   }): void => {
     validationFailures++;
+    const degradesRun = options.degradesRun && (!options.stablecoinId || options.stablecoinId === "aggregate");
     if (options.degradesRun) {
       malformedCoreInputRows++;
+      if (eligibleIds.has(options.stablecoinId)) quarantinedStablecoinIds.add(options.stablecoinId);
     }
     malformedPersistedInputs.push({
       source: options.source,
       context: options.context,
       stablecoinId: options.stablecoinId,
       updatedAt: options.updatedAt ?? null,
-      degradesRun: options.degradesRun,
+      reason: options.reason,
+      degradesRun,
     });
     logMalformedJsonPath({
       scope: "cron",
@@ -117,7 +121,7 @@ export async function computeAndStoreDEWS(
       updatedAt: options.updatedAt ?? null,
       extra: {
         stablecoinId: options.stablecoinId,
-        degradesRun: options.degradesRun,
+        degradesRun,
       },
     });
   };
@@ -159,6 +163,7 @@ export async function computeAndStoreDEWS(
   } = assembled;
   sourceCoverage.stablecoins = eligibleAssets.length;
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
+  for (const stablecoinId of quarantinedStablecoinIds) assetById.delete(stablecoinId);
 
   await reportDewsProgress(reportProgress, "scoring", { validationFailures });
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
@@ -171,8 +176,8 @@ export async function computeAndStoreDEWS(
   });
   await reportDewsProgress(reportProgress, "scoring-complete", { rowsComputed: results.length, validationFailures });
 
-  const degradedByMalformedInputs = malformedCoreInputRows > 0;
-  const degraded = sourceFailures.length > 0 || degradedByMalformedInputs;
+  const degradedByMalformedInputs = malformedPersistedInputs.some((input) => input.degradesRun);
+  const degraded = sourceFailures.length > 0 || degradedByMalformedInputs || results.length === 0;
   const degradedSources = [
     ...sourceFailures.map((failure) => failure.source),
     ...(degradedByMalformedInputs ? ["malformed-persisted-inputs"] : []),
@@ -193,6 +198,7 @@ export async function computeAndStoreDEWS(
     results,
     eligibleIds,
     noCurrentSupplyIds,
+    quarantinedStablecoinIds: [...quarantinedStablecoinIds],
     degradedSources,
     nowSec,
     signal,
@@ -232,6 +238,16 @@ export async function computeAndStoreDEWS(
     },
     metadata: JSON.stringify({
       rowsRead: assets.length + sourceState.dexLiqRows.results.length + sourceState.liqHistRowsRead,
+      reason: degraded
+        ? degradedSources.length > 0
+          ? "dews-cohort-dependency-unavailable"
+          : "dews-no-publishable-assets"
+        : "dews-generation-published",
+      ...(quarantinedStablecoinIds.size > 0 ? {
+        quality: { reason: "dews-asset-inputs-quarantined", reasons: ["dews-asset-inputs-quarantined"] },
+      } : {}),
+      quarantinedStablecoinIds: [...quarantinedStablecoinIds],
+      quarantinedAssetCount: quarantinedStablecoinIds.size,
       rowsWritten: results.length,
       rowsSkippedInsufficientData: insufficientDataCount,
       rowsSkippedNoCurrentSupply: noCurrentSupplyIds.length, rowsRetiredCurrent,

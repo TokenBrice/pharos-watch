@@ -59,6 +59,8 @@ export const StabilityIndexInputDegradationSchema = z.object({
   /** Open depegs the producer could not price: missing severity input, not zero severity. */
   openDepegNoPrice: z.boolean().optional(),
   openDepegsWithoutPrice: z.number().int().nullable().optional(),
+  supplyUnavailableIds: z.array(z.string()).optional(),
+  trendUnavailableIds: z.array(z.string()).optional(),
 });
 
 export const StabilityIndexCurrentSchema = z.object({
@@ -100,6 +102,7 @@ export const StabilityIndexResponseSchema = z.object({
 });
 
 export type StabilityContributor = z.infer<typeof StabilityContributorSchema>;
+export type StabilityIndexInputDegradation = z.infer<typeof StabilityIndexInputDegradationSchema>;
 export type StabilityIndexCurrent = z.infer<typeof StabilityIndexCurrentSchema>;
 export type StabilityIndexResponse = z.infer<typeof StabilityIndexResponseSchema>;
 

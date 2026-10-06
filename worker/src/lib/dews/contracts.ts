@@ -16,6 +16,7 @@ export interface MalformedPersistedInput {
   context: string;
   stablecoinId: string;
   updatedAt: number | null;
+  reason: PersistedJsonDecodeReason;
   degradesRun: boolean;
 }
 
