@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
   configRecovery: vi.fn(),
+  reserveSlotInitialized: false,
+  configRecoveryInitialized: false,
 }));
 
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
@@ -21,15 +23,17 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
 }));
-vi.mock("../hourly-live-reserves", () => ({
-  runFourHourlyReserveSyncSlot: mocks.runReserveSlot,
-}));
+vi.mock("../hourly-live-reserves", () => {
+  mocks.reserveSlotInitialized = true;
+  return { runFourHourlyReserveSyncSlot: mocks.runReserveSlot };
+});
 vi.mock("../context", () => ({
   createScheduledRuntimeContext: mocks.createRuntime,
 }));
-vi.mock("../../../cron/reserve-recovery-config", () => ({
-  recoverLiveReserveConfigChanges: mocks.configRecovery,
-}));
+vi.mock("../../../cron/reserve-recovery-config", () => {
+  mocks.configRecoveryInitialized = true;
+  return { recoverLiveReserveConfigChanges: mocks.configRecovery };
+});
 
 import { runFiveMinuteReserveRecoverySlot } from "../reserve-recovery";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
@@ -77,6 +81,19 @@ describe("reserve recovery mode", () => {
     mocks.claim.mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
   });
+  it("keeps disabled and config-only polls outside the heavy checkpoint replay import graph", async () => {
+    expect(mocks.reserveSlotInitialized).toBe(false);
+    expect(mocks.configRecoveryInitialized).toBe(false);
+    await runFiveMinuteReserveRecoverySlot(runtime("off"));
+    expect(mocks.reserveSlotInitialized).toBe(false);
+    expect(mocks.configRecoveryInitialized).toBe(false);
+
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(mocks.configRecoveryInitialized).toBe(true);
+    expect(mocks.reserveSlotInitialized).toBe(false);
+    expect(mocks.runReserveSlot).not.toHaveBeenCalled();
+  });
+
 
   it.each([true, false])("forwards native capability into targeted recovery only when admitted: %s", async admitted => {
     const value = runtime("recover");

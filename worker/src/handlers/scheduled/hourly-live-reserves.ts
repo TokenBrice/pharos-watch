@@ -18,9 +18,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
  */
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
-import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
-import { runCronSentinel } from "../../cron/cron-sentinel";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 import {
@@ -135,7 +133,12 @@ function buildReserveSyncSlotGroups(
         {
           job: "sync-redemption-backstops",
           errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:",
-          run: (signal) => syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs }),
+          // Static initialization would retain the V9 redemption-policy graph
+          // during every reserve adapter attempt, before this consumer is due.
+          run: async (signal) => {
+            const { syncRedemptionBackstops } = await import("../../cron/sync-redemption-backstops");
+            return syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs });
+          },
         },
       ],
     },
@@ -157,7 +160,12 @@ function buildReserveSyncSlotGroups(
         {
           job: "cron-sentinel",
           errorMessage: "[hourly-live-reserves] Reserve post-sync watchdog failed:",
-          run: (signal) => runCronSentinel(runtime.db, { mode: "reserve-post-sync", signal }),
+          // Keep the multi-mode sentinel graph out of the producer's heap until
+          // its generation has finished and this ordered consumer can execute.
+          run: async (signal) => {
+            const { runCronSentinel } = await import("../../cron/cron-sentinel");
+            return runCronSentinel(runtime.db, { mode: "reserve-post-sync", signal });
+          },
         },
       ],
     },
