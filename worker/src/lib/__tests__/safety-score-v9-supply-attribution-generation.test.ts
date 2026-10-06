@@ -462,6 +462,31 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it("admits a wM maturity wait beyond the default asset timeout and exposes the clipped child deadline", async () => {
+    vi.useFakeTimers();
+    const startedAtMs = Date.now();
+    try {
+      const deadlines: number[] = [];
+      const pending = runBudgetedSupplyAttributionAssets(["ordinary", "wm-m0"], async (asset, signal, deadlineMs) => {
+        deadlines.push(deadlineMs);
+        await sleepWithSignal(asset === "wm-m0" ? 46_000 : 1_000, signal);
+        return asset;
+      }, {
+        assetTimeoutMs: asset => asset === "wm-m0"
+          ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
+          : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
+        executionWindow: { deadlineMs: startedAtMs + 80_000, minimumRemainingMs: 0 },
+      });
+      await vi.runAllTimersAsync();
+      expect(await pending).toEqual([
+        { status: "completed", value: "ordinary" },
+        { status: "completed", value: "wm-m0" },
+      ]);
+      expect(deadlines).toEqual([startedAtMs + 30_000, startedAtMs + 65_000]);
+      expect(Date.now() - startedAtMs).toBe(47_000);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("names window exhaustion for every unattemptable asset", async () => {
     vi.useFakeTimers();
     try {
@@ -506,7 +531,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         .mockResolvedValue({ status: "accepted", attribution: accepted });
       vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt")
         .mockImplementation(async ({ signal }) => {
-          await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs * 2, signal);
+          await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs * 2, signal);
           return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
         });
       const pending = captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {

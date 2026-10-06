@@ -705,7 +705,7 @@ export function reviewedDeploymentObservationTimingIssue(input: {
   ) {
     return {
       code: "cross-chain-skew",
-      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+      failedRouteId: boundaryRouteId(input.deployments, "earliest"),
     };
   }
   if (input.captureStartedAtSec > input.clockSec) {

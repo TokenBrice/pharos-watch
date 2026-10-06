@@ -367,6 +367,7 @@ describe("wM reviewed deployment observer", () => {
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
         executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
+        assetDeadlineMs: startedAtMs + 90_000,
       }, f.deps);
       await vi.advanceTimersByTimeAsync(46_000);
       const attempt = await pending;
@@ -398,7 +399,7 @@ describe("wM reviewed deployment observer", () => {
       }, f.deps);
       await vi.advanceTimersByTimeAsync(46_000);
       expect(await pending).toEqual({ status: "rejected", rejectionCode: "deployment-observation-skew",
-        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+        failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
       vi.useRealTimers();
@@ -427,7 +428,7 @@ describe("wM reviewed deployment observer", () => {
         executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, { ...f.deps, fetchSolanaObservation: async () => ({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 9 }) }))
         .toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
-          failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+          failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
       vi.useRealTimers();
@@ -446,7 +447,28 @@ describe("wM reviewed deployment observer", () => {
           { deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
       }, f.deps);
       expect(attempt).toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
-        failedRouteId: "monad:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+        failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
+      expect(Date.now()).toBe(startedAtMs);
+    } finally {
+      f.metaById.set("wm-m0", f.reviewed);
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([30_000, 60_999])("refuses a repair that exceeds the real %sms asset deadline even with slot headroom", async assetBudgetMs => {
+    vi.useFakeTimers();
+    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
+    try {
+      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
+        executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
+        assetDeadlineMs: startedAtMs + assetBudgetMs,
+      }, f.deps);
+      expect(attempt).toEqual({
+        status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
+        failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      });
       expect(Date.now()).toBe(startedAtMs);
     } finally {
       f.metaById.set("wm-m0", f.reviewed);
