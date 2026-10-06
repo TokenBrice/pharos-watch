@@ -10,7 +10,7 @@ For platform evidence, provide `CLOUDFLARE_API_TOKEN` in the environment with Cl
 npm run ops:cron-delivery -- --minutes 240 --raw
 ```
 
-The helper reads GraphQL `workersInvocationsScheduled`, the delivery/resource-outcome ground truth. It rejects transport, GraphQL, schema and possible truncation failures; reduce the window on truncation. An empty window is absent evidence, not success. Compare `datetime`, `scheduledDatetime`, `cron`, `status` and `cpuTimeUs` against the missing lane clocks. `internalError`, memory/CPU outcomes, and thrown exceptions are platform evidence; child `cron_runs` alone cannot prove the trigger was delivered.
+The helper reads GraphQL `workersInvocationsScheduled`, the delivery/resource-outcome ground truth. It rejects transport, GraphQL, schema and possible truncation failures; reduce the window on truncation. An empty window is absent evidence, not success. Compare `datetime`, `scheduledDatetime`, `cron`, `status` and `cpuTimeUs` against the missing lane clocks. Cloudflare status values other than "success" (internal errors, exceeded memory/CPU, thrown exceptions) are platform evidence; child `cron_runs` alone cannot prove the trigger was delivered.
 
 ## Triage and lost slots
 
