@@ -15,7 +15,7 @@ import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
-import { HeroMobileIdentityDetails, HeroMobileIdentity, HeroVerdict, SafetyGradeHero } from "./hero-card-identity";
+import { HeroMobileIdentityDetails, HeroMobileIdentity, HeroVerdict, SafetyGradeHero, SafetyPartialEvidenceNote } from "./hero-card-identity";
 import {
   HERO_CHIP_BACKING_LABELS,
   HERO_CHIP_GOVERNANCE_LABELS,
@@ -169,6 +169,7 @@ export function HeroCardMobileSection({
           <SafetyGradeHero reportCard={reportCard} mobile />
         </div>
       </div>
+      <SafetyPartialEvidenceNote reportCard={reportCard} />
       <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} />
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />

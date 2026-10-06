@@ -243,6 +243,10 @@ export function SafetyGradeHero({
     );
   }
 
+  // The grade block never shrinks and sits beside the identity column, so it
+  // carries only the grade and score; the partial-evidence note renders full
+  // width below (SafetyPartialEvidenceNote). Inline, the note's width squeezed
+  // the mobile coin name until it broke one letter per line.
   return (
     <div className="flex h-full shrink-0 items-baseline justify-end gap-1.5">
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
@@ -255,17 +259,22 @@ export function SafetyGradeHero({
         </span>
       </ScoreBadgeWrapper>
       {reportCard.score !== null && (
-        <span className={`font-mono text-muted-foreground ${scoreClass}`}>
+        <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
           · {reportCard.score}/100
         </span>
       )}
-      {reportCard.partialEvidence ? (
-        <span className="text-xs text-muted-foreground">
-          Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.map((cause) =>
-            cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
-        </span>
-      ) : null}
     </div>
+  );
+}
+
+/** Full-width partial-evidence qualifier for the hero grade. */
+export function SafetyPartialEvidenceNote({ reportCard }: { reportCard: V9ConsumerCard | null }) {
+  if (!reportCard?.partialEvidence) return null;
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      Partial evidence: pipeline gap · {reportCard.partialEvidence.causes.map((cause) =>
+        cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
+    </p>
   );
 }
 
