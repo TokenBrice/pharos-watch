@@ -256,5 +256,9 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [
   ...V9_SCORE_EVALUATOR_SOURCE_PATHS,
   ...V9_FACT_PRODUCER_SOURCE_PATHS,
+  // Bind the complete metadata bytes and the Worker transport implementation.
+  // The registry fingerprint remains an independent canonical-data identity.
+  "scripts/build-data/generate-worker-stablecoin-catalog.ts",
+  "shared/data/stablecoins/coins.worker-full.generated.json",
+  "worker/src/lib/full-stablecoin-catalog.ts",
 ] as const;
-

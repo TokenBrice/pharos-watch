@@ -73,10 +73,10 @@ export function parseAssignments(toml) {
       continue;
     }
 
-    const assignmentMatch = trimmed.match(/^([A-Za-z0-9_-]+)\s*=\s*(.*)$/);
+    const assignmentMatch = trimmed.match(/^("(?:\\.|[^"\\])*"|'[^']*'|[A-Za-z0-9_-]+)\s*=\s*(.*)$/);
     if (!assignmentMatch) continue;
 
-    const [, key] = assignmentMatch;
+    const key = unquote(assignmentMatch[1]) ?? assignmentMatch[1];
     let value = stripTomlComment(assignmentMatch[2]).trim();
     let bracketDepth = countBracketDelta(value);
     while (bracketDepth > 0 && index + 1 < lines.length) {

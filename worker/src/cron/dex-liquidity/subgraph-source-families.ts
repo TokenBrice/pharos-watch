@@ -1,4 +1,5 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
@@ -408,6 +409,7 @@ export async function fetchUniswapV4Data(
     for (let offset = 0; offset < poolIds.length; offset += 100) {
       const batch = poolIds.slice(offset, offset + 100);
       const batchIds = new Set(batch);
+      let timedOut = false;
       const fetched = await fetchSubgraphEntities<UniswapV4SubgraphPool>({
         subgraphUrl: `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`,
         sourceLabel: "Uniswap V4 exact subgraph",
@@ -436,11 +438,22 @@ export async function fetchUniswapV4Data(
         },
       }).catch((error: unknown) => {
         if (signal?.aborted) throw error;
+        timedOut = timeout.aborted || (error instanceof Error && error.name === "TimeoutError");
         return { failed: true, failureReason: "http" as const };
       });
       if (fetched.failed) {
         if (!result.failedChains.includes(chain)) result.failedChains.push(chain);
         result.failedChainReasons[chain] = fetched.failureReason ?? "http";
+        logWorkerEvent({
+          scope: "handler", level: "warn", event: "uniswap-v4-exact-source-failed",
+          message: "Uniswap V4 exact identity source failed", job: "sync-dex-liquidity",
+          source: "uniswap-v4-subgraph",
+          metadata: {
+            chain, failureReason: result.failedChainReasons[chain],
+            timedOut: timedOut || timeout.aborted,
+            batchOffset: offset, batchSize: batch.length, requestedPoolCount: poolIds.length,
+          },
+        });
         break;
       }
     }

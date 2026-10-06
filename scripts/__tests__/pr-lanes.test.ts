@@ -8,6 +8,7 @@ import { z } from "zod";
 import { execFileSync } from "node:child_process";
 import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrCoverageMatrix, buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
 
 const stepSchema = z.object({
@@ -248,11 +249,15 @@ describe("PR lane manifest", () => {
       const packaging = SETUP_WORKSPACE.runs.steps.find((step) => step.name === "Package required workspace")!;
       const restoring = SETUP_WORKSPACE.runs.steps.find((step) => step.run?.startsWith("tar --zstd -xf"))!;
       const paths = packaging.env.WORKSPACE_PATHS.trim().split("\n");
+      const packedPath = GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "stablecoin-worker-full-catalog")!.outputPaths[0];
+      expect(paths).toContain(packedPath);
+      const packedBytes = JSON.stringify(buildWorkerStablecoinCatalog([{ id: "ci-transport-fixture", evidence: { controls: ["preserved"] } }]));
       for (const file of paths) {
         mkdirSync(dirname(join(source, file)), { recursive: true });
         if (file === "node_modules") mkdirSync(join(source, file));
         else writeFileSync(join(source, file), file);
       }
+      writeFileSync(join(source, packedPath), packedBytes);
       writeFileSync(join(source, "node_modules/tool"), "#!/bin/sh\nexit 0\n");
       chmodSync(join(source, "node_modules/tool"), 0o755);
       symlinkSync("tool", join(source, "node_modules/link"));
@@ -262,10 +267,14 @@ describe("PR lane manifest", () => {
       const env = { ...process.env, RUNNER_TEMP: root, ...packaging.env };
       execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" });
       execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" });
+      expect(readFileSync(join(destination, packedPath), "utf8")).toBe(packedBytes);
       expect(readFileSync(join(destination, paths[1]), "utf8")).toBe(paths[1]);
       expect(statSync(join(destination, "node_modules/tool")).mode & 0o777).toBe(0o755);
       expect(readlinkSync(join(destination, "node_modules/link"))).toBe("tool");
       expect(readFileSync(join(destination, ".tmp/pr-test-plan.json"), "utf8")).toBe(plan);
+      rmSync(join(source, packedPath));
+      expect(() => execFileSync("bash", ["-e", "-c", packaging.run!], { cwd: source, env, stdio: "pipe" })).toThrow();
+      writeFileSync(join(source, packedPath), packedBytes);
       rmSync(join(root, "pharos-workspace/workspace.tar.zst"));
       expect(() => execFileSync("bash", ["-e", "-c", restoring.run!], { cwd: destination, env, stdio: "pipe" })).toThrow();
       rmSync(join(source, paths[1]));

@@ -514,6 +514,8 @@ The lane is registered in `shared/lib/pricing-source-registry-aggregators.ts` wi
 - The new source belongs to the same CG lineage family in `worker/src/lib/price-publish-policy.ts` and `worker/src/lib/depeg-trust-policy.ts`, so severe-downside corroboration still requires an independent non-CG source.
 - Hourly fallback recoveries retain `priceConfidence: "fallback"` when staged in `price_cache`; every later publication revalidates the candidate before it can fill a missing row, and it remains non-depeg-authoritative.
 
+Retained supplemental quotes preserve existing fallback confidence when no primary candidate replaces them; stamping the current publication generation does not promote a low-volume observation to single-source confidence.
+
 Strict primary CoinGecko admission everywhere else is untouched.
 
 ### Zephyr Scanner supplemental lane

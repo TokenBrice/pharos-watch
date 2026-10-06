@@ -138,9 +138,10 @@ function buildReserveSyncSlotGroups(
           errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:",
           // Static initialization would retain the V9 redemption-policy graph
           // during every reserve adapter attempt, before this consumer is due.
-          run: async (signal) => {
+          run: async (signal, reportProgress) => {
+            await reportProgress({ stage: "initializing-redemption-backstops" });
             const { syncRedemptionBackstops } = await import("../../cron/sync-redemption-backstops");
-            return syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs });
+            return syncRedemptionBackstops(runtime.db, signal, { chainRpcs: runtime.chainRpcs }, reportProgress);
           },
         },
       ],

@@ -36,6 +36,7 @@
 /shared/data/stablecoins/coins.client.list.generated.json
 /shared/data/stablecoins/coins.client.detail/
 /shared/data/stablecoins/coins.generated.json
+/shared/data/stablecoins/coins.worker-full.generated.json
 /shared/data/stablecoins/coins.telegram-mini-app.generated.json
 /shared/data/stablecoins/coins.worker-runtime.generated.json
 /shared/data/stablecoins/legacy-llama-redirects.generated.json

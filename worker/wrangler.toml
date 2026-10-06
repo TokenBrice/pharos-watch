@@ -6,12 +6,17 @@ compatibility_date = "2026-04-18"
 # Cloudflare 522s from inside the Worker even when external clients are healthy.
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
+minify = true
+keep_names = true
 
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
   { pattern = "site-api.pharos.watch", custom_domain = true },
   { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
+
+[alias]
+"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
 
 [version_metadata]
 binding = "CF_VERSION_METADATA"

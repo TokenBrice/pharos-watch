@@ -314,6 +314,23 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("omits null optional metadata while preserving known empty dependency coverage", () => {
+    const input = fixture("frax-frax", { score: 70, grade: "B" });
+    const baseline = JSON.stringify(projectSafetyScoreV9Card(input).card);
+    input.sharedBookId = null;
+    input.access = { ...input.access, freezeLookthrough: null };
+    expect(JSON.stringify(projectSafetyScoreV9Card(input).card)).toBe(baseline);
+    input.dependencyCoverage = [];
+    expect(projectSafetyScoreV9Card(input).card.dependencyCoverage).toEqual([]);
+    input.sharedBookId = "reviewed-shared-book";
+    input.dependencyCoverage = [{
+      upstreamLabel: "Unresolved issuer", upstreamAssetId: null, share: null,
+      reason: "Identity remains unverified", sourceAsOf: null, identityVerified: false,
+    }];
+    const card = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card);
+    expect(card.sharedBookId).toBe("reviewed-shared-book");
+    expect(card.dependencyCoverage).toEqual(input.dependencyCoverage);
+  });
   it.each([
     ["stray-percent", "literal%", false],
     ["literal-percent-escape", "parent:gap:literal%20", false],

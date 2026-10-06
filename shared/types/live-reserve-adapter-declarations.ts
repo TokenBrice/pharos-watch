@@ -2212,6 +2212,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       // ASRS 4400 agreed-upon procedures: the report explicitly disclaims an
       // assurance opinion, so the evidence class stays static-validated with
       // issuer-attested origin instead of the independent class.
+      // V3 binds the reviewed September report generation; admission is unchanged.
+      configValidation: configPolicy(["attestation-mix"], [2, 3]),
       sourceModel: "validated-static",
       evidenceClass: "static-validated",
       sourceOriginClass: "issuer-attested",
@@ -2675,6 +2677,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       // Hash-pinned issuer-signed reports (BRLV Fact Finance PoR memo, AUDM
       // issuer-CEO attestation): non-independent tiers, so the evidence class
       // stays static-validated with issuer-attested origin.
+      // V3 binds the reviewed September report generation; admission is unchanged.
+      configValidation: configPolicy(["attestation-mix"], [2, 3]),
       sourceModel: "validated-static",
       evidenceClass: "static-validated",
       sourceOriginClass: "issuer-attested",

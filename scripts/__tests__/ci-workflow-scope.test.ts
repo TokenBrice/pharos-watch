@@ -31,6 +31,26 @@ describe("CI workflow scope", () => {
     expect(check).toBeGreaterThan(build);
     expect(steps[build].env?.PHAROS_RELEASE_PR_TYPECHECKED).toBe("1");
     expect(steps[build].env?.PHAROS_DETAIL_SNAPSHOT_SOURCE).toBe("bulk");
+    expect(steps[build].env?.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
+    expect(steps[build].run).toContain('if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then');
+    expect(steps[build].run?.indexOf("exit 1")).toBeLessThan(steps[build].run!.indexOf("npm run generated:post-refresh"));
+    expect(steps.filter((step) => step.env?.SITE_API_SHARED_SECRET != null)).toHaveLength(1);
+  });
+
+  it("rejects absent bulk credentials before running release generators", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml"));
+    const build = workflow.jobs["pages-release"].steps.find(
+      (step: { name?: string }) => step.name === "Build clean production export",
+    );
+    const credentialGate = build.run.slice(0, build.run.indexOf("npm run generated:post-refresh"));
+    for (const credential of [undefined, "", " \t\n", "test-site-credential"]) {
+      const env = { ...process.env };
+      delete env.SITE_API_SHARED_SECRET;
+      if (credential !== undefined) env.SITE_API_SHARED_SECRET = credential;
+      const result = spawnSync("bash", ["-c", credentialGate], { env, encoding: "utf8" });
+      expect(result.status).toBe(credential === "test-site-credential" ? 0 : 1);
+      expect(result.stdout).not.toContain("test-site-credential");
+    }
   });
 
   it("prepares only pure/history inputs in parallel with the Worker and gates live Pages work", () => {
@@ -75,6 +95,11 @@ describe("CI workflow scope", () => {
       expect(caller.jobs["pages-release"].with.workspace_artifact_name).toBe("${{ needs.pages-prepare.outputs.workspace_artifact_name }}");
     }
     expect(release.on.workflow_call.inputs.workspace_artifact_name).toMatchObject({ required: true, type: "string" });
+    expect(release.on.workflow_call.secrets.SITE_API_SHARED_SECRET).toEqual({ required: true });
+    for (const caller of [deploy, rebuild]) {
+      expect(caller.jobs["pages-release"].secrets.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
+    }
+    expect(release.jobs["pages-release"].env.SITE_API_SHARED_SECRET).toBeUndefined();
     expect(upload?.with).toMatchObject({
       name: "${{ steps.workspace-artifact-name.outputs.name }}", "compression-level": 0, "if-no-files-found": "error",
     });

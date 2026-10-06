@@ -35,6 +35,8 @@ Each digest has four fields produced by the LLM:
 **Dependency:** runs on the daily 08:05 UTC slot, five minutes after `snapshot-psi` writes the daily PSI row at 08:00 UTC
 **Dedup guard:** skips if the latest digest is <1 hour old (bypassed by `force=true`)
 
+See [Failure handling](#failure-handling) for corrective retries, publication holds, and degraded-source behavior.
+
 ### Data collection
 
 The cron assembles a `DigestInputData` object from the collector set below before calling the LLM:
@@ -183,7 +185,7 @@ The corrective retry is field-targeted. It names the rule, field, and excerpt an
 
 Wrapper-owned findings are scanned under `delivery-wrapper` against the fully rendered X or Telegram payload immediately before send/enqueue. Model-owned spans are masked from this second enforcement decision because they have already passed their own mode-aware gate. A hard wrapper finding returns `skipped: editorial-style-wrapper` only for that channel, records bounded `wrapperEditorialAlerts` in cron metadata, and never calls the model. Telegram scans the cemetery appendix separately with the named `literal-cemetery` exemption; the remainder of the rendered payload receives no cemetery exemption. The Worker stores `editorialStyleVersion` and `editorialStyleHash` on each current edition, and the archive API returns those fields as copy provenance. Legacy editions without stored fields are surfaced as `pre-policy` at the API and UI read boundary. Archives remain historical record, byte-identical, and are never edited or retroactively tagged. See [`runbooks/blocked-digest-edition.md`](./runbooks/blocked-digest-edition.md) for operator triage.
 
-### Failure handling
+## Failure handling
 
 
 If parsing or content validation produces hard issues, the worker sends one corrective retry to the configured model containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Style hard findings use the same retry when enforcement is active; in shadow they remain telemetry-only. Soft-only content issues never trigger a retry. A `stop_reason=max_tokens` stream is treated as a hard failure before parsing. A `stop_reason=refusal` is a distinct policy outcome: pre-output and mid-stream refusals both discard text, skip publication, retain the classifier category for operators, and never count as Anthropic circuit failures.

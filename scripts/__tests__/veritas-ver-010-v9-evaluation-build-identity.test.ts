@@ -4,6 +4,8 @@ import { dirname, extname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { resolveLocalPackageImport } from "../lib/package-imports.mts";
+import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import {
   V9_EVALUATION_BUILD_SOURCE_PATHS,
   buildV9EvaluationBuildManifest,
@@ -25,8 +27,13 @@ const IMPORT_CLOSURE_ALLOWLIST: Record<string, true> = {
 };
 
 function resolveStaticImport(fromPath: string, specifier: string): string | null {
-  if (!specifier.startsWith(".")) return null;
-  const base = posix.normalize(posix.join(posix.dirname(fromPath), specifier));
+  const privateTarget = resolveLocalPackageImport(specifier, REPO_ROOT);
+  if (!privateTarget && !specifier.startsWith(".") && !specifier.startsWith("@shared/")) return null;
+  const base = privateTarget
+    ? posix.normalize(privateTarget.slice(REPO_ROOT.length + 1))
+    : specifier.startsWith("@shared/")
+      ? `shared/${specifier.slice("@shared/".length)}`
+      : posix.normalize(posix.join(posix.dirname(fromPath), specifier));
   const extension = extname(base);
   const candidates = extension
     ? [base, ...(extension === ".js" ? [`${base.slice(0, -3)}.ts`, `${base.slice(0, -3)}.tsx`] : [])]
@@ -103,6 +110,30 @@ function fixtureRoot(): string {
 
 // VER-010: an imported fact producer can change without changing the build manifest.
 describe("VERITAS finding VER-010: evaluation build identity binds imported fact producers", () => {
+  it("binds the configured Worker full-catalog decoder and its transported complete bytes", () => {
+    const configPath = resolve(REPO_ROOT, "worker/wrangler.toml");
+    const alias = parseAssignments(readFileSync(configPath, "utf8"))
+      .find((assignment) => assignment.section === "alias" && assignment.key === "#pharos-full-catalog");
+    expect(alias).toBeDefined();
+    const decoder = posix.normalize(posix.join("worker", unquote(alias?.value) ?? ""));
+    expect(V9_EVALUATION_BUILD_SOURCE_PATHS).toContain(decoder);
+    const packed = runtimeImports(decoder)
+      .map((specifier) => resolveStaticImport(decoder, specifier))
+      .find((path) => path?.endsWith("coins.worker-full.generated.json"));
+    expect(packed).toBeDefined();
+    expect(V9_EVALUATION_BUILD_SOURCE_PATHS).toContain(packed);
+    const root = fixtureRoot();
+    try {
+      const before = buildV9EvaluationBuildManifest(root);
+      writeFileSync(resolve(root, decoder), "changed decoder\n");
+      const changedDecoder = buildV9EvaluationBuildManifest(root);
+      expect(changedDecoder.digest).not.toBe(before.digest);
+      writeFileSync(resolve(root, packed!), "changed full metadata\n");
+      expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(changedDecoder.digest);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("changes when the imported supply-share producer changes", () => {
     const root = fixtureRoot();
     try {

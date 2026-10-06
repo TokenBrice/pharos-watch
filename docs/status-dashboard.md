@@ -185,6 +185,8 @@ Probe groups are sourced from `shared/lib/api-endpoints/`:
 
 Source: `worker/src/api/status.ts`
 
+The [history endpoint](#history-endpoint-get-apistatus-history) owns timeline responses and completeness evidence.
+
 Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
@@ -230,6 +232,12 @@ oracle returns a null age and `timestampReason` (`missing-timestamp`, `invalid-t
 existing freshness bands. Captured-run consumers can supply a separate read clock or explicit
 allowance: DEWS uses wall time during hydration so an overlapping producer published after run
 start is not falsely rejected.
+
+Cache freshness sentinels retain strict future-clock rejection with no skew allowance.
+Their validation clock is D1 `unixepoch()` from the same cache SELECT, rather than
+the earlier self-check run clock. A generation published during endpoint probes is
+therefore admissible, while a timestamp ahead of the database read remains invalid.
+The existing caller clock and freshness budgets still own age-band assessment.
 
 Raw status snapshots validate both cache and payload generation clocks, returning `unreadable`
 with a timestamp reason on invalid evidence. Persisted status-state reads return unavailable
@@ -669,7 +677,7 @@ Those rows are pruned by the daily `0 3 * * *` `prune-status-probe-runs` job (`w
 `consecutive_divergent`, `last_divergent_at`, `consecutive_probe_failures`, and `last_probe_failure_at`.
 The legacy `last_alert_at` / `last_probe_alert_at` columns remain in the baseline schema but are no longer written since the alert transport was removed.
 
-### History endpoint (`GET /api/status-history`)
+## History endpoint (`GET /api/status-history`)
 
 Admin machine-readable timeline endpoint for internal tooling and incident audits.
 

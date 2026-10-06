@@ -37,6 +37,29 @@ describe("auto-stage partition", () => {
 });
 
 describe("staged artifact sync", () => {
+  it("regenerates a changed catalog and its packed bytes before hashing the evaluation manifest", () => {
+    let catalogGeneration = 0;
+    let packedGeneration = 0;
+    let evaluationGeneration = 0;
+    const result = syncStagedGeneratedArtifacts({
+      stagedFiles: ["shared/data/stablecoins/coins/usdc-circle.json"],
+      execFile: execReturning(""),
+      log: vi.fn(),
+      runCommand: (command) => {
+        if (command.includes("generate-stablecoin-per-coin-asset.ts")) catalogGeneration += 1;
+        if (command.includes("generate-worker-stablecoin-catalog.ts")) packedGeneration = catalogGeneration;
+        if (command.includes("generate-safety-score-v9-evaluation-build-manifest.ts")) {
+          expect(catalogGeneration).toBe(1);
+          expect(packedGeneration).toBe(catalogGeneration);
+          evaluationGeneration = packedGeneration;
+        }
+        return 0;
+      },
+    });
+    expect(evaluationGeneration).toBe(1);
+    expect(result.regenerated.indexOf("stablecoin-catalog")).toBeLessThan(result.regenerated.indexOf("stablecoin-worker-full-catalog"));
+    expect(result.regenerated.indexOf("stablecoin-worker-full-catalog")).toBeLessThan(result.regenerated.indexOf("safety-score-v9-evaluation-build"));
+  });
   it("removes newly generated glob members after failure, restores tracked bytes, and allows retry", () => {
     const cwd = mkdtempSync(join(tmpdir(), "staged-logo-rollback-"));
     const git = (...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" });
@@ -201,7 +224,7 @@ describe("staged artifact sync", () => {
       log: vi.fn(),
     });
 
-    expect(result.regenerated).toEqual(["safety-score-v9-evaluation-build"]);
+    expect(result.regenerated).toEqual(["stablecoin-catalog", "stablecoin-worker-full-catalog", "safety-score-v9-evaluation-build"]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
       ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
@@ -222,7 +245,7 @@ describe("staged artifact sync", () => {
       log,
     });
 
-    expect(result.regenerated).toEqual(["safety-score-v9-evaluation-build"]);
+    expect(result.regenerated).toEqual(["stablecoin-catalog", "stablecoin-worker-full-catalog", "safety-score-v9-evaluation-build"]);
     expect(result.blocked).toEqual([]);
     expect(runCommand).toHaveBeenCalledWith(
       expect.stringContaining("generate-safety-score-v9-evaluation-build-manifest.ts"),

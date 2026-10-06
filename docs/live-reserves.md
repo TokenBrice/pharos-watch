@@ -380,6 +380,8 @@ The offline release visibility CLI requires an explicit deployed release ref or 
 npm run audit:live-reserve-config-changes -- --base <base-ref>
 ```
 
+AUDD and BRLV config version `3` binds the reviewed September 30, 2026 report generation, replacing the prior August report pins; version `2` remains supported for rollback compatibility. This source-evidence epoch change lets normal fenced config recovery detect incompatible retained August snapshots and fetch the newly reviewed reports. The adapters retain their existing `validated-static` / `static-validated` / `issuer-attested` admission and freshness rules; a config epoch does not itself establish a successful read or refresh the report's examined date.
+
 Six healthy, timely changed feeds can heal in one recovery run; a deferred tail is checked on the next tick. This is not an availability guarantee for failing upstreams or contended producer leases, nor does it move the later Safety Score publication cadence. After deployment, inspect the first relevant recovery execution and its newly admitted snapshots; a green deploy alone is not proof of healing.
 
 ---

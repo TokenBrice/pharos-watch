@@ -17,6 +17,8 @@ on:
         required: true
       CLOUDFLARE_ACCOUNT_ID:
         required: true
+      SITE_API_SHARED_SECRET:
+        required: true
 
 permissions:
   contents: read
@@ -107,8 +109,13 @@ jobs:
           # Cache-only bulk inputs (six concurrent batches) replace 2x488 per-coin
           # GETs; proven byte-identical against production on 2026-10-06.
           PHAROS_DETAIL_SNAPSHOT_SOURCE: bulk
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
+          if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then
+            echo "::error::SITE_API_SHARED_SECRET is required for cache-only bulk detail snapshot acquisition."
+            exit 1
+          fi
           npm run generated:post-refresh
           npx --no-install next build --webpack
           npm run postbuild

@@ -505,6 +505,8 @@ The existing V3 subgraph pages are scoped to canonical tracked deployment curren
 
 Each currency `or` branch includes its own native TVL or Messari liquidity predicate. [Graph Node rejects column predicates alongside `or` at the same filter level](https://github.com/graphprotocol/graph-node/blob/master/graphql/src/store/query.rs); distributing the floor into every branch preserves admission and avoids rejecting the whole source query.
 
+V4 exact-identity failures emit `uniswap-v4-exact-source-failed` with chain, failure reason, timeout flag, batch offset/size and total requested identities. This distinguishes failures in the serial exact pass from a healthy broad scan without logging authenticated URLs or exception text. The existing failed-source label and per-chain deadline remain authoritative.
+
 For a fingerprint without a display fee, both primary and direct-API processing require exactly one source candidate across all actual fees for the chain and currency pair. A known fingerprint fee still requires a unique exact token/fee match. Fee-quality enrichment (including the lowest symbol-pair display fee) cannot select an execution target. Ambiguous fingerprints, conflicting physical packets, missing prices and unsupported deployments remain gated. These producer/matching corrections do not supply missing quotes or backdate observations; any score-bearing admission change is released with Safety Score v10.07.
 
 The legacy 3pool adapter uses a distinct
