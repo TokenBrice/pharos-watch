@@ -538,7 +538,7 @@ Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `co
 
 ```json
 {
-  "currentVersion": "6.31"
+  "currentVersion": "6.32"
 }
 ```
 
@@ -576,7 +576,7 @@ Cross-market peg summary. v6.31: optional `coins[].unknownCoverageSeconds` remov
 
 ```json
 {
-  "currentVersion": "6.31"
+  "currentVersion": "6.32"
 }
 ```
 
@@ -692,7 +692,7 @@ Returns one stablecoin projection from a dated public snapshot.
 
 ### `GET /api/health`
 
-Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide.
+Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts expose nullable `generationId` and `publishedAt` (Unix seconds) from the atomic served-generation sentinel; legacy or fallback evidence leaves both null. Availability budgets remain `maxAge: 3600`, `healthyMaxRatio: 2`, and `healthyMaxAge: 7200`. Safety coverage below 0.75 still produces `cache-quality-degraded: yield-data:safety-snapshot-coverage`. Held safety, including a matching live identity, is healthy only while both yield and original safety clocks stay inside 24 hours, with `yield-safety-publish-time-fallback:safety-snapshot-held`; expiration produces degraded `yield-safety-unrated-serving:safety-snapshot-held`. Missing/unreadable publication health or an accepted-generation mismatch fails closed with `yield-safety-availability-unknown`.
 
 - **Operation ID:** `health`
 - **Path:** `/api/health`
@@ -771,7 +771,7 @@ Returns public Telegram adoption and delivery health aggregates.
 
 ### `GET /api/stability-index`
 
-Returns the current Pharos Stability Index and optional component detail. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete.
+Returns the current Pharos Stability Index and optional component detail. Since 2026-09-28 (PSI v3.64), daily snapshots persist all-null components as null rather than zero. Observed zero remains numeric zero; partial components average only observations and disclose `dailyProvenance.componentSampleCounts`. All-day score averaging and mixed-version breakdown are retained; `componentsUnavailable` identifies unavailable components. Legacy rows without counts remain unknown, not assumed complete. Since PSI v3.66, successful partial samples expose optional `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds` from the stored snapshot alongside `openDepegNoPrice` / `openDepegsWithoutPrice`. Legacy snapshots without omission arrays remain valid. Unavailable current supply leaves denominators, stressed weights and contributors; an unusable aggregate market cap or paired trend denominator preserves the prior sample rather than inventing zero.
 
 - **Operation ID:** `stabilityIndex`
 - **Path:** `/api/stability-index`
@@ -783,8 +783,8 @@ Returns the current Pharos Stability Index and optional component detail. Since 
 
 ```json
 {
-  "currentVersion": "3.65",
-  "methodologyVersion": "3.65"
+  "currentVersion": "3.66",
+  "methodologyVersion": "3.66"
 }
 ```
 
@@ -992,8 +992,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.31",
-  "methodologyVersion": "6.31"
+  "currentVersion": "6.32",
+  "methodologyVersion": "6.32"
 }
 ```
 
