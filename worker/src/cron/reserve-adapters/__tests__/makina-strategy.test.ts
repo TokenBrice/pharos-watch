@@ -179,6 +179,48 @@ describe("makina-strategy adapter", () => {
     );
   });
 
+  it("reconciles the captured API disagreement against same-run Machine accounting", () => {
+    const strategy = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-strategy-post-redeem.json"), "utf8"));
+    const allocations = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-allocations-post-redeem.json"), "utf8"));
+    const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS, {
+      ...REDEMPTION_STATE,
+      machineAccounting: { aumUsd: 1895417.733106, accountedAt: 1791278999, blockNumber: 26134765, blockTimestamp: 1791306971 },
+    });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(1895179.12611, 6);
+    expect(result.metadata?.details?.reconciliationAumUsd).toBe(1895417.733106);
+    expect(result.metadata?.details?.reconciliationKind).toBe("allocation-net-value-equals-onchain-machine-aum");
+    expectWarningEffect(result, "makina-api-aum-disagreement", "degraded");
+    expect(result.metadata?.sourceTimestamp).toBe(1791278963);
+  });
+
+  it("rejects onchain disagreement even when an older API AUM matches", () => {
+    expect(() => adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS, {
+      ...REDEMPTION_STATE,
+      machineAccounting: { aumUsd: 12000, accountedAt: 1785310900, blockNumber: 25646765, blockTimestamp: 1785311000 },
+    })).toThrow(/differs from onchain Machine AUM/);
+  });
+
+  it("preserves the older global-accounting freshness bound after a position refresh and flow", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    for (const position of allocations.data.positions) position.updated_at = 1785310775;
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS, {
+      ...REDEMPTION_STATE,
+      machineAccounting: { aumUsd: 11000, accountedAt: 1785310700, blockNumber: 25646765, blockTimestamp: 1785311000 },
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(1785310700);
+  });
+
+  it("bounds source freshness by onchain global accounting instead of its read block", () => {
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    for (const position of allocations.data.positions) position.updated_at = 1785310739;
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS, {
+      ...REDEMPTION_STATE,
+      machineAccounting: { aumUsd: 11000, accountedAt: 1785310740, blockNumber: 25646765, blockTimestamp: 1785311000 },
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(1785310739);
+    expect(result.metadata?.details?.onchainMachineAccountingTimestamp).toBe(1785310740);
+  });
+
   it("passes shared adapter output validation", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 

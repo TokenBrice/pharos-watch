@@ -1,11 +1,14 @@
 {
   "liveReservesConfig": {
     "adapter": "matrixdock-stbt",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "stbt-matrixdock",
     "display": { "url": "https://www.matrixdock.com/stbt", "label": "Matrixdock STBT issuer reserve dashboard" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://www.matrixdock.com/stbt" } }
+    "inputs": {
+      "primary": { "kind": "http-json", "url": "https://www.matrixdock.com/bond/anon/website/api/v1/stats" },
+      "fallbacks": [{ "kind": "http-json", "url": "https://app.matrixdock.com/bond/anon/website/api/v1/stats" }]
+    }
   },
   "id": "stbt-matrixdock",
   "name": "Matrixdock Short-Term Treasury Bill Token",

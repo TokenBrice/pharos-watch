@@ -1,4 +1,4 @@
-/** Config refresh repairs existing evidence only; new bindings use the regular producer. */
+/** Config refresh repairs proven prior bindings only; new bindings use the regular producer. */
 export function selectConfigRecoveryTargets(
   previous: ReadonlyMap<string, string | null>,
   current: ReadonlyMap<string, string>,

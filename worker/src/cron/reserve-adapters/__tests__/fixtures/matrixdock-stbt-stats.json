@@ -1,0 +1,43 @@
+{
+  "code": 0,
+  "data": {
+    "asset_nav": "23790631.16",
+    "asset_nav_repo": "0",
+    "asset_nav_t_bill": "22414696.63",
+    "asset_nav_buidl": "488786.83",
+    "asset_nav_ustb": "784780.16",
+    "asset_nav_cash_reserve": "102367.54",
+    "asset_repo_per": "0",
+    "asset_t_bill_per": "0.942165",
+    "asset_buidl_per": "0.020545",
+    "asset_ustb_per": "0.032987",
+    "asset_cash_reserve_per": "0.004303",
+    "stbt_total_supply": "23604674.414750902935317681",
+    "stbt_por": "23791487.76",
+    "stbt": {
+      "stbt_repo": "0",
+      "stbt_t_bill": "22414696.63",
+      "stbt_buidl": "488786.83",
+      "stbt_ustb": "701190.9548",
+      "stbt_cash_reserve": "0",
+      "stbt_repo_per": "0",
+      "stbt_t_bill_per": "0.9496",
+      "stbt_buidl_per": "0.0207",
+      "stbt_ustb_per": "0.0297",
+      "stbt_cash_reserve_per": "0"
+    },
+    "reserve": {
+      "reserve_repo": "0",
+      "reserve_t_bill": "22414696.63",
+      "reserve_buidl": "488786.83",
+      "reserve_ustb": "784780.16",
+      "reserve_cash_reserve": "103224.14",
+      "reserve_repo_per": "0",
+      "reserve_t_bill_per": "0.9421",
+      "reserve_buidl_per": "0.0205",
+      "reserve_ustb_per": "0.033",
+      "reserve_cash_reserve_per": "0.0043"
+    }
+  },
+  "message": ""
+}

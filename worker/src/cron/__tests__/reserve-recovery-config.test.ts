@@ -85,6 +85,61 @@ describe("deploy config reserve recovery", () => {
     expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
+  it("recovers a changed prior failed config without a published snapshot", async () => {
+    const { db, sqlite, fetch } = await seed();
+    sqlite.prepare("DELETE FROM reserve_composition WHERE stablecoin_id = 'coin-0'").run();
+    sqlite.prepare("UPDATE reserve_sync_state SET last_status = 'error', last_success_at = NULL, last_success_attempt_id = NULL, last_error = 'prior config failed' WHERE stablecoin_id = 'coin-0'").run();
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+      mismatchCount: 1, priorBindingSources: { snapshot: 0, attempt: 1 },
+      attempted: ["coin-0"], healed: ["coin-0"], failed: [],
+    });
+    expect(fetch.mock.calls.map(([coin]) => coin.id)).toEqual(["coin-0"]);
+    expect((await loadFreshIndependentLiveReserveMap(db)).get("coin-0")).toEqual(slices);
+  });
+
+  it("leaves a failed current no-snapshot binding to the normal producer after its changed-config attempt", async () => {
+    const { db, sqlite } = await seed();
+    sqlite.prepare("DELETE FROM reserve_composition WHERE stablecoin_id = 'coin-0'").run();
+    const fetch = mockLiveReserveAdapterRegistry(async () => { throw new Error("network unavailable"); });
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+      priorBindingSources: { snapshot: 0, attempt: 1 }, attempted: ["coin-0"], failed: ["coin-0"],
+    });
+    expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_sync_state WHERE stablecoin_id = 'coin-0'").get()).toEqual({
+      config_fingerprint: computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!),
+    });
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + RESERVE_CONFIG_RECOVERY_BACKOFF_SEC * 1_000);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not bootstrap new, unattempted, or unchanged no-snapshot bindings", async () => {
+    const { db, sqlite, fetch } = await seed(0);
+    for (const id of ["coin-0", "coin-1", "coin-2"]) {
+      sqlite.prepare("DELETE FROM reserve_composition WHERE stablecoin_id = ?").run(id);
+    }
+    sqlite.prepare("DELETE FROM reserve_sync_state WHERE stablecoin_id = 'coin-0'").run();
+    sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?, last_attempted_at = NULL WHERE stablecoin_id = 'coin-1'")
+      .run("previous-config");
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("prioritizes a non-null snapshot binding over a changed attempted binding", async () => {
+    const { db, sqlite, fetch } = await seed(0);
+    sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ? WHERE stablecoin_id = 'coin-0'").run("previous-config");
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
+    expect(fetch).not.toHaveBeenCalled();
+
+    sqlite.prepare("UPDATE reserve_composition SET config_fingerprint = ?, fetched_at = fetched_at - 60 WHERE stablecoin_id = 'coin-0'").run("previous-config");
+    sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?, last_attempted_at = last_attempted_at - ? WHERE stablecoin_id = 'coin-0'")
+      .run(computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!), RESERVE_CONFIG_RECOVERY_BACKOFF_SEC);
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
+      mismatchCount: 1, priorBindingSources: { snapshot: 1, attempt: 0 }, attempted: ["coin-0"], healed: ["coin-0"],
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("heals six coins in one run and an over-cap deployment within two runs", async () => {
     const { db, fetch } = await seed(8);
     const first = await recoverLiveReserveConfigChanges(db, signal(), {});

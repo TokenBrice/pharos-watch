@@ -2800,7 +2800,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     // v2: position rows missing `updated_at` now degrade the snapshot instead
     // of publishing unbounded position-accounting freshness.
-    configValidation: CONFIG_COLLATERAL_V1_V2,
+    // v3: pinned Machine AUM takes precedence over the issuer API anchors,
+    // with global-accounting time also bounding source freshness.
+    configValidation: configPolicy(["collateral-mix"], [1, 2, 3]),
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
@@ -3414,13 +3416,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   },
   "matrixdock-stbt": {
-    primaryInputKinds: ["http-html"],
+    primaryInputKinds: ["http-json", "http-html"],
     paramsSchema: noParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "weak-live-probe",
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,

@@ -55,6 +55,8 @@ const HEADER_PREFIX_BYTES = 4096;
  * gate, forcing its provenance to be recorded explicitly.
  */
 const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  "matrixdock-stbt-stats.json":
+    "captured 2026-10-06 from the official Matrixdock STBT /bond/anon/website/api/v1/stats JSON API; frozen issuer USD NAV census has no observation timestamp and cannot carry an HTML-comment capture header",
   "midas-mtbill-transparency.json":
     "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":
@@ -62,6 +64,10 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
   "frax-balance-sheet.json": "JSON cannot carry an HTML-comment capture header",
   "makina-allocations.json": "JSON cannot carry an HTML-comment capture header",
   "makina-strategy.json": "JSON cannot carry an HTML-comment capture header",
+  "makina-strategy-post-redeem.json":
+    "captured 2026-10-06T17:16:49Z from the Makina DUSD strategy API; frozen post-redeem index disagreement regression JSON cannot carry an HTML-comment capture header",
+  "makina-allocations-post-redeem.json":
+    "captured 2026-10-06T17:16:50Z from the Makina DUSD allocation API; frozen post-redeem reconciliation regression JSON cannot carry an HTML-comment capture header",
   "falcon-transparency.json":
     "captured 2026-09-10 (payload snapshot_date 2026-09-10T12:03:02Z, refetched byte-identical 2026-09-11); JSON cannot carry an HTML-comment capture header",
   "fdusd-reserve-report.txt": "signed-report text extract; no capture header was recorded",
