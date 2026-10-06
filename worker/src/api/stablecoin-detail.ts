@@ -10,7 +10,7 @@ import {
   createFreshCacheHitResponse,
   createStaleCacheHitResponse,
 } from "./stablecoin-detail/shared";
-import { applyCuratedDetailAddress } from "./stablecoin-detail/defillama";
+import { applyCuratedDetailAddress, resetDefiLlamaDetailStateForTests } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
 import { enrichMissingDetailPrice } from "./stablecoin-detail/price";
 
@@ -31,6 +31,7 @@ let detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshRespons
 /** @internal Reset isolate-local single-flight coordination so test files can share a process. */
 export function resetStablecoinDetailStateForTests(): void {
   detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshResponse>>();
+  resetDefiLlamaDetailStateForTests();
 }
 
 function responseStatusForbidsBody(status: number): boolean {

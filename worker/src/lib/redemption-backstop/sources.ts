@@ -179,6 +179,7 @@ export async function buildRedemptionBackstopEntry(
   const directQueueObservation = usesLidoEarnQueue && contractAddress
     ? await observeExecutableRedemptionRoute(
         stablecoinId, contractAddress, options.signal ?? new AbortController().signal,
+        undefined, { rpcOptions: options.rpcOptions },
       )
     : null;
   if (usesLidoEarnQueue && !directQueueObservation) {

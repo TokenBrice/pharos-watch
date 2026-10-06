@@ -593,7 +593,8 @@ async function loadDdrRepairCandidate(
        JOIN depeg_resolver_incidents i
          ON i.stablecoin_id = target.stablecoin_id
         AND i.direction = target.direction
-        AND i.peg_currency = CASE
+        AND CASE i.peg_currency WHEN 'REAL' THEN 'BRL' ELSE i.peg_currency END = CASE
+          WHEN target.peg_type = 'peggedREAL' THEN 'BRL'
           WHEN target.peg_type LIKE 'pegged%' THEN substr(target.peg_type, 7)
           ELSE 'USD'
         END

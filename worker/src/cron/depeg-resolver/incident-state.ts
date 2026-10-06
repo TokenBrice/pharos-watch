@@ -4,6 +4,7 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/methodology-versions/depeg-resolver";
+import { getPegTaxonomyByCurrency, getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import type {
   DdrCanonicalIncident,
   DdrLockTiming,
@@ -155,6 +156,28 @@ export async function ensureCanonicalIncidentsForEvents(
   for (const event of events) {
     if (quarantinedIds.has(event.id)) continue;
     if (!byEventId.has(event.id)) byEventId.set(event.id, fallbackIncidentForEvent(event));
+    const incident = byEventId.get(event.id);
+    if (!incident || event.ended_at != null || !incident.policyUniverseIncluded) continue;
+    // Existing public exposures remain immutable. Check only candidates that
+    // could create a new assessment/seal, before lock writes or public projection.
+    const lastState = incident.lockState?.lastState;
+    if (lastState && lastState !== "pending_lock" && lastState !== "lock_deferred") continue;
+    const eventCurrency = getPegTaxonomyByType(event.peg_type)?.currency
+      ?? (event.peg_type.startsWith("pegged") ? event.peg_type.slice(6) : "USD");
+    const incidentCurrency = getPegTaxonomyByCurrency(incident.pegCurrency)?.currency ?? incident.pegCurrency;
+    if (
+      incident.stablecoinId !== event.stablecoin_id
+      || incidentCurrency !== eventCurrency
+      || incident.direction !== event.direction
+      || incident.currentEventId !== event.id
+      || incident.startedAt !== event.started_at
+    ) {
+      quarantined.push({
+        eventId: event.id,
+        reason: `canonical-event-identity-mismatch: incident ${incident.incidentKey} does not match the current source event; explicit repair required`,
+      });
+      byEventId.delete(event.id);
+    }
   }
   return { byEventId, quarantined };
 }

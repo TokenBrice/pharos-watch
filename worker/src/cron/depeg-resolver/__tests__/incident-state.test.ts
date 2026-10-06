@@ -101,6 +101,76 @@ describe("ensureCanonicalIncidentsForEvents", () => {
     expect(byEventId.has(2)).toBe(false);
   });
 
+  it.each([
+    { stablecoinId: "wrong-asset" },
+    { pegCurrency: "EUR" },
+    { direction: "above" as const },
+    { currentEventId: 2 },
+    { startedAt: 1_750_000_001 },
+  ])("quarantines a genuine source identity mismatch and keeps other incidents: %j", async (mismatch) => {
+    const healthy = makeIncident({ eventId: 3, currentEventId: 3, incidentKey: "ddr2:healthy" });
+    const stores = {
+      ensureCanonicalIncidents: vi.fn(async () => [makeIncident(mismatch), healthy]),
+    } as unknown as DdrV2StoreContracts;
+    const result = await ensureCanonicalIncidentsForEvents(
+      stores,
+      {} as D1Database,
+      [makeEventRow(), makeEventRow({ id: 3 })],
+      { ddrRunId: "identity-check", runAt: 1_750_000_100 },
+    );
+    expect(result.quarantined).toEqual([
+      { eventId: 1, reason: expect.stringContaining("canonical-event-identity-mismatch") },
+    ]);
+    expect(result.byEventId.has(1)).toBe(false);
+    expect(result.byEventId.get(3)).toBe(healthy);
+  });
+
+  it.each(["BRL", "REAL"])("keeps BRZ #90801 eligible with canonical or legacy %s currency", async (pegCurrency) => {
+    const incident = makeIncident({
+      eventId: 90801,
+      currentEventId: 90801,
+      stablecoinId: "brz-transfero",
+      pegCurrency,
+      startedAt: 1791202581,
+      incidentKey: "ddr2:3d5eaaedeac881a75c738939d446710f",
+    });
+    const stores = {
+      ensureCanonicalIncidents: vi.fn(async () => [incident]),
+    } as unknown as DdrV2StoreContracts;
+    const result = await ensureCanonicalIncidentsForEvents(
+      stores,
+      {} as D1Database,
+      [makeEventRow({
+        id: 90801,
+        stablecoin_id: "brz-transfero",
+        symbol: "BRZ",
+        peg_type: "peggedREAL",
+        started_at: 1791202581,
+      })],
+      { ddrRunId: "brz-production-state", runAt: 1791271718 },
+    );
+    expect(result.quarantined).toEqual([]);
+    expect(result.byEventId.get(90801)).toBe(incident);
+  });
+
+  it("leaves an existing immutable public exposure outside the new-lock quarantine", async () => {
+    const incident = makeIncident({
+      pegCurrency: "EUR",
+      lockState: { lastState: "frozen", eligibleAt: 1_750_000_000, deferralCount: 0, lastDeferralReason: null },
+    });
+    const stores = {
+      ensureCanonicalIncidents: vi.fn(async () => [incident]),
+    } as unknown as DdrV2StoreContracts;
+    const result = await ensureCanonicalIncidentsForEvents(
+      stores,
+      {} as D1Database,
+      [makeEventRow()],
+      { ddrRunId: "sealed-exposure", runAt: 1_750_000_100 },
+    );
+    expect(result.quarantined).toEqual([]);
+    expect(result.byEventId.get(1)).toBe(incident);
+  });
+
 });
 
 describe("loadPendingPromotionConfirmationTimes", () => {

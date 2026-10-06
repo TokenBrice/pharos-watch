@@ -1,9 +1,11 @@
 import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { z } from "zod";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   type DetailResponseHelpers,
@@ -21,6 +23,26 @@ interface PegMeta extends DetailMeta {
   flags: {
     pegCurrency: string;
   };
+}
+
+// Measured 2026-10-06: USDT 21.6 MB, USDC 22.9 MB before chainBalances
+// removal. The shared 16 MiB default rejects these healthy provider responses.
+export const DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
+
+// Bound materialization across different coins, not just per-coin single-flight:
+// one raw body plus its parsed history graph can occupy about 68 MB.
+let detailMaterializationBudget = new ScheduledFetchBudget(1);
+
+/** @internal Simulate isolate recycling alongside per-coin single-flight state. */
+export function resetDefiLlamaDetailStateForTests(): void {
+  detailMaterializationBudget = new ScheduledFetchBudget(1);
+}
+
+interface DefiLlamaDetailConfig {
+  db: D1Database;
+  stablecoinId: string;
+  llamaId: string;
+  meta: PegMeta | undefined;
 }
 
 type PegBuckets = Record<string, number>;
@@ -217,12 +239,36 @@ export function normalizeDefiLlamaDetailBody(
 }
 
 export async function handleDefiLlamaDetail(
-  config: {
-    db: D1Database;
-    stablecoinId: string;
-    llamaId: string;
-    meta: PegMeta | undefined;
-  },
+  config: DefiLlamaDetailConfig,
+  detail: DetailResponseHelpers,
+): Promise<Response> {
+  const admissionTimeout = createTimeoutSignal({
+    timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
+    timeoutReason: new DOMException("DefiLlama detail materialization queue timed out", "TimeoutError"),
+  });
+  let release: () => void;
+  try {
+    release = await detailMaterializationBudget.acquire(1, admissionTimeout.signal);
+  } catch (err) {
+    // Local contention is not an upstream failure and must not trip the source
+    // circuit or admit a half-open probe that never reaches the provider.
+    logUpstreamException("defillama-detail-admission", config.stablecoinId, err);
+    const fallback = await detail.trySupplyHistoryFallback("defillama-detail-admission-timeout");
+    if (fallback) return fallback;
+    return detail.staleCacheOrError(503, "DefiLlama detail refresh capacity unavailable");
+  } finally {
+    admissionTimeout.dispose();
+  }
+
+  try {
+    return await fetchAndNormalizeDefiLlamaDetail(config, detail);
+  } finally {
+    release();
+  }
+}
+
+async function fetchAndNormalizeDefiLlamaDetail(
+  config: DefiLlamaDetailConfig,
   detail: DetailResponseHelpers,
 ): Promise<Response> {
   const dlDetailAllowed = await shouldAttemptFetch(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL);
@@ -237,11 +283,19 @@ export async function handleDefiLlamaDetail(
       `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(config.llamaId)}`,
       undefined,
       DETAIL_UPSTREAM_MAX_RETRIES,
-      { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
+      {
+        timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
+        maxResponseBytes: DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES,
+        passthrough404: true,
+      },
     );
 
     if (!result?.response.ok) {
-      await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+      // A missing asset is an id-local data failure, not a provider outage.
+      // Keep it unavailable/fallback-only without poisoning other coins.
+      if (result?.response.status !== 404) {
+        await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+      }
       logUpstreamFailure(
         "defillama-stablecoin-detail",
         config.stablecoinId,

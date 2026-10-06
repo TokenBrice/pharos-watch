@@ -128,6 +128,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 detail cache rows and circuit-breaker state are authoritative across isolates.",
   },
   {
+    sourcePath: "worker/src/api/stablecoin-detail/defillama.ts",
+    stateNames: ["detailMaterializationBudget"],
+    owner: "DefiLlama detail materialization",
+    kind: "coordination",
+    resetOrTtl: "One active fetch/normalize operation per isolate; waiters expire after 12 seconds, allocations release on settlement, and state resets with the isolate or the detail test reset hook.",
+    durableTruth: "D1 detail cache rows and provider circuit state are authoritative; this gate only bounds simultaneous body materialization.",
+  },
+  {
     sourcePath: "worker/src/cron/depeg-resolver/utils.ts",
     stateNames: [
       "v9DependencyImpairmentByCoin",

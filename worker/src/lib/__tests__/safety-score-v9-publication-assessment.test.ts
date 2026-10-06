@@ -445,6 +445,43 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
+  it("counts downstream quarantine impact before capping the incident hold reasons", () => {
+    const ids = Array.from({ length: 396 }, (_, index) => `asset-${String(index).padStart(3, "0")}`);
+    const directIds = ids.slice(0, 39);
+    const affectedIds = ids.slice(0, 59);
+    const publication = candidate(ids.map((id, index) => index < 59
+      ? producerFailedCard({ id, score: null, grade: null })
+      : makeWorkerV9Card({ id, score: 80, grade: "A-" })));
+    const input = {
+      inputHealth: currentInputHealth(),
+      candidate: publication,
+      acceptedPublication: null,
+      coverageFloors: [
+        { id: "active-result-count", status: "pass" as const, observed: 396, required: "= 396", detail: "complete census" },
+        { id: "minimum-rateable-assets", status: "pass" as const, observed: 337, required: ">= 271", detail: "rateability floor met" },
+      ],
+      quarantinedAssetIds: directIds,
+    };
+
+    // The direct failures alone fit within the 10% allowance.
+    expect(assessV9Publication(input)).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: directIds,
+    });
+    // Their dependent closure does not, even though both coverage floors pass.
+    const assessment = assessV9Publication({
+      ...input,
+      quarantineAffectedAssetIds: affectedIds,
+    });
+    expect(assessment.decision).toBe("hold");
+    expect(assessment.reasons).toEqual(affectedIds.slice(0, 24).map(assetId => ({
+      code: "producer-failed-pipeline-gap", assetId, source: "reason",
+      reasonCode: "missing-pillar-evidence", path: "asset-compilation", effect: "pipeline-gap",
+    })));
+    expect(assessment.affectedAssetIds).toEqual(affectedIds);
+  });
+
   it("rejects a direct quarantine that names no candidate asset", () => {
     const input = {
       inputHealth: currentInputHealth(), candidate: candidate(),

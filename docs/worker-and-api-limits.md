@@ -294,6 +294,7 @@ Measured 2026-09-23 by calling the same public endpoints from a workstation with
 
 | Source (Worker call site) | Endpoint shape | Measured | Cap | Constant |
 | --- | --- | --- | --- | --- |
+| DeFiLlama stablecoin detail | `GET /stablecoin/:llamaId`, no custom headers | measured 2026-10-06: USDT 21,582,084 B; USDC 22,940,753 B | `32 MiB` (≈1.46x the larger body) | `DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES` (`stablecoin-detail/defillama.ts`) |
 | DeFiLlama Yields | `GET /pools` | 11,816,252 B / 17,188 pools | `16 MiB` (≈1.4x) | `DEFILLAMA_YIELDS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
 | DeFiLlama Protocols | `GET /protocols` | 8,911,702 B / 8,339 rows | `12 MiB` (≈1.4x) | `DEFILLAMA_PROTOCOLS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
 | Curve `getPools/all/:chain` | 14 chain bodies, 4 at a time | 4,806,780 B (ethereum, largest) | `8 MiB` (≈1.75x) | `CURVE_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
@@ -304,6 +305,10 @@ Measured 2026-09-23 by calling the same public endpoints from a workstation with
 | Balancer `api-v3.balancer.fi` GraphQL | `first: 1000` pool page | 182,322 B / 246 pools (≈740 B/row) | `4 MiB` | `BALANCER_MAX_RESPONSE_BYTES` (`fetch-balancer.ts`) |
 | Orca `api.orca.so/v2/solana/pools` | `size=200` | 671,680 B / 200 rows (declared `162,596 B` compressed) | `4 MiB` (≈6x) | `ORCA_MAX_RESPONSE_BYTES` (`fetch-orca.ts`) |
 | Fluid tickers | `GET /v2/:chainId/dexes/stats/tickers` | 15,029 B (ethereum, largest of six chains) | `256 KiB` (≈17x) | `FLUID_MAX_RESPONSE_BYTES` (`fetch-fluid.ts`) |
+
+DefiLlama detail needs more than the shared default because its unused `chainBalances` history accounts for about 98% of flagship payloads. The detail-specific cap remains fail-closed, keeps the 12-second per-attempt body timeout and two retries, and leaves the shared default unchanged. Normalization removes `chainBalances` before response/cache publication; the separate 1.9 MB D1 detail-value ceiling is unchanged. An isolate-wide FIFO gate admits one detail fetch/normalize operation at a time (including different coins), preventing overlapping large raw bodies and parsed history graphs. Queued requests expire after the existing 12-second upstream timeout and use the existing stale/supply-history fallback or return `503`; local admission timeout never counts against the provider circuit. A provider `404` is also id-local: the asset remains unavailable/fallback-only without opening the source-wide breaker; transport, parse, rate-limit and server failures retain existing breaker accounting.
+
+The 2026-10-06 USDC capture added approximately 23 MB of raw text and 45 MB of parsed heap in a fresh Node process (about 68 MB combined, not a measurement of Worker peak memory). Recent-week chain-history rows accounted for 181,277 B, leaving roughly 10.6 MB / 59 weeks of linear-growth headroom at the observed rate; new chains can change this estimate. Production isolate memory and the first successful post-deploy probe must still be observed. The breaker is request-driven: after the existing 30-minute cooldown the next admitted detail refresh transitions it to half-open, and a successfully consumed/normalized response closes it and resets consecutive failures.
 
 Overflow semantics (R1-R8: unavailable is not zero, a failed read never becomes a positive claim):
 

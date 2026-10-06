@@ -42,6 +42,7 @@
 | 0254     | `0254_blacklist_transaction_index.sql`                      | Add nullable confirmed within-block Tron transaction position; legacy rows remain unknown until bounded cron enrichment. |
 | 0255     | `0255_depeg_trusted_price_coverage.sql`                     | Add nullable trusted off-peg intervals, last trusted price clock, and current coverage-gap clock; legacy boundaries remain unknown and old Workers keep using named columns. |
 | 0256     | `0256_meteora_dlmm_shadow_quotes.sql`                      | E17: Add isolated DLMM native shadow quotes with enforced score ineligibility; retain all prior native stores unchanged. |
+| 0257     | `0257_ddr_canonical_peg_currency_guard.sql`                 | Replace the DDR seal relational guard with canonical BRL/REAL alias comparisons while preserving all assessment, source-event, link, policy, and timing checks; no stored-row mutation. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -287,6 +288,8 @@ Migration `0252` is pre-Worker compatible: existing writers emit the five known 
 Migration `0254` adds a nullable event column only; old-Worker inserts and reads remain valid. Capture the pre-window Time Travel bookmark, migration ledger, and Worker version before applying it, then deploy the Worker. A Worker-only rollback leaves positions in place and restores conservative ambiguity handling; no D1 restore is needed for a code-only rollback.
 
 Migration `0255` adds nullable columns only, with no row mutation or backfill. Old Workers continue named-column inserts, peak/recovery updates, and event reads unchanged. `EXPECTED_SCHEMA.txt` inventories object names, so its regenerated contents are intentionally unchanged. Before rollout retain the Time Travel bookmark, exact migration ledger and deployed Worker version; apply migration before Worker activation. A Worker-only rollback leaves coverage records in place but suspends their producer updates; on reactivation a gap over 1200 seconds starts a new interval rather than joining across rollback. Restore D1 only for unexpected schema/data mutation, using the verified bookmark.
+
+Migration `0257` replaces only `trg_ddr_public_predictions_relational_guard` in the migration transaction. It aligns `peggedREAL` with canonical `BRL` while retaining compatibility with legacy `REAL` assessment/incident identities; all other relational predicates remain unchanged. Existing sealed predictions and assessments are untouched, and the still-live Worker can seal under either spelling. `EXPECTED_SCHEMA.txt` is intentionally unchanged because the object name is retained. Capture the pre-window Time Travel bookmark, migration ledger, and Worker version; apply before Worker activation and observe the first DDR run. Worker rollback leaves the alias-aware guard installed; restore D1 only for unexpected schema/data mutation with the verified bookmark.
 
 ## Recent Migration Rollback Notes
 
