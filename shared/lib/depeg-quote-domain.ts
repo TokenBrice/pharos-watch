@@ -1,4 +1,5 @@
 import { normalizePegType } from "./peg-rates";
+import type { PersistedNativePegQuote } from "../types/native-peg-quote";
 
 export interface DepegQuoteDomain {
   source?: string;
@@ -24,10 +25,18 @@ export interface NativeEventPriceEvidence extends DepegQuoteDomain {
 }
 
 /** Event peaks have no observation clock and cannot establish a contemporaneous quote. */
-export function getNativeEventPrice(event: NativeEventPriceEvidence, asOf: number): number | null {
+export function getNativeEventPrice(
+  event: NativeEventPriceEvidence,
+  asOf: number,
+  currentQuote?: PersistedNativePegQuote | null,
+): number | null {
   let price: number | null = null;
   let observedAt = -Infinity;
-  for (const [at, value] of [[event.started_at, event.start_price], [event.ended_at, event.recovery_price]]) {
+  for (const [at, value] of [
+    [event.started_at, event.start_price],
+    [event.ended_at, event.recovery_price],
+    [currentQuote?.observedAt, currentQuote?.value],
+  ]) {
     if (at == null || value == null || !Number.isFinite(at) || !Number.isFinite(value) || value <= 0) continue;
     if (at <= asOf && asOf - at < PSI_NATIVE_EVIDENCE_MAX_AGE_SEC && at > observedAt) {
       price = value;

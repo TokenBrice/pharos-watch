@@ -147,12 +147,12 @@ export function StabilityIndexMethodologySection() {
             {
               label: "Required sources",
               value:
-                "Market-cap totals, active depeg inputs (current stablecoins price, or recent replay-safe price_cache fallback for already-open depegs), and exact DEWS stress-signal rows from the published generation pointer no older than two compute-dews intervals",
+                "Market-cap totals, active depeg inputs (observed USD prices or recent replay-safe price_cache; native events use directly observed per-event CoinGecko quotes retained in D1 or timestamped start/recovery evidence strictly younger than six hours), and exact fresh DEWS stress-signal rows",
             },
             {
               label: "Failure behavior",
               value:
-                "Returns null when market-cap input is missing/<=0; the cron also skips publication when active-depeg or DEWS inputs are unavailable, empty, or stale, and the API serves the last valid value",
+                "Returns null when market-cap input is missing/<=0; the cron preserves the last sample when active-depeg reads or DEWS inputs are unavailable. An unpriced open event is omitted with open-depeg-no-price, never assigned synthetic calm. Native quotes are not inferred from USD prices or FX; PSI adds no network requests",
             },
             {
               label: "Historical replay",

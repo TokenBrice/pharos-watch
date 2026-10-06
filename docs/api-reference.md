@@ -782,8 +782,8 @@ Returns the current Pharos Stability Index and optional component detail. Since 
 
 ```json
 {
-  "currentVersion": "3.64",
-  "methodologyVersion": "3.64"
+  "currentVersion": "3.65",
+  "methodologyVersion": "3.65"
 }
 ```
 

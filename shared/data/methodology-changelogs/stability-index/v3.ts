@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.65",
+    title: "Persisted current native-peg event quotes",
+    date: "2026-10-06",
+    effectiveAt: 1791244800,
+    summary:
+      "Live PSI reads directly observed native quotes retained by the existing depeg producer, without adding network requests to the DB-only lane.",
+    impact: [
+      "Each active native event retains its latest validated CoinGecko value, upstream observation clock, and source in D1 cache",
+      "Live sampling selects the latest native observation at or before evaluation, strictly younger than six hours; absent or stale evidence still discloses open-depeg-no-price",
+      "USD prices and FX cannot synthesize native deviation; producer fetch count and historical replay inputs are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.64",
     title: "Null daily components without fabricated zero",
     date: "2026-09-28",

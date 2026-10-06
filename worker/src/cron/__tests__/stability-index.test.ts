@@ -11,6 +11,8 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeAndStoreStabilityIndex } from "../stability-index";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -197,6 +199,92 @@ describe("computeAndStoreStabilityIndex", () => {
       expect(missing.degradedComponents).toEqual(["open-depeg-no-price"]);
       expect(missing.openDepegsWithoutPrice).toBe(1);
     }
+  });
+
+  it("computes cNGN's long-open native event from the producer's persisted upstream quote", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const id = "cngn-compliant-naira";
+    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 77 * 86400 }] });
+    db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN', start_price = 0.95").run();
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({
+      kind: "ok", updatedAt: now,
+      payload: { peggedAssets: [makeStabilityAsset({ id, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 })] },
+    });
+    await persistActiveNativeEventQuotes(db, new Map([[id, {
+      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
+      vsCurrency: "ngn", price: 0.98, updatedAt: now - 60,
+    }]]));
+    const retained = db.sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`) as { value: string; updated_at: number };
+    expect(JSON.parse(retained.value)).toEqual({ value: 0.98, observedAt: now - 60, source: "coingecko" });
+    expect(retained.updated_at).toBe(now - 60);
+    const result = await computeAndStoreStabilityIndex(db);
+    expect(result.status).toBeUndefined(); // Cron success is implicit unless degraded.
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("psi-sample-published");
+    expect(readInsertedInputSnapshot(db).contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
+    expect(readInsertedInputSnapshot(db).degradedComponents).toEqual([]);
+
+    await persistActiveNativeEventQuotes(db, new Map([[id, {
+      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
+      vsCurrency: "ngn", price: 0.9, updatedAt: now - 120,
+    }]]));
+    expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toEqual({ value: retained.value });
+    db.sqlite.prepare("UPDATE depeg_events SET ended_at = ? WHERE id = 90738").run(now);
+    await persistActiveNativeEventQuotes(db, new Map([[id, {
+      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
+      vsCurrency: "ngn", price: 0.98, updatedAt: now - 60,
+    }]]));
+    expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toBeUndefined();
+  });
+
+  it.each(["absent", "stale", "future", "invalid"] as const)(
+    "keeps open-depeg-no-price for %s persisted native evidence",
+    async (kind) => {
+      const now = Math.floor(Date.now() / 1000);
+      const id = "cngn-compliant-naira";
+      const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 77 * 86400 }] });
+      db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN', start_price = 0.95").run();
+      vi.mocked(loadStablecoinsCache).mockResolvedValue({
+        kind: "ok", updatedAt: now,
+        payload: { peggedAssets: [makeStabilityAsset({ id, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 })] },
+      });
+      if (kind !== "absent") {
+        const observedAt = kind === "stale" ? now - PSI_NATIVE_EVIDENCE_MAX_AGE_SEC : now + 1;
+        db.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+          `${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`,
+          kind === "invalid" ? "{invalid" : JSON.stringify({ value: 0.98, observedAt, source: "coingecko" }),
+          observedAt,
+        );
+      }
+      const result = await computeAndStoreStabilityIndex(db);
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}").reason).toBe("open-depeg-no-price");
+      const snapshot = readInsertedInputSnapshot(db);
+      expect(snapshot.contributors).toEqual([]);
+      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+      expect(snapshot.openDepegsWithoutPrice).toBe(1);
+    },
+  );
+
+  it.each([
+    { price: 0, age: 60, currency: "NGN" },
+    { price: 0.98, age: 86400, currency: "NGN" },
+    { price: 0.98, age: -60, currency: "NGN" },
+    { price: 0.98, age: 60, currency: "EUR" },
+  ])("does not persist invalid, stale, future, or wrong-domain producer quotes: %j", async ({ price, age, currency }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const id = "cngn-compliant-naira";
+    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 86400 }] });
+    db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN'").run();
+    await persistActiveNativeEventQuotes(db, new Map([[id, {
+      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: currency,
+      price, updatedAt: now - age,
+    }]]));
+    expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toBeUndefined();
   });
   it("returns degraded when DEWS dependency is unavailable", async () => {
     const db = makeDb({ dewsUnavailable: true });
