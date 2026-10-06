@@ -2,6 +2,10 @@ name: Pages Preparation
 
 on:
   workflow_call:
+    outputs:
+      workspace_artifact_name:
+        description: Prepared workspace artifact from this producer attempt.
+        value: ${{ jobs.pages-prepare.outputs.workspace_artifact_name }}
 
 permissions:
   contents: read
@@ -10,6 +14,8 @@ jobs:
   pages-prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      workspace_artifact_name: ${{ steps.workspace-artifact-name.outputs.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,6 +31,16 @@ jobs:
         # acquire live snapshots: those belong to the Worker-gated release job.
         # npm run puts node_modules/.bin on PATH for the generators' `tsx` children.
         run: npm run generated:compile-input
+      - name: Resolve prepared workspace artifact name
+        id: workspace-artifact-name
+        env:
+          WORKSPACE_ARTIFACT_NAME: pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        run: |
+          if [[ ! "${WORKSPACE_ARTIFACT_NAME}" =~ ^pages-workspace-production-"${GITHUB_RUN_ID}"-[1-9][0-9]*-"${GITHUB_SHA}"$ ]]; then
+            echo "::error::Invalid prepared workspace artifact name."
+            exit 1
+          fi
+          echo "name=${WORKSPACE_ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
       - name: Package prepared production workspace
         run: |
           mkdir -p "${RUNNER_TEMP}/pharos-pages-workspace"
@@ -36,7 +52,7 @@ jobs:
             -cf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          name: ${{ steps.workspace-artifact-name.outputs.name }}
           path: ${{ runner.temp }}/pharos-pages-workspace/workspace.tar.zst
           if-no-files-found: error
           compression-level: 0

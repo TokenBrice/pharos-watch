@@ -30,6 +30,10 @@ inputs:
     description: Required run-scoped workspace transport (publish, restore, or none).
     required: false
     default: "none"
+  workspace-artifact-name:
+    description: Exact producer-owned workspace artifact name (required for restore).
+    required: false
+    default: ""
   install-deps:
     description: Whether to run npm ci after setup.
     required: false
@@ -59,6 +63,9 @@ inputs:
     default: "false"
 
 outputs:
+  workspace-artifact-name:
+    description: Published workspace artifact name, including the producer attempt.
+    value: ${{ steps.workspace-artifact-name.outputs.name }}
   static-cache-key:
     description: Restore key for a designated workflow writer to save after validation.
     value: ${{ steps.static-cache.outputs.cache-primary-key }}
@@ -149,10 +156,27 @@ runs:
         path: ~/.cache/ms-playwright
         key: browser-cache-${{ runner.os }}-${{ steps.cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json') }}
 
+    - name: Resolve workspace artifact name
+      id: workspace-artifact-name
+      if: ${{ inputs.workspace-artifact == 'publish' || inputs.workspace-artifact == 'restore' }}
+      shell: bash
+      env:
+        WORKSPACE_ARTIFACT_MODE: ${{ inputs.workspace-artifact }}
+        WORKSPACE_ARTIFACT_NAME: ${{ inputs.workspace-artifact-name }}
+      run: |
+        if [ "${WORKSPACE_ARTIFACT_MODE}" = "publish" ]; then
+          WORKSPACE_ARTIFACT_NAME="pr-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}"
+        fi
+        if [[ ! "${WORKSPACE_ARTIFACT_NAME}" =~ ^pr-workspace-"${GITHUB_RUN_ID}"-[1-9][0-9]*-"${GITHUB_SHA}"$ ]]; then
+          echo "::error::Invalid producer workspace artifact name."
+          exit 1
+        fi
+        echo "name=${WORKSPACE_ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+
     - if: ${{ inputs.workspace-artifact == 'restore' }}
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
-        name: pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        name: ${{ steps.workspace-artifact-name.outputs.name }}
         path: ${{ runner.temp }}/pharos-workspace
 
     - if: ${{ inputs.workspace-artifact == 'restore' }}
@@ -208,7 +232,7 @@ runs:
     - if: ${{ inputs.workspace-artifact == 'publish' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        name: ${{ steps.workspace-artifact-name.outputs.name }}
         path: ${{ runner.temp }}/pharos-workspace/workspace.tar.zst
         if-no-files-found: error
         compression-level: 0

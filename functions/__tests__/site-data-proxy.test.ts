@@ -84,6 +84,7 @@ describe("site-data proxy", () => {
     siteApi.json("/api/stablecoins", { z: "last", a: "first" }, 200, {
       "Cache-Control": "public, max-age=60",
       "X-Data-Age": "12",
+      "X-Data-Updated-At": "1700000000.125",
     });
 
     const response = await onRequest(
@@ -91,13 +92,14 @@ describe("site-data proxy", () => {
         headers: { Origin: "https://pharos.watch" },
       })),
     );
-    const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age"]);
+    const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age", "X-Data-Updated-At"]);
     const expected: HttpResponseObservation = {
       status: 200,
       headers: {
         "cache-control": "public, max-age=60",
         "content-type": "application/json",
         "x-data-age": "12",
+        "x-data-updated-at": "1700000000.125",
       },
       bodyKind: "json",
       canonicalBody: { a: "first", z: "last" },

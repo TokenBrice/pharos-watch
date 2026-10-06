@@ -31,6 +31,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "Last-Modified",
   "Warning",
   "X-Data-Age",
+  "X-Data-Updated-At",
   "X-Data-Freshness",
   "X-Data-Freshness-Reason",
   "X-Safety-Score-Status",

@@ -68,28 +68,32 @@ function createJsonResponse(body: string, cacheControl: string): Response {
   });
 }
 
-export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: number): Response {
+export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
   const response = createJsonResponse(
     cachedValue,
     buildPerCoinCacheControl(CACHE_TTL_SECONDS - ageSeconds),
   );
   response.headers.set("X-Data-Age", String(Math.max(0, ageSeconds)));
+  response.headers.set("X-Data-Updated-At", String(updatedAt));
   return response;
 }
 
-export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number): Response {
+export function createStaleCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
   return new Response(cachedValue, {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.noStore,
       "X-Data-Age": String(Math.max(0, ageSeconds)),
+      "X-Data-Updated-At": String(updatedAt),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh scheduled\"",
     },
   });
 }
 
 function createFreshUpstreamResponse(body: string): Response {
-  return createJsonResponse(body, buildPerCoinCacheControl(CACHE_TTL_SECONDS));
+  const response = createJsonResponse(body, buildPerCoinCacheControl(CACHE_TTL_SECONDS));
+  response.headers.set("X-Data-Updated-At", String(Math.floor(Date.now() / 1000)));
+  return response;
 }
 
 function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
@@ -100,6 +104,7 @@ function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.noStore,
       "X-Data-Age": String(ageSeconds),
+      "X-Data-Updated-At": String(cached.updatedAt),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh failed\"",
     },
   });

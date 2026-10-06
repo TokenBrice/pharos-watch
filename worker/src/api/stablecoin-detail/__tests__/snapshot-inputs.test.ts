@@ -76,6 +76,17 @@ describe("cache-only detail snapshot inputs", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("retains absolute source clocks when cache reads cross HTTP second boundaries", async () => {
+    let tick = 0;
+    vi.mocked(Date.now).mockImplementation(() => (NOW + tick++) * 1000);
+    const response = await handleDetailSnapshotInputs(makeDb(),
+      new URL(API_PATHS.stablecoinDetailSnapshotInputs(["usdt-tether"]), "https://site-api.pharos.watch"));
+    expect(await response.json()).toMatchObject({ entries: [{
+      status: "available",
+      updatedAt: { liveSummary: (NOW - 60) * 1000, supplyHistory: (NOW - 120) * 1000 },
+    }] });
+  });
+
   it.each([
     [{ age: DAY }, "detail-cache-too-old"],
     [{ age: -1 }, "detail-cache-invalid-clock"],

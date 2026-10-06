@@ -2,6 +2,7 @@ import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { admitSupplyBuckets } from "@shared/lib/supply";
+import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -76,6 +77,11 @@ export async function enrichMissingDetailPrice(
     const remaining = Math.max(0, Math.floor(API_FRESHNESS_MAX_AGE_SEC.stablecoins - cacheAge));
     const priceFreshness = addFreshnessHeaders({}, canonical.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins);
     headers.set("X-Data-Age", String(Math.max(cacheAge, Number(headers.get("X-Data-Age") ?? 0))));
+    const detailUpdatedAt = headers.get("X-Data-Updated-At");
+    const detailSourceClock = detailUpdatedAt === null ? null : parseDetailSnapshotSourceClock(detailUpdatedAt);
+    if (detailSourceClock !== null) {
+      headers.set("X-Data-Updated-At", String(Math.min(canonical.updatedAt, detailSourceClock)));
+    }
     if (priceFreshness.Warning) headers.append("Warning", priceFreshness.Warning);
     if (priceFreshness["Cache-Control"] === "no-store") headers.set("Cache-Control", "no-store");
     // Bound both browser and edge reuse without clearing stale-history warnings

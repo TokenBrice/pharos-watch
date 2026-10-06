@@ -106,6 +106,7 @@ Endpoints backed by the cron cache include these additional headers:
 | Header       | Description                                                                                                                                                             |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `X-Data-Age` | Seconds elapsed since the authoritative producer observation; `unavailable` when that clock cannot be established |
+| `X-Data-Updated-At` | Absolute source update time in Unix seconds, when known; unaffected by edge residence or rewritten HTTP `Date`. Detail enrichment retains the older detail/publication clock. |
 | `Warning`    | Freshness warning (`110`) when cached data is older than the generic freshness runway, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
 | `X-Data-Freshness` | `stale` when retained successful producer history is absent, or `unknown` when its lookup failed |
 | `X-Data-Freshness-Reason` | Machine-readable unavailable-authority reason: `producer-history-missing` or `freshness-lookup-failed` |

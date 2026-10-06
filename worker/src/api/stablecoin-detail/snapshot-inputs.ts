@@ -80,14 +80,11 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
 
       // Curated addresses never enter the projection. Use the exact same enrichment
       // and schema/projection as the per-coin route, but never call its refresh router.
-      let detailResponse = createFreshCacheHitResponse(cached.value, age);
+      let detailResponse = createFreshCacheHitResponse(cached.value, age, cached.updatedAt);
       if (isActiveStablecoinMeta(meta)) {
         detailResponse = await enrichMissingDetailPrice(db, id, detailResponse, publication);
       }
       const detail: unknown = await detailResponse.json();
-      // Cloudflare supplies second-resolution Date on HTTP responses; reproduce it
-      // here before applying the generator's shared body/header clock algorithm.
-      detailResponse.headers.set("Date", new Date(Math.floor(Date.now() / 1000) * 1000).toUTCString());
       const historyResponse = await handleSupplyHistory(
         db,
         new URL(API_PATHS.supplyHistory(id, DETAIL_SNAPSHOT_SUPPLY_HISTORY_DAYS), url.origin),
@@ -98,7 +95,6 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
         entries.push({ id, status: "unavailable", reason: "invalid-cache-input", sources });
         continue;
       }
-      historyResponse.headers.set("Date", new Date(Math.floor(Date.now() / 1000) * 1000).toUTCString());
       const liveSummaryUpdatedAt = detailSnapshotSourceUpdatedAt(detail, detailResponse.headers);
       const supplyHistoryUpdatedAt = detailSnapshotSourceUpdatedAt(history, historyResponse.headers);
       const entry: DetailSnapshotInputEntry = {
