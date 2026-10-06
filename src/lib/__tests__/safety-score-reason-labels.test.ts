@@ -42,6 +42,19 @@ describe("safety score reason labels", () => {
     );
   });
 
+  it("describes a DEX venue share as reference exit-request coverage, not supply", () => {
+    // Producer shape: domainKey(`dex-protocol`) + commonModeReasonQualifier("dex-protocol", "moderate", …).
+    const dex = humanizeSafetyScoreReason(
+      "This asset's own reviewed share is 18.4% at dex-protocol:uniswap-v3, reviewed non-mature exposure from 10% to below 25% (also 12 reviewed paths across 9 assets share dex-protocol:uniswap-v3).",
+    );
+    expect(dex).toBe(
+      "The Uniswap V3 venue can fill up to 18.4% of the reference exit request (upper bound; exit-access exposure; 10%–25% band), shared by 12 paths across 9 assets",
+    );
+    expect(dex).not.toMatch(/reviewed supply|dex-protocol:/);
+    expect(humanizeSafetyScoreReason("12 reviewed paths across 9 assets share dex-protocol:curve, unknown venue concentration."))
+      .not.toContain("dex-protocol:");
+  });
+
   it("rewrites condition reasons without leaking keys", () => {
     expect(humanizeSafetyScoreReason("unsafe-backing condition at mechanism:loss-absorption."))
       .toBe("Unsafe backing condition flagged in the loss absorption review");

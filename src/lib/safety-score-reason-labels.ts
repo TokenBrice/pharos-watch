@@ -62,7 +62,7 @@ const ROUTE_TYPE_LABELS: Record<string, string> = {
 
 /** Embedded evaluator keys. `.` is excluded so a sentence period never joins the key. */
 const EVALUATOR_KEY_PATTERN =
-  /\b(?:chain|bridge-meta|bridge-route|mint-meta|mint-control|upgrade-control|mechanism|oracle|redemption-rail|redemption|dex|common-mode|venue|reserve)(?::[A-Za-z0-9%_~+-]+)+/g;
+  /\b(?:chain|bridge-meta|bridge-route|mint-meta|mint-control|upgrade-control|mechanism|oracle|redemption-rail|redemption|dex-protocol|dex|common-mode|venue|reserve)(?::[A-Za-z0-9%_~+-]+)+/g;
 const CAMEL_CASE_PATTERN = /\b[a-z]+(?:[A-Z][a-z0-9]*)+\b/g;
 const VERSION_PIN_PATTERN = /\bv\d+(?:\.\d+)?\s+/g;
 
@@ -122,6 +122,10 @@ function describeKeyNoun(key: string): KeyNoun {
   }
   if (key.startsWith("oracle:")) {
     return { one: `the ${slugWords(key.slice("oracle:".length))} oracle`, many: null, kind: key };
+  }
+  // `dex-protocol:<venue>` is a failure domain (a named venue); `dex:` is a route key.
+  if (key.startsWith("dex-protocol:")) {
+    return { one: `the ${prettifyProtocol(key.slice("dex-protocol:".length))} venue`, many: null, kind: key };
   }
   if (key.startsWith("redemption:") || key.startsWith("dex:")) return describeRouteKey(key);
   if (key.startsWith("mint-control:")) return { one: "a mint control", many: "mint controls", kind: "mint-control" };
@@ -244,22 +248,29 @@ function humanizeReasonParts(rawMessage: string): HumanizedReason {
  * share is deployment- or access-scoped, never a claim on reserves. The
  * producer's qualifier (`commonModeReasonQualifier` in evaluate-set.ts) carries
  * the bound, the severity band and the scope, so the reader text keeps all three.
+ *
+ * DEX venues use a different denominator: `summarizeDexDomainExposure` divides
+ * the venue's executable capacity by the policy's reference exit request, not
+ * by supply, and the reason cites the `.upper` bound (1 until every route is
+ * complete and current), so it always reads as an upper bound on coverage.
  */
 function describeCommonModeShare(share: string, key: string, qualifier: string): string {
-  const upperBound = /\bupper bound\b/.test(qualifier);
   const name = describeEvaluatorKey(key);
+  const range = /from ([\d.]+%) to below ([\d.]+%)/.exec(qualifier);
+  const floor = /at or above ([\d.]+%)/.exec(qualifier);
+  const band = range ? `${range[1]}–${range[2]} band` : floor ? `at or above the ${floor[1]} threshold` : null;
+  if (key.startsWith("dex-protocol:")) {
+    const notes = ["upper bound", "exit-access exposure", band].filter(Boolean).join("; ");
+    return `${name.charAt(0).toUpperCase()}${name.slice(1)} can fill up to ${share} of the reference exit request (${notes})`;
+  }
+  const upperBound = /\bupper bound\b/.test(qualifier);
   const [verb, scope] = key.startsWith("chain:")
     ? [`is deployed on ${name}`, "deployment exposure"]
     : key.startsWith("bridge-route:")
       ? [`relies on ${name} for bridging`, "deployment exposure"]
       : key.startsWith("mint-control:") || key.startsWith("upgrade-control:")
         ? [`sits on deployments controlled by ${name}`, "deployment exposure"]
-        : key.startsWith("dex:")
-          ? [`trades through ${name}`, "exit-access exposure"]
-          : [`is exposed to ${name}`, /\bdeployment\b/.test(qualifier) ? "deployment exposure" : "reviewed exposure"];
-  const range = /from ([\d.]+%) to below ([\d.]+%)/.exec(qualifier);
-  const floor = /at or above ([\d.]+%)/.exec(qualifier);
-  const band = range ? `${range[1]}–${range[2]} band` : floor ? `at or above the ${floor[1]} threshold` : null;
+        : [`is exposed to ${name}`, /\bdeployment\b/.test(qualifier) ? "deployment exposure" : "reviewed exposure"];
   const notes = [upperBound ? "conservative upper bound" : null, scope, band].filter(Boolean).join("; ");
   return `${upperBound ? "Up to " : ""}${share} of reviewed supply ${verb} (${notes})`;
 }
