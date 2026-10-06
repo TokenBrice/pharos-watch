@@ -1,8 +1,11 @@
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
-import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { selectConfigRecoveryTargets } from "../lib/live-reserves/config-recovery-targets";
 import { throwIfAborted } from "../lib/abort";
-import { runCronWithLease } from "../lib/cron-lease-primitives";
+import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease-primitives";
+import {
+  createReserveLeaseOwner,
+  RESERVE_CONFIG_RECOVERY_LEASE_SEC,
+  type ReserveRecoveryPollIdentity,
+} from "../lib/reserve-producer-priority";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { loadReserveSyncStateMap, type ReserveSyncStateRecord } from "../lib/live-reserves/store";
@@ -13,7 +16,6 @@ import { CONFIGURED_COINS, type ConfiguredCoin } from "./sync-live-reserves-shar
 
 const RESERVE_CONFIG_RECOVERY_MAX_COINS = 6;
 const RESERVE_CONFIG_RECOVERY_BUDGET_MS = 2 * 60_000;
-export const RESERVE_CONFIG_RECOVERY_BACKOFF_SEC = 10 * 60;
 
 type FingerprintRow = {
   stablecoin_id: string;
@@ -24,38 +26,36 @@ type FingerprintRow = {
 /** Partition each proven mismatch once so operator counts name its actual hold. */
 function partitionReserveConfigRecoveries(
   coins: readonly ConfiguredCoin[],
-  fingerprints: ReadonlyMap<string, string>,
+  attemptedFingerprints: ReadonlyMap<string, string>,
+  currentFingerprints: ReadonlyMap<string, string>,
   states: ReadonlyMap<string, ReserveSyncStateRecord>,
   missingFetcherIds: ReadonlySet<string>,
-  now: number,
 ) {
   const suspended: string[] = [];
   const missingFetchers: string[] = [];
-  const backoff: string[] = [];
+  const skippedSameFingerprint: string[] = [];
   const due: ConfiguredCoin[] = [];
   for (const coin of coins) {
     const config = coin.liveReservesConfig!;
-    const state = states.get(coin.id);
-    if (config.suspended) {
+    if (attemptedFingerprints.get(coin.id) === currentFingerprints.get(coin.id)) {
+      skippedSameFingerprint.push(coin.id);
+    } else if (config.suspended) {
       suspended.push(coin.id);
     } else if (missingFetcherIds.has(coin.id)) {
       missingFetchers.push(coin.id);
-    } else if (state !== undefined && state.configFingerprint === fingerprints.get(coin.id)
-      && state.lastAttemptedAt != null
-      && now - state.lastAttemptedAt < RESERVE_CONFIG_RECOVERY_BACKOFF_SEC) {
-      backoff.push(coin.id);
     } else {
       due.push(coin);
     }
   }
   due.sort((a, b) => (states.get(a.id)?.lastAttemptedAt ?? 0) - (states.get(b.id)?.lastAttemptedAt ?? 0));
-  return { suspended, missingFetchers, backoff, due };
+  return { suspended, missingFetchers, skippedSameFingerprint, due };
 }
 
 export async function recoverLiveReserveConfigChanges(
   db: D1Database,
   signal: AbortSignal,
   adapterCtx: AdapterContext,
+  pollIdentity: ReserveRecoveryPollIdentity = {},
 ) {
   // The outer scheduled reserve-recovery lease/fence owns this phase. Take the
   // producer's lease too so the four-hourly writer and this targeted writer
@@ -73,33 +73,34 @@ export async function recoverLiveReserveConfigChanges(
        UNION ALL
        SELECT s.stablecoin_id, s.config_fingerprint, 'attempt' AS binding_source
          FROM reserve_sync_state s
-        WHERE s.config_fingerprint IS NOT NULL AND s.last_attempted_at > 0
-          AND NOT EXISTS (
-            SELECT 1 FROM reserve_composition c
-             WHERE c.stablecoin_id = s.stablecoin_id AND c.config_fingerprint IS NOT NULL
-          )`,
+        WHERE s.config_fingerprint IS NOT NULL AND s.last_attempted_at > 0`,
     ).all<FingerprintRow>(), 3, leaseSignal);
-    const fingerprints = new Map((rows.results ?? []).map((row) => [row.stablecoin_id, row.config_fingerprint]));
-    const currentFingerprints = new Map(CONFIGURED_COINS.map((coin) => [coin.id, computeLiveReserveConfigFingerprint(coin.liveReservesConfig!)]));
-    // Static adapter imports would retain the whole producer heap when this
-    // unchanged-config poll next replays only a checkpoint's backstop consumer.
-    const candidates = selectConfigRecoveryTargets(fingerprints, currentFingerprints, () => true);
-    const adapterRegistry = candidates.targets.length > 0 ? await import("./reserve-adapters/index") : null;
-    const selection = adapterRegistry
-      ? selectConfigRecoveryTargets(fingerprints, currentFingerprints, (id) => {
-        const config = WORKER_TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
-        return config != null && adapterRegistry.getReserveAdapter(config.adapter) != null;
-      })
-      : candidates;
-    const targetIds = new Set([...selection.targets, ...selection.missingFetcherIds]);
-    const priorBindingSources = { snapshot: 0, attempt: 0 };
+    const snapshotFingerprints = new Map<string, string>();
+    const attemptedFingerprints = new Map<string, string>();
     for (const row of rows.results ?? []) {
-      if (targetIds.has(row.stablecoin_id)) priorBindingSources[row.binding_source]++;
+      (row.binding_source === "snapshot" ? snapshotFingerprints : attemptedFingerprints)
+        .set(row.stablecoin_id, row.config_fingerprint);
     }
-    const mismatched = CONFIGURED_COINS.filter((coin) => targetIds.has(coin.id));
+    const currentFingerprints = new Map(CONFIGURED_COINS.map((coin) => [coin.id, computeLiveReserveConfigFingerprint(coin.liveReservesConfig!)]));
+    const priorBindingSources = { snapshot: 0, attempt: 0 };
+    const mismatched = CONFIGURED_COINS.filter((coin) => {
+      const snapshot = snapshotFingerprints.get(coin.id);
+      const prior = snapshot ?? attemptedFingerprints.get(coin.id);
+      if (prior == null || prior === currentFingerprints.get(coin.id)) return false;
+      priorBindingSources[snapshot != null ? "snapshot" : "attempt"]++;
+      return true;
+    });
     const states = await loadReserveSyncStateMap(db, mismatched.map((coin) => coin.id));
+    const initial = partitionReserveConfigRecoveries(
+      mismatched, attemptedFingerprints, currentFingerprints, states, new Set(),
+    );
+    // Consumed and suspended opportunities never initialize adapter machinery.
+    const adapterRegistry = initial.due.length > 0 ? await import("./reserve-adapters/index") : null;
+    const missingFetcherIds = new Set(initial.due.filter((coin) =>
+      adapterRegistry!.getReserveAdapter(coin.liveReservesConfig!.adapter) == null,
+    ).map((coin) => coin.id));
     const partition = partitionReserveConfigRecoveries(
-      mismatched, currentFingerprints, states, new Set(selection.missingFetcherIds), Math.floor(Date.now() / 1000),
+      mismatched, attemptedFingerprints, currentFingerprints, states, missingFetcherIds,
     );
     const { due } = partition;
     const warnings = partition.missingFetchers.map((stablecoinId) => ({
@@ -165,14 +166,24 @@ export async function recoverLiveReserveConfigChanges(
       priorBindingSources,
       suspendedCount: partition.suspended.length,
       missingFetcherCount: partition.missingFetchers.length,
-      backoffCount: partition.backoff.length,
+      skippedSameFingerprint: partition.skippedSameFingerprint,
+      skippedSameFingerprintCount: partition.skippedSameFingerprint.length,
       dueCount: due.length,
       attemptedCount: attempted.length,
       deferredCount: due.length - attempted.length,
       warnings, attempted, healed, failed,
     };
-  }, { abortSignal: signal, ttlSec: 180, heartbeatSec: 30 });
+  }, {
+    abortSignal: signal, ttlSec: RESERVE_CONFIG_RECOVERY_LEASE_SEC, heartbeatSec: 30,
+    reserveRecoveryAdmission: true,
+    owner: createReserveLeaseOwner(createLeaseOwner("reserve-recovery"), "reserve-recovery", "reserve-config-recovery", pollIdentity),
+  });
+  if (leased.status === "skipped_neutral") {
+    return { disposition: "config-recovery-priority", reason: leased.producerPriority!.reason,
+      producerPriority: leased.producerPriority, attemptedCount: 0, attempted: [], healed: [], failed: [] };
+  }
   return leased.status === "skipped_locked"
-    ? { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held", attempted: [], healed: [], failed: [] }
+    ? { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held", blockedBy: leased.blockedBy,
+      attempted: [], healed: [], failed: [] }
     : leased.result!;
 }

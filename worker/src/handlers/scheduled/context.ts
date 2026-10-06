@@ -26,6 +26,13 @@ import {
 import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
+import {
+  createReserveLeaseOwner,
+  RESERVE_PRODUCER_FINALIZATION_MARGIN_MS,
+  RESERVE_PRODUCER_WAIT_MAX_MS,
+} from "../../lib/reserve-producer-priority";
+import { resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
+import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
 
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
@@ -222,7 +229,7 @@ export function createScheduledRuntimeContext(
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
-  const invocationId = createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
+  const invocationId = scheduled.recoveryCheckpoint?.invocationId ?? createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
   const workerVersion = env.CF_VERSION_METADATA?.id || null;
   const jobAttemptNo = scheduled.jobAttemptNo ?? 1;
   const producerKind = scheduled.producerKind ?? "scheduled-job";
@@ -275,9 +282,15 @@ export function createScheduledRuntimeContext(
               attemptNo: jobAttemptNo,
               producerKind,
             };
-            const leaseOwner = createLeaseOwner(job);
+            const reserveFamily = job === "sync-live-reserves" || job === "reserve-recovery" || scheduled.recoveryCheckpoint != null;
+            const leaseOwner = reserveFamily
+              ? createReserveLeaseOwner(createLeaseOwner(job),
+                scheduled.recoveryCheckpoint ? "reserve-recovery" : job,
+                scheduled.recoveryCheckpoint ? "reserve-checkpoint-replay" : descriptor.producerPath,
+                { ...slotMeta, producerKind })
+              : createLeaseOwner(job);
             const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
-            const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
+            const buildLeaseMeta = (lease: CronLeaseRunResult<unknown>) => ({
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
               leaseLost: lease.leaseLost ?? false,
@@ -288,6 +301,9 @@ export function createScheduledRuntimeContext(
               leaseRenewSuccesses: lease.leaseRenewSuccesses,
               leaseRenewFailuresTotal: lease.leaseRenewFailuresTotal,
               leaseLastRenewedAt: lease.leaseLastRenewedAt,
+              blockedBy: lease.blockedBy ?? null,
+              leaseWaitDurationMs: lease.leaseWaitDurationMs ?? 0,
+              leaseAcquisitionAttempts: lease.leaseAcquisitionAttempts ?? 1,
               ...(timeoutBudgetMetadata ? { timeoutBudget: timeoutBudgetMetadata } : {}),
               ...slotMeta,
             });
@@ -297,6 +313,21 @@ export function createScheduledRuntimeContext(
               timeoutBudget,
               ...perJobLeaseOptions,
             };
+            if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
+            if (job === "sync-live-reserves" && scheduled.scheduleKey === "fourHourlyReserveSync"
+              && producerKind === "scheduled-job" && !scheduled.recoveryCheckpoint) {
+              const nowMs = Date.now();
+              const reservationMs = resolveLiveReserveSyncBudgetConfig().runBudgetMs + RESERVE_PRODUCER_FINALIZATION_MARGIN_MS;
+              leaseOptions.acquisitionWait = {
+                deadlineMs: Math.min(nowMs + RESERVE_PRODUCER_WAIT_MAX_MS,
+                  nowMs + timeoutBudget.effectiveTimeoutMs - reservationMs,
+                  (timeoutBudget.slotControlledDeadlineMs ?? Infinity) - reservationMs),
+                onWait: (blockedBy, attempts) => reportProgress({
+                  stage: "waiting-for-reserve-lease", message: "Waiting for the existing reserve writer to settle",
+                  leaseOwner, metadata: { ...slotMeta, blockedBy, leaseAcquisitionAttempts: attempts },
+                }),
+              };
+            }
             const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
               await reportProgress({
                 stage: "started",
@@ -313,6 +344,13 @@ export function createScheduledRuntimeContext(
               return fn(leaseSignal, reportProgress);
             }, leaseOptions);
 
+            if (lease.status === "skipped_neutral") {
+              return {
+                status: "skipped_neutral",
+                metadata: JSON.stringify({ reason: lease.producerPriority!.reason,
+                  producerPriority: lease.producerPriority, ...buildLeaseMeta(lease) }),
+              };
+            }
             if (lease.status === "skipped_locked") {
               await reportProgress({
                 stage: "skipped-locked",

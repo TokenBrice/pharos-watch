@@ -43,6 +43,7 @@
 | 0255     | `0255_depeg_trusted_price_coverage.sql`                     | Add nullable trusted off-peg intervals, last trusted price clock, and current coverage-gap clock; legacy boundaries remain unknown and old Workers keep using named columns. |
 | 0256     | `0256_meteora_dlmm_shadow_quotes.sql`                      | E17: Add isolated DLMM native shadow quotes with enforced score ineligibility; retain all prior native stores unchanged. |
 | 0257     | `0257_ddr_canonical_peg_currency_guard.sql`                 | Replace the DDR seal relational guard with canonical BRL/REAL alias comparisons while preserving all assessment, source-event, link, policy, and timing checks; no stored-row mutation. |
+| 0258     | `0258_scheduled_checkpoint_supersession.sql`              | Add nullable exact superseder identity JSON to scheduled recovery checkpoints; no backfill, reset, or historical rewrite. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -291,6 +292,8 @@ Migration `0255` adds nullable columns only, with no row mutation or backfill. O
 
 Migration `0257` replaces only `trg_ddr_public_predictions_relational_guard` in the migration transaction. It aligns `peggedREAL` with canonical `BRL` while retaining compatibility with legacy `REAL` assessment/incident identities; all other relational predicates remain unchanged. Existing sealed predictions and assessments are untouched, and the still-live Worker can seal under either spelling. `EXPECTED_SCHEMA.txt` is intentionally unchanged because the object name is retained. Capture the pre-window Time Travel bookmark, migration ledger, and Worker version; apply before Worker activation and observe the first DDR run. Worker rollback leaves the alias-aware guard installed; restore D1 only for unexpected schema/data mutation with the verified bookmark.
 
+Migration `0258` adds nullable `worker_scheduled_checkpoints.superseded_by_json` only. Existing named-column writes remain compatible; there is no DML/backfill, baseline edit or lease reset. `EXPECTED_SCHEMA.txt` stays unchanged because no object names change. Capture the pre-window D1 Time Travel bookmark, migration ledger and deployed Worker version, then apply before Worker activation. Observe the next real completed reserve cohort and recovery tick; operator-only cohorts without a slot remain ineligible.
+
 ## Recent Migration Rollback Notes
 
 - `0165_worker_job_attempts.sql`: superseded by removal of the runtime ledger and the 2026-08-10 production table drop. Worker code rollback does not recreate the table; schema/data recovery requires operator-directed D1 Time Travel.
@@ -370,6 +373,7 @@ Migration `0257` replaces only `trg_ddr_public_predictions_relational_guard` in 
 - `0249_dex_volume_availability.sql`: apply before the Worker release that reads availability records (CR-05 release A). Worker rollback ignores the additive nullable columns; retain them. If rows written by a DEC-19 producer (CR-11 slice A) exist when rolling back to a pre-0249-reader Worker, that Worker publishes the stored legacy column (the complete sum, or the in-budget partial gross sum) without its completeness label — roll forward rather than dropping the columns. No backfill: legacy rows stay unknown completeness.
 - `0251_mint_burn_hourly_valuation_completeness.sql`: apply before the Worker release that writes and reads hourly valuation completeness (CR-18 release A). Worker rollback ignores the additive nullable columns; retain them. A prior Worker's hourly rewrites leave both columns NULL, so its buckets read back as unknown coverage, never as complete, after roll-forward; the forward Worker re-derives them from retained raw events inside the event-retention window. No SQL backfill: buckets whose raw events were pruned stay unknown.
 - `0253_supply_history_price_observed_at.sql`: apply before the Worker release that writes and reads `price_observed_at` (mint-burn-flow v6.23) — the new Worker selects the column. Worker rollback ignores the additive nullable column; retain it. A prior Worker's snapshot writes leave it NULL, so those rows' prices are simply not mint/burn event evidence after roll-forward (events stay unpriced and their hours `partial` until heal or repair). No backfill: historical observation clocks cannot be reconstructed.
+- `0258_scheduled_checkpoint_supersession.sql`: restore the prior Worker for a code rollback; keep the additive nullable identity column and retained supersession records. Rollback may restore targeted retry churn but must not resurrect retired checkpoint debt or clear live leases. Restore D1 only for unexpected schema/data mutation using the verified pre-window bookmark.
 
 ## Rollback Procedure
 
