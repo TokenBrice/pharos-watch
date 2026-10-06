@@ -79,8 +79,10 @@ describe("deploy config reserve recovery", () => {
     const { db, sqlite, fetch } = await seed(0);
     sqlite.prepare("DELETE FROM reserve_composition WHERE stablecoin_id = 'coin-0'").run();
     sqlite.prepare("UPDATE reserve_composition SET config_fingerprint = NULL WHERE stablecoin_id = 'coin-1'").run();
+    getReserveAdapterMock.mockClear();
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
     expect(fetch).not.toHaveBeenCalled();
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
   });
 
   it("heals six coins in one run and an over-cap deployment within two runs", async () => {

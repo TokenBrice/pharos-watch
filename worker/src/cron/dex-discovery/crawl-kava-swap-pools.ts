@@ -12,7 +12,7 @@ import {
   type DexDeploymentProviderCheck,
 } from "./types";
 
-const KAVA_SWAP_API_BASE = "https://api.data.kava.io";
+const KAVA_SWAP_API_BASE = "https://api.kava.io";
 const KAVA_SWAP_PARAMS_PATH = "/kava/swap/v1beta1/params";
 const KAVA_SWAP_POOLS_PATH = "/kava/swap/v1beta1/pools";
 const KAVA_SWAP_USDX_DENOM = KAVA_SWAP_USDX_DISCOVERY_ADDRESS;

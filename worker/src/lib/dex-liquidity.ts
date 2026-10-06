@@ -45,9 +45,6 @@ export interface DexLiquidityRow {
   organic_measured_tvl_usd: number | null;
   // Column is NOT NULL DEFAULT in D1; no NULL rows remain (verified 2026-08-19).
   methodology_version: string;
-  deployment_chain?: string | null;
-  deployment_contract_address?: string | null;
-  deployment_outcome?: "observed_pools" | "verified_no_pools" | "provider_inaccessible" | null;
 }
 
 type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
@@ -233,12 +230,8 @@ async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> 
         `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
                 dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
                 dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
-                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
-                dco.chain AS deployment_chain,
-                dco.contract_address AS deployment_contract_address,
-                dco.outcome AS deployment_outcome
+                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at
          FROM dex_liquidity dl
-         LEFT JOIN dex_deployment_outcomes dco ON dco.stablecoin_id = dl.stablecoin_id
          WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
       )
       .all<DexLiquidityRow>();
@@ -249,31 +242,39 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
   const rows = await loadDexLiquidityRows(db);
 
   const map: DexLiquidityDbMap = {};
-  const processedStablecoinIds = new Set<string>();
   const deploymentCoverageById = new Map<string, DeploymentCoverage>();
+  // Deployment census rows must not multiply the per-coin execution payload.
+  // The old join repeated score_components_json for every deployment, retaining
+  // ~16 MB of strings for ~1 MB of evidence before parsing on the Worker heap.
+  const deploymentRows = await db.prepare(
+    `SELECT dco.stablecoin_id, dco.chain AS deployment_chain,
+            dco.contract_address AS deployment_contract_address,
+            dco.outcome AS deployment_outcome
+     FROM dex_deployment_outcomes dco
+     INNER JOIN dex_liquidity dl ON dl.stablecoin_id = dco.stablecoin_id
+     WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
+  ).all<{
+    stablecoin_id: string;
+    deployment_chain: string;
+    deployment_contract_address: string;
+    deployment_outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+  }>();
+  for (const row of deploymentRows.results ?? []) {
+    if (!CURRENT_DEPLOYMENT_KEYS.has(
+      deploymentKey(row.stablecoin_id, row.deployment_chain, row.deployment_contract_address),
+    )) continue;
+    const coverage = deploymentCoverageById.get(row.stablecoin_id) ?? {
+      observedPools: 0,
+      verifiedNoPools: 0,
+      providerInaccessible: 0,
+    };
+    if (row.deployment_outcome === "observed_pools") coverage.observedPools += 1;
+    else if (row.deployment_outcome === "verified_no_pools") coverage.verifiedNoPools += 1;
+    else coverage.providerInaccessible += 1;
+    deploymentCoverageById.set(row.stablecoin_id, coverage);
+  }
   let latestUpdatedAt: number | null = null;
   for (const row of rows) {
-    if (
-      row.deployment_chain != null &&
-      row.deployment_contract_address != null &&
-      row.deployment_outcome != null &&
-      CURRENT_DEPLOYMENT_KEYS.has(
-        deploymentKey(row.stablecoin_id, row.deployment_chain, row.deployment_contract_address),
-      )
-    ) {
-      const coverage = deploymentCoverageById.get(row.stablecoin_id) ?? {
-        observedPools: 0,
-        verifiedNoPools: 0,
-        providerInaccessible: 0,
-      };
-      if (row.deployment_outcome === "observed_pools") coverage.observedPools += 1;
-      else if (row.deployment_outcome === "verified_no_pools") coverage.verifiedNoPools += 1;
-      else coverage.providerInaccessible += 1;
-      deploymentCoverageById.set(row.stablecoin_id, coverage);
-    }
-
-    if (processedStablecoinIds.has(row.stablecoin_id)) continue;
-    processedStablecoinIds.add(row.stablecoin_id);
     let evidence: NormalizedDexLiquidityEvidence;
     let exitRouteDetails: Pick<
       DexLiquiditySnapshot,

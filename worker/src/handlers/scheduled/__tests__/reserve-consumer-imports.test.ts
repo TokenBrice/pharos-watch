@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-const initialized = vi.hoisted(() => ({ backstops: false, sentinel: false }));
+const initialized = vi.hoisted(() => ({ reserves: false, backstops: false, sentinel: false }));
 
-vi.mock("../../../cron/sync-live-reserves", () => ({ syncLiveReserves: vi.fn() }));
+vi.mock("../../../cron/sync-live-reserves", () => {
+  initialized.reserves = true;
+  return { syncLiveReserves: vi.fn() };
+});
 vi.mock("../../../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: vi.fn() }));
 vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   beginLiveReserveCheckpoint: vi.fn(),
@@ -24,6 +27,6 @@ describe("reserve consumer module boundaries", () => {
     // This test intentionally exercises module initialization, not just task calls.
     const runner = await import("../hourly-live-reserves");
     expect(runner.runFourHourlyReserveSyncSlot).toBeTypeOf("function");
-    expect(initialized).toEqual({ backstops: false, sentinel: false });
+    expect(initialized).toEqual({ reserves: false, backstops: false, sentinel: false });
   });
 });
