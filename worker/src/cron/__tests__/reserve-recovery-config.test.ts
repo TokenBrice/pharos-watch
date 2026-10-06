@@ -13,10 +13,12 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRunti
 import { CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { syncLiveReserves } from "../sync-live-reserves";
-import { recoverLiveReserveConfigChanges, RESERVE_CONFIG_RECOVERY_BACKOFF_SEC } from "../reserve-recovery-config";
+import { recoverLiveReserveConfigChanges } from "../reserve-recovery-config";
 import { loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
 import type { ConfiguredCoin, LiveReserveConfig } from "../sync-live-reserves-shared";
 import type { AdapterContext } from "../reserve-adapters/index";
+import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const slices = [{ name: "Treasuries", pct: 100, risk: "low" as const }];
@@ -25,6 +27,7 @@ const good = async () => ({ slices, metadata: { freshnessMode: "verified" as con
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); vi.useRealTimers(); });
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-07T01:00:00Z"));
   shouldAttemptFetchMock.mockResolvedValue(true);
   recordOutcomeSafeMock.mockResolvedValue(undefined);
 });
@@ -32,6 +35,12 @@ beforeEach(() => {
 async function seed(mismatches = 1) {
   const fetch = mockLiveReserveAdapterRegistry(good);
   const fixture = fixtures.open();
+  fixture.sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
+  fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+    (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
+    VALUES ('fourHourlyReserveSync', ?, 'finished', 'producer', 1, ?, ?, ?)`)
+    .run(getCronSlotStartedAtForSchedule("fourHourlyReserveSync", Date.now()), Math.floor(Date.now() / 1000) - 60,
+      Math.floor(Date.now() / 1000) - 1, Math.floor(Date.now() / 1000) - 1);
   await syncLiveReserves(fixture.db, signal(), {});
   for (const coin of CONFIGURED_COINS.slice(0, mismatches)) {
     fixture.sqlite.prepare("UPDATE reserve_composition SET config_fingerprint = ? WHERE stablecoin_id = ?").run("previous-config", coin.id);
@@ -57,21 +66,63 @@ describe("deploy config reserve recovery", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps a failed mismatch rejected, backs off, and heals at the retry boundary", async () => {
+  it.each(["producer", "heavy"])("does not consume a changed fingerprint when direct config recovery is protected by %s", async (lane) => {
+    const { db, sqlite, fetch } = await seed();
+    if (lane === "producer") sqlite.prepare("UPDATE cron_slot_executions SET state = 'running'").run();
+    else sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+      VALUES ('halfHourlyChartsOffset', ?, 'running', 'heavy', 1, ?, ?)`)
+      .run(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000));
+    getReserveAdapterMock.mockClear();
+    expect(await recoverLiveReserveConfigChanges(db, signal(), {}, {
+      invocationId: "poll", scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: Math.floor(Date.now() / 1000),
+    })).toMatchObject({
+      disposition: "config-recovery-priority", attempted: [], attemptedCount: 0,
+      reason: lane === "producer" ? "producer-slot-priority" : "heavy-slot-co-tenancy",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_sync_state WHERE stablecoin_id = 'coin-0'").get())
+      .toEqual({ config_fingerprint: "previous-config" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
+  });
+
+  it("consumes one opportunity after stale evidence rejection across ten minutes, four hours and isolate restarts", async () => {
     const { db, sqlite } = await seed();
-    const fetch = mockLiveReserveAdapterRegistry(async () => { throw new Error("network unavailable"); });
+    const fetch = mockLiveReserveAdapterRegistry(async () => ({
+      slices, metadata: {
+        freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000),
+        redemption: { freshnessKind: "verified-source-timestamp", sourceTimestamp: Math.floor(Date.now() / 1000) - 100 * 86400 },
+      },
+    }));
     const now = Date.now();
-    vi.spyOn(Date, "now").mockReturnValue(now);
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ failed: ["coin-0"], healed: [] });
     expect((await loadFreshIndependentLiveReserveMap(db)).has("coin-0")).toBe(false);
     expect(sqlite.prepare("SELECT config_fingerprint FROM reserve_composition WHERE stablecoin_id = 'coin-0'").get()).toEqual({ config_fingerprint: "previous-config" });
-    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ backoffCount: 1, attempted: [] });
+    for (const elapsedMs of [10 * 60_000, 4 * 3600_000]) {
+      vi.mocked(Date.now).mockReturnValue(now + elapsedMs);
+      if (elapsedMs === 4 * 3600_000) sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
+        VALUES ('fourHourlyReserveSync', ?, 'finished', 'next-producer', 1, ?, ?, ?)`)
+        .run(getCronSlotStartedAtForSchedule("fourHourlyReserveSync", Date.now()),
+          Math.floor(Date.now() / 1000) - 60, Math.floor(Date.now() / 1000) - 1, Math.floor(Date.now() / 1000) - 1);
+      expect(await recoverLiveReserveConfigChanges(createSqliteD1(sqlite), signal(), {})).toMatchObject({
+        mismatchCount: 1, skippedSameFingerprintCount: 1, skippedSameFingerprint: ["coin-0"], attempted: [],
+      });
+    }
     expect(fetch).toHaveBeenCalledTimes(1);
-    vi.mocked(Date.now).mockReturnValue(now + RESERVE_CONFIG_RECOVERY_BACKOFF_SEC * 1_000 - 1_000);
-    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ attempted: [] });
-    vi.mocked(Date.now).mockReturnValue(now + RESERVE_CONFIG_RECOVERY_BACKOFF_SEC * 1_000);
     mockLiveReserveAdapterRegistry(good);
-    expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ healed: ["coin-0"] });
+    const coin = CONFIGURED_COINS[0]!;
+    const priorConfig = coin.liveReservesConfig!;
+    try {
+      coin.liveReservesConfig = { ...priorConfig, version: 2 };
+      expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ healed: ["coin-0"] });
+      expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ attempted: [] });
+    } finally {
+      coin.liveReservesConfig = priorConfig;
+    }
+    vi.mocked(Date.now).mockReturnValue(Date.now() + 1000);
+    await syncLiveReserves(db, signal(), {});
     expect((await loadFreshIndependentLiveReserveMap(db)).has("coin-0")).toBe(true);
   });
 
@@ -108,7 +159,7 @@ describe("deploy config reserve recovery", () => {
       config_fingerprint: computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!),
     });
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
-    vi.spyOn(Date, "now").mockReturnValue(Date.now() + RESERVE_CONFIG_RECOVERY_BACKOFF_SEC * 1_000);
+    vi.mocked(Date.now).mockReturnValue(Date.now() + 10 * 60_000);
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -125,7 +176,7 @@ describe("deploy config reserve recovery", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("prioritizes a non-null snapshot binding over a changed attempted binding", async () => {
+  it("keeps snapshot authority separate from a consumed attempted fingerprint", async () => {
     const { db, sqlite, fetch } = await seed(0);
     sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ? WHERE stablecoin_id = 'coin-0'").run("previous-config");
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({ mismatchCount: 0, attempted: [] });
@@ -133,11 +184,11 @@ describe("deploy config reserve recovery", () => {
 
     sqlite.prepare("UPDATE reserve_composition SET config_fingerprint = ?, fetched_at = fetched_at - 60 WHERE stablecoin_id = 'coin-0'").run("previous-config");
     sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?, last_attempted_at = last_attempted_at - ? WHERE stablecoin_id = 'coin-0'")
-      .run(computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!), RESERVE_CONFIG_RECOVERY_BACKOFF_SEC);
+      .run(computeLiveReserveConfigFingerprint(CONFIGURED_COINS[0]!.liveReservesConfig!), 4 * 3600);
     expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
-      mismatchCount: 1, priorBindingSources: { snapshot: 1, attempt: 0 }, attempted: ["coin-0"], healed: ["coin-0"],
+      mismatchCount: 1, priorBindingSources: { snapshot: 1, attempt: 0 }, attempted: [], skippedSameFingerprintCount: 1,
     });
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("heals six coins in one run and an over-cap deployment within two runs", async () => {
@@ -231,7 +282,7 @@ describe("deploy config reserve recovery", () => {
     try {
       expect(await recoverLiveReserveConfigChanges(db, signal(), {})).toMatchObject({
         disposition: "config-recovery-partial", mismatchCount: 2, suspendedCount: 0,
-        missingFetcherCount: 1, backoffCount: 0, dueCount: 1, attemptedCount: 1,
+        missingFetcherCount: 1, skippedSameFingerprintCount: 0, dueCount: 1, attemptedCount: 1,
         attempted: ["coin-1"], healed: ["coin-1"], failed: [],
         warnings: [{ stablecoinId: "coin-0", code: "config-recovery-missing-fetcher", severity: "warning" }],
       });
@@ -246,7 +297,7 @@ describe("deploy config reserve recovery", () => {
     }
   });
 
-  it("counts suspended, missing-fetcher, backoff, due and attempted coins as one disjoint partition", async () => {
+  it("counts suspended, missing-fetcher, consumed, due and attempted coins as one disjoint partition", async () => {
     const { db, sqlite, fetch } = await seed(5);
     const suspendedCoin = CONFIGURED_COINS[0]!;
     const missingCoin = CONFIGURED_COINS[2]!;
@@ -256,14 +307,14 @@ describe("deploy config reserve recovery", () => {
     getReserveAdapterMock.mockImplementation((key: LiveReserveConfig["adapter"]) => key === "single-asset" ? null : getter(key));
     suspendedCoin.liveReservesConfig = { ...originalSuspended, suspended: { reason: "Feed parked", since: "2026-10-03" } };
     missingCoin.liveReservesConfig = { ...originalMissing, adapter: "single-asset" };
-    const backedOff = CONFIGURED_COINS[1]!;
+    const consumed = CONFIGURED_COINS[1]!;
     sqlite.prepare("UPDATE reserve_sync_state SET config_fingerprint = ?, last_attempted_at = ? WHERE stablecoin_id = ?")
-      .run(computeLiveReserveConfigFingerprint(backedOff.liveReservesConfig!), Math.floor(Date.now() / 1000), backedOff.id);
+      .run(computeLiveReserveConfigFingerprint(consumed.liveReservesConfig!), Math.floor(Date.now() / 1000), consumed.id);
     try {
       const result = await recoverLiveReserveConfigChanges(db, signal(), {});
       expect(result).toMatchObject({
         mismatchCount: 5, suspendedCount: 1, missingFetcherCount: 1,
-        backoffCount: 1, dueCount: 2, attemptedCount: 2, deferredCount: 0,
+        skippedSameFingerprintCount: 1, dueCount: 2, attemptedCount: 2, deferredCount: 0,
         attempted: ["coin-3", "coin-4"], healed: ["coin-3", "coin-4"],
         warnings: [{ stablecoinId: "coin-2", code: "config-recovery-missing-fetcher", severity: "warning" }],
       });

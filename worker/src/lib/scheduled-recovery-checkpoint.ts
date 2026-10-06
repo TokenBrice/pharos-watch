@@ -11,6 +11,11 @@ import {
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
 import { parseJsonObject } from "./json-parse";
+import {
+  getReserveProducerPriority,
+  reserveRecoveryAdmissionSql,
+  type ReserveProducerPriority,
+} from "./reserve-producer-priority";
 
 export { pruneLiveReserveRecoveryCheckpoints } from "./scheduled-recovery-prune";
 
@@ -841,21 +846,42 @@ export async function retireSupersededLiveReserveCheckpoints(
        FROM worker_scheduled_checkpoints
       WHERE schedule_key = ? AND job = ? AND queue_hash <> ?
         AND state IN ('running', 'recovering', 'ready', 'platform_abandoned')
-      ORDER BY slot_started_at ASC LIMIT 25`,
+      ORDER BY CASE WHEN state IN ('ready', 'recovering') THEN 0 WHEN state = 'running' THEN 1 ELSE 2 END,
+        slot_started_at ASC, attempt_no DESC LIMIT 25`,
   ).bind(LIVE_RESERVE_SCHEDULE_KEY, LIVE_RESERVE_CHECKPOINT_JOB, LIVE_RESERVE_QUEUE_HASH)
     .all<ScheduledCheckpointRow>());
   let retired = 0;
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
+    const newer = await runWithOverloadRetry(() => db.prepare(
+      `SELECT ${CHECKPOINT_COLUMNS.split(", ").map((column) => `newer.${column}`).join(", ")}
+         FROM worker_scheduled_checkpoints newer
+         JOIN cron_slot_executions slot
+           ON slot.slot_key = newer.schedule_key AND slot.slot_started_at = newer.slot_started_at
+        WHERE newer.schedule_key = ? AND newer.job = ? AND newer.slot_started_at > ?
+          AND newer.queue_hash = ? AND newer.state = 'completed' AND newer.completed_at IS NOT NULL
+          AND newer.next_item_key IS NULL AND newer.items_done = newer.items_total
+          AND newer.items_total = ? AND slot.state = 'finished' AND slot.finished_at IS NOT NULL
+        ORDER BY newer.slot_started_at DESC, newer.attempt_no DESC LIMIT 1`,
+    ).bind(checkpoint.scheduleKey, checkpoint.job, checkpoint.slotStartedAt,
+      LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS.length).first<ScheduledCheckpointRow>());
+    if (!newer) continue;
+    const supersededBy = {
+      scheduleKey: newer.schedule_key, slotStartedAt: newer.slot_started_at, job: newer.job,
+      attemptNo: newer.attempt_no, executionGeneration: newer.execution_generation,
+      invocationId: newer.invocation_id, queueHash: newer.queue_hash,
+    };
+    const supersederJson = JSON.stringify(supersededBy);
     const reason = "checkpoint-superseded-by-newer-full-cohort";
     const guard = `EXISTS (
       SELECT 1 FROM worker_scheduled_checkpoints
        WHERE ${identityWhereSql()} AND state = 'failed' AND error = ? AND completed_at = ?
+         AND superseded_by_json = ?
     )`;
     const statements = [
       db.prepare(`UPDATE worker_scheduled_checkpoints
         SET state = 'failed', error = ?, completed_at = ?, updated_at = ?,
-            recovery_owner = NULL, recovery_lease_until = NULL
+            recovery_owner = NULL, recovery_lease_until = NULL, superseded_by_json = ?
         WHERE ${identityWhereSql()}
           AND state IN ('running', 'recovering', 'ready', 'platform_abandoned') AND queue_hash <> ?
           AND (recovery_lease_until IS NULL OR recovery_lease_until < ?)
@@ -872,15 +898,17 @@ export async function retireSupersededLiveReserveCheckpoints(
             SELECT 1 FROM worker_scheduled_checkpoints newer
             JOIN cron_slot_executions slot
               ON slot.slot_key = newer.schedule_key AND slot.slot_started_at = newer.slot_started_at
-            WHERE newer.schedule_key = ? AND newer.job = ? AND newer.slot_started_at > ?
+            WHERE newer.schedule_key = ? AND newer.slot_started_at = ? AND newer.job = ?
+              AND newer.attempt_no = ? AND newer.execution_generation = ? AND newer.invocation_id = ?
+              AND newer.slot_started_at > ?
               AND newer.queue_hash = ? AND newer.state = 'completed' AND newer.completed_at IS NOT NULL
               AND newer.next_item_key IS NULL AND newer.items_done = newer.items_total
-              AND newer.items_total = ? AND slot.state = 'finished'
+              AND newer.items_total = ? AND slot.state = 'finished' AND slot.finished_at IS NOT NULL
           )`).bind(
-        reason, timestamp, timestamp, ...identityBinds(checkpoint), LIVE_RESERVE_QUEUE_HASH,
+        reason, timestamp, timestamp, supersederJson, ...identityBinds(checkpoint), LIVE_RESERVE_QUEUE_HASH,
         timestamp, ...LIVE_RESERVE_SLOT_JOBS, timestamp,
         checkpoint.scheduleKey, checkpoint.slotStartedAt, timestamp - 120,
-        checkpoint.scheduleKey, checkpoint.job, checkpoint.slotStartedAt, LIVE_RESERVE_QUEUE_HASH,
+        ...identityBinds(supersededBy), checkpoint.slotStartedAt, LIVE_RESERVE_QUEUE_HASH,
         SYNC_ORDERED_CONFIGURED_COINS.length,
       ),
       ...buildReserveAttemptAbandonmentStatements(db, {
@@ -888,9 +916,9 @@ export async function retireSupersededLiveReserveCheckpoints(
         currentItemKey: checkpoint.currentItemKey ?? checkpoint.nextItemKey,
       }, {
         timestamp, error: reason,
-        metadata: JSON.stringify({ reason, failureCategory: "checkpoint-superseded", supersedingQueueHash: LIVE_RESERVE_QUEUE_HASH, reconciledAt: timestamp }),
+        metadata: JSON.stringify({ reason, failureCategory: "checkpoint-superseded", supersedingQueueHash: LIVE_RESERVE_QUEUE_HASH, supersededBy, reconciledAt: timestamp }),
         checkpointGuardSql: guard,
-        checkpointGuardBinds: [...identityBinds(checkpoint), reason, timestamp],
+        checkpointGuardBinds: [...identityBinds(checkpoint), reason, timestamp, supersederJson],
       }),
     ];
     const results = await runWithOverloadRetry(() => db.batch(statements));
@@ -955,6 +983,11 @@ async function requeueExpiredRecoveries(
   }
 }
 
+export type LiveReserveRecoveryClaim =
+  | { disposition: "claimed"; checkpoint: ScheduledRecoveryCheckpoint }
+  | { disposition: "none" }
+  | { disposition: "priority"; producerPriority: ReserveProducerPriority };
+
 export async function claimNextLiveReserveCheckpointRecovery(
   db: D1Database,
   input: {
@@ -962,8 +995,10 @@ export async function claimNextLiveReserveCheckpointRecovery(
     leaseSec: number;
     nowSec?: number;
   },
-): Promise<ScheduledRecoveryCheckpoint | null> {
+): Promise<LiveReserveRecoveryClaim> {
   const timestamp = input.nowSec ?? nowSec();
+  const priority = await getReserveProducerPriority(db, timestamp);
+  if (priority) return { disposition: "priority", producerPriority: priority };
   await requeueExpiredRecoveries(db, timestamp);
   const rows = await runWithOverloadRetry(() =>
     db
@@ -983,6 +1018,7 @@ export async function claimNextLiveReserveCheckpointRecovery(
     const checkpoint = mapCheckpointRow(row);
     if (checkpoint.queueHash !== LIVE_RESERVE_QUEUE_HASH) continue;
     const leaseUntil = timestamp + Math.max(60, input.leaseSec);
+    const admission = reserveRecoveryAdmissionSql(input.nowSec == null ? undefined : String(Math.floor(input.nowSec)));
     const result = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -990,7 +1026,8 @@ export async function claimNextLiveReserveCheckpointRecovery(
               SET state = 'recovering', invocation_id = ?, recovery_owner = ?,
                   recovery_lease_until = ?, updated_at = ?
             WHERE schedule_key = ? AND slot_started_at = ? AND job = ? AND attempt_no = ?
-              AND execution_generation = ? AND invocation_id = ? AND state = 'ready'`,
+              AND execution_generation = ? AND invocation_id = ? AND state = 'ready'
+              AND ${admission.sql}`,
         )
         .bind(
           input.owner,
@@ -1003,18 +1040,24 @@ export async function claimNextLiveReserveCheckpointRecovery(
           checkpoint.attemptNo,
           checkpoint.executionGeneration,
           checkpoint.invocationId,
+          ...admission.binds,
         )
         .run(),
     );
-    if ((result.meta.changes ?? 0) !== 1) continue;
-    return {
+    if ((result.meta.changes ?? 0) !== 1) {
+      const priority = await getReserveProducerPriority(db, input.nowSec);
+      if (priority) return { disposition: "priority", producerPriority: priority };
+      continue;
+    }
+    return { disposition: "claimed", checkpoint: {
       ...checkpoint,
       state: "recovering",
       invocationId: input.owner,
       recoveryOwner: input.owner,
       recoveryLeaseUntil: leaseUntil,
       updatedAt: timestamp,
-    };
+    } };
   }
-  return null;
+  const finalPriority = await getReserveProducerPriority(db, input.nowSec);
+  return finalPriority ? { disposition: "priority", producerPriority: finalPriority } : { disposition: "none" };
 }

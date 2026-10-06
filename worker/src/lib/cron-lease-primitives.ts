@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { sleep } from "./abort";
+import { sleep, sleepWithSignal } from "./abort";
 import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
@@ -8,6 +8,13 @@ import {
 } from "./cron-timeouts";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import {
+  CRON_LEASE_TTL_ALLOWANCE_SEC,
+  getReserveProducerPriority,
+  reserveRecoveryAdmissionSql,
+  type ReserveProducerPriority,
+} from "./reserve-producer-priority";
+import { parseJsonObject } from "./json-parse";
 
 export interface CronLeaseOptions {
   ttlSec?: number;
@@ -18,6 +25,11 @@ export interface CronLeaseOptions {
   timeoutBudget?: ResolvedCronTimeoutBudget;
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
   leaseStateObserverMode?: "best-effort" | "required";
+  reserveRecoveryAdmission?: boolean;
+  acquisitionWait?: {
+    deadlineMs: number;
+    onWait?: (blockedBy: CronLeaseBlocker, attempts: number) => Promise<void> | void;
+  };
 }
 
 export interface CronLeaseStateUpdate {
@@ -30,7 +42,7 @@ export interface CronLeaseStateUpdate {
 }
 
 export interface CronLeaseRunResult<T> {
-  status: "ok" | "skipped_locked";
+  status: "ok" | "skipped_locked" | "skipped_neutral";
   leaseOwner: string;
   renewFailures: number;
   leaseTtlSec: number;
@@ -42,6 +54,46 @@ export interface CronLeaseRunResult<T> {
   leaseLastRenewedAt: number | null;
   leaseLost?: boolean;
   result?: T;
+  producerPriority?: ReserveProducerPriority;
+  blockedBy?: CronLeaseBlocker | null;
+  leaseWaitDurationMs?: number;
+  leaseAcquisitionAttempts?: number;
+}
+
+export interface CronLeaseBlocker {
+  leaseJob: string;
+  leaseOwner: string;
+  holderJob: string | null;
+  path: string | null;
+  invocationId: string | null;
+  scheduleKey: string | null;
+  slotStartedAt: number | null;
+  leaseUntil: number;
+  heartbeatAt: number;
+  observedAt: number;
+}
+
+async function readCronLeaseBlocker(db: D1Database, job: string): Promise<CronLeaseBlocker | null> {
+  const row = await runWithOverloadRetry(() => db.prepare(
+    "SELECT lease_owner, lease_until, heartbeat_at FROM cron_leases WHERE job = ?",
+  ).bind(job).first<{ lease_owner: string; lease_until: number; heartbeat_at: number }>());
+  if (!row) return null;
+  const envelope = parseJsonObject(row.lease_owner);
+  let evidence = envelope?.version === 1 ? envelope : null;
+  if (!evidence) {
+    // A legacy owner is attributable only through its own exact progress fence.
+    const progress = await runWithOverloadRetry(() => db.prepare(
+      "SELECT job, slot_started_at, metadata FROM cron_run_progress WHERE lease_owner = ?",
+    ).bind(row.lease_owner).first<{ job: string; slot_started_at: number | null; metadata: string | null }>());
+    if (progress) evidence = { ...parseJsonObject(progress.metadata), holderJob: progress.job, slotStartedAt: progress.slot_started_at };
+  }
+  const text = (key: string) => typeof evidence?.[key] === "string" ? evidence[key] as string : null;
+  return {
+    leaseJob: job, leaseOwner: row.lease_owner, holderJob: text("holderJob"), path: text("path") ?? text("producerPath"),
+    invocationId: text("invocationId"), scheduleKey: text("scheduleKey"),
+    slotStartedAt: typeof evidence?.slotStartedAt === "number" ? evidence.slotStartedAt : null,
+    leaseUntil: row.lease_until, heartbeatAt: row.heartbeat_at, observedAt: Math.floor(Date.now() / 1000),
+  };
 }
 
 export class CronLeaseLostError extends Error {
@@ -141,21 +193,24 @@ async function acquireCronLeaseState(
   job: string,
   owner: string,
   ttlSec: number,
+  reserveRecoveryAdmission = false,
 ): Promise<{ acquired: boolean; leaseUntil: number; heartbeatAt: number }> {
   const nowSec = Math.floor(Date.now() / 1000);
   const leaseUntil = nowSec + ttlSec;
+  const admission = reserveRecoveryAdmission ? reserveRecoveryAdmissionSql() : null;
   const result = await db
     .prepare(
       `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)
+       SELECT ?, ?, ?, ?, ? WHERE ${admission?.sql ?? "1 = 1"}
        ON CONFLICT(job) DO UPDATE SET
          lease_owner = excluded.lease_owner,
          lease_until = excluded.lease_until,
          heartbeat_at = excluded.heartbeat_at,
          updated_at = excluded.updated_at
-       WHERE cron_leases.lease_until < ? OR cron_leases.lease_owner = excluded.lease_owner`,
+       WHERE (cron_leases.lease_until < ? OR cron_leases.lease_owner = excluded.lease_owner)
+         AND (${admission?.sql ?? "1 = 1"})`,
     )
-    .bind(job, owner, leaseUntil, nowSec, nowSec, nowSec)
+    .bind(job, owner, leaseUntil, nowSec, nowSec, ...(admission?.binds ?? []), nowSec, ...(admission?.binds ?? []))
     .run();
 
   return { acquired: (result.meta.changes ?? 0) > 0, leaseUntil, heartbeatAt: nowSec };
@@ -217,7 +272,7 @@ export async function runCronWithLease<T>(
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const timeoutMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
   const timeoutSec = Math.ceil(timeoutMs / 1000);
-  const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
+  const ttlSec = opts?.ttlSec ?? timeoutSec + CRON_LEASE_TTL_ALLOWANCE_SEC;
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
   const maxRenewFailures = opts?.maxRenewFailures ?? 2;
   const owner = opts?.owner ?? createLeaseOwner(job);
@@ -252,15 +307,52 @@ export async function runCronWithLease<T>(
     }
   };
 
-  const acquisition = await runWithOverloadRetry(() => acquireCronLeaseState(db, job, owner, ttlSec), 3, opts?.abortSignal);
-  if (!acquisition.acquired) {
-    return {
-      status: "skipped_locked",
-      leaseOwner: owner,
-      renewFailures: 0,
-      ...buildLeaseTelemetry(),
-    };
+  const acquisitionStartedMs = Date.now();
+  let attempts = 0;
+  let blockedBy: CronLeaseBlocker | null = null;
+  let waitDeadlineMs = opts?.acquisitionWait?.deadlineMs ?? acquisitionStartedMs;
+  let blockerDeadlineCaptured = false;
+  let acquisition: { acquired: boolean; leaseUntil: number; heartbeatAt: number };
+  const skipped = (producerPriority?: ReserveProducerPriority): CronLeaseRunResult<T> => ({
+    status: producerPriority ? "skipped_neutral" : "skipped_locked",
+    leaseOwner: owner, renewFailures: 0, ...buildLeaseTelemetry(),
+    ...(producerPriority ? { producerPriority } : {}),
+    blockedBy, leaseWaitDurationMs: Date.now() - acquisitionStartedMs, leaseAcquisitionAttempts: attempts,
+  });
+  for (;;) {
+    if (opts?.abortSignal?.aborted) throw normalizeAbortError(opts.abortSignal.reason, new Error("Lease acquisition aborted"));
+    if (attempts > 0 && opts?.acquisitionWait && Date.now() > waitDeadlineMs) {
+      blockedBy = await readCronLeaseBlocker(db, job);
+      return skipped();
+    }
+    if (opts?.reserveRecoveryAdmission) {
+      const priority = await getReserveProducerPriority(db);
+      if (priority) return skipped(priority);
+    }
+    attempts++;
+    acquisition = await runWithOverloadRetry(
+      () => acquireCronLeaseState(db, job, owner, ttlSec, opts?.reserveRecoveryAdmission), 3, opts?.abortSignal,
+    );
+    if (acquisition.acquired) break;
+    if (opts?.reserveRecoveryAdmission) {
+      const priority = await getReserveProducerPriority(db);
+      if (priority) return skipped(priority);
+    }
+    blockedBy = await readCronLeaseBlocker(db, job);
+    if (opts?.acquisitionWait && !blockerDeadlineCaptured && blockedBy) {
+      // Include the next eligible second: acquisition uses strict lease_until < now.
+      waitDeadlineMs = Math.min(waitDeadlineMs, (blockedBy.leaseUntil + 1) * 1000);
+      const claim = await runWithOverloadRetry(() => db.prepare(
+        "SELECT MAX(recovery_lease_until) AS lease_until FROM worker_scheduled_checkpoints WHERE state = 'recovering' AND recovery_owner = ? AND recovery_lease_until >= ?",
+      ).bind(blockedBy.invocationId ?? blockedBy.leaseOwner, blockedBy.observedAt).first<{ lease_until: number | null }>());
+      if (claim?.lease_until != null) waitDeadlineMs = Math.min(waitDeadlineMs, (claim.lease_until + 1) * 1000);
+      blockerDeadlineCaptured = true;
+    }
+    if (!opts?.acquisitionWait || Date.now() >= waitDeadlineMs) return skipped();
+    if (blockedBy) await opts.acquisitionWait.onWait?.(blockedBy, attempts);
+    await sleepWithSignal(Math.min(15_000, waitDeadlineMs - Date.now()), opts.abortSignal);
   }
+  const leaseWaitDurationMs = Date.now() - acquisitionStartedMs;
   try {
     await notifyLeaseState("acquired", acquisition);
   } catch (error) {
@@ -412,6 +504,8 @@ export async function runCronWithLease<T>(
       leaseLastRenewedAt,
       leaseLost,
       result,
+      leaseWaitDurationMs,
+      leaseAcquisitionAttempts: attempts,
     };
   } finally {
     clearHeartbeat();
