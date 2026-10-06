@@ -6,11 +6,10 @@ import { throwIfAborted } from "../../lib/abort";
 import { getScheduledSlotControlledDeadlineMs } from "../../lib/cron-timeouts";
 import { buildMeasuredPoolDirectionKey, buildPancakeMeasuredExecutionTargets, buildSlipstreamMeasuredExecutionTargets, buildUniV3DirectMeasuredExecutionTargets } from "../measured-execution/inventory";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "../measured-execution/registry";
-import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS } from "./quoter-v2-pool-capture";
+import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
+import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS, QUOTER_V2_CAPTURE_XDC_MAX_POOLS, QUOTER_V2_CAPTURE_MAX_REQUESTS, QUOTER_V2_CAPTURE_MAX_WALL_MS } from "./quoter-v2-pool-capture";
 import { normalizeProtocol } from "./pool-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
-
-const QUOTER_V2_ENRICHMENT_MAX_WALL_MS = 90_000;
 
 /** Address-bound recovery only; fingerprints continue through the unique-source candidate resolver. */
 export async function enrichQuoterV2ExecutionTargets(input: {
@@ -54,11 +53,13 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   let exactPoolCount = 0;
   let remaining = QUOTER_V2_CAPTURE_MAX_POOLS;
   const slotDeadline = input.slotStartedAtSec == null ? Infinity : getScheduledSlotControlledDeadlineMs(input.slotStartedAtSec * 1_000);
-  const deadline = Math.min(slotDeadline, Date.now() + QUOTER_V2_ENRICHMENT_MAX_WALL_MS);
+  const deadline = Math.min(slotDeadline, Date.now() + QUOTER_V2_CAPTURE_MAX_WALL_MS);
+  const rpcBudget = createDexMeasuredExecutionRpcBudget({ maxRequests: QUOTER_V2_CAPTURE_MAX_REQUESTS, deadlineMs: deadline });
   for (const group of groups.values()) {
     throwIfAborted(input.signal);
-    if (remaining === 0 || Date.now() >= deadline) break;
-    const selected = [...group.pools.keys()].slice(0, remaining);
+    if (remaining === 0 || rpcBudget.remainingRequests === 0 || rpcBudget.stopReason || Date.now() >= deadline) break;
+    const selected = [...group.pools.keys()].slice(0, Math.min(remaining,
+      group.chain === "xdc" ? QUOTER_V2_CAPTURE_XDC_MAX_POOLS : QUOTER_V2_CAPTURE_MAX_POOLS));
     remaining -= selected.length;
     const timeout = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
     const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
@@ -66,7 +67,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
       adapterProfileId: group.adapterProfileId, chain: group.chain,
       candidates: selected.map((poolAddress) => ({ poolAddress })),
       chainAddressToId: input.chainAddressToId, trackedStablecoinPrices: input.stablecoinPriceById,
-      chainRpcs: input.chainRpcs, signal,
+      chainRpcs: input.chainRpcs, signal, rpcBudget,
     }).catch((error: unknown) => {
       // Our local deadline defers the remaining identities; caller cancellation must propagate.
       throwIfAborted(input.signal);

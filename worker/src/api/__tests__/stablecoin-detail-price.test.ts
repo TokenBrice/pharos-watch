@@ -67,6 +67,23 @@ describe("missing detail price enrichment", () => {
     expect(body.price).toBe(0.997);
   });
 
+  it.each([true, false])("carries only canonical supply restoration provenance (%s)", async (restored) => {
+    const observedAt = NOW - 3 * 86_400;
+    const result = await enrichMissingDetailPrice(makeDb({
+      circulating: { peggedUSD: 100 }, supplyObservedAt: observedAt, supplyRestored: restored,
+    }), "usdt-tether", makeResponse(JSON.stringify({ tokens, currentSupplyRestored: !restored })));
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentSupplyRestored).toBe(restored);
+    expect(body.currentSupplyObservedAt).toBe(observedAt);
+    expect(body.tokens).toEqual(tokens);
+  });
+
+  it("does not accept a provider restoration marker without an admitted canonical overlay", async () => {
+    const result = await enrichMissingDetailPrice(makeDb({ price: null }), "usdt-tether",
+      makeResponse(JSON.stringify({ tokens, currentSupplyRestored: true })));
+    expect(await result.json()).toEqual({ tokens });
+  });
+
   it("publishes observed zero supply independently of withheld price", async () => {
     const result = await enrichMissingDetailPrice(makeDb({
       circulating: { peggedUSD: 0 }, price: null,

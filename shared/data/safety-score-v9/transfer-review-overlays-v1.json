@@ -2672,8 +2672,8 @@
           "chainId": "ethereum",
           "contractOrTokenId": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "scope": "canonical",
-          "posture": "permissionless",
-          "evidence": "Pinned current implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
+          "posture": "restrictable",
+          "evidence": "Pinned current implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. The proxy retains a ward-gated UUPS upgrade path that can replace this unrestricted transfer logic with holder-transfer restrictions, so the deployment is restrictable. Mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
               "label": "Exact verified current implementation",
@@ -2689,8 +2689,8 @@
           "chainId": "base",
           "contractOrTokenId": "0x5875eee11cf8398102fdad704c9e96607675467a",
           "scope": "material-bridge",
-          "posture": "permissionless",
-          "evidence": "Pinned current implementation 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
+          "posture": "restrictable",
+          "evidence": "Pinned current implementation 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. The proxy retains a ward-gated UUPS upgrade path that can replace this unrestricted transfer logic with holder-transfer restrictions, so the deployment is restrictable. Mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
               "label": "Exact verified current implementation",
@@ -2706,8 +2706,8 @@
           "chainId": "optimism",
           "contractOrTokenId": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
           "scope": "material-bridge",
-          "posture": "permissionless",
-          "evidence": "Pinned current implementation 0x6f0888dda6a5e35451d5be0fabb20171715788b3 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
+          "posture": "restrictable",
+          "evidence": "Pinned current implementation 0x6f0888dda6a5e35451d5be0fabb20171715788b3 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. The proxy retains a ward-gated UUPS upgrade path that can replace this unrestricted transfer logic with holder-transfer restrictions, so the deployment is restrictable. Mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
               "label": "Exact verified current implementation",
@@ -2723,8 +2723,8 @@
           "chainId": "arbitrum",
           "contractOrTokenId": "0xddb46999f8891663a8f2828d25298f70416d7610",
           "scope": "material-bridge",
-          "posture": "permissionless",
-          "evidence": "Pinned current implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. Upgrade/mint/burn authorities and parent reserve freezing remain separate risks.",
+          "posture": "restrictable",
+          "evidence": "Pinned current implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 contains unrestricted holder transfer/transferFrom subject only to balance, allowance and invalid-address checks; no transfer blacklist, whitelist, pause or administrative hook. The proxy retains a ward-gated UUPS upgrade path that can replace this unrestricted transfer logic with holder-transfer restrictions, so the deployment is restrictable. Mint/burn authorities and parent reserve freezing remain separate risks.",
           "sources": [
             {
               "label": "Exact verified current implementation",
@@ -5557,8 +5557,8 @@
           "chainId": "ethereum",
           "contractOrTokenId": "0x9be9294722f8aad37b11a9792be2c782182cafa2",
           "scope": "canonical",
-          "posture": "permissionless",
-          "evidence": "EIP-1967 implementation slot pinned at Ethereum block 0x18e7be1 resolves to verified EmberVault implementation 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e. EmberVault inherits OpenZeppelin ERC20/4626 without overriding the ordinary _update/_transfer path. Blacklist/protocol-pause gates apply to deposit, queued redemption and bridgeBurn, not ordinary ERC20 transfer/transferFrom. Owner upgrade authority is not a present transfer allowlist.",
+          "posture": "restrictable",
+          "evidence": "EIP-1967 implementation slot pinned at Ethereum block 0x18e7be1 resolves to verified EmberVault implementation 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e. EmberVault inherits OpenZeppelin ERC20/4626 without overriding the ordinary _update/_transfer path. Blacklist/protocol-pause gates apply to deposit, queued redemption and bridgeBurn, not ordinary ERC20 transfer/transferFrom. The onlyOwner UUPS upgrade path remains controlled by CTGOneGovernance with a one-day delay and can replace the share implementation with holder-transfer restrictions, so this deployment is restrictable despite its unrestricted current ERC20 transfer path.",
           "sources": [
             {
               "label": "Exact eEARN Ethereum proxy and current verified implementation",

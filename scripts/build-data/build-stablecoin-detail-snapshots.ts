@@ -230,9 +230,14 @@ export async function generateSnapshots(
   const liveIds = TRACKED_STABLECOINS
     .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen")
     .map((coin) => coin.id);
-  const source = options.source ?? process.env.PHAROS_DETAIL_SNAPSHOT_SOURCE ?? "per-coin";
+  let source = options.source ?? process.env.PHAROS_DETAIL_SNAPSHOT_SOURCE ?? "per-coin";
   if (source !== "per-coin" && source !== "bulk") {
     throw new Error(`Invalid PHAROS_DETAIL_SNAPSHOT_SOURCE: ${source}`);
+  }
+  if (source === "bulk" && !process.env.SITE_API_SHARED_SECRET?.trim()) {
+    // Credentialless Pages releases retain the ordinary public per-coin transport.
+    console.warn("[stablecoin-detail-snapshots] bulk requires SITE_API_SHARED_SECRET; using per-coin acquisition");
+    source = "per-coin";
   }
   const fetchCoin = async (id: string): Promise<SnapshotCoinLanes> => {
     const detail = await fetchOptionalDetailSnapshotLane(
@@ -264,8 +269,8 @@ export async function generateSnapshots(
   } else {
     // Bulk is an internal site-only transport even when ordinary per-coin reads
     // use the public API key lane. Explicit site/preview bases remain supported.
-    const bulkApiBase = apiBase === API_ORIGIN
-      ? process.env.SITE_API_SHARED_SECRET?.trim() ? SITE_API_ORIGIN : `${PAGES_APP_ORIGIN}${SITE_DATA_PATH_PREFIX}`
+    const bulkApiBase = apiBase === API_ORIGIN || new URL(apiBase).pathname.startsWith(SITE_DATA_PATH_PREFIX)
+      ? SITE_API_ORIGIN
       : apiBase;
     const batches: string[][] = [];
     for (let offset = 0; offset < liveIds.length; offset += DETAIL_SNAPSHOT_INPUT_BATCH_SIZE) {

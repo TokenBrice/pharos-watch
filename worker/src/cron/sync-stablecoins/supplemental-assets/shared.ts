@@ -1,3 +1,4 @@
+import { isSolomonPriceIdentityAllowed } from "../../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
@@ -140,7 +141,7 @@ export function resolveSupplementalPrice(
 }
 
 export function getSupplementalDefiLlamaContractPriceKey(meta: StablecoinMeta): string | null {
-  if (meta.geckoId) return null;
+  if (meta.geckoId || !isSolomonPriceIdentityAllowed(meta.id, "defillama-contract")) return null;
 
   const contract = selectSupplementalOnchainSupplyProbeContract(meta);
   if (!contract) return null;

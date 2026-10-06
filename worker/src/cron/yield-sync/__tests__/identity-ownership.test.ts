@@ -82,15 +82,22 @@ describe("yield identity and ownership boundaries", () => {
     expect(resolved.map((entry) => [entry.id, entry.yield?.chain])).toEqual([["native", "Ethereum"], ["deposit", "Solana"]]);
   });
 
-  it("recognizes a receipt's own auto pool but not its deposit asset or an untracked chain", () => {
+  it("keeps a symbol-only receipt pool external until holder ownership is curated", () => {
     const receipt = pool({ symbol: "GTUSDCP", project: "morpho-blue" });
     const entries = resolve([receipt]);
     const own = entries.find((entry) => entry.id === "gtusdcp-gauntlet")!;
-    expect(own.yield?.yieldType).toBe("lending-vault");
-    expect(own.yield?.yieldSource).toBe(TRACKED_META_BY_ID.get(own.id)?.yieldConfig?.yieldSource);
-    expect(deriveYieldSourceRole(evaluated(own), { isSelected: true })).toBe("canonical-holder");
+    expect(own.yield?.yieldType).toBe("lending-opportunity");
+    expect(own.yield?.yieldSource).toBe("Morpho Blue");
+    expect(deriveYieldSourceRole(evaluated(own), { isSelected: true })).not.toBe("canonical-holder");
+    expect(resolveYieldTypeLabel({ id: own.id, dataSource: "defillama", pool: receipt })).toBe("lending-vault");
+    expect(resolveYieldTypeLabel({ id: own.id, dataSource: "defillama-auto", explicitType: "lending-vault", pool: receipt })).toBe("lending-vault");
     expect(resolveYieldTypeLabel({ id: "usdc-circle", dataSource: "defillama-auto", pool: receipt })).toBe("lending-opportunity");
     expect(resolveYieldTypeLabel({ id: own.id, dataSource: "defillama-auto", pool: { ...receipt, chain: "Solana" } })).toBe("lending-opportunity");
+  });
+
+  it("rejects a namesake receipt pool with contradictory supplied deposit addresses", () => {
+    const entries = resolve([pool({ symbol: "GTUSDCP", project: "morpho-blue", underlyingTokens: ["0x0000000000000000000000000000000000000001"] })]);
+    expect(entries.filter((entry) => entry.id === "gtusdcp-gauntlet")).toEqual([]);
   });
 
   it("requires a pin for ambiguous same-chain receipt pools", () => {

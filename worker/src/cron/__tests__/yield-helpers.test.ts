@@ -699,6 +699,13 @@ describe("findBestLendingPool", () => {
     expect(result).toBeNull();
   });
 
+  it("does not fall back to a ticker after supplied addresses contradict the asset", () => {
+    const candidates = [makeDlYieldPool({ symbol: "USDH", project: "aave-v3", stablecoin: true, underlyingTokens: ["0xdef"] })];
+    expect(findBestLendingPool("USDH", candidates, allowlist, { contractAddresses: ["0xabc"] })).toBeNull();
+    expect(findBestLendingPool("USDH", [{ ...candidates[0], underlyingTokens: null }], allowlist, { contractAddresses: ["0xabc"] })).not.toBeNull();
+    expect(findBestLendingPool("USDH", [{ ...candidates[0], underlyingTokens: ["0xabc", "0xdef"] }], allowlist, { contractAddresses: ["0xabc"] })).toBeNull();
+  });
+
   it("returns null when symbol-only matching is explicitly disallowed", () => {
     const result = findBestLendingPool("USDT", pools, allowlist, { allowSymbolMatch: false });
     expect(result).toBeNull();

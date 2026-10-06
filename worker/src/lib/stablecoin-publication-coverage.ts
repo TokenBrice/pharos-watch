@@ -54,8 +54,9 @@ export type MissingActivePriceDetail = ActivePriceCoverageGap;
 
 /** A dated, owned, expiring review that acknowledges one active stablecoin's
  * missing live price. The gap stays listed as missing in every coverage
- * payload; it only stops being alert-eligible until `expiresAt`. Renewal
- * requires a fresh review — an expired entry re-arms the alert. */
+ * payload; it stops being alert-eligible only while the review applies, before
+ * `expiresAt`. Renewal requires a fresh review; expiry or leaving its weekly
+ * window re-arms the alert. */
 export interface StablecoinPriceGapReview {
   stablecoinId: string;
   owner: string;
@@ -66,6 +67,8 @@ export interface StablecoinPriceGapReview {
   reviewedAt: number;
   /** Unix seconds; policy caps acknowledgement at roughly 30 days per review. */
   expiresAt: number;
+  /** UTC week seconds since Sunday 00:00; start inclusive, end exclusive. */
+  weeklyUtcWindow?: { start: number; end: number };
 }
 
 /** The writer has measured current counts; only prior-generation continuity
@@ -229,6 +232,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
   },
   {
     stablecoinId: "chfm-mento",
+    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
     owner: "ops",
     reason:
       "Mento's v3 FX oracle gate closes the only executable CHFm venue every weekend: the CHFm/USDm FPMM 0xdc81135f…3e8b8 prices getAmountOut through OracleAdapter 0xa472fbbf…4383a getFXRateIfValid, which reverts FXMarketClosed (selector 0xa407143a) from Friday 21:00 UTC until Sunday 23:00 UTC (MarketHoursBreaker weekend rules), and the Chainlink-backed sortedOracles reports stop with the Friday close (last reports 2026-09-25 20:56-20:59 UTC, ~92ks stale by Saturday evening). The mento-fpmm lane therefore returns empty every weekend and re-prices automatically at the Sunday 23:00 UTC reopen (quote verified live again 2026-09-20 23:30 UTC). No admissible alternative lane exists: CoinGecko cchf is stale since 2026-07-29, DefiLlama publishes no list price, and DexScreener lists no CHFm pair. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
@@ -244,6 +248,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
   },
   {
     stablecoinId: "copm-mento",
+    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
     owner: "ops",
     reason:
       "Mento's weekend FX closure also empties the only executable COPm lane: Broker 0x777a8255…b4cad getAmountOut on the COPm/USDm BiPoolManager exchange reverts 'no valid median' because sortedOracles reports for feed 0x0196d1f4…39f1 stop at the Friday close (last report 2026-09-25 20:58 UTC, isOldestReportExpired true, median ~92ks stale by Saturday evening) and resume only at the Sunday 23:00 UTC reopen (fresh median verified 2026-09-20 23:30 UTC). The mento-broker lane re-prices COPm automatically after the reopen. No admissible alternative lane exists: CoinGecko ccop is stale since 2026-08-16 and DexScreener's COPm pools hold at most $373 liquidity against the $50K address-provider floor. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
@@ -258,6 +263,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
   },
   {
     stablecoinId: "jpym-mento",
+    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
     owner: "ops",
     reason:
       "Mento's weekend FX closure empties the only executable JPYm lane (pricing 6.39 moved JPYm off nominal par onto mento-fpmm): the JPYm/USDm FPMM 0x9861f6d2…2b2b41 getAmountOut reverts FXMarketClosed (selector 0xa407143a) through the same OracleAdapter gate as CHFm, verified at 2026-09-26 12:00 UTC (block 78523242) and 2026-09-27 12:00 UTC, and quotes again on weekdays (0.00635164772 USDm per JPYm at 2026-09-28 12:00 UTC). The mento-fpmm lane re-prices JPYm automatically after the Sunday 23:00 UTC reopen. No admissible alternative lane exists: CoinGecko celo-japanese-yen is stale since 2026-08-19 and has no other tracked venue. Renew while Mento keeps the weekly FX closure; a weekday gap is a real lane failure.",
@@ -312,6 +318,11 @@ export function resolveStablecoinPriceGapReviews(
       || !validReviewSeconds(review.reviewedAt)
       || !validReviewSeconds(review.expiresAt)
       || review.expiresAt <= review.reviewedAt
+      || (review.weeklyUtcWindow != null && (!Number.isInteger(review.weeklyUtcWindow.start)
+        || !Number.isInteger(review.weeklyUtcWindow.end)
+        || review.weeklyUtcWindow.start < 0 || review.weeklyUtcWindow.start >= 7 * 86_400
+        || review.weeklyUtcWindow.end < 0 || review.weeklyUtcWindow.end >= 7 * 86_400
+        || review.weeklyUtcWindow.start === review.weeklyUtcWindow.end))
     ) {
       invalidGapReviewIds.add(review.stablecoinId);
       continue;
@@ -319,6 +330,13 @@ export function resolveStablecoinPriceGapReviews(
     if (review.expiresAt <= nowSec) {
       expiredGapReviewIds.add(review.stablecoinId);
       continue;
+    }
+    if (review.weeklyUtcWindow) {
+      const clock = new Date(nowSec * 1000);
+      const weekSecond = clock.getUTCDay() * 86_400 + clock.getUTCHours() * 3600
+        + clock.getUTCMinutes() * 60 + clock.getUTCSeconds();
+      const { start, end } = review.weeklyUtcWindow;
+      if (!(start < end ? weekSecond >= start && weekSecond < end : weekSecond >= start || weekSecond < end)) continue;
     }
     activeById.set(review.stablecoinId, review);
   }

@@ -13,7 +13,7 @@ const RAYDIUM_STANDARD_PROGRAMS: Record<string, true> = {
 };
 const LEGACY_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
-/** /info/ids proves native identity/type; a provider's cg-amm label never proves a CP invariant. */
+/** /info/ids supplies provider metadata, not independently verified Solana account state. */
 export function parseRaydiumStandardDiscoveryPool(raw: unknown): DexApiPool | null {
   if (!isDexApiRecord(raw) || raw.type !== "Standard" || typeof raw.programId !== "string" ||
     !RAYDIUM_STANDARD_PROGRAMS[raw.programId] || typeof raw.id !== "string" ||

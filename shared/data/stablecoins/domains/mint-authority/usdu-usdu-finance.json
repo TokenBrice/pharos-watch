@@ -195,7 +195,8 @@
               ],
               "callMode": "call",
               "capabilities": [
-                "mint"
+                "mint",
+                "burn"
               ],
               "capSemantics": {
                 "kind": "unbounded",
@@ -297,7 +298,8 @@
               ],
               "callMode": "call",
               "capabilities": [
-                "mint"
+                "mint",
+                "burn"
               ],
               "capSemantics": {
                 "kind": "unbounded",

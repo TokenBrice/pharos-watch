@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
-import { captureQuoterV2Pools } from "../quoter-v2-pool-capture";
+import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_XDC_MAX_POOLS } from "../quoter-v2-pool-capture";
 import { enrichQuoterV2ExecutionTargets } from "../enrich-quoter-v2-targets";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool, quoteQuoterV2Requests, resolveQuoterV2PoolBindings } from "../../measured-execution/quoter-v2";
@@ -102,6 +102,14 @@ describe("address-bound discovered QuoterV2 capture", () => {
 });
 
 describe("retained discovered rows enter actual target production", () => {
+  it("selects a bounded XDC subset instead of failing an oversized discovery group", async () => {
+    answers("xswap-v3-quoter-v2", "xdc");
+    const pools = Array.from({ length: 128 }, (_, index) => row("xswap-v3", "xdc", "cg-concentrated",
+      `xdc:0x${(index + 1).toString(16).padStart(40, "0")}`));
+    await enrich(pools);
+    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![1]).toHaveLength(5 * QUOTER_V2_CAPTURE_XDC_MAX_POOLS);
+    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![3]).toMatchObject({ beforeRequest: expect.any(Function), deadlineMs: expect.any(Number) });
+  });
   it.each(["cg-concentrated", "cg-cl-1bp", "cg-cl-5bp"])("resolves Pancake %s using factory identity, not display fee", async (poolType) => {
     answers("pancakeswap-v3-quoter-v2", "bsc", 2500);
     const pool = row("pancakeswap", "bsc", poolType);

@@ -1,6 +1,14 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { REGIME_CRITICAL_DEGRADED_SOURCES } from "../degraded-sources";
 
+/** Shared numeric gauge decisions used by classification and partial admission. */
+export function classifyGaugeRegime(score: number): "CRISIS" | "TENSION" | "WATCHFUL" | "CALM" {
+  if (score < -50) return "CRISIS";
+  if (score < -20) return "TENSION";
+  if (score < -10) return "WATCHFUL";
+  return "CALM";
+}
+
 export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "WATCHFUL" | "CALM" {
   const band = data.stabilityIndex?.band ?? "BEDROCK";
   // Chronic standing conditions must not pin the regime: a depeg older than a
@@ -25,6 +33,7 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   }, 0);
   const unsuppressedActiveDepegs = data.topDepegs.filter((depeg) => !depeg.suppressReason).length;
   const gaugeScore = data.mintBurnFlows?.gaugeScore ?? 0;
+  const gaugeRegime = classifyGaugeRegime(gaugeScore);
   const ftqActive = data.mintBurnFlows?.flightToQuality.active ?? false;
   const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
     + (data.dewsStress?.bandCounts.warning ?? 0)
@@ -32,13 +41,13 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   const alertPlusMcap = (data.dewsStress?.elevatedCoins ?? [])
     .reduce((sum, coin) => sum + coin.mcapUsd, 0);
 
-  if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeScore < -50 || activeDepegImpact >= 50_000) {
+  if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeRegime === "CRISIS" || activeDepegImpact >= 50_000) {
     return "CRISIS";
   }
-  if (activeDepegImpact >= 1_000 || gaugeScore < -20 || alertPlusMcap > 1_000_000_000 || (alertPlus >= 3 && alertPlusMcap > 100_000_000)) {
+  if (activeDepegImpact >= 1_000 || gaugeRegime === "TENSION" || alertPlusMcap > 1_000_000_000 || (alertPlus >= 3 && alertPlusMcap > 100_000_000)) {
     return "TENSION";
   }
-  if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || unsuppressedActiveDepegs >= 1 || gaugeScore < -10) {
+  if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || unsuppressedActiveDepegs >= 1 || gaugeRegime === "WATCHFUL") {
     return "WATCHFUL";
   }
   // A regime-critical collector that could not read did not observe calm:

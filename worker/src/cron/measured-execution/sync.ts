@@ -81,7 +81,7 @@ import {
 export { isDexMeasuredExecutionTargetScoreEligible } from "./admission";
 
 const MAX_QUOTE_CALLS = 6_400;
-const MAX_RUNTIME_MS = 8 * 60_1_000;
+export const MAX_RUNTIME_MS = 8 * 60_000;
 /**
  * Soft ceiling for starting further quote stages. The eight-minute hard wall
  * above still bounds in-flight work; when observed provider latency projects
@@ -89,7 +89,7 @@ const MAX_RUNTIME_MS = 8 * 60_1_000;
  * early, publishes the quotes it measured, and releases the lease instead of
  * contending with the D1-heavy :10/:13/:16 lanes for the full budget.
  */
-const MAX_PACED_QUOTE_RUNTIME_MS = 5 * 60_1_000;
+export const MAX_PACED_QUOTE_RUNTIME_MS = 5 * 60_000;
 
 interface TargetQuoteState {
   target: DexMeasuredExecutionTarget;

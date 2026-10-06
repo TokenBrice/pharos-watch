@@ -732,7 +732,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
     watchlistPreviousById,
     scoreResults: params.scoreResults,
     previousMajorTvlById: new Map(
-      (previousTopCoverageRows.results ?? []).map((row) => [row.stablecoin_id, row.total_tvl_usd]),
+      // Material coins remain monitored after leaving the top ten or accepting
+      // a lasting cliff. The prior published generation owns the new baseline.
+      [...(previousTopCoverageRows.results ?? []), ...(previousCoinTvlRows.results ?? [])]
+        .map((row) => [row.stablecoin_id, row.total_tvl_usd]),
     ),
   });
 

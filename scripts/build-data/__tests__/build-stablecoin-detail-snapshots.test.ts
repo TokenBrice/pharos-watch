@@ -328,6 +328,7 @@ describe("stablecoin detail snapshot generator", () => {
 
   it.each([false, true])("produces identical bulk bytes and falls back only for unavailable coins (originClock=%s)", async (originClock) => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
     vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_SOURCE", "per-coin");
     for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
     const now = 1_800_000_000_000;
@@ -351,6 +352,7 @@ describe("stablecoin detail snapshot generator", () => {
     vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
       const url = new URL(raw);
       if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        expect(url.hostname).toBe("site-api.pharos.watch");
         const ids = url.searchParams.get("ids")!.split(",");
         batches.push(ids);
         pendingBulkBodies++;
@@ -393,8 +395,27 @@ describe("stablecoin detail snapshot generator", () => {
       .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen").map((coin) => coin.id));
   });
 
+  it("keeps credentialless bulk-configured Pages releases on per-coin acquisition", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "");
+    vi.spyOn(process, "loadEnvFile").mockImplementation(() => undefined);
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetch = vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      expect(url.pathname).toMatch(/^\/_site-data\/(stablecoin\/|supply-history)/);
+      return Response.json(url.pathname.endsWith("/supply-history") ? [] : { price: 1, tokens: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const snapshots = await generateSnapshots(false, { source: "bulk" });
+    expect(snapshots).toHaveLength(TRACKED_STABLECOINS.length);
+    expect(fetch).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("using per-coin acquisition"));
+  });
+
   it("rejects malformed or incomplete bulk accounting without silently falling back", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
     for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
     const fetch = vi.fn(async () => Response.json({ version: 1, entries: [{
       id: "not-requested", status: "unavailable", reason: "detail-cache-missing",

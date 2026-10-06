@@ -5,6 +5,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmRpcOptions } from "../../lib/evm-rpc";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile } from "../measured-execution/registry";
+import { createDexMeasuredExecutionRpcBudget, type DexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { sqrtRatioToSpotPrice } from "./fetch-slipstream";
 import { decodeStagedMulticallResult, erc20RecoveryCalls, ERC20_RECOVERY_ABI, mapStagedMulticallResults, rawAmountToDecimal } from "./staged-pool-recovery";
@@ -23,6 +24,9 @@ const POOL_ABI = parseAbi([
 const V3_FACTORY_ABI = parseAbi(["function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)"]);
 const SLIPSTREAM_FACTORY_ABI = parseAbi(["function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)"]);
 export const QUOTER_V2_CAPTURE_MAX_POOLS = 128;
+export const QUOTER_V2_CAPTURE_XDC_MAX_POOLS = 12;
+export const QUOTER_V2_CAPTURE_MAX_REQUESTS = 160;
+export const QUOTER_V2_CAPTURE_MAX_WALL_MS = 90_000;
 const MULTICALL_BATCH_SIZE = 60;
 
 export interface QuoterV2PoolCaptureCandidate {
@@ -39,14 +43,26 @@ export async function captureQuoterV2Pools(input: {
   trackedStablecoinPrices: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
 }): Promise<DexApiFetchResult & { blockNumber?: number }> {
   try {
     const deployment = getDexMeasuredExecutionDeployment(input.adapterProfileId, input.chain);
     if (!deployment) throw new Error("quoter-v2-deployment-unreviewed");
-    if (input.candidates.length > QUOTER_V2_CAPTURE_MAX_POOLS) throw new Error("quoter-v2-capture-pool-budget");
+    const maxPools = input.chain === "xdc" ? QUOTER_V2_CAPTURE_XDC_MAX_POOLS : QUOTER_V2_CAPTURE_MAX_POOLS;
+    if (input.candidates.length > maxPools) throw new Error("quoter-v2-capture-pool-budget");
     const candidates = input.candidates;
     if (candidates.length === 0) return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
-    const options: EvmRpcOptions = { chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, maxRetries: 0, multicallBatchSize: MULTICALL_BATCH_SIZE };
+    // Enforce a bound here as well as in the enrichment caller: direct capture
+    // callers and endpoint failover must spend the same physical-request limit.
+    const rpcBudget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: QUOTER_V2_CAPTURE_MAX_REQUESTS,
+      deadlineMs: Math.min(input.rpcBudget?.deadlineMs ?? Infinity, Date.now() + QUOTER_V2_CAPTURE_MAX_WALL_MS),
+    });
+    const options: EvmRpcOptions = {
+      chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+      maxRetries: 0, multicallBatchSize: MULTICALL_BATCH_SIZE, deadlineMs: rpcBudget.deadlineMs,
+      beforeRequest: () => rpcBudget.tryConsume() && (input.rpcBudget?.tryConsume() ?? true),
+    };
     const blockNumber = await fetchEvmBlockNumber(input.chain, options);
     if (blockNumber == null) throw new Error("quoter-v2-block-unavailable");
     if (input.chain === "xdc") {
@@ -89,6 +105,7 @@ export async function captureQuoterV2Pools(input: {
     if (bindingCalls.length === 0) return { ...makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] }), blockNumber };
     const rawBindings = await fetchEvmMulticall3Aggregate3AtBlock(input.chain, bindingCalls, blockNumber, options);
     if (!rawBindings) throw new Error("quoter-v2-binding-unavailable");
+    if (rpcBudget.stopReason || input.rpcBudget?.stopReason) throw new Error("quoter-v2-capture-request-budget");
     const bindings = mapStagedMulticallResults(rawBindings);
     const pools: DexApiPool[] = [];
     for (const row of decoded) {

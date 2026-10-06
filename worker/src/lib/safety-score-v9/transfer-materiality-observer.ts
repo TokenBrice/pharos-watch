@@ -240,7 +240,7 @@ async function observeChainDeployments(
       { label: `${target.deploymentKey}:total-supply`, target: target.address, callData: TOTAL_SUPPLY_SELECTOR, allowFailure: true },
       { label: `${target.deploymentKey}:decimals`, target: target.address, callData: DECIMALS_SELECTOR, allowFailure: true },
     ]);
-    const readOptions = provenance ? { ...options, stateBlockHash: header.hash } : options;
+    const readOptions = { ...options, stateBlockHash: header.hash };
     let results = await dependencies.fetchEvmMulticall3Aggregate3AtBlock(chainId, calls, blockNumber, readOptions);
     if (results === null) {
       // A failed aggregate is not zero. The existing fallback reads directly

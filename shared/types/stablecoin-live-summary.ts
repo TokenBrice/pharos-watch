@@ -23,6 +23,7 @@ export const StablecoinLiveSummarySchema = z.object({
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
   supplyObservedAt: z.number().nullable(),
+  supplyRestored: z.boolean().optional(),
   circulating: StablecoinDetailPegBucketsSchema,
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
   circulatingPrevWeek: StablecoinDetailPegBucketsSchema,

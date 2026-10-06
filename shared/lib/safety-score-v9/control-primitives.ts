@@ -249,8 +249,9 @@ export function isV9OperationallyGovernedIssuanceQualified(
     fail("operational-decision-rule-inadmissible", "H0", "issuanceGovernance.decisionRule");
   }
   if (control.incidentState === "active") fail("active-incident", "H0", "incidentState");
-  if (!isKnownRequired(control.status) || control.scopedQuestionFresh === true) {
-    fail(control.scopedQuestionFresh === true ? "scoped-question-open" : "review-incomplete", "H0", "status");
+  const semanticQuestionOpen = control.scopedQuestionFresh === true && control.scopedQuestionSubject !== "key-custody-independence";
+  if (!isKnownRequired(control.status) || semanticQuestionOpen) {
+    fail(semanticQuestionOpen ? "scoped-question-open" : "review-incomplete", "H0", "status");
   }
   if (control.controlKind === "bridge" || control.economicLossScope === "unknown" ||
       (control.capSemantics.kind !== "unbounded" && control.claimImpairment !== "unbounded") ||

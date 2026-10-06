@@ -4,6 +4,10 @@ import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { formatScore, signedCurrency } from "./digest-intelligence-utils";
 import { ACTIVE_DEPEGS_DEGRADED_SOURCE } from "./degraded-sources";
 
+export function getGaugeRiskTapeTone(score: number): "warning" | "positive" | "neutral" {
+  return score < -20 ? "warning" : score > 20 ? "positive" : "neutral";
+}
+
 export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
   const items: DigestRiskTapeItem[] = [];
 
@@ -50,7 +54,7 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
       id: "risk-tape:gauge",
       label: "Gauge",
       value: `${formatScore(gaugeScore)} ${gaugeBand}`,
-      tone: gaugeScore < -20 ? "warning" : gaugeScore > 20 ? "positive" : "neutral",
+      tone: getGaugeRiskTapeTone(gaugeScore),
       detail:
         classificationSource === "unavailable"
           ? `Flight-to-quality classification unavailable${classificationReason ? ` (${classificationReason})` : ""}.`

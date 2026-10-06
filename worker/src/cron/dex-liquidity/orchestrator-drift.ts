@@ -180,9 +180,8 @@ export function computeDexLiquidityDriftSummary(params: {
   }>;
   scoreResults: Map<string, FullScoreResult>;
   /**
-   * Prior published TVL for the coins that were the largest by TVL last run.
-   * Reuses the rows the major-coverage guard already loads: a per-coin cliff
-   * only matters for coins big enough to be part of the market's exit capacity.
+   * Prior published TVL, including material coins outside the top ten. This
+   * remains available after a cliff is rebaselined and its candidate is dropped.
    */
   previousMajorTvlById: Map<string, number>;
 }): DexLiquidityDriftSummary {

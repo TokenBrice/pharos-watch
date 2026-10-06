@@ -351,7 +351,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
   });
 
-  it("keeps an unattributed asset's chain supply on the fixed-input clock when another asset's packet is older", () => {
+  it.each([null, XAUT_FACT_SET_CLOCK_SEC, XAUT_FACT_SET_CLOCK_SEC - 86_400])("ages unattributed chain supply by its asset clock (%s) independently of another packet", (observedAtSec) => {
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const xautInput = xautFactSetFixedInput({
       clockSec,
@@ -360,6 +360,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       omitLiveReserve: true,
     });
     const alphaInput = exactFixedInput({ clockSec });
+    alphaInput.aggregateCirculatingById.alpha!.observedAtSec = observedAtSec;
     const fixed = rebuildFixed({
       ...xautInput,
       activeAssetIds: ["alpha", "xaut-tether"],
@@ -402,8 +403,12 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
     expect(baseline.sources.chainSupply.maxAgeSec).toBeLessThan(2_800);
     expect(chainSupply("alpha")).toMatchObject({
-      evidence: { observedAtSec: clockSec, freshness: { state: "current" } },
+      evidence: {
+        observedAtSec: observedAtSec ?? clockSec,
+        freshness: { state: observedAtSec === clockSec - 86_400 ? "stale" : "current" },
+      },
     });
+    if (observedAtSec === clockSec - 86_400) expect(chainSupply("alpha").state).not.toBe("known");
     expect(chainSupply("xaut-tether")).toMatchObject({
       state: "known",
       evidence: {
@@ -615,6 +620,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     ];
     for (const { name, extension: extensionCase, responsibility, observationState } of cases) {
       const fixed = exactFixedInput();
+      if (extensionCase.chainSupplyObservedAtSec !== undefined) {
+        // Per-asset evidence owns freshness when its captured observation clock exists.
+        fixed.aggregateCirculatingById.alpha!.observedAtSec = extensionCase.chainSupplyObservedAtSec;
+        fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+      }
       const alpha = compileSafetyScoreV9FactSetFromFixedInput(
         fixed, nullSupplyReviewExtension(extensionCase),
       ).assets[0]!;

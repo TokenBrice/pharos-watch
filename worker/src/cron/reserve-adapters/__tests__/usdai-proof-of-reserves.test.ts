@@ -149,20 +149,29 @@ async function fetchAnchored(
 }
 
 describe("usdai-proof-of-reserves adapter", () => {
-  it("anchors composition to same-call liquid balance and vault assets rather than document clocks", async () => {
+  it("retains amount observations without certifying composition shares", async () => {
     const result = await fetchAnchored();
     expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
     expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
+      freshnessMode: "unverified",
       observedBlock: { number: 500_000_000, timestamp: 1_788_975_000 },
       details: { anchor: { block: 500_000_000, tolerance: 0.01, checkedRows: [expect.objectContaining({ name: "PYUSD" })] } },
     });
-    expect(result.warnings?.some((warning) => warning.effect === "degraded")).toBe(false);
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
+  });
+
+  it("does not certify fabricated full liquid shares with correct balances and omitted deals", async () => {
+    const result = await fetchAnchored({}, [
+      { ...MIXED_WEIGHT_PAYLOAD[0], share: "1000000000000000000" },
+    ]);
+    expect(result.slices.map(({ pct }) => pct)).toEqual([100]);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
   });
 
   it("enforces the reviewed tolerance without floating-point boundary drift", async () => {
     const atLimit = await fetchAnchored({ "balance-0": 953_535n * 10n ** 6n });
-    expect(atLimit.metadata?.freshnessMode).toBe("not-applicable");
+    expect(atLimit.metadata?.freshnessMode).toBe("unverified");
     const overLimit = await fetchAnchored({ "balance-0": 953_536n * 10n ** 6n });
     expect(overLimit.metadata?.freshnessMode).toBe("unverified");
     expect(overLimit.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch" }));
@@ -172,8 +181,7 @@ describe("usdai-proof-of-reserves adapter", () => {
     // Production shape (2026-09-25): the PYUSD share divides the hub sleeve plus
     // legacy deals at their remaining balances, so share x vault totalAssets can
     // never equal the hub balance once the issuer's scopes drift apart; the
-    // anchor must still pass while the liquid amount matches the measured
-    // balance exactly and the composition shares total 100%.
+    // amount check must still pass while composition remains unverified.
     const result = await fetchAnchored(
       { assets: 2_000_000n * 10n ** 18n, "idle-asset": 1_944_000n * 10n ** 18n },
       [
@@ -182,8 +190,8 @@ describe("usdai-proof-of-reserves adapter", () => {
       ],
     );
     expect(result.slices.map(({ pct }) => pct)).toEqual([54, 46]);
-    expect(result.metadata?.freshnessMode).toBe("not-applicable");
-    expect((result.warnings ?? []).some((warning) => warning.effect === "degraded")).toBe(false);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expectWarningEffect(result, "usdai-composition-unverified", "degraded");
   });
 
   it("does not mistake a zero liquid row for evidence covering the loan composition", async () => {

@@ -1448,7 +1448,7 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
   });
 
-  it("simulates a Raydium constant-product exit from exact retained reserves", () => {
+  it("keeps provider-reported Raydium reserves diagnostic and ineligible for scoring", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
@@ -1464,14 +1464,14 @@ describe("P4 DEX exit route observations", () => {
     expect(result.coverage).toMatchObject({
       status: "populated",
       observationCount: 1,
-      scoreEligibleObservationCount: 1,
+      scoreEligibleObservationCount: 0,
       unsupportedPoolCount: 0,
       evidenceCounts: { "reserve-based-amm-simulation": 1 },
     });
     expect(result.observations[0]).toMatchObject({
       evidenceKind: "reserve-based-amm-simulation",
-      confidence: "high",
-      scoreEligible: true,
+      confidence: "low",
+      scoreEligible: false,
       output: {
         kind: "tracked-stablecoin",
         trackedAssetIds: ["usdt-tether"],

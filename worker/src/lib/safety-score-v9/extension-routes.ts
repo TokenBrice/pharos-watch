@@ -665,7 +665,6 @@ function redemptionExecutionCertainty(
 
 function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
-  observation: ExitRouteObservation,
 ): RouteReview["coverageClass"] {
   // A reviewed bounded-terms gap keeps the captured mechanism and capacity
   // curve visible, but it cannot lend score credit to settlement/cost values
@@ -677,11 +676,9 @@ function redemptionCoverageClass(
   ) {
     return "diagnostic";
   }
-  // The current-open gate protects producer-eligible immediate execution.
-  // Unscored observations retain the evaluator's separate redemption-credit
-  // treatment; an unknown open status is not measured proof of no viable exit.
+  // Current-open evidence also gates discounted credit. Producer rejection
+  // must not let a paused or unknown immediate rail bypass this requirement.
   const requiresCurrentOpenAttribution =
-    observation.scoreEligible &&
     entry.sourceMode === "dynamic" &&
     (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded") &&
     (entry.settlementModel === "atomic" || entry.settlementModel === "immediate");
@@ -806,6 +803,13 @@ function redemptionExecutionCosts(
   observation: ExitRouteObservation,
 ): RouteReview["executionCosts"] {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
+  if (hasUnquantifiedDocumentedRedemptionCost(config, observation)) {
+    return canonicalExecutionCosts({
+      ...observation,
+      executionCostBps: undefined,
+      capacityCurve: observation.capacityCurve?.map((point) => ({ ...point, executionCostBps: undefined })),
+    }, () => null);
+  }
   return canonicalExecutionCosts(
     observation,
     (point) =>
@@ -820,6 +824,20 @@ function redemptionExecutionCosts(
           ? entry.feeBps
           : null),
   );
+}
+
+function hasUnquantifiedDocumentedRedemptionCost(
+  config: RedemptionBackstopConfig | null,
+  observation: ExitRouteObservation,
+): boolean {
+  // A frozen documented row cannot establish a bound that the current review
+  // explicitly leaves unquantified. Already diagnostic terms-gap reviews
+  // retain captured terms; measured execution has separate evidence.
+  return observation.evidenceKind === "documented-terms" &&
+    config?.costModel.kind === "dynamic-or-unclear" &&
+    config.v9RouteReviewTerms?.scoringDisposition !== "bounded-terms-gap" &&
+    config.costModel.feeBpsMax == null &&
+    config.v9RouteCostTerms === undefined;
 }
 
 function buildRedemptionRouteReview(
@@ -868,7 +886,10 @@ function buildRedemptionRouteReview(
     ...(routeSuspension ? { routeSuspension } : {}),
     // Old captures mislabeled published formulas as issuer non-disclosure.
     // Correct provenance only: no formula evaluation or <=200 bps claim.
-    ...(observation.feeEvidence === "undisclosed-reviewed" &&
+    ...(hasUnquantifiedDocumentedRedemptionCost(staticConfig, observation)
+      ? { feeEvidence: staticConfig?.costModel.confidence === "formula"
+          ? "disclosed-unquantified" as const : "undisclosed-reviewed" as const }
+      : observation.feeEvidence === "undisclosed-reviewed" &&
     entry.feeConfidence === "formula" &&
     (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable")
       ? { feeEvidence: "disclosed-unquantified" as const }
@@ -877,7 +898,7 @@ function buildRedemptionRouteReview(
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon

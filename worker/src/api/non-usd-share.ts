@@ -104,22 +104,34 @@ async function readCoinHistoryGaps(
     .prepare(
       `WITH
          core_ids(id) AS (SELECT value FROM json_each(?)),
+         bounded_history AS (
+           SELECT stablecoin_id, snapshot_date, circulating_usd
+           FROM supply_history
+           WHERE stablecoin_id IN (SELECT id FROM core_ids)
+             AND snapshot_date >= ?${latestSnapshotFilter}
+           UNION ALL
+           SELECT history.stablecoin_id, history.snapshot_date, history.circulating_usd
+           FROM core_ids
+           JOIN supply_history history ON history.stablecoin_id = core_ids.id
+             AND history.snapshot_date = (
+               SELECT MAX(snapshot_date) FROM supply_history
+               WHERE stablecoin_id = core_ids.id AND snapshot_date < ?${latestSnapshotFilter}
+             )
+         ),
          coin_history AS (
            SELECT
              stablecoin_id,
              snapshot_date,
              LAG(snapshot_date) OVER by_coin AS previous_date,
              LAG(circulating_usd) OVER by_coin AS previous_usd
-           FROM supply_history
-           WHERE stablecoin_id IN (SELECT id FROM core_ids)
-             AND snapshot_date >= ?${latestSnapshotFilter}
+           FROM bounded_history
            WINDOW by_coin AS (PARTITION BY stablecoin_id ORDER BY snapshot_date)
          )
        SELECT stablecoin_id, previous_date, snapshot_date AS next_date, previous_usd
        FROM coin_history
-       WHERE snapshot_date - previous_date > ${DAY_SECONDS}`,
+       WHERE snapshot_date >= ? AND snapshot_date - previous_date > ${DAY_SECONDS}`,
     )
-    .bind(JSON.stringify(CORE_IDS), cutoff, ...latestSnapshotBinds)
+    .bind(JSON.stringify(CORE_IDS), cutoff, ...latestSnapshotBinds, cutoff, ...latestSnapshotBinds, cutoff)
     .all<CoinHistoryGapRow>();
 
   return result.results ?? [];

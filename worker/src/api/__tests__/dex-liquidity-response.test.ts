@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { DEX_UNSUPPORTED_CHAIN_WAIVER_REASON } from "@shared/lib/dex-deployment-coverage";
 import {
   buildDexDeploymentCoverage,
   normalizeTopPools,
@@ -239,6 +241,18 @@ describe("selectTrendBaseline", () => {
 });
 
 describe("buildDexDeploymentCoverage", () => {
+  it.each(["krusdc-keyrock", "arcusdc-galaxy"])("suppresses persisted unsupported waiver for supported Arc deployment %s", (stablecoinId) => {
+    const deployment = ACTIVE_STABLECOINS.find((coin) => coin.id === stablecoinId)!.contracts!.find((contract) => contract.chain === "arc")!;
+    for (const providers of [[], ["geckoterminal"]]) {
+      const coverage = buildDexDeploymentCoverage([{
+        stablecoin_id: stablecoinId, chain: "arc", contract_address: deployment.address,
+        outcome: "provider_inaccessible", provider_set_json: JSON.stringify(providers), reason: "legacy unsupported",
+        observed_pool_count: 0, observed_at: 100, waiver_owner: "data-platform",
+        waiver_reason: DEX_UNSUPPORTED_CHAIN_WAIVER_REASON, waiver_expires_at: 200,
+      }], 150).get(stablecoinId);
+      expect(coverage?.deployments[0]?.waiver).toBeNull();
+    }
+  });
   it("keeps verified empty separate from inaccessible and expires waivers", () => {
     const rows = [
       // Registry-true deployments: rows keyed outside the current registry are

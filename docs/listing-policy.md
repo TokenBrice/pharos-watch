@@ -25,10 +25,12 @@ The listing class separates the research catalog from the core monetary aggregat
 | `core-stablecoin` | A transferable stable-value monetary instrument that is not a tracked variant, NAV/fund cash equivalent, or credit investment | Included in the core aggregate while active |
 | `cash-equivalent` | A non-variant with `flags.navToken === true`, or a non-variant classified as `mechanismArchetype: "tbill"` | Included in the core aggregate while active; NAV-aware pricing applies only to rows with `flags.navToken === true`, while `tbill` rows without that flag keep ordinary peg-price bounds |
 | `stablecoin-variant` | A direct tracked child with `variantOf` and `variantKind` | Tracked and analyzed, but excluded from parent-inclusive aggregate totals to prevent double counting |
-| `stable-value-investment` | A non-variant classified as `mechanismArchetype: "rwa-credit-fund"` | Tracked on its separate investment surface, excluded from the core monetary aggregate |
+| `stable-value-investment` | A non-variant classified as `mechanismArchetype: "rwa-credit-fund"`, or held outside core aggregates by an unresolved exact-product mechanism review | Tracked on its separate investment surface, excluded from the core monetary aggregate |
 | `excluded` | Fails the scope or instrument tests | Historical record only; never active |
 
 Class precedence is deterministic: `excluded`, then `stablecoin-variant`, then `stable-value-investment`, then `cash-equivalent`, then the residual `core-stablecoin` class. `npm run check:stablecoin-data` enforces exact catalog coverage and this precedence.
+
+An unresolved mechanism review preserves delisted, variant, credit-fund and NAV/T-bill invariants before applying its hold. Remaining unresolved mechanisms require `stable-value-investment`; the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. USDR Ring is held on that basis pending exact-product qualification; its listing class does not assert a proven credit-fund mechanism.
 
 ## Instrument Eligibility
 

@@ -16,6 +16,7 @@ import {
 
 const ADAPTER_KEY = "quantoz-transparency";
 const MIN_RESERVE_RATIO_PCT = 99.5;
+const MAX_PUBLISHED_NUMBER_FIELD_LENGTH = 128;
 /**
  * The transparency cards publish whole-number percentages (`Cash 33%`,
  * `Government bonds 66%`) and no absolute amount per category, so each of the N
@@ -50,6 +51,7 @@ const COMPOSITION_LABELS = ["Cash", "Government bonds"] as const;
  * at.
  */
 function parsePublishedNumber(raw: string): number | null {
+  if (raw.length > MAX_PUBLISHED_NUMBER_FIELD_LENGTH) return null;
   const cleaned = stripTags(raw).replace(/[€$£\s]/g, "");
   const [integerPart, fractionPart, ...extra] = cleaned.split(".");
   if (extra.length > 0 || integerPart == null) return null;
@@ -80,6 +82,9 @@ function extractQuantozTimestamp(html: string): number {
 function extractDefinedValuePairs(html: string): Array<{ label: string; value: string }> {
   const pairs: Array<{ label: string; value: string }> = [];
   for (const match of html.matchAll(/<dt\b[^>]*>([\s\S]*?)<\/dt>\s*<dd\b[^>]*>([\s\S]*?)<\/dd>/gi)) {
+    if ((match[2]?.length ?? 0) > MAX_PUBLISHED_NUMBER_FIELD_LENGTH) {
+      throw htmlLayoutChangedError(ADAPTER_KEY, "oversized numeric field");
+    }
     pairs.push({ label: stripTags(match[1] ?? ""), value: stripTags(match[2] ?? "") });
   }
   return pairs;

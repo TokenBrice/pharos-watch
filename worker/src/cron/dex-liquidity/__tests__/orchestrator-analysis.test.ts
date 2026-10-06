@@ -113,6 +113,33 @@ function makeCronMetadata(params: {
 }
 
 describe("analyzeDexLiquidityPostScoring", () => {
+  it("monitors a material former top-ten asset after acceptance and quiet outside-top-ten publications", async () => {
+    let candidates: NonNullable<Parameters<typeof makeCronMetadata>[0]["qualityDriftCandidates"]> = [];
+    let previousTvl = 152_000_000;
+    const levels = [...Array<number>(7).fill(13_700_000), 13_650_000, 13_600_000, 6_000_000, 6_000_000];
+    for (const [index, tvl] of levels.entries()) {
+      const db = mockD1([
+        { match: "ORDER BY total_tvl_usd DESC", rows: index === 0 ? [{ stablecoin_id: "usds-sky", total_tvl_usd: previousTvl }] : [] },
+        { match: "FROM dex_liquidity_run_rows r", rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: previousTvl, protocol_tvl_json: "{}" }] },
+        { match: "FROM cron_runs", rows: [{ started_at: 1_784_000_000 + index * 3600, status: "ok", metadata: makeCronMetadata({
+          dlProtocolsAvailable: true, currentGlobalTvl: 6_000_000_000, stagedPoolsMerged: 0,
+          stagedPoolsSkipped: 0, priceObservationCoins: 0, measuredBalanceCoveragePct: 0, weakCoverageCoins: 0,
+          qualityDriftCandidates: candidates,
+        }) }] },
+      ]);
+      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db,
+        scoreResults: new Map([["usds-sky", { ...BASE_SCORE_RESULT, tvl, effectiveTvl: tvl }]]),
+      }));
+      candidates = analysis.sourceCoverage.qualityDriftCandidates;
+      previousTvl = tvl;
+      if (index === 6) expect(analysis.sourceCoverage.qualityDriftRebaselined).toHaveLength(1);
+      if (index >= 6 && index < 10) expect(analysis.sourceCoverage.qualityDriftFlags).toEqual([]);
+      if (index === 10) {
+        expect(analysis.sourceCoverage.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
+        expect(analysis.sourceCoverage.majorTvlCliffs[0]?.previousTvlUsd).toBe(13_600_000);
+      }
+    }
+  });
   it("counts published-generation TVL steps at the reviewed bounds and ranks the five largest moves", async () => {
     const coins = [
       { id: "surge", previous: 100, current: 400 },

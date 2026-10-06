@@ -74,6 +74,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
     supplyObservedAt: hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : latestDate,
+    ...(hasCurrentSupply && detail.currentSupplyRestored === true ? { supplyRestored: true } : {}),
     circulating,
     circulatingPrevDay: hasCurrentSupply ? detail.currentCirculatingPrevDayUSD ?? {}
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),

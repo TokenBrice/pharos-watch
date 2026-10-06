@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.09",
+    title: "Current route evidence and consistent control qualification",
+    date: "2026-10-06",
+    effectiveAt: 1791295690,
+    summary:
+      "Safety Score v10.09 requires current open attribution for dynamic immediate redemption credit, preserves unquantified documented costs in frozen captures, and aligns custody-only questions and allocation completeness with their stated evidence boundaries.",
+    impact: [
+      "Dynamic live-direct atomic or immediate rails without same-run open status from on-chain or protocol-API evidence remain diagnostic even when their producer sets scoreEligible false; the discounted redemption path cannot bypass that gate.",
+      "HBD conversion costs remain disclosed but unquantified until haircut-adjusted proceeds are established. Frozen documented rows cannot restore a numeric cost bound that the current review leaves unquantified; measured execution retains its separate evidence path.",
+      "Custody-only questions retain unknown key custody without invalidating independently established issuance governance or operational process; semantic questions continue to gate qualification. Allocation coverage uses the same 1e-9 unit-weight tolerance as reserve admission.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.08",
     title: "Authenticated bridge in-flight accounting, exact vault unwinds and honest control questions",
     date: "2026-10-05",

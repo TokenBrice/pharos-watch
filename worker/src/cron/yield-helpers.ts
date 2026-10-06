@@ -474,7 +474,12 @@ export function findBestLendingPool(
   }
 
   // Fallback: exact symbol, but only when the caller has determined it is safe.
-  const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === symbolKey);
+  const symbolCandidates = baseCandidates.filter((pool) =>
+    normalizeDexSymbol(pool.symbol) === symbolKey &&
+    // Supplied deposit addresses take precedence over a coincident ticker.
+    (contractSet.size === 0 || (pool.underlyingTokens ?? []).length === 0 ||
+      corroboratesUnderlyingSet(pool, contractSet))
+  );
   if (symbolCandidates.length === 0) return null;
 
   const best = symbolCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));

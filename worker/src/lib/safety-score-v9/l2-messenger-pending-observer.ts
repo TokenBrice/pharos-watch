@@ -9,6 +9,8 @@ import type { ChainRpcConfig } from "../chain-registry";
 
 const PAGES_PER_ATTEMPT = 8;
 const LOGS_PER_PAGE = 2048;
+const MESSAGES_PER_DIRECTION = 32;
+const REDEMPTIONS_PER_ATTEMPT = 8;
 const CHECKPOINT_MAX_BYTES = 128 * 1024;
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 const WORD = /^0x[0-9a-f]{64}$/;
@@ -109,7 +111,7 @@ export async function observeL2MessengerPending(input: {
     if (!parsed.success) fail("source-invalid");
     const source = parsed.data;
     const sourceDigest = sha256Hex(stableJsonStringifyV1(source));
-    const cacheKey = `safety-score-v9:l2-messenger-pending:v1:${sourceDigest}`;
+    const cacheKey = `safety-score-v9:l2-messenger-pending:v2:${sourceDigest}`;
     const chains = [source.chainId, source.l2ChainId], starts = [source.l1StartBlock, source.l2StartBlock];
     const options = { chainRpcs: input.chainRpcs, signal: input.signal };
     const rpc = async (index: number, calls: EvmRpcBatchCall[]) => {
@@ -195,17 +197,21 @@ export async function observeL2MessengerPending(input: {
         if (cursor.nextBlock < starts[i]! || cursor.nextBlock > input.headers[i]!.number + 1 || cursor.anchorHash === null) fail("checkpoint-invalid");
         const anchor = await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock - 1, options);
         if (!anchor || anchor.hash !== cursor.anchorHash || await counter(i, anchor) !== BigInt(cursor.nextNonce)) fail("checkpoint-reorg");
+        if (cursor.resume && ((await fetchEvmBlockHeader(chains[i]!, cursor.nextBlock, options))?.hash !== cursor.resume.blockHash ||
+          BigInt(cursor.resume.nextNonce) <= BigInt(cursor.nextNonce))) fail("checkpoint-reorg");
+        const settlement = checkpoint.settlementPins[i]!;
+        if (settlement.number > input.headers[i]!.number || (await fetchEvmBlockHeader(chains[i]!, settlement.number, options))?.hash !== settlement.hash) fail("checkpoint-reorg");
       }
       if (checkpoint.messages.some(row => {
         const i = row.direction === "deposit" ? 0 : 1;
-        return row.blockNumber < starts[i]! || row.blockNumber >= checkpoint!.cursors[i].nextBlock ||
-          BigInt(row.nonce) >= BigInt(checkpoint!.cursors[i].nextNonce) ||
+        return row.blockNumber < starts[i]! || (row.blockNumber > checkpoint!.cursors[i].nextBlock || (row.blockNumber === checkpoint!.cursors[i].nextBlock && !checkpoint!.cursors[i].resume)) ||
+          BigInt(row.nonce) >= BigInt(checkpoint!.cursors[i].resume?.nextNonce ?? checkpoint!.cursors[i].nextNonce) ||
           (source.protocol === "op-stack" && row.relayHash === null);
       })) fail("checkpoint-invalid");
     } else {
       const cursors: L2MessengerPendingCheckpoint["cursors"] = [
-        { nextBlock: starts[0]!, anchorHash: null, nextNonce: "0", digest: sha256Hex("l2-messenger-history-v1") },
-        { nextBlock: starts[1]!, anchorHash: null, nextNonce: "0", digest: sha256Hex("l2-messenger-history-v1") },
+        { nextBlock: starts[0]!, anchorHash: null, nextNonce: "0", digest: sha256Hex("l2-messenger-history-v2"), resume: null },
+        { nextBlock: starts[1]!, anchorHash: null, nextNonce: "0", digest: sha256Hex("l2-messenger-history-v2"), resume: null },
       ];
       for (let i = 0; i < 2; i++) {
         const anchor = await fetchEvmBlockHeader(chains[i]!, starts[i]! - 1, options);
@@ -214,10 +220,11 @@ export async function observeL2MessengerPending(input: {
         if (word((await read(i, anchor, [balance]))[0]) !== 0n) fail("initial-liabilities-not-empty");
         cursors[i]!.anchorHash = anchor.hash; cursors[i]!.nextNonce = String(await counter(i, anchor));
       }
-      checkpoint = { schemaVersion: 1, sourceDigest, cursors, messages: [] };
+      checkpoint = { schemaVersion: 2, sourceDigest, cursors, settlementPins: input.headers.map(pin => ({ number: pin.number, hash: pin.hash })) as L2MessengerPendingCheckpoint["settlementPins"], messages: [] };
     }
     const cp = checkpoint;
-    let pages = 0, relayHistoryIncomplete = false;
+    let pages = 0, redemptionEvents = 0, relayHistoryIncomplete = false;
+    let reservedSourcePages = cp.cursors.filter((cursor, i) => cursor.nextBlock <= input.headers[i]!.number).length;
     const logs = async (index: number, address: string, topics: unknown[], from: number, to: number) => {
       const result = (await rpc(index, [{ method: "eth_getLogs", params: [{ address, topics, fromBlock: toHex(from), toBlock: toHex(to) }] }]))[0];
       if (!Array.isArray(result) || result.length > LOGS_PER_PAGE) fail("history-unavailable");
@@ -247,106 +254,7 @@ export async function observeL2MessengerPending(input: {
       });
       if (matches.length !== 1) fail("initiation-unproved");
     };
-    const add = (message: Message) => {
-      if (cp.messages.some(row => row.direction === message.direction && row.id === message.id)) fail("message-duplicate");
-      if (cp.messages.length >= 256) fail("checkpoint-capacity");
-      cp.messages.push(message);
-    };
-    for (let i = 0; i < 2; i++) {
-      const cursor = cp.cursors[i]!;
-      // Fair budget: neither stream can starve the other during bootstrap.
-      let directionPages = 0;
-      while (cursor.nextBlock <= input.headers[i]!.number && directionPages < (source.protocol === "arbitrum" ? 2 : PAGES_PER_ATTEMPT / 2)) {
-        const from = cursor.nextBlock, to = Math.min(input.headers[i]!.number, from + source.scanPageBlocks[i]! - 1);
-        const end = await fetchEvmBlockHeader(chains[i]!, to, options);
-        if (!end) fail("history-unavailable");
-        const address = source.protocol === "op-stack" ? (i === 0 ? source.l1Messenger : source.messagePasser) : (i === 0 ? source.rollupBridge : source.arbSys);
-        const rows = await logs(i, address, [source.protocol === "op-stack" ? (i === 0 ? SENT : PASSED) : (i === 0 ? DELIVERED : WITHDRAWAL)], from, to);
-        for (const log of rows) {
-          const event = decode(log), height = Number(BigInt(log.blockNumber));
-          let nonce: bigint;
-          if (event.eventName === "SentMessage") nonce = event.args.messageNonce;
-          else if (event.eventName === "MessagePassed") nonce = event.args.nonce;
-          else if (event.eventName === "MessageDelivered") nonce = event.args.messageIndex;
-          else if (event.eventName === "L2ToL1Tx") nonce = event.args.position;
-          else fail("log-invalid");
-          if (source.protocol === "op-stack") {
-            if (nonce! >> 240n !== 1n) fail("nonce-version-unsupported");
-            nonce! &= NONCE_MASK;
-          }
-          if (nonce! !== BigInt(cursor.nextNonce)) fail("nonce-missing");
-          cursor.nextNonce = String(nonce! + 1n);
-          if (source.protocol === "op-stack") {
-            if (event.eventName === "SentMessage") {
-              if (event.args.sender.toLowerCase() !== source.l1Bridge || event.args.target.toLowerCase() !== source.l2Bridge) continue;
-              const payload = tokenPayload(source, event.args.message, true);
-              if (!payload) continue;
-              const txLogs = await receipt(0, log.transactionHash, height, log.blockHash);
-              verifyInitiation(txLogs, true, payload);
-              const extension = txLogs.find(row => row.address === source.l1Messenger && BigInt(row.logIndex) === BigInt(log.logIndex) + 1n);
-              if (!extension) fail("message-value-missing");
-              const ext = decode(extension!);
-              if (ext.eventName !== "SentMessageExtension1" || ext.args.sender.toLowerCase() !== source.l1Bridge || ext.args.value !== 0n) fail("message-value-invalid");
-              const hash = keccak256(encodeFunctionData({ abi: relayAbi, functionName: "relayMessage", args: [event.args.messageNonce, event.args.sender, event.args.target, ext.args.value, event.args.gasLimit, event.args.message] }));
-              add({ direction: "deposit", id: hash, relayHash: hash, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0 });
-            } else if (event.eventName === "MessagePassed") {
-              if (event.args.sender.toLowerCase() !== source.l2Messenger || event.args.target.toLowerCase() !== source.l1Messenger) continue;
-              const relay = decodeFunctionData({ abi: relayAbi, data: event.args.data });
-              const [relayNonce, sender, target, value, , message] = relay.args;
-              if (relayNonce >> 240n !== 1n) fail("nonce-version-unsupported");
-              if (sender.toLowerCase() !== source.l2Bridge || target.toLowerCase() !== source.l1Bridge) continue;
-              const payload = tokenPayload(source, message, false);
-              if (!payload) continue;
-              if (value !== 0n || event.args.value !== 0n) fail("message-value-invalid");
-              const hash = keccak256(encodeAbiParameters(parseAbiParameters("uint256,address,address,uint256,uint256,bytes"), [event.args.nonce, event.args.sender, event.args.target, event.args.value, event.args.gasLimit, event.args.data]));
-              // Both values are public on-chain withdrawal commitments, not secrets.
-              // eslint-disable-next-line security/detect-possible-timing-attacks
-              if (hash !== event.args.withdrawalHash) fail("withdrawal-hash-mismatch");
-              verifyInitiation(await receipt(1, log.transactionHash, height, log.blockHash), false, payload);
-              if (!bool((await read(1, end, [call(source.messagePasser, "sentMessages(bytes32)", hash.slice(2))]))[0])) fail("withdrawal-unproved");
-              add({ direction: "withdrawal", id: hash, relayHash: keccak256(event.args.data), nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0 });
-            } else fail("log-invalid");
-          } else if (event.eventName === "MessageDelivered") {
-            const alias = toHex((BigInt(source.l1Bridge) + 0x1111000000000000000000000000000000001111n) % (1n << 160n), { size: 20 });
-            if (event.args.sender.toLowerCase() !== alias || event.args.kind !== 9 || event.args.inbox.toLowerCase() !== source.inbox) continue;
-            const txLogs = await receipt(0, log.transactionHash, height, log.blockHash);
-            const deliveries = txLogs.filter(row => row.address === source.inbox && row.topics[0] === topic("InboxMessageDelivered(uint256,bytes)")).map(decode).filter(row => row.eventName === "InboxMessageDelivered" && row.args.messageNum === nonce);
-            if (deliveries.length !== 1 || deliveries[0]!.eventName !== "InboxMessageDelivered") fail("inbox-payload-missing");
-            const packed = deliveries[0]!.args.data;
-            if (keccak256(packed) !== event.args.messageDataHash || packed.length < 578) fail("inbox-payload-invalid");
-            const words = Array.from({ length: 9 }, (_, j) => BigInt(`0x${packed.slice(2 + j * 64, 66 + j * 64)}`));
-            const addressWord = (j: number) => { if (words[j]! >= 1n << 160n) fail("inbox-payload-invalid"); return toHex(words[j]!, { size: 20 }); };
-            const target = addressWord(0), data = `0x${packed.slice(578)}` as `0x${string}`;
-            if (BigInt((data.length - 2) / 2) !== words[8]) fail("inbox-payload-invalid");
-            if (target !== source.l2Bridge) continue;
-            if (words[1] !== 0n) fail("message-value-invalid");
-            const payload = tokenPayload(source, data, true);
-            if (!payload) continue;
-            verifyInitiation(txLogs, true, payload, nonce);
-            const number = (n: bigint): `0x${string}` => n === 0n ? "0x" : toHex(n);
-            const id = keccak256(concat(["0x69", toRlp([number(BigInt(source.l2EvmChainId)), toHex(nonce!, { size: 32 }), alias, number(event.args.baseFeeL1), number(words[2]!), number(words[7]!), number(words[6]!), target, number(words[1]!), addressWord(5), number(words[3]!), addressWord(4), data])]));
-            add({ direction: "deposit", id, relayHash: null, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: source.l2StartBlock });
-          } else if (event.eventName === "L2ToL1Tx") {
-            if (event.args.caller.toLowerCase() !== source.l2Bridge || event.args.destination.toLowerCase() !== source.l1Bridge) continue;
-            if (event.args.callvalue !== 0n) fail("message-value-invalid");
-            const payload = tokenPayload(source, event.args.data, false);
-            if (!payload) continue;
-            const leaf = keccak256(concat([event.args.caller, event.args.destination, toHex(event.args.arbBlockNum, { size: 32 }), toHex(event.args.ethBlockNum, { size: 32 }), toHex(event.args.timestamp, { size: 32 }), toHex(event.args.callvalue, { size: 32 }), event.args.data]));
-            if (BigInt(leaf) !== event.args.hash) fail("withdrawal-hash-mismatch");
-            verifyInitiation(await receipt(1, log.transactionHash, height, log.blockHash), false, payload, nonce);
-            add({ direction: "withdrawal", id: leaf, relayHash: null, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0 });
-          } else fail("log-invalid");
-        }
-        if (await counter(i, end) !== BigInt(cursor.nextNonce)) fail("nonce-missing");
-        const canonical = await fetchEvmBlockHeader(chains[i]!, to, options);
-        if (!canonical || canonical.hash !== end.hash) fail("history-reorg");
-        cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, to, hash: end.hash, logs: rows }));
-        cursor.nextBlock = to + 1; cursor.anchorHash = end.hash; directionPages++; pages++;
-      }
-    }
-    const retained: Message[] = [];
-    let depositAmount = 0n, withdrawalAmount = 0n;
-    for (const message of cp.messages) {
+    const isPending = async (message: Message): Promise<boolean> => {
       let complete = false;
       if (source.protocol === "op-stack") {
         const index = message.direction === "deposit" ? 1 : 0;
@@ -370,23 +278,34 @@ export async function observeL2MessengerPending(input: {
             const header = await fetchEvmBlockHeader(chains[1]!, height, options);
             if (!header || header.hash !== creation.blockHash) fail("receipt-unproved");
             message.redeemNextBlock = Math.max(message.redeemNextBlock, height);
-            while (message.redeemNextBlock <= input.headers[1]!.number && pages < PAGES_PER_ATTEMPT) {
+            if (message.redeemResume && (await fetchEvmBlockHeader(chains[1]!, message.redeemNextBlock, options))?.hash !== message.redeemResume.blockHash) fail("checkpoint-reorg");
+            while (message.redeemNextBlock <= input.headers[1]!.number && pages < PAGES_PER_ATTEMPT - reservedSourcePages && redemptionEvents < REDEMPTIONS_PER_ATTEMPT) {
               const from = message.redeemNextBlock, to = Math.min(input.headers[1]!.number, from + source.scanPageBlocks[1] - 1);
               const scheduled = await logs(1, source.retryableTx, [REDEEM, message.id], from, to);
               pages++;
-              let pendingExecution = false;
+              let pendingExecution = false, redemptionPrefix: Log | undefined;
               for (const log of scheduled) {
                 const event = decode(log);
                 if (event.eventName !== "RedeemScheduled" || event.args.ticketId !== message.id) fail("log-invalid");
+                const height = Number(BigInt(log.blockNumber)), logIndex = Number(BigInt(log.logIndex));
+                if (message.redeemResume && height === from && logIndex <= message.redeemResume.logIndex) continue;
+                redemptionEvents++;
                 const result = (await rpc(1, [{ method: "eth_getTransactionReceipt", params: [event.args.retryTxHash] }]))[0] as Record<string, unknown> | null;
                 if (!result || result.transactionHash !== event.args.retryTxHash || typeof result.blockNumber !== "string" || !QUANTITY.test(result.blockNumber) ||
                   (result.status !== "0x0" && result.status !== "0x1")) fail("receipt-unproved");
                 const redeemedHeight = Number(BigInt(result.blockNumber));
-                if (redeemedHeight > input.headers[1]!.number) { pendingExecution = true; continue; }
+                if (redeemedHeight > input.headers[1]!.number) { pendingExecution = true; break; }
                 if (typeof result.blockHash !== "string") fail("receipt-unproved");
                 const header = await fetchEvmBlockHeader(chains[1]!, redeemedHeight, options);
                 if (!header || header.hash !== result.blockHash) fail("receipt-unproved");
-                if (result.status === "0x0") continue;
+                if (result.status === "0x0") {
+                  // Only canonical finalized failures can be skipped. Persist a
+                  // within-block prefix before a dense retry page consumes the
+                  // attempt; later successful retries must still be inspected.
+                  if ((await fetchEvmBlockHeader(chains[1]!, height, options))?.hash !== log.blockHash) fail("receipt-unproved");
+                  if (redemptionEvents >= REDEMPTIONS_PER_ATTEMPT) { redemptionPrefix = log; break; }
+                  continue;
+                }
                 const redeemed = await receipt(1, event.args.retryTxHash, redeemedHeight, header!.hash);
                 const finalizations = redeemed.filter(row => row.address === source.l2Bridge && row.topics[0] === topic("DepositFinalized(address,address,address,uint256)")).map(decode).filter(row => row.eventName === "DepositFinalized" && row.args.l1Token.toLowerCase() === source.l1Token && row.args.from.toLowerCase() === message.from && row.args.to.toLowerCase() === message.to && String(row.args.amount) === message.amount);
                 if (finalizations.length !== 1) fail("deposit-relay-unproved");
@@ -396,18 +315,157 @@ export async function observeL2MessengerPending(input: {
               // rechecked next time, rather than forgotten by advancing past it.
               if (complete) break;
               if (pendingExecution) break;
-              message.redeemNextBlock = to + 1;
+              if (redemptionPrefix) {
+                message.redeemNextBlock = Number(BigInt(redemptionPrefix.blockNumber));
+                message.redeemResume = { blockHash: redemptionPrefix.blockHash, logIndex: Number(BigInt(redemptionPrefix.logIndex)) };
+                break;
+              }
+              message.redeemNextBlock = to + 1; message.redeemResume = null;
             }
             if (!complete && message.redeemNextBlock <= input.headers[1]!.number) relayHistoryIncomplete = true;
           }
         }
       }
-      if (!complete) {
-        retained.push(message);
-        if (message.direction === "deposit") depositAmount += BigInt(message.amount); else withdrawalAmount += BigInt(message.amount);
+      return !complete;
+    };
+    const refreshed: Message[] = [];
+    for (const message of cp.messages) if (await isPending(message)) refreshed.push(message);
+    cp.messages = refreshed;
+    let classified = 0, sourceHistoryIncomplete = false;
+    const add = async (message: Message) => {
+      if (cp.messages.some(row => row.direction === message.direction && row.id === message.id)) fail("message-duplicate");
+      if (await isPending(message)) {
+        if (cp.messages.length >= 256) fail("checkpoint-capacity");
+        cp.messages.push(message);
+      }
+      classified++;
+    };
+    const eventNonce = (event: ReturnType<typeof decode>) => {
+      let nonce: bigint;
+      if (event.eventName === "SentMessage") nonce = event.args.messageNonce;
+      else if (event.eventName === "MessagePassed") nonce = event.args.nonce;
+      else if (event.eventName === "MessageDelivered") nonce = event.args.messageIndex;
+      else if (event.eventName === "L2ToL1Tx") nonce = event.args.position;
+      else fail("log-invalid");
+      if (source.protocol === "op-stack") {
+        if (nonce! >> 240n !== 1n) fail("nonce-version-unsupported");
+        nonce! &= NONCE_MASK;
+      }
+      return nonce!;
+    };
+    for (let i = 0; i < 2; i++) {
+      const cursor = cp.cursors[i]!;
+      // Fair budget: neither stream can starve the other during bootstrap.
+      let directionPages = 0;
+      const directionStart = classified;
+      while (pages < PAGES_PER_ATTEMPT && cursor.nextBlock <= input.headers[i]!.number && directionPages < (source.protocol === "arbitrum" ? 2 : PAGES_PER_ATTEMPT / 2)) {
+        const from = cursor.nextBlock, to = Math.min(input.headers[i]!.number, from + source.scanPageBlocks[i]! - 1);
+        const end = await fetchEvmBlockHeader(chains[i]!, to, options);
+        if (!end) fail("history-unavailable");
+        const address = source.protocol === "op-stack" ? (i === 0 ? source.l1Messenger : source.messagePasser) : (i === 0 ? source.rollupBridge : source.arbSys);
+        const rows = await logs(i, address, [source.protocol === "op-stack" ? (i === 0 ? SENT : PASSED) : (i === 0 ? DELIVERED : WITHDRAWAL)], from, to);
+        pages++;
+        if (directionPages === 0) reservedSourcePages--;
+        // Authenticate the entire response against the end counter before a
+        // prefix may be retained, including non-token traffic and skipped logs.
+        let census = BigInt(cursor.nextNonce), resumedNonce = census;
+        for (const log of rows) {
+          if (eventNonce(decode(log)) !== census) fail("nonce-missing");
+          census++;
+          if (cursor.resume && Number(BigInt(log.blockNumber)) === from && Number(BigInt(log.logIndex)) <= cursor.resume.logIndex) resumedNonce = census;
+        }
+        if (await counter(i, end) !== census || (cursor.resume && resumedNonce !== BigInt(cursor.resume.nextNonce))) fail("nonce-missing");
+        const processLog = async (log: Log) => {
+          const event = decode(log), height = Number(BigInt(log.blockNumber)), nonce = eventNonce(event);
+          if (source.protocol === "op-stack") {
+            if (event.eventName === "SentMessage") {
+              if (event.args.sender.toLowerCase() !== source.l1Bridge || event.args.target.toLowerCase() !== source.l2Bridge) return;
+              const payload = tokenPayload(source, event.args.message, true);
+              if (!payload) return;
+              const txLogs = await receipt(0, log.transactionHash, height, log.blockHash);
+              verifyInitiation(txLogs, true, payload);
+              const extension = txLogs.find(row => row.address === source.l1Messenger && BigInt(row.logIndex) === BigInt(log.logIndex) + 1n);
+              if (!extension) fail("message-value-missing");
+              const ext = decode(extension!);
+              if (ext.eventName !== "SentMessageExtension1" || ext.args.sender.toLowerCase() !== source.l1Bridge || ext.args.value !== 0n) fail("message-value-invalid");
+              const hash = keccak256(encodeFunctionData({ abi: relayAbi, functionName: "relayMessage", args: [event.args.messageNonce, event.args.sender, event.args.target, ext.args.value, event.args.gasLimit, event.args.message] }));
+              await add({ direction: "deposit", id: hash, relayHash: hash, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0, redeemResume: null });
+            } else if (event.eventName === "MessagePassed") {
+              if (event.args.sender.toLowerCase() !== source.l2Messenger || event.args.target.toLowerCase() !== source.l1Messenger) return;
+              const relay = decodeFunctionData({ abi: relayAbi, data: event.args.data });
+              const [relayNonce, sender, target, value, , message] = relay.args;
+              if (relayNonce >> 240n !== 1n) fail("nonce-version-unsupported");
+              if (sender.toLowerCase() !== source.l2Bridge || target.toLowerCase() !== source.l1Bridge) return;
+              const payload = tokenPayload(source, message, false);
+              if (!payload) return;
+              if (value !== 0n || event.args.value !== 0n) fail("message-value-invalid");
+              const hash = keccak256(encodeAbiParameters(parseAbiParameters("uint256,address,address,uint256,uint256,bytes"), [event.args.nonce, event.args.sender, event.args.target, event.args.value, event.args.gasLimit, event.args.data]));
+              // Both values are public on-chain withdrawal commitments, not secrets.
+              // eslint-disable-next-line security/detect-possible-timing-attacks
+              if (hash !== event.args.withdrawalHash) fail("withdrawal-hash-mismatch");
+              verifyInitiation(await receipt(1, log.transactionHash, height, log.blockHash), false, payload);
+              if (!bool((await read(1, end, [call(source.messagePasser, "sentMessages(bytes32)", hash.slice(2))]))[0])) fail("withdrawal-unproved");
+              await add({ direction: "withdrawal", id: hash, relayHash: keccak256(event.args.data), nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0, redeemResume: null });
+            } else fail("log-invalid");
+          } else if (event.eventName === "MessageDelivered") {
+            const alias = toHex((BigInt(source.l1Bridge) + 0x1111000000000000000000000000000000001111n) % (1n << 160n), { size: 20 });
+            if (event.args.sender.toLowerCase() !== alias || event.args.kind !== 9 || event.args.inbox.toLowerCase() !== source.inbox) return;
+            const txLogs = await receipt(0, log.transactionHash, height, log.blockHash);
+            const deliveries = txLogs.filter(row => row.address === source.inbox && row.topics[0] === topic("InboxMessageDelivered(uint256,bytes)")).map(decode).filter(row => row.eventName === "InboxMessageDelivered" && row.args.messageNum === nonce);
+            if (deliveries.length !== 1 || deliveries[0]!.eventName !== "InboxMessageDelivered") fail("inbox-payload-missing");
+            const packed = deliveries[0]!.args.data;
+            if (keccak256(packed) !== event.args.messageDataHash || packed.length < 578) fail("inbox-payload-invalid");
+            const words = Array.from({ length: 9 }, (_, j) => BigInt(`0x${packed.slice(2 + j * 64, 66 + j * 64)}`));
+            const addressWord = (j: number) => { if (words[j]! >= 1n << 160n) fail("inbox-payload-invalid"); return toHex(words[j]!, { size: 20 }); };
+            const target = addressWord(0), data = `0x${packed.slice(578)}` as `0x${string}`;
+            if (BigInt((data.length - 2) / 2) !== words[8]) fail("inbox-payload-invalid");
+            if (target !== source.l2Bridge) return;
+            if (words[1] !== 0n) fail("message-value-invalid");
+            const payload = tokenPayload(source, data, true);
+            if (!payload) return;
+            verifyInitiation(txLogs, true, payload, nonce);
+            const number = (n: bigint): `0x${string}` => n === 0n ? "0x" : toHex(n);
+            const id = keccak256(concat(["0x69", toRlp([number(BigInt(source.l2EvmChainId)), toHex(nonce!, { size: 32 }), alias, number(event.args.baseFeeL1), number(words[2]!), number(words[7]!), number(words[6]!), target, number(words[1]!), addressWord(5), number(words[3]!), addressWord(4), data])]));
+            await add({ direction: "deposit", id, relayHash: null, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: source.l2StartBlock, redeemResume: null });
+          } else if (event.eventName === "L2ToL1Tx") {
+            if (event.args.caller.toLowerCase() !== source.l2Bridge || event.args.destination.toLowerCase() !== source.l1Bridge) return;
+            if (event.args.callvalue !== 0n) fail("message-value-invalid");
+            const payload = tokenPayload(source, event.args.data, false);
+            if (!payload) return;
+            const leaf = keccak256(concat([event.args.caller, event.args.destination, toHex(event.args.arbBlockNum, { size: 32 }), toHex(event.args.ethBlockNum, { size: 32 }), toHex(event.args.timestamp, { size: 32 }), toHex(event.args.callvalue, { size: 32 }), event.args.data]));
+            if (BigInt(leaf) !== event.args.hash) fail("withdrawal-hash-mismatch");
+            verifyInitiation(await receipt(1, log.transactionHash, height, log.blockHash), false, payload, nonce);
+            await add({ direction: "withdrawal", id: leaf, relayHash: null, nonce: String(nonce), amount: String(payload.amount), from: payload.from, to: payload.to, blockNumber: height, transactionHash: log.transactionHash, redeemNextBlock: 0, redeemResume: null });
+          } else fail("log-invalid");
+        };
+        let stopped: Log | undefined;
+        for (const log of rows) {
+          const height = Number(BigInt(log.blockNumber)), index = Number(BigInt(log.logIndex));
+          if (cursor.resume && height === from && index <= cursor.resume.logIndex) continue;
+          await processLog(log);
+          if (classified - directionStart >= MESSAGES_PER_DIRECTION || relayHistoryIncomplete) { stopped = log; break; }
+        }
+        if (stopped) {
+          const height = Number(BigInt(stopped.blockNumber));
+          const predecessor = await fetchEvmBlockHeader(chains[i]!, height - 1, options);
+          if (!predecessor || (await fetchEvmBlockHeader(chains[i]!, height, options))?.hash !== stopped.blockHash) fail("history-reorg");
+          cursor.nextBlock = height; cursor.anchorHash = predecessor.hash; cursor.nextNonce = String(await counter(i, predecessor));
+          cursor.resume = { blockHash: stopped.blockHash, logIndex: Number(BigInt(stopped.logIndex)), nextNonce: String(eventNonce(decode(stopped)) + 1n) };
+          cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, prefix: cursor.resume, height }));
+          sourceHistoryIncomplete = true;
+          break;
+        }
+
+        cursor.nextNonce = String(census); cursor.resume = null;
+        const canonical = await fetchEvmBlockHeader(chains[i]!, to, options);
+        if (!canonical || canonical.hash !== end.hash) fail("history-reorg");
+        cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, to, hash: end.hash, logs: rows }));
+        cursor.nextBlock = to + 1; cursor.anchorHash = end.hash; directionPages++;
       }
     }
-    cp.messages = retained;
+    const depositAmount = cp.messages.filter(message => message.direction === "deposit").reduce((sum, message) => sum + BigInt(message.amount), 0n);
+    const withdrawalAmount = cp.messages.filter(message => message.direction === "withdrawal").reduce((sum, message) => sum + BigInt(message.amount), 0n);
+    cp.settlementPins = input.headers.map(pin => ({ number: pin.number, hash: pin.hash })) as L2MessengerPendingCheckpoint["settlementPins"];
     const serialized = stableJsonStringifyV1(cp);
     if (new TextEncoder().encode(serialized).length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
     for (let i = 0; i < 2; i++) {
@@ -415,7 +473,7 @@ export async function observeL2MessengerPending(input: {
       if (!header || header.hash !== input.headers[i]!.hash) fail("pin-reorg");
     }
     if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
-    if (relayHistoryIncomplete || cp.cursors.some((cursor, i) => cursor.nextBlock !== input.headers[i]!.number + 1)) return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
+    if (sourceHistoryIncomplete || relayHistoryIncomplete || cp.cursors.some((cursor, i) => cursor.nextBlock !== input.headers[i]!.number + 1)) return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
     const proof: L2MessengerPendingProof = { sourceDigest, checkpointDigest: sha256Hex(serialized), depositAmount: String(depositAmount), withdrawalAmount: String(withdrawalAmount),
       pins: chains.map((chainId, i) => ({ chainId, anchor: input.headers[i]!.number, anchorHash: input.headers[i]!.hash, observedAtSec: input.headers[i]!.timestamp, nextNonce: cp.cursors[i]!.nextNonce })) };
     const amount = String(depositAmount + withdrawalAmount);

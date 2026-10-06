@@ -558,14 +558,14 @@ export function getListingGovernanceIssues(
       && MechanismArchetypeReviewSchema.safeParse(coin.mechanismArchetypeReview).success;
     const expectedListingClass = coin.status === "delisted"
       ? "excluded"
-      : holdListingClass
-        ? listingClass
-        : coin.variantOf
-          ? "stablecoin-variant"
-          : coin.mechanismArchetype === "rwa-credit-fund"
-            ? "stable-value-investment"
-            : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
-              ? "cash-equivalent"
+      : coin.variantOf
+        ? "stablecoin-variant"
+        : coin.mechanismArchetype === "rwa-credit-fund"
+          ? "stable-value-investment"
+          : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
+            ? "cash-equivalent"
+            : holdListingClass
+              ? "stable-value-investment"
               : "core-stablecoin";
     if (listingClass !== expectedListingClass) {
       issues.push(

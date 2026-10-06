@@ -285,6 +285,13 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 }
 
 describe("HeroCard", () => {
+  it("labels restored market cap with its original supply observation date", () => {
+    const html = renderHero({ coinData: { supplyRestored: true, supplyObservedAt: 1_700_000_000 } });
+    expect(html).toContain("Stale supply · as of Nov 14");
+    expect(renderHero({ coinData: { supplyRestored: false, supplyObservedAt: 1_700_000_000 } }))
+      .not.toContain("Stale supply");
+  });
+
   it("renders unavailable market cap and supply without a false zero in static markup", () => {
     const html = renderHero({
       coinData: { circulating: {}, circulatingPrevDay: {} },

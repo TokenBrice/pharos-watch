@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.47",
+    title: "Unquantified HBD haircut-sensitive conversion cost",
+    date: "2026-10-06",
+    effectiveAt: 1791295690,
+    summary:
+      "HBD conversion no longer publishes a fixed zero all-in cost while protocol debt-ratio haircuts and median-price settlement can affect proceeds.",
+    impact: [
+      "The reviewed no-extra-fee statement does not establish full-value output. HBD uses disclosed-unquantified dynamic cost evidence until executable haircut-adjusted proceeds are established.",
+      "The reviewed 302400-second settlement term and documented full-supply eventual capacity remain separate evidence; neither establishes a numeric cost or output-value bound.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.46",
     title: "Executable vault capacity and unavailable-evidence cutover",
     date: "2026-10-03",

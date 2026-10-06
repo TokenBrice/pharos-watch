@@ -187,7 +187,7 @@
     "eurs-stasis": "core-stablecoin",
     "msusd-metronome": "core-stablecoin",
     "rusd-royal-dollar": "excluded",
-    "usdr-ring": "core-stablecoin",
+    "usdr-ring": "stable-value-investment",
     "usdaf-asymmetry": "core-stablecoin",
     "usnd-nerite": "core-stablecoin",
     "usdq-quill": "core-stablecoin",

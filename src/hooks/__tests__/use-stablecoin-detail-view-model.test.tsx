@@ -121,6 +121,25 @@ describe("useStablecoinDetailViewModel", () => {
     installQueryMocks();
   });
 
+  it.each([true, false])("projects restored supply provenance into the hero coin data (%s)", (restored) => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
+      descriptor.queryKey[0] === "stablecoin-live-summary"
+        ? queryResult({ data: {
+          price: null, priceSource: null, priceConfidence: null, priceUpdatedAt: null, priceObservedAt: null,
+          supplyObservedAt: 1_790_793_000, supplyRestored: restored,
+          circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+          nativeSupply: { current: null, prevWeek: null, prevMonth: null },
+        }, refetch: mocks.refetchList })
+        : queryResult({ refetch: mocks.refetchRedemptionBackstops }));
+    renderHook(() => useStablecoinDetailViewModel({
+      id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+    }));
+    const coinData = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.stablecoinList.data.peggedAssets[0];
+    expect(coinData.supplyRestored === true).toBe(restored);
+    expect(coinData.supplyObservedAt).toBe(1_790_793_000);
+  });
+
   it("keeps only price, peg, and supply eager while disabling below-fold queries", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
 

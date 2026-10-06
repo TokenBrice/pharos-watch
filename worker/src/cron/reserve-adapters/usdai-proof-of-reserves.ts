@@ -13,7 +13,6 @@ import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
   fetchOnchainMulticall3,
-  notApplicableFreshnessMetadata,
   unverifiedFreshnessMetadata,
   requireJsonInput,
   reserveInfoWarning,
@@ -432,17 +431,20 @@ async function anchorUsdAiComposition(
     checkedRows.push({ name: reserve.name, tokenAddress: reserve.tokenAddress, amountRaw: amount.toString(), balanceRaw: balance.toString() });
   }
   if (totalLiquidBalance <= 0n) return mismatch("no positive liquid exposure can anchor the composition");
+  const freshness = unverifiedFreshnessMetadata("usdai-proof-of-reserves-api", "Liquid balance observations do not corroborate composition shares");
   return {
+    warning: reserveDegradedWarning("usdai-composition-unverified", "USD.AI liquid amounts match on-chain balances, but composition shares have no independently corroborated denominator"),
     metadata: {
-      ...notApplicableFreshnessMetadata({
-        freshnessSource: "same-run-onchain",
+      ...freshness,
+      details: {
+        ...freshness.details,
         anchor: {
           block: Number(block), checkedRows, tolerance: anchor.toleranceBps / 10_000,
           idleAssetRaw: idleAsset.toString(), shareBasisDealAmountRaw: shareBasisDealAmount.toString(),
           amountOnlyDealAmountRaw: amountOnlyDealAmount.toString(),
           totalAssetsRaw: totalAssets.toString(), totalSupplyRaw: totalSupply.toString(),
         },
-      }),
+      },
       observedBlock: { number: Number(block), timestamp: Number(timestamp) },
     },
   };

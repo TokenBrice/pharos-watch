@@ -597,6 +597,12 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 ## Data Integrity Guardrails
 
+Legacy Solomon USDv contract quotes are rejected before supplemental on-chain supply valuation when they alias replacement-token identity; exact legacy mint counts do not make a replacement-token price admissible. Missing admissible valuation leaves supplemental supply unavailable.
+
+Dated missing-price reviews apply only inside any authored weekly UTC window as well as before expiry. CHFm/COPm weekend acknowledgements stop suppressing alert eligibility after market reopen; the missing row remains visible throughout.
+
+Exact-address routing hints are invalidated after a definitive answered miss (404 or no admitted quote), so the next refresh can rediscover canonical deployments. Capped, blocked, failed or locally aborted work does not invalidate hints. An answered miss for a previously address-priced asset records `missing-quote` degradation without treating coverage-only 404 as a provider outage.
+
 The sync pipeline includes multiple layers of validation to prevent bad data from reaching users:
 
 1. **Structural validation**: DefiLlama response must contain `MIN_VALID_ASSET_COUNT` (50) assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching

@@ -387,6 +387,39 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     expect(compile(profile).process?.diagnostics).toContainEqual(expect.objectContaining({ code: "runtime-unmatched", memberRef: PROGRAM }));
   });
 
+  it.each(["key-custody-independence", "authority-semantics", "execution-scope", undefined] as const)("keeps custody-only %s questions separate from issuance qualification", (subject) => {
+    const profile = modeledProfile();
+    profile.review.scopedQuestions = [{ controlRef: SCOPE_CONTROLLER, subject,
+      question: "Which entity safeguards this controller?", reviewedAt: "2026-10-04", reviewer: "Fixture reviewer" }];
+    const { rows, governance, process, asset } = compile(profile);
+    const custodyOnly = subject === "key-custody-independence";
+    expect(governance.diagnostics.some(row => row.code === "scoped-question-open")).toBe(!custodyOnly);
+    expect(process?.diagnostics.some(row => row.code === "scoped-question-open")).toBe(!custodyOnly);
+    expect(deriveV9MintPosture(rows[0]!, makeReviewedMintInput(rows[0]!.controlKey), false,
+      V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe(custodyOnly ? "unbounded-operationally-governed" : "unbounded-adverse");
+    if (custodyOnly) expect(rows.find(row => row.scopedQuestionFresh)).toMatchObject({
+      scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
+  });
+
+  it("retains operational qualification with a custody marker on the evaluated row", () => {
+    const { rows, asset } = compile();
+    const row = { ...rows[0]!, scopedQuestionFresh: true, scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const };
+    expect(deriveV9MintPosture(row, makeReviewedMintInput(row.controlKey), false,
+      V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(deriveV9MintPosture({ ...row, scopedQuestionSubject: "authority-semantics" }, makeReviewedMintInput(row.controlKey), false,
+      V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe("unbounded-adverse");
+  });
+
+  it("keeps mixed semantic and custody questions conservative", () => {
+    const profile = modeledProfile();
+    profile.review.scopedQuestions = ["key-custody-independence", "authority-semantics"].map(subject => ({
+      controlRef: SCOPE_CONTROLLER, subject: subject as "key-custody-independence" | "authority-semantics",
+      question: "Fixture open question", reviewedAt: "2026-10-04", reviewer: "Fixture reviewer" }));
+    const { governance, process } = compile(profile);
+    expect(governance.diagnostics).toContainEqual(expect.objectContaining({ code: "scoped-question-open" }));
+    expect(process?.diagnostics).toContainEqual(expect.objectContaining({ code: "scoped-question-open" }));
+  });
+
   it("compiles one neutral process and voting object once per asset with exact native references", () => {
     const { rows, governance, process, asset } = compile();
     expect(governance.votingControl).toMatchObject({ observationState: "known", qualified: true, largestSingleControllerShareBps: 6000 });

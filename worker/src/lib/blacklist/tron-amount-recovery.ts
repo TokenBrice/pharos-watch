@@ -209,6 +209,9 @@ export async function recoverTronFreezeAmountForRow(
       // The ledger only grows, so a cap-exceeded history can never resolve on retry.
       throw new TronReplayEvidenceError("history_over_cap", "confirmed transfer ledger exceeds the replay page cap");
     }
+    if (history.watermarkMs < anchor.timestampMs) {
+      throw new TronReplayEvidenceError("state_raced", "transfer history has not reached the solidified anchor");
+    }
     // A duplicated record can cancel at the final-balance checkpoint while
     // doubling the derived freeze-time balance, so identity uniqueness is a
     // precondition for the ledger, not a nicety. TronGrid history exposes no
@@ -251,8 +254,10 @@ export async function recoverTronFreezeAmountForRow(
       throw new TronReplayEvidenceError("state_raced", "account moved between the ledger and the balance read");
     }
 
-    // The raw solidified balance is the completeness proof for the ledger: it can
-    // only equal the cumulative signed flow when every transfer is present once.
+    // Reconcile the indexed ledger with solidified state. Matching net flow
+    // alone cannot detect omitted offsetting transfers; response freshness and
+    // identity uniqueness are separate prerequisites above. Indexed history
+    // completeness remains a provider trust assumption.
     if (ledger.net !== balance) {
       throw new TronReplayEvidenceError("evidence_mismatch", "ledger does not reconcile with the confirmed balance");
     }

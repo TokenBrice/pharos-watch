@@ -99,7 +99,9 @@ export function SafetyScoresOverview() {
         A confidence gap caused by our pipeline or curation does not discount the asset, but this never makes stale
         capacity current or admits an invalid execution certificate. Issuer/unresearched uncertainty and genuinely
         weaker models still apply. Unknown holder terms are not verified eligibility; an unevaluated public fee
-        formula is not a zero fee. Wrapper A/B gaps do not trigger form fallback charges; C/U eligibility follows
+        formula is not a zero fee. Dynamic immediate redemption rails require current on-chain or protocol-API
+        open status for credit even when their producer marks them unscored. Frozen documented costs cannot
+        override a current unquantified review. Wrapper A/B gaps do not trigger form fallback charges; C/U eligibility follows
         cause, not a legacy disposition label. Allocation reviews resolve U custody/reuse, while other eligible
         local gaps keep existing charges and no missing proof grants risk-transfer credit.
       </p>

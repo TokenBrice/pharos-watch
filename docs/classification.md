@@ -50,6 +50,8 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 [Stablecoin Listing Policy](./listing-policy.md) owns the class tests, the class precedence order, the lifecycle table, and the eligibility and review rules.
 
+An unresolved mechanism review cannot validate its currently authored class by identity. CI preserves delisted, variant, credit-fund, and NAV/T-bill precedence first; a remaining unresolved mechanism stays `stable-value-investment` until resolved rather than entering core aggregates.
+
 ### Additional Metadata
 
 Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/stablecoin-meta-schemas.ts` for the typed/schema source):

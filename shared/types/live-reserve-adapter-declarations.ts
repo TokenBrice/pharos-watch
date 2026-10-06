@@ -1667,6 +1667,20 @@ const tetherUsdtRowKeys = [
   "tether:usdt:secured-loans",
 ] as const;
 
+const tetherUsdtReviewedDollars: Record<typeof tetherUsdtRowKeys[number], number> = {
+  "tether:usdt:treasury-bills": 114960963604,
+  "tether:usdt:overnight-reverse-repo": 18625552412,
+  "tether:usdt:term-reverse-repo": 6993428950,
+  "tether:usdt:non-us-treasury-bills": 22374689,
+  "tether:usdt:cash-bank-deposits": 40307440,
+  "tether:usdt:corporate-bonds": 8711171,
+  "tether:usdt:precious-metals": 18838357171,
+  "tether:usdt:bitcoin": 5801630681,
+  "tether:usdt:public-equities": 3761438892,
+  "tether:usdt:other-investments": 5244911675,
+  "tether:usdt:secured-loans": 13453749726,
+};
+
 const tetherUsdtReviewedCompositionSchema = z.object({
   sourceUrl: z.literal("https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"),
   asOf: z.literal("2026-06-30"),
@@ -1686,6 +1700,11 @@ const tetherUsdtReviewedCompositionSchema = z.object({
 }).strict().superRefine((packet, ctx) => {
   if (new Set(packet.rows.map((row) => row.sourceKey)).size !== tetherUsdtRowKeys.length) {
     ctx.addIssue({ code: "custom", path: ["rows"], message: "tether-reviewed-composition-row-identity-mismatch" });
+  }
+  for (const [index, row] of packet.rows.entries()) {
+    if (row.dollars !== tetherUsdtReviewedDollars[row.sourceKey]) {
+      ctx.addIssue({ code: "custom", path: ["rows", index, "dollars"], message: "tether-reviewed-composition-category-dollar-mismatch" });
+    }
   }
   if (packet.rows.reduce((sum, row) => sum + row.dollars, 0) !== packet.totalAssetsUsd) {
     ctx.addIssue({ code: "custom", path: ["rows"], message: "tether-reviewed-composition-dollar-conservation-mismatch" });

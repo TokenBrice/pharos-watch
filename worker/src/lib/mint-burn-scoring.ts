@@ -136,15 +136,32 @@ export function isGaugeBandRobustToWithheldWeight(input: {
   scoredMcapUsd: number;
   withheldMcapUsd: number;
 }): boolean {
-  const { score, scoredMcapUsd, withheldMcapUsd } = input;
-  if (withheldMcapUsd <= 0) return true;
-  if (!(scoredMcapUsd > 0)) return false;
-  const total = scoredMcapUsd + withheldMcapUsd;
-  // Clamp away floating-point overshoot past the score range (getGaugeBand's out-of-range sentinel).
-  const lower = clamp((scoredMcapUsd * score + FLOW_INTENSITY_MIN * withheldMcapUsd) / total, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
-  const upper = clamp((scoredMcapUsd * score + FLOW_INTENSITY_MAX * withheldMcapUsd) / total, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX);
+  const interval = getGaugeScoreInterval(input);
+  if (!interval) return false;
+  const [lower, upper] = interval;
+  const { score } = input;
   const band = getGaugeBand(score);
   return getGaugeBand(lower) === band && getGaugeBand(upper) === band;
+}
+
+/** Full-cohort bounds for an unknown withheld intensity in [-100, 100]. */
+export function getGaugeScoreInterval(input: {
+  score: number;
+  scoredMcapUsd: number;
+  withheldMcapUsd: number;
+}): readonly [number, number] | null {
+  const { score, scoredMcapUsd, withheldMcapUsd } = input;
+  if (![score, scoredMcapUsd, withheldMcapUsd].every(Number.isFinite)
+      || score < FLOW_INTENSITY_MIN || score > FLOW_INTENSITY_MAX
+      || !(scoredMcapUsd > 0) || withheldMcapUsd < 0) return null;
+  const total = scoredMcapUsd + withheldMcapUsd;
+  if (!Number.isFinite(total)) return null;
+  const scoredFraction = scoredMcapUsd / total;
+  const withheldFraction = withheldMcapUsd / total;
+  return [
+    clamp(scoredFraction * score + FLOW_INTENSITY_MIN * withheldFraction, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX),
+    clamp(scoredFraction * score + FLOW_INTENSITY_MAX * withheldFraction, FLOW_INTENSITY_MIN, FLOW_INTENSITY_MAX),
+  ];
 }
 
 // ---------------------------------------------------------------------------

@@ -233,6 +233,19 @@ describe("validateTronTransferPaginationUrl", () => {
 });
 
 describe("fetchTronTransferWindow", () => {
+  it.each([
+    [WINDOW_END - 1, WINDOW_END + 60_000],
+    [WINDOW_END + 60_000, WINDOW_END - 1],
+  ])("retains stale coverage across page watermarks %s and %s", async (first, second) => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [], meta: { at: first, links: { next: windowUrl("page2") } } }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [], meta: { at: second } })));
+    const ctx = providerContext();
+    const window = await fetchTronTransferWindow(ctx, ACCOUNT, CONTRACT, WINDOW_START, WINDOW_END, 10);
+    expect(window).toMatchObject({ complete: true, stopped: false, watermarkMs: WINDOW_END - 1 });
+    expect(ctx.pagesFetched.count).toBe(2);
+  });
+
   it("follows fingerprints, counts pages on the shared meter, and drops non-transfer records", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = requestUrl(input);
@@ -279,6 +292,7 @@ describe("fetchTronTransferWindow", () => {
     const window = await fetchTronTransferWindow(ctx, ACCOUNT, CONTRACT, WINDOW_START, WINDOW_END, 10);
     expect(window.complete).toBe(false);
     expect(window.stopped).toBe(true);
+    expect(window.watermarkMs).toBe(0);
     expect(ctx.pagesFetched.count).toBe(0);
   });
 

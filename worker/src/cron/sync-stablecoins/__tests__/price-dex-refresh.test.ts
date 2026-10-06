@@ -401,6 +401,26 @@ describe("exact-address coverage refresh", () => {
     expect(summary.addressRefresh).toMatchObject({ targetCount: 1, resolved: 1, cappedTargets: 0, successfulRequests: 1 });
   });
 
+  it.each(["404", "missing", "thin"])("evicts a definitively unresolved %s address hint and broadens the next slot", async (kind) => {
+    prepareAddressRefresh(usda());
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0,
+      addressTargets: [{ id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 }] }), now - 900);
+    const cg = mockFetch([{ match: (request) => onchainRequest(request.url),
+      ...(kind === "404" ? { status: 404, body: { error: "not found" } }
+        : kind === "missing" ? { body: { data: [] } }
+          : { respond: (request: Request) => coingeckoResponse(new URL(request.url).pathname.split("/tokens/multi/")[1]!, "1", "1") }),
+    }]);
+    const missing = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+    expect(missing.addressRefresh).toMatchObject({ resolved: 0, failureClasses: ["missing-quote"] });
+    expect(JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).addressTargets).toEqual([]);
+    cg.mockClear();
+    mockFetch(onchainRoutes());
+    const recovered = await runPriceDexRefresh({ db, syncStartSec: now + 900, addressProvider });
+    expect(recovered.addressRefresh.targetCount).toBeGreaterThan(1);
+    expect(recovered.addressRefresh.resolved).toBe(1);
+    expect(JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).addressTargets).toHaveLength(1);
+  });
+
   it("records the exact-address circuit outcome and stages nothing when the provider refuses", async () => {
     prepareAddressRefresh(usda());
     mockFetch([{ match: (request) => onchainRequest(request.url), status: 429, body: { error: "rate limited" } }]);
@@ -416,6 +436,8 @@ describe("exact-address coverage refresh", () => {
 
   it("skips the address lane without a request or circuit write while its breaker is open", async () => {
     prepareAddressRefresh(usda());
+    const hint = { id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 };
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0, addressTargets: [hint] }), now - 900);
     const cg = mockFetch(onchainRoutes());
     vi.spyOn(circuit, "shouldAttemptFetch").mockResolvedValue(false);
     const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
@@ -425,6 +447,7 @@ describe("exact-address coverage refresh", () => {
     expect(summary.addressRefresh).toMatchObject({ enabled: true, circuitOpen: true, resolved: 0, attemptedRequests: 0 });
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
     expect(recordOutcome).not.toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_ONCHAIN, expect.anything());
+    expect(JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).addressTargets).toEqual([hint]);
   });
 
   it("runs no address request when the provider is unconfigured or the row is under a reviewed gap", async () => {

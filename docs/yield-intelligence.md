@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.46`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.47`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+The v8.47 update requires curated ownership or an explicit source type for native receipt-yield labels. Auto-discovered symbol/deployment matches remain lending opportunities; contradictory deposit-address evidence cannot fall back to symbol-only matching.
 
 Detailed release history lives under `shared/data/methodology-changelogs/yield-methodology/` and is rendered at `/methodology/yield-changelog/`. Keep version deltas in that structured source rather than duplicating them in this methodology reference.
 
@@ -25,7 +27,7 @@ The current scoring contract is:
 - When the Royco Dawn tranche model or the external-opportunity assessment supplies a row's `safetyScore` / `safetyGrade`, the row publishes `provenance.safetyProvenance: "opportunity-safety"`. That grade is **not** Safety Score V9. Every surface that renders it labels it as opportunity-derived from `shared/lib/yield-opportunity-provenance.ts`: the leaderboard and instrument board mark the badge and carry the explanation in its title and screen-reader label, the leaderboard CSV adds a `Safety provenance` column, and the Picker records `MergedRow.safetyProvenance`, folds it into the dataset hash, and names it in the shortlist card's authored explanation.
 - Freshness eligibility is applied before confidence arbitration. Expired candidates stay auditable, and every benchmark key is assessed independently against both a 48-hour fetch TTL and its own observation-age bound (`YIELD_BENCHMARK_RECORD_MAX_AGE_SEC` in `shared/lib/yield-benchmark-freshness.ts`: 5 days for daily/overnight series, 7 days CHF, 10 days TRY, 12 days RUB, 45 days CAD). Either expired bound makes evidence stale; a fresh fetch cannot renew an old observation. Producer guards, registry health, write/read evaluation, and frontend explanations share this policy. The USD reference used by the v8.43 rebase is gated by the same classifier.
 - A final resolve-stage eligibility pass runs after linked-variant projection and before evaluation/arbitration. It removes every `lending-opportunity`, `fixed-yield`, and `structured-tranche` candidate whose tracked stablecoin supply is unavailable, or whose measured `sourceTvlUsd` is null, non-finite, or below `max(chain absolute floor, 0.1% of current tracked supply)`, across tracked, explicit, auto-discovered, supplemental, and linked-variant paths. Unlike the discovery-time size gate, this pass never admits on the absolute floor alone. Structured-tranche rows additionally retain Royco's bespoke market/vault floors.
-- Source roles and effective yield types are assigned at construction, before the final size gate. Own-symbol yield-bearing NAV receipts on tracked chains retain their catalog holder identity; projecting that return onto a parent creates a deposit opportunity, not passive parent-token yield.
+- Source roles and effective yield types are assigned at construction, before the final size gate. Curated receipt sources retain their catalog holder identity; auto-discovered pools remain lending opportunities because a matching symbol and tracked deployment do not prove receipt ownership. Supplied deposit addresses that contradict the tracked asset prevent symbol fallback; absent addresses may still use the existing unambiguous-symbol discovery path. Projecting a curated receipt return onto a parent creates a deposit opportunity, not passive parent-token yield.
 - `scoreQualified` describes evidence qualification (`scoreQualification !== "NR"`), not whether a numeric score exists. A source can have qualified evidence yet no PYS because its APY, effective yield, scaling, or variance is unavailable or ineligible; use `pharosYieldScore` and `pysNullReason` for score availability.
 
 Source ownership, projection, provider order, publication guards, and compatibility behavior are documented in the sections below.

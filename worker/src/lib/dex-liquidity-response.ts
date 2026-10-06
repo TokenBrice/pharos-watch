@@ -13,6 +13,7 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { DEX_UNSUPPORTED_CHAIN_WAIVER_REASON, getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -140,7 +141,11 @@ export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRo
     if (row.outcome === "observed_pools") coverage.observedPools++;
     else if (row.outcome === "verified_no_pools") coverage.verifiedNoPools++;
     else coverage.providerInaccessible++;
-    const waiverActive = row.waiver_expires_at != null && row.waiver_expires_at > nowSec && !!row.waiver_owner;
+    const waiverActive = row.waiver_expires_at != null && row.waiver_expires_at > nowSec && !!row.waiver_owner &&
+      // Unsupported-chain waivers persisted before a provider registration are
+      // superseded immediately, without waiting for the crawl rotation.
+      (row.waiver_reason !== DEX_UNSUPPORTED_CHAIN_WAIVER_REASON ||
+        getDexDiscoveryProviders(row.chain, row.contract_address).length === 0);
     coverage.deployments.push({
       chain: row.chain,
       contractAddress: row.contract_address,

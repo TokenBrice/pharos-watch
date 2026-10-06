@@ -69,6 +69,23 @@ function legalBorrowing(input: AllocationFixture, layer: "borrower-spv" | "lende
 }
 
 describe("dimension-scoped allocation consumer boundaries", () => {
+  it.each([99.99999999999999, 99.9999])("applies denominator completion consistently at %s percent", (pct) => {
+    const input = fixture();
+    const draft = structuredClone(input.fixed);
+    draft.liveReserveMap.alpha![0]!.pct = pct;
+    input.fixed = rebuildFixed(draft);
+    const result = compile(input);
+    const claim = result.asset.allocationScopeFacts!.find(row => row.claimKey === "contract-borrowing")!;
+    if (pct > 99.999999) {
+      expect(result.asset.reserveResiduals).toEqual([]);
+      expect(claim).toMatchObject({ admitted: true, rejectionReason: null, assessment: "none" });
+      expect(wrapperFacts(result).facts.leverage).toMatchObject({ disposition: "reviewed", assessment: "none" });
+    } else {
+      expect(result.asset.reserveResiduals.length).toBeGreaterThan(0);
+      expect(claim).toMatchObject({ admitted: false, rejectionReason: "reserve-coverage-unestablished" });
+    }
+  });
+
   it("gives complete contract-only leverage relief but prices a complete adverse contract statement", () => {
     const benign = fixture();
     const relief = compile(benign);
