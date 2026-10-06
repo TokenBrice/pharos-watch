@@ -99,7 +99,7 @@ runs:
           --output "${archive}"
         printf '%s  %s\n' "${sha256}" "${archive}" | sha256sum --check --strict
         tar -xzf "${archive}" -C "${root}" --strip-components=1 "${package}/rg"
-        # /usr/local/bin is already on the hosted runner PATH; avoid GITHUB_PATH writes (zizmor github-env).
+        # /usr/local/bin is already on the hosted runner PATH, so no environment-file write is needed (zizmor github-env).
         sudo install -m 755 "${root}/rg" /usr/local/bin/rg
         rg --version
 
