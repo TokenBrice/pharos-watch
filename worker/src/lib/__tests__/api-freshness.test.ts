@@ -165,6 +165,28 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
 
 
 describe("buildCacheStatuses sentinel validation", () => {
+  it.each([7200, 7201, 14400, 14401])("preserves generation and yield freshness bands at %s seconds", async (age) => {
+    const now = 1_800_000_000;
+    const { caches } = await buildCacheStatuses(freshnessDb({
+      cacheRows: [sentinelRow("yield-data", now - age, { generationId: "yield-winner" })],
+    }), now);
+    expect(caches["yield-data"]).toMatchObject({
+      generationId: "yield-winner", publishedAt: now - age, ageSeconds: age,
+      maxAge: 3600, healthyMaxAge: 7200, healthy: age <= 7200,
+    });
+    expect(buildFreshnessMeta(now - age, 3600, "yield-data", { assessedAt: now }).status)
+      .toBe(age <= 7200 ? "fresh" : age <= 14400 ? "degraded" : "stale");
+  });
+
+  it.each(["legacy", "table", "cron"] as const)("does not invent identity for %s evidence", async (source) => {
+    const now = 1_800_000_000;
+    const { caches } = await buildCacheStatuses(freshnessDb({
+      cacheRows: source === "legacy" ? [sentinelRow("yield-data", now - 60)] : [],
+      tableAge: source === "table" ? 60 : null,
+      cronRows: source === "cron" ? [{ job: "sync-yield-data", started_at: now - 60 }] : [],
+    }), now);
+    expect(caches["yield-data"]).toMatchObject({ generationId: null, publishedAt: null, ageSeconds: 60 });
+  });
   it.each([0, 1])("validates concurrent DEWS publication against the cache read clock (future offset %s)", async (futureOffset) => {
     const now = 1_800_000_000;
     const observedAt = now + 20;
@@ -194,6 +216,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       expect(caches["yield-data"]).toMatchObject({
         ageSeconds: 600,
         freshnessSource: "table-fallback",
+        generationId: null, publishedAt: null,
       });
 
       sqlite.exec("UPDATE yield_data SET is_best = 0");
@@ -208,7 +231,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     const now = Math.floor(Date.now() / 1000);
     const { db, sqlite } = createLatestSchemaSqlite();
     try {
-      const sentinel = sentinelRow("yield-data", now - 60);
+      const sentinel = sentinelRow("yield-data", now - 60, { generationId: "yield-imperfect" });
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
         sentinel.key, sentinel.value, sentinel.updated_at,
       );
@@ -222,6 +245,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       const impaired = await buildCacheStatuses(db, now);
       expect(impaired.caches["yield-data"]).toMatchObject({
         ageSeconds: 60, degraded: true, degradedReason: reason, streakDegradedRuns: 2,
+        generationId: "yield-imperfect", publishedAt: now - 60,
       });
       expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs ORDER BY started_at DESC LIMIT 1").get())
         .toEqual({ status: "ok", degraded_reason: null });

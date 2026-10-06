@@ -9,6 +9,8 @@ import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
 import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import { REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "./supplemental-source-family-keys";
+import { STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 
@@ -92,12 +94,12 @@ export function buildYieldSafetySnapshotMeta(input: {
     publicationGenerationId: input.publicationGenerationId,
     methodologyVersion: input.methodologyVersion,
     publishedAt: input.publishedAt,
+    maxAgeSeconds: YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC,
   };
 }
 
 export function buildYieldDegradationReasons(params: {
-  safetySnapshotDegraded: boolean;
-  safetySnapshotReason: string | null;
+  safetyCoverageRatio: number;
   defaultBenchmarkMeta: YieldBenchmarkMeta;
   riskFreeRateRegistryCacheState?: string;
   selectedSources: readonly EvaluatedYieldSource[];
@@ -114,11 +116,8 @@ export function buildYieldDegradationReasons(params: {
   // All-rejected arbitration retains a diagnostic winner, never a public row.
   const selectedSources = params.selectedSources.filter((source) => !source.rejected);
 
-  if (params.safetySnapshotDegraded) {
+  if (params.safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio) {
     degradationReasons.push("safety-snapshot-coverage");
-    if (params.safetySnapshotReason) {
-      degradationReasons.push(`safety-snapshot:${params.safetySnapshotReason}`);
-    }
   }
   if (params.riskFreeRateRegistryCacheState === "invalid") {
     degradationReasons.push("yield-benchmarks:registry-invalid");
@@ -168,8 +167,8 @@ export function buildYieldDegradationReasons(params: {
   }
   for (const family of supplemental.degradedFamilies) {
     if (!REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.some((key) => key === family)) continue;
-    // The quota-bound daily Pendle lane is advisory, including for the clean
-    // freshness sentinel. Its warning is retained separately in quality metadata.
+    // The quota-bound daily Pendle lane is advisory; freshness tracks publication.
+    // Its warning is retained separately in quality metadata.
     if (family === "pendle") continue;
     // Preserve the required family's concrete machine-readable failure cause.
     const familyReason = supplemental.degradedFamilyReasons?.[family];
@@ -237,6 +236,7 @@ export function buildYieldSyncMetadata(input: {
   sourceSwitches: number;
   defaultSafetyCoinCount: number;
   safetySnapshot: YieldSafetySnapshotMeta;
+  safetySnapshotHeld: boolean;
   resolvedYieldBearingCount: number;
   expectedYieldBearingCount: number;
   publishedYieldBearingCount: number;
@@ -267,6 +267,7 @@ export function buildYieldSyncMetadata(input: {
   const onChain = input.onChain;
   const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
   const advisoryReasons: string[] = [];
+  if (input.safetySnapshotHeld) advisoryReasons.push("safety-snapshot-held");
   if (input.supplementalMeta.degradedFamilies.includes("pendle")) {
     const reason = input.supplementalMeta.degradedFamilyReasons?.pendle;
     advisoryReasons.push(`yield-supplemental:family-degraded:pendle${reason ? `:${reason}` : ""}`);
