@@ -84,7 +84,7 @@ function slugWords(slug: string): string {
 }
 
 /** `materialSupplyShare` → "bridged supply share"; unknown camelCase splits to words. */
-export function describeEvidenceDatum(datum: string): string {
+function describeEvidenceDatum(datum: string): string {
   const explicit = DATUM_LABELS[datum];
   if (explicit) return explicit;
   return datum.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ").toLowerCase();

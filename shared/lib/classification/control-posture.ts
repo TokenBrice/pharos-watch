@@ -65,12 +65,3 @@ export const CONTROL_POSTURE_STYLES: Record<GovernanceQuality, ControlPostureSty
     iconClassName: "text-muted-foreground",
   },
 };
-
-export const CONTROL_POSTURE_ORDER = [
-  "immutable-code",
-  "dao-governance",
-  "multisig",
-  "regulated-entity",
-  "single-entity",
-  "wrapper",
-] as const satisfies readonly GovernanceQuality[];
