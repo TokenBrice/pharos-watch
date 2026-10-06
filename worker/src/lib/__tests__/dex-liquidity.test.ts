@@ -1,11 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadDexLiquiditySnapshot } from "../dex-liquidity";
+import { loadDexLiquidityMap, loadDexLiquiditySnapshot } from "../dex-liquidity";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
-function mockDb(rows: unknown[]): D1Database {
+function mockDb(rows: Record<string, unknown>[]): D1Database {
+  const evidenceRows = [...new Map(rows.map((row) => [row.stablecoin_id, row])).values()];
+  const deploymentRows = rows.filter((row) => row.deployment_outcome != null).map((row) => ({
+    stablecoin_id: row.stablecoin_id,
+    deployment_chain: row.deployment_chain,
+    deployment_contract_address: row.deployment_contract_address,
+    deployment_outcome: row.deployment_outcome,
+  }));
   return makeNoopD1({
-    prepare: vi.fn(() => ({
-      all: vi.fn().mockResolvedValue({ results: rows }),
+    prepare: vi.fn((sql: string) => ({
+      all: vi.fn().mockResolvedValue({
+        results: sql.includes("FROM dex_deployment_outcomes") ? deploymentRows : evidenceRows,
+      }),
     })),
   });
 }
@@ -75,16 +84,51 @@ describe("loadDexLiquiditySnapshot", () => {
     });
   });
 
-  it("surfaces a missing mandatory deployment-outcomes table", async () => {
-    const prepare = vi.fn().mockReturnValue({
-      all: vi.fn().mockRejectedValue(new Error("D1_ERROR: no such table: dex_deployment_outcomes")),
+  it("loads execution payloads once per coin, never once per deployment, for both callers", async () => {
+    const db = mockDb([
+      liquidityRow({
+        deployment_chain: "ethereum",
+        deployment_contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        deployment_outcome: "observed_pools",
+        score_components_json: "{}",
+      }),
+      liquidityRow({
+        deployment_chain: "arbitrum",
+        deployment_contract_address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+        deployment_outcome: "verified_no_pools",
+        score_components_json: "{}",
+      }),
+    ]);
+    const snapshot = await loadDexLiquiditySnapshot(db);
+    expect(await loadDexLiquidityMap(db)).toEqual(snapshot.map);
+    const queries = vi.mocked(db.prepare).mock.calls.map(([sql]) => sql);
+    for (const sql of queries) {
+      expect(sql).toContain("state = 'published'");
+      if (sql.includes("score_components_json")) {
+        expect(sql).not.toContain("JOIN");
+        expect(sql).not.toContain("dex_deployment_outcomes");
+      } else {
+        expect(sql).toContain("FROM dex_deployment_outcomes");
+        expect(sql).not.toContain("score_components_json");
+      }
+    }
+    expect(snapshot.map["usdc-circle"].deploymentCoverage).toEqual({
+      observedPools: 1, verifiedNoPools: 1, providerInaccessible: 0,
     });
+  });
+
+  it("surfaces a missing mandatory deployment-outcomes table", async () => {
+    const prepare = vi.fn((sql: string) => ({
+      all: sql.includes("FROM dex_deployment_outcomes")
+        ? vi.fn().mockRejectedValue(new Error("D1_ERROR: no such table: dex_deployment_outcomes"))
+        : vi.fn().mockResolvedValue({ results: [liquidityRow()] }),
+    }));
     const db = makeNoopD1({ prepare });
 
     await expect(loadDexLiquiditySnapshot(db)).rejects.toThrow(
       "D1_ERROR: no such table: dex_deployment_outcomes",
     );
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).toHaveBeenCalledTimes(2);
   });
 
   it("keeps old rows evidence-neutral", async () => {

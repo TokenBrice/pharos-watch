@@ -17,7 +17,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  * Recovery serializes Kinesis behind the head to retain its separate 2/6 budget.
  * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
  */
-import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncKinesisSupply } from "../../cron/sync-kinesis-supply";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
@@ -107,8 +106,11 @@ function buildReserveSyncSlotGroups(
         {
           job: "sync-live-reserves",
           errorMessage: "[hourly-live-reserves] Live reserves sync failed:",
-          run: (signal, reportProgress) =>
-            syncLiveReserves(
+          run: async (signal, reportProgress) => {
+            // An exhausted recovery checkpoint needs only its consumers, not
+            // the complete reserve-adapter graph retained beside their inputs.
+            const { syncLiveReserves } = await import("../../cron/sync-live-reserves");
+            return syncLiveReserves(
               runtime.db,
               signal,
               {
@@ -122,7 +124,8 @@ function buildReserveSyncSlotGroups(
               reportProgress,
               undefined,
               checkpointIdentity(checkpoint),
-            ),
+            );
+          },
         },
       ],
     },

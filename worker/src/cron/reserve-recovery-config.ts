@@ -7,9 +7,7 @@ import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { loadReserveSyncStateMap, type ReserveSyncStateRecord } from "../lib/live-reserves/store";
 import { logWorkerEvent } from "../lib/structured-log";
-import { getReserveAdapter, type AdapterContext } from "./reserve-adapters/index";
-import { createReserveAdapterRunner } from "./sync-live-reserves";
-import { createAdapterLatencyCollector, syncReserveCoin } from "./sync-live-reserves-core";
+import type { AdapterContext } from "./reserve-adapters/types";
 import { resolveLiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
 import { CONFIGURED_COINS, type ConfiguredCoin } from "./sync-live-reserves-shared";
 
@@ -68,10 +66,16 @@ export async function recoverLiveReserveConfigChanges(
     ).all<FingerprintRow>(), 3, leaseSignal);
     const fingerprints = new Map((rows.results ?? []).map((row) => [row.stablecoin_id, row.config_fingerprint]));
     const currentFingerprints = new Map(CONFIGURED_COINS.map((coin) => [coin.id, computeLiveReserveConfigFingerprint(coin.liveReservesConfig!)]));
-    const selection = selectConfigRecoveryTargets(fingerprints, currentFingerprints, (id) => {
-      const config = WORKER_TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
-      return config != null && getReserveAdapter(config.adapter) != null;
-    });
+    // Static adapter imports would retain the whole producer heap when this
+    // unchanged-config poll next replays only a checkpoint's backstop consumer.
+    const candidates = selectConfigRecoveryTargets(fingerprints, currentFingerprints, () => true);
+    const adapterRegistry = candidates.targets.length > 0 ? await import("./reserve-adapters/index") : null;
+    const selection = adapterRegistry
+      ? selectConfigRecoveryTargets(fingerprints, currentFingerprints, (id) => {
+        const config = WORKER_TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
+        return config != null && adapterRegistry.getReserveAdapter(config.adapter) != null;
+      })
+      : candidates;
     const targetIds = new Set([...selection.targets, ...selection.missingFetcherIds]);
     const mismatched = CONFIGURED_COINS.filter((coin) => targetIds.has(coin.id));
     const states = await loadReserveSyncStateMap(db, mismatched.map((coin) => coin.id));
@@ -95,21 +99,26 @@ export async function recoverLiveReserveConfigChanges(
     const failed: string[] = [];
     const breakerOutcomes = new Map<string, boolean>();
     const breakerCanFetch = new Map<string, boolean>();
+    // Initialize execution machinery only when a coin can actually be retried.
+    const execution = due.length > 0 ? await Promise.all([
+      import("./sync-live-reserves"),
+      import("./sync-live-reserves-core"),
+    ]) : null;
     for (const coin of due.slice(0, RESERVE_CONFIG_RECOVERY_MAX_COINS)) {
       throwIfAborted(leaseSignal);
       if (deadlineMs - Date.now() < budget.minimumAttemptBudgetMs) break;
       // Per-coin caches/telemetry are released before the next coin. The shared
       // runner supplies the same body-draining adapters, fallbacks, timeouts and
       // two-operation I/O limiter as the normal sync; no new transport path.
-      const runAdapter = createReserveAdapterRunner({
+      const runAdapter = execution![0].createReserveAdapterRunner({
         signal: leaseSignal,
         adapterCtx: { ...adapterCtx, db, requestCache: new Map() },
         adapterTimeoutMs: budget.adapterTimeoutMs,
-        telemetry: createAdapterLatencyCollector(),
+        telemetry: execution![1].createAdapterLatencyCollector(),
       });
-      const result = await syncReserveCoin({
+      const result = await execution![1].syncReserveCoin({
         db, coin, signal: leaseSignal,
-        adapter: getReserveAdapter(coin.liveReservesConfig!.adapter),
+        adapter: adapterRegistry!.getReserveAdapter(coin.liveReservesConfig!.adapter),
         runAdapter: async (attemptCoin, config, adapter, attemptDeadline) => {
           const result = await runAdapter(attemptCoin, config, adapter, (attemptDeadline ?? deadlineMs) - budget.d1FinalizeTimeoutMs);
           throwIfAborted(leaseSignal);
