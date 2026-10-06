@@ -17,7 +17,7 @@ import {
   buildReserveFootnoteModel,
   buildReserveSourceChip,
   liveCompositionDiffers,
-  liveCompositionSlices,
+  compositionSlices,
   reserveSliceLabel,
   reviewedCompositionSlices,
   type ReserveCompositionSlice,
@@ -273,16 +273,23 @@ function LiveFeedDetail({
   slices,
   datedLabel,
   note,
+  relation,
 }: {
   slices: readonly ReserveCompositionSlice[];
   datedLabel: string | null;
   note: string | null;
+  relation: "differs" | "matches" | "unreviewed";
 }) {
+  const relationText = {
+    differs: "This composition can differ from the reviewed slices above, which drive the Safety Score basis.",
+    matches: "This composition matches the reviewed slices above, which drive the Safety Score basis.",
+    unreviewed: "No reviewed reserve composition exists yet, so these figures do not drive the Safety Score basis.",
+  }[relation];
   return (
     <ModuleDisclosure label="Live reserve feed">
       <div className="mt-3 space-y-2">
         <p className={SLICE_LINE_CLASS}>
-          {datedLabel ?? "Live attestation or proof composition"}. This composition can differ from the reviewed slices above, which drive the Safety Score basis.
+          {datedLabel ?? "Live attestation or proof composition"}. {relationText}
         </p>
         {note ? <p className={SLICE_LINE_CLASS}>{note}</p> : null}
         <ul aria-label="Live reserve feed composition" className="space-y-1">
@@ -326,9 +333,10 @@ function FeedStatusDetail({
 /**
  * The one Reserves module: lede and risk-toned treemap of the *reviewed* slices
  * (the Safety Score basis), up to four facts, then folded ladder, slice detail,
- * the dated live attestation/proof feed, and feed status. Live figures never sit
- * beside the reviewed ones unlabeled; they live in the dated "Live reserve feed"
- * fold. Falls back to the live composition only when no reviewed slices exist.
+ * the dated live attestation/proof feed, and feed status. The summary is always
+ * the reviewed slices, or an explicit "no reviewed composition" state: live
+ * figures never reach it. A live feed is always exposed in the dated "Live
+ * reserve feed" fold, worded by whether it differs from the reviewed slices.
  * Also owns the `#reserve-quality` anchor the hero and FAQ link to.
  */
 export function ReservesSection({
@@ -340,16 +348,19 @@ export function ReservesSection({
   isLoading = false,
   qualitySummary = null,
 }: ReservesSectionProps) {
+  // The reviewed basis is the curated `coin.reserves`. The quality summary is
+  // derived from it but only exists when slices carry both asset class and
+  // liquidity horizon, so partially annotated baskets (USDe) still draw here.
   const reviewedSlices = useMemo(
-    () => (qualitySummary ? reviewedCompositionSlices(qualitySummary) : []),
-    [qualitySummary],
+    () => (qualitySummary ? reviewedCompositionSlices(qualitySummary) : compositionSlices(coin.reserves ?? [])),
+    [qualitySummary, coin.reserves],
   );
   const liveSlices = useMemo(
-    () => (reserves ? liveCompositionSlices(reserves.reserves) : []),
+    () => (reserves ? compositionSlices(reserves.reserves) : []),
     [reserves],
   );
 
-  if (!reserves && !reserveFetchError && !qualitySummary) {
+  if (!reserves && !reserveFetchError && !qualitySummary && !coin.reserves?.length) {
     if (!isLoading) return null;
     return (
       <section
@@ -369,16 +380,15 @@ export function ReservesSection({
   }
 
   const hasReviewedBasis = reviewedSlices.length > 0;
-  const visualSlices = hasReviewedBasis ? reviewedSlices : liveSlices;
   const feedStatus = buildReserveFeedStatus(reserves, reserveFetchError);
   const sourceChip = buildReserveSourceChip(reserves);
   const footnote = reserves
     ? buildReserveFootnoteModel(reserves, !!coin.liveReservesConfig, coin.flags.backing.replace("-", " "))
     : null;
   const isLiveFeed = reserves?.mode === "live" || reserves?.mode === "live-stale";
-  const showLiveFeed = hasReviewedBasis && isLiveFeed && liveSlices.length > 0
-    && liveCompositionDiffers(liveSlices, reviewedSlices);
-  const facts = buildFacts(qualitySummary, visualSlices);
+  // A live feed is always exposed in its dated disclosure, never promoted into the summary.
+  const showLiveFeed = isLiveFeed && liveSlices.length > 0;
+  const facts = buildFacts(qualitySummary, reviewedSlices);
 
   const sources: EvidenceFooterSource[] = [];
   for (const source of [...(qualitySummary?.sources ?? []), ...(footnote?.references ?? [])]) {
@@ -420,18 +430,18 @@ export function ReservesSection({
           {qualitySummary ? (
             <p className="text-sm leading-relaxed text-muted-foreground">{qualitySummary.lede}</p>
           ) : null}
-          {visualSlices.length > 0 ? (
-            <ReserveTreemap
-              slices={visualSlices}
-              subject={hasReviewedBasis ? "Reviewed reserve slices" : "Reserve composition"}
-            />
-          ) : null}
-          {!reserves && !qualitySummary ? (
+          {hasReviewedBasis ? (
+            <ReserveTreemap slices={reviewedSlices} subject="Reviewed reserve slices" />
+          ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">Reserve composition could not be loaded.</p>
-              {onRetry ? <RetryButton onRetry={onRetry} isFetching={isFetching} /> : null}
+              <p className="text-sm text-muted-foreground">
+                {!reserves && reserveFetchError
+                  ? "Reserve composition could not be loaded."
+                  : "No reviewed reserve composition yet."}
+              </p>
+              {!reserves && onRetry ? <RetryButton onRetry={onRetry} isFetching={isFetching} /> : null}
             </div>
-          ) : null}
+          )}
           <FactGrid aria-label="Reserve facts" items={facts} />
           {qualitySummary && qualitySummary.ladder.length > 0 ? (
             <ModuleDisclosure label="Liquidity ladder">
@@ -448,6 +458,7 @@ export function ReservesSection({
               slices={liveSlices}
               datedLabel={footnote?.text ?? null}
               note={buildReserveCompositionNote(reserves)}
+              relation={!hasReviewedBasis ? "unreviewed" : liveCompositionDiffers(liveSlices, reviewedSlices) ? "differs" : "matches"}
             />
           ) : null}
           {feedStatus ? <FeedStatusDetail status={feedStatus} onRetry={onRetry} isFetching={isFetching} /> : null}

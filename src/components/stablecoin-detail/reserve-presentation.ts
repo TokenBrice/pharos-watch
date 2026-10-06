@@ -509,7 +509,7 @@ export function reviewedCompositionSlices(summary: ReserveQualityClientSummary):
     .sort((a, b) => b.pct - a.pct);
 }
 
-export function liveCompositionSlices(slices: readonly ReserveSlice[]): ReserveCompositionSlice[] {
+export function compositionSlices(slices: readonly ReserveSlice[]): ReserveCompositionSlice[] {
   return slices
     .filter((slice) => Number.isFinite(slice.pct) && slice.pct > 0)
     .map((slice, index) => ({
@@ -525,18 +525,27 @@ export function liveCompositionSlices(slices: readonly ReserveSlice[]): ReserveC
 /** Largest per-rank share gap, in points, below which two snapshots read as the same composition. */
 const SAME_COMPOSITION_TOLERANCE_PCT = 0.5;
 
+/** Identity key for a slice: lowercase alphanumerics of the name, ignoring any parenthetical expansion. */
+function sliceIdentity(label: string): string {
+  return label.replace(/\(.*?\)/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 /**
- * Whether the live attestation/proof composition is worth a dated disclosure next
- * to the reviewed slices: slice count or any rank-by-rank share moves by more
- * than half a point. Names are not compared: reviewed and live feeds label the
- * same asset differently.
+ * Whether the live attestation/proof composition differs from the reviewed
+ * slices. It reads as the same only when, rank by rank, both the share (within
+ * half a point) and the slice identity (normalized name) match: 100% ETH against
+ * 100% USDC has identical shares and is still a different composition. Reviewed
+ * and live feeds often name the same asset differently, so a "differs" result
+ * means "not provably the same", which is the conservative wording.
  */
 export function liveCompositionDiffers(
   live: readonly ReserveCompositionSlice[],
   reviewed: readonly ReserveCompositionSlice[],
 ): boolean {
   if (live.length !== reviewed.length) return true;
-  return live.some((slice, index) =>
-    Math.abs(slice.pct - reviewed[index]!.pct) > SAME_COMPOSITION_TOLERANCE_PCT,
-  );
+  return live.some((slice, index) => {
+    const counterpart = reviewed[index]!;
+    return Math.abs(slice.pct - counterpart.pct) > SAME_COMPOSITION_TOLERANCE_PCT
+      || sliceIdentity(slice.label) !== sliceIdentity(counterpart.label);
+  });
 }

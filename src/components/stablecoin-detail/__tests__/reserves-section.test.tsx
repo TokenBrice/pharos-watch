@@ -9,6 +9,8 @@ import { ReservesSection, type ReservesSectionProps } from "../reserves-section"
 
 const COIN = TRACKED_META_BY_ID.get("iusd-infinifi")!;
 const AMBER_VALUE_CLASS = "text-amber-600";
+// A coin whose curated `reserves` is empty: nothing reviewed to draw.
+const NO_REVIEW_COIN = { ...COIN, reserves: [] };
 
 const SUMMARY: ReserveQualityClientSummary = {
   chipLabel: "Highly liquid",
@@ -81,9 +83,9 @@ afterEach(() => {
 
 describe("ReservesSection", () => {
   it("renders nothing without reserves, a fetch error or a reviewed summary, and a skeleton while loading", () => {
-    const { container, rerender } = renderSection({ qualitySummary: null });
+    const { container, rerender } = renderSection({ coin: NO_REVIEW_COIN, qualitySummary: null });
     expect(container.innerHTML).toBe("");
-    rerender(<ReservesSection coin={COIN} reserves={null} reserveFetchError={null} isLoading />);
+    rerender(<ReservesSection coin={NO_REVIEW_COIN} reserves={null} reserveFetchError={null} isLoading />);
     expect(container.querySelector('section#reserves[aria-busy="true"]')).not.toBeNull();
   });
 
@@ -233,13 +235,6 @@ describe("ReservesSection", () => {
       expect(screen.getByRole("figure").getAttribute("aria-label")).not.toContain("49.9");
     });
 
-    it("omits the live disclosure when the live feed matches the reviewed slices", () => {
-      renderSection({
-        reserves: makeReserves({ reserves: [{ name: "T-bills", pct: 80.2, risk: "very-low" }, { name: "Cash", pct: 19.8, risk: "very-low" }] }),
-      });
-      expect(screen.queryByLabelText("Live reserve feed composition")).toBeNull();
-    });
-
     it("retries from the Feed status disclosure after a failed fetch and keeps the reviewed visual", () => {
       const onRetry = vi.fn();
       renderSection({ reserves: makeReserves({ mode: "curated-fallback" }), reserveFetchError: new Error("boom"), onRetry });
@@ -251,27 +246,88 @@ describe("ReservesSection", () => {
 
     it("explains an empty module when the feed failed and no reviewed slices exist", () => {
       const onRetry = vi.fn();
-      const { container } = renderSection({ qualitySummary: null, reserveFetchError: new Error("upstream exploded"), onRetry });
+      const { container } = renderSection({ coin: NO_REVIEW_COIN, qualitySummary: null, reserveFetchError: new Error("upstream exploded"), onRetry });
       expect(container.textContent).toContain("Reserve composition could not be loaded.");
       expect(container.textContent).not.toContain("upstream exploded");
       expect(screen.getAllByRole("button", { name: "Retry", hidden: true }).length).toBeGreaterThan(0);
     });
   });
 
-  it("falls back to the live composition when no slices are reviewed", () => {
+  it("never promotes the live feed into the summary when no slices are reviewed", () => {
     const { container } = renderSection({
+      coin: NO_REVIEW_COIN,
       qualitySummary: null,
       reserves: makeReserves({
+        metadata: { sourceTimestamp: Date.parse("2026-09-24T00:00:00Z") / 1000 },
         reserves: [
           { name: "GhoDirectFacilitator GSM Arbitrum", pct: 60, risk: "high", issuerOrObligor: "Aave DAO Arbitrum GHO Reserve and remote GSM" },
           { name: "Cash", pct: 40, risk: "very-low" },
         ],
       }),
     });
+    expect(screen.getByText("No reviewed reserve composition yet.")).toBeDefined();
+    expect(screen.queryByRole("figure")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Reserve facts" })).toBeNull();
+    // The live numbers appear only inside the dated, folded disclosure.
+    const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
+    expect(disclosure.textContent).toContain("Source as of Sep 24, 2026");
+    expect(disclosure.textContent).toContain("do not drive the Safety Score basis");
+    expect(within(disclosure).getByText("Cash")).toBeDefined();
+    expect(container.textContent?.replace(disclosure.textContent ?? "", "")).not.toMatch(/60%|40%/);
+  });
+
+  it("draws the reviewed curated slices when no quality summary exists, with no quality facts", () => {
+    const curated = {
+      ...COIN,
+      reserves: [
+        { name: "Liquid Cash strategy basket", pct: 81.3, risk: "medium" as const, assetClass: "cash" as const },
+        { name: "BTC", pct: 9.8, risk: "medium" as const },
+        { name: "ETH / LST", pct: 7.6, risk: "low" as const },
+        { name: "Other", pct: 1.3, risk: "high" as const },
+      ],
+    };
+    const { container } = renderSection({
+      coin: curated,
+      qualitySummary: null,
+      reserves: makeReserves({
+        metadata: { sourceTimestamp: Date.parse("2026-10-06T00:00:00Z") / 1000 },
+        reserves: [{ name: "Live strategy", pct: 100, risk: "low" }],
+      }),
+    });
     expect(screen.getByRole("figure").getAttribute("aria-label"))
-      .toBe("Reserve composition: Aave DAO Arbitrum GHO Reserve and remote GSM 60%, Cash 40%");
-    expect(container.textContent).not.toContain("GhoDirectFacilitator");
-    expect(screen.queryByLabelText("Live reserve feed composition")).toBeNull();
-    expect(screen.getByText("Top position")).toBeDefined();
+      .toBe("Reviewed reserve slices: Liquid Cash strategy basket 81.3%, BTC 9.8%, ETH / LST 7.6%, Other 1.3%");
+    expect(screen.queryByText("No reviewed reserve composition yet.")).toBeNull();
+    // Only the structural fact survives; quality-only facts, ladder and slice detail need the summary.
+    const facts = within(screen.getByRole("group", { name: "Reserve facts" }));
+    expect(facts.getByText("Top position")).toBeDefined();
+    expect(facts.queryByText("Liquid ≤ 1 day")).toBeNull();
+    expect(facts.queryByText("Unresolved reserve exposure")).toBeNull();
+    expect(screen.queryByText("Liquidity ladder")).toBeNull();
+    expect(screen.queryByText("Slice detail & risk factors")).toBeNull();
+    // The live feed stays in its dated disclosure and is worded as differing.
+    const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
+    expect(disclosure.textContent).toContain("can differ from the reviewed slices");
+    expect(within(disclosure).getByText("Live strategy")).toBeDefined();
+    expect(container.textContent?.replace(disclosure.textContent ?? "", "")).not.toContain("Live strategy");
+  });
+
+  it("reports a live feed with identical shares but different assets as different", () => {
+    renderSection({
+      qualitySummary: { ...SUMMARY, sliceCount: 1, slices: [{ ...SUMMARY.slices[0]!, name: "ETH", pct: 100 }] },
+      reserves: makeReserves({ reserves: [{ name: "USDC", pct: 100, risk: "low" }] }),
+    });
+    const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
+    expect(disclosure.textContent).toContain("can differ from the reviewed slices");
+    expect(within(disclosure).getByText("USDC")).toBeDefined();
+  });
+
+  it("still exposes a live feed that matches the reviewed slices, worded as matching", () => {
+    renderSection({
+      reserves: makeReserves({
+        reserves: [{ name: "U.S. Treasury bills", pct: 80.2, risk: "very-low" }, { name: "Bank deposits", pct: 19.8, risk: "very-low" }],
+      }),
+    });
+    const disclosure = screen.getByText("Live reserve feed").closest("details") as HTMLElement;
+    expect(disclosure.textContent).toContain("matches the reviewed slices");
   });
 });

@@ -492,11 +492,18 @@ describe("reserve composition slices", () => {
     expect(reserveSliceLabel("USDe staking vault shares", "Ethena")).toBe("USDe staking vault shares");
   });
 
-  it("treats the live feed as the same composition within half a point per rank", () => {
-    const slice = (pct: number): ReserveCompositionSlice => ({ key: String(pct), label: "x", pct, risk: "low", detail: null });
-    expect(liveCompositionDiffers([slice(60), slice(40)], [slice(59.7), slice(40.3)])).toBe(false);
-    expect(liveCompositionDiffers([slice(60), slice(40)], [slice(67.6), slice(32.4)])).toBe(true);
-    expect(liveCompositionDiffers([slice(100)], [slice(60), slice(40)])).toBe(true);
+  it("treats the live feed as the same composition only when both share and identity match per rank", () => {
+    const slice = (label: string, pct: number): ReserveCompositionSlice => ({ key: label + pct, label, pct, risk: "low", detail: null });
+    expect(liveCompositionDiffers([slice("T-bills", 60), slice("Cash", 40)], [slice("T-bills", 59.7), slice("Cash", 40.3)])).toBe(false);
+    expect(liveCompositionDiffers([slice("T-bills", 60), slice("Cash", 40)], [slice("T-bills", 67.6), slice("Cash", 32.4)])).toBe(true);
+    expect(liveCompositionDiffers([slice("ETH", 100)], [slice("T-bills", 60), slice("Cash", 40)])).toBe(true);
+    // A parenthetical expansion does not change identity.
+    expect(liveCompositionDiffers([slice("cbBTC (Coinbase Wrapped BTC)", 100)], [slice("cbBTC", 100)])).toBe(false);
+  });
+
+  it("reports 100% ETH reviewed against 100% USDC live as different despite identical shares", () => {
+    const slice = (label: string): ReserveCompositionSlice => ({ key: label, label, pct: 100, risk: "low", detail: null });
+    expect(liveCompositionDiffers([slice("USDC")], [slice("ETH")])).toBe(true);
   });
 });
 

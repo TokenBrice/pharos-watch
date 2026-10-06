@@ -235,7 +235,7 @@ describe("StablecoinDetailClient", () => {
     expect(container.querySelectorAll("#price-transparency").length).toBeLessThanOrEqual(1);
   });
 
-  it("mounts the reserves module in backing evidence when report-card data is unavailable", async () => {
+  it("mounts the reserves module in the score row when report-card data is unavailable", async () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
     useStablecoinDetailViewModelMock.mockReturnValue(
@@ -256,7 +256,9 @@ describe("StablecoinDetailClient", () => {
     const reserves = await screen.findByTestId("reserves-section");
     expect(screen.queryByTestId("report-card")).toBeNull();
     expect(reserves.textContent).toContain("curated-fallback");
-    expect(container.querySelector("#backing-evidence")?.contains(reserves)).toBe(true);
+    expect(container.querySelector("#backing-evidence")?.contains(reserves)).toBe(false);
+    const backingEvidence = container.querySelector("#backing-evidence")!;
+    expect(reserves.compareDocumentPosition(backingEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
@@ -280,10 +282,14 @@ describe("StablecoinDetailClient", () => {
 
     const reportCardElement = await screen.findByTestId("report-card");
     const reserves = await screen.findByTestId("reserves-section");
-    // The treemap left the score card: reserves are backing evidence.
+    // The treemap left the score card: Reserves pairs with it in one row
+    // (score first), ahead of the backing-evidence group.
     expect(reportCardElement.contains(reserves)).toBe(false);
     expect(reserves.textContent).toContain("loading-reserves");
-    const spine = ["#report-card", "#backing-evidence", "#exit-evidence", "#control-evidence"].map(
+    const scoreSection = container.querySelector("#report-card")!;
+    expect(scoreSection.parentElement).toBe(reserves.parentElement?.parentElement);
+    expect(scoreSection.compareDocumentPosition(reserves) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const spine = ["#reserves", "#backing-evidence", "#exit-evidence", "#control-evidence"].map(
       (selector) => container.querySelector(selector)!,
     );
     const overview = container.querySelector("#overview")!;

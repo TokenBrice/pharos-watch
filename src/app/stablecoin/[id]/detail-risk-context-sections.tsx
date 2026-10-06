@@ -86,8 +86,14 @@ export function DetailRiskContextSections({
   const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
   const reservesLoading = viewModel.featureStates.reserves.status === "loading";
   const qualitySummary = viewModel.coin.reserveQualitySummary ?? null;
+  const hasReviewedSlices = qualitySummary != null || (viewModel.coin.reserves?.length ?? 0) > 0;
   const showReserves =
-    viewModel.reserves != null || viewModel.reserveFetchError != null || reservesLoading || qualitySummary != null;
+    viewModel.reserves != null || viewModel.reserveFetchError != null || reservesLoading || hasReviewedSlices;
+  const { reportCard, reportCardsResponse } = viewModel;
+  const showScoreCard = reportCard != null && reportCardsResponse != null;
+  // Pair side by side only when a reviewed composition fills the Reserves
+  // half; a live-feed-only module would leave a mostly empty stretched box.
+  const pairScoreAndReserves = showScoreCard && hasReviewedSlices;
 
   return (
     <>
@@ -112,35 +118,43 @@ export function DetailRiskContextSections({
             />
           ) : null}
         </section>
-        <section id="report-card">
-          {viewModel.reportCard && viewModel.reportCardsResponse ? (
-            <StablecoinSafetyScoreV9Card
-              card={viewModel.reportCard}
-              identity={viewModel.reportCardsResponse.safetyScoreIdentity}
-              publicationHealth={viewModel.reportCardsResponse.publicationHealth}
-              updatedAtMs={viewModel.reportCardUpdatedAt}
-              stablecoinName={viewModel.coin.name}
-              stablecoinSymbol={viewModel.coin.symbol}
-              logoSrc={viewModel.logoSrc}
-            />
+        {/* Score left, reserves right at lg+ when both exist and reserves has
+            a reviewed composition; otherwise each takes the full width, stacked.
+            Each half is a one-cell grid so its card stretches to the row
+            height and the pair stays equal. */}
+        <div className={cn("grid gap-6", pairScoreAndReserves ? "lg:grid-cols-2" : undefined)}>
+          <section id="report-card" className={cn("grid min-w-0", SECTION_SCROLL_MT)}>
+            {reportCard && reportCardsResponse ? (
+              <StablecoinSafetyScoreV9Card
+                card={reportCard}
+                identity={reportCardsResponse.safetyScoreIdentity}
+                publicationHealth={reportCardsResponse.publicationHealth}
+                updatedAtMs={viewModel.reportCardUpdatedAt}
+                stablecoinName={viewModel.coin.name}
+                stablecoinSymbol={viewModel.coin.symbol}
+                logoSrc={viewModel.logoSrc}
+              />
+            ) : null}
+          </section>
+          {showReserves ? (
+            <div className="grid min-w-0">
+              <ReservesSection
+                coin={viewModel.coin}
+                reserves={viewModel.reserves}
+                reserveFetchError={viewModel.reserveFetchError}
+                onRetry={viewModel.refetchReserves ?? undefined}
+                isFetching={viewModel.isFetchingReserves}
+                isLoading={reservesLoading}
+                qualitySummary={qualitySummary}
+              />
+            </div>
           ) : null}
-        </section>
+        </div>
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
 
         <PillarEvidenceGroup id="backing-evidence" title="Backing evidence">
-          {showReserves ? (
-            <ReservesSection
-              coin={viewModel.coin}
-              reserves={viewModel.reserves}
-              reserveFetchError={viewModel.reserveFetchError}
-              onRetry={viewModel.refetchReserves ?? undefined}
-              isFetching={viewModel.isFetchingReserves}
-              isLoading={reservesLoading}
-              qualitySummary={qualitySummary}
-            />
-          ) : null}
           {viewModel.coin.oracleRiskSummary ? (
             <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />
           ) : null}
