@@ -74,6 +74,96 @@ describe("DDRv2 storage contract cases", () => {
     expect(rows(db, "SELECT * FROM depeg_resolver_public_predictions")).toEqual([original]);
   }));
 
+  it.each([
+    ["peggedREAL", "BRL", "prediction"],
+    ["peggedREAL", "BRL", "no_call"],
+    ["peggedREAL", "REAL", "prediction"],
+    ["peggedREAL", "REAL", "no_call"],
+    ["peggedBRL", "BRL", "prediction"],
+    ["peggedBRL", "REAL", "prediction"],
+  ] as const)("seals the BRZ production identity atomically with %s / %s / %s", async (pegType, pegCurrency, kind) => withSqliteD1(async (db) => {
+    // Production event #90801 and the first-observed canonical identity.
+    const startedAt = 1791202581;
+    const lockedAt = 1791271718;
+    insertLiveEvent(db, {
+      eventId: 90801, stablecoinId: "brz-transfero", symbol: "BRZ",
+      pegCurrency: pegType.slice(6), startedAt, peakDeviationBps: -484,
+    });
+    const [incident] = await ensureCanonicalIncidents(db, [{
+      eventId: 90801, stablecoinId: "brz-transfero", pegCurrency, direction: "below",
+      startedAt, peakDeviationBps: -484, source: "live", publicTrackedAtFirstSeen: true,
+      sourceFingerprint: "5239ceeafac876f9f6ad4bcdd14446295a21df6ece4aab0e1b334c8c81750bae",
+    }], { nowSec: lockedAt, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 });
+    if (pegCurrency === "BRL") {
+      expect(incident.incidentKey).toBe("ddr2:3d5eaaedeac881a75c738939d446710f");
+    }
+    const metadata = {
+      lockTrigger: "forecast_readiness" as const,
+      forecastReadinessScore: 0.8,
+      forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+      readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+      backstopAt: startedAt + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+    };
+    const sealed = await sealPublicFixture(db, incident.incidentKey, kind, {
+      payload: {
+        eventId: 90801, stablecoinId: "brz-transfero", symbol: "BRZ", name: "BRZ",
+        pegCurrency, startedAt, eligibleAt: lockedAt, lockedAt,
+        policyDelaySec: lockedAt - startedAt, eventAgeAtLockSec: lockedAt - startedAt,
+        predictionExtras: {
+          lockTrigger: metadata.lockTrigger,
+          readiness: { score: metadata.forecastReadinessScore, version: metadata.forecastReadinessVersion, threshold: metadata.readinessThreshold },
+          backstop: { backstopAt: metadata.backstopAt, delaySec: metadata.backstopDelaySec },
+        },
+      },
+      lock: metadata,
+    });
+    expect(sealed).toMatchObject({ eventId: 90801, outcomeKind: kind, incidentKey: incident.incidentKey });
+    expect(row(db, "SELECT event_id, checkpoint, peg_currency FROM depeg_resolver_assessments WHERE id = ?", sealed.assessmentId))
+      .toEqual({ event_id: 90801, checkpoint: "public_prediction", peg_currency: pegCurrency });
+    expect(rows(db, "SELECT * FROM depeg_resolver_lock_opportunity_audit WHERE event_id = 90801")).toHaveLength(1);
+    // Reloading preserves the same exposure and its single linked assessment.
+    const again = await loadSealedPublicPredictions(db, { incidentKeys: [incident.incidentKey] });
+    expect(again.map((prediction) => prediction.id)).toEqual([sealed.id]);
+    expect(rows(db, "SELECT * FROM depeg_resolver_assessments WHERE event_id = 90801")).toHaveLength(1);
+  }));
+
+  it.each([
+    ["assessment", "BRL", "USD"],
+    ["incident", "USD", "BRL"],
+  ] as const)("still rejects a genuine %s currency mismatch and rolls back the entire seal", async (_label, incidentCurrency, assessmentCurrency) => withSqliteD1(async (db) => {
+    insertLiveEvent(db, { eventId: 1, stablecoinId: "brz-transfero", symbol: "BRZ", pegCurrency: "REAL", startedAt: 100000 });
+    const [incident] = await ensureCanonicalIncidents(db, [{
+      eventId: 1, stablecoinId: "brz-transfero", pegCurrency: incidentCurrency, direction: "below",
+      startedAt: 100000, peakDeviationBps: -300, source: "live", publicTrackedAtFirstSeen: true,
+    }], { nowSec: 200000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 });
+    await expect(sealPublicFixture(db, incident.incidentKey, "prediction", {
+      payload: { stablecoinId: "brz-transfero", symbol: "BRZ", name: "BRZ", pegCurrency: assessmentCurrency },
+    })).rejects.toThrow(/linked public_prediction assessment/);
+    expect(rows(db, "SELECT * FROM depeg_resolver_assessments")).toEqual([]);
+    expect(rows(db, "SELECT * FROM depeg_resolver_public_predictions")).toEqual([]);
+    expect(rows(db, "SELECT * FROM depeg_resolver_prediction_lock_state")).toEqual([]);
+    expect(rows(db, "SELECT * FROM depeg_resolver_lock_opportunity_audit")).toEqual([]);
+  }));
+
+  it("adopts a BRL canonical successor whose persisted source uses peggedREAL", async () => withSqliteD1(async (db) => {
+    insertLiveEvent(db, { eventId: 1, stablecoinId: "brz-transfero", pegCurrency: "REAL", startedAt: 100000, endedAt: 100600 });
+    const firstInput = {
+      eventId: 1, stablecoinId: "brz-transfero", pegCurrency: "BRL", direction: "below" as const,
+      startedAt: 100000, endedAt: 100600, peakDeviationBps: -300, source: "live",
+      publicTrackedAtFirstSeen: true,
+    };
+    const options = { nowSec: 100700, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 };
+    const [first] = await ensureCanonicalIncidents(db, [firstInput], options);
+    insertLiveEvent(db, { eventId: 2, stablecoinId: "brz-transfero", pegCurrency: "REAL", startedAt: 100900 });
+    const [successor] = await ensureCanonicalIncidents(db, [{
+      ...firstInput, eventId: 2, startedAt: 100900, endedAt: null,
+    }], { ...options, nowSec: 101000 });
+    expect(successor).toMatchObject({
+      incidentKey: first.incidentKey, currentEventId: 2, pegCurrency: "BRL", relation: "repair_replacement",
+    });
+  }));
+
   it.each<[string, string, RegExp]>([
     ["stablecoinId", "usdc-circle", /payload identity/],
     ["kind", "no_call", /payload kind must match prediction outcome/],

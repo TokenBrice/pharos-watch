@@ -194,7 +194,7 @@ describe("computeDepegResolver", () => {
     };
     const stores: DdrV2StoreContracts = {
       closeRecoveredPreLockIncidents: vi.fn(async () => 0),
-      ensureCanonicalIncidents: vi.fn(async () => [
+      ensureCanonicalIncidents: vi.fn(async (_db, inputs) => [
         {
           incidentKey,
           eventId: 42,
@@ -202,7 +202,7 @@ describe("computeDepegResolver", () => {
           stablecoinId: "lane-b-test",
           pegCurrency: "USD",
           direction: "below" as const,
-          startedAt: NOW_SEC - 90_000,
+          startedAt: inputs.find((input: { eventId: number; startedAt: number }) => input.eventId === 42)?.startedAt ?? NOW_SEC - 90_000,
           eligibleAt: NOW_SEC - 3_600,
           policyUniverseIncluded: true,
           rolloutActiveAtEnablement: true,
@@ -1020,6 +1020,48 @@ describe("computeDepegResolver", () => {
     expect(result.sealed).toEqual([existing]);
     expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
     expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
+  });
+
+  it("quarantines a genuine canonical identity mismatch and completes publication for the remaining asset", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const startedAt = NOW_SEC - 72 * 3600;
+    const events = [
+      activeEvent({ started_at: startedAt }),
+      activeEvent({ id: 43, started_at: startedAt }),
+    ];
+    const bad = canonicalIncident({ startedAt, pegCurrency: "EUR" });
+    const good = canonicalIncident({ eventId: 43, currentEventId: 43, startedAt, incidentKey: "ddr2:healthy" });
+    const db = resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: events },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: events },
+      ...healthyDewsPublicationTables(),
+      { match: "INSERT INTO worker_repair_tasks", rows: [] },
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+    ]);
+    const outcomes: DdrSealedPublicPrediction[] = [];
+    const { stores } = storesFor(good.incidentKey);
+    stores.ensureCanonicalIncidents = vi.fn(async () => [bad, good]);
+    stores.loadSealedPublicPredictions = vi.fn(async () => outcomes);
+    stores.sealPublicNoCall = vi.fn(async (_db, input) => {
+      if (input.eventId === 42) throw new Error("bad event reached the protected seal writer");
+      const sealed = sealedFromInput(input, "no_call", 7);
+      outcomes.push(sealed);
+      return sealed;
+    });
+    const result = await computeDepegResolver({
+      db, runAt: NOW_SEC, storeContracts: stores,
+      stablecoinsCacheSafe: true, depegPipelineHealthy: true,
+    });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.itemCount).toBe(1);
+    expect(metadata.repairRequiredEvents).toEqual([
+      { eventId: 42, reason: expect.stringContaining("canonical-event-identity-mismatch") },
+    ]);
+    expect(metadata.v2PublicationSucceeded).toBe(true);
+    expect(stores.sealPublicNoCall).toHaveBeenCalledWith(db, expect.objectContaining({ eventId: 43 }));
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO worker_repair_tasks"))).toBe(true);
+    expect(readDdrSnapshotPayload(db).rows.map((row: { eventId: number }) => row.eventId)).toEqual([43]);
   });
 
   it("alerts once per newly quarantined event id and never re-alerts the same id", async () => {

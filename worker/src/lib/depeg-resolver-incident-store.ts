@@ -1,5 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { auditVerdictNotInSql } from "./depeg-audit";
 import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
@@ -917,6 +918,7 @@ async function assertCanonicalLiveEventProvenance(
        WHERE id = ?
          AND stablecoin_id = ?
          AND CASE
+           WHEN peg_type = 'peggedREAL' THEN 'BRL'
            WHEN peg_type LIKE 'pegged%' THEN substr(peg_type, 7)
            ELSE 'USD'
          END = ?
@@ -929,7 +931,7 @@ async function assertCanonicalLiveEventProvenance(
     .bind(
       event.eventId,
       event.stablecoinId,
-      event.pegCurrency,
+      getPegTaxonomyByCurrency(event.pegCurrency)?.currency ?? event.pegCurrency,
       event.direction,
       event.startedAt,
       ...auditEligible.binds,
