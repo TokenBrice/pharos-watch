@@ -487,7 +487,7 @@ describe("wrapper-local loss absorption and custody scope", () => {
           status: { ...route.status, observationState: "known" },
           holderAccess: "permissionless",
           executionModel: "atomic",
-          executionCertainty: "deterministic",
+          executionCertainty: "guaranteed",
           settlementModel: "atomic",
           settlementSlaSec: null,
         };
