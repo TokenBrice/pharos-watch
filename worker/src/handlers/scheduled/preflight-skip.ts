@@ -1,3 +1,5 @@
+import type { CronResultStatus } from "@shared/types/status/cron";
+import { resolveCronDegradedReason } from "../../lib/cron-logger";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordProducerOutcome } from "../../lib/producer-history";
 import { getRuntimeProducerIdentity, type ScheduledRuntimeContext } from "./context";
@@ -7,7 +9,7 @@ interface LogSkippedCronRunOptions {
   reason: string;
   message?: string;
   metadata?: Record<string, unknown>;
-  status?: "ok" | "degraded" | "skipped_neutral";
+  status?: Extract<CronResultStatus, "ok" | "degraded" | "skipped_neutral">;
 }
 
 export async function logSkippedCronRun(
@@ -23,13 +25,16 @@ export async function logSkippedCronRun(
     options.job,
     options.reason,
   ].join(":");
-  const metadata = JSON.stringify({
+  const metadataObject = {
     ...options.metadata,
     skippedReason: options.reason,
+    reason: options.reason,
     message: options.message ?? null,
     slotStartedAt: runtime.slotStartedAt,
     scheduleKey: runtime.scheduleKey,
-  });
+  };
+  const metadata = JSON.stringify(metadataObject);
+  const degradedReason = resolveCronDegradedReason(options.job, status, undefined, metadataObject);
 
   const producer = getRuntimeProducerIdentity(runtime, options.job);
   await runWithOverloadRetry(() =>
@@ -38,8 +43,8 @@ export async function logSkippedCronRun(
         `INSERT INTO cron_runs
            (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, idempotency_key,
             schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-            productive, publication_count, calendar_period)
-         VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+            productive, publication_count, calendar_period, degraded_reason)
+         VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
          ON CONFLICT DO NOTHING`,
       )
       .bind(
@@ -55,6 +60,7 @@ export async function logSkippedCronRun(
         producer.invocationId,
         producer.workerVersion ?? null,
         producer.calendarPeriod ?? null,
+        degradedReason,
       )
       .run(),
   );

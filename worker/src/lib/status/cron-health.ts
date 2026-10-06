@@ -9,7 +9,6 @@ import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
-import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
@@ -55,7 +54,7 @@ const NEUTRAL_CRON_RUN_STATUS = "skipped_neutral";
 const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
 const CRON_HISTORY_SELECT_COLUMNS =
-  "job, started_at, duration_ms, status, error, item_count, metadata, schedule_key";
+  "job, started_at, duration_ms, status, error, item_count, metadata, schedule_key, degraded_reason";
 const LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER = `NOT (
   job = 'daily-digest'
   AND COALESCE(schedule_key = 'digestTriggerPoll', 0)
@@ -134,25 +133,6 @@ function parseCronEvent(value: string | null | undefined): CronEvent | null {
   }
 }
 
-function numberFromMetadata(metadata: Record<string, unknown> | undefined, key: string): number {
-  const value = metadata?.[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function booleanFromMetadata(metadata: Record<string, unknown> | undefined, key: string): boolean {
-  return metadata?.[key] === true;
-}
-
-function hasBlacklistMaintenanceDegradation(metadata: Record<string, unknown> | undefined): boolean {
-  if (!metadata) return false;
-  return (
-    numberFromMetadata(metadata, "currentBalanceCacheFailed") > 0
-    || numberFromMetadata(metadata, "enrichFailed") > 0
-    || numberFromMetadata(metadata, "contractsSkipped") > 0
-    || booleanFromMetadata(metadata, "runtimeBudgetReached")
-    || booleanFromMetadata(metadata, "subrequestBudgetReached")
-  );
-}
 
 function parseCronRunStatus(status: string): CronRun["status"] {
   const parsed = CronRunStatusSchema.safeParse(status);
@@ -231,6 +211,7 @@ interface CronHistoryRow {
   item_count: number | null;
   metadata: string | null;
   schedule_key: string | null;
+  degraded_reason: string | null;
 }
 
 interface CronLeaseRow {
@@ -687,6 +668,7 @@ export async function loadCronHealth(
         durationMs: row.duration_ms,
         status: parsedStatus,
         ...(row.error ? { error: row.error } : {}),
+        ...(row.degraded_reason?.trim() ? { degradedReason: row.degraded_reason.trim() } : {}),
         ...(row.item_count != null ? { itemCount: row.item_count } : {}),
         ...(parsedMeta || parsedStatus !== row.status
           ? { metadata: { ...(parsedMeta ?? {}), ...(parsedStatus !== row.status ? { rawStatus: row.status } : {}) } }
@@ -746,12 +728,6 @@ export async function loadCronHealth(
         (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || periodSatisfiedSinceRequiredAttempt)) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
-    const qualityRun = lastRun?.status === NEUTRAL_CRON_RUN_STATUS ? latestRequiredRun : lastRun;
-    const metadataDegraded =
-      qualityRun != null
-      && isFreshCronRun(qualityRun, now, interval)
-      && (getCronQualityReasons(qualityRun.metadata).length > 0
-        || (job === "sync-blacklist" && hasBlacklistMaintenanceDegradation(qualityRun.metadata)));
     // Bootstrap = no required attempt yet. Watch-tier crons can legitimately
     // have no rows or one neutral admission skip while a just-deployed
     // prerequisite generation/version is not ready. A second neutral-only run
@@ -779,9 +755,8 @@ export async function loadCronHealth(
     }
     if (
       !telemetryUnknown
-      && (((lastRun?.status === "degraded" && isFresh)
+      && ((lastRun?.status === "degraded" && isFresh)
         || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
-        || metadataDegraded)
     ) {
       degradedCronRuns++;
     }

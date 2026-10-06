@@ -1,11 +1,13 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { describeError } from "@shared/lib/error-utils";
 import type {
   WorkflowEvent,
   WorkflowStep,
 } from "cloudflare:workers";
 import { getCache } from "../lib/db-cache";
-import type { CronResult } from "../lib/cron-logger";
+import { resolveCronDegradedReason, type CronResult } from "../lib/cron-logger";
+import { stripSensitive } from "../lib/safe-error-message";
+import { parseJsonObject } from "../lib/json-parse";
 import type { Env } from "../lib/env";
 import {
   NATIVE_V9_INPUT_CACHE_KEY,
@@ -301,6 +303,16 @@ async function compilePublication(
   };
 }
 
+function resolveCompiledWorkflowReason(compiled: CapturedPublicationRun): string | null {
+  const metadata = parseJsonObject(compiled.metadata);
+  const attempt = parseJsonObject(compiled.failedPublicationAttempt);
+  const failure = attempt?.failure;
+  const code = failure && typeof failure === "object" && "code" in failure ? failure.code : undefined;
+  return resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, compiled.status,
+    { error: compiled.error ?? undefined },
+    { ...metadata, ...(typeof metadata?.reason !== "string" && typeof code === "string" ? { reason: code } : {}) });
+}
+
 export async function gateSafetyScoreV9ShadowPublication(
   instanceId: string,
   slotStartedAt: number,
@@ -340,6 +352,9 @@ export async function gateSafetyScoreV9ShadowPublication(
     );
   }
 
+  const reason = resolveCompiledWorkflowReason(compiled);
+  const error = compiled.status === "error" || compiled.status === "degraded"
+    ? `${reason}${compiled.error ? `: ${stripSensitive(compiled.error)}` : ""}`.slice(0, 500) : null;
   const shadowKey = `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:${fixedInput.sourceGeneration}`;
   const shadowValue = stableJsonStringifyV1({
     schemaVersion: 1,
@@ -353,7 +368,7 @@ export async function gateSafetyScoreV9ShadowPublication(
       status: compiled.status,
       itemCount: compiled.itemCount,
       metadata: compiled.metadata,
-      error: compiled.error,
+      error,
     },
     captured: {
       publicationEnvelope: compiled.publicationEnvelope,
@@ -369,7 +384,7 @@ export async function gateSafetyScoreV9ShadowPublication(
     updatedAt: fixedInput.clockSec,
     cronStatus: compiled.status,
     itemCount: compiled.itemCount,
-    error: compiled.error,
+    error,
     cronMetadata: stableJsonStringifyV1({
       workflow: "safety-score-v9-publication",
       instanceId,
@@ -378,6 +393,8 @@ export async function gateSafetyScoreV9ShadowPublication(
       baseInputGenerationId: fixedInput.baseInputGenerationId,
       shadowKey,
       publicationStatus,
+      ...(reason ? { reason } : {}),
+      ...(error ? { error } : {}),
     }),
   };
 }
@@ -444,8 +461,8 @@ export async function writeSafetyScoreV9ShadowPublication(
     db.prepare(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
-          slot_started_at, error, idempotency_key)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+          slot_started_at, error, idempotency_key, degraded_reason)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         WHERE EXISTS (
           SELECT 1
             FROM cache
@@ -464,6 +481,7 @@ export async function writeSafetyScoreV9ShadowPublication(
       slotStartedAt,
       gated.error,
       terminalIdempotencyKey(instanceId),
+      resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, gated.cronStatus, undefined, parseJsonObject(gated.cronMetadata)),
       gated.shadowKey,
       gated.shadowValue,
       gated.updatedAt,
@@ -487,27 +505,34 @@ async function writeTerminalFailure(
   slotStartedAt: number,
   startedAtMs: number,
   error: unknown,
+  capturedReason: string | null,
 ): Promise<void> {
-  const message = toErrorMessage(error).slice(0, 500);
+  const descriptor = describeError(error, stripSensitive);
+  const reason = capturedReason || descriptor.code || "workflow-execution-failed";
+  const metadata = {
+    workflow: "safety-score-v9-publication",
+    instanceId,
+    slotStartedAt,
+    stage: "workflow",
+    reason,
+    errorDescriptor: descriptor,
+  };
+  const message = `${reason}: ${descriptor.message}`.slice(0, 500);
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key)
-     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?)
+        slot_started_at, error, idempotency_key, degraded_reason)
+     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
     Math.floor(startedAtMs / 1_000),
     Math.max(0, Date.now() - startedAtMs),
-    stableJsonStringifyV1({
-      workflow: "safety-score-v9-publication",
-      instanceId,
-      slotStartedAt,
-      stage: "workflow",
-    }),
+    stableJsonStringifyV1(metadata),
     slotStartedAt,
     message,
     terminalIdempotencyKey(instanceId),
+    resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "error", undefined, metadata),
   ).run();
 }
 
@@ -534,8 +559,8 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key)
-     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?)
+        slot_started_at, error, idempotency_key, degraded_reason)
+     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -553,6 +578,8 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
     }),
     slotStartedAt,
     `${terminalIdempotencyKey(instanceId)}:upstream-absent`,
+    resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "skipped_neutral", undefined,
+      { reason: "upstream-compute-publication-absent" }),
   ).run();
 }
 
@@ -605,6 +632,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
   // literal "undefined".
   const instanceId = safetyScoreV9WorkflowInstanceId(slotStartedAt);
   const startedAtMs = event.timestamp.getTime();
+  let capturedReason: string | null = null;
 
   try {
     const fixedInput = await step.do(
@@ -622,6 +650,8 @@ export async function runSafetyScoreV9PublicationWorkflow(
       WORKFLOW_STEP_CONFIG,
       () => compilePublication(env.DB, fixedInput),
     );
+    capturedReason = resolveCompiledWorkflowReason(compiled);
+    if (capturedReason?.startsWith("unspecified-")) capturedReason = null;
     const gated = await step.do(
       "gate publication",
       WORKFLOW_STEP_CONFIG,
@@ -664,6 +694,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
           slotStartedAt,
           startedAtMs,
           error,
+          capturedReason,
         );
         return { recorded: true };
       },

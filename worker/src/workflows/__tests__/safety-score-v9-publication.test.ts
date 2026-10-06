@@ -321,6 +321,7 @@ describe("Safety Score V9 publication Workflow", () => {
     expect(rows).toMatchObject([{
       job: SAFETY_SCORE_V9_WORKFLOW_JOB, status: "ok", item_count: 200,
       slot_started_at: 1788433200, error: null,
+      degraded_reason: null,
       idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`,
     }]);
     await write();
@@ -350,6 +351,7 @@ describe("Safety Score V9 publication Workflow", () => {
       item_count: 0,
       slot_started_at: 1788433200,
       error: null,
+      degraded_reason: "upstream-compute-publication-absent",
       idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${instanceId}:upstream-absent`,
     }]);
     expect(JSON.parse(String((rows[0] as { metadata: string }).metadata))).toMatchObject({
@@ -493,8 +495,9 @@ describe("Safety Score V9 publication Workflow", () => {
       const result = await runSafetyScoreV9PublicationWorkflow({ DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep);
       expect(result).toEqual({ instanceId: EVENT.instanceId, shadowKey: null, sourceGeneration: null, status: "error" });
       expect(sqlite.prepare("SELECT key FROM cache WHERE key != 'report-cards:fixed-input:exact'").all()).toEqual([]);
-      expect(sqlite.prepare("SELECT status, error FROM cron_runs").all()).toEqual([{
+      expect(sqlite.prepare("SELECT status, error, degraded_reason FROM cron_runs").all()).toEqual([{
         status: "error", error: expect.stringContaining(failure === "missing" ? "missing" : failure === "newer" ? "newer" : "advanced"),
+        degraded_reason: "workflow-execution-failed",
       }]);
     }
   });
@@ -534,7 +537,7 @@ describe("Safety Score V9 publication Workflow", () => {
         metadata: JSON.stringify({
           sourceGenerationId: "report-cards:v9:1788433200",
           baseInputGenerationId: "report-cards-input:v1:1788433200",
-          publication: { status: "held" },
+          publication: { status: "held", code: "redemption-stale" },
         }),
         error: null,
         publicationEnvelope: null,
@@ -566,6 +569,32 @@ describe("Safety Score V9 publication Workflow", () => {
         publicationHealth: "held-health",
         publicationAttempt: "held-attempt",
       },
+    });
+    expect(gated.error).toBe("redemption-stale");
+    expect(JSON.parse(gated.cronMetadata)).toMatchObject({ reason: "redemption-stale" });
+    const { db, sqlite } = fixtures.open();
+    await writeSafetyScoreV9ShadowPublication(db, EVENT.instanceId, 1788433200, EVENT.timestamp.getTime(), gated);
+    expect(sqlite.prepare("SELECT status, error, degraded_reason FROM cron_runs").get()).toEqual({
+      status: "degraded", error: "redemption-stale", degraded_reason: "redemption-stale",
+    });
+  });
+
+  it("persists bounded redacted Workflow failure descriptors with actionable codes", async () => {
+    const { db, sqlite } = createWorkflowDb();
+    computeSafetyScoreV9.mockRejectedValueOnce({
+      name: "PublicationError", code: "v9-publication-write-failed",
+      message: "failed Bearer credential", cause: { message: "owner@example.com" },
+    });
+    const result = await runSafetyScoreV9PublicationWorkflow(
+      { DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep,
+    );
+    expect(result.status).toBe("error");
+    const row = sqlite.prepare("SELECT error, metadata, degraded_reason FROM cron_runs").get()!;
+    expect(row.degraded_reason).toBe("v9-publication-write-failed");
+    expect(row.error).toBe("v9-publication-write-failed: failed Bearer [redacted]; cause: [email]");
+    expect(JSON.parse(String(row.metadata))).toMatchObject({
+      reason: "v9-publication-write-failed",
+      errorDescriptor: { code: "v9-publication-write-failed", cause: { message: "[email]" } },
     });
   });
 });

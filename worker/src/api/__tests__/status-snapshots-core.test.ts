@@ -172,6 +172,25 @@ describe("handleStatus", () => {
     expect(body.causes.overall.find((cause) => cause.code === "degraded_cron_warning")?.value).toBe(1);
   });
 
+  it.each([false, true])("keeps ok quality findings out of degraded counts (live refresh: %s)", async (live) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      ...(!live ? [{ match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 120)] }] : []),
+      { match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((job) => ({
+        ...makeCronRow(job, "ok", 60),
+        metadata: job === "cron-sentinel" ? JSON.stringify({ quality: { reason: "observed-staleness" } })
+          : job === "sync-blacklist" ? JSON.stringify({ currentBalanceCacheFailed: 2, contractsSkipped: 1 }) : null,
+      })) },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true,
+      request: fixtureMakeApiRequest(`/api/status${live ? "?refresh=live" : ""}`, { adminKey: "secret-key" }) });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.summary.degradedCrons).toBe(0);
+    expect(body.crons["cron-sentinel"].lastRun?.metadata?.quality).toEqual({ reason: "observed-staleness" });
+    expect(body.causes.availability.find((cause) => cause.code === "degraded_cron_warning")).toBeUndefined();
+  });
+
   it("serves raw status fields from a fresh cron snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
