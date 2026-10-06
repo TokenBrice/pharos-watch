@@ -11,6 +11,9 @@ const RUNTIME_DOCUMENTED_FIELDS = [
   { section: "root", key: "compatibility_date", label: "compatibility_date" },
   { section: "root", key: "compatibility_flags", label: "compatibility_flags" },
   { section: "root", key: "preview_urls", label: "preview_urls" },
+  { section: "root", key: "minify", label: "minify" },
+  { section: "root", key: "keep_names", label: "keep_names" },
+  { section: "alias", key: "#pharos-full-catalog", label: "[alias].#pharos-full-catalog" },
   { section: "limits", key: "cpu_ms", label: "[limits].cpu_ms" },
   { section: "observability", key: "enabled", label: "[observability].enabled" },
   { section: "observability", key: "head_sampling_rate", label: "[observability].head_sampling_rate" },
@@ -82,6 +85,10 @@ export function evaluateWorkerWranglerConfig(
 ): WorkerWranglerConfigReport {
   const assignments = parseAssignments(toml);
   const issues: string[] = [];
+  const catalogAliases = assignments.filter(({ section, key }) => section === "alias" && key === "#pharos-full-catalog");
+  if (catalogAliases.length !== 1 || unquote(catalogAliases[0]?.value) !== "./src/lib/full-stablecoin-catalog.ts") {
+    issues.push("Worker full catalog alias must resolve to ./src/lib/full-stablecoin-catalog.ts.");
+  }
   const routes = assignments.filter(({ key }) => key === "routes");
   const rootRoutes = routes.filter(({ section }) => section === "root");
   const nestedRoutes = routes.filter(({ section }) => section !== "root");

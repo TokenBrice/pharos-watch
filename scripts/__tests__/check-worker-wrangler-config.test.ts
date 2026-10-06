@@ -6,11 +6,16 @@ name = "stablecoin-api"
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
+minify = true
+keep_names = true
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
   { pattern = "site-api.pharos.watch", custom_domain = true },
   { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
+
+[alias]
+"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
 
 [limits]
 cpu_ms = 300000
@@ -46,6 +51,11 @@ const VALID_WORKER_INFRASTRUCTURE_DOC = `
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
+minify = true
+keep_names = true
+
+[alias]
+"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
 
 [limits]
 cpu_ms = 300000
@@ -61,6 +71,12 @@ invocation_logs = true
 `;
 
 describe("check-worker-wrangler-config", () => {
+  it("rejects a missing lossless Worker catalog alias", () => {
+    const report = evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
+      '"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"', "",
+    ));
+    expect(report.issues).toContain("Worker full catalog alias must resolve to ./src/lib/full-stablecoin-catalog.ts.");
+  });
   it("accepts root-owned custom domains and fallthrough asset rules", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG)).toEqual({ failed: false, issues: [] });
   });
@@ -82,6 +98,16 @@ describe("check-worker-wrangler-config", () => {
     expect(report.issues).toContain(
       "docs/worker-infrastructure.md runtime snippet must document [limits].cpu_ms = 300000; found 30000.",
     );
+  });
+
+  it("checks minification and function-name preservation against the runtime documentation", () => {
+    const report = evaluateWorkerWranglerConfig(VALID_CONFIG, {
+      workerInfrastructureDoc: VALID_WORKER_INFRASTRUCTURE_DOC
+        .replace("minify = true", "minify = false")
+        .replace("keep_names = true", "keep_names = false"),
+    });
+    expect(report.issues).toContain("docs/worker-infrastructure.md runtime snippet must document minify = true; found false.");
+    expect(report.issues).toContain("docs/worker-infrastructure.md runtime snippet must document keep_names = true; found false.");
   });
 
   it("rejects routes nested under an asset rule and missing fallthrough", () => {

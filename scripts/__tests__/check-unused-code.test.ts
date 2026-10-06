@@ -241,6 +241,30 @@ describe("check-unused-code production reachability", () => {
   const minimalScaffold = { "vitest.config.ts": SCAFFOLD["vitest.config.ts"] };
   const skipAudit = ["--skip-allowlist-audit"];
 
+  it("follows package-private local imports as production edges", () => {
+    const { status, output } = runChecker({
+      "package.json": JSON.stringify({ imports: { "#catalog": "./shared/catalog.ts" } }),
+      "src/app/page.tsx": 'import catalog from "#catalog";\nexport default function Page() { return catalog; }\n',
+      "shared/catalog.ts": 'export { default } from "./complete-catalog";\n',
+      "shared/complete-catalog.ts": "export default [1];\n",
+    }, skipAudit, minimalScaffold);
+    expect(status, output).toBe(0);
+    expect(output).not.toContain("shared/catalog.ts");
+    expect(output).not.toContain("shared/complete-catalog.ts");
+  });
+
+  it("retains both package-private targets and their authored Wrangler alias replacements", () => {
+    const { status, output } = runChecker({
+      "package.json": JSON.stringify({ imports: { "#catalog": "./shared/catalog.ts" } }),
+      "worker/wrangler.toml": '[alias]\n"#catalog" = "./src/lib/catalog.ts" # Worker replacement\n',
+      "src/app/page.tsx": 'import catalog from "#catalog";\nexport default function Page() { return catalog; }\n',
+      "shared/catalog.ts": "export default [1];\n",
+      "worker/src/lib/catalog.ts": 'import data from "./complete-catalog";\nexport default data;\n',
+      "worker/src/lib/complete-catalog.ts": "export default [1];\n",
+    }, skipAudit, minimalScaffold);
+    expect(status, output).toBe(0);
+  });
+
   it("reports a production helper only tests import as dead, including through test-only re-exports", () => {
     // Tests are not consumers: a module whose only importers are test files is
     // dead product code, and a non-test barrel that only tests import must not

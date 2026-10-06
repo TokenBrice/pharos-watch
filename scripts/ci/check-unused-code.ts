@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
+import { resolveLocalPackageImport } from "../lib/package-imports.mts";
+import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import { collectScriptEntrypoints } from "./check-script-entrypoints";
 import { parse as parseYaml } from "yaml";
 import {
@@ -63,6 +65,7 @@ interface StaleAllowlistEntry {
 // synchronous top to bottom, so sequential invocations never observe partial
 // state.
 let ROOT = process.cwd();
+let WRANGLER_PRIVATE_TARGETS = new Map<string, string[]>();
 let VITEST_ALIASES = new Map<string, string>();
 let files: string[] = [];
 let fileSet = new Set<string>();
@@ -216,11 +219,23 @@ export function scanForUnusedCode(options: UnusedCodeScanOptions = {}): UnusedCo
   };
 
   VITEST_ALIASES = loadVitestAliases();
+  WRANGLER_PRIVATE_TARGETS = loadWranglerPrivateTargets();
 
   files = collectSourceFiles();
   fileSet = new Set(files);
   relPathByFile = new Map(files.map((file) => [file, relative(ROOT, file).replaceAll("\\", "/")]));
-  moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
+  moduleInfo = new Map(files.map((file) => {
+    const info = analyzeModule(file);
+    // Shared modules can run in both bundles: retain the canonical package
+    // target and the configured Worker replacement as separate graph edges.
+    info.dependencies = info.dependencies.flatMap((dependency) => [
+      dependency,
+      ...(WRANGLER_PRIVATE_TARGETS.get(dependency.resolved) ?? [])
+        .filter((target) => fileSet.has(target))
+        .map((resolved) => ({ ...dependency, resolved })),
+    ]);
+    return [file, info];
+  }));
 
   runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
   namedExportUsage = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
@@ -783,7 +798,9 @@ function hasExportModifier(node: ts.Node): boolean {
 function resolveModule(fromFile: string, specifier: string): string | null {
   let candidate: string | null = null;
 
-  if (specifier.startsWith(".")) {
+  if (specifier.startsWith("#")) {
+    candidate = resolveLocalPackageImport(specifier, ROOT);
+  } else if (specifier.startsWith(".")) {
     candidate = resolve(dirname(fromFile), specifier);
   } else {
     candidate = resolveAliasSpecifier(specifier);
@@ -793,6 +810,30 @@ function resolveModule(fromFile: string, specifier: string): string | null {
 
   const resolved = resolveWithExtensions(candidate);
   return resolved && fileSet.has(resolved) ? resolved : null;
+}
+
+function loadWranglerPrivateTargets(): Map<string, string[]> {
+  const targets = new Map<string, string[]>();
+  const configPath = resolve(ROOT, "worker/wrangler.toml");
+  if (!existsSync(configPath)) return targets;
+  for (const assignment of parseAssignments(readFileSync(configPath, "utf8"))) {
+    if (assignment.section !== "alias" || !assignment.key.startsWith("#")) continue;
+    const canonical = resolveLocalPackageImport(assignment.key, ROOT);
+    const target = unquote(assignment.value);
+    if (!canonical || !target || !target.startsWith("./")) {
+      throw new Error(`Unable to resolve local Wrangler alias ${assignment.key}`);
+    }
+    const absolute = resolve(dirname(configPath), target);
+    const local = relative(ROOT, absolute);
+    if (local === ".." || local.startsWith("../") || target.split("/").includes("node_modules")) {
+      throw new Error(`Wrangler alias ${assignment.key} escapes the repository source tree`);
+    }
+    if (!existsSync(absolute) || !statSync(absolute).isFile()) {
+      throw new Error(`Wrangler alias ${assignment.key} does not resolve to a local file`);
+    }
+    targets.set(canonical, [...(targets.get(canonical) ?? []), absolute]);
+  }
+  return targets;
 }
 
 /**

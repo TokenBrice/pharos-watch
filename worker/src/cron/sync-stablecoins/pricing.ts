@@ -164,7 +164,7 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
   stampPriceMetadata(
     asset,
     source,
-    "single-source",
+    asset.priceConfidence === "fallback" ? "fallback" : "single-source",
     asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
     asset.priceObservedAtMode ?? null,
     [source],

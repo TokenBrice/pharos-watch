@@ -18,6 +18,11 @@ Worker runtime safety and telemetry controls are declared in `worker/wrangler.to
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
+minify = true
+keep_names = true
+
+[alias]
+"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
 
 [limits]
 cpu_ms = 300000
@@ -38,6 +43,7 @@ invocation_logs = true
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
 - `preview_urls = true`: keeps deployment-specific preview URLs available for explicit diagnostics without making them part of the production release gate.
+- `minify = true` + `keep_names = true`: reduce the deployed script's source footprint while preserving function and class names for diagnostics and exported entrypoints. A Node 24 Wrangler dry-run reduced the main script from 58.61 MiB to 38.16 MiB without removing registry evidence; this is a bundle-size result, not proof of Cloudflare peak-memory safety. The compiled minified entrypoint was exercised in local workerd with the existing compatibility flags.
 
 Cron observability has two paths. Terminal job outcomes continue through `logCronRun()` / `cron_runs`; swallowed exceptions that should remain non-fatal use `recordCronFailure()`. Degraded, skipped, fallback, or warning conditions that should survive log retention can call `logCronEvent(db, { job, eventType, severity, message, metadata })`, which writes a latest-event record to the existing cache table under a bounded `cron:event:<job>:<eventType>` key and also emits a structured console line. Use `logCronEvent` for non-terminal operational events rather than adding TODO-backed `console.*` call sites. Price observation collection runs after the existing status-check chain every 15 minutes. Narrow exact DEX refresh and the coverage refresh for rows the exact-address lane prices run first in each slot; broad price corroboration still runs only at `:09`, ahead of `:15` publication. It is budget-only serial work, retains the slot cancellation signal and requires a valid published stablecoins cache. Each collection attempt records its outcome in budget-surface telemetry; its 900-second interval uses the existing two-interval diagnostic stale threshold, independently of provider quote TTLs. No physical trigger is added and the primary publication does not wait for corroboration. It uses the exact `cron:event:sync-stablecoins:price-corroboration` key; the status collector explicitly joins this bounded record to the stablecoin job. Newest event time wins, with higher severity breaking equal-time ties, so a newer stale-slot recovery error is preserved. Its metadata contains slot/version and bounded provider identifiers, counts and failure classes, without provider URLs, credentials or response bodies.
 
@@ -373,6 +379,8 @@ Timestamp validity is separate from retention and age bands. The freshness oracl
 The top-level `fetch` and `scheduled` handlers load their dispatchers lazily. The HTTP route catalog keeps only endpoint metadata and loader closures eager, then initializes an API implementation module only when its endpoint is invoked; scheduled slots likewise load only their selected runner. The exported Safety Score V9 Workflow class is also a thin shell: its `run()` dynamically imports the shadow publication implementation so the compiler graph stays out of a fresh fetch or scheduled isolate. This prevents unrelated HTTP, cron, and Workflow object graphs from being retained in a fresh isolate. `worker/src/routes/__tests__/lazy-route-loading.test.ts` and `worker/src/workflows/__tests__/safety-score-v9-publication-entry.test.ts` enforce these import boundaries.
 
 The reserve API and its snapshot display resolver use the existing Worker runtime registry projection. Configured feeds retain their complete display reserves, classification flags, and live-reserve configuration; the resolver guards that full-feed slice before applying fallback templates. Invoking this endpoint therefore does not hydrate the full evidence-rich catalog into an isolate shared with scheduled work. The endpoint tests compare every configured feed's fallback and configuration against the full registry. Internal resolver calls also preserve retained historical snapshots for unconfigured assets with ineligible provenance; only their no-snapshot fallback lazily loads full metadata, because the unconfigured projection does not promise complete display reserves.
+
+Full-catalog consumers use the unchanged shared registry through the private `#pharos-full-catalog` import. Frontend/tooling resolves its canonical JSON wrapper; Wrangler's `[alias]` redirects only the Worker build to the lossless per-record packed loader. That loader inflates complete records sequentially into one reusable buffer before ordinary registry initialization; the generated artifact and decoder are covered by full-cohort equality/hash/registry-view checks and V9 evaluation-build identity. The packed/minified Node 24 Wrangler dry-run reduced the main script from 58.61 MiB to 23.83 MiB. Actual local workerd exercised full 488-record hydration plus all six redemption phases and serial resolution/publication serialization with bounded offline evidence. This does not certify Cloudflare peak-memory fit or production health. [ADR-37](./architecture.md#adr-37) owns the transport contract.
 
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 

@@ -201,7 +201,7 @@ describe("staged artifact sync", () => {
       log: vi.fn(),
     });
 
-    expect(result.regenerated).toEqual(["safety-score-v9-evaluation-build"]);
+    expect(result.regenerated).toEqual(["stablecoin-catalog", "safety-score-v9-evaluation-build", "stablecoin-worker-full-catalog"]);
     expect(execFile).toHaveBeenCalledWith(
       "git",
       ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACMRD", "-z"],
@@ -222,7 +222,7 @@ describe("staged artifact sync", () => {
       log,
     });
 
-    expect(result.regenerated).toEqual(["safety-score-v9-evaluation-build"]);
+    expect(result.regenerated).toEqual(["stablecoin-catalog", "safety-score-v9-evaluation-build", "stablecoin-worker-full-catalog"]);
     expect(result.blocked).toEqual([]);
     expect(runCommand).toHaveBeenCalledWith(
       expect.stringContaining("generate-safety-score-v9-evaluation-build-manifest.ts"),

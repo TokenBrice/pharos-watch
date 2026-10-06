@@ -2,6 +2,9 @@
   "name": "pharos-watch",
   "version": "0.1.0",
   "private": true,
+  "imports": {
+    "#pharos-full-catalog": "./shared/lib/stablecoins/full-catalog.ts"
+  },
   "license": "MIT",
   "workspaces": [
     "worker"

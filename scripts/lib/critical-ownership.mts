@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } from "node:path";
 
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
+import { resolveLocalPackageImport } from "./package-imports.mts";
 
 const TEST_SCAN_ROOTS = [
   "src",
@@ -124,8 +125,8 @@ export function collectCriticalOwnershipTestFiles(cwd = process.cwd()): string[]
 
 /**
  * Resolve the repository module named by a test's runtime import.
- * Package imports are intentionally ignored; only paths that
- * resolve inside this checkout can own a critical source.
+ * External packages are ignored; exact local package-private imports and
+ * paths inside this checkout can own a critical source.
  */
 export function resolveCriticalImport(
   specifier: string,
@@ -134,7 +135,11 @@ export function resolveCriticalImport(
   fsImpl: CriticalOwnershipFs = { existsSync, readFileSync, statSync },
 ): string | null {
   let modulePath: string;
-  if (specifier.startsWith("@shared/")) modulePath = specifier.slice("@shared/".length) ? `shared/${specifier.slice("@shared/".length)}` : "shared";
+  if (specifier.startsWith("#")) {
+    const target = resolveLocalPackageImport(specifier, cwd, fsImpl);
+    if (!target) return null;
+    modulePath = target;
+  } else if (specifier.startsWith("@shared/")) modulePath = specifier.slice("@shared/".length) ? `shared/${specifier.slice("@shared/".length)}` : "shared";
   else if (specifier.startsWith("@data/")) modulePath = `data/${specifier.slice("@data/".length)}`;
   else if (specifier.startsWith("@/")) modulePath = `src/${specifier.slice(2)}`;
   else if (specifier.startsWith("./") || specifier.startsWith("../")) modulePath = join(dirname(importer), specifier);
@@ -308,7 +313,7 @@ export function deriveBaseCriticalOwnership(
   const inventory = new Set(execFile("git", ["ls-tree", "-r", "--name-only", "-z", ref], { encoding: "utf8" }).toString().split("\0").filter(Boolean));
   const existingTests = tests.filter((file) => inventory.has(file));
   if (existingTests.length === 0) return new Map();
-  const contents = readBaseBlobs(ref, existingTests, execFile);
+  const contents = readBaseBlobs(ref, [...existingTests, ...(inventory.has("package.json") ? ["package.json"] : [])], execFile);
   return deriveCriticalOwnership({
     testFiles: existingTests,
     fsImpl: {

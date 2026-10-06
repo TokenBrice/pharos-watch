@@ -21,7 +21,6 @@ import {
 } from "./depeg-event-projection";
 import { getFirstSeenDates } from "./db";
 import { deriveCurrentPegObservationMap } from "./current-peg-observations";
-export { deriveCurrentPegObservationMap, type CurrentPegObservation } from "./current-peg-observations";
 
 export interface DerivePegAnalyticsOptions {
   peggedAssets: StablecoinData[];

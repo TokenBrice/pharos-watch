@@ -75,6 +75,20 @@ describe("pricing application helpers", () => {
     expect(assets[0].priceConfidence).toBe("high");
   });
 
+  it.each([
+    ["fusd-freedom-dollar", "coingecko-low-volume", "fallback", 1790853290],
+    ["usdt-tether", "coingecko", "single-source", 1791304200],
+  ] as const)("preserves retained %s confidence and original observation clock", (id, source, confidence, observedAt) => {
+    const asset = makeAsset({ id, price: 0.9979, priceSource: source, priceConfidence: confidence,
+      priceObservedAt: observedAt, priceUpdatedAt: observedAt, priceObservedAtMode: "upstream" });
+    applyConsensusResults({
+      assets: [asset], primaryPriceResults: new Map(), validationContexts: createValidationContextResolver(),
+      syncStartSec: 1791304218, reason: "primary",
+    });
+    expect(asset).toMatchObject({ price: 0.9979, priceSource: source, priceConfidence: confidence,
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream", priceSyncedAt: 1791304218 });
+  });
+
   it.each([900, 901])("bounds missing-candidate retention at the CG budget (age=%i)", (age) => {
     const assets = [
       makeAsset({

@@ -80,7 +80,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "issuer-attested-report",
-    "version": 2,
+    "version": 3,
     "semantics": "attestation-mix",
     "breakerScope": "brlv-crown",
     "display": {
