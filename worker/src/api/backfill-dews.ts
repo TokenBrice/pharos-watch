@@ -97,6 +97,7 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
       context: options.context,
       stablecoinId: options.stablecoinId,
       updatedAt: options.updatedAt ?? null,
+      reason: options.reason,
       degradesRun: options.degradesRun,
     });
   };

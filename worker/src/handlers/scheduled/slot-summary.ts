@@ -5,7 +5,7 @@ import type { ScheduledRuntimeContext } from "./context";
 
 export type ScheduledSlotJobOutcome = "ok" | "degraded" | "error" | "skipped";
 
-export interface ScheduledSlotJobSummary {
+export type ScheduledSlotJobSummary = {
   job: string;
   outcome: ScheduledSlotJobOutcome;
   status?: CronResult["status"];
@@ -18,9 +18,9 @@ export interface ScheduledSlotJobSummary {
     outputPublishedAt: number | null;
     productive: boolean;
   };
-}
+};
 
-export interface ScheduledSlotSummary {
+export type ScheduledSlotSummary = {
   jobsAttempted: number;
   jobsSucceeded: number;
   jobsRun: number;
@@ -30,7 +30,7 @@ export interface ScheduledSlotSummary {
   jobsErrored: number;
   budgetOnlyJobs: number;
   jobs: ScheduledSlotJobSummary[];
-}
+};
 
 function truncateSummaryText(value: unknown): string {
   return String(value).slice(0, 300);

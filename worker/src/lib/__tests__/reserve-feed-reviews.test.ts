@@ -52,8 +52,8 @@ describe("reserve feed review policy", () => {
       { lastError: "primary:http-json: midas-mtbill:future-portfolio-timestamp" },
       { lastError: "primary:http-json: midas-mtbill: stale or future portfolio timestamp" },
       { metadata: { failureCategory: "adapter-timeout" } },
-      { warnings: [{ code: "new-failure", message: "new" }] },
-    ]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
+      { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
+    ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
   it("inherits circuit-open only from the latest non-skipped matching attempt", async () => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {

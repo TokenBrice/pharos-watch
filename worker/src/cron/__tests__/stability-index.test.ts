@@ -833,7 +833,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(JSON.parse(result.metadata ?? "{}").trendUnavailableIds).toEqual([]);
   });
 
-  it.each([undefined, {}, { peggedUSD: NaN }, { peggedUSD: -1 }])(
+  it.each<[Record<string, number> | undefined]>([[undefined], [{}], [{ peggedUSD: NaN }], [{ peggedUSD: -1 }]])(
     "excludes unavailable previous-week supply from both trend sides", async (circulatingPrevWeek) => {
       const now = Math.floor(Date.now() / 1000);
       vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
@@ -853,7 +853,7 @@ describe("computeAndStoreStabilityIndex", () => {
     },
   );
 
-  it.each([undefined, {}, { peggedUSD: 0 }, { peggedUSD: -1 }, { peggedUSD: NaN }])(
+  it.each<[Record<string, number> | undefined]>([[undefined], [{}], [{ peggedUSD: 0 }], [{ peggedUSD: -1 }], [{ peggedUSD: NaN }]])(
     "preserves the previous sample when no positive paired trend denominator exists", async (circulatingPrevWeek) => {
       const db = makeDb();
       await computeAndStoreStabilityIndex(db);

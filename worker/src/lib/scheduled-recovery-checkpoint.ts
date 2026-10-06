@@ -101,12 +101,12 @@ export interface ScheduledCheckpointAdvance {
   recoveryLeaseUntil?: number | null;
 }
 
-export interface AbandonedCheckpointPreparation {
+export type AbandonedCheckpointPreparation = {
   abandonedAttemptNo: number;
   recoveryAttemptNo: number;
   currentItemKey: string | null;
   currentDomainAttemptId: string | null;
-}
+};
 
 export type ScheduledRecoveryBlocker =
   | "active-child-lease"
@@ -115,7 +115,7 @@ export type ScheduledRecoveryBlocker =
   | "slot-missing"
   | "slot-not-abandoned";
 
-export interface ScheduledRecoveryEligibilityCandidate {
+export type ScheduledRecoveryEligibilityCandidate = {
   scheduleKey: string;
   slotStartedAt: number;
   attemptNo: number;
@@ -129,16 +129,16 @@ export interface ScheduledRecoveryEligibilityCandidate {
   currentDomainAttemptId: string | null;
   blockers: ScheduledRecoveryBlocker[];
   eligible: boolean;
-}
+};
 
-export interface ScheduledRecoveryEligibilityInspection {
+export type ScheduledRecoveryEligibilityInspection = {
   observedAt: number;
   staleBefore: number;
   readyCheckpointCount: number;
   incompatibleCheckpointCount: number;
   eligibleCheckpointCount: number;
   candidates: ScheduledRecoveryEligibilityCandidate[];
-}
+};
 
 
 interface ScheduledRecoveryEligibilityRow extends ScheduledCheckpointRow {

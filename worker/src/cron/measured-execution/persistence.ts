@@ -93,11 +93,11 @@ export async function loadPositiveEmptyPoolQuarantines(
         ROW_NUMBER() OVER (PARTITION BY q.target_id ORDER BY g.published_at DESC, g.started_at DESC, g.generation_id DESC) AS outcome_rank
       FROM dex_measured_execution_quotes q
       JOIN surface_publication_generations g ON g.generation_id = q.generation_id
-      WHERE g.surface = '${surface}' AND g.state IN ('published', 'superseded')
+      WHERE g.surface = ? AND g.state IN ('published', 'superseded')
         AND q.target_id IN (${inClause})
     ) WHERE outcome_rank = 1`,
     async (sql, binds) => {
-      const result = await runWithOverloadRetry(() => db.prepare(sql).bind(...binds).all<{
+      const result = await runWithOverloadRetry(() => db.prepare(sql).bind(surface, ...binds).all<{
         target_id: string; status: string; failure_reason: string | null; raw_quote_payload_json: string | null;
       }>(), 3, signal);
       return result.results ?? [];

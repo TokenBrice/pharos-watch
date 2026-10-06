@@ -2,7 +2,7 @@ import { ReserveFeedReviewSchema, type ReserveFeedReview } from "@shared/types/l
 import { RESERVE_FEED_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { getConfiguredLiveReserveCoins, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
-import { loadLatestNonSkippedReserveAttempt } from "./live-reserves/store-history-read";
+import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntry } from "./live-reserves/store-history-read";
 
 const reviewedAt = Date.UTC(2026, 9, 6) / 1000;
 const expiresAt = Date.UTC(2026, 9, 13) / 1000;
@@ -87,7 +87,7 @@ export async function matchReserveFeedReview(
   if (!state || state.metadata.uncertainWrite === true) return null;
   const review = reviewsById.get(state.stablecoinId);
   if (!review || review.adapterKey !== state.adapterKey) return null;
-  let failure = {
+  let failure: Pick<ReserveSyncAttemptTimelineEntry, "adapterKey" | "status" | "failureCategory" | "warningCodes" | "lastError"> = {
     adapterKey: state.adapterKey, status: state.lastStatus,
     failureCategory: typeof state.metadata.failureCategory === "string" ? state.metadata.failureCategory : null,
     warningCodes: state.warnings.map((warning) => warning.code), lastError: state.lastError,

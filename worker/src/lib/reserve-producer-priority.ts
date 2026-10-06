@@ -17,14 +17,14 @@ export interface ReserveRecoveryPollIdentity {
   slotStartedAt?: number;
 }
 
-export interface ReserveProducerPriority {
+export type ReserveProducerPriority = {
   reason: "producer-slot-priority" | "heavy-slot-co-tenancy";
   scheduleKey: CronScheduleKey;
   slotStartedAt: number;
   observedAt: number;
   lookaheadSec: number;
   condition: "next-slot-lookahead" | "current-slot-unfinished" | "heavy-slot-running";
-}
+};
 
 export function getReserveRecoveryLookaheadSec(): number {
   return Math.ceil(resolveLiveReserveSyncBudgetConfig().runBudgetMs / 1000)

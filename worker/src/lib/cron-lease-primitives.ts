@@ -340,11 +340,12 @@ export async function runCronWithLease<T>(
     }
     blockedBy = await readCronLeaseBlocker(db, job);
     if (opts?.acquisitionWait && !blockerDeadlineCaptured && blockedBy) {
+      const blocker = blockedBy;
       // Include the next eligible second: acquisition uses strict lease_until < now.
-      waitDeadlineMs = Math.min(waitDeadlineMs, (blockedBy.leaseUntil + 1) * 1000);
+      waitDeadlineMs = Math.min(waitDeadlineMs, (blocker.leaseUntil + 1) * 1000);
       const claim = await runWithOverloadRetry(() => db.prepare(
         "SELECT MAX(recovery_lease_until) AS lease_until FROM worker_scheduled_checkpoints WHERE state = 'recovering' AND recovery_owner = ? AND recovery_lease_until >= ?",
-      ).bind(blockedBy.invocationId ?? blockedBy.leaseOwner, blockedBy.observedAt).first<{ lease_until: number | null }>());
+      ).bind(blocker.invocationId ?? blocker.leaseOwner, blocker.observedAt).first<{ lease_until: number | null }>());
       if (claim?.lease_until != null) waitDeadlineMs = Math.min(waitDeadlineMs, (claim.lease_until + 1) * 1000);
       blockerDeadlineCaptured = true;
     }

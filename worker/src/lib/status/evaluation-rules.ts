@@ -369,7 +369,7 @@ export function rebuildCronDerivedAvailabilityCauses(
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
   if (scheduler.status === "healthy") return { status: "healthy", causes: [] };
   const unavailable = scheduler.status === "unavailable";
-  const status = unavailable ? "degraded" : scheduler.status;
+  const status: StatusLevel = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
   return { status, causes: [makeCause(
     "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
     status === "stale" ? "critical" : "warning",
