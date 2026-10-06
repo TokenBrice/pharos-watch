@@ -223,15 +223,15 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.inFlight[0]).toMatchObject({ amount: "1000000", anchor: "100", anchorHash: HASH });
   });
 
-  it.each(["missing", "identity", "count", "code", "not finalized"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
+  it.each(["missing", "identity", "count", "code", "finalized head unavailable"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
     const f = pendingFixture();
-    if (failure === "not finalized") vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH }));
+    if (failure === "finalized head unavailable") vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
     else vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (_chain, calls) =>
       failure === "missing" ? null : calls[0]!.method === "eth_getCode" ?
         [failure === "code" ? "0x6001" : "0x6000", word(failure === "count" ? 2n : 1n)] :
         [word(0n), word(1000000n)]);
-    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "bridge" });
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: failure === "finalized head unavailable" ? f.plan.deployments[0]!.deploymentKey : "bridge" });
   });
 
   it("admits an empty pending queue only after a successful authenticated zero-count read", async () => {
@@ -367,9 +367,12 @@ describe("reviewed economic supply observation", () => {
 
   it("retains the escrow OFT history-incomplete cause after successful holding and identity reads", async () => {
     const f = oftFixture(), original = vi.mocked(evmRpc.fetchEvmRpcBatch).getMockImplementation()!;
-    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(17002);
+    // Keep the source pin beyond eight 1,000,000-block discovery windows.
+    // The missing send is still outside the scanned prefix, not an omitted
+    // send in a complete history (which correctly yields send-census-mismatch).
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(8_001_002);
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => {
-      const height = number === "finalized" ? 17000 : number;
+      const height = number === "finalized" ? 8_001_000 : number;
       return { number: height, timestamp: CLOCK - 60, hash: word(BigInt(height)) };
     });
     vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (chain, calls, options) => {
@@ -401,7 +404,7 @@ describe("reviewed economic supply observation", () => {
     });
   });
 
-  it.each([false, true])("surfaces CCIP finality rejection for liability=%s without assuming no pending messages", async liability => {
+  it.each([false, true])("caps the shared CCIP holding pin at the actual finalized head for liability=%s instead of rejecting it", async liability => {
     const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
     const pool = f.plan.escrows[0]!.account;
     const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
@@ -418,14 +421,42 @@ describe("reviewed economic supply observation", () => {
     if (liability) {
       f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
     } else f.plan.escrows[0]!.inFlightSource = source;
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(110);
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
       number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
     }));
-    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
-      failedRouteId: `${liability ? "in-flight:liability" : "bridge"}:pin-not-finalized` });
+    const result = await f.run();
+    // Pins land on the finalized head (99); the CCIP reader then runs past its
+    // finality gate, so whatever it reports is no longer `pin-not-finalized`.
+    expect(result).not.toMatchObject({ failedRouteId: expect.stringContaining("pin-not-finalized") });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledWith("ethereum", expect.anything(), 99, expect.anything());
+    expect(evmRpc.fetchEvmBlockHeader).not.toHaveBeenCalledWith(expect.anything(), 108, expect.anything());
   });
 
-  it("surfaces an unfinalized canonical messenger census without substituting escrow surplus", async () => {
+  it.each([false, true])("rejects an unavailable finalized CCIP head for liability=%s without assuming no pending messages", async liability => {
+    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
+    const pool = f.plan.escrows[0]!.account;
+    const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
+      chainId: row!.chainId, chainSelector, tokenAddress: row!.address!, tokenPoolAddress,
+      tokenPoolRuntimeCodeSha256: sha256Hex("0x6000"), decimals: 6,
+    });
+    const source: CcipPendingRead = {
+      kind: "evm-ccip-pending", sourceId: "ccip", chainId: "ethereum", finality: "finalized", amountDecimals: 6,
+      lanes: [{ id: "eth-base", version: "1.6", source: side(canonical, "1", pool),
+        destination: side(receipt, "2", `0x${"4".repeat(40)}`), onRampAddress: `0x${"5".repeat(40)}`,
+        offRampAddress: `0x${"6".repeat(40)}`, onRampRuntimeCodeSha256: sha256Hex("0x6000"),
+        offRampRuntimeCodeSha256: sha256Hex("0x6000"), sourceStartBlock: 100 }],
+    };
+    if (liability) {
+      f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
+    } else f.plan.escrows[0]!.inFlightSource = source;
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: canonical!.deploymentKey });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unavailable finalized canonical messenger head without substituting escrow surplus", async () => {
     const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
     const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
     f.plan.escrows[0]!.inFlightSource = {
@@ -441,12 +472,12 @@ describe("reviewed economic supply observation", () => {
       ],
       identityReads: [{ chainId: "ethereum", address: address(10), method: "eth_call", data: "0x12345678", expected: word(1n) }],
     };
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
-      number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
-    }));
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
     expect(await f.run()).toEqual({
-      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: "bridge:pin-not-finalized",
+      status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: canonical!.deploymentKey,
     });
+    expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 
   it.each(["number", "hash"])("rejects pending generations whose escrow block %s changed", async failure => {
@@ -454,6 +485,7 @@ describe("reviewed economic supply observation", () => {
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
       number: number === "finalized" ? 100 : number, timestamp: CLOCK - 60, hash: HASH,
     })).mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
+      .mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
       .mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
       .mockResolvedValueOnce({ number: 100, timestamp: CLOCK - 60, hash: HASH })
       .mockResolvedValueOnce({ number: failure === "number" ? 101 : 100, timestamp: CLOCK - 60,

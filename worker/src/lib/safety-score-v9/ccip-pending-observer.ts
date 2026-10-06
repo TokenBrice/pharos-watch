@@ -411,6 +411,7 @@ export async function observeCcipPending(input: {
       return scans;
     }));
     let pages = 0, idleChains = 0;
+    const narrowedSpans = new Map<string, number>();
     while (pages < PAGES_PER_ATTEMPT && idleChains < chains.length) {
       throwIfAborted(input.signal);
       const chainIndex = checkpoint.nextChainIndex, chain = chains[chainIndex]!, pin = input.headers.get(chain)!;
@@ -418,12 +419,16 @@ export async function observeCcipPending(input: {
       const backlog = scansByChain[chainIndex]!.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= pin.number);
       if (backlog.length === 0) { idleChains++; continue; }
       idleChains = 0;
-      let pageBlocks = PAGE_BLOCKS;
+      let declaredSpan: number | undefined;
       for (const endpoint of input.chainRpcs.get(chain)?.endpoints ?? []) {
-        if (endpoint.position !== "registry" || endpoint.maxLogBlockSpan === undefined) continue;
+        if (endpoint.position !== "registry" || endpoint.operator === "dwellir" ||
+          endpoint.logsHistory !== "full" || endpoint.maxLogBlockSpan === undefined) continue;
         if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
-        pageBlocks = Math.min(pageBlocks, endpoint.maxLogBlockSpan);
+        declaredSpan = Math.max(declaredSpan ?? endpoint.maxLogBlockSpan, endpoint.maxLogBlockSpan);
       }
+      // The RPC transport skips endpoints whose own declaration cannot fit this
+      // interval; a narrow primary must not constrain a reviewed wider fallback.
+      const pageBlocks = Math.min(narrowedSpans.get(chain) ?? Infinity, declaredSpan ?? PAGE_BLOCKS);
       // One physical log page covers every participating lane/side on this chain.
       // Later cursors never rescan their prefix; they join when the oldest reaches them.
       const from = Math.min(...backlog.map(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock));
@@ -433,8 +438,17 @@ export async function observeCcipPending(input: {
       const topics = [...new Set(scans.map(scan => scan.topic))];
       const endHeader = await fetchEvmBlockHeader(chain, end, options);
       if (!endHeader) fail("history-unavailable");
-      const [raw] = await rpc(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
-        fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }]);
+      const result = await fetchEvmRpcBatch(chain, [{ method: "eth_getLogs", params: [{ address: addresses, topics: [topics],
+        fromBlock: `0x${from.toString(16)}`, toBlock: `0x${end.toString(16)}` }] }], options);
+      const raw = result?.[0];
+      // Provider/body/result caps never advance a cursor. Subdivision consumes
+      // the same eight-attempt budget, preserving wall/connection ceilings.
+      if ((!Array.isArray(raw) || raw.length > 2048) && end > from) {
+        narrowedSpans.set(chain, Math.max(1, Math.floor(pageBlocks / 10)));
+        checkpoint.nextChainIndex = chainIndex;
+        pages++;
+        continue;
+      }
       if (!Array.isArray(raw) || raw.length > 2048) fail("history-capacity");
       const logs = raw.map(log => asLog(log, true)), blockHashes = new Map<string, string>();
       let previousPosition = -1;
