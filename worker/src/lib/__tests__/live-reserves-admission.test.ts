@@ -8,6 +8,7 @@ import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-st
 import { makeReservesDb, mockReserveD1, reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
+import { getReserves } from "@shared/lib/reserve-templates";
 
 function fixture(id = "hbd-hive", metadata: Record<string, unknown> = { freshnessMode: "not-applicable" }, fingerprint?: string, status = "ok") {
   const source = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? "infinifi";
@@ -124,7 +125,14 @@ describe("live reserve admission", () => {
         delete meta.liveReservesConfig;
         delete runtimeMeta.liveReservesConfig;
       }
-      expect((await resolveReserveResult(fixture(id), id, 1_200))?.provenance?.scoringEligible).toBe(false);
+      const retained = await resolveReserveResult(fixture(id), id, 1_200);
+      expect(retained?.provenance?.scoringEligible).toBe(false);
+      const staleRetained = await resolveReserveResult(fixture(id), id, 100_000, 100);
+      expect(staleRetained?.mode).toBe("live-stale");
+      expect(staleRetained?.reserves).toEqual(retained?.reserves);
+      expect(staleRetained?.provenance?.scoringEligible).toBe(false);
+      const fallback = await resolveReserveResult(mockReserveD1(), id, 1_200);
+      expect(fallback).toMatchObject(getReserves(meta)!);
     } finally {
       meta.liveReservesConfig = original;
       runtimeMeta.liveReservesConfig = originalRuntimeConfig;

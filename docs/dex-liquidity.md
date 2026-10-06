@@ -503,6 +503,8 @@ Methodology v10.08 adds bounded, post-merge QuoterV2 identity capture for retain
 
 The existing V3 subgraph pages are scoped to canonical tracked deployment currencies before their bounded pagination: native-schema queries match either token side, and Messari queries match either input currency. The native TVL floor, Messari liquidity-only filter/balance-derived valuation, page counts, per-chain timeout and response-body limits are unchanged. This prevents unrelated markets from taking every candidate slot; it is not an exhaustive pool census or a new source/secret dependency. Candidate maps are indexed once per completed source generation by physical identity and currency pair.
 
+Each currency `or` branch includes its own native TVL or Messari liquidity predicate. [Graph Node rejects column predicates alongside `or` at the same filter level](https://github.com/graphprotocol/graph-node/blob/master/graphql/src/store/query.rs); distributing the floor into every branch preserves admission and avoids rejecting the whole source query.
+
 For a fingerprint without a display fee, both primary and direct-API processing require exactly one source candidate across all actual fees for the chain and currency pair. A known fingerprint fee still requires a unique exact token/fee match. Fee-quality enrichment (including the lowest symbol-pair display fee) cannot select an execution target. Ambiguous fingerprints, conflicting physical packets, missing prices and unsupported deployments remain gated. These producer/matching corrections do not supply missing quotes or backdate observations; any score-bearing admission change is released with Safety Score v10.07.
 
 The legacy 3pool adapter uses a distinct

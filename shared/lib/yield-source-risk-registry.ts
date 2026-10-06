@@ -525,6 +525,38 @@ const YIELD_RISK_CONFIG_PROTOCOL_ALIASES: Record<string, YieldRiskConfigProtocol
  * backfill a guessed tier here.
  */
 export const YIELD_VARIANT_CHILD_VENUE_PROTOCOLS: Readonly<Record<string, string>> = {
+  // October 2026 addition wave: exact vault identities and lender adapters
+  // reviewed in shared/data/coverage-dispositions/dependency-target-dispositions.ts.
+  // The curator/brand is not the lending venue (including Pendle and Sky vaults).
+  "senpyusdmain-sentora": "morpho-blue",
+  "senpyusdprimev2-sentora": "morpho-blue",
+  "senrlusdv2-sentora": "morpho-blue",
+  "senpathusd-sentora": "morpho-blue",
+  "senpyusdpst-sentora": "morpho-blue",
+  "senpyusdmwin-sentora": "morpho-blue",
+  "sxsrlusd-sentora": "morpho-blue",
+  "krusdc-keyrock": "morpho-blue",
+  "arcusdc-galaxy": "morpho-blue",
+  "armusdcs-wintermute": "morpho-blue",
+  "pendleusdc-pendle": "morpho-blue",
+  "skymoneyusdsflagship-sky": "morpho-blue",
+  "skymoneyusdtsavings-sky": "morpho-blue",
+  "sirloinusdc-steakhouse": "morpho-blue",
+  "steakusdg-steakhouse": "morpho-blue",
+  "steakeurcv-steakhouse": "morpho-blue",
+  "kpkusdcyield-kpk": "morpho-blue",
+  "kpkusdcprime-kpk": "morpho-blue",
+  "gusdcq-galaxy": "morpho-blue",
+  "gusdtq-galaxy": "morpho-blue",
+  "gtusdtp-gauntlet": "morpho-blue",
+  "steakcusdc-steakhouse": "morpho-blue",
+  "bbqusdc-steakhouse-v2": "morpho-blue",
+  "cscbusdc-clearstar": "morpho-blue",
+  "ethenausdc-steakhouse": "morpho-blue",
+  "hyperusdca-hyperithm": "morpho-blue",
+  "sparkusdc-spark": "morpho-blue",
+  "sparkusdtbc-spark": "morpho-blue",
+  "syrupusdg-maple": "maple",
   "bbqusdc-steakhouse": "morpho-blue",
   "gtusdc-gauntlet": "morpho-blue",
   "gtusdcp-gauntlet": "morpho-blue",

@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.42",
+    title: "Scoped single-source parent inheritance for Sentora pathUSD",
+    date: "2026-10-06",
+    effectiveAt: 1791300000,
+    summary:
+      "Sentora pathUSD's reviewed ERC-4626 NAV route can inherit a fresh replay-safe single-source pathUSD market quote while retaining that source's confidence and observation time.",
+    impact: [
+      "Only senpathusd-sentora opts into the existing single-source parent policy. Its exact Tempo vault convertToAssets(1 share) read still supplies the live assets-per-share rate; live enrichment and pre-intake supply valuation share the route. The parent source, single-source confidence and original observation time are preserved rather than promoted to protocol authority. Stale, fallback, cached and non-replay-safe single-source parents remain inadmissible",
+      "The reviewed CoinGecko low-volume fallback cohort also gains USDKG, CHFAU and Freedom Dollar after observed quotes passed the existing seven-day budget. This curation retains upstream timestamps, fallback confidence, peg bounds and supply provenance; it changes no freshness limit, source weight or depeg-authority rule",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.41",
     title: "Reviewed pricing routes and fiat references for expanded asset coverage",
     date: "2026-10-03",

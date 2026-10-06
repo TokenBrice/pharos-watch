@@ -44,6 +44,34 @@ describe("LOW_VOLUME_CG_FALLBACK_IDS registry invariant", () => {
 });
 
 describe("runCoingeckoLowVolumePass", () => {
+  it.each([
+    ["usdkg-gold-dollar", "usdkg", 1.001, 1791222170],
+    ["fusd-freedom-dollar", "freedom-dollar", 0.997906, 1790853290],
+    ["chfau-allunity", "allunity-chf", 1.2, 1791267900],
+  ] as const)("recovers audited %s observations without renewing their clock and fails closed at expiry", async (id, geckoId, price, observedAt) => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    vi.useFakeTimers();
+    vi.setSystemTime(1791299423 * 1000);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      [geckoId]: { usd: price, last_updated_at: observedAt },
+    }), { status: 200 })));
+    const pegType = id === "chfau-allunity" ? "peggedCHF" : "peggedUSD";
+    const asset = makePeggedAsset({ id, pegType, price: null, supplySource: "defillama", circulating: { peggedUSD: 123 } });
+    expect(await runCoingeckoLowVolumePass([asset], null, { peggedCHF: 1.2 })).toEqual({ resolved: 1, failures: [] });
+    expect(asset).toMatchObject({
+      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      supplySource: "defillama", circulating: { peggedUSD: 123 },
+    });
+    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
+    const expired = makePeggedAsset({ id, pegType, price: null });
+    expect(await runCoingeckoLowVolumePass([expired], null, { peggedCHF: 1.2 })).toEqual({ resolved: 0, failures: [] });
+    expect(expired.price).toBeNull();
+  });
+
   it("recovers HBD on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",

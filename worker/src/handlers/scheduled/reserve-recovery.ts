@@ -8,6 +8,7 @@ import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./c
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
+import type { CronProgressReporter } from "../../lib/cron-logger";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -19,12 +20,17 @@ function normalizeReserveRecoveryMode(value: string | null | undefined): Reserve
 const RECOVERY_LEASE_SEC = 15 * 60;
 const RECOVERY_STALE_AFTER_SEC = 5 * 60;
 
-async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: AbortSignal) {
+async function runReserveRecovery(
+  runtime: ScheduledRuntimeContext,
+  signal: AbortSignal,
+  reportProgress: CronProgressReporter,
+) {
   const mode = normalizeReserveRecoveryMode(runtime.env.WORKER_RESERVE_RECOVERY_MODE);
   // This lane runs every five minutes, so it is the fast global reconciler
   // for slots whose isolate was killed without a terminal write (OOM leaves
   // state='running' with a silent heartbeat). Runs in every recovery mode:
   // sweeping is DB-only and independent of the reserve checkpoint machinery.
+  await reportProgress({ stage: "sweeping-stale-slots" });
   await sweepStaleScheduledSlotExecutions(runtime.db, {
     staleAfterSec: 5 * 60,
     limit: 10,
@@ -41,6 +47,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
 
   // Config-only polls must not initialize the checkpoint replay's redemption
   // and sentinel graphs alongside reserve adapters on the 128 MB isolate.
+  await reportProgress({ stage: "recovering-reserve-config" });
   const { recoverLiveReserveConfigChanges } = await import("../../cron/reserve-recovery-config");
   const configRecovery = await recoverLiveReserveConfigChanges(runtime.db, signal, {
     etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
@@ -55,6 +62,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     || ("missingFetcherCount" in configRecovery && configRecovery.missingFetcherCount > 0);
 
 
+  await reportProgress({ stage: "preparing-reserve-checkpoint" });
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
     slotKey: "fourHourlyReserveSync",
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
@@ -105,6 +113,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     recoveryCheckpoint: checkpoint,
   });
   recoveryRuntime.slotSignal = signal;
+  await reportProgress({ stage: "replaying-reserve-checkpoint" });
   const { runFourHourlyReserveSyncSlot } = await import("./hourly-live-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const recoveryDeferred = summary.jobsSkipped > 0;
@@ -139,6 +148,6 @@ export async function runFiveMinuteReserveRecoverySlot(runtime: ScheduledRuntime
   return runSingleScheduledJob(runtime, "isolated reserve recovery slot", {
     job: "reserve-recovery",
     errorMessage: "[reserve-recovery] Recovery poll failed:",
-    run: (signal) => runReserveRecovery(runtime, signal),
+    run: (signal, reportProgress) => runReserveRecovery(runtime, signal, reportProgress),
   });
 }

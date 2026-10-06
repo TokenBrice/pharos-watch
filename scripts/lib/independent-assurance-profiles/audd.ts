@@ -4,11 +4,11 @@ export const PROFILE: CompilerProfile = {
   product: "AUDD",
   profile: "audd-v1",
   officialIndexUrl: "https://www.audd.digital/transparency/",
-  reportUrl: "https://www.audd.digital/wp-content/uploads/2026/09/AUDC-Agreed-upon-procedures-report-Aug26_.pdf",
-  reportDate: "2026-08-31",
-  reportAsOf: "2026-08-31T23:59:00Z",
+  reportUrl: "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf",
+  reportDate: "2026-09-30",
+  reportAsOf: "2026-09-30T23:59:00Z",
   reportTimeZone: "UTC (as printed in the report)",
-  reportIssuedAt: "2026-09-04T23:59:00Z",
+  reportIssuedAt: "2026-10-05T23:59:00Z",
   attestor: "William Buck Audit (Vic) Pty Ltd",
   engagement: "Report of Factual Findings under ASRS 4400 Agreed-Upon Procedures Engagements (not an assurance engagement)",
   conclusion: "agreed-upon-procedures",
@@ -37,11 +37,13 @@ export const PROFILE: CompilerProfile = {
     { code: "xdc", label: "XDC AUDD circulation", pattern: /^\s*XDC\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump.
     { code: "redbelly", label: "Redbelly AUDD circulation", pattern: /^\s*Redbelly\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump.
+    { code: "arc", label: "ARC AUDD circulation", pattern: /^\s*ARC\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
   ],
   requiredText: [
     { label: "William Buck examiner", pattern: /William Buck Audit \(Vic\) Pty Ltd/i },
     { label: "ASRS 4400 engagement", pattern: /ASRS 4400/i },
-    { label: "examined instant", pattern: /11:59pm UTC on 31st August 2026/i },
+    { label: "examined instant", pattern: /11:59pm UTC on 30th September 2026/i },
     { label: "AUP is not an assurance engagement", pattern: /not an assurance engagement/i },
     { label: "factual finding reserves at minimum equal onchain", pattern: /minimum equal to the AUDD[\s\S]*?Onchain amounts/i },
   ],
@@ -50,11 +52,11 @@ export const PROFILE: CompilerProfile = {
   ],
   reportedTotals: [
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump.
-    { label: "AUDD reserve account total", expected: "11544609.77", pattern: /^\s*Total:\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im },
+    { label: "AUDD reserve account total", expected: "11289945.05", pattern: /^\s*Total:\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im },
     // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump.
-    { label: "AUDD on-chain total", expected: "11408211.96", pattern: /^\s*Total:\s+\$?[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
+    { label: "AUDD on-chain total", expected: "11159088.49", pattern: /^\s*Total:\s+\$?[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
   ],
-  reportedAssetTotal: "11544609.77",
-  computedAssetTotal: "11544609.77",
-  reportedLiabilityTotal: "11408211.96",
+  reportedAssetTotal: "11289945.05",
+  computedAssetTotal: "11289945.05",
+  reportedLiabilityTotal: "11159088.49",
 };

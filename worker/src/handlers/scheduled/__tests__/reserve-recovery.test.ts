@@ -48,6 +48,7 @@ const EMPTY_INSPECTION = {
 };
 
 let latestLeasedResult: CronResult | void;
+const reportProgress = vi.fn();
 
 function runtime(mode: string | undefined): ScheduledRuntimeContext {
   const value = makeScheduledRuntime({
@@ -62,7 +63,7 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
       _job: string,
       fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
     ) => {
-      latestLeasedResult = await fn(new AbortController().signal, vi.fn());
+      latestLeasedResult = await fn(new AbortController().signal, reportProgress);
       return latestLeasedResult;
     }),
   });
@@ -146,6 +147,12 @@ describe("reserve recovery mode", () => {
       leaseSec: 900,
     });
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+    expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
+      "sweeping-stale-slots",
+      "recovering-reserve-config",
+      "preparing-reserve-checkpoint",
+      "replaying-reserve-checkpoint",
+    ]);
     expect(JSON.parse((latestLeasedResult as { metadata?: string }).metadata ?? "{}")).toMatchObject({
       disposition: "recovery-executed",
       mode: "recover",
@@ -161,6 +168,19 @@ describe("reserve recovery mode", () => {
       preparation: { inspection: EMPTY_INSPECTION, prepared: [] },
       summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 },
     });
+  });
+
+  it("persists the config phase before initializing or executing its heavy graph", async () => {
+    mocks.configRecovery.mockImplementation(async () => {
+      expect(reportProgress).toHaveBeenLastCalledWith({ stage: "recovering-reserve-config" });
+      throw new Error("config recovery failed");
+    });
+    const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(result.jobsErrored).toBe(1);
+    expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
+      "sweeping-stale-slots", "recovering-reserve-config",
+    ]);
+    expect(mocks.claim).not.toHaveBeenCalled();
   });
 
   it("surfaces a zero-eligible incompatible backlog instead of reporting green", async () => {

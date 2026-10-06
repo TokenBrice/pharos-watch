@@ -34,8 +34,8 @@ import {
 import { parseReserveCompositionRow } from "../lib/live-reserves/store-row-decoding";
 import { evaluateLiveReserveAdmission } from "../lib/live-reserves/store-snapshot-state";
 
-/** Stamped by the fallback runner on a result read from `inputs.fallbacks` after the primary failed. */
-export const PRIMARY_FALLBACK_USED_WARNING_CODE = "primary-fallback-used";
+import { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
+export { PRIMARY_FALLBACK_USED_WARNING_CODE } from "./reserve-adapter-runner";
 /** A score-ineligible fallback read was not persisted because the stored snapshot is still admissible. */
 export const FALLBACK_WITHHELD_WARNING_CODE = "fallback-withheld-score-grade-retained";
 

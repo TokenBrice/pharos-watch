@@ -135,15 +135,17 @@ export const SUBGRAPH_PAGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 /** TVL floor for Uni V3 subgraph rows (native query filter; Messari rows client-side). */
 export const UNIV3_POOL_MIN_TVL_USD = 10_000;
 
+// Graph Node rejects column predicates alongside `or` at the same level.
+// Distribute the admission floor into every branch so it applies to both sides.
 export const buildUniV3PoolQuery = (skip: number, trackedCurrencies?: readonly string[]): string => `{
   pools(
     first: ${UNIV3_POOL_PAGE_SIZE},
     skip: ${skip},
     orderBy: totalValueLockedUSD,
     orderDirection: desc,
-    where: { totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}"${trackedCurrencies?.length
-      ? `, or: [{ token0_in: ${JSON.stringify(trackedCurrencies)} }, { token1_in: ${JSON.stringify(trackedCurrencies)} }]`
-      : ""} }
+    where: { ${trackedCurrencies?.length
+      ? `or: [{ totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}", token0_in: ${JSON.stringify(trackedCurrencies)} }, { totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}", token1_in: ${JSON.stringify(trackedCurrencies)} }]`
+      : `totalValueLockedUSD_gt: "${UNIV3_POOL_MIN_TVL_USD}"`} }
   ) {
     id
     token0 { id symbol decimals }
@@ -181,9 +183,9 @@ export const buildUniV3MessariPoolQuery = (skip: number, trackedCurrencies?: rea
     skip: ${skip},
     orderBy: id,
     orderDirection: asc,
-    where: { totalLiquidity_gt: "0"${trackedCurrencies?.length
-      ? `, or: [${trackedCurrencies.map((address) => `{ inputTokens_contains: [${JSON.stringify(address)}] }`).join(", ")}]`
-      : ""} }
+    where: { ${trackedCurrencies?.length
+      ? `or: [${trackedCurrencies.map((address) => `{ totalLiquidity_gt: "0", inputTokens_contains: [${JSON.stringify(address)}] }`).join(", ")}]`
+      : 'totalLiquidity_gt: "0"'} }
   ) {
     id
     inputTokens { id symbol decimals }

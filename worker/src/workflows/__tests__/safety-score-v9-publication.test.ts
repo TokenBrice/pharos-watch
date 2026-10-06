@@ -165,6 +165,9 @@ describe("Safety Score V9 publication Workflow", () => {
     expect(first).toEqual(second);
     expect(parseNativeV9InputCacheArtifact).toHaveBeenCalledTimes(1);
     expect(computeSafetyScoreV9).toHaveBeenCalledTimes(1);
+    expect(computeSafetyScoreV9.mock.calls[0].slice(1)).toEqual([
+      undefined, undefined, { retainAcceptedReplay: false },
+    ]);
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
       { key: "report-cards:fixed-input:exact" },
       { key: "safety-score-v9:shadow:report-cards:v9:1788433200" },
@@ -229,6 +232,12 @@ describe("Safety Score V9 publication Workflow", () => {
       value: "canonical",
       updatedAt: 1788433200,
     });
+    await capture.db.prepare(
+      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    ).bind("report-cards:v9:accepted-replay:base", "unused-large-artifact", 1788433200).run();
+    expect(capture.state.cacheKeys.has("report-cards:v9:accepted-replay:base")).toBe(true);
+    expect(capture.state.cacheWrites.has("report-cards:v9:accepted-replay:base")).toBe(false);
+    expect(baseRun).not.toHaveBeenCalled();
     await expect(
       capture.db.prepare("INSERT INTO other_table (value) VALUES (?)")
         .bind("unsafe")

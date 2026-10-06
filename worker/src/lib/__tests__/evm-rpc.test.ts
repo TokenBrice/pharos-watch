@@ -649,6 +649,32 @@ describe("evm-rpc helpers", () => {
     expect(blockTimestamp).toBe(100);
   });
 
+  it.each([null, {}, { timestamp: "invalid" }, { timestamp: "0x0" }, { timestamp: "0x20000000000000" }])(
+    "tries the next provider when the block timestamp is unusable: %j",
+    async (result) => {
+      fetchWithRetryMock
+        .mockResolvedValueOnce(rpcResponse({ result }))
+        .mockResolvedValueOnce(rpcResponse({ result: { timestamp: "0x64" } }));
+      await expect(fetchEvmBlockTimestamp("fantom", 16, {
+        extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+      })).resolves.toBe(100);
+      expect(fetchWithRetryMock.mock.calls.map((call) => call[0])).toEqual([
+        "https://primary.example", "https://fallback.example",
+      ]);
+      for (const call of fetchWithRetryMock.mock.calls) {
+        expect(JSON.parse(String(call[1].body)).params).toEqual(["0x10", false]);
+      }
+    },
+  );
+
+  it("withholds the timestamp when every provider returns an unusable block", async () => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: {} }));
+    await expect(fetchEvmBlockTimestamp("fantom", 16, {
+      extraRpcUrls: ["https://primary.example", "https://fallback.example"],
+    })).resolves.toBeNull();
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+  });
+
   it("requires a numbered block header with its canonical hash", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(

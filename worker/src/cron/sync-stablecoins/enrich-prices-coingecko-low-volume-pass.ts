@@ -38,6 +38,11 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // 2026-09-30: HBD's low-volume quote remains inside the existing seven-day
   // budget, but CG-only intake rejects its stale market cap and carries supply.
   "hbd-hive",
+  // 2026-10-06: observed CG quotes remain within the seven-day budget,
+  // while strict primary freshness rejects these low-volume tickers.
+  "usdkg-gold-dollar",
+  "fusd-freedom-dollar",
+  "chfau-allunity",
 ]);
 
 export async function runCoingeckoLowVolumePass(

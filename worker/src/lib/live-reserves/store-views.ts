@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/live-reserve-display";
 import { inferReserveDisplayBadgeKindFromEvidenceClass } from "@shared/lib/live-reserve-adapter-descriptors";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type {
   LiveReserveSnapshotMetadata,
   ReserveDisplayBadgeView,
@@ -133,7 +133,7 @@ export async function resolveReserveResult(
   now = Math.floor(Date.now() / 1000),
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
 ): Promise<ReserveResult | null> {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) return null;
 
   const [compositionRow, syncState] = await Promise.all([
@@ -142,7 +142,6 @@ export async function resolveReserveResult(
   ]);
 
   const displayUrl = meta.liveReservesConfig?.display?.url;
-  const staticFallback = getReserves(meta);
   const consistentRow = compositionRow && hasConsistentSnapshotState(syncState, {
     fetchedAt: compositionRow.fetched_at,
     attemptId: compositionRow.attempt_id ?? null,
@@ -196,6 +195,14 @@ export async function resolveReserveResult(
       }),
     };
   }
+
+  // Configured feeds retain their complete display slice. Internal callers may
+  // also request a retired feed's fallback: defer its full metadata until no
+  // historical snapshot can be displayed, preserving that legacy contract.
+  const fallbackMeta = hasWorkerLiveReserves(meta)
+    ? meta
+    : (await import("@shared/lib/stablecoins/registry")).TRACKED_META_BY_ID.get(stablecoinId);
+  const staticFallback = fallbackMeta ? getReserves(fallbackMeta) : null;
 
   const snapshotIntegrityWarning = consistentSnapshot.issue ? describeSnapshotIssue(consistentSnapshot.issue) : null;
   const statusOverride = snapshotIntegrityWarning
