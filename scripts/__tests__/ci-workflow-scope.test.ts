@@ -30,6 +30,7 @@ describe("CI workflow scope", () => {
     expect(build).toBeGreaterThan(refresh);
     expect(check).toBeGreaterThan(build);
     expect(steps[build].env?.PHAROS_RELEASE_PR_TYPECHECKED).toBe("1");
+    expect(steps[build].env?.PHAROS_DETAIL_SNAPSHOT_SOURCE).toBe("bulk");
   });
 
   it("prepares only pure/history inputs in parallel with the Worker and gates live Pages work", () => {
