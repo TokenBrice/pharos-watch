@@ -21,6 +21,7 @@ import {
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
 import type { FaqItem } from "@/lib/faq";
+import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
 
 const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
 const STATUS_SHELL_PROPS = {
@@ -130,6 +131,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
 
     content = (
       <div className="space-y-6">
+        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
         <PublicStatusHero
           healthData={healthData}
           lastUpdated={lastUpdated}

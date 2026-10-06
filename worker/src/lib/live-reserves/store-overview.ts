@@ -21,6 +21,7 @@ import {
   hasUncertainWriteState,
 } from "./store-snapshot-state";
 import { parseReserveCompositionRow } from "./store-row-decoding";
+import { matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-feed-reviews";
 
 
 interface LiveReserveResumePointer {
@@ -272,6 +273,22 @@ export async function computeReserveCompositionOverview(
 
 
   const counts = countCoinsByStatus(configuredCoins, syncById, compositionById, now, freshnessSec);
+  const reviews = resolveReserveFeedReviews(now);
+  const matched = await Promise.all(configuredCoins.map((coin) => {
+    const state = syncById.get(coin.id) ?? null;
+    const row = compositionById.get(coin.id);
+    if (row && (!hasConsistentSnapshotState(state, { fetchedAt: row.fetched_at, attemptId: row.attempt_id ?? null })
+      || !parseReserveCompositionRow(row, state).record)) return null;
+    return matchReserveFeedReview(db, state, now, reviews.activeById);
+  }));
+  const acknowledgedFeeds = matched.filter((review) => review != null);
+  const acknowledgedFeedIds = acknowledgedFeeds.map((review) => review.stablecoinId);
+  // Re-evaluate the actual subset: removing only a denominator would invent coverage.
+  const acknowledgedIds = new Set(acknowledgedFeedIds);
+  const healthCounts = countCoinsByStatus(
+    configuredCoins.filter((coin) => !acknowledgedIds.has(coin.id)),
+    syncById, compositionById, now, freshnessSec,
+  );
 
   return {
     configuredCoins: configuredCoins.length,
@@ -297,6 +314,15 @@ export async function computeReserveCompositionOverview(
     lastSuccessAt: counts.lastSuccessAt,
     oldestFreshAgeSec: counts.oldestFreshAgeSec,
     adapterReliability,
+    healthConfiguredCoins: configuredCoins.length - acknowledgedFeedIds.length,
+    healthFreshCoins: healthCounts.freshCoins,
+    healthAuthoritativeFreshCoins: healthCounts.independentFreshEligible
+      + healthCounts.independentFreshUnverified + healthCounts.staticValidatedFresh,
+    acknowledgedFeedIds,
+    acknowledgedFeeds,
+    expiredFeedReviewIds: reviews.expiredIds,
+    invalidFeedReviewIds: reviews.invalidIds,
+    unacknowledgedPersistentlyStaleIndependentCoins: healthCounts.persistentlyStaleIndependentCoins,
   };
 }
 

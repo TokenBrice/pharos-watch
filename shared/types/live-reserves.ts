@@ -131,6 +131,23 @@ export const ReserveSyncAdapterReliabilitySchema = /* @__PURE__ */ (() => z.obje
 }))();
 export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterReliabilitySchema>;
 
+export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
+  stablecoinId: z.string().min(1),
+  adapterKey: z.enum(LIVE_RESERVE_ADAPTER_KEYS),
+  failureCategory: z.string().min(1),
+  warningCodes: z.array(z.string().min(1)),
+  errorPrefix: z.string().min(1).nullable(),
+  owner: z.string().trim().min(1),
+  reason: z.string().trim().min(1),
+  sources: z.array(z.object({
+    url: z.string().url().refine((url) => url.startsWith("https://")),
+    evidenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).strict()).min(1),
+  reviewedAt: z.number().int().positive(),
+  expiresAt: z.number().int().positive(),
+}).strict())();
+export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
+
 export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object({
   configuredCoins: z.number(),
   freshCoins: z.number(),
@@ -163,6 +180,17 @@ export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object(
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
   adapterReliability: z.array(ReserveSyncAdapterReliabilitySchema),
+  healthConfiguredCoins: z.number().optional(),
+  healthFreshCoins: z.number().optional(),
+  healthAuthoritativeFreshCoins: z.number().optional(),
+  acknowledgedFeedIds: z.array(z.string()).optional(),
+  acknowledgedFeeds: z.array(ReserveFeedReviewSchema).optional(),
+  expiredFeedReviewIds: z.array(z.string()).optional(),
+  invalidFeedReviewIds: z.array(z.string()).optional(),
+  unacknowledgedPersistentlyStaleIndependentCoins: z.array(z.object({
+    stablecoinId: z.string(),
+    ageSec: z.number(),
+  })).optional(),
 }))();
 export type ReserveCompositionOverview = z.infer<typeof ReserveCompositionOverviewSchema>;
 
@@ -189,6 +217,14 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
     adapterReliability: [],
+    healthConfiguredCoins: configuredCoins,
+    healthFreshCoins: 0,
+    healthAuthoritativeFreshCoins: 0,
+    acknowledgedFeedIds: [],
+    acknowledgedFeeds: [],
+    expiredFeedReviewIds: [],
+    invalidFeedReviewIds: [],
+    unacknowledgedPersistentlyStaleIndependentCoins: [],
   };
 }
 
@@ -432,6 +468,7 @@ export const ReserveSyncStateViewSchema = /* @__PURE__ */ (() => z
     uncertainWrite: z.boolean().optional(),
     /** Budgets, clock, and generation behind `stale`; absent only from producers predating ADR-30 publication. */
     freshness: ReserveFreshnessViewSchema.optional(),
+    acknowledgedFeed: ReserveFeedReviewSchema.optional(),
   })
   .strict())();
 export type ReserveSyncStateView = z.output<typeof ReserveSyncStateViewSchema>;

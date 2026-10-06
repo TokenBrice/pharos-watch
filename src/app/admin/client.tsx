@@ -6,6 +6,7 @@ import { useCriticalOpsModel } from "@/hooks/use-critical-ops-model";
 import { TriageSummary } from "./status-dashboard/triage-summary";
 import { useAutoExpand } from "./use-auto-expand";
 import { WorkspaceStatusBoundary } from "./workspace-status-boundary";
+import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
 
 export default function TriageClient() {
   const { data, handleRefresh, healthData, initialLoadError, isLoading, lastUpdated, model } = useCriticalOpsModel();
@@ -46,6 +47,7 @@ export default function TriageClient() {
               showSignOut={false}
             />
             <NoticeRail notices={model.notices} />
+            <SchedulerLivenessCard observation={status.schedulerLiveness} />
             <CredentialSummaryCard />
           </div>
         );

@@ -116,6 +116,21 @@ export async function loadReserveSyncAttemptTimeline(
   return (result.results ?? []).map(mapTimelineRow);
 }
 
+/** Circuit skips may inherit only the latest actual attempt, never an older matching failure. */
+export async function loadLatestNonSkippedReserveAttempt(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<ReserveSyncAttemptTimelineEntry | null> {
+  const row = await db.prepare(
+    `SELECT stablecoin_id, attempted_at, adapter_key, breaker_key, attempt_id,
+            status, warnings, last_error, metadata
+       FROM reserve_sync_attempt_history
+      WHERE stablecoin_id = ? AND status != 'skipped'
+      ORDER BY attempted_at DESC, id DESC LIMIT 1`,
+  ).bind(stablecoinId).first<AttemptHistoryRow>();
+  return row ? mapTimelineRow(row) : null;
+}
+
 /**
  * 30-day per-adapter reliability rollup: one grouped scan over the attempt
  * ledger. `successRate` is `ok / attempts` (all attempts in the window,

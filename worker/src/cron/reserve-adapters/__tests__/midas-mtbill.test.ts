@@ -11,6 +11,16 @@ const ustb = "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')";
 afterEach(() => vi.restoreAllMocks());
 
 describe("mTBILL issuer portfolio", () => {
+  it("persists distinct rejected clocks and unchanged freshness budgets", () => {
+    const sourceTimestamp = Math.floor(Date.parse(fixture.updatedAt) / 1000);
+    expect(() => adaptMidasMtbillTransparency(fixture, sourceTimestamp + 259201)).toThrow(
+      `midas-mtbill:stale-portfolio-timestamp sourceTimestamp=${sourceTimestamp} nowSec=${sourceTimestamp + 259201} ageSec=259201 maxAgeSec=259200`,
+    );
+    expect(() => adaptMidasMtbillTransparency(fixture, sourceTimestamp - 601)).toThrow(
+      "midas-mtbill:future-portfolio-timestamp",
+    );
+    expect(() => adaptMidasMtbillTransparency(fixture, sourceTimestamp + 259200)).not.toThrow();
+  });
   it("uses source dollar units and preserves the unclassified residual without scaling named holdings", () => {
     const result = adaptMidasMtbillTransparency(fixture, now);
     const total = 76.2856204874 * 1_000_000;

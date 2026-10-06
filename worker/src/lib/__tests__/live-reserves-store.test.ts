@@ -16,7 +16,37 @@ import { resolveReserveResult } from "../live-reserves/store-views";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 
+import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
 describe("live-reserves-store", () => {
+  it("conserves raw evidence and removes each acknowledged feed's actual authoritative contribution", async () => {
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    const now = review.reviewedAt + 1;
+    const composition = reserveCompositionRow({
+      stablecoin_id: review.stablecoinId, source: review.adapterKey, fetched_at: now - 100,
+      adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent",
+      metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now - 100 }),
+    });
+    const sync = reserveSyncRow({
+      stablecoin_id: review.stablecoinId, adapter_key: review.adapterKey,
+      last_attempted_at: now, last_success_at: now - 100, last_status: "error",
+      last_error: review.errorPrefix, metadata: JSON.stringify({ failureCategory: review.failureCategory }),
+    });
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [composition], first: composition },
+      { match: "FROM reserve_sync_state", rows: [sync], first: sync },
+    ]);
+    const overview = await computeReserveCompositionOverview(db, now);
+    expect(overview.errorCoins).toBe(1);
+    expect(overview.freshCoins).toBe(0);
+    expect(overview.acknowledgedFeedIds).toEqual([review.stablecoinId]);
+    expect(overview.healthConfiguredCoins).toBe(overview.configuredCoins - 1);
+    expect(overview.healthAuthoritativeFreshCoins).toBe(overview.independentFreshEligible
+      + overview.independentFreshUnverified + overview.staticValidatedFresh - 1);
+    const expired = await computeReserveCompositionOverview(db, review.expiresAt);
+    expect(expired.acknowledgedFeedIds).toEqual([]);
+    expect(expired.healthConfiguredCoins).toBe(expired.configuredCoins);
+    expect(expired.expiredFeedReviewIds).toContain(review.stablecoinId);
+  });
   it.each([
     ["fdusd-first-digital", "fdusd-independent-assurance", 36 * 86400, 60, false],
     ["xsgd-straitsx", "straitsx-independent-assurance", 63 * 86400, 60, false],

@@ -65,7 +65,7 @@ describe("ReserveSyncHealthCard", () => {
     const { container } = render(<ReserveSyncHealthCard health={makeReserveHealth()} nowSeconds={1_712_600_120} />);
 
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
-    expect(container.textContent).toContain("100.0% fresh, 100.0% score-grade");
+    expect(container.textContent).toContain("100.0% fresh, 100.0% authoritative");
   });
 
   it("does not flag conservative inputs for a healthy lane at live 73.7% score-grade coverage", () => {
@@ -87,7 +87,7 @@ describe("ReserveSyncHealthCard", () => {
     );
 
     expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
-    expect(container.textContent).toContain("73.7% fresh, 73.7% score-grade");
+    expect(container.textContent).toContain("73.7% fresh, 73.7% authoritative");
   });
 
   it("renders the 30-day adapter reliability rollup as a compact table", () => {
