@@ -2,22 +2,57 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildGitleaksMergeResolutionInput,
+  collectGitleaksTrustedFiles,
   ensurePinnedGitleaks,
   GITLEAKS_VERSION,
   resolveGitleaksPin,
   runGitleaks,
+  runGitleaksConfigSelfTest,
+  snapshotGitleaksTrustedInputs,
 } from "../ci/run-gitleaks";
 
-// Model the self-test's public-only and mixed-credential fixture contents, not scan order.
-function selfTestScanStatus(args: string[]): number {
-  return readdirSync(args.at(-1)!, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .some((entry) => /"(?:api_key|aws_access_key_id)"\s*:/.test(readFileSync(join(entry.parentPath, entry.name), "utf8")))
-    ? 1 : 0;
+interface SelfTestFinding {
+  File: string;
+  StartLine: number;
+  RuleID: string;
+}
+
+// Model report contents from each fixture's own line, independently of scan order.
+function selfTestScanStatus(args: string[], transform = (findings: SelfTestFinding[]) => findings): number {
+  const root = args.at(-1)!;
+  const findings: SelfTestFinding[] = [];
+  for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const file = join(entry.parentPath, entry.name);
+    const lines = readFileSync(file, "utf8").trimEnd().split("\n");
+    for (const [index, line] of lines.entries()) {
+      const value = JSON.parse(line);
+      for (const [key, rule] of [["api_key", "generic-api-key"], ["aws_access_key_id", "aws-access-token"]]) {
+        if (key in value) findings.push({ File: relative(root, file), StartLine: index + 1, RuleID: rule });
+      }
+    }
+  }
+  const reportPath = args.find((arg) => arg.startsWith("--report-path="))!.slice("--report-path=".length);
+  writeFileSync(reportPath, JSON.stringify(transform(findings)));
+  return findings.length ? 1 : 0;
+}
+
+function writeRepoFile(root: string, path: string, contents: string): void {
+  const destination = resolve(root, path);
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, contents);
+}
+
+function scannerRepo(root: string): void {
+  writeRepoFile(root, "scripts/ci/run-gitleaks.ts", 'import "../lib/scanner-helper.mjs";\n');
+  writeRepoFile(root, "scripts/lib/scanner-helper.mjs", 'export { value } from "./scanner-leaf.mjs";\n');
+  writeRepoFile(root, "scripts/lib/scanner-leaf.mjs", "export const value = 1;\n");
+  writeRepoFile(root, ".gitleaks.toml", "[extend]\nuseDefault = true\n");
+  writeRepoFile(root, ".gitleaksignore", "# fingerprints\n");
 }
 
 describe("run-gitleaks", () => {
@@ -217,6 +252,204 @@ describe("run-gitleaks", () => {
       expect(fetchImpl).toHaveBeenCalledOnce();
     } finally {
       rmSync(cacheRoot, { recursive: true, force: true });
+    }
+  });
+  it("batches self-tests into three scans while retaining per-line rule assertions", () => {
+    const reports: SelfTestFinding[][] = [];
+    const fixtureCounts: number[] = [];
+    const runBinary = vi.fn((_binary: string, args: string[]) => {
+      fixtureCounts.push(readdirSync(args.at(-1)!, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .reduce((count, entry) => count + readFileSync(join(entry.parentPath, entry.name), "utf8").trimEnd().split("\n").length, 0));
+      return { status: selfTestScanStatus(args, (findings) => {
+        reports.push(findings);
+        return findings;
+      }) };
+    });
+    runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary });
+    expect(runBinary).toHaveBeenCalledTimes(3);
+    expect(fixtureCounts).toEqual([50, 49, 50]);
+    expect(reports.map((report) => report.length)).toEqual([0, 49, 50]);
+    expect(reports[1].every((finding) => finding.RuleID === "aws-access-token")).toBe(true);
+    expect(reports[2].every((finding) => finding.RuleID === "generic-api-key")).toBe(true);
+  });
+
+  it.each(["aws", "generic"])("rejects a single missing %s finding even when the scan exits 1", (group) => {
+    const runBinary = vi.fn((_binary: string, args: string[]) => ({
+      status: selfTestScanStatus(args, (findings) => args.at(-1)!.endsWith(group) ? findings.slice(1) : findings),
+    }));
+    expect(() => runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary })).toThrow(`${group} control failed`);
+  });
+
+  it("rejects a public control finding and a positive finding with the wrong rule", () => {
+    for (const failure of ["public", "rule"]) {
+      const runBinary = vi.fn((_binary: string, args: string[]) => ({
+        status: selfTestScanStatus(args, (findings) => {
+          if (failure === "public" && args.at(-1)!.endsWith("public")) {
+            return [{ File: "shared/data/stablecoins/coins/xaum-matrixdock.json", StartLine: 1, RuleID: "generic-api-key" }];
+          }
+          return failure === "rule" ? findings.map((finding, index) =>
+            index === 0 ? { ...finding, RuleID: "wrong-rule" } : finding) : findings;
+        }),
+      }));
+      expect(() => runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary })).toThrow("control failed");
+    }
+  });
+
+  it("snapshots the actual scanner without installing or scanning", async () => {
+    const destination = mkdtempSync(join(tmpdir(), "gitleaks-trusted-"));
+    const ensureBinary = vi.fn<() => Promise<string>>();
+    try {
+      await expect(runGitleaks({ argv: [`--snapshot-trusted=${destination}`], ensureBinary })).resolves.toEqual({ status: 0 });
+      expect(ensureBinary).not.toHaveBeenCalled();
+      expect(readFileSync(join(destination, "scripts/ci/run-gitleaks.ts")))
+        .toEqual(readFileSync(resolve("scripts/ci/run-gitleaks.ts")));
+      expect(readFileSync(join(destination, ".gitleaks.toml"))).toEqual(readFileSync(".gitleaks.toml"));
+      expect(readFileSync(join(destination, ".gitleaksignore"))).toEqual(readFileSync(".gitleaksignore"));
+      expect(JSON.parse(readFileSync(join(destination, "package.json"), "utf8"))).toEqual({ private: true, type: "module" });
+      const output = execFileSync(process.execPath, [
+        join(destination, "scripts/ci/run-gitleaks.ts"), "--range", "--candidate-policy", `--trusted-root=${destination}`,
+      ], { cwd: process.cwd(), encoding: "utf8" });
+      expect(output).toContain("[gitleaks] candidate policy identical to trusted base; skipping");
+    } finally {
+      rmSync(destination, { recursive: true, force: true });
+    }
+  });
+
+  it("copies transitive imports, re-exports and literal dynamic imports with repo-relative paths", () => {
+    const root = mkdtempSync(join(tmpdir(), "gitleaks-closure-"));
+    const destination = mkdtempSync(join(tmpdir(), "gitleaks-snapshot-"));
+    try {
+      scannerRepo(root);
+      writeRepoFile(root, "scripts/lib/scanner-leaf.mjs",
+        'import { resolve } from "node:path";\nexport const value = /["\']/;\nvoid import("./dynamic.mjs");\n');
+      writeRepoFile(root, "scripts/lib/dynamic.mjs", 'export const text = "import \\"./not-a-dependency.mjs\\"";\n');
+      const files = collectGitleaksTrustedFiles(root);
+      expect(files).toEqual([
+        ".gitleaks.toml", ".gitleaksignore", "scripts/ci/run-gitleaks.ts",
+        "scripts/lib/dynamic.mjs", "scripts/lib/scanner-helper.mjs", "scripts/lib/scanner-leaf.mjs",
+      ]);
+      snapshotGitleaksTrustedInputs(root, destination);
+      for (const file of files) expect(readFileSync(join(destination, file))).toEqual(readFileSync(join(root, file)));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(destination, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    'import "./missing.mjs";',
+    'import "not-installed";',
+    'void import(computedPath);',
+    'void import("../lib/scanner-leaf.mjs" + suffix);',
+  ])("fails closed for an unresolved or nonliteral scanner import: %s", (source) => {
+    const root = mkdtempSync(join(tmpdir(), "gitleaks-closure-fail-"));
+    try {
+      scannerRepo(root);
+      writeRepoFile(root, "scripts/ci/run-gitleaks.ts", source);
+      expect(() => collectGitleaksTrustedFiles(root)).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["range", "full", "tree", "worktree"])("uses trusted policy/cache but cwd git input for %s", async (mode) => {
+    const policyRoot = resolve("/trusted/policy");
+    const ensureBinary = vi.fn(async () => "/fake/gitleaks");
+    const input = Buffer.from("cwd git bytes\n");
+    const buildMergeResolutionInput = vi.fn(() => input);
+    const buildWorktreeInput = vi.fn(() => input);
+    const runBinary = vi.fn((_binary: string, args: string[]) => ({
+      status: args[0] === "dir" ? selfTestScanStatus(args) : 0,
+    }));
+    await expect(runGitleaks({
+      argv: [`--${mode === "full" ? "range" : mode}`, `--policy-root=${policyRoot}`],
+      env: { GITLEAKS_BASE_REF: mode === "full" ? "000000" : "base", GITLEAKS_HEAD_REF: "head", NODE_ENV: "test" },
+      ensureBinary, runBinary, buildMergeResolutionInput, buildWorktreeInput, platformKey: "linux-x64",
+    })).resolves.toEqual({ status: 0 });
+    expect(ensureBinary).toHaveBeenCalledWith({ cacheRoot: resolve(policyRoot, ".cache/gitleaks"), platformKey: "linux-x64" });
+    for (const call of runBinary.mock.calls) expect(call[1]).toContain(`--config=${resolve(policyRoot, ".gitleaks.toml")}`);
+    const scan = runBinary.mock.calls.at(-1)!;
+    expect(scan[1]).toContain(`--gitleaks-ignore-path=${resolve(policyRoot, ".gitleaksignore")}`);
+    expect(scan[1]).not.toContain("--config=.gitleaks.toml");
+    if (mode === "range") expect(scan[1]).toContain("--log-opts=--no-merges base..head");
+    if (mode === "tree") expect(buildMergeResolutionInput).toHaveBeenCalledWith({ baseRef: "base", headRef: "head" });
+    if (mode === "worktree") expect(buildWorktreeInput).toHaveBeenCalledOnce();
+  });
+
+  it.each(["identical", "config", "ignore", "scanner", "helper", "closure"])("checks candidate %s inputs against trusted bytes", async (change) => {
+    const root = mkdtempSync(join(tmpdir(), "gitleaks-candidate-"));
+    const trusted = mkdtempSync(join(tmpdir(), "gitleaks-base-"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      scannerRepo(root);
+      snapshotGitleaksTrustedInputs(root, trusted);
+      const paths: Record<string, string> = {
+        config: ".gitleaks.toml", ignore: ".gitleaksignore", scanner: "scripts/ci/run-gitleaks.ts",
+        helper: "scripts/lib/scanner-leaf.mjs",
+      };
+      if (paths[change]) writeFileSync(join(root, paths[change]), `${readFileSync(join(root, paths[change]), "utf8")}\n// changed\n`);
+      if (change === "closure") {
+        writeRepoFile(root, "scripts/lib/scanner-leaf.mjs", 'import "./added.mjs";\n');
+        writeRepoFile(root, "scripts/lib/added.mjs", "export const added = 1;\n");
+      }
+      vi.spyOn(process, "cwd").mockReturnValue(root);
+      const ensureBinary = vi.fn(async () => "/fake/gitleaks");
+      const runBinary = vi.fn((_binary: string, args: string[]) => ({
+        status: args[0] === "dir" ? selfTestScanStatus(args) : 1,
+      }));
+      const result = await runGitleaks({
+        argv: ["--range", "--candidate-policy", `--trusted-root=${trusted}`],
+        env: { GITLEAKS_BASE_REF: "base", GITLEAKS_HEAD_REF: "head", NODE_ENV: "test" },
+        ensureBinary, runBinary, platformKey: "linux-x64",
+      });
+      if (change === "identical") {
+        expect(result).toEqual({ status: 0 });
+        expect(log).toHaveBeenCalledWith("[gitleaks] candidate policy identical to trusted base; skipping");
+        expect(ensureBinary).not.toHaveBeenCalled();
+        expect(runBinary).not.toHaveBeenCalled();
+      } else {
+        expect(result).toEqual({ status: 1 });
+        expect(runBinary).toHaveBeenCalledTimes(4);
+        expect(runBinary.mock.calls[0][1]).toContain(`--config=${resolve(root, ".gitleaks.toml")}`);
+        expect(runBinary.mock.calls.at(-1)![1]).toContain("--log-opts=--no-merges base..head");
+        expect(log).not.toHaveBeenCalled();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(trusted, { recursive: true, force: true });
+    }
+  });
+
+  it("fails changed candidate policy before the range scan when one self-test finding is absent", async () => {
+    const root = mkdtempSync(join(tmpdir(), "gitleaks-candidate-fail-"));
+    const trusted = mkdtempSync(join(tmpdir(), "gitleaks-trusted-fail-"));
+    try {
+      scannerRepo(root);
+      snapshotGitleaksTrustedInputs(root, trusted);
+      writeRepoFile(root, ".gitleaksignore", "# changed candidate\n");
+      vi.spyOn(process, "cwd").mockReturnValue(root);
+      const runBinary = vi.fn((_binary: string, args: string[]) => ({
+        status: selfTestScanStatus(args, (findings) => findings.slice(1)),
+      }));
+      await expect(runGitleaks({
+        argv: ["--range", "--candidate-policy", `--trusted-root=${trusted}`],
+        ensureBinary: async () => "/fake/gitleaks", runBinary, platformKey: "linux-x64",
+      })).rejects.toThrow("aws control failed");
+      expect(runBinary.mock.calls.every((call) => call[1][0] === "dir")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(trusted, { recursive: true, force: true });
+    }
+  });
+
+  it("requires a trusted root for candidate mode and rejects changing its policy or scan mode", async () => {
+    for (const argv of [
+      ["--candidate-policy"],
+      ["--candidate-policy", "--trusted-root=/trusted", "--policy-root=/other"],
+      ["--candidate-policy", "--trusted-root=/trusted", "--tree"],
+    ]) {
+      await expect(runGitleaks({ argv })).rejects.toThrow();
     }
   });
 });
