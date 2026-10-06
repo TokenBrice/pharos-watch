@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
@@ -11,10 +12,13 @@ import {
   renameSync,
   rmSync,
   writeFileSync,
+  realpathSync,
+  statSync,
 } from "node:fs";
 import { arch, platform, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { isBuiltin } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const GITLEAKS_VERSION = "8.30.0";
 const GITLEAKS_PINS = {
@@ -56,19 +60,201 @@ interface GitleaksOptions {
   headRef: string;
   lenientPlatform: boolean;
   mode: "tree" | "worktree" | "range";
+  snapshotTrusted?: string;
+  policyRoot?: string;
+  trustedRoot?: string;
+  candidatePolicy: boolean;
 }
 
 function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): GitleaksOptions {
   const mode = argv.includes("--worktree") ? "worktree" : argv.includes("--tree") ? "tree" : "range";
   const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
+  const value = (flag: string) => {
+    const arg = argv.find((item) => item.startsWith(`${flag}=`));
+    if (!arg) return undefined;
+    const path = arg.slice(flag.length + 1);
+    if (!path) throw new Error(`${flag} requires a directory`);
+    return resolve(path);
+  };
   return {
     baseRef,
     fullHistory: env.GITLEAKS_FULL_HISTORY === "1" || ZERO_SHA.test(baseRef),
     headRef,
     lenientPlatform: argv.includes("--lenient-platform"),
     mode,
+    snapshotTrusted: value("--snapshot-trusted"),
+    policyRoot: value("--policy-root"),
+    trustedRoot: value("--trusted-root"),
+    candidatePolicy: argv.includes("--candidate-policy"),
   };
+}
+
+const SCANNER_PATH = "scripts/ci/run-gitleaks.ts";
+const POLICY_FILES = [".gitleaks.toml", ".gitleaksignore"];
+
+/**
+ * A dependency-free lexical pass over import/re-export statements. Comments and
+ * string contents are tokens, never executable syntax. Computed imports and
+ * package dependencies fail closed: a trusted snapshot must run without npm.
+ */
+function localImportSpecifiers(source: string): string[] {
+  const tokens: string[] = [];
+  let offset = source.startsWith("#!") ? source.indexOf("\n") : 0;
+  if (offset === -1) offset = source.length;
+  while (offset < source.length) {
+    if (/\s/.test(source[offset])) {
+      offset += 1;
+      continue;
+    }
+    const start = offset;
+    const character = source[offset];
+    if (source.startsWith("//", offset)) {
+      const end = source.indexOf("\n", offset + 2);
+      offset = end === -1 ? source.length : end;
+      continue;
+    }
+    if (source.startsWith("/*", offset)) {
+      const end = source.indexOf("*/", offset + 2);
+      if (end === -1) throw new Error("Unterminated trusted scanner comment");
+      offset = end + 2;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      offset += 1;
+      let closed = false;
+      while (offset < source.length) {
+        if (source[offset] === "\\") {
+          offset += 2;
+        } else if (source[offset++] === character) {
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) throw new Error("Unterminated trusted scanner string");
+      const token = source.slice(start, offset);
+      if (character === "`" && token.includes("${") && /\b(?:import|require)\s*\(/.test(token)) {
+        throw new Error("Cannot snapshot imports inside template expressions");
+      }
+      tokens.push(token);
+      continue;
+    }
+    // Regex literals must not be mistaken for quoted strings or import syntax.
+    // At expression-start positions "/" is a regex; otherwise it is division.
+    const previous = tokens.at(-1);
+    if (character === "/" &&
+      (!previous || ["(", "[", "{", "=", ":", ",", ";", "!", "?", "&", "|", "return", "=>"].includes(previous))) {
+      offset += 1;
+      let inCharacterClass = false;
+      let closed = false;
+      while (offset < source.length) {
+        const next = source[offset++];
+        if (next === "\n" || next === "\r") throw new Error("Unterminated trusted scanner regex literal");
+        if (next === "\\") {
+          offset += 1;
+        } else if (next === "[") {
+          inCharacterClass = true;
+        } else if (next === "]") {
+          inCharacterClass = false;
+        } else if (next === "/" && !inCharacterClass) {
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) throw new Error("Unterminated trusted scanner regex literal");
+      while (offset < source.length && /[a-z]/.test(source[offset])) offset += 1;
+    } else if (/[A-Za-z_$0-9]/.test(character)) {
+      offset += 1;
+      while (offset < source.length && /[\w$]/.test(source[offset])) offset += 1;
+    } else {
+      offset += source.startsWith("=>", offset) ? 2 : 1;
+    }
+    tokens.push(source.slice(start, offset));
+  }
+  const specifiers: string[] = [];
+  const literal = (token: string | undefined) => {
+    if (!token || !/^["']/.test(token) || token.includes("\\")) {
+      throw new Error("Trusted scanner imports must use unescaped literal specifiers");
+    }
+    return token.slice(1, -1);
+  };
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === "require" && tokens[index + 1] === "(") {
+      if (tokens[index + 3] !== ")") throw new Error("Cannot snapshot computed scanner require");
+      specifiers.push(literal(tokens[index + 2]));
+    } else if (token === "import" && tokens[index - 1] !== ".") {
+      if (tokens[index + 1] === ".") continue; // import.meta
+      if (tokens[index + 1] === "(") {
+        if (tokens[index + 3] !== ")" && tokens[index + 3] !== ",") {
+          throw new Error("Cannot snapshot computed scanner import");
+        }
+        specifiers.push(literal(tokens[index + 2]));
+      } else if (/^["']/.test(tokens[index + 1] ?? "")) {
+        specifiers.push(literal(tokens[index + 1]));
+      } else {
+        while (++index < tokens.length && tokens[index] !== "from" && tokens[index] !== ";") {}
+        if (tokens[index] !== "from") throw new Error("Cannot resolve trusted scanner import");
+        specifiers.push(literal(tokens[index + 1]));
+      }
+    } else if (token === "export" && ["*", "{"].includes(tokens[index + 1])) {
+      while (++index < tokens.length && tokens[index] !== "from" && tokens[index] !== ";") {}
+      if (tokens[index] === "from") specifiers.push(literal(tokens[index + 1]));
+    }
+  }
+  return specifiers;
+}
+
+export function collectGitleaksTrustedFiles(repoRoot: string): string[] {
+  const root = realpathSync(repoRoot);
+  const files = new Set<string>();
+  const visit = (path: string) => {
+    const absolute = realpathSync(path);
+    const name = relative(root, absolute);
+    if (isAbsolute(name) || name === ".." || name.startsWith("../")) {
+      throw new Error(`Trusted scanner dependency escapes repository: ${path}`);
+    }
+    if (resolve(path) !== absolute) throw new Error(`Cannot snapshot symlinked scanner dependency: ${path}`);
+    if (files.has(name)) return;
+    if (!statSync(absolute).isFile()) throw new Error(`Not a scanner file: ${path}`);
+    files.add(name);
+    for (const specifier of localImportSpecifiers(readFileSync(absolute, "utf8"))) {
+      if (isBuiltin(specifier)) continue;
+      if (!specifier.startsWith(".")) {
+        throw new Error(`Cannot snapshot non-local scanner import: ${specifier}`);
+      }
+      // Node's ESM resolver requires the exact filename, including its extension.
+      visit(resolve(dirname(absolute), specifier));
+    }
+  };
+  visit(resolve(root, SCANNER_PATH));
+  for (const path of POLICY_FILES) {
+    const absolute = resolve(root, path);
+    if (!statSync(absolute).isFile()) throw new Error(`Not a policy file: ${path}`);
+    files.add(path);
+  }
+  // Self-test fixture bytes are generated inline, not read from repository files.
+  return [...files].sort();
+}
+
+export function snapshotGitleaksTrustedInputs(repoRoot: string, destination: string): void {
+  const files = collectGitleaksTrustedFiles(repoRoot);
+  mkdirSync(destination, { recursive: true });
+  for (const path of files) {
+    const target = resolve(destination, path);
+    mkdirSync(dirname(target), { recursive: true });
+    copyFileSync(resolve(repoRoot, path), target);
+  }
+  // Explicit ESM resolution avoids relying on the checkout's package.json.
+  writeFileSync(resolve(destination, "package.json"), '{"private":true,"type":"module"}\n');
+}
+
+export function gitleaksCandidateMatchesTrusted(repoRoot: string, trustedRoot: string): boolean {
+  const candidate = collectGitleaksTrustedFiles(repoRoot);
+  const trusted = collectGitleaksTrustedFiles(trustedRoot);
+  return candidate.length === trusted.length && candidate.every((path, index) =>
+    path === trusted[index] &&
+    readFileSync(resolve(repoRoot, path)).equals(readFileSync(resolve(trustedRoot, path))));
 }
 
 export function resolveGitleaksPin(platformKey: string): (typeof GITLEAKS_PINS)[keyof typeof GITLEAKS_PINS] | undefined {
@@ -207,48 +393,14 @@ export async function ensurePinnedGitleaks({
 
 export function runGitleaksConfigSelfTest(
   binaryPath: string,
-  { runBinary = spawnSync }: { runBinary?: GitleaksRunner } = {},
+  { runBinary = spawnSync, policyRoot = process.cwd() }: { runBinary?: GitleaksRunner; policyRoot?: string } = {},
 ): void {
   const root = mkdtempSync(join(tmpdir(), "pharos-gitleaks-self-test-"));
-  const fixturePath = resolve(root, FALCON_SELF_TEST_PATH);
-  const configPath = resolve(process.cwd(), ".gitleaks.toml");
-  const scan = () =>
-    runBinary(
-      binaryPath,
-      [
-        "dir",
-        "--no-banner",
-        "--redact",
-        "--exit-code",
-        "1",
-        `--config=${configPath}`,
-        "--gitleaks-ignore-path=/dev/null",
-        root,
-      ],
-      { encoding: "utf8", stdio: "pipe" },
-    );
+  const configPath = resolve(policyRoot, ".gitleaks.toml");
 
   try {
-    mkdirSync(dirname(fixturePath), { recursive: true });
     const falconLabel = ["ARIA", "B71VABWJ", "T8GB"].join("_");
-    writeFileSync(fixturePath, `${JSON.stringify({ key: falconLabel })}\n`);
-    const publicLabelResult = scan();
-    if (publicLabelResult.status !== 0) {
-      throw new Error(
-        `Falcon public-label allowlist self-test failed with status ${publicLabelResult.status ?? "unknown"}`,
-      );
-    }
-
     const credential = ["A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6"].join("");
-    writeFileSync(fixturePath, `${JSON.stringify({ api_key: credential })}\n`);
-    const credentialControl = scan();
-    if (credentialControl.status !== 1) {
-      throw new Error(
-        `Credential-shaped Falcon-path control was not detected (status ${credentialControl.status ?? "unknown"})`,
-      );
-    }
-
-    rmSync(fixturePath);
     const solanaMint = ["Cfuy5T6osdazUeLego5LF", "ycBQebm9PP3H7VNdCndXXEN"].join("");
     const gitbookUuid = ["54e9714e-c65f-4b0c", "-8bcf-c7869956dd20"].join("");
     const tronUsdt = ["TR7NHqjeKQxGTCi8q8", "ZY4pL8otSzgjLj6t"].join("");
@@ -397,16 +549,56 @@ export function runGitleaksConfigSelfTest(
       })),
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
-    for (const control of publicControls) {
-      const path = resolve(root, control.path);
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, `${JSON.stringify(control.value)}\n`);
-      if (scan().status !== 0) throw new Error(`Public identifier control failed: ${control.path}`);
-      writeFileSync(path, `${JSON.stringify({ ...control.value, aws_access_key_id: awsKey })}\n`);
-      if (scan().status !== 1) throw new Error(`Mixed-line credential was hidden: ${control.path}`);
-      writeFileSync(path, `${JSON.stringify({ ...control.value, api_key: credential })}\n`);
-      if (scan().status !== 1) throw new Error(`Mixed-line generic credential was hidden: ${control.path}`);
-      rmSync(path);
+    // Multiple controls share a path. Keep each on its own line so report
+    // assertions address every original fixture, not merely the file as a whole.
+    const falconControl = { path: FALCON_SELF_TEST_PATH, value: { key: falconLabel } };
+    for (const group of ["public", "aws", "generic"] as const) {
+      const controls = group === "aws" ? publicControls : [falconControl, ...publicControls];
+      const scanRoot = resolve(root, group);
+      const linesByPath = new Map<string, string[]>();
+      const assertions: { path: string; line: number }[] = [];
+      for (const control of controls) {
+        const lines = linesByPath.get(control.path) ?? [];
+        const value = group === "aws"
+          ? { ...control.value, aws_access_key_id: awsKey }
+          : group === "generic"
+            ? control.path === FALCON_SELF_TEST_PATH ? { api_key: credential } : { ...control.value, api_key: credential }
+            : control.value;
+        lines.push(JSON.stringify(value));
+        linesByPath.set(control.path, lines);
+        assertions.push({ path: control.path, line: lines.length });
+      }
+      for (const [path, lines] of linesByPath) {
+        const fixture = resolve(scanRoot, path);
+        mkdirSync(dirname(fixture), { recursive: true });
+        writeFileSync(fixture, `${lines.join("\n")}\n`);
+      }
+      const report = resolve(root, `${group}-report.json`);
+      const result = runBinary(binaryPath, [
+        "dir", "--no-banner", "--redact", "--exit-code", "1",
+        `--config=${configPath}`, "--gitleaks-ignore-path=/dev/null",
+        "--report-format=json", `--report-path=${report}`, scanRoot,
+      ], { encoding: "utf8", stdio: "pipe" });
+      if (result.error || result.status !== (group === "public" ? 0 : 1)) {
+        throw new Error(`Gitleaks ${group} self-test failed with status ${result.status ?? "unknown"}`);
+      }
+      // Go's JSON encoder can represent an empty findings slice as null.
+      const findings: { File: string; StartLine: number; RuleID: string }[] = JSON.parse(readFileSync(report, "utf8")) ?? [];
+      if (!Array.isArray(findings) || findings.some((finding) =>
+        finding == null || typeof finding.File !== "string" || !Number.isInteger(finding.StartLine) || typeof finding.RuleID !== "string")) {
+        throw new Error(`Invalid Gitleaks ${group} self-test report`);
+      }
+      for (const { path, line } of assertions) {
+        const matches = findings.filter((finding) =>
+          resolve(scanRoot, finding.File) === resolve(scanRoot, path) && finding.StartLine === line);
+        const expectedRule = group === "aws" ? "aws-access-token" : "generic-api-key";
+        if (group === "public" ? matches.length !== 0 : !matches.some((finding) => finding.RuleID === expectedRule)) {
+          throw new Error(`Gitleaks ${group} control failed: ${path}:${line} (${expectedRule})`);
+        }
+      }
+      if (group === "public" && findings.length !== 0) {
+        throw new Error("Unexpected finding in public Gitleaks controls");
+      }
     }
   } finally {
     rmSync(root, { force: true, recursive: true });
@@ -426,13 +618,25 @@ export async function runGitleaks({
 }: {
   argv?: string[];
   env?: NodeJS.ProcessEnv;
-  ensureBinary?: () => Promise<string>;
+  ensureBinary?: (options?: { cacheRoot?: string; platformKey?: string }) => Promise<string>;
   buildMergeResolutionInput?: (refs: { baseRef: string; headRef: string }) => Buffer;
   buildWorktreeInput?: () => Buffer;
   platformKey?: string;
   runBinary?: GitleaksRunner;
 } = {}): Promise<{ status: number }> {
   const options = parseOptions(argv, env);
+  if (options.snapshotTrusted) {
+    snapshotGitleaksTrustedInputs(resolve(dirname(fileURLToPath(import.meta.url)), "../.."), options.snapshotTrusted);
+    return { status: 0 };
+  }
+  if (options.candidatePolicy) {
+    if (!options.trustedRoot) throw new Error("--candidate-policy requires --trusted-root");
+    if (options.policyRoot || options.mode !== "range") throw new Error("--candidate-policy requires the cwd range policy");
+    if (gitleaksCandidateMatchesTrusted(process.cwd(), options.trustedRoot)) {
+      console.log("[gitleaks] candidate policy identical to trusted base; skipping");
+      return { status: 0 };
+    }
+  }
   if (!resolveGitleaksPin(platformKey)) {
     const displayPlatform = platformKey.replace("-", "/");
     if (options.lenientPlatform) {
@@ -441,8 +645,11 @@ export async function runGitleaks({
     }
     throw new Error(`No pinned Gitleaks binary for ${displayPlatform}`);
   }
-  const binaryPath = await ensureBinary();
-  runGitleaksConfigSelfTest(binaryPath, { runBinary });
+  const binaryPath = await ensureBinary({
+    ...(options.policyRoot ? { cacheRoot: resolve(options.policyRoot, ".cache/gitleaks") } : {}),
+    platformKey,
+  });
+  runGitleaksConfigSelfTest(binaryPath, { runBinary, policyRoot: options.policyRoot });
   // `.gitleaksignore` fingerprints are commit-pinned, which only a history scan can honour, so both
   // stdin lanes carry exactly the bytes the range scan cannot see: uncommitted edits (worktree) or
   // the lines a merge resolution introduced in neither parent's history (tree). Anything flagged in
@@ -470,6 +677,16 @@ export async function runGitleaks({
           `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`,
           ".",
         ];
+  if (options.policyRoot) {
+    // Explicit flags prevent the target checkout's config/ignore from influencing
+    // either history or stdin scans. Git and merge-resolution inputs stay in cwd.
+    const policyArgs = [
+      `--config=${resolve(options.policyRoot, ".gitleaks.toml")}`,
+      `--gitleaks-ignore-path=${resolve(options.policyRoot, ".gitleaksignore")}`,
+    ];
+    if (stdinMode) args.splice(5, 2, ...policyArgs);
+    else args.splice(args.length - 1, 0, ...policyArgs);
+  }
   const result = runBinary(binaryPath, args, {
     ...(options.mode === "worktree" ? { input: buildWorktreeInput() } : {}),
     ...(options.mode === "tree" ? { input: buildMergeResolutionInput({ baseRef: options.baseRef, headRef: options.headRef }) } : {}),
@@ -478,7 +695,7 @@ export async function runGitleaks({
   return { status: result.status ?? 1 };
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   void runGitleaks()
     .then((result) => {
       process.exitCode = result.status;
