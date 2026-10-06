@@ -94,6 +94,7 @@
         "Funding Rate (BTC)": "high",
         "Funding Rate Arb (BTC)": "high",
         "Funding Rate Arb (HYPE)": "high",
+        "Funding Rate Arb (Hyperliquid)": "high",
         "Undeployed": "high",
         "Other": "high"
       },
@@ -111,6 +112,7 @@
         "Funding Rate (BTC)": "accountable:noon:deployment:funding-rate-btc",
         "Funding Rate Arb (BTC)": "accountable:noon:deployment:funding-rate-arb-btc",
         "Funding Rate Arb (HYPE)": "accountable:noon:deployment:funding-rate-arb-hype",
+        "Funding Rate Arb (Hyperliquid)": "accountable:noon:deployment:funding-rate-arb-hyperliquid",
         "Undeployed": "accountable:noon:deployment:undeployed"
       }
     }
