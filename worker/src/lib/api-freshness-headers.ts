@@ -18,6 +18,7 @@ export function addFreshnessHeaders(
     API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   );
   const result: Record<string, string> = { ...headers, "X-Data-Age": String(age) };
+  if (Number.isFinite(updatedAt) && updatedAt >= 0) result["X-Data-Updated-At"] = String(updatedAt);
   if (futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC) {
     result.Warning = `199 - "Response timestamp is ${futureSkewSeconds}s in the future"`;
     result["Cache-Control"] = "no-store";

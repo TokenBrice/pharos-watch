@@ -22,6 +22,7 @@ describe("freshness cache runway", () => {
       });
       expect(directive(headers, "s-maxage")).toBe(10);
       expect(directive(headers, "max-age")).toBe(10);
+      expect(headers["X-Data-Updated-At"]).toBe(String(assessedAt - freshBudgetSec + 10));
       if (profile === API_CACHE_PROFILES.producerBacked) {
         expect(directive(headers, "stale-while-revalidate")).toBe(0);
       }
@@ -37,6 +38,7 @@ describe("freshness cache runway", () => {
   it.each([0, -1, 0.5])("disables cache storage when only %s seconds remain", (remaining) => {
     const headers = addFreshnessHeaders({ "Cache-Control": API_CACHE_PROFILES.standard }, assessedAt - 4_800 + remaining, 600, { assessedAt });
     expect(headers["Cache-Control"]).toBe("no-store");
+    expect(headers["X-Data-Updated-At"]).toBe(String(assessedAt - 4_800 + remaining));
   });
 
   it("preserves Age and Date rather than refreshing transport age", () => {
@@ -44,5 +46,13 @@ describe("freshness cache runway", () => {
     const headers = addFreshnessHeaders({ "Cache-Control": API_CACHE_PROFILES.standard, Age: "5", Date: date }, assessedAt - 100, 600, { assessedAt });
     expect(headers.Age).toBe("5");
     expect(headers.Date).toBe(date);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])("rejects a nonfinite origin clock (%s)", (updatedAt) => {
+    expect(() => addFreshnessHeaders({}, updatedAt, 600, { assessedAt })).toThrow("Freshness timestamps must be finite");
+  });
+
+  it("does not publish a negative origin clock", () => {
+    expect(addFreshnessHeaders({}, -1, 600, { assessedAt })["X-Data-Updated-At"]).toBeUndefined();
   });
 });

@@ -129,10 +129,10 @@ const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: Executio
     if (normalizedCached) {
       const age = Math.floor(Date.now() / 1000) - normalizedCached.updatedAt;
       if (age < CACHE_TTL_SECONDS) {
-        return createFreshCacheHitResponse(normalizedCached.value, age);
+        return createFreshCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       }
       if (!providerRefreshAllowed) {
-        return createStaleCacheHitResponse(normalizedCached.value, age);
+        return createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       }
       if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
         logWorkerEventArgs("api", "warn",
@@ -149,7 +149,7 @@ const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: Executio
         return createResponseFromSharedResponse(response);
       }
       scheduleStablecoinDetailRefresh({ db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey });
-      return createStaleCacheHitResponse(normalizedCached.value, age);
+      return createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
     }
 
     if (!providerRefreshAllowed) {

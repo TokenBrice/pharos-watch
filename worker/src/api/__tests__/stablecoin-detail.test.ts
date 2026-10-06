@@ -267,6 +267,7 @@ describe("handleStablecoinDetail", () => {
     const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(60);
+    expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 60));
   });
 
   it("returns 502 when upstream fails and no cache exists", async () => {
@@ -324,6 +325,7 @@ describe("handleStablecoinDetail", () => {
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Warning")).toContain("refresh scheduled");
+    expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
     const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(80_000_000);
@@ -353,6 +355,7 @@ describe("handleStablecoinDetail", () => {
 
     const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
+    expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
     await Promise.allSettled(ctx.waitUntilPromises);
   });
 

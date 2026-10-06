@@ -32,6 +32,8 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const DETAIL_SNAPSHOT_OUTPUT_DIR = resolve(REPO_ROOT, "src/generated/stablecoin-detail-snapshots");
 export const DETAIL_SNAPSHOT_TARGET_BYTES = 8 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 6;
+// Match the six-connection budget; bulk bodies finish before fallback reads begin.
+const MAX_PARALLEL_BULK_REQUESTS = 6;
 
 export class DetailSnapshotHttpError extends Error {
   readonly status: number;
@@ -265,8 +267,11 @@ export async function generateSnapshots(
     const bulkApiBase = apiBase === API_ORIGIN
       ? process.env.SITE_API_SHARED_SECRET?.trim() ? SITE_API_ORIGIN : `${PAGES_APP_ORIGIN}${SITE_DATA_PATH_PREFIX}`
       : apiBase;
+    const batches: string[][] = [];
     for (let offset = 0; offset < liveIds.length; offset += DETAIL_SNAPSHOT_INPUT_BATCH_SIZE) {
-      const ids = liveIds.slice(offset, offset + DETAIL_SNAPSHOT_INPUT_BATCH_SIZE);
+      batches.push(liveIds.slice(offset, offset + DETAIL_SNAPSHOT_INPUT_BATCH_SIZE));
+    }
+    const responses = await mapWithConcurrency(batches, MAX_PARALLEL_BULK_REQUESTS, async (ids) => {
       const payload = await fetchDetailSnapshotJson(
         resolveApiPathUrl(bulkApiBase, API_PATHS.stablecoinDetailSnapshotInputs(ids)),
       );
@@ -276,20 +281,21 @@ export async function generateSnapshots(
       if (entries.length !== ids.length || received.size !== ids.length || entries.some((entry) => !requested.has(entry.id))) {
         throw new Error("Bulk detail snapshot response did not account for every requested coin exactly once");
       }
-      const batch = await mapWithConcurrency(entries, MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
-        if (entry.status === "unavailable") {
-          console.warn(`[stablecoin-detail-snapshots] Bulk unavailable for ${entry.id}: ${entry.reason}; fetching per-coin`);
-          return fetchCoin(entry.id);
-        }
-        return {
-          id: entry.id,
-          liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
-          supplyHistory: entry.supplyHistory,
-          updatedAt: entry.updatedAt,
-        };
-      });
-      lanes.push(...batch);
-    }
+      return entries;
+    });
+    // Separate phases keep unavailable-coin fallbacks within the same global cap.
+    lanes.push(...await mapWithConcurrency(responses.flat(), MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
+      if (entry.status === "unavailable") {
+        console.warn(`[stablecoin-detail-snapshots] Bulk unavailable for ${entry.id}: ${entry.reason}; fetching per-coin`);
+        return fetchCoin(entry.id);
+      }
+      return {
+        id: entry.id,
+        liveSummary: normalizeStablecoinLiveSummary(entry.liveSummary),
+        supplyHistory: entry.supplyHistory,
+        updatedAt: entry.updatedAt,
+      };
+    }));
   }
   return buildStablecoinDetailSnapshots({
     generatedAt: options.generatedAt ?? Date.now(),

@@ -136,7 +136,7 @@ Use `package.json` for artifact commands and `scripts/lib/automation-registry.mj
 
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
-`PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin`; `npm run verify:detail-snapshot-sources` proves optional bulk parity before cutover: [procedure and transport](./stablecoin-detail-page.md#build-snapshot-hydration).
+`PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin`; `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk cutover](./stablecoin-detail-page.md#build-snapshot-hydration).
 
 `postbuild` runs `inline-homepage-critical-css.ts` in a Beasties worker pool; `PHAROS_CRITICAL_CSS_WORKERS` overrides concurrency: [Pages release](./deployment-process.md#ci-deploy-sequence).
 

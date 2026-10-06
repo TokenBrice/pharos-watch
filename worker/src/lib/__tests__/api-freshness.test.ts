@@ -32,6 +32,7 @@ describe("public freshness clock skew", () => {
       expect(addFreshnessHeaders({ "Cache-Control": "public, max-age=60" }, updatedAt, 60)).toEqual({
         "Cache-Control": "no-store",
         "X-Data-Age": "0",
+        "X-Data-Updated-At": String(updatedAt),
         Warning: `199 - "Response timestamp is ${API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1}s in the future"`,
       });
     } finally {
@@ -45,7 +46,7 @@ describe("public freshness clock skew", () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     try {
       expect(buildFreshnessMeta(updatedAt, 60)).toMatchObject({ ageSeconds: 0, status: "fresh" });
-      expect(addFreshnessHeaders({}, updatedAt, 60)).toEqual({ "X-Data-Age": "0" });
+      expect(addFreshnessHeaders({}, updatedAt, 60)).toEqual({ "X-Data-Age": "0", "X-Data-Updated-At": String(updatedAt) });
     } finally {
       nowSpy.mockRestore();
     }

@@ -87,7 +87,31 @@ describe("stablecoin detail snapshot generator", () => {
       supplyHistoryById: new Map([["usdt-tether", history!.data]]),
       updatedAtById: new Map([["usdt-tether", { liveSummary: detail!.updatedAt, supplyHistory: history!.updatedAt }]]),
     }).find((candidate) => candidate.stablecoinId === "usdt-tether")!;
-    expect(snapshot.updatedAt).toEqual({ liveSummary: 1_700_000_000_000, supplyHistory: 1_699_996_400_000 });
+    expect(snapshot.updatedAt).toEqual({ liveSummary: 1_700_000_000_000, supplyHistory: 1_699_995_800_000 });
+  });
+
+  it("prefers origin clocks over rewritten Date/ages and preserves body provenance first", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    const headers = { "X-Data-Updated-At": "1700000000.125", Date: new Date(1_800_000_000_000).toUTCString(), Age: "500", "X-Data-Age": "100" };
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json([], { headers }))
+      .mockResolvedValueOnce(Response.json({ price: 1, _meta: { updatedAt: 1_600_000_000 } }, { headers })));
+    expect(await fetchOptionalDetailSnapshotLane(
+      "history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema,
+    )).toEqual({ data: [], updatedAt: 1_700_000_000_125 });
+    expect((await fetchOptionalDetailSnapshotLane(
+      "detail", "https://api.pharos.watch/api/stablecoin/usdt-tether", StablecoinDetailResponseSchema,
+    ))?.updatedAt).toBe(1_600_000_000_000);
+  });
+
+  it.each(["", "invalid", "-1", "Infinity", "1e309", "0x10", ".5", "5.", "1..2", "1 2"])("rejects a malformed present origin clock (%s) without legacy fallback", async (sourceClock) => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json([], { headers: {
+      "X-Data-Updated-At": sourceClock, Date: new Date(1_700_000_000_000).toUTCString(),
+    } })));
+    await expect(fetchOptionalDetailSnapshotLane(
+      "history", "https://api.pharos.watch/api/supply-history", SupplyHistoryResponseSchema,
+    )).rejects.toThrow(/Invalid X-Data-Updated-At/);
   });
 
   it("projects only compact above-fold fields from the full response", () => {
@@ -243,6 +267,8 @@ describe("stablecoin detail snapshot generator", () => {
       [{ Date: "invalid", "X-Data-Age": "10", Age: "20" }, 70_000],
       [{}, 100_000],
       [{ "X-Data-Age": "invalid", Age: "invalid" }, 100_000],
+      [{ Date: new Date(100_000).toUTCString(), "X-Data-Age": "10", Age: "20" }, 70_000],
+      [{ Date: new Date(120_000).toUTCString(), "X-Data-Age": "10", Age: "40" }, 70_000],
       [{ "X-Data-Age": "90", Age: "20" }, 0],
     ];
     for (const [headers, expected] of cases) {
@@ -300,7 +326,7 @@ describe("stablecoin detail snapshot generator", () => {
     expect(snapshots.map((snapshot) => snapshot.stablecoinId)).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
   });
 
-  it("produces identical bytes in bulk mode and fetches only unavailable coins per-coin", async () => {
+  it.each([false, true])("produces identical bulk bytes and falls back only for unavailable coins (originClock=%s)", async (originClock) => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
     vi.stubEnv("PHAROS_DETAIL_SNAPSHOT_SOURCE", "per-coin");
     for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
@@ -310,17 +336,27 @@ describe("stablecoin detail snapshot generator", () => {
       { date: sourceClock, totalCirculatingUSD: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } },
     ] };
     const history = [{ date: sourceClock, circulatingUsd: 100, price: 1 }];
-    const headers = { Date: new Date(sourceClock * 1000).toUTCString() };
+    // Origin provenance also survives the one-second loss in legacy Date/age arithmetic.
+    const headers = new Headers({ Date: new Date((sourceClock + 1200 + Number(originClock)) * 1000).toUTCString(), Age: "1200" });
+    if (originClock) headers.set("X-Data-Updated-At", String(sourceClock));
     const perCoinIds: string[] = [];
     const batches: string[][] = [];
     const unavailableId = "usdt-tether";
+    let pendingBulkBodies = 0;
+    let peakBulkBodies = 0;
+    let completedBatches = 0;
+    const expectedBatches = Math.ceil(TRACKED_STABLECOINS
+      .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen").length / DETAIL_SNAPSHOT_INPUT_BATCH_SIZE);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
       const url = new URL(raw);
       if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
         const ids = url.searchParams.get("ids")!.split(",");
         batches.push(ids);
-        return Response.json({ version: 1, entries: ids.map((id) => {
+        pendingBulkBodies++;
+        peakBulkBodies = Math.max(peakBulkBodies, pendingBulkBodies);
+        expect(pendingBulkBodies).toBeLessThanOrEqual(6);
+        const response = Response.json({ version: 1, entries: ids.map((id) => {
           const sources = { detailCacheUpdatedAt: sourceClock, publicationUpdatedAt: sourceClock, supplySnapshotUpdatedAt: sourceClock, supplySnapshotDate: sourceClock };
           return id === unavailableId
             ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
@@ -328,7 +364,17 @@ describe("stablecoin detail snapshot generator", () => {
               supplyHistory: history, updatedAt: { liveSummary: sourceClock * 1000, supplyHistory: sourceClock * 1000 },
               freshness: { liveSummary: { status: "fresh", maxAgeSec: 300 }, supplyHistory: { status: "fresh", maxAgeSec: 86_400 } }, sources };
         }) });
+        const consumeBody = response.json.bind(response);
+        vi.spyOn(response, "json").mockImplementation(async () => {
+          await Promise.resolve();
+          const body = await consumeBody();
+          pendingBulkBodies--;
+          completedBatches++;
+          return body;
+        });
+        return response;
       }
+      if (batches.length) expect(completedBatches).toBe(expectedBatches);
       const isHistory = url.pathname.endsWith("/supply-history");
       perCoinIds.push(isHistory ? url.searchParams.get("stablecoin")! : url.pathname.split("/").at(-1)!);
       return Response.json(isHistory ? history : detail, { headers });
@@ -340,6 +386,8 @@ describe("stablecoin detail snapshot generator", () => {
     expect(bulk.map((snapshot) => `${JSON.stringify(snapshot)}\n`))
       .toEqual(baseline.map((snapshot) => `${JSON.stringify(snapshot)}\n`));
     expect(perCoinIds).toEqual([unavailableId, unavailableId]);
+    expect(peakBulkBodies).toBe(6);
+    expect(pendingBulkBodies).toBe(0);
     expect(batches.every((ids) => ids.length <= DETAIL_SNAPSHOT_INPUT_BATCH_SIZE)).toBe(true);
     expect(batches.flat()).toEqual(TRACKED_STABLECOINS
       .filter((coin) => coin.status == null || coin.status === "active" || coin.status === "frozen").map((coin) => coin.id));
@@ -354,7 +402,7 @@ describe("stablecoin detail snapshot generator", () => {
     }] }));
     vi.stubGlobal("fetch", fetch);
     await expect(generateSnapshots(false, { source: "bulk" })).rejects.toThrow(/account for every requested coin/);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(6);
   });
 
   it("rejects an unknown source instead of changing the acquisition policy", async () => {

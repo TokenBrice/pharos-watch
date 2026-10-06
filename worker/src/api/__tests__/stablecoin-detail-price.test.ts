@@ -161,6 +161,27 @@ describe("missing detail price enrichment", () => {
     expect(result.headers.get("Cache-Control")).toBe("public, s-maxage=4, max-age=4");
   });
 
+  it.each([30, 90])("preserves the older real detail/publication clock (detail age %s)", async (age) => {
+    const response = makeResponse();
+    response.headers.set("X-Data-Updated-At", String(NOW - age));
+    // A stale transport age must not be used to manufacture an absolute timestamp.
+    response.headers.set("X-Data-Age", "999");
+    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    expect(result.headers.get("X-Data-Updated-At")).toBe(String(NOW - Math.max(age, 60)));
+  });
+
+  it("does not invent an origin clock for a legacy response without one", async () => {
+    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", makeResponse());
+    expect(result.headers.has("X-Data-Updated-At")).toBe(false);
+  });
+
+  it.each(["", ".5", "5.", "1..2", "0x10", "1e3"])("does not repair a malformed origin header (%s)", async (sourceClock) => {
+    const response = makeResponse();
+    response.headers.set("X-Data-Updated-At", sourceClock);
+    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    expect(result.headers.get("X-Data-Updated-At")).toBe(sourceClock);
+  });
+
   it("keeps a stale published quote visible while warning and disabling reuse", async () => {
     const result = await enrichMissingDetailPrice(makeDb({}, NOW - 6000), "usdt-tether", makeResponse());
     expect(await result.json()).toMatchObject({ price: 0.997 });
@@ -224,6 +245,7 @@ describe("detail response paths", () => {
     const payload = await result.json() as { price: number; tokens: unknown[] };
     expect(payload.price).toBe(0.997);
     expect(payload.tokens).toEqual(tokens);
+    if (age !== undefined) expect(result.headers.get("X-Data-Updated-At")).toBe(String(NOW - Math.max(age, 60)));
     if (age === 600) {
       expect(result.headers.get("Cache-Control")).toBe("no-store");
       expect(result.headers.get("X-Data-Age")).toBe("600");
@@ -238,6 +260,7 @@ describe("detail response paths", () => {
     vi.mocked(routeStablecoinDetail).mockImplementation(async (_config, helper) => helper.createFreshResponseFromTokens(tokens));
     const result = await handleStablecoinDetail(makeDb(), "usdt-tether", ctx);
     expect(await result.json()).toMatchObject({ price: 0.997, tokens });
+    expect(result.headers.get("X-Data-Updated-At")).toBe(String(NOW - 60));
     await Promise.all(pending);
     expect(vi.mocked(publishDetailCacheGeneration).mock.calls[0]?.[2]).toBe(JSON.stringify({ tokens }));
   });
