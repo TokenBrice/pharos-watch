@@ -423,11 +423,11 @@
         { "path": "docs/report-cards.md", "anchor": "supply-attribution-and-in-flight-accounting" },
         { "path": "docs/report-cards.md", "anchor": "bridge-in-flight-accounting" },
         { "path": "docs/report-cards.md", "anchor": "scoped-evidence-and-exit-evaluation" },
+        "docs/safety-score-map.md",
+        { "path": "docs/digest-pipeline.md", "anchor": "generation" },
         { "path": "docs/report-cards.md", "anchor": "dependency-coverage" },
         { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
         { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
-        "docs/safety-score-map.md",
-        { "path": "docs/digest-pipeline.md", "anchor": "generation" },
         { "path": "docs/digest-pipeline.md", "anchor": "distribution" }
       ],
       "background": [
