@@ -1,5 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
-import { applyCuratedDetailAddress, normalizeDefiLlamaDetailBody } from "../stablecoin-detail/defillama";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import type * as AbortModule from "../../lib/abort";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../../lib/fetch-retry";
+import { DETAIL_UPSTREAM_TIMEOUT_MS, type DetailResponseHelpers } from "../stablecoin-detail/shared";
+import {
+  applyCuratedDetailAddress,
+  DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES,
+  handleDefiLlamaDetail,
+  normalizeDefiLlamaDetailBody,
+} from "../stablecoin-detail/defillama";
+
+vi.mock("../../lib/abort", async (importOriginal) => ({
+  ...(await importOriginal<typeof AbortModule>()),
+  sleepWithSignal: vi.fn(async () => undefined),
+}));
 
 describe("applyCuratedDetailAddress", () => {
   it("returns already-normalized cached bodies unchanged without parsing", () => {
@@ -314,5 +330,219 @@ describe("normalizeDefiLlamaDetailBody", () => {
 
     expect(normalized.chainBalances).toBeUndefined();
     expect(normalized.price).toBe(1);
+  });
+});
+
+function makeDetailHelpers(): DetailResponseHelpers {
+  return {
+    cached: null,
+    createFreshResponseFromBody: vi.fn((body: string) => new Response(body)),
+    createFreshResponseFromTokens: vi.fn((tokens) => new Response(JSON.stringify({ tokens }))),
+    resolveTokensWithSupplyHistoryFallback: vi.fn(async (tokens) => tokens),
+    staleCacheOrError: vi.fn((status: number, message: string) =>
+      new Response(JSON.stringify({ error: message }), { status })),
+    trySupplyHistoryFallback: vi.fn(async () => null),
+  };
+}
+
+function detailCircuitWrites(db: MockD1Database): Array<Record<string, unknown>> {
+  return db.getHistory()
+    .filter(({ sql, binds }) => sql.includes("INSERT") && binds[0] === `circuit:${CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL}`)
+    .map(({ binds }) => JSON.parse(String(binds[1])) as Record<string, unknown>);
+}
+
+describe("DefiLlama detail bounded materialization", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("consumes a flagship-sized body above the shared default and closes a due half-open probe", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([{
+      match: "cache",
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          state: "open",
+          consecutiveFailures: 5,
+          lastFailureAt: now - 1801,
+          lastSuccessAt: now - 3600,
+          openedAt: now - 1801,
+        }),
+        updated_at: now - 1801,
+      },
+    }]);
+    const body = JSON.stringify({
+      id: "2",
+      price: 1,
+      tokens: [{ date: now, circulating: { peggedUSD: 100 } }],
+      chainBalances: { unusedHistory: "x".repeat(23 * 1024 * 1024) },
+    });
+    expect(new TextEncoder().encode(body).byteLength).toBeGreaterThan(DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
+    expect(DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES).toBe(32 * 1024 * 1024);
+    const fetch = mockFetch([{ match: "https://stablecoins.llama.fi/stablecoin/2", respond: () => new Response(body) }]);
+    const detail = makeDetailHelpers();
+
+    const response = await handleDefiLlamaDetail({
+      db, stablecoinId: "usdc-circle", llamaId: "2", meta: { flags: { pegCurrency: "USD" } },
+    }, detail);
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const normalized = await response.json() as Record<string, unknown>;
+    expect(normalized.chainBalances).toBeUndefined();
+    expect(normalized.tokens).toEqual([{
+      date: now,
+      circulating: { peggedUSD: 100 },
+      totalCirculating: { peggedUSD: 100 },
+      totalCirculatingUSD: { peggedUSD: 100 },
+    }]);
+    expect(detailCircuitWrites(db)).toEqual([
+      expect.objectContaining({ state: "half-open" }),
+      expect.objectContaining({ state: "closed", consecutiveFailures: 0, openedAt: null }),
+    ]);
+  });
+
+  it.each(["declared", "streamed"])("fails closed and cancels %s bodies beyond the detail-specific cap", async (mode) => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    const cancellations = vi.fn();
+    const chunk = new Uint8Array(1024 * 1024);
+    const fetch = mockFetch([{
+      match: "https://stablecoins.llama.fi/stablecoin/1",
+      respond: () => new Response(new ReadableStream<Uint8Array>({
+        pull(controller) { controller.enqueue(chunk); },
+        cancel: cancellations,
+      }, { highWaterMark: 0 }), mode === "declared" ? {
+        headers: { "Content-Length": String(DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES + 1) },
+      } : undefined),
+    }]);
+    const detail = makeDetailHelpers();
+
+    const response = await handleDefiLlamaDetail({
+      db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
+    }, detail);
+
+    expect(response.status).toBe(502);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(cancellations).toHaveBeenCalledTimes(3);
+    expect(detail.createFreshResponseFromBody).not.toHaveBeenCalled();
+    expect(detailCircuitWrites(db)).toEqual([expect.objectContaining({ consecutiveFailures: 1 })]);
+  });
+
+  it("isolates repeated missing-id 404s without hiding the unavailable asset or blocking another coin", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    const fetch = mockFetch([
+      { match: "https://stablecoins.llama.fi/stablecoin/missing", status: 404, body: "Not Found" },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+    ]);
+    for (let index = 0; index < 4; index++) {
+      const response = await handleDefiLlamaDetail({
+        db, stablecoinId: "missing-asset", llamaId: "missing", meta: undefined,
+      }, makeDetailHelpers());
+      expect(response.status).toBe(502);
+    }
+    expect(detailCircuitWrites(db)).toEqual([]);
+    const response = await handleDefiLlamaDetail({
+      db, stablecoinId: "gho-aave", llamaId: "118", meta: undefined,
+    }, makeDetailHelpers());
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(detailCircuitWrites(db)).toEqual([expect.objectContaining({ state: "closed", consecutiveFailures: 0 })]);
+  });
+
+  it("releases materialization after a parse failure and retains provider failure accounting", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    const fetch = mockFetch([
+      { match: "https://stablecoins.llama.fi/stablecoin/1", respond: () => new Response("{") },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+    ], { strictUrl: true });
+    const invalid = await handleDefiLlamaDetail({
+      db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
+    }, makeDetailHelpers());
+    expect(invalid.status).toBe(502);
+    expect(detailCircuitWrites(db)).toEqual([expect.objectContaining({ consecutiveFailures: 1 })]);
+    const recovered = await handleDefiLlamaDetail({
+      db, stablecoinId: "gho-aave", llamaId: "118", meta: undefined,
+    }, makeDetailHelpers());
+    expect(recovered.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const circuitWrites = detailCircuitWrites(db);
+    expect(circuitWrites[circuitWrites.length - 1]).toMatchObject({ state: "closed", consecutiveFailures: 0 });
+  });
+
+  it("serializes different ids until the first body has been consumed and normalized", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    let finishBody!: () => void;
+    const firstBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        finishBody = () => {
+          controller.enqueue(new TextEncoder().encode('{"tokens":[],"price":1}'));
+          controller.close();
+        };
+      },
+    });
+    let firstFetched!: () => void;
+    const firstStarted = new Promise<void>((resolve) => { firstFetched = resolve; });
+    const fetch = mockFetch([
+      {
+        match: "https://stablecoins.llama.fi/stablecoin/1",
+        respond: () => { firstFetched(); return new Response(firstBody); },
+      },
+      { match: "https://stablecoins.llama.fi/stablecoin/2", body: { tokens: [], price: 1 } },
+    ]);
+    const first = handleDefiLlamaDetail({
+      db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
+    }, makeDetailHelpers());
+    await firstStarted;
+    const second = handleDefiLlamaDetail({
+      db, stablecoinId: "usdc-circle", llamaId: "2", meta: undefined,
+    }, makeDetailHelpers());
+    try {
+      await Promise.resolve();
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      finishBody();
+      await Promise.all([first, second]);
+    }
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("expires queued requests without fetching or recording a provider failure and removes the waiter", async () => {
+    vi.useFakeTimers();
+    const db = mockD1([
+      { match: "SELECT", rows: [] },
+      { match: "INSERT", rows: [], delayMs: 2 * DETAIL_UPSTREAM_TIMEOUT_MS },
+    ]);
+    const fetch = mockFetch([
+      { match: "https://stablecoins.llama.fi/stablecoin/1", body: { tokens: [], price: 1 } },
+      { match: "https://stablecoins.llama.fi/stablecoin/118", body: { tokens: [], price: 1 } },
+    ]);
+    const first = handleDefiLlamaDetail({
+      db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined,
+    }, makeDetailHelpers());
+    // The provider body is complete, but the first operation still holds its
+    // allocation while its circuit write awaits D1.
+    await vi.advanceTimersByTimeAsync(0);
+    const detail = makeDetailHelpers();
+    const queued = handleDefiLlamaDetail({
+      db, stablecoinId: "usdc-circle", llamaId: "2", meta: undefined,
+    }, detail);
+    try {
+      await vi.advanceTimersByTimeAsync(DETAIL_UPSTREAM_TIMEOUT_MS);
+      expect((await queued).status).toBe(503);
+      expect(detail.trySupplyHistoryFallback).toHaveBeenCalledWith("defillama-detail-admission-timeout");
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(detailCircuitWrites(db)).toEqual([expect.objectContaining({ state: "closed", consecutiveFailures: 0 })]);
+    } finally {
+      await vi.advanceTimersByTimeAsync(DETAIL_UPSTREAM_TIMEOUT_MS);
+      await first;
+    }
+    const next = handleDefiLlamaDetail({
+      db, stablecoinId: "gho-aave", llamaId: "118", meta: undefined,
+    }, makeDetailHelpers());
+    await vi.advanceTimersByTimeAsync(2 * DETAIL_UPSTREAM_TIMEOUT_MS);
+    expect((await next).status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
