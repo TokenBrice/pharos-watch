@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import { toTokenUnits } from "@shared/lib/math";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import {
@@ -215,7 +215,7 @@ export function adaptYouvesTezosState(state: YouvesTezosState): AdapterResult {
  * publishes when every material collateral has a supported valuation path.
  */
 export async function fetchYouvesTezosReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

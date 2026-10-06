@@ -1,5 +1,5 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData, PAUSED_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
@@ -97,7 +97,7 @@ function readSlice(params: AstherusEarnWrapperParams): ReserveSlice {
  * strategy yield is not yet attributable to the wrapper's redeemable backing.
  */
 export async function fetchAstherusEarnWrapperReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

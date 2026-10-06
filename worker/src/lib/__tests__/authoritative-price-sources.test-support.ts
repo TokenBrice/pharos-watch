@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
+import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 
 export const fetchEvmCallHexAtBlockMock = vi.fn();
 export const fetchEvmRpcBatchMock = vi.fn();
@@ -78,6 +79,17 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
     has: (stablecoinId: string) => stablecoinId !== "usx-dforce",
   },
 }));
+
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
+  // Resolve the hoisted registry mock, not the production projection, inside the factory.
+  const actual = await importOriginal<typeof WorkerRuntimeRegistry>();
+  const registry = await import("@shared/lib/stablecoins/registry");
+  return {
+    ...actual,
+    WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
+    WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
+  };
+});
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmRpcBatch: (...args: unknown[]) => fetchEvmRpcBatchMock(...args),

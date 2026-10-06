@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchTextWithRetry, parseFiniteNumber, requireHtmlInput, requireRecord, slicesFromValues, unverifiedFreshnessMetadata } from "./helpers";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -44,7 +44,7 @@ export function parseMatrixdockStbt(html: string): AdapterResult {
   };
 }
 
-export async function fetchMatrixdockStbtReserves(coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
+export async function fetchMatrixdockStbtReserves(coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "matrixdock-stbt");
   if (coin.id !== "stbt-matrixdock" || input.url !== MATRIXDOCK_STBT_URL) throw new Error("matrixdock-stbt coin or endpoint mismatch");
   return parseMatrixdockStbt(await fetchTextWithRetry(input.url, signal, 10_000, ctx, { maxResponseBytes: 1024 * 1024 }));

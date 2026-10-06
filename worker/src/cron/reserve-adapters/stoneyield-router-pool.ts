@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
@@ -127,7 +127,7 @@ function divergenceWarning(
 }
 
 export async function fetchStoneyieldRouterPoolReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,5 +1,5 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
@@ -968,7 +968,7 @@ export function adaptCrvUsdOnchain(
 }
 
 export async function fetchCrvUsdReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

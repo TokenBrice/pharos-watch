@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { parsePositiveNumber } from "../../lib/number-utils";
@@ -305,7 +305,7 @@ async function fetchSkyLitePsmUsdcCapacity(
 // ---------------------------------------------------------------------------
 
 export async function fetchSkyMakercoreReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

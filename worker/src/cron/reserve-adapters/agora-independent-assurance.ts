@@ -1,5 +1,5 @@
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
@@ -123,7 +123,7 @@ export const AGORA_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
 };
 
 export async function fetchAgoraIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

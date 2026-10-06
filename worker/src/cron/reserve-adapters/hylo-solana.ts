@@ -1,4 +1,4 @@
-import type { StablecoinMeta, ReserveSlice } from "@shared/types/core";
+import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -57,7 +57,7 @@ function balance(accounts: Map<string, SolanaAccount | null>, vault: string, min
   return Number(view(data).getBigUint64(64, true)) / 10 ** mintDecimals(accounts, mint);
 }
 
-export async function fetchHyloSolanaReserves(_coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
+export async function fetchHyloSolanaReserves(_coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext): Promise<AdapterResult> {
   if (config.inputs.primary.kind !== "onchain-solana") throw new Error("hylo-solana requires onchain-solana input");
   const p = parseLiveReserveAdapterParams("hylo-solana", config.params);
   const discovery = await fetchSolanaAccounts([p.registry], signal, ctx);

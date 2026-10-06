@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { makeReservesDb } from "./live-reserves-store.test-support";
-import { resolveReserveResult } from "../live-reserves/store";
+import { resolveReserveResult } from "../live-reserves/store-views";
 import { assessReserveSnapshotFreshness } from "../live-reserves/store-snapshot-state";
 
 const DAY = 86_400;

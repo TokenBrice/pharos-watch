@@ -1,9 +1,8 @@
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { formatIsoDate } from "@shared/lib/format";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, type WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import type { StablecoinMeta } from "@shared/types";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 
@@ -93,7 +92,7 @@ export function buildRedemptionCurrentDepegObservationMap(options: {
 }
 
 function getTrackedSymbol(stablecoinId: string): string {
-  return TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? stablecoinId;
+  return WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? stablecoinId;
 }
 
 function addDependencyWeight(
@@ -107,7 +106,7 @@ function addDependencyWeight(
 }
 
 function resolveOutputDependencyWeights(
-  meta: StablecoinMeta,
+  meta: Pick<WorkerRuntimeStablecoinMeta, "id" | "variantOf" | "pegReferenceId" | "reserves" | "dependencies">,
   config: RedemptionBackstopConfig,
 ): { weights: Map<string, number>; reserveDerived: boolean } {
   const weights = new Map<string, number>();
@@ -256,7 +255,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
     });
   }
 
-  for (const meta of ACTIVE_STABLECOINS) {
+  for (const meta of WORKER_ACTIVE_STABLECOINS) {
     if (result.has(meta.id)) continue;
     const config = getRedemptionBackstopConfig(meta.id);
     if (!config) continue;

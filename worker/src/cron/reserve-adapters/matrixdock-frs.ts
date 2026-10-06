@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC,
@@ -231,7 +231,7 @@ export function adaptMatrixdockFrsState(state: MatrixdockFrsState, params: Matri
 }
 
 export async function fetchMatrixdockFrsReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

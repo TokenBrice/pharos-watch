@@ -1,5 +1,5 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { encodeUint256 } from "../../lib/evm-selectors";
@@ -53,7 +53,7 @@ function readParams(config: LiveReservesConfig): LiquityV1Params {
 }
 
 export async function fetchLiquityV1Reserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

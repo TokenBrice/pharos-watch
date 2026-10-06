@@ -1,5 +1,5 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS,
   parseLiveReserveRedemptionTelemetryNumber,
@@ -320,7 +320,7 @@ function isValidSlice(item: unknown, subjectId: string): item is ReserveSlice {
   if (slice.name.trim().length === 0) return false;
   if (slice.depType != null && !slice.coinId) return false;
   if (slice.coinId === subjectId) return false;
-  if (slice.coinId != null && !TRACKED_META_BY_ID.has(slice.coinId)) return false;
+  if (slice.coinId != null && !WORKER_TRACKED_META_BY_ID.has(slice.coinId)) return false;
   return true;
 }
 
@@ -417,7 +417,7 @@ export function parseReserveCompositionRow(
   }
 
   const fallbackAdapterKey =
-    syncState?.adapterKey ?? TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter ?? row.source;
+    syncState?.adapterKey ?? WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.liveReservesConfig?.adapter ?? row.source;
   const metadata = parseSnapshotMetadata(row.metadata);
   const warnings = parseWarnings(row.warnings ?? null);
   const allowLegacyRecovery = shouldUseLegacySnapshotFallback(syncState, {

@@ -2,7 +2,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { RedemptionRouteStatus } from "@shared/types/redemption";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
@@ -47,7 +47,7 @@ function parseFirstUint256Word(result: string | null): bigint | null {
 }
 
 async function fetchMultiReadCapacity(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   params: EscrowBalanceMultiParams,
   onchain: ReturnType<typeof makeOnchainCallers>,
 ): Promise<{
@@ -162,7 +162,7 @@ function compareEscrowSupply(balanceUsd: number, supplyUsd: number | undefined) 
  * the coin's deployments because the payout state can live elsewhere.
  */
 export async function fetchEscrowBalanceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

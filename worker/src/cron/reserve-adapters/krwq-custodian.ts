@@ -2,7 +2,7 @@ import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ContractDeployment, ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
@@ -158,7 +158,7 @@ function balanceFromMulticallResult(result: EvmMulticall3Result | undefined): bi
 }
 
 async function aggregateKrwqSupply(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<KrwqSupplyAggregate> {
@@ -317,7 +317,7 @@ export function adaptKrwqCustodian(
 }
 
 export async function fetchKrwqCustodianReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -3,7 +3,7 @@ import { logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -59,10 +59,10 @@ export function defineRegistryErc4626NavVault(input: {
   allowFreshNonReplaySafeParent?: boolean;
   allowFreshReplaySafeSingleSourceParent?: boolean;
 }): Erc4626NavVaultConfig {
-  const vaultDeployment = TRACKED_META_BY_ID.get(input.id)?.contracts?.find(
+  const vaultDeployment = WORKER_TRACKED_META_BY_ID.get(input.id)?.contracts?.find(
     (deployment) => deployment.chain === input.chain,
   );
-  const assetDeployment = TRACKED_META_BY_ID.get(input.parentId)?.contracts?.find(
+  const assetDeployment = WORKER_TRACKED_META_BY_ID.get(input.parentId)?.contracts?.find(
     (deployment) => deployment.chain === input.chain,
   );
   if (!vaultDeployment || !assetDeployment || !isFixedDecimalDeployment(vaultDeployment) || !isFixedDecimalDeployment(assetDeployment)) {
@@ -237,7 +237,7 @@ export interface LivePriceDiagnosticTarget {
 }
 
 export function getRegistryLivePriceDiagnosticTarget(stablecoinId: string): LivePriceDiagnosticTarget | null {
-  const deployment = TRACKED_META_BY_ID.get(stablecoinId)?.contracts?.[0];
+  const deployment = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.contracts?.[0];
   if (!deployment) return null;
   return { chain: deployment.chain, target: deployment.address };
 }
@@ -659,8 +659,8 @@ export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
   quoteContract: string;
   quoteDecimals: number;
 } | null {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  const quoteMeta = TRACKED_META_BY_ID.get(USDC_CIRCLE_ID);
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
+  const quoteMeta = WORKER_TRACKED_META_BY_ID.get(USDC_CIRCLE_ID);
   if (!meta || !quoteMeta) return null;
 
   const contract = meta.contracts?.find((entry) => entry.chain === ETHEREUM_CHAIN);

@@ -1,7 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, reserveInfoWarning } from "./helpers";
@@ -160,7 +160,7 @@ function compareCrossCheck(
 }
 
 export async function fetchUsdgoTransparencyReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

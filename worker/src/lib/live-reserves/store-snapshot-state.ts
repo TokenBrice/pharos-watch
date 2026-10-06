@@ -113,7 +113,7 @@ export function assessReserveFetchFreshness(
  */
 export function assessReserveSnapshotFreshness(
   record: Pick<ReserveCompositionRecord, "fetchedAt" | "attemptId" | "metadata">,
-  coin: StablecoinMeta,
+  coin: Pick<StablecoinMeta, "liveReservesConfig">,
   now: number,
   fetchFreshnessSec: number,
 ): ReserveFreshnessView {
@@ -152,7 +152,7 @@ export interface LiveReserveAdmissionResult {
 export function evaluateLiveReserveAdmission(
   record: ReserveCompositionRecord | null,
   syncState: ReserveSyncStateRecord | null,
-  coin: StablecoinMeta | undefined,
+  coin: Pick<StablecoinMeta, "liveReservesConfig"> | undefined,
   now: number,
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,

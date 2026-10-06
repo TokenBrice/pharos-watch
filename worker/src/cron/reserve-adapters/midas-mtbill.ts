@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, verifiedFreshnessMetadata } from "./helpers";
@@ -96,7 +96,7 @@ export function adaptMidasMtbillTransparency(payload: unknown, nowSec: number, m
 }
 
 export async function fetchMidasMtbillReserves(
-  coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
+  coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "midas-mtbill");
   if (coin.id !== "mtbill-midas" || input.url !== MIDAS_MTBILL_TRANSPARENCY_URL) {

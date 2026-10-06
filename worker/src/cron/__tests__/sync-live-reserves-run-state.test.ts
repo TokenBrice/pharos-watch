@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { computeReserveCompositionOverview, resolveReserveResult } from "../../lib/live-reserves/store";
+import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
+import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import {
   recordDeferredTail,

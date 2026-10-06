@@ -3,7 +3,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { hexToBytes, keccak256, recoverAddress } from "viem/utils";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
@@ -205,7 +205,7 @@ export function adaptKerneSignedPor(input: AdaptInput): AdapterResult {
 }
 
 export async function fetchKerneSignedPorReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

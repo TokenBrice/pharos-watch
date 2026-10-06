@@ -1,6 +1,6 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { toTokenUnits } from "@shared/lib/math";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import {
@@ -194,7 +194,7 @@ function protocolCoverage(collateralRaw: bigint, priceRaw: bigint, liabilityRaw:
   return ratio;
 }
 
-function verifyTrackedToken(coin: StablecoinMeta, params: MocV3Params): void {
+function verifyTrackedToken(coin: ReserveAdapterCoin, params: MocV3Params): void {
   const rootstock = coin.contracts?.find((contract) => contract.chain === ROOTSTOCK_CHAIN);
   if (!rootstock
     || rootstock.address.toLowerCase() !== params.canonicalUsdrif.address.toLowerCase()
@@ -311,7 +311,7 @@ function readBucket(
 }
 
 export async function fetchUsdrifRifReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

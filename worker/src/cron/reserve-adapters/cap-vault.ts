@@ -1,7 +1,7 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { formatAddress } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveRedemptionOutputValuation,
   LiveReservesConfig,
@@ -175,7 +175,7 @@ async function resolveSourceBoundOutputPrice(
   now: number,
 ): Promise<CapVaultAssetState> {
   if (asset.coinId !== WTGXX_ASSET_ID) return asset;
-  const navConfig = TRACKED_META_BY_ID.get(WTGXX_ASSET_ID)?.liveReservesConfig;
+  const navConfig = WORKER_TRACKED_META_BY_ID.get(WTGXX_ASSET_ID)?.liveReservesConfig;
   if (navConfig?.adapter !== "chainlink-nav") {
     throw new Error("cap-vault: WTGXX output valuation requires the tracked Chainlink NAV config");
   }
@@ -336,7 +336,7 @@ export function adaptCapVaultState(args: {
 }
 
 export async function fetchCapVaultReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,6 +1,6 @@
 import type { ScheduledCheckpointIdentity } from "../scheduled-recovery-checkpoint";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS, hasWorkerLiveReserves, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveSnapshotProvenance as SharedSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
 import type {
@@ -190,8 +190,8 @@ export const RESERVE_SYNC_STATE_SELECT_COLUMNS = [
   "config_fingerprint",
 ].join(", ");
 
-export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
-  return ACTIVE_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
+export function getConfiguredLiveReserveCoins(): WorkerLiveReserveStablecoinMeta[] {
+  return WORKER_ACTIVE_STABLECOINS.filter(hasWorkerLiveReserves);
 }
 
 const UNALLOWLISTABLE_DEGRADED_WARNING_CODES = new Set([

@@ -1,6 +1,6 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
@@ -66,7 +66,7 @@ export interface CapacityResolverContext {
 export function resolveReserveSyncCapacityConfidence(
   stablecoinId: string,
 ): RedemptionBackstopEntry["capacityConfidence"] {
-  const adapterKey = TRACKED_META_BY_ID.get(stablecoinId)?.liveReservesConfig?.adapter;
+  const adapterKey = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.liveReservesConfig?.adapter;
   if (!adapterKey) return "dynamic";
   const telemetry = getLiveReserveAdapterDefinition(adapterKey)?.redemptionTelemetry.capacity;
   if (telemetry === "direct") return "live-direct";

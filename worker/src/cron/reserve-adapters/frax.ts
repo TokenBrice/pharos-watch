@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -607,7 +607,7 @@ function isFpiCollateralResponse(payload: unknown): payload is FraxFpiCollateral
  * balance-sheet API with independent evidence class (e.g. frxUSD).
  */
 export async function fetchFraxBalanceSheetReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -626,7 +626,7 @@ export async function fetchFraxBalanceSheetReserves(
  * they are excluded from reserve slices and netted against FPI liabilities.
  */
 export async function fetchFraxFpiCollateralReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

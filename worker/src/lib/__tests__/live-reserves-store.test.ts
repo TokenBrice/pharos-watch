@@ -11,8 +11,8 @@ import {
   computeReserveCompositionOverview,
   getMaxSyncAge,
   loadFreshIndependentLiveReserveMap,
-  resolveReserveResult,
 } from "../live-reserves/store";
+import { resolveReserveResult } from "../live-reserves/store-views";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 

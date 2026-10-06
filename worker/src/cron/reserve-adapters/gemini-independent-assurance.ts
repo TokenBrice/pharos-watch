@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getIndependentAssuranceManifest, type IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -112,7 +112,7 @@ const GEMINI_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
 };
 
 export async function fetchGeminiIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

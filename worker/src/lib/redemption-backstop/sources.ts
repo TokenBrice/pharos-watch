@@ -1,5 +1,5 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
 import { resolveCoinContractAddress } from "../../cron/reserve-adapters/evm";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
@@ -171,7 +171,7 @@ export async function buildRedemptionBackstopEntry(
     : options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const meta = usesLidoEarnQueue ? TRACKED_META_BY_ID.get(stablecoinId) : null;
+  const meta = usesLidoEarnQueue ? WORKER_TRACKED_META_BY_ID.get(stablecoinId) : null;
   const contractAddress = meta ? resolveCoinContractAddress(meta, "ethereum") : null;
   if (usesLidoEarnQueue && !contractAddress) {
     throw new Error("earnusd-lido redemption observer missing tracked Ethereum contract");

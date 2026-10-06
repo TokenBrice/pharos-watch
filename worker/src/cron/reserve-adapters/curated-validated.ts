@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   parseLiveReserveAdapterParams,
@@ -14,7 +14,7 @@ import { probeTrackedTokenSupply } from "./helpers";
  * have well-researched curated reserve breakdowns.
  */
 export async function fetchCuratedValidatedReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

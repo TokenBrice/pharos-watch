@@ -1,5 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   DECIMALS_SELECTOR,
@@ -47,7 +47,7 @@ const PYUSDX_SELECTOR = "0xda6b76b8"; // pyusdx()
  * the wrapper's 1:1 PYUSDx backing extends the claim to PYUSD.
  */
 export async function fetchSaturnPyusdxReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

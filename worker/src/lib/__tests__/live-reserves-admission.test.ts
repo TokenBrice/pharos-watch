@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap, loadReserveSnapshotMetadataMap, resolveReserveResult } from "../live-reserves/store";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap, loadReserveSnapshotMetadataMap } from "../live-reserves/store";
+import { resolveReserveResult } from "../live-reserves/store-views";
 import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { makeReservesDb, mockReserveD1, reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
 import { resolveRedemptionCapacity } from "../redemption-backstop/capacity";
@@ -53,14 +55,18 @@ describe("live reserve admission", () => {
 
   it("rejects an explicitly suspended current configuration", async () => {
     const coin = TRACKED_META_BY_ID.get("hbd-hive")!;
+    const runtimeCoin = WORKER_TRACKED_META_BY_ID.get(coin.id)!;
+    const originalRuntimeConfig = runtimeCoin.liveReservesConfig;
     const original = coin.liveReservesConfig!;
     try {
       coin.liveReservesConfig = { ...original, suspended: { reason: "Feed under review", since: "2026-09-09" } };
+      runtimeCoin.liveReservesConfig = coin.liveReservesConfig;
       const db = fixture();
       expect((await resolveReserveResult(db, coin.id, 1_200))?.provenance?.scoringEligible).toBe(false);
       expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has(coin.id)).toBe(false);
     } finally {
       coin.liveReservesConfig = original;
+      runtimeCoin.liveReservesConfig = originalRuntimeConfig;
     }
   });
 
@@ -110,12 +116,18 @@ describe("live reserve admission", () => {
 
   it.each(["usdy-ondo-finance", "usdt-tether"])("never marks suspended or unconfigured %s eligible", async (id) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
+    const runtimeMeta = WORKER_TRACKED_META_BY_ID.get(id)!;
+    const originalRuntimeConfig = runtimeMeta.liveReservesConfig;
     const original = meta.liveReservesConfig;
     try {
-      if (id === "usdt-tether") delete meta.liveReservesConfig;
+      if (id === "usdt-tether") {
+        delete meta.liveReservesConfig;
+        delete runtimeMeta.liveReservesConfig;
+      }
       expect((await resolveReserveResult(fixture(id), id, 1_200))?.provenance?.scoringEligible).toBe(false);
     } finally {
       meta.liveReservesConfig = original;
+      runtimeMeta.liveReservesConfig = originalRuntimeConfig;
     }
   });
 

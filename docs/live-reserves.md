@@ -41,7 +41,9 @@ The Mento adapter preserves native and represented assets as separate keyed rows
 
 Every provenance field below is an evidence claim about the current run, not a feed-family label — rule R6 (ADR-33 in [architecture.md](./architecture.md#architectural-decision-records)), enforced for route attribution by `buildRedemptionSnapshotMetadata` in `worker/src/cron/reserve-adapters/redemption.ts`.
 
-Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/coins/*.json` via `shared/lib/stablecoins/registry.ts` and validated by `shared/lib/stablecoins/schema.ts`).
+Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, authored under `shared/data/stablecoins/coins/*.json` and validated by `shared/lib/stablecoins/schema.ts`). Producer, recovery, adapter lookups, and snapshot-store reads/writes use `shared/lib/stablecoins/worker-runtime-registry.ts`: configured feeds retain lossless `liveReservesConfig`, `flags`, `reserves`, and `reserveReview` inputs, while unconfigured entries keep only bounded classification/structural slices. `ReserveAdapterCoin` in `shared/types/core.ts` defines the adapter's metadata contract.
+
+The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe storage and overview functions. Public `resolveReserveResult` callers import `store-views.ts` directly; only that presentation layer keeps the full registry and curated-reserve fallback templates. This prevents a producer storage import from initializing the full evidence-heavy catalog.
 
 `LiveReservesConfig` fields:
 
@@ -274,7 +276,7 @@ Warnings now carry both a display `severity` and an execution `effect`:
 
 `syncLiveReserves()`:
 
-1. Filters `ACTIVE_STABLECOINS` to the coins that declare `liveReservesConfig`.
+1. Filters `WORKER_ACTIVE_STABLECOINS` to the coins that declare `liveReservesConfig`.
 2. Orders the queue by adapter evidence class (`independent`, then `static-validated`, then `weak-live-probe`) and packs coins sharing a `source-invariant` adapter contiguously, so run-budget truncation defers weak probes before score-grade feeds and shared fetches are reused immediately. The durable scheduler checkpoint stores the one next-item resume pointer; a resumed run processes only that deferred suffix and does not wrap back to the queue head.
 3. Resolves an adapter from `worker/src/cron/reserve-adapters/index.ts`.
 4. Builds a breaker key as `live-reserves:${breakerScope ?? adapter}`.

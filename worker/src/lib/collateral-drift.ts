@@ -1,5 +1,5 @@
 import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves/store";
@@ -18,9 +18,12 @@ export interface CollateralDriftResult {
   fallbackCoins: string[];
 }
 
+type CollateralDriftCoin = Pick<StablecoinMeta, "id" | "liveReservesConfig">
+  & { reserves?: readonly Pick<ReserveSlice, "pct" | "risk">[] };
+
 export function summarizeCollateralDriftFromLiveReserveMap(
   liveReserveMap: ReadonlyMap<string, ReserveSlice[]>,
-  stablecoins: readonly StablecoinMeta[] = ACTIVE_STABLECOINS,
+  stablecoins: readonly CollateralDriftCoin[] = WORKER_ACTIVE_STABLECOINS,
 ): CollateralDriftResult {
   const driftCoins: CollateralDriftEntry[] = [];
   const fallbackCoins: string[] = [];

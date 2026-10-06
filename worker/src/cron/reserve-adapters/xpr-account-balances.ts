@@ -2,7 +2,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { rethrowIfAborted } from "../../lib/abort";
 import {
@@ -242,7 +242,7 @@ function adaptBatch(batch: XprReadBatch, params: XprAccountBalancesParams): Adap
  * unhealthy RPC cannot silently truncate the read.
  */
 export async function fetchXprAccountBalancesReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

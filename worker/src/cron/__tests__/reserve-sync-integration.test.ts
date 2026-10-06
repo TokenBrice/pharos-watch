@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockRegistry } from "../../test-helpers/cron";
+import { mockRegistry, mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockLiveReserveAdapterRegistry, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
 
-vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({
+const testRegistry = vi.hoisted(() => ({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({
   id, name: id, symbol: id, flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
   liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: id === "control" ? "https://example.com/control" : "https://example.com/shared" } } },
 })) }));
 
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry(testRegistry));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry(testRegistry));
+
 import { syncLiveReserves } from "../sync-live-reserves";
-import { resolveReserveResult } from "../../lib/live-reserves/store";
+import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const slices = [{ name: "US Treasuries", pct: 80, risk: "low" as const }, { name: "Cash", pct: 20, risk: "low" as const }];

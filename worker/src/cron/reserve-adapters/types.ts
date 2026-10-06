@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveAdapterDescriptor } from "@shared/types/live-reserve-adapter-declarations";
 import type {
   LiveReserveAdapterKey,
@@ -33,7 +33,7 @@ export interface AdapterResult {
 }
 
 export type AdapterFn = (
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

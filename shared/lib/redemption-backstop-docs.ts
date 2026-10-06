@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "./stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "./stablecoins/worker-runtime-registry";
 import type { RedemptionBackstopEntry, RedemptionDocSource, RedemptionDocsProvenance } from "../types/redemption";
 import type { RedemptionBackstopConfig } from "./redemption-backstops";
 
@@ -36,7 +36,7 @@ export function trackedRedemptionDocSources(
   stablecoinId: string,
   options?: { includeLiveReserveDisplay?: boolean },
 ): RedemptionDocSource[] {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) {
     throw new Error(`Unknown tracked stablecoin id "${stablecoinId}" while building redemption docs`);
   }
@@ -83,7 +83,7 @@ export function resolveRedemptionDocs(
     return buildDocs(config, "config-reviewed", config.docs);
   }
 
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) {
     throw new Error(`Unknown tracked stablecoin id "${stablecoinId}" while resolving redemption docs`);
   }

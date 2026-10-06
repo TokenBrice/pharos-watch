@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CONFIGURED_COINS, type ConfiguredCoin } from "../sync-live-reserves-shared";
 import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 import { syncReserveCoin } from "../sync-live-reserves-core";
-import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
+import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
+import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { buildDocumentedRedemptionTelemetry } from "../reserve-adapters/redemption";
 import {
   mockLiveReserveD1,
@@ -20,18 +21,16 @@ describe("syncLiveReserves", () => {
     fixtures.closeAll();
     vi.restoreAllMocks();
   });
-  type ConfiguredCoin = (typeof ACTIVE_STABLECOINS)[number] & {
-    liveReservesConfig: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>;
-  };
 
   function getIndependentConfiguredCoin(): ConfiguredCoin {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => {
+    const coin = CONFIGURED_COINS.find((candidate) => {
       const config = candidate.liveReservesConfig;
       if (!config) return false;
       return LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter]?.evidenceClass === "independent";
     });
     expect(coin).toBeDefined();
-    return coin as ConfiguredCoin;
+    if (!coin) throw new Error("Missing independent configured live-reserve feed");
+    return coin;
   }
 
   function adapterForCoin(coin: ConfiguredCoin): ReserveAdapterDefinition {
@@ -171,7 +170,6 @@ describe("syncLiveReserves", () => {
       previousLastSuccessAttemptId: `${coin.id}:previous-success`,
     });
 
-    const { resolveReserveResult } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
 
     expect(resolved?.mode).toBe("live");
@@ -197,7 +195,6 @@ describe("syncLiveReserves", () => {
       previousLastSuccessAttemptId: `${coin.id}:previous-success`,
     });
 
-    const { resolveReserveResult } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
 
     expect(resolved?.mode).toBe("live");
@@ -250,7 +247,6 @@ describe("syncLiveReserves", () => {
     });
     expect(result.status).toBe("failed");
 
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
@@ -265,7 +261,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("keeps stale source-age warnings degrading even when the warning code is allowlisted", async () => {
-    const configuredCoin = ACTIVE_STABLECOINS.find((candidate) =>
+    const configuredCoin = CONFIGURED_COINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "mento"
       || candidate.liveReservesConfig?.adapter === "accountable"
     ) as ConfiguredCoin | undefined;
@@ -322,7 +318,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("heals a reachable source's breaker without publishing stale redemption evidence", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "wars-argentine-peso") as ConfiguredCoin;
+    const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "wars-argentine-peso") as ConfiguredCoin;
     const { sqlite, db } = fixtures.open();
     const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope}`;
     const timestamp = Math.floor(Date.now() / 1000) - 100 * 86400;
@@ -355,7 +351,7 @@ describe("syncLiveReserves", () => {
     // `not-applicable`). Reservoir can only ever attest `unverified` freshness,
     // so the allowlist case is exercised on a verified-freshness adapter whose
     // coin allowlists a degraded code.
-    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+    const coin = CONFIGURED_COINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "chainlink-por"
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("partial-supply-read-failure")
     ) as ConfiguredCoin | undefined;
@@ -442,7 +438,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("keeps the sync degraded when an allowlisted warning accompanies an unallowlisted warning", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+    const coin = CONFIGURED_COINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "reservoir"
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
     ) as ConfiguredCoin | undefined;
@@ -497,7 +493,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("fails on a fatal warning even when its code is allowlisted", async () => {
-    const coin = ACTIVE_STABLECOINS.find((candidate) =>
+    const coin = CONFIGURED_COINS.find((candidate) =>
       candidate.liveReservesConfig?.adapter === "reservoir"
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
     ) as ConfiguredCoin | undefined;
@@ -548,7 +544,6 @@ describe("syncLiveReserves", () => {
       failureCategory: "network",
     });
     const db = dbWithPreviousLiveReserveRows(rows);
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
@@ -660,7 +655,6 @@ describe("syncLiveReserves", () => {
     expect(result.status).toBe("skipped");
     expect(runAdapter).not.toHaveBeenCalled();
 
-    const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const resolved = await resolveReserveResult(db, coin.id, now);
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now);
 
@@ -722,7 +716,6 @@ describe("syncLiveReserves", () => {
           lastSuccessAttemptId: previousLastSuccessAttemptId,
         },
       });
-      const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
       return {
         result,
         lastSuccessAt,

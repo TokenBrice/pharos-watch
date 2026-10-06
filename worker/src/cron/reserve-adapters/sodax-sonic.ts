@@ -1,7 +1,7 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { keccak256, toFunctionSelector } from "viem/utils";
 import { encodeAddress } from "../../lib/evm-selectors";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -111,7 +111,7 @@ async function fetchFixedConstantLegPrices(
   const lookups: Array<{ key: string; chain: string; address: string }> = [];
   for (const { reserve } of reserves) {
     const coinId = IDENTITIES[reserve]?.coinId;
-    const geckoId = coinId ? TRACKED_META_BY_ID.get(coinId)?.geckoId : undefined;
+    const geckoId = coinId ? WORKER_TRACKED_META_BY_ID.get(coinId)?.geckoId : undefined;
     if (!geckoId) continue;
     lookups.push({ key: reserve, chain: "coingecko", address: geckoId });
   }
@@ -120,7 +120,7 @@ async function fetchFixedConstantLegPrices(
 }
 
 export async function fetchSodaxSonicReserves(
-  coin: StablecoinMeta, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
+  coin: ReserveAdapterCoin, config: LiveReservesConfig, signal: AbortSignal, ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, KEY);
   if (input.chain !== "sonic") throw new Error(`${KEY}: only Sonic is supported`);

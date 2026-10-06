@@ -1,7 +1,6 @@
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
 import {
   getConfiguredLiveReserveCoins,
@@ -95,7 +94,7 @@ function* iterateReserveSnapshots(
 }
 
 function countCoinsByStatus(
-  configuredCoins: readonly StablecoinMeta[],
+  configuredCoins: readonly WorkerLiveReserveStablecoinMeta[],
   syncById: Map<string, ReserveSyncStateRecord>,
   compositionById: Map<string, ReserveCompositionRow>,
   now: number,
@@ -405,7 +404,7 @@ export async function loadReserveSnapshotMetadataMap(
   const records = new Map<string, ReserveSnapshotMetadataRecord>();
   for (const { stablecoinId, syncState, record } of iterateReserveSnapshots(stablecoinIds, syncById, compositionById)) {
     if (!record) continue;
-    const admission = evaluateLiveReserveAdmission(record, syncState, TRACKED_META_BY_ID.get(stablecoinId), now);
+    const admission = evaluateLiveReserveAdmission(record, syncState, WORKER_TRACKED_META_BY_ID.get(stablecoinId), now);
     if (admission.reasons.includes("config-mismatch")) continue;
     records.set(stablecoinId, buildReserveSnapshotMetadataRecord(stablecoinId, record, syncState, admission));
   }

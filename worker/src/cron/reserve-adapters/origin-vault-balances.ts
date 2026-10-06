@@ -3,7 +3,7 @@ import { ReserveBoundedFactSchema, OriginCollateralLiquidityObservationSchema } 
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { fetchJsonWithRetry } from "./request";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -49,7 +49,7 @@ function readParams(config: LiveReservesConfig): OriginVaultBalancesParams {
 }
 
 export async function fetchOriginVaultBalancesReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

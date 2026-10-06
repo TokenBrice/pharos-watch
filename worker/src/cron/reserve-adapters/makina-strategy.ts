@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -235,7 +235,7 @@ export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
 }
 
 async function fetchMakinaRedemptionState(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   params: MakinaStrategyParams,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -879,7 +879,7 @@ export function adaptMakinaStrategyReserves(
 }
 
 export async function fetchMakinaStrategyReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

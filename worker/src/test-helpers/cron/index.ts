@@ -7,7 +7,7 @@
  * shared mocking surface. See the per-file headers for usage patterns.
  */
 
-export { mockRegistry } from "./mock-registry";
+export { mockRegistry, mockWorkerRuntimeRegistry } from "./mock-registry";
 
 export { mockDbCache } from "./mock-db-cache";
 

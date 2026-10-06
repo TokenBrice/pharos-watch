@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
@@ -94,7 +94,7 @@ const ANCHORAGE_ASSURANCE_PROFILES: Record<"USAT" | "USDPT", IndependentAssuranc
 };
 
 export async function fetchAnchorageIndependentAssuranceReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

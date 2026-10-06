@@ -4,7 +4,7 @@ import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type {
   RedemptionCapacityConfidence,
   RedemptionHolderEligibility,
@@ -466,7 +466,7 @@ export function readRedemptionBackstopLiveMetadata(
   const redemptionTelemetry = parsedRedemptionTelemetry.fields;
   const redemptionTelemetryMalformed = parsedRedemptionTelemetry.malformed;
   const updatedAt = snapshotMetadata?.fetchedAt ?? null;
-  const trackedMeta = TRACKED_META_BY_ID.get(stablecoinId);
+  const trackedMeta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   const adapterKey = trackedMeta?.liveReservesConfig?.adapter ?? null;
   const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
   const isFresh = updatedAt != null && now - updatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
@@ -509,7 +509,7 @@ export function readRedemptionBackstopLiveMetadata(
   const outputValuationUnknownAsset =
     parsedOutputValuation.success &&
     parsedOutputValuation.data.basketWeights.some(
-      (weight) => !TRACKED_META_BY_ID.has(weight.assetId) && !configuredOutputKeys.has(weight.assetId),
+      (weight) => !WORKER_TRACKED_META_BY_ID.has(weight.assetId) && !configuredOutputKeys.has(weight.assetId),
     );
   const outputValuationFuture =
     parsedOutputValuation.success &&

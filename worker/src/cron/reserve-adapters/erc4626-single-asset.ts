@@ -1,11 +1,11 @@
 import { toFunctionSelector } from "viem/utils";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   DECIMALS_SELECTOR,
   PAUSED_SELECTOR,
@@ -86,7 +86,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
 }
 
 export async function fetchErc4626SingleAssetReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   _ctx?: AdapterContext,
@@ -319,7 +319,7 @@ export async function fetchErc4626SingleAssetReserves(
         pause: pauseProbe,
       });
       const underlyingPeg = (sliceConfig.coinId
-        ? TRACKED_META_BY_ID.get(sliceConfig.coinId)?.flags.pegCurrency
+        ? WORKER_TRACKED_META_BY_ID.get(sliceConfig.coinId)?.flags.pegCurrency
         : undefined) ?? coin.flags.pegCurrency;
       if (redemptionCapacity && underlyingPeg !== "USD") {
         redemptionCapacity = null;

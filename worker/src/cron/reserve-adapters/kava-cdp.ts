@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   buildUnknownExposureWarning,
@@ -362,7 +362,7 @@ function parsePayload<T>(schema: z.ZodType<T>, payload: unknown, label: string):
 }
 
 export async function fetchKavaCdpReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -261,7 +261,7 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
 }
 
 export async function fetchAvantReservesApiReserves(
-  _coin: StablecoinMeta,
+  _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

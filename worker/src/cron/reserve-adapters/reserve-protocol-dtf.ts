@@ -1,6 +1,6 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveRedemptionOutputValuation,
   LiveReserveRedemptionTelemetry,
@@ -254,7 +254,7 @@ async function buildRedemptionOutputValuation(args: {
 }
 
 export async function fetchReserveProtocolDtfReserves(
-  coin: StablecoinMeta,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
