@@ -346,6 +346,7 @@ describe("representative --file routing", () => {
   it.each([
     "scripts/maintenance/run-focused-checks.ts",
     "scripts/maintenance/build-annotation-candidates.ts",
+    "scripts/maintenance/compare-detail-snapshot-sources.ts",
     "scripts/__tests__/pharos-change-contract.test.ts",
   ])("keeps ordinary script reads bounded for %s", (file) => {
     const contract = route(file);
@@ -356,6 +357,23 @@ describe("representative --file routing", () => {
       "docs/process/agent-start-here.md",
     ]);
     expect(contract.scopedContext).toContain("scripts/AGENTS.md");
+  });
+
+  it("routes bulk detail transport and its shared contracts through the existing owners", () => {
+    const worker = route("worker/src/api/stablecoin-detail/snapshot-inputs.ts");
+    expect(worker.mappings.map((mapping) => mapping.id)).toContain("worker-api-auth");
+    expect(docKeys(worker)).toContain("docs/api-reference.md#public-endpoints");
+    for (const file of [
+      "shared/lib/stablecoin-live-summary.ts",
+      "shared/lib/detail-snapshot-inputs.ts",
+      "shared/types/stablecoin-live-summary.ts",
+      "shared/types/detail-snapshot-inputs.ts",
+    ]) {
+      const contract = route(file);
+      expect(contract.mappings.map((mapping) => mapping.id)).toContain("shared-runtime");
+      expect(contract.deploy.workerImpact).toBe(true);
+      expect(contract.deploy.pagesImpact).toBe(true);
+    }
   });
 
   it.each([

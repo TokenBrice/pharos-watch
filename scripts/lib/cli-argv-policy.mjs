@@ -32,6 +32,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/build-cemetery-logo-atlas.ts"),
     strict("scripts/maintenance/build-daily-social.ts"),
     strict("scripts/maintenance/build-og-cemetery.ts"),
+    strict("scripts/maintenance/compare-detail-snapshot-sources.ts"),
     strict("scripts/maintenance/diff-safety-score-v9-movers.ts"),
     strict("scripts/maintenance/dwellir-rpc.mjs"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),

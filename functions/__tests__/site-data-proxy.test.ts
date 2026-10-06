@@ -137,6 +137,19 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ publicationStatus: "held" });
   });
 
+  it("allows bounded bulk snapshot inputs, preserves query and unavailable entries, and never caches them", async () => {
+    const body = { version: 1, entries: [{ id: "usdt-tether", status: "unavailable", reason: "detail-cache-missing" }] };
+    siteApi.json("/api/stablecoin-detail-snapshot-inputs?ids=usdt-tether%2Cusdc-circle", body, 200, { "Cache-Control": "no-store" });
+    const response = await onRequest(siteDataContext(new Request(
+      "https://pharos.watch/_site-data/stablecoin-detail-snapshot-inputs?ids=usdt-tether%2Cusdc-circle",
+      { headers: { Origin: "https://pharos.watch" } },
+    )));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual(body);
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("rejects requests without Origin or Referer", async () => {
     const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins")));
 

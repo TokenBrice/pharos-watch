@@ -198,7 +198,7 @@ export async function evaluateAccessGate(
     return gateResult("public-api", notFoundResponse());
   }
 
-  if (isTelegramAdoptionPath(url)) {
+  if (isTelegramAdoptionPath(url) || getPublicApiAccess(url.pathname) === "site-only") {
     return gateResult("public-api", notFoundResponse());
   }
 

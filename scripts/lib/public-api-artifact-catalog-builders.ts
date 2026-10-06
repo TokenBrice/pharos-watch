@@ -65,8 +65,9 @@ export function definePublicArtifact<const T extends PublicArtifactInput<Endpoin
   artifact: T,
 ): DefinedPublicArtifact<T> {
   const definition = getEndpointDefinitionByKey(artifact.key);
-  if (!definition || definition.adminRequired || definition.methods.length !== 1 || definition.methods[0] !== "GET") {
-    throw new Error(`Public artifact endpoint "${artifact.key}" must use a non-admin GET definition`);
+  if (!definition || definition.adminRequired || definition.publicApiAccess === "site-only" ||
+      definition.methods.length !== 1 || definition.methods[0] !== "GET") {
+    throw new Error(`Public artifact endpoint "${artifact.key}" must use an integration-facing non-admin GET definition`);
   }
   const intentionallyGeneric = OPENAPI_JSON_VALUE_ENDPOINT_KEYS.has(artifact.key);
   if ((artifact.responseSchema === undefined) !== intentionallyGeneric) {

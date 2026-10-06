@@ -2,7 +2,7 @@ import { API_PATHS } from "./paths";
 
 export type EndpointMethod = "GET" | "HEAD" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
-export type EndpointPublicApiAccess = "protected" | "exempt";
+export type EndpointPublicApiAccess = "protected" | "exempt" | "site-only";
 export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
   | "apiKeyHashPepper"
@@ -349,6 +349,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
+  }),
+  publicGet({
+    key: "stablecoin-detail-snapshot-inputs",
+    path: "/api/stablecoin-detail-snapshot-inputs",
+    cacheBypass: true,
+    publicApiAccess: "site-only",
   }),
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.

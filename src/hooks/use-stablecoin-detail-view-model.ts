@@ -25,8 +25,8 @@ import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-co
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
-  type StablecoinLiveSummary,
 } from "@/lib/api-query-descriptors";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { StablecoinData } from "@shared/types";
 

@@ -20,6 +20,8 @@ export function buildQueryPath(path: string, params?: Record<string, QueryParamV
 export const API_PATHS = {
   stablecoins: () => "/api/stablecoins",
   stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
+  stablecoinDetailSnapshotInputs: (ids: readonly string[]) =>
+    buildQueryPath("/api/stablecoin-detail-snapshot-inputs", { ids: ids.join(",") }),
   stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
   stablecoinReserves: (stablecoinId: string) => `/api/stablecoin-reserves/${encodeURIComponent(stablecoinId)}`,
   stablecoinCharts: () => "/api/stablecoin-charts",

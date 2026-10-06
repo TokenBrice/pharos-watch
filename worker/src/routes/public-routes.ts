@@ -8,6 +8,7 @@ import {
 
 export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("stablecoins", () => import("../api/cache-handlers").then(({ handleStablecoins }) => handleStablecoins)),
+  defineLazyDbUrlRoute("stablecoin-detail-snapshot-inputs", () => import("../api/stablecoin-detail/snapshot-inputs").then(({ handleDetailSnapshotInputs }) => handleDetailSnapshotInputs)),
   defineLazyDbRoute("stablecoin-charts", () => import("../api/cache-handlers").then(({ handleStablecoinCharts }) => handleStablecoinCharts)),
   defineLazyDbUrlRoute("blacklist", () => import("../api/blacklist").then(({ handleBlacklist }) => handleBlacklist)),
   defineLazyDbRoute("blacklist-summary", () => import("../lib/blacklist-summary-service").then(({ handleBlacklistSummary }) => handleBlacklistSummary)),

@@ -12,7 +12,7 @@ import {
 } from "../lib/public-api-artifact-catalog";
 
 const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS.filter(
-  (endpoint) => !endpoint.adminRequired && endpoint.methods.includes("GET") && endpoint.publicApiAccess !== "exempt",
+  (endpoint) => !endpoint.adminRequired && endpoint.methods.includes("GET") && endpoint.publicApiAccess === "protected",
 )
   .map((endpoint) => endpoint.key)
   .sort();
@@ -22,6 +22,7 @@ const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/donor-key-claims",
   "/api/feedback",
   "/api/api-keys",
+  "/api/stablecoin-detail-snapshot-inputs",
 ];
 
 function isPostmanRequestConfig(

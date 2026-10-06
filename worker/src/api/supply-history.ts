@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
+import { getCompletedSupplySnapshot, type CompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
 interface SupplyHistoryRow {
@@ -12,11 +12,14 @@ interface SupplyHistoryRow {
 
 export const handleSupplyHistory = async (
   db: D1Database,
-  url: URL
+  url: URL,
+  completedSnapshot?: CompletedSupplySnapshot | null,
 ): Promise<Response> => {
   let completedSnapshotPromise: ReturnType<typeof getCompletedSupplySnapshot> | null = null;
   const loadCompletedSnapshot = () => {
-    completedSnapshotPromise ??= getCompletedSupplySnapshot(db);
+    completedSnapshotPromise ??= completedSnapshot === undefined
+      ? getCompletedSupplySnapshot(db)
+      : Promise.resolve(completedSnapshot);
     return completedSnapshotPromise;
   };
 

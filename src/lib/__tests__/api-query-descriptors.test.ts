@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FRONTEND_API_QUERY_DESCRIPTORS, projectStablecoinLiveSummary, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
+import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
+import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {

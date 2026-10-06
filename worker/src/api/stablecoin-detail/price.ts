@@ -3,7 +3,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { admitSupplyBuckets } from "@shared/lib/supply";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
 /** Enrich the response only; historical detail cache generations stay provider-owned. */
@@ -11,6 +11,7 @@ export async function enrichMissingDetailPrice(
   db: D1Database,
   stablecoinId: string,
   response: Response,
+  publication?: StablecoinsCacheLoadResult,
 ): Promise<Response> {
   if (!response.ok) return response;
 
@@ -40,7 +41,7 @@ export async function enrichMissingDetailPrice(
 
     // Read the publication, not price_cache: a last-good replay could resurrect
     // a quote that the current pricing pipeline deliberately withheld.
-    const canonical = await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
+    const canonical = publication ?? await loadStablecoinsCache(db, { mode: "strict", contract: "published" });
     if (canonical.kind !== "ok") return response;
     const now = Math.floor(Date.now() / 1000);
     const cacheAge = now - canonical.updatedAt;

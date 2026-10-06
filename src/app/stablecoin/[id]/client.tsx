@@ -25,7 +25,7 @@ import {
   seedStablecoinDetailQueryCache,
   type StablecoinDetailSnapshot,
 } from "@/lib/api";
-import type { StablecoinLiveSummary } from "@/lib/api-query-descriptors";
+import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { DetailContent } from "./detail-content";
 
 function DetailLoadingShell({
