@@ -415,9 +415,10 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(model!.tokens[0]!.referencePriceUsd).toBeCloseTo(75.86 * 0.9999, 6);
   });
 
-  it("produces a schema-valid model whose capacity curve stays score-eligible", () => {
+  it("produces a schema-valid model with positive diagnostic capacity and no score eligibility", () => {
     const shaped = modelFor(raydiumPool());
     expect(shaped).not.toBeNull();
+    expect(DexAmmExecutionModelSchema.safeParse(shaped!.ammExecutionModel).success).toBe(true);
     const metrics = new Map();
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", shaped!);
     const retained = metrics.get("usdc-circle")!.topPools[0]!;
@@ -430,10 +431,14 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(p4.observations).toHaveLength(1);
     expect(p4.observations[0]).toMatchObject({
       evidenceKind: "reserve-based-amm-simulation",
-      scoreEligible: true,
+      scoreEligible: false,
+      confidence: "low",
       output: { kind: "collateral" },
     });
     expect(p4.observations[0]!.executableUsd).toBeGreaterThan(0);
+    expect(p4.observations[0]!.capacityCurve!.length).toBeGreaterThan(0);
+    expect(p4.coverage.scoreEligibleObservationCount).toBe(0);
+    expect(p4.coverage.scoreEligiblePoolCount).toBe(0);
   });
 
   it("still gates when the pool price is missing or the counter identity is broken", () => {
