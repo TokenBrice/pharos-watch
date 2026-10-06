@@ -140,15 +140,14 @@ function isRecent(timestampSec: number | null, nowSec: number, windowSec: number
   return timestampSec != null && timestampSec >= nowSec - windowSec;
 }
 
-function isRuntimeBreaching(stats: JobDurationStats, nowSec: number): boolean {
-  const hasRecentCapHits =
-    stats.recentCapHits >= DURATION_ALERT_CAP_HITS &&
-    isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
-  const hasRecentBudgetTruncations =
-    stats.recentBudgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS &&
-    isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
-  const hasAverageTrend = stats.runs >= MIN_RUNS_FOR_TREND && stats.avgRatio >= DURATION_ALERT_AVG_RATIO;
-  return hasAverageTrend || hasRecentCapHits || hasRecentBudgetTruncations;
+function runtimeFiredRuleIds(stats: JobDurationStats, nowSec: number): string[] {
+  return [
+    ...(stats.runs >= MIN_RUNS_FOR_TREND && stats.avgRatio >= DURATION_ALERT_AVG_RATIO ? ["duration-average"] : []),
+    ...(stats.recentCapHits >= DURATION_ALERT_CAP_HITS
+      && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC) ? ["duration-cap-hits"] : []),
+    ...(stats.recentBudgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
+      && isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC) ? ["duration-budget-truncations"] : []),
+  ];
 }
 
 function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats, nowSec: number): boolean {
@@ -453,14 +452,16 @@ export async function runCronDurationWatchdog(
     };
   });
 
-  const runtimeBreaching = stats.filter((entry) => isRuntimeBreaching(entry, nowSec));
+  const runtimeBreaching = stats.filter((entry) => runtimeFiredRuleIds(entry, nowSec).length > 0);
   const slotAbandonmentBreaching = slotStats.filter((entry) => isSlotAbandonmentBreaching(entry, nowSec));
   const durationDiagnostics = await loadDurationDiagnostics(db, runtimeBreaching, sinceSec, signal);
 
   if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
     return {
+      status: "ok",
       itemCount: stats.length + slotStats.length,
       metadata: JSON.stringify({
+        firedRuleIds: [],
         stats,
         slotStats,
         slotAbandonmentRecentWindowSec: SLOT_ABANDONMENT_RECENT_WINDOW_SEC,
@@ -474,9 +475,14 @@ export async function runCronDurationWatchdog(
   }
 
   return {
-    status: "degraded",
+    status: "ok",
     itemCount: stats.length + slotStats.length,
     metadata: JSON.stringify({
+      quality: { reason: "cron-duration-findings" },
+      firedRuleIds: [...new Set([
+        ...runtimeBreaching.flatMap((entry) => runtimeFiredRuleIds(entry, nowSec)),
+        ...(slotAbandonmentBreaching.length > 0 ? ["slot-abandonment"] : []),
+      ])],
       stats,
       durationDiagnostics,
       slotStats,

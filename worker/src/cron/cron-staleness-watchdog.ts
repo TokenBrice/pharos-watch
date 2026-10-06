@@ -388,7 +388,7 @@ async function alertOnFreshnessTransitions(params: {
   nowSec: number;
   operatorTelegramCreds: TelegramCreds | null;
   signal?: AbortSignal;
-}): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean }> {
+}): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean; deliveryFailed?: boolean }> {
   const [stateCache, alertCache] = await Promise.all([
     getCache(params.db, WATCHDOG_STATE_KEY, params.signal),
     getCache(params.db, WATCHDOG_ALERT_KEY, params.signal),
@@ -427,7 +427,7 @@ async function alertOnFreshnessTransitions(params: {
     params.signal,
   );
   if (!delivery.ok) {
-    return { stale, recovered, sent: false, cooldown: false };
+    return { stale, recovered, sent: false, cooldown: false, deliveryFailed: true };
   }
   await setCache(params.db, WATCHDOG_STATE_KEY, JSON.stringify(next), params.signal);
   await setCache(params.db, WATCHDOG_ALERT_KEY, String(params.nowSec), params.signal);
@@ -477,13 +477,22 @@ export async function runCronStalenessWatchdog(
     operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
   });
+  const qualityReasons = [
+    ...(stale.length > 0 ? ["producer-output-stale"] : []),
+    ...(detailWriteFailures.length > 0 ? ["detail-cache-write-failed"] : []),
+  ];
 
   return {
-    status: stale.length > 0 || detailWriteFailures.length > 0 ? "degraded" : "ok",
+    status: status.failures.length > 0 || alertTransitions.deliveryFailed ? "degraded" : "ok",
     itemCount: stale.length + detailWriteFailures.length,
     metadata: JSON.stringify({
-      reason: stale.length > 0 ? "producer-output-stale"
-        : detailWriteFailures.length > 0 ? "detail-cache-write-failed" : "producer-output-current",
+      ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
+        : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+      ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
+      firedRuleIds: [
+        ...(stale.length > 0 ? ["producer-stale"] : []),
+        ...(detailWriteFailures.length > 0 ? ["detail-write-failure"] : []),
+      ],
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,
       detailWriteFailures,

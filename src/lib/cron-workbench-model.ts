@@ -1,4 +1,5 @@
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type {
   BudgetOnlySurfaceStatus,
   CronRun,
@@ -51,6 +52,7 @@ export interface CronWorkbenchRow {
   runningState: Exclude<CronRunningFilter, "all">;
   rawStatus: CronRunStatus | null;
   statusLabel: string;
+  qualityReasons: string[];
   registryIndex: number;
   sourceIndex: number;
 }
@@ -241,6 +243,14 @@ function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome
   return latestRequiredRun.status;
 }
 
+function getWorkbenchQualityReasons(cron: CronStatus, nowSeconds?: number): string[] {
+  const run = cron.lastRun?.status === "skipped_neutral"
+    ? cron.recentRuns.find((candidate) => candidate.status !== "skipped_neutral")
+    : cron.lastRun;
+  if (!run || (nowSeconds != null && nowSeconds - run.startedAt > cron.expectedIntervalSec * 2)) return [];
+  return getCronQualityReasons(run.metadata);
+}
+
 function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {
   if (!normalizedSearch) return true;
   const artifactText = (row.cron.staleArtifacts ?? [])
@@ -258,6 +268,7 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
     row.rawStatus,
     row.statusLabel,
     row.impactClass,
+    ...row.qualityReasons,
     artifactText,
   ]
     .filter((value): value is string => typeof value === "string")
@@ -269,7 +280,7 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
 function matchesFilters(row: CronWorkbenchRow, filters: CronWorkbenchFilters): boolean {
   if (!matchesSearch(row, normalizeSearch(filters.search))) return false;
   if (filters.state === "attention") {
-    if (!isAttentionState(row.state) && !(row.state === "skipped" && !row.cron.healthy)) return false;
+    if (!isAttentionState(row.state) && row.qualityReasons.length === 0 && !(row.state === "skipped" && !row.cron.healthy)) return false;
   } else if (filters.state !== "all" && row.state !== filters.state) {
     return false;
   }
@@ -361,6 +372,7 @@ export function formatCronRunStatus(
   if (notStartedReason === "upstream-failure") return "Not started: prerequisite failed";
   if (notStartedReason === "upstream-blocked") return "Not started: prerequisite blocked";
   if (isCronRunPlatformAbandoned({ metadata })) return "Abandoned";
+  if (status === "ok" && getCronQualityReasons(metadata).length > 0) return "Succeeded with findings";
   if (status === "skipped_neutral") {
     const reason = readMetadataString(metadata, "reason");
     if (reason && NEUTRAL_SKIP_REASON_LABELS[reason]) return NEUTRAL_SKIP_REASON_LABELS[reason];
@@ -467,6 +479,7 @@ export function buildCronWorkbenchModel(
       const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;
+      const qualityReasons = getWorkbenchQualityReasons(cron, nowSeconds);
       const row: CronWorkbenchRow = {
         key: `${group.key}:${job}`,
         job,
@@ -485,7 +498,10 @@ export function buildCronWorkbenchModel(
             ? "Failed (latest required run)"
             : inheritedRequiredOutcome === "degraded"
               ? "Completed with warnings (latest required run)"
-              : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
+              : qualityReasons.length > 0 && (rawStatus === "ok" || rawStatus === "skipped_neutral")
+                ? "Succeeded with findings"
+                : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
+        qualityReasons,
         registryIndex: getRegistryIndex(job),
         sourceIndex,
       };

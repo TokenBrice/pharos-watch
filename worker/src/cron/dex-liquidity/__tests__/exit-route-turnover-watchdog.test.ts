@@ -145,7 +145,7 @@ describe("DEX exit-route turnover watchdog", () => {
       previousSnapshot([{ stablecoinId: "coin-a", routes: coinRoutes }]),
     ));
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       changedCoinCount: 0,
       alertingCoinCount: 0,
@@ -172,7 +172,7 @@ describe("DEX exit-route turnover watchdog", () => {
     ));
 
     const metadata = JSON.parse(String(result.metadata));
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(metadata.highestObservedTurnover).toBe(0.4);
     expect(metadata.changedCoinCount).toBe(1);
     expect(metadata.evidenceKindChangedRouteCount).toBe(1);
@@ -191,7 +191,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const metadata = JSON.parse(String(result.metadata));
     const write = JSON.parse(lastSnapshotWrite(db) ?? "{}");
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(metadata.baselineCreated).toBe(false);
     expect(metadata.comparedCoinCount).toBe(1);
     expect(metadata.alertingCoinCount).toBe(0);
@@ -223,7 +223,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const metadata = JSON.parse(String(result.metadata));
     const write = JSON.parse(lastSnapshotWrite(db) ?? "{}");
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(metadata.turnoverAlertThreshold).toBe(DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD);
     expect(metadata.alertingCoinCount).toBe(1);
     expect(metadata.candidateCoinCount).toBe(0);
@@ -252,7 +252,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const metadata = JSON.parse(String(result.metadata));
     const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(metadata).toMatchObject({
       baselineCreated: true,
       previousGenerationId: null,
@@ -274,7 +274,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const blipMetadata = JSON.parse(String(blip.metadata));
 
     // The blip generation is visible in diagnostics but only opens a candidate.
-    expect(blip.status).toBeUndefined();
+    expect(blip.status).toBe("ok");
     expect(blipMetadata).toMatchObject({
       changedCoinCount: 1,
       highestObservedTurnover: 1,
@@ -291,7 +291,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const recoveryMetadata = JSON.parse(String(recovery.metadata));
     const recoveryWrite = JSON.parse(lastSnapshotWrite(recoveryDb) ?? "{}");
 
-    expect(recovery.status).toBeUndefined();
+    expect(recovery.status).toBe("ok");
     expect(recoveryMetadata).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -308,7 +308,7 @@ describe("DEX exit-route turnover watchdog", () => {
       CURRENT_GENERATION,
     );
     const first = await runDexExitRouteTurnoverWatchdog(firstDb);
-    expect(first.status).toBeUndefined();
+    expect(first.status).toBe("ok");
     expect(JSON.parse(String(first.metadata))).toMatchObject({ candidateCoinCount: 1 });
 
     const secondDb = watchdogDb(
@@ -318,7 +318,7 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const second = await runDexExitRouteTurnoverWatchdog(secondDb);
     const secondMetadata = JSON.parse(String(second.metadata));
-    expect(second.status).toBe("degraded");
+    expect(second.status).toBe("ok");
     expect(secondMetadata.worstOffenders[0]).toMatchObject({
       stablecoinId: "coin-a",
       previousRouteCount: 4,
@@ -334,12 +334,14 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const third = await runDexExitRouteTurnoverWatchdog(thirdDb);
     const thirdMetadata = JSON.parse(String(third.metadata));
-    expect(third.status).toBe("degraded");
+    expect(third.status).toBe("ok");
     expect(thirdMetadata).toMatchObject({
       alertingCoinCount: 0,
       pendingAlertCleared: true,
-      reason: "dex-route-turnover-pending-alert",
     });
+    expect(thirdMetadata.reason).toBeUndefined();
+    expect(thirdMetadata.quality).toBeUndefined();
+    expect(secondMetadata.quality).toEqual({ reason: "dex-route-turnover-threshold" });
     expect(JSON.parse(lastSnapshotWrite(thirdDb) ?? "{}").pendingAlert).toBeUndefined();
   });
 
@@ -358,7 +360,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const flap = await runDexExitRouteTurnoverWatchdog(flapDb);
     const flapMetadata = JSON.parse(String(flap.metadata));
 
-    expect(flap.status).toBeUndefined();
+    expect(flap.status).toBe("ok");
     expect(flapMetadata).toMatchObject({
       changedCoinCount: 2,
       highestObservedTurnover: 1,
@@ -376,7 +378,7 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const back = await runDexExitRouteTurnoverWatchdog(backDb);
 
-    expect(back.status).toBeUndefined();
+    expect(back.status).toBe("ok");
     expect(JSON.parse(String(back.metadata))).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -403,7 +405,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const first = await runDexExitRouteTurnoverWatchdog(firstDb);
     const firstWrite = JSON.parse(lastSnapshotWrite(firstDb) ?? "{}");
 
-    expect(first.status).toBeUndefined();
+    expect(first.status).toBe("ok");
     expect(JSON.parse(String(first.metadata))).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -429,7 +431,7 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const second = await runDexExitRouteTurnoverWatchdog(secondDb);
 
-    expect(second.status).toBeUndefined();
+    expect(second.status).toBe("ok");
     expect(JSON.parse(String(second.metadata))).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -449,7 +451,7 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const first = await runDexExitRouteTurnoverWatchdog(firstDb);
 
-    expect(first.status).toBeUndefined();
+    expect(first.status).toBe("ok");
     expect(JSON.parse(String(first.metadata))).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -464,7 +466,7 @@ describe("DEX exit-route turnover watchdog", () => {
     );
     const second = await runDexExitRouteTurnoverWatchdog(secondDb);
 
-    expect(second.status).toBeUndefined();
+    expect(second.status).toBe("ok");
     expect(JSON.parse(String(second.metadata))).toMatchObject({
       alertingCoinCount: 0,
       candidateCoinCount: 0,
@@ -478,7 +480,7 @@ describe("DEX exit-route turnover watchdog", () => {
       CURRENT_GENERATION,
     );
     const first = await runDexExitRouteTurnoverWatchdog(firstDb);
-    expect(first.status).toBeUndefined();
+    expect(first.status).toBe("ok");
     expect(JSON.parse(String(first.metadata))).toMatchObject({ candidateCoinCount: 1 });
 
     const secondDb = watchdogDb(
@@ -489,7 +491,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const second = await runDexExitRouteTurnoverWatchdog(secondDb);
     const metadata = JSON.parse(String(second.metadata));
 
-    expect(second.status).toBe("degraded");
+    expect(second.status).toBe("ok");
     expect(metadata.worstOffenders[0]).toMatchObject({
       stablecoinId: "coin-a",
       previousRouteCount: lost.length,

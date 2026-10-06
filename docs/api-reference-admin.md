@@ -73,6 +73,8 @@ Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as sourc
 
 The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and the duplicate `alertBroker` block are intentionally omitted from `/api/status`. This is an API response-shape change: public health diagnostics, including `alertBroker`, remain on `/api/health`; producer/provider diagnostics remain in the `sync-stablecoins` cron's latest-run metadata for operator inspection. Retained status sections are validated for their required fields and malformed sections fail closed at the admin client boundary.
 
+Cron terminal execution and observed quality are independent: `degradedCrons` counts fresh operational degraded attempts (including inheritance behind neutral skips), not successful-run `metadata.quality.{reason,reasons,sources}` findings. Those findings remain visible in cron summaries and Attention. Observer `ok` does not renew the observed producer's publication clock.
+
 ```text
 {
   "timestamp": 1771856453,

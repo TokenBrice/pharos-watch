@@ -78,8 +78,11 @@ profiles are generation-fenced in `dex_measured_execution_quotes`. Score-bearing
 active EVM targets and quotes remain on the half-hour lane; the shadow EVM lane
 runs daily at 08:10 UTC. Quote generations write
 only measured outcomes and real failures; a target-count and target-ID digest
-proves omitted `budget-deferred` outcomes so readers can reconstruct them. The
-hourly `:10` source stage carries the active target graph into its exact bounded
+proves omitted `budget-deferred` outcomes so readers can reconstruct them.
+
+Positively empty V4 pool-state proofs are persisted as dense failed outcomes, isolated by active/shadow surface. Before RPC admission the latest accepted outcome can quarantine a target for two measured intervals, preserving its original observation clock on reuse. At expiry it is probed again; a later success clears the quarantine. Empty observations become quality findings without publishing a profile/capacity or weakening deterministic-failure/LKG blocking.
+
+The hourly `:10` source stage carries the active target graph into its exact bounded
 D1 handoff. At `:16`, `sync-dex-liquidity` consumes a published prior active quote
 generation and refreshes prices, scores, and the next active target inventory
 hourly. The `:46` path reuses the exact current score

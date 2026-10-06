@@ -261,6 +261,8 @@ Direct `CronResult` producers retain the logger's runtime defense: unresolved de
 `unspecified-<status>` and warn in the Worker log. `cron_runs.degraded_reason` remains the terminal reason;
 successful-run quality reasons remain visible in status diagnostics and operator night-watch findings.
 
+Successful observers report `ok` plus `metadata.quality` for semantic service degradation, stale producer output, detail-write markers, missing digest editions, duration/abandonment trends, and sustained DEX turnover. These findings do not increment `degradedCrons`; fresh operational `degraded` attempts still inherit behind neutral skips. The workbench includes findings in Attention and labels successful observations “Succeeded with findings” without changing execution state or group degraded totals. Observation success never renews a producer's output clock.
+
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
 `worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
 confirmed output clock (`lastSuccessAt`). `cron-output.ts` owns the shared evidence boundary used by the
@@ -605,6 +607,8 @@ The isolated `9,24,39,54 * * * *` status lane runs `status-self-check`, `data-in
 
 Every sentinel run publishes `metadata.mode`, a first-class `metadata.sourceStatuses` map, and — for a non-`ok` run — `metadata.reason` as `<mode>:<source>:<status>`, so a permanently degraded lane is attributable to the watchdog that raised it without reading nested JSON paths. `metadata.ruleIds` lists the rule ids per active source; the rule conditions are documented in `worker/src/cron/cron-sentinel-rules.ts` rather than re-serialized into every run. The daily invocation is reached only through `runDailyCronSentinel`; `runCronSentinel` dispatches the status, turnover, and reserve-post-sync modes.
 
+`metadata.firedRuleIds` records only predicates that fired (per source in the sentinel), unlike the configured `ruleIds` inventory. The sentinel preserves the worst operational child status; thrown evidence reads/writes and malformed retained source state remain failures. An attempted failed operator alert is `operator-alert-delivery-failed`; cooldown and absent credentials leave transitions pending without failing execution.
+
 Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced scheduled invocation pre-sweeps stale prior rows for its own schedule key, and a same-slot takeover reconciles the displaced owner's artifacts before work resumes. The five-minute reserve-recovery lane retains the unscoped sweep so a killed lane is still discovered promptly. Reconciliation preserves real terminal child rows, classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence, and writes `scheduled-slot-abandoned` event markers without deleting a renewed or newer owner.
 
 `status-self-check` then:
@@ -614,12 +618,14 @@ Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced sche
    - external production probes always use real HTTPS `fetch()` calls through the production custom domains with a 10s timeout per endpoint: `https://api.pharos.watch/api/health`, `https://site-api.pharos.watch/api/health` when `SITE_API_SHARED_SECRET` is configured, a `site-api.pharos.watch` access-gate probe expecting `401` or `403` when that shared secret is absent, and `https://ops-api.pharos.watch/api/status-history?limit=1`.
    - the ops API canary expects Cloudflare Access/admin gating to block the unauthenticated request (`302` or `403`); a successful open response is treated as `ops-api-access-gate-open-or-unreachable`.
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency. External timings reflect the production edge path.
-   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport. `/api/status` is not probed by this synthetic endpoint loop; it is evaluated separately through `evaluateStatusAndPersist()`.
+   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the persisted synthetic probe/discrepancy but becomes a successful observation with quality findings. Separate `transportStatus` and `semanticStatus` accompany combined `probeStatus`. Invalid payloads, failed/access-gate probes and exceeded transport bands remain `probe-execution-failed`. `/api/status` is evaluated separately through `computeRawStatus()` and `reconcileStatusState()`.
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
 5. Exposes the sustained-divergence and sustained-probe-failure streaks as `discrepancyStreak` / `probeFailureStreak` in the cron metadata, alongside the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions. There is no outbound alert transport; escalation is operator-driven from the status surfaces.
+
+All four required stores (`status_probe_runs`, `status_state`, `status:raw-snapshot:v1`, `status_discrepancy_state`) must succeed, including their required-read callbacks. A failed store returns `status-self-check-persistence-failed`, lists `failedOutputs`, and sets `outputPublishedAt: null`; this reason takes precedence. Current DB/section evidence failures return `status-self-check-evidence-read-failed`, not a semantic service finding. Existing status hysteresis and probe thresholds remain unchanged.
 
 The cron metadata now includes:
 
