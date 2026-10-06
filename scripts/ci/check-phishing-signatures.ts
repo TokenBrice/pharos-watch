@@ -118,7 +118,8 @@ function findNextScriptOpen(html: string, lowerHtml: string, searchFrom: number)
 
 function extractInlineScripts(html: string): string[] {
   const scripts: string[] = [];
-  const lowerHtml = html.toLowerCase();
+  // ASCII-only lowercasing keeps indexes aligned with `html` ("İ" lowercases to two units).
+  const lowerHtml = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
   let searchFrom = 0;
   while (true) {
     const openStart = findNextScriptOpen(html, lowerHtml, searchFrom);

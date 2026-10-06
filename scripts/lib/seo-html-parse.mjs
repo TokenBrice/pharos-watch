@@ -76,7 +76,9 @@ export function getCanonical(html) {
 
 export function extractJsonLdBlocks(html) {
   const blocks = [];
-  const lowerHtml = html.toLowerCase();
+  // ASCII-only lowercasing keeps indexes aligned with `html`; String#toLowerCase
+  // can lengthen text ("İ" → "i̇"), which would shift every later slice.
+  const lowerHtml = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
   let offset = 0;
   while (offset < html.length) {
     const scriptStart = lowerHtml.indexOf("<script", offset);
