@@ -3,7 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, globSync, lstatSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { matchesGlob, resolve } from "node:path";
-import { GENERATED_ARTIFACT_REGISTRY, selectAutoStageArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
+import { GENERATED_ARTIFACT_REGISTRY, buildGeneratedArtifactPhases, selectAutoStageArtifactIds } from "../lib/automation-registry.mjs";
 import { collectGitPaths, collectStagedFiles, normalizeRepoPaths, splitNullDelimited } from "../lib/changed-files.mts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -183,7 +183,8 @@ export function syncStagedGeneratedArtifacts({
   const outputPathsFor = (id: string): string[] => registryById.get(id)?.outputPaths ?? [];
 
   // Execution includes prerequisites; staging authority remains autoStage only.
-  const artifacts: RegistryArtifact[] = autoStage.length === 0 ? [] : selectGeneratedArtifacts({ only: autoStage });
+  const artifacts: RegistryArtifact[] = autoStage.length === 0 ? [] : buildGeneratedArtifactPhases({ only: autoStage })
+    .flatMap(({ artifacts }: { artifacts: RegistryArtifact[] }) => artifacts);
   for (const artifact of artifacts) {
     if (artifact.reproducibility === "network-derived") {
       throw new Error(`[staged-artifacts] refusing network-derived prerequisite ${artifact.id}`);
