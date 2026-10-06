@@ -101,7 +101,7 @@ export async function recoverLiveReserveConfigChanges(
     const breakerCanFetch = new Map<string, boolean>();
     // Initialize execution machinery only when a coin can actually be retried.
     const execution = due.length > 0 ? await Promise.all([
-      import("./sync-live-reserves"),
+      import("./reserve-adapter-runner"),
       import("./sync-live-reserves-core"),
     ]) : null;
     for (const coin of due.slice(0, RESERVE_CONFIG_RECOVERY_MAX_COINS)) {

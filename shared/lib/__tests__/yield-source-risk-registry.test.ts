@@ -85,6 +85,44 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveReviewedYieldRiskConfig(null)).toBeNull();
   });
 
+  it("resolves reviewed October vault identities to the lending venue, not the curator", () => {
+    for (const childId of [
+      "senpyusdmain-sentora",
+      "senpyusdprimev2-sentora",
+      "senrlusdv2-sentora",
+      "senpathusd-sentora",
+      "senpyusdpst-sentora",
+      "senpyusdmwin-sentora",
+      "sxsrlusd-sentora",
+      "krusdc-keyrock",
+      "arcusdc-galaxy",
+      "armusdcs-wintermute",
+      "pendleusdc-pendle",
+      "skymoneyusdsflagship-sky",
+      "skymoneyusdtsavings-sky",
+      "sirloinusdc-steakhouse",
+      "steakusdg-steakhouse",
+      "steakeurcv-steakhouse",
+      "kpkusdcyield-kpk",
+      "kpkusdcprime-kpk",
+      "gusdcq-galaxy",
+      "gusdtq-galaxy",
+      "gtusdtp-gauntlet",
+      "steakcusdc-steakhouse",
+      "bbqusdc-steakhouse-v2",
+      "cscbusdc-clearstar",
+      "ethenausdc-steakhouse",
+      "hyperusdca-hyperithm",
+      "sparkusdc-spark",
+      "sparkusdtbc-spark",
+    ]) {
+      expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childId], childId).toBe("morpho-blue");
+      expect(venueRiskTierOf(resolveReviewedYieldRiskConfig(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[childId])!), childId).toBe("medium");
+    }
+    expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["syrupusdg-maple"]).toBe("maple");
+    expect(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS["susdat-saturn"]).toBeUndefined();
+  });
+
   it("resolves the A8 venue slugs and every variant child id", () => {
     // DeFiLlama project slugs that name an already-reviewed venue: the 11
     // `pendle-v2` rows and the legacy sDAI pool otherwise publish unknown tiers.

@@ -261,6 +261,9 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   {
     id: "senpathusd-sentora",
     parentId: "pathusd-bridge",
+    // Fresh pathUSD currently has one replay-safe market leg. Inherit that
+    // leg's source, single-source confidence and clock instead of upgrading it.
+    allowFreshReplaySafeSingleSourceParent: true,
     chain: "tempo",
     vault: "0x9a044ae05e5e6290dcf56afd69548565e957a626",
     vaultDecimals: 18,

@@ -901,6 +901,13 @@ export async function fetchEvmBlockTimestamp(
     "eth_getBlockByNumber",
     [toBlockTag(blockNumber), false],
     options,
+    {
+      acceptResult: (result): result is EvmBlockResult => {
+        const timestamp = parseHexInteger((result as EvmBlockResult)?.timestamp);
+        return timestamp != null && Number.isSafeInteger(timestamp) && timestamp > 0;
+      },
+      rejectedReason: () => "block has no valid positive timestamp",
+    },
   );
 
   return parseHexInteger(block?.timestamp);

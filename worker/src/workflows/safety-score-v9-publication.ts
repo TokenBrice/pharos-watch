@@ -70,7 +70,15 @@ interface CapturedStatement {
 
 interface ShadowCaptureState {
   cacheWrites: Map<string, { value: string; updatedAt: number }>;
+  cacheKeys: Set<string>;
 }
+
+const SHADOW_RETAINED_CACHE_KEYS = new Set<string>([
+  SAFETY_SCORE_V9_CACHE_KEYS.publication,
+  SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+  SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+  SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
+]);
 
 function emptyD1Result(): D1Result {
   return {
@@ -107,21 +115,24 @@ function captureCacheWrite(
       "Safety Score V9 shadow compiler attempted a cache write with unsupported bindings",
     );
   }
-  state.cacheWrites.set(key, { value, updatedAt });
+  state.cacheKeys.add(key);
+  if (SHADOW_RETAINED_CACHE_KEYS.has(key)) {
+    state.cacheWrites.set(key, { value, updatedAt });
+  }
   return emptyD1Result();
 }
 
 /**
  * The canonical runner is reused against a write-capturing D1 facade. Reads
  * reach the live fixed inputs and accepted baseline; every cache write is
- * retained in memory for the final shadow-only step, and any other write is
+ * suppressed; only the four shadow result values are retained, and any other write is
  * rejected. This keeps compiler bytes identical without exposing live keys to
  * the Workflow writer.
  */
 export function createSafetyScoreV9ShadowCaptureDatabase(
   db: D1Database,
 ): { db: D1Database; state: ShadowCaptureState } {
-  const state: ShadowCaptureState = { cacheWrites: new Map() };
+  const state: ShadowCaptureState = { cacheWrites: new Map(), cacheKeys: new Set() };
   const statementMetadata = new WeakMap<object, CapturedStatement>();
 
   const wrapStatement = (
@@ -223,7 +234,12 @@ async function compilePublication(
   const { computeSafetyScoreV9 } = await import(
     "../cron/compute-safety-score-v9"
   );
-  const result = await computeSafetyScoreV9(capture.db);
+  // Accepted replay retention belongs to the authoritative cron publication.
+  // Building its delta here duplicates a large serialization while the candidate
+  // graph is live, even though the shadow result never returns that artifact.
+  const result = await computeSafetyScoreV9(capture.db, undefined, undefined, {
+    retainAcceptedReplay: false,
+  });
   const parsedMetadata = result.metadata === undefined
     ? null
     : JSON.parse(result.metadata) as { sourceGenerationId?: unknown };
@@ -255,7 +271,7 @@ async function compilePublication(
     failedPublicationAttempt: getCapturedValue(
       SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
     ),
-    capturedCacheKeys: [...capture.state.cacheWrites.keys()].sort(),
+    capturedCacheKeys: [...capture.state.cacheKeys].sort(),
   };
 }
 

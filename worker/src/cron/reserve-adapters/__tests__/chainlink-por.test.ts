@@ -1091,6 +1091,12 @@ describe("reviewed Backed inventory circulation", () => {
       if (scenario === "one-wei-net") {
         expect(result.metadata).toMatchObject({ supplyTokens: 60000, supplyReadComplete: true });
       }
+      if (scenario === "partial-read") {
+        expect(result.metadata).toMatchObject({ supplyTokens: 60000, supplyReadComplete: false });
+        expect(result.metadata?.supplyContributions).toHaveLength(7);
+        const warning = result.warnings?.find((entry) => entry.code === "partial-supply-read-failure");
+        expect(warning?.message).toBe("Supply aggregation omits chains whose totalSupply() read failed: fantom");
+      }
       expect(result.warnings?.some((warning) => warning.code === "por-circulation-probe-failed")).toBe(true);
     });
   }

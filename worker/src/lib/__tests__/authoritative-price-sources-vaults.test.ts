@@ -669,6 +669,46 @@ describe("authoritative-price-sources", () => {
     expect(rateWrite?.binds[1]).toBeCloseTo(1.01, 8);
   });
 
+  it("prices senpathUSD from its observed vault NAV and a fresh single-source pathUSD parent without upgrading trust", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce("0x00000000000000000000000000000000000000000000000000000000001e82f6");
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 60;
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("senpathusd-sentora"),
+      freshParent("pathusd-bridge", 1.0056651906974041, "coingecko", {
+        nowSec, priceConfidence: "single-source", priceObservedAt: observedAt,
+        priceUpdatedAt: observedAt,
+      }),
+    ]);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "tempo", "0x9a044ae05e5e6290dcf56afd69548565e957a626",
+      expect.stringMatching(/^0x07a2d13a/), "latest", expect.any(Object),
+    );
+    expect(overrides.get("senpathusd-sentora")).toMatchObject({
+      price: expect.closeTo(1.999606 * 1.0056651906974041, 8),
+      source: "coingecko", confidence: "single-source", observedAt,
+      metadata: { inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source", parentReplaySafe: true },
+    });
+  });
+
+  it.each([
+    { priceSource: "coingecko", priceConfidence: "fallback" as const },
+    { priceSource: "dexscreener", priceConfidence: "single-source" as const },
+    { priceSource: "cached", priceConfidence: "single-source" as const },
+    { priceSource: "coingecko", priceConfidence: "single-source" as const, stale: true },
+  ])("keeps senpathUSD missing for an untrusted pathUSD parent (%j)", async (input) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchLiveOverrides([
+      unpricedChild("senpathusd-sentora"),
+      freshParent("pathusd-bridge", 1, input.priceSource, {
+        nowSec, priceConfidence: input.priceConfidence,
+        ...(input.stale ? { priceObservedAt: nowSec - 86400, priceUpdatedAt: nowSec - 86400 } : {}),
+      }),
+    ]);
+    expect(overrides.has("senpathusd-sentora")).toBe(false);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   it("prices sYUSD before GT hardening from a fresh replay-safe single-source YUSD parent", async () => {
     const assetsPerShareRaw = 1_044_572_348_140_406_493n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);

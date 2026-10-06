@@ -3,57 +3,57 @@
   "product": "BRLV",
   "profile": "brlv-v1",
   "officialIndexUrl": "https://www.crown-brlv.com/en/transparency/",
-  "reportUrl": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf",
-  "reportSha256": "68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
-  "reportByteLength": 59237,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:59-03:00",
+  "reportUrl": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+  "reportSha256": "f557afd5506170ed84fd66104ceaeefc72241314941c553bef8c880ad654395a",
+  "reportByteLength": 59547,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:59-03:00",
   "reportTimeZone": "Brasília Time (BRT, UTC-3)",
   "attestor": "Fact Finance Ltda",
-  "engagement": "Independent technical Proof of Reserves verification memo (an RWA verification agent, not an accounting/audit firm; the signer is a technical lead, not a licensed accountant)",
+  "engagement": "Technical Proof of Reserves verification memo by Fact Finance Ltda, signed by Rodrigo Molin da Silva (CRC PR-052428/O; CNAI 10106); no stated audit or assurance engagement standard",
   "conclusion": "issuer-attested",
   "unit": "BRL",
   "assets": [
     {
       "code": "cash-equivalents",
       "label": "Cash and equivalents",
-      "amount": "60.21"
+      "amount": "10.20"
     },
     {
       "code": "treasury-bonds-primary",
       "label": "Brazilian Treasury Bonds",
-      "amount": "231887240.50"
+      "amount": "211011738.24"
     },
     {
       "code": "treasury-bonds-secondary",
       "label": "Brazilian Treasury Bonds",
-      "amount": "148370777.48"
+      "amount": "150107336.33"
     },
     {
       "code": "etf-treasury-primary",
       "label": "ETFs – Brazilian Treasury",
-      "amount": "48479.53"
+      "amount": "9152.49"
     },
     {
       "code": "etf-treasury-secondary",
       "label": "ETFs – Brazilian Treasury",
-      "amount": "9060.72"
+      "amount": "16862861.35"
     }
   ],
   "liabilities": [
     {
       "code": "circulation",
       "label": "BRLV tokens in circulation (all networks)",
-      "amount": "378063743.00"
+      "amount": "377989540.00"
     }
   ],
-  "reportedAssetTotal": "380315618.44",
-  "computedAssetTotal": "380315618.44",
-  "reportedLiabilityTotal": "378063743.00",
+  "reportedAssetTotal": "377991098.61",
+  "computedAssetTotal": "377991098.61",
+  "reportedLiabilityTotal": "377989540.00",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "a0ad11c3687ee3440e5f0ab96f0584d2f82d3e7e2297a4f436c848b68eb95e65",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "c515df2f111fecb747224880d77e05aa9a0f2b27389db35982306275561fabc9",
     "pageCount": 2
   },
   "assuranceTier": "issuer-attested"

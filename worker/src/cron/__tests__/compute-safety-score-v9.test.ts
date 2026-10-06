@@ -166,6 +166,17 @@ describe("computeSafetyScoreV9", () => {
     mocks.runPublication.mockReset();
   });
 
+  it.each([true, false])("retains accepted replay only when requested (%s)", async (retainAcceptedReplay) => {
+    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
+    mocks.runPublication.mockResolvedValue({
+      status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
+    });
+    await computeSafetyScoreV9({} as D1Database, undefined, undefined,
+      retainAcceptedReplay ? undefined : { retainAcceptedReplay: false });
+    expect(mocks.runPublication.mock.calls[0][0].fixedInputCacheValue)
+      .toBe(retainAcceptedReplay ? "fixed-input" : undefined);
+  });
+
   it("v10.01 second preparation keeps captured proof identity and rejects subsequent proof substitution", async () => {
     const failure = createRuntimeGapVerdict({
       assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",

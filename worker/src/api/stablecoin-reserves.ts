@@ -1,5 +1,5 @@
 import { jsonFreshResponse, errorResponse } from "../lib/api-response";
-import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_READABLE_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves/store-views";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -22,11 +22,11 @@ export const handleStablecoinReserves = async (
   db: D1Database,
   stablecoinId: string,
 ): Promise<Response> => {
-  if (!READABLE_IDS.has(stablecoinId)) {
+  if (!WORKER_READABLE_IDS.has(stablecoinId)) {
     return errorResponse(404, "Not found");
   }
 
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const meta = WORKER_TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta?.liveReservesConfig) {
     return errorResponse(404, "Not found");
   }

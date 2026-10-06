@@ -1,248 +1,137 @@
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
-import { fetchJpmorganNavReserves } from "./jpmorgan-nav";
-import { fetchLeverupLvusdReserves } from "./leverup-lvusd";
-import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
-import { fetchHyloSolanaReserves } from "./hylo-solana";
-import { fetchAbracadabraReserves } from "./abracadabra";
-import { fetchAccountableReserves } from "./accountable";
-import { fetchAgoraIndependentAssuranceReserves } from "./agora-independent-assurance";
-import { fetchAnzenUsdzReserves } from "./anzen-usdz";
-import { fetchAnchorageIndependentAssuranceReserves } from "./anchorage-independent-assurance";
-import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
-import { fetchAuddIndependentAssuranceReserves } from "./audd-independent-assurance";
-import { fetchBrlaIndependentAssuranceReserves } from "./brla-independent-assurance";
-import { fetchCaddIndependentAssuranceReserves } from "./cadd-independent-assurance";
-import { fetchPaxosIndependentAssuranceReserves } from "./paxos-independent-assurance";
-import { fetchIndependentAssuranceAdapter } from "./independent-assurance";
-import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
-import { fetchBloxAttestationIndexReserves } from "./blox-attestation-index";
-import { fetchBridgeTransparencyReserves } from "./bridge-transparency";
-import { fetchBtcfiReserves } from "./btcfi";
-import { fetchCapVaultReserves } from "./cap-vault";
-import { fetchCircleReserves } from "./circle-transparency";
-import { fetchChainlinkNavCore } from "./chainlink-nav-core";
-import { fetchChainlinkPorReserves } from "./chainlink-por";
-import { fetchChronicleNavReserves } from "./chronicle-nav";
-import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
-import { fetchCrvUsdReserves } from "./crvusd";
-import { fetchCuratedValidatedReserves } from "./curated-validated";
-import { fetchDgldGoldMapperReserves } from "./dgld-gold-mapper";
-import { fetchDjedCardanoReserves } from "./djed-cardano";
-import { fetchDolaInverseReserves } from "./dola-inverse";
-import { fetchEscrowBalanceReserves } from "./escrow-balance";
-import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
-import { fetchEthenaReserves } from "./ethena";
-import { fetchEthenaWhitelabelReserves } from "./ethena-whitelabel";
-import { fetchFalconReserves } from "./falcon";
-import { fetchFdusdIndependentAssuranceReserves } from "./fdusd-independent-assurance";
-import { fetchFiddIndependentAssuranceReserves } from "./fidd-independent-assurance";
-import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
-import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
-import { fetchFxReserves } from "./fx";
-import { fetchGeminiIndependentAssuranceReserves } from "./gemini-independent-assurance";
-import { fetchGhoReserves } from "./gho";
-import { fetchSodaxSonicReserves } from "./sodax-sonic";
-import { fetchHiveHbdProtocolReserves } from "./hive-hbd-protocol";
-import { fetchHliquityHederaReserves } from "./hliquity-hedera";
-import { fetchIdleCdoEpochVariantReserves } from "./idle-cdo-epoch-variant";
-import { fetchIcpGldtReserves } from "./icp-gldt";
-import { fetchInfiniFiReserves } from "./infinifi";
-import { fetchJupUsdReserves } from "./jupusd";
-import { fetchKavaCdpReserves } from "./kava-cdp";
-import { fetchKerneSignedPorReserves } from "./kerne-signed-por";
-import { fetchKrwqCustodianReserves } from "./krwq-custodian";
-import { fetchLiquityV1Reserves } from "./liquity-v1";
-import { fetchLiquityNativeActivePoolReserves } from "./liquity-native-active-pool";
-import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
-import { fetchM0Reserves } from "./m0";
-import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
-import { fetchMakinaStrategyReserves } from "./makina-strategy";
-import { fetchMatrixdockFrsReserves } from "./matrixdock-frs";
-import { fetchMegausdCustodyReserves } from "./megausd-custody";
-import { fetchMentoReserves } from "./mento";
-import { fetchMocDocReserves } from "./moc-doc";
-import { fetchMoneyReserves } from "./money-llamma";
-import { fetchUsdrifRifReserves } from "./usdrif-rif";
-import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
-import { fetchOpenEdenUsdoReserves } from "./openeden";
-import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
-import { fetchParallelizerBalancesReserves } from "./parallelizer-balances";
-import { fetchQuantozTransparencyReserves } from "./quantoz-transparency";
-import { fetchReMetricsReserves } from "./re-metrics";
-import { fetchResupplyPairsReserves } from "./resupply-pairs";
-import { fetchSaturnPyusdxReserves } from "./saturn-pyusdx";
-import { fetchSbcIndependentAssuranceReserves } from "./sbc-independent-assurance";
-import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
-import { fetchReservoirReserves } from "./reservoir";
-import { fetchRlusdIndependentAssuranceReserves } from "./rlusd-independent-assurance";
-import { fetchOndoOusgReserves } from "./ondo-ousg";
-import { fetchMidasMtbillReserves } from "./midas-mtbill";
-import { fetchRiverProtocolInfoReserves } from "./river-protocol-info";
-import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
-import { fetchAstherusEarnWrapperReserves } from "./astherus-earn-wrapper";
-import { fetchInitiaWrapperVaultReserves } from "./initia-wrapper-vault";
-import { fetchStoneyieldRouterPoolReserves } from "./stoneyield-router-pool";
-import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
-import { fetchSingleAssetReserves } from "./single-asset";
-import { fetchSkyMakercoreReserves } from "./sky-makercore";
-import { fetchSolomonProtocolReserves } from "./solomon-protocol";
-import { fetchSolomonChanceryReserves } from "./solomon-chancery";
-
-import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
-import { fetchSpikoApiReserves } from "./spiko-api";
-import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
-import { fetchTheoThusdRedemptionReserves } from "./theo-thusd-redemption";
-import { fetchTetherTransparencyReserves } from "./tether-transparency";
-import { fetchUnitedPorReserves } from "./united-por";
-import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
-import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
-import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
-import { fetchUsdaiHubReserves } from "./usdai-hub";
-import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
-import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
-import { fetchUsdtbTransparencyReserves } from "./usdtb-transparency";
-import { fetchUsdyHoldingsReserves } from "./usdy-holdings-report";
-
-import { fetchYamatoReserves } from "./yamato";
-import { fetchYouvesTezosReserves } from "./youves-tezos";
-import { fetchXdaiBridgeReserves } from "./xdai-bridge";
-import { fetchXprAccountBalancesReserves } from "./xpr-account-balances";
-import { fetchZephyrScannerReserves } from "./zephyr-scanner";
-import { fetchOnreHoldingsCsvReserves } from "./onre-holdings-csv";
-import { fetchAvantReservesApiReserves } from "./avant-reserves-api";
-import { fetchAfiProofReserves } from "./afi-proof";
-import { fetchFrntLedgerlensReserves } from "./frnt-ledgerlens";
-import { fetchCoinbaseOnedPorReserves } from "./coinbase-oned-por";
-import { fetchBlackrockBrsrvHoldingsReserves } from "./blackrock-brsrv-holdings";
-import { fetchMatrixdockStbtReserves } from "./matrixdock-stbt";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
+
+/** Keep registry inspection cheap; initialize only the adapter actually fetched. */
+function lazyAdapter(load: () => Promise<AdapterFn>): AdapterFn {
+  return async (...args) => (await load())(...args);
+}
 
 // Annotated (not `satisfies`): the explicit `Record<LiveReserveAdapterKey, …>`
 // makes a declaration key with no fetcher a compile error here, so the
 // declaration table stays the single source of adapter identity.
 export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, AdapterFn> = {
-  "leverup-lvusd": fetchLeverupLvusdReserves,
-  "hylo-solana": fetchHyloSolanaReserves,
-  "usdy-holdings-report": fetchUsdyHoldingsReserves,
-  "3jane-usd3": fetchThreeJaneUsd3Reserves,
-  abracadabra: fetchAbracadabraReserves,
-  accountable: fetchAccountableReserves,
-  "agora-independent-assurance": fetchAgoraIndependentAssuranceReserves,
-  "anchorage-independent-assurance": fetchAnchorageIndependentAssuranceReserves,
-  "anzen-usdz": fetchAnzenUsdzReserves,
-  "astherus-earn-wrapper": fetchAstherusEarnWrapperReserves,
-  "attestation-pdf-index": fetchAttestationPdfIndexReserves,
-  "audd-independent-assurance": fetchAuddIndependentAssuranceReserves,
-  "audx-independent-assurance": fetchIndependentAssuranceAdapter,
-  "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
-  "blox-attestation-index": fetchBloxAttestationIndexReserves,
-  "brla-independent-assurance": fetchBrlaIndependentAssuranceReserves,
-  "bridge-transparency": fetchBridgeTransparencyReserves,
-  btcfi: fetchBtcfiReserves,
-  "cadd-independent-assurance": fetchCaddIndependentAssuranceReserves,
-  "cap-vault": fetchCapVaultReserves,
-  "chainlink-nav": fetchChainlinkNavCore,
-  "jpmorgan-nav": fetchJpmorganNavReserves,
-  "circle-transparency": fetchCircleReserves,
-  "chainlink-por": fetchChainlinkPorReserves,
-  "chronicle-nav": fetchChronicleNavReserves,
-  "collateral-positions-api": fetchCollateralPositionsApiReserves,
-  crvusd: fetchCrvUsdReserves,
-  "curated-validated": fetchCuratedValidatedReserves,
-  "dgld-gold-mapper": fetchDgldGoldMapperReserves,
-  "djed-cardano": fetchDjedCardanoReserves,
-  "dola-inverse": fetchDolaInverseReserves,
-  "erc4626-single-asset": fetchErc4626SingleAssetReserves,
-  "escrow-balance": fetchEscrowBalanceReserves,
-  ethena: fetchEthenaReserves,
-  "ethena-whitelabel": fetchEthenaWhitelabelReserves,
-  "europ-independent-assurance": fetchIndependentAssuranceAdapter,
-  "evm-branch-balances": fetchEvmBranchBalancesReserves,
-  falcon: fetchFalconReserves,
-  "fdusd-independent-assurance": fetchFdusdIndependentAssuranceReserves,
-  "fidd-independent-assurance": fetchFiddIndependentAssuranceReserves,
-  "flying-tulip-ftusd": fetchFlyingTulipFtUsdReserves,
-  "frax-balance-sheet": fetchFraxBalanceSheetReserves,
-  "frax-fpi-collateral": fetchFraxFpiCollateralReserves,
-  fx: fetchFxReserves,
-  "gemini-independent-assurance": fetchGeminiIndependentAssuranceReserves,
-  gho: fetchGhoReserves,
-  "sodax-sonic": fetchSodaxSonicReserves,
-  "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
-  "hliquity-hedera": fetchHliquityHederaReserves,
-  "idle-cdo-epoch-variant": fetchIdleCdoEpochVariantReserves,
-  "icp-gldt": fetchIcpGldtReserves,
-  infinifi: fetchInfiniFiReserves,
-  "initia-wrapper-vault": fetchInitiaWrapperVaultReserves,
-  "issuer-attested-report": fetchIndependentAssuranceAdapter,
-  jupusd: fetchJupUsdReserves,
-  "kava-cdp": fetchKavaCdpReserves,
-  "kerne-signed-por": fetchKerneSignedPorReserves,
-  "krwq-custodian": fetchKrwqCustodianReserves,
-  "liquity-v1": fetchLiquityV1Reserves,
-  "liquity-native-active-pool": fetchLiquityNativeActivePoolReserves,
-  "liquity-v2-branches": fetchLiquityV2BranchReserves,
-  m0: fetchM0Reserves,
-  "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
-  "makina-strategy": fetchMakinaStrategyReserves,
-  "matrixdock-frs": fetchMatrixdockFrsReserves,
-  "megausd-custody": fetchMegausdCustodyReserves,
-  mento: fetchMentoReserves,
-  "moc-doc": fetchMocDocReserves,
-  "moc-v3-buckets": fetchUsdrifRifReserves,
-  "money-llamma": fetchMoneyReserves,
-  "nest-vault-positions": fetchNestVaultPositionsReserves,
-  "openeden-usdo": fetchOpenEdenUsdoReserves,
-  "origin-vault-balances": fetchOriginVaultBalancesReserves,
-  "parallelizer-balances": fetchParallelizerBalancesReserves,
-  "quantoz-transparency": fetchQuantozTransparencyReserves,
-  "re-metrics": fetchReMetricsReserves,
-  "resupply-pairs": fetchResupplyPairsReserves,
-  "saturn-pyusdx": fetchSaturnPyusdxReserves,
-  "sbc-independent-assurance": fetchSbcIndependentAssuranceReserves,
-  "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
-  reservoir: fetchReservoirReserves,
-  "rlusd-independent-assurance": fetchRlusdIndependentAssuranceReserves,
-  "ondo-ousg": fetchOndoOusgReserves,
-  "midas-mtbill": fetchMidasMtbillReserves,
-  "river-protocol-info": fetchRiverProtocolInfoReserves,
-  "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
-  "solstice-attestation": fetchSolsticeAttestationReserves,
-  "single-asset": fetchSingleAssetReserves,
-  "sky-makercore": fetchSkyMakercoreReserves,
-  "solomon-protocol": fetchSolomonProtocolReserves,
-  "solomon-chancery": fetchSolomonChanceryReserves,
+  "leverup-lvusd": lazyAdapter(() => import("./leverup-lvusd").then((mod) => mod.fetchLeverupLvusdReserves)),
+  "hylo-solana": lazyAdapter(() => import("./hylo-solana").then((mod) => mod.fetchHyloSolanaReserves)),
+  "usdy-holdings-report": lazyAdapter(() => import("./usdy-holdings-report").then((mod) => mod.fetchUsdyHoldingsReserves)),
+  "3jane-usd3": lazyAdapter(() => import("./3jane-usd3").then((mod) => mod.fetchThreeJaneUsd3Reserves)),
+  abracadabra: lazyAdapter(() => import("./abracadabra").then((mod) => mod.fetchAbracadabraReserves)),
+  accountable: lazyAdapter(() => import("./accountable").then((mod) => mod.fetchAccountableReserves)),
+  "agora-independent-assurance": lazyAdapter(() => import("./agora-independent-assurance").then((mod) => mod.fetchAgoraIndependentAssuranceReserves)),
+  "anchorage-independent-assurance": lazyAdapter(() => import("./anchorage-independent-assurance").then((mod) => mod.fetchAnchorageIndependentAssuranceReserves)),
+  "anzen-usdz": lazyAdapter(() => import("./anzen-usdz").then((mod) => mod.fetchAnzenUsdzReserves)),
+  "astherus-earn-wrapper": lazyAdapter(() => import("./astherus-earn-wrapper").then((mod) => mod.fetchAstherusEarnWrapperReserves)),
+  "attestation-pdf-index": lazyAdapter(() => import("./attestation-pdf-index").then((mod) => mod.fetchAttestationPdfIndexReserves)),
+  "audd-independent-assurance": lazyAdapter(() => import("./audd-independent-assurance").then((mod) => mod.fetchAuddIndependentAssuranceReserves)),
+  "audx-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
+  "blast-usdb-yield-manager": lazyAdapter(() => import("./blast-usdb-yield-manager").then((mod) => mod.fetchBlastUsdbYieldManagerReserves)),
+  "blox-attestation-index": lazyAdapter(() => import("./blox-attestation-index").then((mod) => mod.fetchBloxAttestationIndexReserves)),
+  "brla-independent-assurance": lazyAdapter(() => import("./brla-independent-assurance").then((mod) => mod.fetchBrlaIndependentAssuranceReserves)),
+  "bridge-transparency": lazyAdapter(() => import("./bridge-transparency").then((mod) => mod.fetchBridgeTransparencyReserves)),
+  btcfi: lazyAdapter(() => import("./btcfi").then((mod) => mod.fetchBtcfiReserves)),
+  "cadd-independent-assurance": lazyAdapter(() => import("./cadd-independent-assurance").then((mod) => mod.fetchCaddIndependentAssuranceReserves)),
+  "cap-vault": lazyAdapter(() => import("./cap-vault").then((mod) => mod.fetchCapVaultReserves)),
+  "chainlink-nav": lazyAdapter(() => import("./chainlink-nav-core").then((mod) => mod.fetchChainlinkNavCore)),
+  "jpmorgan-nav": lazyAdapter(() => import("./jpmorgan-nav").then((mod) => mod.fetchJpmorganNavReserves)),
+  "circle-transparency": lazyAdapter(() => import("./circle-transparency").then((mod) => mod.fetchCircleReserves)),
+  "chainlink-por": lazyAdapter(() => import("./chainlink-por").then((mod) => mod.fetchChainlinkPorReserves)),
+  "chronicle-nav": lazyAdapter(() => import("./chronicle-nav").then((mod) => mod.fetchChronicleNavReserves)),
+  "collateral-positions-api": lazyAdapter(() => import("./collateral-positions-api").then((mod) => mod.fetchCollateralPositionsApiReserves)),
+  crvusd: lazyAdapter(() => import("./crvusd").then((mod) => mod.fetchCrvUsdReserves)),
+  "curated-validated": lazyAdapter(() => import("./curated-validated").then((mod) => mod.fetchCuratedValidatedReserves)),
+  "dgld-gold-mapper": lazyAdapter(() => import("./dgld-gold-mapper").then((mod) => mod.fetchDgldGoldMapperReserves)),
+  "djed-cardano": lazyAdapter(() => import("./djed-cardano").then((mod) => mod.fetchDjedCardanoReserves)),
+  "dola-inverse": lazyAdapter(() => import("./dola-inverse").then((mod) => mod.fetchDolaInverseReserves)),
+  "erc4626-single-asset": lazyAdapter(() => import("./erc4626-single-asset").then((mod) => mod.fetchErc4626SingleAssetReserves)),
+  "escrow-balance": lazyAdapter(() => import("./escrow-balance").then((mod) => mod.fetchEscrowBalanceReserves)),
+  ethena: lazyAdapter(() => import("./ethena").then((mod) => mod.fetchEthenaReserves)),
+  "ethena-whitelabel": lazyAdapter(() => import("./ethena-whitelabel").then((mod) => mod.fetchEthenaWhitelabelReserves)),
+  "europ-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
+  "evm-branch-balances": lazyAdapter(() => import("./evm-branch-balances").then((mod) => mod.fetchEvmBranchBalancesReserves)),
+  falcon: lazyAdapter(() => import("./falcon").then((mod) => mod.fetchFalconReserves)),
+  "fdusd-independent-assurance": lazyAdapter(() => import("./fdusd-independent-assurance").then((mod) => mod.fetchFdusdIndependentAssuranceReserves)),
+  "fidd-independent-assurance": lazyAdapter(() => import("./fidd-independent-assurance").then((mod) => mod.fetchFiddIndependentAssuranceReserves)),
+  "flying-tulip-ftusd": lazyAdapter(() => import("./flying-tulip-ftusd").then((mod) => mod.fetchFlyingTulipFtUsdReserves)),
+  "frax-balance-sheet": lazyAdapter(() => import("./frax").then((mod) => mod.fetchFraxBalanceSheetReserves)),
+  "frax-fpi-collateral": lazyAdapter(() => import("./frax").then((mod) => mod.fetchFraxFpiCollateralReserves)),
+  fx: lazyAdapter(() => import("./fx").then((mod) => mod.fetchFxReserves)),
+  "gemini-independent-assurance": lazyAdapter(() => import("./gemini-independent-assurance").then((mod) => mod.fetchGeminiIndependentAssuranceReserves)),
+  gho: lazyAdapter(() => import("./gho").then((mod) => mod.fetchGhoReserves)),
+  "sodax-sonic": lazyAdapter(() => import("./sodax-sonic").then((mod) => mod.fetchSodaxSonicReserves)),
+  "hive-hbd-protocol": lazyAdapter(() => import("./hive-hbd-protocol").then((mod) => mod.fetchHiveHbdProtocolReserves)),
+  "hliquity-hedera": lazyAdapter(() => import("./hliquity-hedera").then((mod) => mod.fetchHliquityHederaReserves)),
+  "idle-cdo-epoch-variant": lazyAdapter(() => import("./idle-cdo-epoch-variant").then((mod) => mod.fetchIdleCdoEpochVariantReserves)),
+  "icp-gldt": lazyAdapter(() => import("./icp-gldt").then((mod) => mod.fetchIcpGldtReserves)),
+  infinifi: lazyAdapter(() => import("./infinifi").then((mod) => mod.fetchInfiniFiReserves)),
+  "initia-wrapper-vault": lazyAdapter(() => import("./initia-wrapper-vault").then((mod) => mod.fetchInitiaWrapperVaultReserves)),
+  "issuer-attested-report": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
+  jupusd: lazyAdapter(() => import("./jupusd").then((mod) => mod.fetchJupUsdReserves)),
+  "kava-cdp": lazyAdapter(() => import("./kava-cdp").then((mod) => mod.fetchKavaCdpReserves)),
+  "kerne-signed-por": lazyAdapter(() => import("./kerne-signed-por").then((mod) => mod.fetchKerneSignedPorReserves)),
+  "krwq-custodian": lazyAdapter(() => import("./krwq-custodian").then((mod) => mod.fetchKrwqCustodianReserves)),
+  "liquity-v1": lazyAdapter(() => import("./liquity-v1").then((mod) => mod.fetchLiquityV1Reserves)),
+  "liquity-native-active-pool": lazyAdapter(() => import("./liquity-native-active-pool").then((mod) => mod.fetchLiquityNativeActivePoolReserves)),
+  "liquity-v2-branches": lazyAdapter(() => import("./liquity-v2-branches").then((mod) => mod.fetchLiquityV2BranchReserves)),
+  m0: lazyAdapter(() => import("./m0").then((mod) => mod.fetchM0Reserves)),
+  "m0-wrapper-underlying": lazyAdapter(() => import("./m0-wrapper-underlying").then((mod) => mod.fetchM0WrapperUnderlyingReserves)),
+  "makina-strategy": lazyAdapter(() => import("./makina-strategy").then((mod) => mod.fetchMakinaStrategyReserves)),
+  "matrixdock-frs": lazyAdapter(() => import("./matrixdock-frs").then((mod) => mod.fetchMatrixdockFrsReserves)),
+  "megausd-custody": lazyAdapter(() => import("./megausd-custody").then((mod) => mod.fetchMegausdCustodyReserves)),
+  mento: lazyAdapter(() => import("./mento").then((mod) => mod.fetchMentoReserves)),
+  "moc-doc": lazyAdapter(() => import("./moc-doc").then((mod) => mod.fetchMocDocReserves)),
+  "moc-v3-buckets": lazyAdapter(() => import("./usdrif-rif").then((mod) => mod.fetchUsdrifRifReserves)),
+  "money-llamma": lazyAdapter(() => import("./money-llamma").then((mod) => mod.fetchMoneyReserves)),
+  "nest-vault-positions": lazyAdapter(() => import("./nest-vault-positions").then((mod) => mod.fetchNestVaultPositionsReserves)),
+  "openeden-usdo": lazyAdapter(() => import("./openeden").then((mod) => mod.fetchOpenEdenUsdoReserves)),
+  "origin-vault-balances": lazyAdapter(() => import("./origin-vault-balances").then((mod) => mod.fetchOriginVaultBalancesReserves)),
+  "parallelizer-balances": lazyAdapter(() => import("./parallelizer-balances").then((mod) => mod.fetchParallelizerBalancesReserves)),
+  "quantoz-transparency": lazyAdapter(() => import("./quantoz-transparency").then((mod) => mod.fetchQuantozTransparencyReserves)),
+  "re-metrics": lazyAdapter(() => import("./re-metrics").then((mod) => mod.fetchReMetricsReserves)),
+  "resupply-pairs": lazyAdapter(() => import("./resupply-pairs").then((mod) => mod.fetchResupplyPairsReserves)),
+  "saturn-pyusdx": lazyAdapter(() => import("./saturn-pyusdx").then((mod) => mod.fetchSaturnPyusdxReserves)),
+  "sbc-independent-assurance": lazyAdapter(() => import("./sbc-independent-assurance").then((mod) => mod.fetchSbcIndependentAssuranceReserves)),
+  "reserve-protocol-dtf": lazyAdapter(() => import("./reserve-protocol-dtf").then((mod) => mod.fetchReserveProtocolDtfReserves)),
+  reservoir: lazyAdapter(() => import("./reservoir").then((mod) => mod.fetchReservoirReserves)),
+  "rlusd-independent-assurance": lazyAdapter(() => import("./rlusd-independent-assurance").then((mod) => mod.fetchRlusdIndependentAssuranceReserves)),
+  "ondo-ousg": lazyAdapter(() => import("./ondo-ousg").then((mod) => mod.fetchOndoOusgReserves)),
+  "midas-mtbill": lazyAdapter(() => import("./midas-mtbill").then((mod) => mod.fetchMidasMtbillReserves)),
+  "river-protocol-info": lazyAdapter(() => import("./river-protocol-info").then((mod) => mod.fetchRiverProtocolInfoReserves)),
+  "sgforge-coinvertible": lazyAdapter(() => import("./sgforge-coinvertible").then((mod) => mod.fetchSgForgeCoinvertibleReserves)),
+  "solstice-attestation": lazyAdapter(() => import("./solstice-attestation").then((mod) => mod.fetchSolsticeAttestationReserves)),
+  "single-asset": lazyAdapter(() => import("./single-asset").then((mod) => mod.fetchSingleAssetReserves)),
+  "sky-makercore": lazyAdapter(() => import("./sky-makercore").then((mod) => mod.fetchSkyMakercoreReserves)),
+  "solomon-protocol": lazyAdapter(() => import("./solomon-protocol").then((mod) => mod.fetchSolomonProtocolReserves)),
+  "solomon-chancery": lazyAdapter(() => import("./solomon-chancery").then((mod) => mod.fetchSolomonChanceryReserves)),
 
-  "spiko-api": fetchSpikoApiReserves,
-  "stoneyield-router-pool": fetchStoneyieldRouterPoolReserves,
-  "superstate-liquidity": fetchSuperstateLiquidityReserves,
-  "theo-thusd-redemption": fetchTheoThusdRedemptionReserves,
-  "paxos-independent-assurance": fetchPaxosIndependentAssuranceReserves,
-  "straitsx-independent-assurance": fetchIndependentAssuranceAdapter,
-  "tether-transparency": fetchTetherTransparencyReserves,
-  "united-por": fetchUnitedPorReserves,
-  "usdgo-transparency": fetchUsdgoTransparencyReserves,
-  "usdh-native-markets": fetchUsdhNativeMarketsReserves,
-  "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
-  "usdai-hub": fetchUsdaiHubReserves,
-  "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
-  "usdd-data-platform": fetchUsddDataPlatformReserves,
-  "usdtb-transparency": fetchUsdtbTransparencyReserves,
-  "xdai-bridge": fetchXdaiBridgeReserves,
-  "xpr-account-balances": fetchXprAccountBalancesReserves,
-  yamato: fetchYamatoReserves,
-  "youves-tezos": fetchYouvesTezosReserves,
-  "zephyr-scanner": fetchZephyrScannerReserves,
-  "onre-holdings-csv": fetchOnreHoldingsCsvReserves,
-  "avant-reserves-api": fetchAvantReservesApiReserves,
-  "afi-proof": fetchAfiProofReserves,
-  "frnt-ledgerlens": fetchFrntLedgerlensReserves,
-  "coinbase-oned-por": fetchCoinbaseOnedPorReserves,
-  "blackrock-brsrv-holdings": fetchBlackrockBrsrvHoldingsReserves,
-  "matrixdock-stbt": fetchMatrixdockStbtReserves,
+  "spiko-api": lazyAdapter(() => import("./spiko-api").then((mod) => mod.fetchSpikoApiReserves)),
+  "stoneyield-router-pool": lazyAdapter(() => import("./stoneyield-router-pool").then((mod) => mod.fetchStoneyieldRouterPoolReserves)),
+  "superstate-liquidity": lazyAdapter(() => import("./superstate-liquidity").then((mod) => mod.fetchSuperstateLiquidityReserves)),
+  "theo-thusd-redemption": lazyAdapter(() => import("./theo-thusd-redemption").then((mod) => mod.fetchTheoThusdRedemptionReserves)),
+  "paxos-independent-assurance": lazyAdapter(() => import("./paxos-independent-assurance").then((mod) => mod.fetchPaxosIndependentAssuranceReserves)),
+  "straitsx-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
+  "tether-transparency": lazyAdapter(() => import("./tether-transparency").then((mod) => mod.fetchTetherTransparencyReserves)),
+  "united-por": lazyAdapter(() => import("./united-por").then((mod) => mod.fetchUnitedPorReserves)),
+  "usdgo-transparency": lazyAdapter(() => import("./usdgo-transparency").then((mod) => mod.fetchUsdgoTransparencyReserves)),
+  "usdh-native-markets": lazyAdapter(() => import("./usdh-native-markets").then((mod) => mod.fetchUsdhNativeMarketsReserves)),
+  "usdai-proof-of-reserves": lazyAdapter(() => import("./usdai-proof-of-reserves").then((mod) => mod.fetchUsdAiProofOfReserves)),
+  "usdai-hub": lazyAdapter(() => import("./usdai-hub").then((mod) => mod.fetchUsdaiHubReserves)),
+  "usd1-bundle-oracle": lazyAdapter(() => import("./usd1-bundle-oracle").then((mod) => mod.fetchUsd1BundleOracleReserves)),
+  "usdd-data-platform": lazyAdapter(() => import("./usdd-data-platform").then((mod) => mod.fetchUsddDataPlatformReserves)),
+  "usdtb-transparency": lazyAdapter(() => import("./usdtb-transparency").then((mod) => mod.fetchUsdtbTransparencyReserves)),
+  "xdai-bridge": lazyAdapter(() => import("./xdai-bridge").then((mod) => mod.fetchXdaiBridgeReserves)),
+  "xpr-account-balances": lazyAdapter(() => import("./xpr-account-balances").then((mod) => mod.fetchXprAccountBalancesReserves)),
+  yamato: lazyAdapter(() => import("./yamato").then((mod) => mod.fetchYamatoReserves)),
+  "youves-tezos": lazyAdapter(() => import("./youves-tezos").then((mod) => mod.fetchYouvesTezosReserves)),
+  "zephyr-scanner": lazyAdapter(() => import("./zephyr-scanner").then((mod) => mod.fetchZephyrScannerReserves)),
+  "onre-holdings-csv": lazyAdapter(() => import("./onre-holdings-csv").then((mod) => mod.fetchOnreHoldingsCsvReserves)),
+  "avant-reserves-api": lazyAdapter(() => import("./avant-reserves-api").then((mod) => mod.fetchAvantReservesApiReserves)),
+  "afi-proof": lazyAdapter(() => import("./afi-proof").then((mod) => mod.fetchAfiProofReserves)),
+  "frnt-ledgerlens": lazyAdapter(() => import("./frnt-ledgerlens").then((mod) => mod.fetchFrntLedgerlensReserves)),
+  "coinbase-oned-por": lazyAdapter(() => import("./coinbase-oned-por").then((mod) => mod.fetchCoinbaseOnedPorReserves)),
+  "blackrock-brsrv-holdings": lazyAdapter(() => import("./blackrock-brsrv-holdings").then((mod) => mod.fetchBlackrockBrsrvHoldingsReserves)),
+  "matrixdock-stbt": lazyAdapter(() => import("./matrixdock-stbt").then((mod) => mod.fetchMatrixdockStbtReserves)),
 };
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the

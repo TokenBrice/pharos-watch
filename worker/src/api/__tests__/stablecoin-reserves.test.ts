@@ -7,8 +7,21 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 import { reserveCompositionRow, reserveSyncRow } from "./stablecoin-reserves.test-support";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { getReserves } from "@shared/lib/reserve-templates";
 
 describe("handleStablecoinReserves", () => {
+  it("preserves every configured feed's reserve display and admission inputs in the Worker projection", () => {
+    for (const coin of TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig)) {
+      const projected = WORKER_TRACKED_META_BY_ID.get(coin.id);
+      expect(projected && hasWorkerLiveReserves(projected), coin.id).toBe(true);
+      if (!projected || !hasWorkerLiveReserves(projected)) continue;
+      expect(projected.liveReservesConfig, coin.id).toEqual(coin.liveReservesConfig);
+      expect(getReserves(projected), coin.id).toEqual(getReserves(coin));
+    }
+  });
+
   it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
     const db = mockD1([
       { match: "FROM reserve_composition", rows: [] },

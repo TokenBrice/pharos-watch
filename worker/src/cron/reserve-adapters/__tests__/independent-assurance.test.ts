@@ -201,7 +201,7 @@ function assuranceFenceCases() {
       product: "AUDD",
       html: indexFixture("audd-independent-assurance.html"),
       newerHtml: indexFixture("audd-independent-assurance.html") +
-        '<a href="https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf">September 2026</a>',
+        '<a href="https://www.audd.digital/wp-content/uploads/2026/11/AUDC-Agreed-upon-procedures-report-Oct26_.pdf">October 2026</a>',
     },
     {
       adapter: "cadd-independent-assurance",

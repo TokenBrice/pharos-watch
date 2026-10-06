@@ -331,12 +331,15 @@ async function fetchVerifiedBackedCirculation(
       if (excluded > gross) throw new Error(`Backed ${contract.chain} inventory exceeds total supply`);
       return { contract, gross, excluded, net: gross - excluded, block: plan.observedBlock };
     }));
-    const reads = settled.map((result) => {
-      if (result.status === "rejected") throw result.reason;
-      return result.value;
-    });
+    const reads = settled.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
     supply = { contributions: reads.map((read) => ({ chain: read.contract.chain, tokenAddress: read.contract.address,
-      raw: read.gross, decimals: 18 })), omittedNonEvmChains: [], omittedNoRpcChains: [], omittedReadFailureChains: [] };
+      raw: read.gross, decimals: 18 })), omittedNonEvmChains: [], omittedNoRpcChains: [],
+      omittedReadFailureChains: contracts.filter((_, index) => settled[index].status === "rejected")
+        .map((contract) => contract.chain) };
+    // Keep successful observations diagnostic, but verify circulation only
+    // after every reviewed deployment has been read.
+    const failedRead = settled.find((result) => result.status === "rejected");
+    if (failedRead?.status === "rejected") throw failedRead.reason;
     const payload = await fetchJsonPostWithRetry<BackedAssetReservesResponse>(probe.url,
       { query: BACKED_CIRCULATION_QUERY }, signal, 10_000, ctx);
     const assets = payload.data?.assetReserves?.filter((row) => row.symbol === policy.reserveSymbol);

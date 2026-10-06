@@ -206,6 +206,12 @@ describe("tracked-currency QuoterV2 source pages", () => {
     expect(query).toContain('totalValueLockedUSD_gt: "10000"');
     expect(query).toContain(`token0_in: ${JSON.stringify([USDC, USDT])}`);
     expect(query).toContain(`token1_in: ${JSON.stringify([USDC, USDT])}`);
+    // Graph Node rejects an OR object with sibling column predicates. Both
+    // currency branches must independently retain the admission floor.
+    expect(query).toMatch(/where: \{ or: \[/);
+    expect(query.match(/totalValueLockedUSD_gt: "10000"/g)).toHaveLength(2);
+    expect(query).toContain(`{ totalValueLockedUSD_gt: "10000", token0_in:`);
+    expect(query).toContain(`{ totalValueLockedUSD_gt: "10000", token1_in:`);
   });
 
   it("scopes Messari input currencies while preserving its liquidity-only filter", () => {
@@ -215,6 +221,11 @@ describe("tracked-currency QuoterV2 source pages", () => {
     expect(query).toContain(`inputTokens_contains: ["${USDC}"]`);
     expect(query).toContain(`inputTokens_contains: ["${USDT}"]`);
     expect(query).not.toContain("totalValueLockedUSD_gt");
+    expect(query).toMatch(/where: \{ or: \[/);
+    expect(query.match(/totalLiquidity_gt: "0"/g)).toHaveLength(2);
+    for (const currency of [USDC, USDT]) {
+      expect(query).toContain(`{ totalLiquidity_gt: "0", inputTokens_contains: ["${currency}"] }`);
+    }
   });
 
   it("passes only canonical chain-local tracked currencies into source queries", async () => {
