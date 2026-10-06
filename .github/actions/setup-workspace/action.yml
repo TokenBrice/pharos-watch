@@ -53,6 +53,10 @@ inputs:
     description: Whether to install the Playwright Firefox browser after npm dependencies are installed.
     required: false
     default: "false"
+  install-ripgrep:
+    description: Whether to install the pinned, checksum-verified ripgrep binary (Linux x64 only).
+    required: false
+    default: "false"
 
 outputs:
   static-cache-key:
@@ -73,6 +77,30 @@ runs:
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: ${{ inputs.node-version }}
+
+    - name: Install verified ripgrep
+      if: ${{ inputs.install-ripgrep == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ "${RUNNER_OS}" != "Linux" || "${RUNNER_ARCH}" != "X64" ]]; then
+          echo "::error::install-ripgrep supports Linux x64 runners only (got ${RUNNER_OS}/${RUNNER_ARCH})."
+          exit 1
+        fi
+        version="15.2.0"
+        # https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz.sha256
+        sha256="33e15bcf1624b25cdd2a55813a47a2f95dbe126268203e76aa6a585d1e7b149c"
+        package="ripgrep-${version}-x86_64-unknown-linux-musl"
+        archive="${RUNNER_TEMP}/${package}.tar.gz"
+        root="${RUNNER_TEMP}/pharos-ripgrep-${version}"
+        mkdir -p "${root}/bin"
+        curl --fail --location --silent --show-error \
+          "https://github.com/BurntSushi/ripgrep/releases/download/${version}/${package}.tar.gz" \
+          --output "${archive}"
+        printf '%s  %s\n' "${sha256}" "${archive}" | sha256sum --check --strict
+        tar -xzf "${archive}" -C "${root}" --strip-components=1 "${package}/rg"
+        install -m 755 "${root}/rg" "${root}/bin/rg"
+        echo "${root}/bin" >> "${GITHUB_PATH}"
 
     - if: ${{ inputs.static-cache == 'true' || inputs.next-cache == 'true' || inputs.browser-cache == 'true' }}
       id: cache-key
@@ -128,7 +156,7 @@ runs:
 
     - if: ${{ inputs.workspace-artifact == 'restore' }}
       shell: bash
-      run: tar -xzf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.gz"
+      run: tar --zstd -xf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" --same-permissions
 
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash
@@ -172,14 +200,17 @@ runs:
         mkdir -p "${RUNNER_TEMP}/pharos-workspace"
         mapfile -t paths <<< "${WORKSPACE_PATHS%$'\n'}"
         if [ -d worker/node_modules ]; then paths+=(worker/node_modules); fi
-        tar -czf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.gz" "${paths[@]}"
+        if [ -f .tmp/pr-test-plan.json ]; then paths+=(.tmp/pr-test-plan.json); fi
+        # zstd is preinstalled on ubuntu-latest: https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md#tools
+        tar -I 'zstd -T0 -3' -cf "${RUNNER_TEMP}/pharos-workspace/workspace.tar.zst" "${paths[@]}"
 
     - if: ${{ inputs.workspace-artifact == 'publish' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: pr-workspace-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
-        path: ${{ runner.temp }}/pharos-workspace/workspace.tar.gz
+        path: ${{ runner.temp }}/pharos-workspace/workspace.tar.zst
         if-no-files-found: error
+        compression-level: 0
         retention-days: 1
 
 

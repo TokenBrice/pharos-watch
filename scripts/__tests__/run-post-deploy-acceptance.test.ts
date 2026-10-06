@@ -237,6 +237,31 @@ describe("run-post-deploy-acceptance CLI", () => {
     expect(summary).toContain(`| pages-shell | pages | passed | GET ${RELEASE_URL} returned 200; release commit ${RELEASE_COMMIT}. |`);
   });
 
+  it.each<[string, string | undefined, string | undefined, number]>([
+    ["verified API identity matches", WORKER_VERSION, WORKER_VERSION, 0],
+    ["observed API identity is missing", WORKER_VERSION, undefined, 1],
+    ["expected deploy identity is missing", undefined, WORKER_VERSION, 1],
+    ["active API version changed", WORKER_VERSION, "another-version", 1],
+  ])("preserves the Worker identity gate when %s", async (_case, expected, observed, expectedExit) => {
+    const outputPath = join(summaryDir(), "github-output.txt");
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const exitCode = await runPostDeployAcceptanceCli(
+      {
+        NODE_ENV: "test",
+        GITHUB_OUTPUT: outputPath,
+        PAGES_DEPLOYED: "false",
+        WORKER_DEPLOYED: "true",
+        EXPECTED_WORKER_VERSION: expected,
+        OBSERVED_WORKER_VERSION: observed,
+      },
+      dependencies(),
+    );
+    expect(exitCode).toBe(expectedExit);
+    expect(readFileSync(outputPath, "utf8")).toBe(
+      `outcome=${expectedExit === 0 ? "passed" : "failed"}\n`,
+    );
+  });
+
   it("returns a failing exit code and records the failed outcome for a failed probe", async () => {
     const workDir = summaryDir();
     vi.spyOn(console, "log").mockImplementation(() => {});

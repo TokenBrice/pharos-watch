@@ -75,7 +75,7 @@ describe("script entrypoint validation", () => {
     expect(
       collectScriptEntrypoints(
         [
-          "node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --preflight",
+          "node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --classify",
           "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --range",
           "node --import tsx scripts/ci/check-unused-code.ts",
         ].join("\n"),

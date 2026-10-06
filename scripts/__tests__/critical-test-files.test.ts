@@ -22,6 +22,12 @@ describe("critical execution contracts", () => {
     expect(() => buildCriticalCoverageMergeArgs(".vitest-reports", { criticalFiles: [] })).toThrow(/Empty/);
   });
 
+  it("rejects an empty explicit shard rather than running unrestricted tests", () => {
+    const options = { criticalFiles: ["src/source.ts"], ownership: new Map([["src/source.ts", ["src/source.test.ts"]]]), exists: () => true };
+    expect(() => buildCriticalCoverageArgs(["--shard=2/2"], options)).toThrow("Empty critical coverage shard");
+    expect(() => buildCriticalCoverageArgs(["--shard=0/8"], options)).toThrow("Invalid test shard");
+  });
+
   it("retains all critical owners while narrowing measured sources", () => {
     const ownership = new Map([["src/first.ts", ["src/first.test.ts"]], ["src/second.ts", ["src/second.test.ts"]]]);
     const args = buildCriticalCoverageArgs([], { criticalFiles: [...ownership.keys()], ownership, changedFiles: ["src/first.ts"], exists: () => true });

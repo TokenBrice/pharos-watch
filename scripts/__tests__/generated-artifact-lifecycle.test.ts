@@ -67,11 +67,14 @@ describe("generated artifact lifecycle", () => {
     expect(isGitIgnored("tracked.ts", root)).toBe(false);
     expect(() => isGitIgnored("ignored.ts", roots.makeRoot())).toThrow();
   });
-  it("uses offline snapshots for bootstrap and live generation for compile inputs", () => {
+  it("uses offline snapshots for bootstrap and live generation only after refresh", () => {
     const snapshot = (options: Record<string, unknown>) => buildGeneratedArtifactPhases(options)
       .flatMap(({ artifacts }) => artifacts).find((artifact) => artifact.id === "stablecoin-detail-snapshots")!;
     expect(snapshot({ bootstrap: true }).command).toContain("PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP=1");
-    expect(snapshot({ buildLifecycles: ["compile-input"] }).command).not.toContain("PHAROS_DETAIL_SNAPSHOT_BOOTSTRAP");
+    expect(snapshot({ buildLifecycles: ["compile-input"] })).toBeUndefined();
+    expect(snapshot({ buildLifecycles: ["post-refresh"] }).command).toBe(
+      "node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    );
     expect(snapshot({ check: true }).command).toContain("PHAROS_DETAIL_SNAPSHOT_CHECK=1");
     expect(selectedIds({ only: ["stablecoin-detail-snapshots"] })).toEqual([
       "stablecoin-catalog", "stablecoin-detail-snapshots",
@@ -86,7 +89,7 @@ describe("generated artifact lifecycle", () => {
     expect(registry.every((artifact) => artifact.buildLifecycle != null)).toBe(true);
   });
 
-  it("selects only compile inputs for plain prebuild", () => {
+  it("excludes live snapshots from compile-input selection", () => {
     expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual([
       "stablecoin-catalog",
       "sitemap-dates",
@@ -99,7 +102,6 @@ describe("generated artifact lifecycle", () => {
       "legacy-stablecoin-redirects",
       "stablecoin-client-registry",
       "stablecoin-client-projections",
-      "stablecoin-detail-snapshots",
       "case-study-client-index",
       "editorial-style",
     ]);
@@ -108,7 +110,32 @@ describe("generated artifact lifecycle", () => {
   it("classifies refresh-sensitive projections separately", () => {
     expect(
       registry.filter((artifact) => artifact.buildLifecycle === "post-refresh").map((artifact) => artifact.id),
-    ).toEqual(["depeg-event-search-data", "llms-txt"]);
+    ).toEqual(["depeg-event-search-data", "stablecoin-detail-snapshots", "llms-txt"]);
+  });
+
+  it("keeps standalone prebuild hydrated with both lifecycles and one snapshot acquisition", () => {
+    const packageJson: unknown = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8"));
+    if (
+      packageJson === null || typeof packageJson !== "object" || !("scripts" in packageJson) ||
+      packageJson.scripts === null || typeof packageJson.scripts !== "object" ||
+      !("prebuild" in packageJson.scripts) || typeof packageJson.scripts.prebuild !== "string"
+    ) {
+      throw new Error("package.json must declare a prebuild script");
+    }
+    const buildLifecycles = [...packageJson.scripts.prebuild.matchAll(/--build-lifecycle=([^\s"]+)/g)]
+      .flatMap((match) => match[1].split(","));
+    expect(buildLifecycles).toEqual(["compile-input", "post-refresh"]);
+    const phases = buildGeneratedArtifactPhases({ buildLifecycles });
+    const ids = phases.flatMap(({ artifacts }) => artifacts.map(({ id }: RegistryArtifact) => id));
+    expect(ids.filter((id) => id === "stablecoin-detail-snapshots")).toHaveLength(1);
+    expect(ids).toEqual(expect.arrayContaining([
+      "sitemap-dates", "docs-metadata", "depeg-event-search-data", "llms-txt",
+    ]));
+    expect(phases.find(({ artifacts }) => artifacts.some(({ id }: RegistryArtifact) => id === "stablecoin-catalog"))?.phase).toBe(0);
+    expect(phases.find(({ artifacts }) => artifacts.some(({ id }: RegistryArtifact) => id === "stablecoin-detail-snapshots"))?.phase).toBe(1);
+    const snapshot = phases.flatMap(({ artifacts }) => artifacts)
+      .find(({ id }) => id === "stablecoin-detail-snapshots")!;
+    expect(snapshot.command).toBe("node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts");
   });
 
   it("materializes every gitignored artifact from one of the two bootstrap paths", () => {

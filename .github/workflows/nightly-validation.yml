@@ -28,11 +28,8 @@ jobs:
           bootstrap-history: "true"
           static-cache: "true"
       - run: npm run lint
-      - run: npm run lint:typed
       - run: npm run typecheck
-      - run: npm run typecheck:tests
       - run: npm run typecheck:worker
-      - run: npm run check:structural
       - uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
@@ -40,6 +37,9 @@ jobs:
             *.tsbuildinfo
             worker/*.tsbuildinfo
           key: ${{ steps.workspace.outputs.static-cache-key }}
+      - run: npm run lint:typed
+      - run: npm run typecheck:tests
+      - run: npm run check:structural
 
   full-tests:
     name: Full test suite (${{ matrix.shard }}/2)

@@ -9,14 +9,14 @@ export interface WorkerDeploymentVersion {
   version_id?: string;
 }
 
-/** `wrangler deployments status --json` shape. */
+/** Cloudflare Workers deployments API entry (the first entry is active). */
 export interface ActiveWorkerDeployment {
   annotations?: Record<string, string | undefined>;
   id?: string;
   versions?: readonly WorkerDeploymentVersion[];
 }
 
-/** One entry of `wrangler deployments list --json`. */
+/** Deployment history entries from the same Cloudflare API response. */
 export interface ListedWorkerDeployment {
   created_on?: string;
   id?: string;
@@ -102,37 +102,69 @@ export function selectWorkerActivationAt({
   };
 }
 
-function requireEnvPath(env: NodeJS.ProcessEnv, key: string): string {
+function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   const value = env[key];
-  if (!value) throw new Error(`${key} must name the JSON file captured by the deploy step.`);
+  if (!value) throw new Error(`${key} is required for Worker deployment verification.`);
   return value;
 }
 
-function readDeploymentHistory(env: NodeJS.ProcessEnv): ListedWorkerDeployment[] {
-  if (env.DEPLOYMENT_HISTORY_AVAILABLE !== "true") return [];
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(requireEnvPath(env, "DEPLOYMENTS_FILE"), "utf8"));
-    return Array.isArray(parsed) ? (parsed as ListedWorkerDeployment[]) : [];
-  } catch {
-    console.log(
-      "::warning::Cloudflare deployment history JSON was unavailable; the activation marker will be skipped.",
-    );
-    return [];
+export function readWorkerScriptName(): string {
+  const config = readFileSync(new URL("../../worker/wrangler.toml", import.meta.url), "utf8");
+  const topLevel = config.split(/^\s*\[/m, 1)[0];
+  const name = topLevel.match(/^name\s*=\s*"([^"]+)"\s*$/m)?.[1];
+  if (!name) throw new Error("worker/wrangler.toml must declare a top-level Worker name.");
+  return name;
+}
+
+/**
+ * GET /accounts/{account_id}/workers/scripts/{script_name}/deployments returns
+ * { success, result: { deployments } }. Cloudflare documents the first entry
+ * as the deployment actively serving traffic; do not sort by created_on.
+ * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/methods/list/
+ */
+export async function fetchWorkerDeployments(
+  env: NodeJS.ProcessEnv,
+  fetchApi: typeof fetch = fetch,
+): Promise<(ActiveWorkerDeployment & ListedWorkerDeployment)[]> {
+  const accountId = requireEnv(env, "CLOUDFLARE_ACCOUNT_ID");
+  const token = requireEnv(env, "CLOUDFLARE_API_TOKEN");
+  const scriptName = readWorkerScriptName();
+  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`
+    + `/workers/scripts/${encodeURIComponent(scriptName)}/deployments`;
+  const response = await fetchApi(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Cloudflare Worker deployments API returned HTTP ${response.status}.`);
   }
+  const payload = await response.json() as {
+    success?: boolean;
+    result?: { deployments?: (ActiveWorkerDeployment & ListedWorkerDeployment)[] };
+  } | null;
+  if (payload?.success !== true || !Array.isArray(payload.result?.deployments)) {
+    throw new Error("Cloudflare Worker deployments API returned an unsuccessful or malformed response.");
+  }
+  return payload.result.deployments;
 }
 
 function appendGithubOutput(env: NodeJS.ProcessEnv, line: string): void {
-  appendFileSync(requireEnvPath(env, "GITHUB_OUTPUT"), line);
+  // Local read-only smoke runs need no output file.
+  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, line);
 }
 
-export function runWorkerDeploymentVerification(env: NodeJS.ProcessEnv = process.env): void {
-  const deployment: ActiveWorkerDeployment = JSON.parse(
-    readFileSync(requireEnvPath(env, "DEPLOYMENT_STATUS_FILE"), "utf8"),
-  );
-  const verified = verifyActiveWorkerDeployment(deployment, workerDeployMessage(env.GITHUB_SHA));
+export async function runWorkerDeploymentVerification(
+  env: NodeJS.ProcessEnv = process.env,
+  fetchApi: typeof fetch = fetch,
+): Promise<void> {
+  const expectedMessage = workerDeployMessage(requireEnv(env, "GITHUB_SHA"));
+  const deployments = await fetchWorkerDeployments(env, fetchApi);
+  const deployment = deployments[0];
+  if (!deployment) throw new Error("Cloudflare Worker deployment history is empty; active identity is unavailable.");
+  const verified = verifyActiveWorkerDeployment(deployment, expectedMessage);
   const activation = selectWorkerActivationAt({
     deploymentId: verified.deploymentId,
-    deployments: readDeploymentHistory(env),
+    deployments,
     workerVersion: verified.workerVersion,
   });
 
@@ -154,6 +186,4 @@ export function runWorkerDeploymentVerification(env: NodeJS.ProcessEnv = process
   );
 }
 
-runDirectCli(import.meta.url, () => {
-  runWorkerDeploymentVerification();
-});
+runDirectCli(import.meta.url, () => runWorkerDeploymentVerification());

@@ -1,46 +1,37 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Beasties from "beasties";
+import { Worker } from "node:worker_threads";
+import Beasties, { type Logger, type Options } from "beasties";
+import { runDirectCli } from "../lib/cli-args.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const outDir = path.join(root, "out");
-const homepagePath = path.join(outDir, "index.html");
-
-if (!existsSync(homepagePath)) {
-  console.error("[critical-css] Missing out/index.html. Run next build first.");
-  process.exit(1);
+// Coin detail and yield pages share a template, but each page needs its own
+// critical styles. Keep the existing exported page selection.
+export function collectCriticalCssPages(outDir: string): string[] {
+  const stablecoinDir = path.join(outDir, "stablecoin");
+  const detailPagePaths = existsSync(stablecoinDir)
+    ? readdirSync(stablecoinDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .flatMap((entry) => [
+          path.join(stablecoinDir, entry.name, "index.html"),
+          path.join(stablecoinDir, entry.name, "yield", "index.html"),
+        ])
+        .filter((file) => existsSync(file))
+    : [];
+  return [path.join(outDir, "index.html"), ...detailPagePaths].sort();
 }
 
-// Coin detail pages are the SEO landing surface (~400 pages sharing one
-// template); without this pass each of them render-blocks on the full global
-// stylesheet (~64 KB gz). Each coin's /yield subpage ships the same
-// render-blocking link, so it gets the same treatment. Pages are processed
-// individually (shared optimizer, ~60ms/page) so per-coin markup variations
-// stay correct.
-const stablecoinDir = path.join(outDir, "stablecoin");
-const detailPagePaths = existsSync(stablecoinDir)
-  ? readdirSync(stablecoinDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .flatMap((entry) => [
-        path.join(stablecoinDir, entry.name, "index.html"),
-        path.join(stablecoinDir, entry.name, "yield", "index.html"),
-      ])
-      .filter((file) => existsSync(file))
-  : [];
-
-const optimizer = new Beasties({
-  path: outDir,
-  publicPath: "/",
-  preload: "media",
-  pruneSource: false,
-  reduceInlineStyles: false,
-  inlineFonts: false,
-  fonts: false,
-  logLevel: (process.env.BEASTIES_LOG_LEVEL || "error") as "error" | "info" | "warn" | "trace" | "debug" | "silent",
-});
+export function criticalCssWorkerCount(pageCount: number): number {
+  const override = process.env.PHAROS_CRITICAL_CSS_WORKERS;
+  const requested = override === undefined ? availableParallelism() - 1 : Number(override);
+  if (override !== undefined && (!Number.isSafeInteger(requested) || requested < 1)) {
+    throw new Error("PHAROS_CRITICAL_CSS_WORKERS must be a positive integer.");
+  }
+  return Math.max(1, Math.min(requested, pageCount));
+}
 
 const asyncCssLoaderPath = "/critical-css-loader.js";
 const asyncStylesheetPattern =
@@ -52,7 +43,99 @@ interface OptimizationResult {
   skipped?: boolean;
 }
 
-async function optimizePage(filePath: string, label: string): Promise<OptimizationResult> {
+const logLevels = ["trace", "debug", "info", "warn", "error", "silent"] as const;
+type LogLevel = Exclude<(typeof logLevels)[number], "silent">;
+interface OptimizationLog {
+  level: LogLevel;
+  message: string;
+}
+
+export interface PageOptimizationResult extends OptimizationResult {
+  label: string;
+  logs: OptimizationLog[];
+}
+
+// A worker owns one optimizer and processes its partition sequentially. Source
+// CSS is never pruned, so separate workers only write their own HTML files.
+export async function optimizeCriticalCssBatch(
+  outDir: string,
+  filePaths: string[],
+): Promise<PageOptimizationResult[]> {
+  const logLevel = (process.env.BEASTIES_LOG_LEVEL || "error") as Options["logLevel"];
+  const threshold = logLevels.indexOf(logLevel!);
+  let logs: OptimizationLog[] = [];
+  const logger: Logger = {};
+  for (const level of logLevels) {
+    if (level !== "silent" && logLevels.indexOf(level) >= threshold) {
+      logger[level] = (message) => logs.push({ level, message });
+    }
+  }
+  const optimizer = new Beasties({
+    path: outDir,
+    publicPath: "/",
+    preload: "media",
+    pruneSource: false,
+    reduceInlineStyles: false,
+    inlineFonts: false,
+    fonts: false,
+    logLevel,
+    logger,
+  });
+  const results: PageOptimizationResult[] = [];
+  for (const filePath of filePaths) {
+    logs = [];
+    const label = path.relative(path.dirname(outDir), filePath);
+    const result = await optimizePage(optimizer, filePath, label);
+    results.push({ ...result, label, logs });
+  }
+  return results;
+}
+
+export async function optimizeCriticalCssPages(
+  outDir: string,
+  filePaths: string[],
+  workerCount = criticalCssWorkerCount(filePaths.length),
+): Promise<PageOptimizationResult[]> {
+  const files = [...filePaths].sort();
+  if (files.length === 0) return [];
+  const poolSize = Math.min(workerCount, files.length);
+  if (poolSize === 1) return optimizeCriticalCssBatch(outDir, files);
+
+  const partitions = Array.from({ length: poolSize }, () => [] as string[]);
+  for (let index = 0; index < files.length; index++) {
+    partitions[index % poolSize].push(files[index]);
+  }
+  const workers: Worker[] = [];
+  try {
+    const pending = partitions.map((partition) => {
+      // scripts/maintenance/critical-css-worker.mjs registers tsx in the worker
+      // before importing this module, without relying on inherited loader hooks.
+      const worker = new Worker(new URL("./critical-css-worker.mjs", import.meta.url), {
+        workerData: { outDir, filePaths: partition },
+      });
+      workers.push(worker);
+      return new Promise<PageOptimizationResult[]>((resolve, reject) => {
+        let received = false;
+        worker.once("message", (results: PageOptimizationResult[]) => {
+          received = true;
+          resolve(results);
+        });
+        worker.once("error", reject);
+        worker.once("exit", (code) => {
+          if (!received) reject(new Error(`Critical CSS worker exited without results (code ${code}).`));
+        });
+      });
+    });
+    return (await Promise.all(pending)).flat().sort((a, b) =>
+      a.label < b.label ? -1 : a.label > b.label ? 1 : 0,
+    );
+  } finally {
+    // In particular, stop the other partitions before reporting a page failure.
+    await Promise.all(workers.map((worker) => worker.terminate()));
+  }
+}
+
+async function optimizePage(optimizer: Beasties, filePath: string, label: string): Promise<OptimizationResult> {
   const before = readFileSync(filePath, "utf8");
 
   // Re-running Beasties on an already-optimized page re-attaches onload
@@ -106,38 +189,37 @@ async function optimizePage(filePath: string, label: string): Promise<Optimizati
 }
 
 async function main(): Promise<void> {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const outDir = path.join(root, "out");
+  if (!existsSync(path.join(outDir, "index.html"))) {
+    console.error("[critical-css] Missing out/index.html. Run next build first.");
+    process.exit(1);
+  }
+
   const startedAt = Date.now();
   try {
-  const homepage = await optimizePage(homepagePath, "out/index.html");
-  console.log(
-    `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
-  );
-
-  // Pages have no ordering dependency; process them in bounded-concurrency
-  // batches so the ~60ms/page cost overlaps instead of running serially.
-  const CONCURRENCY = 8;
-  let detailBefore = 0;
-  let detailAfter = 0;
-  for (let i = 0; i < detailPagePaths.length; i += CONCURRENCY) {
-    const batch = detailPagePaths.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(
-      batch.map((filePath) => optimizePage(filePath, path.relative(root, filePath))),
-    );
+    const results = await optimizeCriticalCssPages(outDir, collectCriticalCssPages(outDir));
+    // Worker completion order cannot reorder diagnostics.
     for (const result of results) {
-      detailBefore += result.beforeBytes;
-      detailAfter += result.afterBytes;
+      for (const log of result.logs) console[log.level](log.message);
     }
-  }
-  if (detailPagePaths.length > 0) {
+    const homepage = results.find((result) => result.label === "out/index.html")!;
     console.log(
-      `[critical-css] Optimized ${detailPagePaths.length} coin detail + yield pages ` +
-      `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
+      `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
     );
-  }
+    const detailResults = results.filter((result) => result !== homepage);
+    if (detailResults.length > 0) {
+      const detailBefore = detailResults.reduce((bytes, result) => bytes + result.beforeBytes, 0);
+      const detailAfter = detailResults.reduce((bytes, result) => bytes + result.afterBytes, 0);
+      console.log(
+        `[critical-css] Optimized ${detailResults.length} coin detail + yield pages ` +
+        `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
+      );
+    }
   } catch (error) {
     console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }
 
-void main();
+runDirectCli(import.meta.url, main);

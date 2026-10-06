@@ -1,0 +1,42 @@
+name: Pages Preparation
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  pages-prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Pure/history projections need complete ancestry, but no live data.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+      - name: Materialize compile-input artifacts
+        # The refresh consumes the generated catalog. This lifecycle must never
+        # acquire live snapshots: those belong to the Worker-gated release job.
+        run: node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input
+      - name: Package prepared production workspace
+        run: |
+          mkdir -p "${RUNNER_TEMP}/pharos-pages-workspace"
+          # Transfer the whole compile-input output closure, including generated
+          # tracked files, modes and dependency symlinks. Git history is checked
+          # out independently by the consumer; no compiler cache is promoted.
+          tar -I 'zstd -T0 -3' \
+            --exclude='./.git' --exclude='./.next' --exclude='./.cache' \
+            -cf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pages-workspace-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: ${{ runner.temp }}/pharos-pages-workspace/workspace.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1

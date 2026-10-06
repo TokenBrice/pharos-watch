@@ -153,6 +153,13 @@ describe("classifyChangedFiles", () => {
       docs: ["docs/deployment-process.md#ci-deploy-sequence"],
     },
     {
+      name: "PR partition timing inputs to CI policy ownership",
+      files: ["scripts/data/pr-test-timings.json", "scripts/lib/shard-timing-reporter.mts", "scripts/maintenance/refresh-pr-test-timings.ts"],
+      mappings: ["validation-ci-policy"],
+      docs: ["docs/testing.md#ci-pipeline", "docs/scripts.md#pr-and-release-gates"],
+      checks: ["npx vitest run scripts/__tests__"],
+    },
+    {
       name: "Telegram delivery changes to the unified Telegram contract",
       files: ["worker/src/lib/telegram/mini-app-auth.ts", "shared/lib/telegram-delivery-policy.ts"],
       mappings: ["telegram"],
@@ -353,6 +360,7 @@ describe("representative --file routing", () => {
 
   it.each([
     ".github/workflows/pages-release.yml",
+    ".github/workflows/pages-prepare.yml",
     "scripts/ci/classify-deploy-changes.ts",
     "scripts/lib/automation-registry.mjs",
     "scripts/lib/deploy-impact.mts",

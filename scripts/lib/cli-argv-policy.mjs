@@ -48,6 +48,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/reconcile-dependency-graph.ts"),
     strict("scripts/maintenance/refresh-pages-release-data.ts"),
+    strict("scripts/maintenance/refresh-pr-test-timings.ts"),
     strict("scripts/maintenance/register-telegram.ts"),
     strict("scripts/maintenance/run-focused-checks.ts"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
