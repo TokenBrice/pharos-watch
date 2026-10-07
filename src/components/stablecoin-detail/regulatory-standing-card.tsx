@@ -2,12 +2,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { EvidenceModule } from "@/components/stablecoin-detail/evidence-module";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { SourceLinkList } from "@/components/stablecoin-detail/source-link-list";
 import { Badge } from "@/components/ui/badge";
 import type {
   IssuerDisclosureRow,
@@ -286,21 +287,7 @@ export function RegulatoryStandingCard({
             <div className="mt-1 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">
               {fold.notes}
               {view.sources.length > 0 ? (
-                <ul aria-label="Sources" className="space-y-2">
-                  {view.sources.map((source) => (
-                    <li key={source.url} className="flex min-w-0 gap-2">
-                      <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pharos-focus-ring min-w-0 break-words rounded-sm underline underline-offset-2 transition-colors hover:text-foreground motion-reduce:transition-none"
-                      >
-                        {source.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <SourceLinkList aria-label="Sources" sources={view.sources} className="space-y-2" />
               ) : null}
             </div>
           </ModuleDisclosure>
