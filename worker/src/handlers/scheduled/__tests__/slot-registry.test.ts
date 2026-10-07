@@ -40,15 +40,33 @@ async function runSlot(scheduleKey: CronScheduleKey): Promise<{
 }> {
   const plan = SCHEDULED_SLOT_PLANS[scheduleKey];
   const leased: string[] = [];
+  const fixture = fixtures.open();
   const runtime = makeScheduledRuntime({
-    db: fixtures.open().db,
+    db: fixture.db,
     scheduleKey,
     cron: plan.triggerSchedules[0],
+    invocationId: "registry-invocation",
+    jobAttemptNo: 1,
     runLeasedCron: vi.fn(async (job: string) => {
       leased.push(job);
       return { status: "ok" as const, itemCount: 1, metadata: CAPABLE_RESULT_METADATA };
     }) as ScheduledRuntimeContext["runLeasedCron"],
   });
+  // Gated members write real preflight terminals, which require the same
+  // running execution fence that production supplies before dispatch.
+  runtime.executionFence = {
+    scheduleKey,
+    slotStartedAt: runtime.slotStartedAt,
+    invocationId: runtime.invocationId!,
+    owner: "registry-owner",
+    generation: 1,
+    workerRole: plan.worker,
+  };
+  fixture.sqlite.prepare(`INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner,
+    execution_generation, invocation_id, started_at, updated_at, child_marker_version)
+    VALUES (?, ?, 'running', ?, ?, ?, ?, ?, 1)`)
+    .run(scheduleKey, runtime.slotStartedAt, runtime.executionFence.owner, runtime.executionFence.generation,
+      runtime.executionFence.invocationId, runtime.slotStartedAt, runtime.slotStartedAt);
   const runner = await SLOT_RUNNER_LOADER_BY_KEY[plan.runnerKey]();
   const summary = (await runner(runtime)) ?? undefined;
   return { leased, summary };

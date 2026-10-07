@@ -478,6 +478,8 @@ export async function logCronRun(
   let lastProgressWriteAtMs: number | null = null;
   let lastProgressWriteStage: string | null | undefined;
   let lastProgressLeaseOwner: string | null = null;
+  // Cleanup must match the detailed row, not a newer coalesced owner report.
+  let lastProgressWriteLeaseOwner: string | null = null;
   let latestResourcePressure: ResourcePressure | null = null;
   const reportProgress: CronProgressReporter = (update) => {
     // Keep valid evidence even when this job skips D1 progress or coalesces this update.
@@ -520,7 +522,7 @@ export async function logCronRun(
     lastProgressWriteStage = snapshot.stage;
     progressWriteTail = progressWriteTail.then(async () => {
       try {
-        lastProgressLeaseOwner = snapshot.leaseOwner;
+        lastProgressWriteLeaseOwner = snapshot.leaseOwner;
         await upsertCronProgress(db, job, startSec, slotStartedAt, snapshot);
       } catch (err) {
         console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
@@ -766,7 +768,7 @@ export async function logCronRun(
     await progressWriteTail;
     if (progressActivated) {
       try {
-        await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressLeaseOwner);
+        await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressWriteLeaseOwner);
       } catch (err) {
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }
