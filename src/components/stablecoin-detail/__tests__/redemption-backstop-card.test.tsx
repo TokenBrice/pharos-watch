@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { render, within } from "@testing-library/react";
 import { RedemptionRouteSection } from "../redemption-backstop-card";
@@ -81,6 +81,18 @@ function onSummaryLayer(matches: readonly HTMLElement[]): HTMLElement {
   expect(visible).toHaveLength(1);
   return visible[0]!;
 }
+
+// The footer's live-data freshness label is relative to the clock. Pinned five
+// minutes after BASE_ENTRY.updatedAt, so it never reads an hour count that
+// collides with the score digits the summary-layer matchers look for.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date((BASE_ENTRY.updatedAt + 300) * 1000));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("RedemptionBackstopCard", () => {
   it("presents one standalone route score without the legacy effective exit score", () => {

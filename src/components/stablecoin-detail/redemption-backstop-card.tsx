@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { cn } from "@/lib/utils";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
 import {
@@ -521,46 +522,53 @@ function RouteScoreBreakdown({
     <ModuleDisclosure label="Scoring breakdown" defaultOpen={showWork}>
       <div className="mt-2 grid gap-x-10 gap-y-5 pb-1 text-xs text-muted-foreground @4xl/evidence:grid-cols-2">
         <div className="min-w-0 space-y-2">
-          <table className="w-full border-collapse">
-            <caption className="sr-only">Route score: component score × weight = contribution</caption>
-            <thead>
-              <tr className="border-b border-border/50 text-left">
-                <th scope="col" className="py-1.5 pr-3 font-normal">Component</th>
-                <th scope="col" className="py-1.5 pr-3 text-right font-normal">Score</th>
-                <th scope="col" className="py-1.5 pr-3 text-right font-normal">Weight</th>
-                <th scope="col" className="py-1.5 text-right font-normal">Contribution</th>
-              </tr>
-            </thead>
-            <tbody>
+          <TableFrame
+            tableId="redemption-route-score-breakdown"
+            chrome="bare"
+            density="compact"
+            caption="Route score: component score × weight = contribution"
+            captionClassName="sr-only"
+            tableClassName="border-collapse text-xs"
+            viewportProps={{ mobileScrollHint: false, compactBottomPadding: false }}
+          >
+            <TableHeader>
+              <TableRow rowIntent="static" className="border-border/50 text-left">
+                <TableHead scope="col" className="h-auto px-0 py-1.5 pr-3 font-normal">Component</TableHead>
+                <TableHead scope="col" className="h-auto px-0 py-1.5 pr-3 text-right font-normal">Score</TableHead>
+                <TableHead scope="col" className="h-auto px-0 py-1.5 pr-3 text-right font-normal">Weight</TableHead>
+                <TableHead scope="col" className="h-auto px-0 py-1.5 text-right font-normal">Contribution</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => (
-                <tr key={row.label} className="border-b border-border/30">
-                  <th scope="row" className="py-1.5 pr-3 text-left font-normal text-foreground">
+                <TableRow key={row.label} rowIntent="static" className="border-border/30">
+                  <TableHead scope="row" className="h-auto whitespace-normal px-0 py-1.5 pr-3 font-normal text-foreground">
                     {row.label}
                     {row.item.suffix ? <span className="text-muted-foreground">{row.item.suffix}</span> : null}
-                  </th>
-                  <td className={cn("pharos-numeric py-1.5 pr-3 text-right", row.item.score == null ? undefined : row.item.textClass)}>
+                  </TableHead>
+                  <TableCell className={cn("pharos-numeric px-0 py-1.5 pr-3 text-right", row.item.score == null ? undefined : row.item.textClass)}>
                     {row.item.score ?? "–"}
-                  </td>
-                  <td className="pharos-numeric py-1.5 pr-3 text-right">{formatPercent(row.weight * 100, 0)}</td>
-                  <td className="pharos-numeric py-1.5 text-right text-foreground">
+                  </TableCell>
+                  <TableCell className="pharos-numeric px-0 py-1.5 pr-3 text-right">{formatPercent(row.weight * 100, 0)}</TableCell>
+                  <TableCell className="pharos-numeric px-0 py-1.5 text-right text-foreground">
                     {row.contribution == null ? "–" : row.contribution.toFixed(1)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
             <tfoot>
-              <tr>
-                <th scope="row" colSpan={3} className="pt-2 pr-3 text-left font-normal">Weighted sum</th>
-                <td className="pharos-numeric pt-2 text-right text-foreground">{weightedSum == null ? "–" : weightedSum.toFixed(1)}</td>
-              </tr>
-              <tr>
-                <th scope="row" colSpan={3} className="pt-1 pr-3 text-left font-medium text-foreground">Route score</th>
-                <td className={cn("pharos-numeric pt-1 text-right text-sm font-semibold", entry.score == null ? undefined : "text-foreground")}>
+              <TableRow rowIntent="static" className="border-b-0 border-t border-border/30">
+                <TableHead scope="row" colSpan={3} className="h-auto px-0 pt-2 pr-3 font-normal">Weighted sum</TableHead>
+                <TableCell className="pharos-numeric px-0 py-0 pt-2 text-right text-foreground">{weightedSum == null ? "–" : weightedSum.toFixed(1)}</TableCell>
+              </TableRow>
+              <TableRow rowIntent="static" className="border-b-0">
+                <TableHead scope="row" colSpan={3} className="h-auto px-0 pt-1 pr-3 font-medium text-foreground">Route score</TableHead>
+                <TableCell className={cn("pharos-numeric px-0 py-0 pt-1 text-right text-sm font-semibold", entry.score == null ? undefined : "text-foreground")}>
                   {entry.score ?? "NR"}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             </tfoot>
-          </table>
+          </TableFrame>
           {caps.length > 0 ? (
             <p>
               <span className="text-foreground">Caps applied:</span>{" "}
