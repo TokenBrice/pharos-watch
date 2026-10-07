@@ -6,21 +6,14 @@ import Link from "next/link";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
-import { revealAnchorTarget } from "@/lib/anchor-reveal";
+import { revealAnchorId } from "@/lib/anchor-reveal";
 
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome
   // clearance) and the page's scroll-behavior, including its reduced-motion
-  // override. At xl some sections relocate into the right rail and the
-  // in-flow twin that owns the id is display-hidden — jump to the visible
-  // rail twin (`data-anchor-twin`) instead.
-  const target = document.getElementById(sectionId);
-  const element =
-    target && target.offsetParent === null
-      ? (document.querySelector<HTMLElement>(`[data-anchor-twin="${CSS.escape(sectionId)}"]`) ?? target)
-      : target;
-  revealAnchorTarget(element);
-  element?.scrollIntoView({ block: "start" });
+  // override. `revealAnchorId` lands on the visible rail twin when the in-flow
+  // owner of the id is display-hidden at xl.
+  revealAnchorId(sectionId)?.scrollIntoView({ block: "start" });
 }
 
 function PassportItemValue({ item, valueClassName }: { item: HeroPassportItemViewModel; valueClassName: string }) {
@@ -163,7 +156,7 @@ export function HeroPassportStrip({
                 }
                 className="pharos-focus-ring group flex min-h-11 shrink-0 snap-start flex-col justify-center rounded-sm lg:min-h-0"
               >
-                <span className="text-[10px] font-medium uppercase tracking-wider leading-tight text-muted-foreground">
+                <span className="text-[11px] font-medium uppercase tracking-wider leading-tight text-muted-foreground">
                   {item.category}
                 </span>
                 <PassportItemValue
@@ -194,7 +187,7 @@ export function HeroPassportStrip({
                   }
                   className={`pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 py-3 last:border-r-0 ${desktopCellPaddingClass}`}
                 >
-                  <span className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
+                  <span className="text-[11px] font-medium uppercase leading-tight tracking-[0.1em] text-muted-foreground">
                     {item.category}
                   </span>
                   <span className="mt-0.5 flex">

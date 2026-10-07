@@ -18,7 +18,9 @@ import {
   obituary,
 } from "./client-test-support";
 import StablecoinDetailClient from "./client";
+import { resolveBoardGridPlacement } from "./detail-risk-context-sections";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { BRIDGE_TIER_LABELS } from "@shared/lib/classification";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -79,10 +81,18 @@ vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
   PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
+vi.mock("@/components/stablecoin-detail/redemption-backstop-card", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/stablecoin-detail/redemption-backstop-card")>()),
   RedemptionRouteSection: ({ entry }: { entry: { stablecoinId: string } | null }) => (
     <section data-testid="redemption-route-section">{entry?.stablecoinId ?? "no-route"}</section>
   ),
+  hasRedemptionRouteModule: (entry: unknown) => entry != null,
+}));
+
+// Freeze & seizure reads blacklist usage near the viewport; no query client here.
+vi.mock("@/hooks/use-blacklist-events", () => ({
+  useBlacklistSummary: () => ({ data: undefined, dataUpdatedAt: 0 }),
+  useBlacklistEventsPage: () => ({ data: { events: [], total: 0 }, isLoading: false, isError: false }),
 }));
 
 vi.mock("@/components/ai-summary", () => ({
@@ -256,9 +266,10 @@ describe("StablecoinDetailClient", () => {
     const reserves = await screen.findByTestId("reserves-section");
     expect(screen.queryByTestId("report-card")).toBeNull();
     expect(reserves.textContent).toContain("curated-fallback");
-    expect(container.querySelector("#backing-evidence")?.contains(reserves)).toBe(false);
-    const backingEvidence = container.querySelector("#backing-evidence")!;
-    expect(reserves.compareDocumentPosition(backingEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Control evidence always renders (Mint Authority or its "Not reviewed" state).
+    const controlEvidence = container.querySelector("#control-evidence")!;
+    expect(controlEvidence.contains(reserves)).toBe(false);
+    expect(reserves.compareDocumentPosition(controlEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
@@ -409,9 +420,17 @@ describe("StablecoinDetailClient", () => {
     );
   });
 
-  it("mounts each structural card once, in its pillar group, and indexes it from the rail", () => {
+  it("mounts every evidence module once in its board, with rail twins and a complete evidence index", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reserves: {
+        reserves: [{ name: "Vault collateral", pct: 100, risk: "low" }],
+        estimated: false,
+        mode: "live",
+        liveAt: 1_780_000_000,
+        metadata: { collateralizationRatio: 1.24 },
+      },
+    }));
 
     const { container } = render(
       <StablecoinDetailClient
@@ -425,39 +444,85 @@ describe("StablecoinDetailClient", () => {
           notes: "Reserves sit in segregated accounts.",
           sources: [{ label: "Terms", url: "https://example.com/terms" }],
         }}
-        mechanismBacking={{
-          archetype: "fiat-cash",
-          reviewedAt: "2026-07-15",
-          metrics: [],
-          protocolFacts: [],
-          notes: [],
-          sourceLabel: "Terms",
-          sourceUrl: "https://example.com/terms",
-        }}
       />,
     );
 
-    const backingEvidence = container.querySelector("#backing-evidence");
-    const controlEvidence = container.querySelector("#control-evidence");
-    const mintAuthority = container.querySelector("#mint-authority");
-    const mechanismReview = container.querySelector("#mechanism-review");
-    const backingMechanics = container.querySelector("#backing-mechanics");
-    // The anchor lands on the fold band itself — one mount at every width.
-    expect(mechanismReview?.tagName).toBe("DETAILS");
-    expect(mechanismReview?.closest('[class~="xl:hidden"]')).toBeNull();
-    expect(controlEvidence?.contains(mintAuthority)).toBe(true);
-    // Mechanism review explains the Backing pillar's mechanism scores.
-    expect(backingEvidence?.contains(mechanismReview)).toBe(true);
-    expect(backingEvidence?.contains(backingMechanics)).toBe(true);
-
-    const rail = container.querySelector('aside[aria-label="Coin summary rail"]')!;
-    const railLinks = Array.from(rail.querySelectorAll('[aria-label="Evidence index"] a')).map((link) =>
-      link.getAttribute("href"),
-    );
-    expect(railLinks).toEqual(expect.arrayContaining(["#backing-mechanics", "#mechanism-review"]));
-    // The rail holds index rows only, never a second copy of the card body.
-    expect(rail.textContent).not.toContain("Reserves sit in segregated accounts.");
+    const backingEvidence = container.querySelector("#backing-evidence")!;
+    const controlEvidence = container.querySelector("#control-evidence")!;
+    // Mechanism review is the Backing strip's provenance row, mounted once.
     expect(container.querySelectorAll("#mechanism-review")).toHaveLength(1);
+    expect(backingEvidence.contains(container.querySelector("#mechanism-review"))).toBe(true);
+    // No mint review: the explicit S14 state owns the anchor in its slot.
+    const mint = container.querySelector("#mint-authority");
+    expect(controlEvidence.contains(mint)).toBe(true);
+    expect(mint?.getAttribute("data-evidence-state")).toBe("not-reviewed");
+
+    // Rail metric cards are twins: the in-flow copy owns the id, inside its board.
+    const rail = container.querySelector('aside[aria-label="Coin summary rail"]')!;
+    for (const [anchor, board] of [["collateralization", backingEvidence], ["jurisdiction", controlEvidence]] as const) {
+      const owners = container.querySelectorAll(`#${anchor}`);
+      expect(owners).toHaveLength(1);
+      expect(board.contains(owners[0]!)).toBe(true);
+      expect(rail.contains(owners[0]!)).toBe(false);
+      expect(rail.querySelector(`[data-anchor-twin="${anchor}"]`)).not.toBeNull();
+    }
+
+    // Every index row lands on exactly one in-flow mount outside the rail.
+    const railLinks = Array.from(rail.querySelectorAll('[aria-label="Evidence index"] a')).map((link) =>
+      link.getAttribute("href")!,
+    );
+    expect(railLinks).toEqual(expect.arrayContaining(["#mechanism-review", "#mint-authority", "#bridging"]));
+    for (const href of railLinks) {
+      const targets = container.querySelectorAll(href);
+      expect(targets).toHaveLength(1);
+      expect(rail.contains(targets[0]!)).toBe(false);
+    }
+    // The rail never repeats a module body.
+    expect(rail.textContent).not.toContain("Reserves sit in segregated accounts.");
+  });
+
+  it("places the live stress layer under Score and Reserves, ahead of the pillar boards", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = makeV9Card({ id: coin.id });
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reportCard,
+      reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+    }));
+
+    const { container } = renderDetail(coin);
+
+    const dews = screen.getByTestId("dews-detail");
+    const score = container.querySelector("#report-card")!;
+    const backingEvidence = container.querySelector("#backing-evidence")!;
+    expect(score.compareDocumentPosition(dews) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(dews.compareDocumentPosition(backingEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("states that DEWS does not apply to NAV tokens instead of omitting it silently", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ isNavToken: true }));
+
+    const { container } = renderDetail(coin);
+
+    expect(screen.queryByTestId("dews-detail")).toBeNull();
+    const notApplicable = container.querySelector('#overview [data-evidence-state="not-applicable"]');
+    expect(notApplicable).not.toBeNull();
+    const controlEvidence = container.querySelector("#control-evidence")!;
+    expect(notApplicable!.compareDocumentPosition(controlEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("never leaves a board kicker whose only content is hidden at xl", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = makeV9Card({ id: coin.id });
+    // Frozen coins keep the bare kicker (no strip), so the Exit board's only
+    // possible child is the below-xl Access posture twin.
+    useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), reportCard });
+
+    const { container } = renderDetail(coin);
+
+    const exitEvidence = container.querySelector("#exit-evidence");
+    expect(exitEvidence === null || exitEvidence.classList.contains("xl:hidden")).toBe(true);
+    expect(container.querySelector("#control-evidence")?.classList.contains("xl:hidden")).toBe(false);
   });
 
   it("mounts the redemption route in exit evidence, out of the Market zone", () => {
@@ -501,6 +566,150 @@ describe("StablecoinDetailClient", () => {
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
     expect(container.querySelector("#price")).toBeNull();
+  });
+
+  it("states a missing redemption route in the Exit board and indexes it", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ redemptionBackstop: undefined }));
+
+    const { container } = renderDetail(coin);
+
+    const redemption = container.querySelector("#redemption");
+    expect(container.querySelector("#exit-evidence")?.contains(redemption)).toBe(true);
+    expect(redemption?.getAttribute("data-evidence-state")).toBe("not-reviewed");
+    const rail = container.querySelector('aside[aria-label="Coin summary rail"]')!;
+    const row = rail.querySelector('[aria-label="Evidence index"] a[href="#redemption"]');
+    expect(row?.textContent).toContain("Redemption route");
+    expect(row?.textContent).toContain("Not reviewed");
+  });
+
+  it.each([
+    { name: "no route qualifies", primaryRoute: null, note: "not counted" },
+    { name: "Exit scores this route", primaryRoute: "usds-sky", note: null },
+    { name: "Exit scores another coin's route of the same family", primaryRoute: "usdc-circle", note: "not selected" },
+  ])("qualifies the indexed redemption score when $name", ({ primaryRoute, note }) => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const routeFamily = "offchain-issuer";
+    const reportCard = structuredClone(makeV9Card({ id: coin.id }));
+    const exit = reportCard.breakdowns!.exit;
+    if (primaryRoute === null) exit.primaryRoute = null;
+    else exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reportCard,
+      reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+      redemptionBackstop: { stablecoinId: coin.id, score: 79, routeFamily },
+    }));
+
+    const { container } = renderDetail(coin);
+
+    const row = container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')!;
+    expect(row.textContent).toContain("79");
+    if (note) expect(row.textContent).toContain(note);
+    else expect(row.textContent).not.toMatch(/not counted|not selected/);
+  });
+
+  it.each([
+    { name: "Exit selects another route", primaryRoute: "usdc-circle", expected: "NR · not selected" },
+    { name: "no route qualifies", primaryRoute: null, expected: "NR · not counted" },
+  ])("indexes an unrated redemption route as NR, never a blank row, when $name", ({ primaryRoute, expected }) => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const routeFamily = "offchain-issuer";
+    const reportCard = structuredClone(makeV9Card({ id: coin.id }));
+    const exit = reportCard.breakdowns!.exit;
+    if (primaryRoute === null) exit.primaryRoute = null;
+    else exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reportCard,
+      reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+      redemptionBackstop: { stablecoinId: coin.id, score: null, routeFamily },
+    }));
+
+    const { container } = renderDetail(coin);
+
+    const row = container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')!;
+    expect(row.textContent).toContain(expected);
+  });
+
+  it("reads bridging on a single-chain coin as not applicable, not as a missing review", () => {
+    const coin = { ...TRACKED_META_BY_ID.get("usds-sky")!, contracts: [] };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ coin }));
+
+    const { container } = renderDetail(coin);
+
+    const bridging = container.querySelector("#bridging");
+    expect(bridging?.getAttribute("data-evidence-state")).toBe("not-applicable");
+    expect(bridging?.textContent).toContain(BRIDGE_TIER_LABELS["single-chain-or-native"]);
+  });
+});
+
+describe("resolveBoardGridPlacement", () => {
+  /** Auto-placement without `dense`: the unfilled tracks of every row that a span wraps past, plus the last row. */
+  function holes(spans: readonly number[], tracks: number): number[] {
+    const gaps: number[] = [];
+    let column = 0;
+    for (const span of spans) {
+      if (column + span > tracks) {
+        gaps.push(tracks - column);
+        column = 0;
+      }
+      column = (column + span) % tracks;
+    }
+    if (column > 0) gaps.push(tracks - column);
+    return gaps;
+  }
+
+  const cases = Array.from({ length: 8 }, (_, tiles) => [0, 1].map((twins) => ({ tiles, twins }))).flat();
+
+  it.each(cases)("never leaves an empty track with $tiles tiles and $twins twins", ({ tiles, twins }) => {
+    const placements = resolveBoardGridPlacement(tiles, twins);
+    const tilePlacements = placements.slice(0, tiles);
+
+    // Below xl: tiles and twins share two tracks.
+    expect(holes(placements.map((placement) => (placement.rowAtTwo === "always" ? 2 : 1)), 2)).toEqual([]);
+    // At xl, two tracks: twins are hidden.
+    expect(holes(tilePlacements.map((placement) => (placement.rowAtTwo === "never" ? 1 : 2)), 2)).toEqual([]);
+    // At xl, three tracks drawn as six half-tracks; twins never reach them.
+    expect(placements.slice(tiles).every((placement) => placement.halfTracksAtThree === null)).toBe(true);
+    expect(holes(tilePlacements.map((placement) => placement.halfTracksAtThree ?? 0), 6)).toEqual([]);
+    // Strip form only for a tile that spans the row at two tracks.
+    for (const placement of tilePlacements) {
+      expect(placement.stripForm).toBe(placement.rowAtTwo !== "never");
+    }
+  });
+
+  it("splits two tiles across the three-track row instead of leaving a third empty", () => {
+    expect(resolveBoardGridPlacement(2, 0).map((placement) => placement.halfTracksAtThree)).toEqual([3, 3]);
+  });
+
+  it("pairs a lone tile with a twin below xl and spans it only at xl", () => {
+    const [tile, twin] = resolveBoardGridPlacement(1, 1);
+    expect(tile).toMatchObject({ rowAtTwo: "xl", stripForm: true });
+    expect(twin).toMatchObject({ rowAtTwo: "never", halfTracksAtThree: null });
+  });
+});
+
+describe("StablecoinDetailClient (frozen S14)", () => {
+  beforeEach(() => {
+    useStablecoinDetailViewModelMock.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("keeps the reduced dossier: DEWS reads frozen archive and no placeholder claims a missing review", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = makeV9Card({ id: coin.id });
+    useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), reportCard });
+
+    const { container } = renderDetail(coin);
+
+    expect(screen.queryByTestId("dews-detail")).toBeNull();
+    const notApplicable = container.querySelector('#overview [data-evidence-state="not-applicable"]');
+    expect(notApplicable?.textContent).toContain("frozen archive");
+    // Mint Authority's own state is the only "Not reviewed" left.
+    const notReviewed = Array.from(container.querySelectorAll('[data-evidence-state="not-reviewed"]'));
+    expect(notReviewed.map((node) => node.id)).toEqual(["mint-authority"]);
   });
 });
 

@@ -29,6 +29,9 @@ import { buildMechanismBackingView } from "@/lib/mechanism-backing";
 import { buildMechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import { buildMechanismReviewView } from "@/lib/mechanism-review";
 import { buildTransferReviewView } from "@/lib/transfer-review";
+import { projectOracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
+import type { BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
+import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanism-diagrams/mechanism-template";
 import type { StablecoinDetailSnapshot } from "@/lib/api";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
 import type { StablecoinAiSummariesById } from "@shared/types";
@@ -225,6 +228,21 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const staticCoin = buildStablecoinStaticMeta(coin);
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const detailSnapshot = readDetailSnapshot(id);
+  // A wrapper's Mechanism flow draws its parent's design; whether that parent
+  // has a liquidation engine needs the parent's server-only backing review.
+  const variantParent = coin.variantOf ? TRACKED_META_BY_ID.get(coin.variantOf) : undefined;
+  const parentMechanismBacking = variantParent ? buildMechanismBackingView(variantParent.id) : null;
+  const parentLiquidationEngine = variantParent
+    ? deriveLiquidationEngine(parentMechanismBacking, projectOracleRiskClientSummary(variantParent)?.role)
+    : null;
+  // A pure or savings pass-through wrapper runs no backing of its own: its
+  // Backing KPI reads the parent's system ("via USDe"). Strategy vaults and
+  // archetype overrides keep their own figures.
+  const backingParent: NonNullable<BackingMetricsInput["parent"]> | null = variantParent
+    && !coin.archetypeOverride
+    && (coin.variantKind === "pure-wrapper" || coin.variantKind === "savings-passthrough")
+    ? { symbol: variantParent.symbol, backing: parentMechanismBacking }
+    : null;
   // Frozen coins never refresh provider detail, so their archived list row backs the hero
   // whenever the live detail row is unavailable.
   const frozenSnapshot = coin.status === "frozen" ? FROZEN_SNAPSHOTS_BY_ID.get(id) : undefined;
@@ -263,6 +281,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           mechanismBacking={buildMechanismBackingView(id)}
           mechanismCollateralization={buildMechanismCollateralizationView(id)}
           mechanismReview={buildMechanismReviewView(id)}
+          parentLiquidationEngine={parentLiquidationEngine}
+          backingParent={backingParent}
           transferReview={buildTransferReviewView(id)}
           exploreNextContent={
             <ExploreNextSection

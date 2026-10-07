@@ -41,7 +41,6 @@ export const createDetailLazySectionsMock = () => {
       "FeedbackModal",
       "McapChart",
       "MarketDataSection",
-      "DEWSDetail",
       "DepegHistory",
       "DdrTrackRecordSection",
       "PegStabilityCard",
@@ -83,6 +82,7 @@ export const createDetailLazySectionsMock = () => {
     FlowsSection: () => <div data-testid="flows-section" />,
     FlowHistorySection: () => <div data-testid="flow-history-section" />,
     BlacklistSection: () => <div data-testid="blacklist-section" />,
+    DEWSDetail: () => <div data-testid="dews-detail" />,
     BlacklistHistorySection: () => <div data-testid="blacklist-history-section" />,
   };
 };
