@@ -17,6 +17,8 @@ import { stableJsonStringifyChunksV1 } from "../stable-json";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 
 import { findV9CauseEvidenceBindingIssues } from "./evidence";
+import { findV9ReserveBoundFactorStatusIssues } from "./reserve-bound-facts";
+import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "./reserve-bound-policy";
 const V9_FACT_SET_DIGEST_DOMAINS = {
   2: "safety-score-v9.normalized-facts.v2",
   4: "safety-score-v9.normalized-facts.v4",
@@ -79,8 +81,15 @@ export function canonicalV9RouteKey(lane: "dex" | "redemption", sourceGeneration
 type V9FactSetCore = V9FactSetCoreV2 | V9FactSetCoreV3;
 type CompiledV9FactSet = CompiledV9FactSetV2 | CompiledV9FactSetV3;
 
+function assertV9ReserveBoundFactorStatuses(factSet: V9FactSetCoreV3): void {
+  for (const asset of factSet.assets) {
+    const issues = findV9ReserveBoundFactorStatusIssues(asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, factSet.asOfSec);
+    if (issues.length > 0) throw new Error(`Invalid reserve bound status for ${asset.assetId}: ${issues.map(issue => issue.message).join("; ")}`);
+  }
+}
+
 function parseV9FactSetDigestInput(input: V9FactSetCore | CompiledV9FactSet): V9FactSetCore | CompiledV9FactSet {
-  return (
+  const parsed = (
     input.schemaVersion === 2
       ? "v9FactSetDigest" in input
         ? CompiledV9FactSetV2Schema.parse(input)
@@ -89,6 +98,8 @@ function parseV9FactSetDigestInput(input: V9FactSetCore | CompiledV9FactSet): V9
         ? CompiledV9FactSetV3Schema.parse(input)
         : V9FactSetCoreV3Schema.parse(input)
   );
+  if (parsed.schemaVersion === 4) assertV9ReserveBoundFactorStatuses(parsed);
+  return parsed;
 }
 
 function projectValidatedV9FactSetDigestPayload(input: V9FactSetCore | CompiledV9FactSet) {
@@ -136,6 +147,7 @@ export function parseCompiledV9FactSetV2(input: unknown): CompiledV9FactSetV2 {
 // Test seam (keep exported): V3 digest-tamper refusal, paired with the V2 form.
 export function parseCompiledV9FactSetV3(input: unknown): CompiledV9FactSetV3 {
   const factSet = CompiledV9FactSetV3Schema.parse(input);
+  assertV9ReserveBoundFactorStatuses(factSet);
   for (const asset of factSet.assets) {
     const issues = findV9CauseEvidenceBindingIssues(asset);
     if (issues.length > 0) throw new Error(`Invalid cause proof for ${asset.assetId}: ${issues.map((issue) => issue.message).join("; ")}`);

@@ -30,7 +30,8 @@
       "pct": 0.1,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "liquidityHorizon": "immediate"
     },
     {
       "sourceKey": "nest-vault-positions:pusd",
@@ -38,14 +39,29 @@
       "pct": 0.1,
       "risk": "high",
       "coinId": "pusd-plume",
-      "depType": "collateral"
+      "depType": "collateral",
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "nest-vault-positions:usdt",
+      "name": "Liquid USDT balances",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_2)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Nest scoped on-chain liquid-reserve availability, reviewed 2026-10-07",
+        "url": "https://docs.nest.credit/about/liquidity-and-redemptions"
+      },
       {
         "label": "Nest nWISDOM positions API",
         "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
@@ -55,7 +71,7 @@
         "url": "https://docs.nest.credit/about/available-vaults/"
       }
     ],
-    "rationale": "An October 1, 2026 recheck of the exact nWISDOM positions API identifies xCRDYX, nTBILL and liquid stablecoin balances. WisdomTree issuer disclosure corroborates CRDYX exposure to publicly traded alternative-credit investment vehicles. The Nest available-vault directory fetched on that date does not list nWISDOM or verify the earlier four-day redemption estimate. The September 21 composition percentages and NAV reconciliation residual remain historical observations pending dated liability/asset reconciliation; the current API balances do not identify the residual or legal recovery waterfall.",
+    "rationale": "An October 1, 2026 recheck of the exact nWISDOM positions API identifies xCRDYX, nTBILL and liquid stablecoin balances. WisdomTree issuer disclosure corroborates CRDYX exposure to publicly traded alternative-credit investment vehicles. The Nest available-vault directory fetched on that date does not list nWISDOM or verify the earlier four-day redemption estimate. The September 21 composition percentages and NAV reconciliation residual remain historical observations pending dated liability/asset reconciliation; the current API balances do not identify the residual or legal recovery waterfall. On 2026-10-07, the exact vault 0x29bf22381a5811dec89dc7b46a5ce57ad02c0240 positions API lists USDC, USDT/USDT0 and pUSD in liquidAssets with no pending transactions. Immediate liquidity describes only these scoped idle token categories, consistent with the issuer's on-chain liquid-reserve mechanics; it is not a bank USD, bridge unwind, whole-vault or stressed-settlement guarantee. The added keyed zero-percent USDT metadata row makes no assertion about its live weight and does not refresh the historical composition or classify the NAV residual.",
     "compositionBasis": "Live Nest positions and vault documentation, with the adapter's NAV reconciliation residual retained explicitly",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

@@ -832,7 +832,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
-      "The verified Ethereum USDC custodian implementation exposes redeemFee as an 18-decimal fraction. previewRedeem first floors the decimal conversion to USDC, then floors assets * (1e18 - redeemFee) / 1e18. The fee is mutable; the producer must read it and quote the actual request at the same block. Ethereum transaction gas is separate, so this formula does not assert a fixed or all-in zero redemption cost.",
+      "The verified Ethereum USDC custodian exposes redeemFee as an 18-decimal fraction. At block 26141525 (2026-10-07T15:52:35Z), wasInitialized is true and redeemFee is zero; subsequent setMintRedeemFee calls require redeemFee < 1e18, giving a conservative 100% issuer-fee ceiling, not a fixed/current fee. previewRedeem floors decimal conversion and the fee deduction; transaction gas is separate.",
       "formula",
     ),
     docs: [
@@ -840,7 +840,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("frxUSD USDC quickstart", "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc", ["route"]),
       sourceRefRouteCapacity("FraxNetDeposit contract", "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit"),
       sourceRef(
-        "frxUSD USDC custodian verified fee formula (reviewed 2026-10-05)",
+        "frxUSD USDC custodian fee bound (verified 2026-03-01; pinned review 2026-10-07)",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
         ["route", "fees"],
       ),
@@ -848,6 +848,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",
       "If the Frax balance-sheet snapshot is unavailable or stale, the route is intentionally left unrated rather than falling back to a static heuristic buffer",
+      "The initialized USDC custodian 0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10 and fee were pinned at Ethereum block 26141525 via https://api-ethereum-mainnet-erigon.n.dwellir.com; the 10,000 bps bound covers issuer fees only, not rounding, gas, or downstream USDC redemption.",
     ],
   }),
   "jupusd-jupiter": defineStablecoinRedeemConfig({
@@ -1174,9 +1175,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "reserve-sync-metadata" },
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
-      "f(x) fxSP instantRedeem fee = on-chain instantRedeemFeeRatio, currently 1%, governance cap 5%",
+      "fxSP instantRedeem charges instantRedeemFeeRatio on both fxUSD and USDC output legs. The implementation pinned at Ethereum block 26141525 (2026-10-07T15:52:35Z) enforces MAX_INSTANT_REDEEM_FEE = 5e16 (5%); this bounds the protocol fee, not gas or third-party USDC-to-fxUSD conversion fees and price impact.",
       "formula",
     ),
+    v9RouteCostTerms: { feeBpsMax: 500 },
     reviewedAt: REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
     docs: [
       sourceRefFull("f(x) Stability Pool", "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"),
@@ -1186,9 +1188,15 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "fxSP enforced instant-redemption fee cap (verified 2026-01-04; pinned review 2026-10-07)",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9",
+        ["route", "fees"],
+      ),
     ],
     notes: [
       "Fresh ERC-4626 reserve telemetry reads the fxSAVE vault's idle fxSP balance as current direct redemption capacity; if the live snapshot is unavailable, the route is left unrated instead of falling back to the prior heuristic strategy-buffer estimate.",
+      "Ethereum fxSP proxy 0x65c9a641afceb9c0e6034e558a319488fa0fa3be used implementation 0x9cfefd90d4c8428d4cbac9baaa6d52c6ba7897f9 at block 26141525 via https://api-ethereum-mainnet-erigon.n.dwellir.com; re-review the bound when the implementation changes. The fxUSD-only router swaps the USDC leg separately.",
     ],
   }),
   "susn-noon": erc4626InstantConfig({

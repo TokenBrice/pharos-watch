@@ -351,7 +351,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ),
     docs: mapleSyrupDocs(),
     notes: [
-      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
+      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues processed as liquidity becomes available",
+      "Settlement reviewed 2026-10-07: the current risk disclosures state there is no guaranteed maximum withdrawal period, so no settlement SLA exists to curate; the previously noted 30-day figure is not an issuer-published maximum",
       "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
     ],
     telemetrySubject: "the pool's idle USDC balance",
@@ -366,7 +367,8 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ),
     docs: mapleSyrupDocs(),
     notes: [
-      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
+      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues processed as liquidity becomes available",
+      "Settlement reviewed 2026-10-07: the current risk disclosures state there is no guaranteed maximum withdrawal period, so no settlement SLA exists to curate; the previously noted 30-day figure is not an issuer-published maximum",
       "Modeled route excludes secondary-market exits and instead scores the documented protocol withdrawal rail",
     ],
     telemetrySubject: "the pool's idle USDT balance",
@@ -839,7 +841,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: fixedFee(25, "RIF On Chain FAQ lists a 0.25% mint/redeem fee paid in RIF for USDRIF"),
     docs: [
       sourceRef(
-        "RIF On Chain USDRIF redemption docs",
+        "Legacy RIF On Chain USDRIF redemption docs",
         "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/getting-rdocs/redeeming-rdocs",
         ["route", "settlement", "access"],
       ),
@@ -849,10 +851,15 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states",
         ["route", "capacity", "settlement"],
       ),
+      sourceRef(
+        "RIF bucket MocQueue verified implementation (reviewed 2026-10-07)",
+        "https://rootstock.blockscout.com/api/v2/smart-contracts/0x8d7a31357ba29fecd3e6ce5b6110a2a28f619c97",
+        ["route", "settlement"],
+      ),
     ],
     notes: [
-      "USDRIF supports settlement-cycle redemption requests into RIF collateral; the 90-day settlement cadence means Pharos treats the broad holder route as queued eventual redeemability",
-      "Outside-settlement redemption is limited to free USDRIF, so immediate capacity is not modeled until live Rootstock telemetry exposes free redeemable amount, queue depth, and current system state",
+      "Settlement review 2026-10-07: at Rootstock block 9304993 (2026-10-07T15:41:38Z), legacy MoCSettlement getters revert because the protocol migrated to V2; its old 90-day target is not a current USDRIF payout maximum.",
+      "The RIF bucket queue 0x47f5014115d3bb29b20b5168ee75050d6f8c3bf1 at the same block uses implementation 0x8d7a31357ba29fecd3e6ce5b6110a2a28f619c97 and min/max operation waits of 1/6 blocks. These are execution-eligibility thresholds, not deadlines: guarded batch execution and failed operations leave final payout unbounded. Keyless pinned RPC: https://public-node.rsk.co.",
     ],
   }),
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
@@ -861,13 +868,35 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     settlementModel: "days",
     executionModel: "rules-based-nav",
     totalScoreCap: 65,
-    costModel: documentedVariableFee(
-      "apyUSD redemptions become claimable after 3 days, with an early-redemption fee that declines linearly from 3.5% to 0.1% over the claimable window (waiting longer lowers the fee)",
-      "formula",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "At Ethereum block 26140624 (2026-10-07), apyUSD charges a 10 bps upfront vault fee and escrows apxUSD in UnlockReceipt; the receipt fee is bounded from 0 to 3.4%, with claims enabled after 259200 seconds and the fee reaching zero after 1728000 seconds. The 350 bps ceiling bounds protocol fees, not gas or a downstream apxUSD-to-fiat redemption.",
+        "formula",
+      ),
+      feeBpsMin: 10,
+      feeBpsMax: 350,
+    },
+    v9RouteReviewTerms: {
+      settlementDelaySec: 259_200,
+      reviewedAt: "2026-10-07",
+      docs: [
+        sourceRef(
+          "apyUSD active vault, receipt pointer and unlocking fee (Ethereum block 26140624)",
+          "https://eth.blockscout.com/address/0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A?tab=contract",
+          ["route", "settlement"],
+        ),
+        sourceRef(
+          "UnlockReceipt funded escrow, claim and fee curve (Ethereum block 26140624)",
+          "https://eth.blockscout.com/address/0x9bf51f33955ec70f87c4b5c49441815589043237?tab=contract",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     docs: [
       sourceRefFull("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview"),
       sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
+      sourceRefFull("apyUSD active vault source (implementation pinned at Ethereum block 26140624)", "https://eth.blockscout.com/address/0xfD616567EcC1607F61073951A1E822F7315bB112?tab=contract"),
+      sourceRefFull("UnlockReceipt claim and bounded fee source (implementation pinned at Ethereum block 26140624)", "https://eth.blockscout.com/address/0x54F1c7fFe10bC392f08AE9432A7e21a6E86bB982?tab=contract"),
     ],
     telemetrySubject: "the vault's idle apxUSD balance",
     settlementConstraint: "the documented unlock window",

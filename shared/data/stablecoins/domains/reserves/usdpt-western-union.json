@@ -14,7 +14,8 @@
         "custody",
         "legal"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "immediate",
+      "maturityDaysMax": 0
     },
     {
       "sourceKey": "anchorage-independent-assurance:usdpt:money-market-funds",
@@ -34,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_1)",
     "confidence": "verified",
     "sources": [
       {
@@ -47,7 +48,7 @@
         "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
       }
     ],
-    "rationale": "Deloitte's August 31, 2026 11:59:59 PM UTC examination, signed September 28, 2026: reserves $11,289,740 against 11,179,088 redeemable USDPT on Solana. Schedule II reports $1,907,311 demand deposits ($1,657,311 uninsured) and $9,382,429 money-market funds at NAV, split between CUSIP 09250C572 $7,440,000 and CUSIP 46655R119 $1,942,429. Schedule III reports surplus $110,652 with no timing or temporary differences.",
+    "rationale": "Deloitte's August 31, 2026 11:59:59 PM UTC examination, signed September 28, 2026: reserves $11,289,740 against 11,179,088 redeemable USDPT on Solana. Schedule II reports $1,907,311 demand deposits ($1,657,311 uninsured) and $9,382,429 money-market funds at NAV, split between CUSIP 09250C572 $7,440,000 and CUSIP 46655R119 $1,942,429. Schedule III reports surplus $110,652 with no timing or temporary differences. Re-reviewed on October 7: page 5 expressly classifies the entire cash balance as Demand deposit accounts at FDIC-insured depository institutions, held directly. This on-demand account category has no contractual term lock, supporting zero-day asset tenor for the cash slice only. The funds' N/A share maturity does not establish their underlying portfolio maximum maturity, which remains unknown. The August 31 composition date and amounts are unchanged.",
     "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of August 31, 2026",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

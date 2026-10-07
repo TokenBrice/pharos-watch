@@ -28,7 +28,8 @@
       }
     ]
   },
-  "detailProvider": "coingecko",
+  "llamaId": "428",
+  "detailProvider": "defillama",
   "geckoId": "krwt",
   "cmcSlug": "korean-won-iq",
   "proofOfReserves": {

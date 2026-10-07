@@ -63,6 +63,9 @@ import {
 } from "./extension-operational-resilience";
 import {
   addSafetyScoreV9IncidentEvidence,
+  addSafetyScoreV9NegativeIncidentEvidence,
+  getSafetyScoreV9NegativeIncidentReviews,
+  routeSafetyScoreV9NegativeIncidentReviews,
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   routeSafetyScoreV9OperationalIncidents,
@@ -2436,6 +2439,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
+        const negativeIncidentReviews = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews);
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2578,9 +2583,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           mint.review,
           reviewedIncidents,
         );
-        const controls = [...incidentControlRoute.controls, ...bridge.controls].sort((left, right) =>
-          compareText(left.controlKey, right.controlKey),
-        );
+        const controls = routeSafetyScoreV9NegativeIncidentReviews(
+          [...incidentControlRoute.controls, ...bridge.controls],
+          assetId,
+          clockSec,
+          negativeIncidentReviews,
+          reviewedIncidents,
+        ).sort((left, right) => compareText(left.controlKey, right.controlKey));
         admissionPath = "accessReview";
         const reviewedTransferFact = reviewedTransferFacts
           ? reviewedTransferFacts.get(assetId)

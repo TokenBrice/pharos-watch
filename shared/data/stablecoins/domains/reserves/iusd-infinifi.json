@@ -183,8 +183,10 @@
       "name": "Aave USDG",
       "pct": 0,
       "risk": "low",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave V4",
+      "issuerOrObligor": "Aave V3/V4 USDG lending farm",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -208,11 +210,26 @@
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sentora / Morpho",
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "infinifi:morpho-v2-august-usdc",
+      "name": "August USDC",
+      "pct": 0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho / August Digital (Monad August USDC V2 vault)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract"
+      ]
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-04",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice8); W3R24 keyed metadata review",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_6)",
     "confidence": "verified",
     "sources": [
       {
@@ -234,9 +251,25 @@
       {
         "label": "Verified Ethereum AaveV4Farm source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657"
+      },
+      {
+        "label": "Morpho exact Monad August USDC V2 vault identity (observed 2026-10-07)",
+        "url": "https://app.morpho.org/monad/vault/0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59/august-usdc-v2"
+      },
+      {
+        "label": "Circle native Monad USDC deployment identity",
+        "url": "https://www.circle.com/multi-chain-usdc/monad"
+      },
+      {
+        "label": "infiniFi address-bearing August vault and Aave USDG farm identities (observed 2026-10-07T14:58:13Z; backend rate-history anchor 2026-10-07T12:00:00Z)",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      },
+      {
+        "label": "infiniFi dated siUSD rate-history freshness anchor",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/rate-history/siUSD?daysAgo=7"
       }
     ],
-    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04: zero-percent keyed rows are classification-only join metadata, not new measured holdings or a refreshed composition. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Existing historical weights and compositionAsOf are unchanged.",
+    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04: zero-percent keyed rows are classification-only join metadata, not new measured holdings or a refreshed composition. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 does not change the 2026-09-21 composition or its percentages. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. The new zero-percent keyed row is classification-only metadata, not measured holdings. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee.",
     "compositionBasis": "infiniFi protocol farm balances captured on 2026-09-21, with the Base Steakhouse Prime vault identity verified against Morpho",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

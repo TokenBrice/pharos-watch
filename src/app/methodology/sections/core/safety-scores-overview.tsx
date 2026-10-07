@@ -180,6 +180,14 @@ export function SafetyScoresOverview() {
         never a reserve row&apos;s class quality.
       </p>
       <p>
+        Since methodology v10.10, a reserve liquidity or maturity factor is known when the existing evaluator&apos;s
+        selected current bound fully determines that exact exposure. Every supporting reference remains attached;
+        a raw unknown horizon or maximum stays null rather than becoming a fictional number. Partial bounds are
+        never summed, and a selected stronger partial bound cannot borrow a weaker full bound&apos;s coverage.
+        Stale, future, rejected, unmatched and nonbinding evidence keeps its gap. Quality ladders, weights,
+        applicability and scores do not change.
+      </p>
+      <p>
         Responsibility follows validated evidence about the exact missing question, not the nearest processing stage
         or a compiler&apos;s default label. A pipeline verdict binds the captured source and generation.
         Public-but-uncurated and researched-undisclosed classifications retain dated primary sources; otherwise the
@@ -273,6 +281,15 @@ export function SafetyScoresOverview() {
         moved, 0 grades flipped. No evidence was added.
       </p>
       <p>
+        Since methodology v10.10, open data points count distinct evidence obligations on each card, not the number
+        of scoring explanations. Multiple reasons or paths tied to the same exact source gap count once under the
+        same responsibility owner. A source-less causal view aliases it only when its single exact root is already
+        counted as a source on that card under that owner. All scoring witnesses, caps and not-rated explanations
+        remain visible. Unmatched inherited roots, synthetic facts and multi-root views remain separate; nothing is
+        deduplicated across cards. Critical counts retain any critical witness and reason lists retain every code.
+        This accounting correction adds no evidence and changes no score.
+      </p>
+      <p>
         Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,
         reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:
         <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from
@@ -357,6 +374,12 @@ export function SafetyScoresOverview() {
         risk, with root-claim, deployment, integration-only, or holder-exit scope. Active, mitigated, and resolved
         evidence therefore changes an existing component without creating a fourth pillar or charging an event beyond
         the affected liability.
+        Since methodology v10.10, independent researched-negative incident reviews can resolve only a matching
+        unknown control incident state. They require dated issuer/status evidence, exact-deployment event history
+        and an independent incident-tracker search, with source excerpts, an honest researched window and reviewer
+        identity. Both review and window end must remain current; date-only reviews wait until their UTC day ends.
+        Exact deployment/control-kind reviews never resolve global controls. Actual incidents retain precedence,
+        an empty registry or audit alone proves no absence, and unrelated authority or custody gaps stay open.
       </p>
       <p>
         Publication remains fail-closed: global or invalid-identity state holds the last accepted publication.

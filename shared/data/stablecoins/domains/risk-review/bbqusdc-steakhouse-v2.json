@@ -122,8 +122,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "All currently enumerated adapter markets have chain-qualified oracle paths and borrower-liquidation branches. Direct share accounting has no independent external price input. Exact oracle feed/rate control, freshness enforcement and fallback closure remain incomplete; no oracleless lending or high-quality feed claim is made.",
+    "tier": "privileged-internal-pricing",
+    "summary": "A positively evidenced funded mF-ONE collateral branch establishes privileged internal NAV pricing, not an independently determined external market feed. At Ethereum block 26122340 (2026-10-04T23:40:11Z), exact adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 has nonzero supplyShares in market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba. Its reviewed discounted feed 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99 uses MFOneCustomAggregatorFeed implementation 0x7cc057c382dea2d1d590386db13655f6ec8a65b4; exact published source states price is submitted manually by feed admins and binds M_FONE_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE. Other branch control, freshness, fallback and complete administrator membership remain unresolved. Profile-wide confidence deliberately stays limited; this concrete adverse pricing authority does not promote the aggregate review or five branch-component reviews.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -150,8 +150,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
     "confidence": "limited",
     "sources": [
       {
@@ -169,6 +169,18 @@
       {
         "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+      },
+      {
+        "label": "MFOneCustomAggregatorFeed source: manual feed-admin price submissions, exact implementation reviewed October 7, 2026",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cc057c382dea2d1d590386db13655f6ec8a65b4"
+      },
+      {
+        "label": "Exact mF-ONE discounted feed and nested manual-NAV path",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99"
+      },
+      {
+        "label": "Nonzero exact adapter supplyShares in mF-ONE market, block 26122340, 2026-10-04T23:40:11Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "branches": [

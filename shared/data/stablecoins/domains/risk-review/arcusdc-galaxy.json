@@ -126,8 +126,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R21 exact-source and pinned RPC review",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
     "confidence": "probable",
     "sources": [
       {
@@ -169,6 +169,18 @@
       {
         "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
         "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      },
+      {
+        "label": "Circle Guarded Vaults terms, September 15, 2026, sections 2.1 and 3: no rescue or make-whole obligation; liquidity not guaranteed",
+        "url": "https://www.circle.com/legal/guarded-vaults"
+      },
+      {
+        "label": "Galaxy Covered Vault terms, reviewed October 7, 2026, sections 3.6, 9.3 and 10.2: depositor losses, no loss-prevention guarantee, liability cap",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+      },
+      {
+        "label": "Exact Arc Galaxy USDC Vault V2 identity and Galaxy Curation designation, observed October 7, 2026",
+        "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc"
       }
     ],
     "branches": [
@@ -203,6 +215,7 @@
           }
         ],
         "liquidationMechanism": "Exact Morpho deployed runtime matches explorer source at block 24129914. Permissionless liquidate accrues interest, checks borrower health using IOracle.price and immutable LLTV, transfers seized collateral, and requires loan-token repayment; liquidator funding and realizable collateral value remain risks.",
+        "backstop": "No committed depositor loss backstop is established in the reviewed exact-vault disclosures. Galaxy Covered Vault terms section 3.6 warns depositors may lose some or all assets, section 9.3 disclaims a loss-prevention guarantee and section 10.2 caps contractual liability at USD 500. Circle Guarded Vaults terms dated September 15, 2026, section 2.1 explicitly creates no obligation to rescue or make whole a liquidity-provider, borrower or collateral position; section 3 states any Circle liquidity is not guaranteed. This is a reviewed absence of committed coverage in these governing public terms, not proof that no separate private agreement exists, and ordinary protocol liquidity or sentinel intervention is not insurance.",
         "shutdownOrBadDebtBehavior": "Exact Morpho liquidate writes off remaining borrow shares when borrower collateral becomes zero and subtracts badDebtAssets from totalSupplyAssets. The adapter values lender shares against that reduced supply book; VaultV2 accrual realizes losses. There is no local shutdown or guaranteed recovery payment in this Morpho market implementation.",
         "sources": [
           {
@@ -232,6 +245,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Circle Guarded Vaults terms dated September 15, 2026, sections 2.1 and 3: no depositor rescue/make-whole obligation or guaranteed liquidity",
+            "url": "https://www.circle.com/legal/guarded-vaults"
+          },
+          {
+            "label": "Galaxy Covered Vault terms reviewed October 7, 2026, sections 3.6, 9.3 and 10.2: loss borne by users, no loss-prevention guarantee, USD 500 liability cap",
+            "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+          },
+          {
+            "label": "Exact Galaxy USDC Arc vault identity and named Galaxy curator, observed October 7, 2026",
+            "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc"
           }
         ]
       }

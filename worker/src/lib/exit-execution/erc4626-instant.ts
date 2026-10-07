@@ -102,6 +102,7 @@ export async function observeErc4626InstantExit(args: {
   if (uint(probe[0]!) !== 37n || uint(probe2[0]!) !== 71n) throw new Error("erc4626-state-override-unsupported");
   overrideVerified = true;
   const points: ExitExecutionRequestPoint[] = [];
+  let provenShares = 0n;
   for (const request of args.requests) {
     const requested = requestedExitRawInput(request.requestedNotionalUsd, args.inputReference.unitValueUsd, config.inputDecimals);
     const empty = (reason: string, certification: ExitExecutionRequestPoint["certification"] = "diagnostic"): ExitExecutionRequestPoint => ({ ...request, requestedRawInput: requested.toString(), executedRawInput: "0", executableUsd: 0, executionCostBps: 0, allInCostBps: 0, fees: [], outputs: [], certification, reason });
@@ -139,13 +140,17 @@ export async function observeErc4626InstantExit(args: {
     let results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: simulation[0] as `0x${string}` });
     if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
     if (!results[2]!.success) {
-      // One bounded fallback: a reported ordinary max, or independently read
-      // idle assets for V2. Neither bound earns credit without another redeem.
+      // One bounded fallback: an ordinary max, or V2 idle assets / a smaller
+      // successful same-block ladder amount. The new holder balance still
+      // requires its own redeem, transfer and burn proof; prior success alone
+      // never certifies this request or proves that liquidity is exhausted.
       let candidate = maxRedeem;
       if (config.maxFunctions === "reviewed-non-binding-zero") {
         const idle = await batch([{ to: underlying, data: calldata("balanceOf", [vault]) }]);
         const idleShares = await batch([{ to: vault, data: calldata("convertToShares", [uint(idle[0]!)]) }]);
         candidate = uint(idleShares[0]!);
+        if (candidate >= requested) candidate = 0n;
+        if (provenShares < requested && provenShares > candidate) candidate = provenShares;
       }
       if (candidate > 0n && candidate < requested) {
         amount = candidate;
@@ -179,6 +184,7 @@ export async function observeErc4626InstantExit(args: {
       executionCostBps, allInCostBps, fees: [{ kind: "vault-withdrawal-haircut", rawUnits: (gross > received ? gross - received : 0n).toString(), assetKey: args.outputReference.assetKey }],
       outputs: [{ ...args.outputReference, rawUnits: received.toString() }], certification: aboveBudget ? "diagnostic" : amount === requested ? "exact-complete" : "exact-lower-bound",
       reason: aboveBudget ? "erc4626-cost-exceeds-request" : amount === requested ? null : "erc4626-liquidity-limited" });
+    if (!aboveBudget && amount > provenShares) provenShares = amount;
   }
   const confirmed = await fetchEvmBlockHeader(config.chain, block, options);
   if (!confirmed || confirmed.hash !== header.hash) throw new Error("erc4626-source-reorg");

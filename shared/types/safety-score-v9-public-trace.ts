@@ -26,7 +26,7 @@ import {
 import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 import { causeGapRefs, V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
-import { iterateEvidenceResponsibilityFacts, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
+import { countV9EvidenceObligations, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
 
 const SafetyScoreV9AggregationTraceSchema = z
   .object({
@@ -337,15 +337,14 @@ const SafetyScoreV9EvidenceResponsibilityTraceSchema = z.object({
   if (JSON.stringify(evidence.summaries.map((summary) => summary.responsibility)) !== JSON.stringify(RESPONSIBILITIES)) {
     ctx.addIssue({ code: "custom", path: ["summaries"], message: "V9 evidence responsibility summaries must preserve a supported canonical owner order" });
   }
-  const factCounts = new Uint32Array(RESPONSIBILITIES.length), criticalCounts = new Uint32Array(RESPONSIBILITIES.length);
-  for (const fact of iterateEvidenceResponsibilityFacts(evidence)) {
-    const index = RESPONSIBILITIES.indexOf(fact[3]);
-    factCounts[index]!++;
-    if (fact[4]) criticalCounts[index]!++;
-  }
-  if (evidence.facts.length !== evidence.totalFactCount || evidence.summaries.some((summary, index) =>
-      (summary.factCount ?? 0) !== factCounts[index] || (summary.criticalFactCount ?? 0) !== criticalCounts[index])) {
-    ctx.addIssue({ code: "custom", path: ["facts"], message: "Cause facts and critical counts must reconcile; A/B never directly withholds" });
+  const summariesAgree = evidence.summaries.every((summary) => {
+    const facts = evidence.facts.filter((fact) => fact[3] === summary.responsibility);
+    const counts = countV9EvidenceObligations(facts, (fact) => fact[2], (fact) => fact[6], (fact) => fact[4]);
+    return (summary.factCount ?? 0) === counts.factCount &&
+      (summary.criticalFactCount ?? 0) === counts.criticalFactCount;
+  });
+  if (evidence.facts.length !== evidence.totalFactCount || !summariesAgree) {
+    ctx.addIssue({ code: "custom", path: ["facts"], message: "Cause witnesses and distinct obligation counts must reconcile; A/B never directly withholds" });
   }
 });
 

@@ -124,12 +124,20 @@
         },
         "executionScope": {
           "controllerDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (BRIDGE_CTRL)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Runtime-matched Celo TetherMultiSigWallet arbitrary executor, reviewed 2026-10-07",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cad90b6d336930881cd43657c9e0f28fccbe1bc"
+            },
+            {
+              "label": "Pinned Celo block 78986590, 2026-10-01T20:42:28Z: verified runtime match, five owners, required three",
+              "url": "https://api-celo-mainnet-archive.n.dwellir.com"
+            },
             {
               "label": "Celo USAT authorized crosschain mint/burn and mutable OFT source",
               "url": "https://sourcify.dev/server/v2/contract/42220/0x49912f84f43d2675d99941b7f21a5d9ed2eab71e?fields=sources,abi"
@@ -155,79 +163,61 @@
             "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
             "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "usat-celo-change-authorized-oft",
-              "targetDeployment": "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771",
+              "id": "usat-celo-bridge-maximal-execution",
+              "targetDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
               "entrypointKind": "evm-selector",
-              "entrypoints": ["0x8040a2c7"],
+              "entrypoints": ["0xee22610b"],
               "callMode": "call",
-              "capabilities": ["parameter-change", "bridge-mint"],
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
               "capSemantics": { "kind": "unbounded", "bound": null },
               "claimImpairment": "unbounded",
-              "economicLossScope": "unknown",
+              "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": ["usat-tether"],
-              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
-            },
-            {
-              "id": "usat-celo-oft-peer-config",
-              "targetDeployment": "celo:0xc8f467e1ba04ffdeca1cd1878ca3416d84045d0e",
-              "entrypointKind": "evm-selector",
-              "entrypoints": ["0x3400288b"],
-              "callMode": "call",
-              "capabilities": ["parameter-change"],
-              "capSemantics": { "kind": "unknown", "bound": null },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": ["usat-tether"],
-              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [],
-              "upgradeRefs": ["usat-celo-oft-upgrade"],
-              "bypassRefs": ["usat-celo-change-authorized-oft"]
-            },
-            {
-              "id": "usat-celo-oft-upgrade",
-              "targetDeployment": "celo:0xbfd99c067ceb2e048bf627e039d388e4d22d8b80",
-              "entrypointKind": "evm-selector",
-              "entrypoints": ["0x99a88ec4", "0x9623609d"],
-              "callMode": "call",
-              "capabilities": ["upgrade", "bridge-mint"],
-              "capSemantics": { "kind": "unbounded", "bound": null },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": ["usat-tether"],
-              "affectedDeployments": ["celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [],
-              "upgradeRefs": [],
-              "bypassRefs": ["usat-celo-change-authorized-oft"]
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+                "executorDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+                "sourceDeployment": "celo:0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "78986590",
+                  "hash": "0xbe463549638c28e53f5397d1968483f545e6844264051646981d575c0c49e6d7",
+                  "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                  "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cad90b6d336930881cd43657c9e0f28fccbe1bc",
+                  "location": "TetherMultiSigWallet.sol executeTransaction/isConfirmed and onlyWallet owner changes: unrestricted tx.destination.call.value(tx.value)(tx.data), 3-of-5, no target/selector restriction or executor delay. Exact deployed-bytecode match at Celo block 78986590. Conservative adverse upper envelope includes token mint, changeAuthorizedOFT, peer/delegate and ProxyAdmin upgrades, not benign-path certification."
+                }
+              }
             }
           ]
         },
@@ -271,12 +261,24 @@
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc11)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (BRIDGE_CTRL)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Ethereum verified TetherMultiSigWallet source; runtime exactly equals source-matched Celo executor",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb"
+            },
+            {
+              "label": "Pinned Ethereum block 26099927, 2026-10-01T20:42:23Z: code, five owners and required three; observed 2026-10-07T15:12:49Z and 15:13:51Z",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Exact Celo deployed-bytecode/source correspondence reused after byte-for-byte Ethereum runtime comparison",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8cad90b6d336930881cd43657c9e0f28fccbe1bc"
+            },
             {
               "label": "Ethereum USAT lock/release adapter and owner-only peer source",
               "url": "https://sourcify.dev/server/v2/contract/1/0xd5d5a960dc2ba87349fd7977af0cd15a2b699355?fields=sources,abi"
@@ -298,58 +300,61 @@
             "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
             "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "usat-ethereum-adapter-peer-config",
-              "targetDeployment": "ethereum:0x18171f318a49051301c3422b6042fca2d8be43df",
+              "id": "usat-ethereum-bridge-maximal-execution",
+              "targetDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
               "entrypointKind": "evm-selector",
-              "entrypoints": ["0x3400288b"],
+              "entrypoints": ["0xee22610b"],
               "callMode": "call",
-              "capabilities": ["parameter-change"],
-              "capSemantics": { "kind": "unknown", "bound": null },
-              "claimImpairment": "unknown",
-              "economicLossScope": "unknown",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": ["usat-tether"],
-              "affectedDeployments": ["ethereum:0x07041776f5007aca2a54844f50503a18a72a8b68", "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
-              "reach": "unknown",
-              "controlRefs": [],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [],
-              "upgradeRefs": ["usat-ethereum-adapter-upgrade"],
-              "bypassRefs": []
-            },
-            {
-              "id": "usat-ethereum-adapter-upgrade",
-              "targetDeployment": "ethereum:0xd122aa3b1ffb2aebf61180ec1387efc99850b35f",
-              "entrypointKind": "evm-selector",
-              "entrypoints": ["0x99a88ec4", "0x9623609d"],
-              "callMode": "call",
-              "capabilities": ["upgrade", "custody-transfer"],
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
               "capSemantics": { "kind": "unbounded", "bound": null },
               "claimImpairment": "unbounded",
-              "economicLossScope": "unknown",
+              "economicLossScope": "global-claim",
               "unavoidableDelaySec": 0,
               "activation": "active",
               "affectedLiabilityIds": ["usat-tether"],
-              "affectedDeployments": ["ethereum:0x07041776f5007aca2a54844f50503a18a72a8b68", "celo:0xd2ab3c9a02dbbab236bfec45d1d755df4267f771"],
-              "reach": "unknown",
+              "affectedDeployments": [],
+              "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+                "executorDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+                "sourceDeployment": "ethereum:0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+                "targets": "any-contract",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26099927",
+                  "hash": "0x8bb51bdecfe7482e5f2b0037b3eab2171fa97576f35f3f05ad80278c61dd111e",
+                  "runtimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                  "signerIdentity": "sha256:quorum-json:d026c85af00ad58c5cc127ba6924c48cd3910d4ab22696c0fb17169b27f87666"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:3cc4df901c3dcaedbddaa1db1a8c26568b70df4a0dedcd80f5cb40dc8525f2b4",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x62b3a0f6ffc5efd7692053a9040fe44f9ac8c5cb",
+                  "location": "contracts/utilities/TetherMultiSigWallet.sol executeTransaction/isConfirmed and onlyWallet owner changes: unrestricted tx.destination.call.value(tx.value)(tx.data), 3-of-5, no target/selector restriction or mandatory executor delay. Pinned Ethereum block 26099927 runtime exactly equals verified Celo deployed bytecode; matching five-owner/required-three reads. Conservative all-reachable adverse envelope covers adapter escrow, peers/delegates and ProxyAdmin upgrades."
+                }
+              }
             }
           ]
         },

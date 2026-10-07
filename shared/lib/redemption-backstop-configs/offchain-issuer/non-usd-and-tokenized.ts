@@ -703,8 +703,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "fees",
       ]),
       sourceRef(
-        "SBI Shinsei Trust JPYSC terms PDF",
-        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260624.pdf",
+        "SBI Shinsei Trust JPYSC terms (updated 2026-09-30; reviewed 2026-10-07)",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
         ["route", "access", "settlement", "fees", "capacity"],
       ),
       sourceRef("SBI VC Trade token manual", "https://www.sbivc.co.jp/assets/docs/manual_tt.pdf", ["route", "settlement"]),
@@ -721,7 +721,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "The primary modeled route is direct 1:1 JPY redemption from SBI Shinsei Trust after the holder transfers JPYSC to the issuer-designated wallet; the separate SBI VC Trade account route is not required.",
       "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; JPY remains an unresolved fiat output rather than a tracked stablecoin.",
       "supply-full is the documented legal redemption bound, not a claim that same-day bank liquidity equals current token supply; requests can lapse or be delayed under the terms' wallet-designation and transfer windows.",
-      "The 3,000 JPY plus consumption-tax issuer fee and holder-borne bank transfer fee are documented flat-currency charges, so the cost is retained as a documented variable/unclear model rather than converted into fabricated bps.",
+      "Fee review 2026-10-07: the 2026-09-30 terms, sections 4(3)(ro) and 4(11)(ni), charge 3,000 JPY plus applicable consumption tax per direct redemption procedure; holder-borne bank transfer and network fees are separate. V9 has no fixed-maximum-in-JPY term, so no bps ceiling or invented USD conversion is added.",
     ],
   },
   "hlusd-hela": {

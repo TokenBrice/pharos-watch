@@ -51,11 +51,17 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
         { url: "https://www.bullionbypost.co.uk/sell-to-us/", quote: "Currently processing deliveries within 2 working days; once metals arrive and are checked, payment is made directly to the customer's bank. Used as modelled dealer-sale typical time, not an issuer delivery SLA." },
       ],
     },
-    costModel: undisclosedReviewedFee(
-      "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Effective 2026-09-01, Paxos charges marginal rolling-30-day net redemption fees of 12.5–50 bps plus 5 bps for in-kind allocated/unallocated gold conversion. The 55 bps ceiling bounds these issuer conversion fees only, not physical delivery, dealer sale, tax or bank charges.",
+        "formula",
+      ),
+      feeBpsMin: 12.5,
+      feeBpsMax: 55,
+    },
     docs: [
-      sourceRefFull("PAXG physical terms; unpublished fee and delivery charges", "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"),
+      sourceRefFull("PAXG physical terms and separately unbounded delivery charges", "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"),
+      sourceRef("PAX Gold Fees; effective 2026-09-01", "https://support.paxos.com/articles/2899561282-pax-gold-fees", ["route", "fees"]),
       sourceRefRouteCapacity("Paxos Pax Gold", "https://www.paxos.com/pax-gold"),
       sourceRef(
         "Paxos PAXG buy/sell/redeem",

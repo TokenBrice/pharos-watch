@@ -12,6 +12,7 @@ import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
+import type { FxRateState } from "../fx-rate-state";
 import type * as EvmRpcModule from "../evm-rpc";
 import { makeV9FixedInput, makeV9Extension } from "../../test-helpers/v9-fixed-input";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
@@ -24,7 +25,7 @@ const VAULT = "0x0000000000000000000000000000000000000001";
 const TOKEN = "0x0000000000000000000000000000000000000002";
 const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
-const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
+const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
   default: { schemaVersion: 1, get reviews() { return [review]; } },
@@ -50,7 +51,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         const decoded = decodeFunctionData({ abi: MULTICALL, data: tx.data });
         const redeemData = decoded.args![0][2]!.callData;
         const executed = BigInt("0x" + redeemData.slice(10, 74));
-        const succeeds = !state.redeemFails && executed <= state.liquidity;
+        const succeeds = !state.redeemFails && executed <= state.liquidity && !(state.rejectPartial && executed < shares);
         const received = executed * (10_000n - state.feeBps) / 10_000n;
         results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [[
           { success: true, returnData: word(7n) }, { success: true, returnData: word(shares) },
@@ -65,7 +66,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         [toFunctionSelector("asset()")]: state.identity ? 3n : 2n,
         [toFunctionSelector("decimals()")]: 6n,
         [toFunctionSelector("totalSupply()")]: 1_000_000_000_000_000n,
-        [toFunctionSelector("balanceOf(address)")]: tx.to === TOKEN ? state.liquidity : state.override === "ignored" ? 0n : shares,
+        [toFunctionSelector("balanceOf(address)")]: tx.to === TOKEN ? state.idleLiquidity ?? state.liquidity : state.override === "ignored" ? 0n : shares,
         [toFunctionSelector("maxRedeem(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("convertToAssets(uint256)")]: amount,
@@ -91,7 +92,7 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
-beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -146,6 +147,30 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 40_000, certification: "exact-lower-bound", reason: "erc4626-liquidity-limited" });
     state.redeemFails = true;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted" });
+  });
+  it("re-measures a proven V2 ladder amount for larger requests when liquidity is in adapters, not idle", async () => {
+    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 1_000_000_000_000n;
+    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+    const requests = [100_000, 1_000_000, 10_000_000, 25_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
+    const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
+    expect(points.map(point => point.certification)).toEqual(["exact-complete", "exact-complete", "exact-lower-bound", "exact-lower-bound"]);
+    expect(points[2]).toMatchObject({ requestedRawInput: "10000000000000", executedRawInput: "1000000000000", executableUsd: 1_000_000, reason: "erc4626-liquidity-limited", outputs: [{ rawUnits: "1000000000000" }] });
+    expect(points[3]).toMatchObject({ requestedRawInput: "25000000000000", executedRawInput: "1000000000000", executableUsd: 1_000_000, reason: "erc4626-liquidity-limited" });
+  });
+  it("does not transplant an earlier V2 success when redeem fails with the larger holder balance", async () => {
+    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 1_000_000_000_000n; state.rejectPartial = true;
+    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+    const requests = [1_000_000, 10_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
+    const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
+    expect(points[0]!.certification).toBe("exact-complete");
+    expect(points[1]).toMatchObject({ executedRawInput: "0", executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted", outputs: [] });
+  });
+  it("keeps an all-failing zero-idle V2 ladder diagnostic instead of inferring executable liquidity", async () => {
+    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 0n;
+    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+    const requests = [100_000, 1_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
+    const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
+    expect(points.every(point => point.executableUsd === 0 && point.certification === "diagnostic" && point.reason === "erc4626-redeem-reverted")).toBe(true);
   });
   it("rejects a reorganized source and keeps over-budget observations diagnostic", async () => {
     state.reorg = true;
@@ -273,5 +298,42 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(admitted.observations[0]!.executionCertificate!.inputReference.sourceGenerationId).toBe(`stablecoins:${CLOCK - 60}`);
     cache.payload.peggedAssets[0]!.priceSource = "protocol-par";
     expect((await observeReviewedExitExecutionRoutes(call)).failures).toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
+  });
+  it("measures EUR-denominated vault exits with observed token prices and a proven fresh FX reference", async () => {
+    const cache: StablecoinsCacheLoadOk = {
+      kind: "ok", updatedAt: CLOCK - 60,
+      payload: { peggedAssets: [
+        makeAsset({ id: "fixture-vault", price: 1.2, priceSource: "coingecko", priceObservedAt: CLOCK }),
+        makeAsset({ id: "fixture-underlying", pegType: "peggedEUR", price: 1.2, priceSource: "coingecko", priceObservedAt: CLOCK }),
+      ] },
+    };
+    const fxRateState: FxRateState = {
+      rates: { peggedEUR: 1.2 }, usableSyncAt: CLOCK - 20, usableAgeSec: 20, mode: "live",
+      sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 30 }, sourceModeByPeg: { peggedEUR: "live" },
+      sourceCadenceByPeg: { peggedEUR: "intraday" }, sourceDateByPeg: { peggedEUR: "2026-10-06" },
+      metadataIdentity: "verified", consecutiveFallbackRuns: 0,
+    };
+    const db = { prepare() { throw new Error("preloaded price and FX state must not read D1"); } } as unknown as D1Database;
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, lane: "redemption" as const, db, stablecoinsCache: cache, fxRateState, reviews: [review] };
+    const result = await observeReviewedExitExecutionRoutes(call);
+    expect(result.failures).toEqual([]);
+    expect(result.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });
+    const reference = result.observations[0]!.executionCertificate!.points[0]!.outputs[0]!;
+    expect(reference).toMatchObject({ unitValueUsd: 1.2, expectedUnitValueUsd: 1.2,
+      sourceId: "coingecko+fx-rates:peggedEUR", observedAtSec: CLOCK - 30 });
+    expect(reference.sourceGenerationId).not.toBe(`stablecoins:${CLOCK - 60}`);
+    for (const invalid of [
+      null,
+      { ...fxRateState, metadataIdentity: "generation-mismatch" as const },
+      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: null } },
+      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: CLOCK + 1 } },
+      { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 86_400 } },
+    ]) {
+      expect((await observeReviewedExitExecutionRoutes({ ...call, fxRateState: invalid })).failures)
+        .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
+    }
+    cache.payload.peggedAssets[1]!.priceSource = "protocol-par";
+    expect((await observeReviewedExitExecutionRoutes(call)).failures)
+      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
   });
 });

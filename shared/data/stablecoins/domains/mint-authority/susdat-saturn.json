@@ -17,6 +17,7 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-03",
         "observedBlock": 26108096,
@@ -28,9 +29,13 @@
           {
             "label": "Saturn vault mechanics",
             "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md"
+          },
+          {
+            "label": "Independently re-pinned implementation at Ethereum block 26108096, 2026-10-03T00:02:59Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 26108096, asset() returned the tracked USDat contract, decimals() returned 18, totalSupply() was 64,115,192.98239439 and paused() was false. The verified deployed source exposes deposit/mint share issuance against USDat rather than native creation of USDat. This is not a proof that upgrades, reserve accounting or all roles are harmless."
+        "evidence": "At Ethereum block 26108096, asset() returned the tracked USDat contract, decimals() returned 18, totalSupply() was 64,115,192.98239439 and paused() was false. The verified deployed source exposes deposit/mint share issuance against USDat rather than native creation of USDat. Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_2): independently re-pinned EIP-1967 implementation 0x2b7074cf6681382b70e239063931ebe83c0f4e0a at block 26108096, hash 0x0f721ad86127287f3bd856772c27f1e0c04e60b1664e8bbe88005c590aae2e50, timestamp 2026-10-03T00:02:59Z, observed 2026-10-07T14:40:16.718Z. Its local ERC-4626 accounting control has no discretionary mint-cap setter: deposit/mint requires underlying transfer through _deposit. canRaiseCap=false applies only to this accounting row; separately authored upgrade, parameter and operator powers remain unchanged and economically adverse. This is not proof that upgrades, reserve accounting or all roles are harmless."
       },
       {
         "label": "Saturn sUSDat default-admin upgrade timelock",

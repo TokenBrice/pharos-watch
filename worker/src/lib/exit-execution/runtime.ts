@@ -12,6 +12,7 @@ import { observeErc4626InstantExit } from "./erc4626-instant";
 import type { EvmRpcOptions } from "../evm-rpc";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getFxReferenceTypeFromState, loadFxRateState, type FxRateState } from "../fx-rate-state";
 
 export async function observeReviewedExitExecutionRoutes(args: {
   assetId: string;
@@ -20,6 +21,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
   lane: "dex" | "redemption";
   db?: D1Database;
   stablecoinsCache?: StablecoinsCacheLoadResult;
+  fxRateState?: FxRateState | null;
   envelope?: V9ValidatedPolicyEnvelope;
   reviews?: readonly ExitExecutionModelReview[];
   inputReference?: ExitExecutionCertificate["inputReference"];
@@ -47,6 +49,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
   const cache = !args.inputReference || !args.outputReference
     ? args.stablecoinsCache ?? (args.db ? await loadStablecoinsCache(args.db) : null)
     : null;
+  let fxRateState = args.fxRateState;
   for (const review of reviews) {
     if (args.signal?.aborted) throw args.signal.reason;
     try {
@@ -61,11 +64,29 @@ export async function observeReviewedExitExecutionRoutes(args: {
           assetKey: args.assetId, deployment: review.identity.deployment, rawUnits: "0", decimals: review.producer.inputDecimals,
           unitValueUsd: input.price, expectedUnitValueUsd: input.price, sourceId: input.priceSource!, sourceGenerationId: `stablecoins:${cache.updatedAt}`, observedAtSec: input.priceObservedAt,
         };
-        if (!outputReference && output?.price && output.priceObservedAt != null && output.pegType === "peggedUSD" && isObservedPrice(output)) outputReference = {
-          assetKey: review.identity.outputAssetKeys[0]!, deployment: review.producer.kind === "kraken" ? review.producer.outputDeployment : `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`,
-          rawUnits: "0", decimals: review.producer.outputDecimals, unitValueUsd: output.price, expectedUnitValueUsd: 1,
-          sourceId: output.priceSource!, sourceGenerationId: `stablecoins:${cache.updatedAt}`, observedAtSec: output.priceObservedAt,
-        };
+        if (!outputReference && output?.price && output.priceObservedAt != null && isObservedPrice(output)) {
+          let expectedUnitValueUsd = output.pegType === "peggedUSD" ? 1 : null;
+          let fxObservedAtSec: number | null = null;
+          if (output.pegType === "peggedEUR") {
+            if (fxRateState === undefined) fxRateState = args.db ? await loadFxRateState(args.db) : null;
+            const sourceTime = fxRateState?.sourceUpdatedAtByPeg.peggedEUR;
+            if (getFxReferenceTypeFromState(fxRateState ?? null, "peggedEUR", policy.priceMaxAgeSec, args.clockSec) === "fresh" &&
+                sourceTime != null && sourceTime <= args.clockSec && args.clockSec - sourceTime <= policy.priceMaxAgeSec) {
+              expectedUnitValueUsd = fxRateState!.rates.peggedEUR!;
+              fxObservedAtSec = sourceTime;
+            }
+          }
+          if (expectedUnitValueUsd !== null) outputReference = {
+            assetKey: review.identity.outputAssetKeys[0]!, deployment: review.producer.kind === "kraken" ? review.producer.outputDeployment : `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`,
+            rawUnits: "0", decimals: review.producer.outputDecimals, unitValueUsd: output.price, expectedUnitValueUsd,
+            sourceId: fxObservedAtSec === null ? output.priceSource! : `${output.priceSource!}+fx-rates:peggedEUR`,
+            sourceGenerationId: fxObservedAtSec === null ? `stablecoins:${cache.updatedAt}` : domainDigest("safety-score-v10.exit-execution-eur-reference.v1", {
+              stablecoinsUpdatedAt: cache.updatedAt, fxUpdatedAt: fxRateState!.usableSyncAt,
+              expectedUnitValueUsd, fxObservedAtSec, sourceDate: fxRateState!.sourceDateByPeg.peggedEUR,
+            }),
+            observedAtSec: fxObservedAtSec === null ? output.priceObservedAt : Math.min(output.priceObservedAt, fxObservedAtSec),
+          };
+        }
       }
       if (!inputReference || !outputReference) { failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue; }
       const isVault = review.producer.kind === "erc4626-instant";
@@ -108,7 +129,11 @@ export async function observeReviewedExitExecutionRoutes(args: {
         output: { kind: outputReference.assetKey.startsWith("fiat:") ? "fiat" : "tracked-stablecoin", assetKeys: review.identity.outputAssetKeys, ...(outputReference.assetKey.startsWith("fiat:") ? { currency: outputReference.assetKey.slice(5) } : { trackedAssetIds: review.identity.outputAssetKeys }) },
         evidenceKind: isBook ? "direct-orderbook-depth" : "onchain-contract-state", confidence: "medium", modelConfidence: "medium", scoreEligible,
         observedAt: observedAtSec, freshnessSeconds: Math.max(0, observedAtSec - source.timestamp), commonModeKeys: certificate.resourceKeys,
-        capacityCurve: observed.points.filter((entry) => !scoreEligible || entry.certification !== "diagnostic").map((entry) => ({ requestedNotionalUsd: entry.requestedNotionalUsd, maxCostBps: entry.maxCostBps, executableUsd: entry.executableUsd, completionRatio: entry.executableUsd / entry.requestedNotionalUsd, executionCostBps: entry.certification === "diagnostic" ? 0 : entry.executionCostBps })),
+        // Vault grid calls are independent executions: a larger failed redeem
+        // can fall back below a smaller successful request. Keep every receipt
+        // in the certificate, but project only the generation-bound canonical
+        // request rather than presenting those receipts as a monotonic curve.
+        capacityCurve: (isVault ? [point] : observed.points.filter((entry) => !scoreEligible || entry.certification !== "diagnostic")).map((entry) => ({ requestedNotionalUsd: entry.requestedNotionalUsd, maxCostBps: entry.maxCostBps, executableUsd: entry.executableUsd, completionRatio: entry.executableUsd / entry.requestedNotionalUsd, executionCostBps: entry.certification === "diagnostic" ? 0 : entry.executionCostBps })),
         executionModelId: review.modelId, executionCertificate: certificate,
       }));
       if (admission.state === "unavailable") failures.push({ modelId: review.modelId, reason: admission.reason, responsibility: admission.responsibility === "method-unsupported" ? "method-unsupported" : "producer-failed" });

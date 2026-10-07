@@ -859,7 +859,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "hchf-hedera-swiss-franc": defineReviewedCollateralConfig("2026-08-13", {
       outputAssets: ["asset:hbar"],
       costModel: documentedVariableFee(
-        "HLiquity documents a dynamic redemption fee based on the amount redeemed relative to total HCHF supply; the fee is paid in HBAR",
+        "HLiquity redemption fee is dynamic; _calcRedemptionRate in the registry-identified source version 30f7253f635f6015267b0fcdb5554d259b76e5db (2024-05-18) caps the protocol fee at 100%; this is a ceiling, not the current rate",
         "formula",
       ),
       routeStatus: "open",
@@ -882,6 +882,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "access",
           "settlement",
         ]),
+        sourceRef(
+          "HLiquity registry-identified TroveManager source (2024-05-18; fee ceiling reviewed 2026-10-07)",
+          "https://github.com/SwisscoastAG/HLiquity/blob/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol#L1396-L1401",
+          ["fees"],
+        ),
         sourceRef("Hedera mainnet mirror-node API", "https://mainnet-public.mirrornode.hedera.com", [
           "capacity",
           "route",
@@ -890,7 +895,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Any HCHF holder can redeem against the lowest-collateral-ratio Troves; HCHF is burned and the protocol transfers face-value HBAR to the redeemer.",
         "supply-full is the eventual system bound, not a guaranteed hot buffer: same-block capacity depends on current open Troves and their collateral.",
-        "The fee is dynamic and should be read from the deployed contract's current fee state/formula rather than treated as a fixed numeric charge.",
+        "Fee ceiling reviewed 2026-10-07: the registry identifies HCHF token 0.0.6070123 and source version 30f7253f635f6015267b0fcdb5554d259b76e5db; _calcRedemptionRate caps the dynamic protocol charge at 100%. This adverse ceiling does not claim a current fee or include Hedera network costs.",
       ],
     }),
     "euro3-3a-dao": defineCollateralConfig({

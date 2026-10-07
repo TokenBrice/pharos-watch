@@ -53,8 +53,8 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "accountable:noon:deployment:funding-rate-arb-hype",
-      "name": "Funding Rate Arb (HYPE)",
+      "sourceKey": "accountable:noon:deployment:funding-rate-arb-hyperliquid",
+      "name": "Funding Rate Arb (Hyperliquid)",
       "pct": 13.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
@@ -116,10 +116,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W2R09 USD+ classification correction; W1R66 reserve identity evidence preserved",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7); historical W2R09/W1R66 composition evidence preserved",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Noon Hyperliquid category identity re-reviewed 2026-10-07: HYPE spot plus matched HYPE/USDC perpetual; sourceKey update only, September 22 composition unchanged",
+        "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/funding-rate-arbitrage-perps.md"
+      },
       {
         "label": "Noon HYPE funding-rate arbitrage: Hyperliquid spot and HYPE/USDC perpetual",
         "url": "https://docs.noon.capital/3.-the-yield-engine/yield-strategies/funding-rate-arbitrage-perps"
@@ -211,7 +215,7 @@
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Funding Rate Arb (HYPE)",
+        "reserveName": "Funding Rate Arb (Hyperliquid)",
         "pct": 13.4,
         "disposition": "insufficient-evidence",
         "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket. Noon's current strategy page identifies Hyperliquid HYPE spot and HYPE/USDC perpetual markets, but current hedge notional, margin and any additional settlement counterparties are not published."

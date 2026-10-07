@@ -10,7 +10,7 @@ import {
   collateralExposureV9Path,
   createV9FactGapV3,
 } from "@shared/lib/safety-score-v9/reasons";
-import { v9MaturityNotApplicableBoundFact, v9OpenEndedMaturityBoundFact } from "@shared/lib/safety-score-v9/reserve-bound-facts";
+import { v9FullyBoundReserveFactorEvidence, v9MaturityNotApplicableBoundFact, v9OpenEndedMaturityBoundFact } from "@shared/lib/safety-score-v9/reserve-bound-facts";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -696,6 +696,34 @@ export function buildReserves(context: AssetBuildContext): {
     const openEndedMaturityBound = !maturityNotApplicableClass
       ? v9OpenEndedMaturityBoundFact(exposureKey, reserveBoundFacts, context.fixedInput.clockSec) : undefined;
     const factorStatuses: NonNullable<V9ReserveExposureFactV2["factorStatuses"]> = {};
+    const exposure: V9ReserveExposureFactV2 = {
+      exposureKey,
+      classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
+      sourceGenerationId: reviewedStatic
+        ? context.extension.sources.researchOverlays.generationId
+        : context.extension.sources.liveReserves.generationId,
+      provenance: reviewedStatic ? reviewedStatic.provenance : "live",
+      ...(reviewedStatic
+        ? {
+            evidenceClass: reviewedStatic.evidenceClass,
+            ...(reviewedStatic.sourceKind == null ? {} : { sourceKind: reviewedStatic.sourceKind, scopeId: reviewedStatic.scopeId }),
+          }
+        : {}),
+      status,
+      factorStatuses,
+      name: raw.name.trim(),
+      weight,
+      trackedAssetId,
+      assetClass,
+      issuerOrObligorKey,
+      riskFactors: classification?.riskFactors ?? raw.riskFactors ?? [],
+      liquidityHorizon,
+      maturityDaysMax,
+      failureDomains,
+    };
+    const boundFactorEvidence = status.observationState === "known"
+      ? v9FullyBoundReserveFactorEvidence(exposure, reserveBoundFacts, V9_CANDIDATE_POLICY_V1.policy.semantic.backing, context.fixedInput.clockSec)
+      : { liquidity: [], maturity: [] };
     for (const [factorKey, requiredDatum, missing] of [
       ["assetClass", "assetClass", assetClass === null],
       ["liquidity", "liquidityHorizon", liquidityHorizon === null || liquidityHorizon === "unknown"],
@@ -721,6 +749,14 @@ export function buildReserves(context: AssetBuildContext): {
         });
         continue;
       }
+      if (missing && (factorKey === "liquidity" || factorKey === "maturity") && boundFactorEvidence[factorKey].length > 0) {
+        factorStatuses[factorKey] = createV9FactStatus({
+          applicability: requiredV9Applicability("v9.backing.reserve-classification"),
+          observationState: "known",
+          evidenceRefIds: [...new Set([...evidenceIds, ...boundFactorEvidence[factorKey]])],
+        });
+        continue;
+      }
       factorStatuses[factorKey] = missing || status.observationState === "stale"
         ? missingLocalFact(context, {
             componentKey: `reserve:${exposureKey}:${factorKey}`, reasonCode: "material-reserve-slice-unstructured",
@@ -734,31 +770,7 @@ export function buildReserves(context: AssetBuildContext): {
         : createV9FactStatus({ applicability: requiredV9Applicability("v9.backing.reserve-classification"),
             observationState: "known", evidenceRefIds: evidenceIds });
     }
-    exposures.push({
-      exposureKey,
-      classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
-      sourceGenerationId: reviewedStatic
-        ? context.extension.sources.researchOverlays.generationId
-        : context.extension.sources.liveReserves.generationId,
-      provenance: reviewedStatic ? reviewedStatic.provenance : "live",
-      ...(reviewedStatic
-        ? {
-            evidenceClass: reviewedStatic.evidenceClass,
-            ...(reviewedStatic.sourceKind == null ? {} : { sourceKind: reviewedStatic.sourceKind, scopeId: reviewedStatic.scopeId }),
-          }
-        : {}),
-      status,
-      factorStatuses,
-      name: raw.name.trim(),
-      weight,
-      trackedAssetId,
-      assetClass,
-      issuerOrObligorKey,
-      riskFactors: classification?.riskFactors ?? raw.riskFactors ?? [],
-      liquidityHorizon,
-      maturityDaysMax,
-      failureDomains,
-    });
+    exposures.push(exposure);
   }
   const unconsumed = [...classificationByKey.keys()].filter((key) => !consumedClassifications.has(key));
   if (unconsumed.length > 0) {
