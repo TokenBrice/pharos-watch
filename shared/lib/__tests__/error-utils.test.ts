@@ -3,9 +3,23 @@ import { describeError, toErrorMessage } from "../error-utils";
 import { ErrorDescriptorSchema } from "../../types/error";
 
 describe("toErrorMessage", () => {
-  it("preserves ordinary Error messages without invoking platform accessors", () => {
+  it("preserves ordinary Error and platform accessor messages", () => {
     expect(toErrorMessage(new Error("error message"))).toBe("error message");
-    expect(toErrorMessage(new DOMException("abort message", "AbortError"))).toBeTruthy();
+    expect(describeError(new DOMException("request timed out", "TimeoutError"))).toMatchObject({
+      name: "TimeoutError",
+      message: "request timed out",
+    });
+  });
+
+  it("preserves own codes on Error subclasses", () => {
+    class NetworkError extends Error {
+      readonly code = "NETWORK_DOWN";
+    }
+    expect(describeError(new NetworkError("network down"))).toMatchObject({
+      name: "Error",
+      message: "network down",
+      code: "NETWORK_DOWN",
+    });
   });
 
   it("describes primitives and only error-shaped object fields", () => {
@@ -30,7 +44,7 @@ describe("toErrorMessage", () => {
     expect(ErrorDescriptorSchema.safeParse(descriptor).success).toBe(true);
   });
 
-  it("never executes user getters, coercion or serialization hooks", () => {
+  it("never executes non-Error getters, coercion or serialization hooks", () => {
     let calls = 0;
     const hostile = {
       get message() { calls++; throw new Error("getter"); },
@@ -38,6 +52,7 @@ describe("toErrorMessage", () => {
       toJSON() { calls++; throw new Error("json"); },
     };
     expect(describeError(hostile).message).toBe("Non-error value thrown");
+    expect(describeError(Object.create({ message: "inherited message" })).message).toBe("Non-error value thrown");
     expect(describeError(new Proxy({}, { getOwnPropertyDescriptor() { throw new Error("proxy"); } })).message).toBeTruthy();
     const { proxy, revoke } = Proxy.revocable({}, {});
     revoke();

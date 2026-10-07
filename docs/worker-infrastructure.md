@@ -889,8 +889,6 @@ Each chunk is its own D1 transaction. If a later chunk fails, earlier chunks rem
 
 Lease primitives and scheduled slot fencing are implemented in `worker/src/lib/cron-lease-primitives.ts` and the active `worker/migrations/0000_baseline.sql`; the manifest records historical migration 0074 as their pre-squash origin.
 
-Reserve-family admission and bounded wait policy lives in `worker/src/lib/reserve-producer-priority.ts`; [live reserve Cron Behavior](./live-reserves.md#cron-behavior) owns its full contract. Recovery protects unfinished/missing due producer slots and the next producer from 24 minutes before due, plus live controlled slots in `RESERVE_RECOVERY_HEAVY_SLOT_KEYS`. Config/replay claims and both lease INSERT/conflict UPDATE paths fence that policy using database time. Deferrals are neutral (`producer-slot-priority` / `heavy-slot-co-tenancy`) and prove no publication. Only a genuine scheduled four-hourly head waits, in abortable 15-second polls with a non-extending deadline (approximately 145 seconds for a fresh head); recovery never waits or evicts a blocker. Reserve-family opaque owners are versioned holder envelopes; `blockedBy` names the actual holder separately from the requester, while unknown legacy holder fields remain null unless exact-owner progress proves them.
-
 ```sql
 CREATE TABLE IF NOT EXISTS cron_leases (
   job TEXT PRIMARY KEY,

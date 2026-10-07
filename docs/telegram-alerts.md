@@ -391,7 +391,7 @@ When the dispatch snapshots are healthy, the live safety and reserve sources are
 
 The no-work branch is not used when snapshots need seeding, the safety source is missing/corrupt/stale/wrong-generation, any alert family has an actionable change, or due/expired pending rows need queue work. A non-alertable reserve source can still use this path because its baseline is explicitly preserved or cold-seeded; the returned metadata exposes `reserveAlertSourceState`, `reserveAlertSourceAgeSeconds`, `reserveAlertSourceGeneration`, and `reserveAlertsSuppressed`. Due pending rows still drain on an otherwise eventless run; expired pending rows still run the TTL cleanup. The latest pending-capacity and safety-source assessment from dispatch are passed to the degradation watchdog and pulse snapshot sidecar in the same five-minute lane so those sidecars do not repeat the same D1 reads.
 
-Every eventless and circuit-open queue lifecycle also runs bounded D1 maintenance before the due-transport gate, even when no Bot API transport configuration is supplied. Orphaned `sending` rows and interrupted terminal projections therefore do not require an unrelated alert to recover. Maintenance never counts as `pendingAttempted` or `messagesSent`; any changed/projected outcome refreshes capacity before it is shared with the watchdog.
+Eventless and circuit-open lifecycles also run bounded D1 maintenance before the due-transport gate ([Pending Delivery Queue](#pending-delivery-queue)), so orphaned `sending` rows recover without an unrelated alert; maintenance never counts as a send.
 
 ### Failure Modes
 

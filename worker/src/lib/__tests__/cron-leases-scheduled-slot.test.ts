@@ -197,9 +197,23 @@ describe("runScheduledSlotWithFence", () => {
         job: "sync-yield-data",
         status: "error",
         slot_started_at: slotStartedAt,
-        error: "scheduled slot heartbeat stale; child job progress abandoned",
+        started_at: slotStartedAt + 20,
+        duration_ms: 1_780_000,
+        error: "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]",
       }),
     ]);
+    expect(db.sqlite.prepare("SELECT degraded_reason FROM cron_runs ORDER BY id").all()).toEqual([
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+    ]);
+    for (const run of db.getRuns()) {
+      expect(JSON.parse(run.metadata ?? "{}")).toMatchObject({
+        reason: "stale-slot-reconciled",
+        reconciledAt: now,
+      });
+    }
     const abandonedRun = db.getRuns().find((run) => run.job === "sync-yield-data");
     expect(JSON.parse(abandonedRun?.metadata ?? "{}")).toMatchObject({
       slotWorkerVersion: "worker-v1",
@@ -440,28 +454,47 @@ describe("runScheduledSlotWithFence", () => {
         job: "sync-yield-supplemental",
         status: "error",
         slot_started_at: staleSlotStartedAt,
-        error: "scheduled slot abandoned before child job started",
+        started_at: staleSlotStartedAt,
+        duration_ms: 0,
+        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "fetch-tbill-rate",
         status: "error",
         slot_started_at: staleSlotStartedAt,
-        error: "scheduled slot abandoned before child job started",
+        started_at: staleSlotStartedAt,
+        duration_ms: 0,
+        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "observe-rpc-provider-parity",
         status: "error",
         slot_started_at: staleSlotStartedAt,
-        error: "scheduled slot abandoned before child job started",
+        started_at: staleSlotStartedAt,
+        duration_ms: 0,
+        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "sync-yield-data",
         status: "error",
         slot_started_at: staleSlotStartedAt,
-        error: "scheduled slot heartbeat stale; child job progress abandoned",
+        started_at: staleSlotStartedAt + 20,
+        error: "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]",
         duration_ms: 1_780_000,
       }),
     ]);
+    expect(db.sqlite.prepare("SELECT degraded_reason FROM cron_runs ORDER BY id").all()).toEqual([
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+      { degraded_reason: "stale-slot-reconciled" },
+    ]);
+    for (const run of db.getRuns()) {
+      expect(JSON.parse(run.metadata ?? "{}")).toMatchObject({
+        reason: "stale-slot-reconciled",
+        reconciledAt: currentSlotStartedAt,
+      });
+    }
     expect(JSON.parse(db.getRuns().find((run) => run.job === "sync-yield-data")?.metadata ?? "{}")).toMatchObject({
       failureCategory: "platform-abandoned",
       activeDurationMs: 1_780_000,

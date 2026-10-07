@@ -34,8 +34,6 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll an `process.argv` loop. The many existing hand-rolled parsers stay as they are; convert one only when that script is already being edited for another reason, so parser migration never becomes a standalone churn commit.
 
-`ops:cron-delivery` follows the strict CLI contract (`--minutes 1..1440`, `--raw`, help), reads `CLOUDFLARE_API_TOKEN` only from the environment, and never scrapes Wrangler OAuth files. The token needs Cloudflare Analytics read permission; optional `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WORKER_NAME` override the production target. HTTP/GraphQL errors, malformed evidence and possible 10,000-row truncation fail closed.
-
 | Verification CLI | Selection contract |
 | --- | --- |
 | `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
@@ -151,7 +149,7 @@ For `check:focused` selection and preview behavior, use the [smallest adequate c
 
 Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
-Use `npm run ops:cron-delivery -- --minutes 240 --raw` to inspect `workersInvocationsScheduled`, the platform delivery/resource-outcome ground truth rather than child cron rows. This read-only query performs no schedule, D1, KV, or Worker mutations. Empty windows are absent evidence, not success. Follow the [cron delivery stall runbook](./runbooks/cron-delivery-stall.md); never automatically PUT/reset triggers.
+`ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
 
 ### Curation Audits
 

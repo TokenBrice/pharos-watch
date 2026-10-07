@@ -1,14 +1,12 @@
 import type { ErrorDescriptor } from "../types/error";
 
-// Read data properties only: diagnostics must not execute thrown values' code.
-function dataProperty(value: object, key: string): unknown {
+// Platform errors expose fields through accessors; other thrown values only
+// contribute own data properties so diagnostics do not execute arbitrary getters.
+function errorProperty(value: object, key: string, isError = false): unknown {
   try {
-    let current: object | null = value;
-    for (let depth = 0; current && depth < 4; depth++) {
-      const property = Object.getOwnPropertyDescriptor(current, key);
-      if (property) return "value" in property ? property.value : undefined;
-      current = Object.getPrototypeOf(current);
-    }
+    if (isError) return (value as Record<string, unknown>)[key];
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    return property && "value" in property ? property.value : undefined;
   } catch {
     // Proxies may reject reflection; the descriptor still supplies a safe fallback.
   }
@@ -35,10 +33,13 @@ export function describeError(
     };
     const object = value !== null && (typeof value === "object" || typeof value === "function")
       ? value : null;
-    const rawName = object ? dataProperty(object, "name") : undefined;
-    const rawMessage = object ? dataProperty(object, "message") : undefined;
     let isError = false;
-    try { isError = value instanceof Error; } catch { /* Hostile proxy. */ }
+    try {
+      isError = value instanceof Error ||
+        (typeof DOMException !== "undefined" && value instanceof DOMException);
+    } catch { /* Hostile proxy. */ }
+    const rawName = object ? errorProperty(object, "name", isError) : undefined;
+    const rawMessage = object ? errorProperty(object, "message", isError) : undefined;
     const name = bounded(typeof rawName === "string" && rawName.trim() ? rawName : isError ? "Error" : "NonError", 100) || "NonError";
     if (object && seen.has(object)) return { name, message: "Circular error", truncated: true };
     if (object) seen.add(object);
@@ -48,12 +49,12 @@ export function describeError(
     if (!message.trim()) message = isError ? `${name} (no message)` : "Non-error value thrown";
     const descriptor: ErrorDescriptor = { name, message };
     if (object) {
-      const code = dataProperty(object, "code");
+      const code = errorProperty(object, "code", isError);
       if (typeof code === "string" || typeof code === "number") descriptor.code = bounded(String(code), 100);
-      const stack = depth === 0 ? dataProperty(object, "stack") : undefined;
+      const stack = depth === 0 ? errorProperty(object, "stack", isError) : undefined;
       if (typeof stack === "string") descriptor.stack = bounded(stack, 800);
-      const cause = dataProperty(object, "cause");
-      const children = dataProperty(object, "errors");
+      const cause = errorProperty(object, "cause", isError);
+      const children = errorProperty(object, "errors", isError);
       let aggregate = false;
       try { aggregate = Array.isArray(children); } catch { /* Hostile proxy. */ }
       if (depth < 3) {
@@ -61,10 +62,10 @@ export function describeError(
         else if (cause !== undefined) truncated = true;
         if (aggregate) {
           descriptor.errors = [];
-          const length = dataProperty(children as object, "length");
+          const length = errorProperty(children as object, "length");
           const count = typeof length === "number" ? Math.min(length, 5) : 0;
           for (let index = 0; index < count && nodes < 12; index++) {
-            descriptor.errors.push(visit(dataProperty(children as object, String(index)), depth + 1));
+            descriptor.errors.push(visit(errorProperty(children as object, String(index)), depth + 1));
           }
           if (typeof length === "number" && descriptor.errors.length < length) truncated = true;
         }
