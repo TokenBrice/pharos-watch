@@ -1,0 +1,156 @@
+{
+  "id": "pht-pht",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "PHT is marketed for payments and remittances and APACX LTD. is expressly named as Token Issuer. The documented issuer protocol returns collateral when CDP debt is repaid; fiat exit is separately described through MoneyBees OTC shops. An APACX obligation to redeem every PHT for a fixed PHP amount was not established. Payment marketing and third-party fiat access warrant unclear applicability rather than a categorical non-payment-token exclusion.",
+      "references": [
+        {
+          "label": "APACX: PHT issuer identity in legal terms",
+          "url": "https://docs.apacx.io/legal-compliance/terms-and-conditions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "APACX: PHT CDP minting and collateral repayment",
+          "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "APACX: Philippine OTC fiat on-ramp and off-ramp",
+          "url": "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "APACX: public beta collateral wallet disclosure",
+          "url": "https://docs.apacx.io/transparency.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, sections 2(17), 2(22), 3 and 20",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "New issuerEntity is exactly APACX LTD., independently confirmed in the primary PHT legal-terms excerpt. Exact issuer domicile is omitted; the base-file Singapore jurisdiction was not independently proven. APACX says beta PHT is minted against apcxUSDT; its transparency page discloses a Tron reserve wallet without an independent monthly attestation. CDP repayment releases borrower collateral, while MoneyBees provides a separate OTC fiat exit. No fixed-PHP issuer redemption obligation was established. Full linked DocSend terms were bot-blocked in static fetch; browser fallback displayed an image-based 16-page viewer but did not expose the document text. No unread eligibility or redemption clause is assumed. Public payment/remittance and overseas-worker marketing warrants retaining unclear applicability and additional terms research. The pre-effective DASP posture is not a claim that other U.S. laws permit all offers.",
+    "references": [
+      {
+        "label": "APACX: PHT issuer identity in legal terms",
+        "url": "https://docs.apacx.io/legal-compliance/terms-and-conditions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "APACX: PHT CDP minting and collateral repayment",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "APACX: Philippine OTC fiat on-ramp and off-ramp",
+        "url": "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "APACX: public beta collateral wallet disclosure",
+        "url": "https://docs.apacx.io/transparency.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, sections 2(17), 2(22), 3 and 20",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: proposed GENIUS implementation",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Federal Reserve: proposed payment-stablecoin framework and applications",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury: SCRC interim certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS: virtual-currency entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Independently reopened PHT overview, legal issuer excerpt, mint/redeem guide, OTC fiat conversion guide, payment-use page and reserve-wallet transparency. Full DocSend terms remained unextracted after static bot block and browser image-viewer fallback.",
+        "Independently reopened OCC Bulletin 2026-3, Federal Reserve September 24 announcement updated September 29, Treasury September 30 SCRC procedural rule, and complete NYDFS regulated-entity and issuance Greenlist tables.",
+        "Named-token/project search: (CJPY OR JPYT OR APACX OR Alchemix) on OCC, FDIC, Federal Reserve, NCUA and NYDFS domains. No token-specific qualifying authorization located; FDIC academic discussion is not issuer approval.",
+        "Individual token/project searches for GENIUS approval and enforcement: CJPY/Yamato, JPYT/DePhaser, APACX LTD/PHT and Alchemix/alUSD. No qualifying token-specific authorization or action located.",
+        "Reopened Public Law 119-27, including sections 2(17), 2(22) and 3. Consulted the independently researched federal/state landscape briefs; proposed rules and SCRC procedural implementation do not approve named issuers."
+      ],
+      "summary": "As of 2026-10-07, no qualifying public GENIUS issuer approval, state qualification, official application, issuer-announced intent or foreign registration was located for pht-pht in the independently opened token materials, NYDFS tables and named-token searches listed. This is a bounded public-evidence finding and does not exclude confidential or unindexed filings. Proposed implementing rules and ordinary licensing context do not establish token-specific GENIUS authorization. APACX LTD. issuer identity is confirmed, but fixed-fiat obligations in the full terms remain unresolved.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: proposed GENIUS implementation",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve: proposed payment-stablecoin framework and applications",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury: SCRC interim certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS: virtual-currency entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.apacx.io/transparency.md",
+    "issuerEntity": "APACX LTD."
+  }
+}

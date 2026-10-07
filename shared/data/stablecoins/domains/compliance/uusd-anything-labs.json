@@ -1,27 +1,40 @@
 {
   "id": "uusd-anything-labs",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "UUSD is marketed as a stable-value payment and settlement asset, is tradable on BNB Chain, and has institutional allocation channels; it is therefore an apparent payment stablecoin despite unresolved issuer and reserve details.",
+      "summary": "UUSD is marketed for stable-value payments and settlement and is offered through a BNB Chain DEX and institutional allocations. The reviewed Anything Labs pages and whitepaper do not identify the legal issuer or an obligation to convert, redeem or repurchase UUSD for a fixed amount of monetary value. That obligation is required by GENIUS section 2(22), so marketing and tradability alone do not resolve statutory applicability.",
       "references": [
         {
           "label": "Anything Labs UUSD website",
           "url": "https://uusd.ai/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Anything Labs UUSD access page",
           "url": "https://uusd.ai/get/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Anything Labs UUSD whitepaper",
           "url": "https://uusd.ai/whitepaper.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anything Labs UUSD issuance infrastructure",
+          "url": "https://uusd.ai/issuance",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -33,82 +46,174 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Anything Labs publicly describes UUSD as a settlement and payments network, but the reviewed materials do not identify a U.S. permitted issuer, state-qualified issuer, official application, foreign-issuer registration, reserve disclosure, or fixed-value redemption policy. The regime remains in proposed-rulemaking phase; no official approval was found.",
+    "notes": "Anything Labs is a public project brand, not a verified legal issuer entity in the reviewed disclosures. Applicability is corrected to unclear because payment marketing is evident but the statutory monetary-value redemption obligation is not. No legal entity, domicile, licensing regulator or official GENIUS route is inferred from the brand, a smart-contract audit, a trading venue or an institutional issuance service. The opened U.S. framework sources, NYDFS tables and exact-name regulator searches yielded no public token-specific PPSI approval, state qualification, official application or foreign registration. No reserve composition/report, fixed-value redemption policy or monthly attestation was located. Rulemaking remains pre-effective; not-yet-restricted does not assert affirmative legal availability. The old OCC directory reference is omitted because its applicant table could not be reopened; the negative review does not claim it was inspected. Independent verification on 2026-10-07 reopened every retained reference URL. The statutory applicability analysis is an editorial assessment rather than a regulator ruling.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule: Bulletin 2026-3",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "OCC Digital Assets Licensing Applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register: OCC GENIUS Act proposed rule",
         "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anything Labs UUSD website",
         "url": "https://uusd.ai/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anything Labs UUSD access page",
         "url": "https://uusd.ai/get/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anything Labs UUSD whitepaper",
         "url": "https://uusd.ai/whitepaper.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anything Labs UUSD issuance infrastructure",
+        "url": "https://uusd.ai/issuance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act framework and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS Act requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury issuance, offering, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-regime certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule, Bulletin 2026-3",
-        "Federal Register OCC GENIUS Act proposed rule, 2026-04089",
-        "OCC Digital Assets Licensing Applications table and linked application materials",
-        "Anything Labs UUSD website, access page, issuance page, and whitepaper",
-        "Public search for Anything Labs/UUSD GENIUS approval, application, state qualification, and foreign-issuer registration"
+        "https://public-inspection.federalregister.gov/2026-04089.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://uusd.ai/",
+        "https://uusd.ai/get/",
+        "https://uusd.ai/whitepaper.pdf",
+        "https://uusd.ai/issuance",
+        "2026-10-07 exact-name searches for uusd-anything-labs and its issuer/project on OCC, NYDFS, FDIC, Federal Reserve, Treasury, NCUA and SEC domains for GENIUS/PPSI approval, application, registration and enforcement; no qualifying result located."
       ],
-      "summary": "No token-specific U.S. GENIUS approval, state-qualified approval, regulator-published application, or foreign-issuer registration was located for UUSD or Anything Labs. The public UUSD materials identify payment and settlement use but do not identify a regulatory pathway, U.S. issuer domicile, reserve disclosure, or redemption policy.",
+      "summary": "No public token-specific U.S. GENIUS approval, state-qualified approval, regulator-published application or foreign-issuer registration was located for UUSD/Anything Labs in the opened sources and bounded exact-name searches as of 2026-10-07. Issuer identity and fixed monetary-value redemption obligation remain unverified. No public GENIUS enforcement action naming this exact token was located; absence is not proof of legal compliance or an exhaustive register search.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
-        {
-          "label": "OCC GENIUS Act proposed rule: Bulletin 2026-3",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
-        },
-        {
-          "label": "OCC Digital Assets Licensing Applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
-        },
         {
           "label": "Federal Register: OCC GENIUS Act proposed rule",
           "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
           "sourceKind": "federal-register",
           "sourceDate": "2026-03-02",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act framework and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS Act requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury issuance, offering, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-regime certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anything Labs UUSD website",
+          "url": "https://uusd.ai/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anything Labs UUSD access page",
+          "url": "https://uusd.ai/get/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anything Labs UUSD whitepaper",
+          "url": "https://uusd.ai/whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anything Labs UUSD issuance infrastructure",
+          "url": "https://uusd.ai/issuance",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-05"
+    "reviewedAt": "2026-10-07"
   }
 }

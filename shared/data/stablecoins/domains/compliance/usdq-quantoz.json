@@ -23,6 +23,31 @@
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDQ is a U.S. dollar-referenced electronic-money token issued by Quantoz Payments B.V. for payments and transfers, with an issuer obligation to redeem at its fixed face value. It is not a bank deposit or a tokenized investment-fund share.",
+      "references": [
+        {
+          "label": "Quantoz EURQ/USDQ",
+          "url": "https://www.quantoz.com/products/eurq-usdq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Quantoz USDQ whitepaper",
+          "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Quantoz Payments B.V.",
@@ -35,43 +60,184 @@
     "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located. The GENIUS Act foreign-exception framework remains in proposed-rules phase as of 2026-06-18; no foreign exception registry or comparability determination has been established.",
+    "notes": "Reviewed 2026-10-07. Quantoz Payments B.V. holds Dutch EMI authorization R186418, effective 2023-10-13. No public GENIUS issuer approval, official application, foreign registration or applicable Treasury comparability determination was located in the sources checked. No U.S. issuer pathway or supervising U.S. regulator is inferred from the Dutch license. The issuer CEO's June 2025 discussion of GENIUS does not announce a Quantoz application or a specific authorization route. Issuer-authorization rules remain proposals. Treasury's September 30 SCRC interim final rule concerns procedures and does not qualify Quantoz or accelerate the Act's effective date; Treasury's August proposal gives an expected general effective date of 2027-01-18 and the general DASP offer/sale restriction date of 2028-07-18. The foreign-issuer lawful-order condition would apply when the Act becomes effective. Reserve disclosure is present: the current issuer snapshot was published 2026-08-30. This self-reported snapshot and an ISAE 3402 Type 2 controls description do not establish a publicly available monthly independent reserve-attestation series. Token terms sections 24-27 provide face-value redemption, KYC/AML checks, EEA/UK/Swiss address and bank-account restrictions, and non-registered-holder access; recovery/redemption-plan clauses permit limitations. No public enforcement action was identified in the bounded sources checked; this is not a comprehensive clearance. The current redemption webpage and common token terms allow direct verified EEA/UK/Swiss claims without a pre-existing token account; USDQ whitepaper executive-summary wording instead limits direct claims to registered EEA holders and directs others to partners. This disclosure inconsistency does not negate the published redemption policy or establish U.S. eligibility.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Quantoz EURQ/USDQ",
         "url": "https://www.quantoz.com/products/eurq-usdq",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Quantoz transparency",
         "url": "https://www.quantoz.com/transparency",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "DNB public register: Quantoz Payments B.V.",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Quantoz token terms of service (30 April 2026)",
+        "url": "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Quantoz token redemption",
+        "url": "https://www.quantoz.com/token-redemption/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC proposed GENIUS licensing and registration information collection",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-07-27/html/2026-15088.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-07-27",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act DASP offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS standards and application requirements",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FinCEN enforcement actions",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OFAC civil penalties and enforcement information",
+        "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Quantoz CEO interview discussing the GENIUS Act",
+        "url": "https://www.quantoz.com/articles/interview-non-us-stablecoin-issuers-gaining-appeal-amid-trade-wars-says-quantoz-payments-ceo-arnoud-star-busmann/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-06-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Web search for Quantoz Payments GENIUS Act foreign issuer registration 2026",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 proposed requirements, including foreign issuer registration and permitted issuer applications; substantive HTML fetched directly",
+        "OCC Digital Assets Licensing Applications: complete published pending-applications table; Quantoz Payments B.V. absent; this table is not a complete GENIUS approval register",
+        "OCC July 27, 2026 proposed licensing and foreign registration information collection",
+        "Treasury August 17, 2026 proposed DASP rules and September 30, 2026 SCRC procedural interim final rule",
+        "Federal Reserve September 24, 2026 proposed GENIUS standards and application requirements",
+        "NYDFS public virtual currency regulated entities and greenlisted coins; ordinary state licenses are not GENIUS qualification",
+        "DNB R186418 issuer register, Quantoz token terms, product page, transparency page, redemption policy and CEO GENIUS commentary",
+        "FinCEN published enforcement-actions index and OFAC 2026 civil penalties index, checked for Quantoz",
+        "Public searches for Quantoz GENIUS approval, application, foreign registration and enforcement; regulator-domain search across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS"
       ],
-      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ. The GENIUS Act foreign exception framework rules remain in proposed-rules phase as of 2026-06-18.",
+      "summary": "As of 2026-10-07, the public regulatory materials and issuer disclosures checked did not identify Quantoz Payments B.V. as a GENIUS permitted issuer, state-qualified issuer, official applicant or registered foreign issuer, or identify a Treasury comparability determination applicable to it. The OCC pending digital-asset applications table and NYDFS regulated-entities list did not name Quantoz. These lists have limited scope; absence does not establish prohibition or rule out non-public filings. The Dutch EMI authorization does not establish U.S. authorization. FinCEN's published index, OFAC's 2026 index and the public enforcement search did not identify a named Quantoz action.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Quantoz EURQ/USDQ",
+          "url": "https://www.quantoz.com/products/eurq-usdq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC proposed GENIUS licensing and registration information collection",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-07-27/html/2026-15088.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-07-27",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OFAC civil penalties and enforcement information",
+          "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

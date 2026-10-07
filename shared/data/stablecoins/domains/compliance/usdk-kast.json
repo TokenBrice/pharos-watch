@@ -3,70 +3,163 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDK is KAST's branded USD-pegged payment token for consumer payments and savings, built on M0 programmable stablecoin infrastructure on Solana."
+      "summary": "USDK is KAST Dollar, the non-yield payment-oriented branded USD token on M0 infrastructure. KAST-authored M0 research distinguishes USDK for payments from the separate USDKy yield product; this is apparent payment-token positioning, not a legal determination or authorization.",
+      "references": [
+        {
+          "label": "KAST-authored M0 research: USDK payments versus USDKy yield",
+          "url": "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-02",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "KAST Tech (Reg No. 16223, Anjouan, Comoros)",
     "issuerDomicile": "Union of Comoros",
-    "licensingRegulator": "Anjouan Offshore Finance Authority",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://dashboard.m0.org/",
-    "redemptionPolicyPresent": true,
+    "reserveDisclosureUrl": "https://docs.m0.org/protocol/minting-burning",
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "KAST Tech is incorporated in Anjouan, Comoros (Reg No. 16223) and explicitly states it is not a bank; licensed services are provided by third-party partners (BitGo, Fireblocks, Tazapay). In September 2025, KAST's founder stated an aspiration to 'upgrade USDK to be issued in the US by an issuer that meets the Genius standard' and referenced ongoing discussions with major issuers; but this remains an informal forward-looking intent, not a formal application. As of 2026-06-18, no PPSI approval or foreign-issuer exception has been filed or granted for USDK under the GENIUS Act. The GENIUS Act rulemaking remains in proposed-rules phase with no final rules issued and no issuer having received a PPSI approval.",
+    "notes": "KAST current terms identify KAST Tech (Reg No. 16223, Anjouan, Comoros), or relevant affiliates, as the platform company and state that it is not a bank. The existing issuerEntity string is retained under the load-bearing identity rule, but these general account terms do not independently identify the legal USDK mint/redemption obligor. Anjouan Offshore Finance Authority licensing was not evidenced by the opened primary terms and is omitted. The public terms describe a contractual KAST account debt claim and fiat withdrawals, not a USDK-specific token redemption policy; redemptionPolicyPresent is therefore false for a verified public token policy. M0 reserve disclosures concern upstream protocol collateral and validators, not a USDK-specific monthly CPA attestation. No named GENIUS approval, acknowledged token-issuer application, foreign registration/comparability decision, or formal KAST GENIUS undertaking was found in the consulted sources; an older unsourced founder aspiration is not adopted. Treasury still describes the expected January 18, 2027 effective date. This bounded review does not determine every filing or every token-holder legal right. The M0 dashboard was reopened but returned only a client shell; no current collateral balances were independently inspected. The reserve-disclosure link therefore points to the working primary M0 collateral/validator documentation and describes upstream collateral only.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "KAST USDK announcement blog post",
-        "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
-        "sourceKind": "issuer-disclosure"
+        "url": "https://www.kast.xyz/en/newsroom/press-releases/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 Solana launch with KAST press release",
         "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "M0 dashboard (protocol reserve attestation)",
+        "label": "M0 dashboard (upstream protocol collateral disclosure endpoint)",
         "url": "https://dashboard.m0.org/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "KAST Terms and Conditions (legal entity confirmation)",
-        "url": "https://www.kast.xyz/legal/terms-and-conditions-of-service",
-        "sourceKind": "issuer-disclosure"
+        "url": "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KAST-authored M0 research: USDK payments versus USDKy yield",
+        "url": "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "M0 collateral updates and validator attestations",
+        "url": "https://docs.m0.org/protocol/minting-burning",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule and expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated entities and stablecoin issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3, Feb 2026)",
-        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026)",
-        "KAST and M0 issuer disclosures and blog posts",
-        "KAST Terms and Conditions (legal entity: KAST Tech, Reg No. 16223, Anjouan, Comoros)",
-        "Bitget News (Sep 2025): KAST founder stated aspiration to align USDK with GENIUS standard via US issuer partner: no formal application found",
-        "CoinDesk KAST $80M Series A coverage (Mar 2026): no GENIUS application mentioned",
-        "Web searches for KAST USDK OCC FDIC PPSI application: no results found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.kast.xyz/en/legal/terms-and-conditions-of-service",
+        "https://www.kast.xyz/en/newsroom/press-releases/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0",
+        "https://docs.m0.org/protocol/minting-burning",
+        "2026-10-07 exact-brand searches on OCC, FDIC, Federal Reserve, NCUA and NYDFS domains for GENIUS/PPSI/application/authorization/enforcement; no token-specific match located."
       ],
-      "summary": "No PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception under the GENIUS Act has been publicly filed or granted for USDK or its issuer KAST Tech. The KAST founder's September 2025 statement of intent to partner with a US-compliant issuer has not translated into any publicly visible application or structural change as of June 2026. No US federal or state regulator has published any filing, acknowledgment, or action regarding KAST or USDK.",
+      "summary": "No public USDK-specific PPSI approval, acknowledged GENIUS application, state qualification, foreign-exception decision or enforcement action was located in the consulted sources and exact-brand official-domain searches. KAST generic platform identity, M0 infrastructure and third-party financial partners do not establish token authorization. The OCC licensing tracker returned navigation-only reader content and was not treated as a complete inspected application list.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "FDIC GENIUS requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated entities and stablecoin issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

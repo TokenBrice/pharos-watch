@@ -4,16 +4,12 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register landing page: no SLVon EMT/ART authorization located in the reviewed register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "SLVon Final Terms: debt instrument",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf"
       },
       {
-        "label": "EUR-Lex MiCA Regulation: financial instruments are outside MiCA scope",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
-      },
-      {
-        "label": "Ondo Important Notes: Ondo Stocks are tokenized securities offered in the EEA under qualified-investor/professional-client restrictions",
-        "url": "https://docs.ondo.finance/ondo-stocks/important-notes"
+        "label": "Ondo prospectus: ledger-based tracker-certificate debt securities",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
       }
     ]
   },
@@ -24,23 +20,30 @@
       "references": [
         {
           "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "OCC GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
         },
         {
           "label": "Ondo Important Notes: tokenized stocks and ETFs are security exposures, not underlying shares",
           "url": "https://docs.ondo.finance/ondo-stocks/important-notes",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SLVon Final Terms: debt instrument and exact Ethereum token",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-11-11"
         }
       ]
     },
@@ -51,29 +54,36 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicitly assessed because this dashboard-listed $25M+ tokenized ETF could be confused with a payment stablecoin. Ondo's disclosures identify the product as tokenized security exposure and describe EEA distribution under investor-eligibility restrictions; no GENIUS payment-stablecoin authorization posture applies.",
+    "notes": "SLVon is a debt-instrument security tracking iShares Silver Trust. Its Final Terms identify ISIN VGG7001AAT12 and Ethereum address 0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4, and expressly provide for EU/EEA retail and professional offers under securities offering documents. The current Important Notes likewise describe securities prospectus distribution; the older professional-only EEA description is superseded. No token-specific GENIUS enforcement action was located in the October 7, 2026 issuer/regulator searches. No GENIUS payment-stablecoin authorization posture applies.",
     "references": [
       {
         "label": "GENIUS Act statutory text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "Ondo Stocks Important Notes",
         "url": "https://docs.ondo.finance/ondo-stocks/important-notes",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ondo Stocks overview",
         "url": "https://docs.ondo.finance/ondo-stocks/overview",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SLVon Final Terms: debt instrument and exact Ethereum token",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-11-11"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

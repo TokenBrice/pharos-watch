@@ -1,20 +1,116 @@
 {
   "id": "iusd-infinifi",
-  "mica": {
-    "status": "out-of-scope",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "iUSD is a transferable stablecoin-like receipt minted against USDC at a 1:1 protocol exchange rate. The public protocol offers USDC withdrawal subject to liquidity and FIFO queues, deploys backing into liquid and illiquid investments, and exposes holders to potential losses. It does not establish a legally obligated issuer redeeming iUSD for a fixed amount of national currency or bank deposits. The payment-stablecoin definition remains unresolved; USDC collateral redemption is distinct from the statutory monetary-value obligation.",
+      "references": [
+        {
+          "label": "GENIUS Act enacted text: fixed monetary-value redemption and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "infiniFi iUSD protocol documentation",
+          "url": "https://docs.infinifi.xyz/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "infiniFi whitepaper: USDC deposits and redemption queues",
+          "url": "https://docs.infinifi.xyz/whitepaper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "infiniFi loss-allocation and liquidity risk disclosures",
+          "url": "https://docs.infinifi.xyz/risk-disclosures.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "infiniFi receipt-token contract identity",
+          "url": "https://docs.infinifi.xyz/dev-docs/tokens/receipt-token.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://eth-api.infinifi.xyz/api/protocol/data",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Scope assessed for unstaked iUSD, excluding siUSD/liUSD yield shares and the separate INFI governance token. Public redemptionPolicyPresent records protocol USDC withdrawals and queues, without establishing fixed cash redemption by a legal issuer. Reserve data is protocol-published live accounting, without a located independent monthly reserve-attestation report. The INFI Title II whitepaper names infiniFi Foundation and InfiniFi Global in governance-token roles; it does not identify either as the iUSD redemption obligor, so issuerEntity is omitted. Governor/multisig roles prevent an unsupported blanket fully-decentralized or issuerless exemption. No public GENIUS approval, application, or announced route was found. Current federal proposals do not establish a general DASP restriction already effective.",
     "references": [
       {
-        "label": "infiniFi documentation: iUSD is a USDC receipt token in a DeFi fractional-reserve system",
-        "url": "https://docs.infinifi.xyz/"
+        "label": "GENIUS Act enacted text: fixed monetary-value redemption and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
-        "label": "infiniFi whitepaper: iUSD is minted when users deposit USDC into the protocol",
-        "url": "https://docs.infinifi.xyz/whitepaper"
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
-        "label": "ESMA Interim MiCA Register landing page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "infiniFi iUSD protocol documentation",
+        "url": "https://docs.infinifi.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "infiniFi whitepaper: USDC deposits and redemption queues",
+        "url": "https://docs.infinifi.xyz/whitepaper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "infiniFi loss-allocation and liquidity risk disclosures",
+        "url": "https://docs.infinifi.xyz/risk-disclosures.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "infiniFi current protocol reserve data",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "infiniFi receipt-token contract identity",
+        "url": "https://docs.infinifi.xyz/dev-docs/tokens/receipt-token.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://infinifi.xyz/",
+        "https://docs.infinifi.xyz/",
+        "https://docs.infinifi.xyz/whitepaper",
+        "https://github.com/InfiniFi-Labs/infinifi-protocol",
+        "https://eth-api.infinifi.xyz/api/protocol/data"
+      ],
+      "summary": "No public GENIUS PPSI approval, state qualification, official application, or registered foreign-issuer exception naming iUSD / infiniFi was located in the opened federal rulemaking/application sources, NYDFS directory, issuer disclosures, and exact-name official-domain searches as of 2026-10-07. These sources are bounded public evidence, not proof of an absent application or nonpublic proceeding; the token legal issuer remains unresolved.",
+      "reviewer": "Pharos independent compliance verifier s075",
+      "reviewedAt": "2026-10-07"
+    },
+    "reviewer": "Pharos independent compliance verifier s075",
+    "reviewedAt": "2026-10-07"
   }
 }

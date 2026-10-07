@@ -1,31 +1,91 @@
 {
   "id": "pyusdx-moonpay",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "PYUSDx issuer terms: EEA persons and EEA-directed distribution prohibited",
+        "url": "https://www.moonpay.com/legal/pyusdx_terms"
+      },
+      {
+        "label": "MoonPay PYUSDx announcement: distinct BVI-issued PYUSD-backed framework",
+        "url": "https://www.moonpay.com/newsroom/pyusdx"
+      }
+    ]
+  },
   "genius": {
-    "applicability": "unclear",
+    "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "Issuer terms prohibit describing PYUSDx as a GENIUS payment stablecoin, exclude U.S./EEA distribution and provide contractual PYUSD redemption only for eligible counterparties. That disclaimer does not settle statutory applicability."
+      "summary": "Under the published PYUSDx terms, MoonPay Digital Assets Limited owes eligible counterparties exclusively one PYUSD digital asset per PYUSDx, never fiat currency; that obligation is unchanged by PYUSD market-price changes. GENIUS section 2(22)(A)(ii)(I) expressly does not count redemption into a digital asset denominated in fixed monetary value as the required monetary-value redemption. Ordinary non-onboarded holders lack direct issuer redemption rights. The non-payment-token classification reflects this statutory-definition failure, not merely the issuer marketing disclaimer or U.S. distribution ban.",
+      "references": [
+        {
+          "label": "PYUSDx terms: exclusively digital-asset redemption and no fiat obligation",
+          "url": "https://www.moonpay.com/legal/pyusdx_terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-05"
+        },
+        {
+          "label": "GENIUS Act sections 2(17) and 2(22): monetary-value redemption threshold",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
-    "authorizationStatus": "unknown",
-    "issuerPathway": "unknown",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
     "redemptionPolicyPresent": true,
-    "notes": "Token-specific U.S. GENIUS authorization, legal issuer pathway and independent financial assurance were not established by the reviewed product, holder and reserve disclosures. Upstream PYUSD/USDC authorization is not local-token authorization. MiCA status is intentionally unassessed; geographic platform restrictions are not a regulatory out-of-scope ruling.",
+    "notes": "Reviewed exact PYUSDx token issued by MoonPay Digital Assets Limited in the British Virgin Islands, not Paxos PYUSD, MoonPay USA LLC, MoonPay Trust Company LLC, or any downstream branded token. Redemption is exclusively 1 PYUSDx for 1 PYUSD, even if PYUSD market value changes; the issuer is not contractually obligated to redeem for dollars or a bank deposit. Section 2(22)(A)(ii)(I) excludes such digital-asset-only redemption from the required fixed-monetary-value obligation. Therefore authorizationStatus and issuerPathway are not-applicable to the tracked GENIUS payment-stablecoin posture under these published terms; this is not a government exemption, PPSI authorization, or a claim of compliance with all U.S. law. Eligible-counterparty contractual redemption exists, but ordinary holders have no direct mint/redeem service right or claim against Paxos. Issuer prohibition on calling PYUSDx a GENIUS payment stablecoin corroborates rather than decides the analysis. U.S./EEA-directed distribution is contractually prohibited; U.S. geographic restrictions alone would not exclude a true payment stablecoin from GENIUS. Upstream PYUSD attestations and MoonPay affiliate licenses do not establish this token issuer reserve assurance or authorization.",
     "references": [
       {
         "label": "MoonPay PYUSDx holder and counterparty terms",
         "url": "https://www.moonpay.com/legal/pyusdx_terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-05"
       },
       {
         "label": "M0 exact PYUSDx mainnet deployments",
         "url": "https://docs.m0.org/resources/addresses/pyusdx-platform",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MoonPay PYUSDx product announcement",
+        "url": "https://www.moonpay.com/newsroom/pyusdx",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act statutory payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "SCRC rule quotes digital-asset-redemption exclusion",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "issuerEntity": "MoonPay Digital Assets Limited",
-    "issuerDomicile": "British Virgin Islands"
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable"
   }
 }

@@ -26,13 +26,13 @@
           "label": "EURØP white paper: issuer, EMT classification, redemption and payment use",
           "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Schuman Financial: issuer and business description",
           "url": "https://schuman.io/about/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -47,66 +47,124 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://schuman.io/reserve-attestations/",
     "redemptionPolicyPresent": true,
-    "notes": "SALVUS SAS has an official French MiCA/EMT authorization recorded in the MiCA field, but that EU authorization is not a GENIUS approval. Schuman's public GENIUS references discuss the U.S. framework at a general policy level; no token-specific U.S. approval, official application, state qualification, or OCC foreign-issuer registration was found. Because the GENIUS framework remains in proposed-rules phase, the conservative status is no-public-authorization-found.",
+    "monthlyAttestationPresent": false,
+    "notes": "SALVUS SAS has French MiCA/EMT authorization under ACPR supervision. That EU authorization does not establish U.S. GENIUS approval. Schuman's public GENIUS commentary discusses the U.S. framework at a policy level; no token-specific U.S. approval, regulator-confirmed application, state qualification or OCC foreign-issuer registration was located in the opened sources and scoped searches as of 2026-10-07. The OCC digital-assets licensing inventory is a pending charter-application table, not an exhaustive GENIUS register. Reserve disclosures include a KPMG quarterly attestation for 2026-06-30, signed 2026-07-03; its procedures are expressly neither an audit nor a review, and no monthly attestation series was located. The expected Act effective date remains 2027-01-18, with a separate 2028-07-18 broader DASP issuer restriction. The 2026-09-30 state-committee procedural interim rule does not qualify an issuer. The negative finding is limited to public sources and searches, not confidential filings or proceedings.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register 91 FR 37234: GENIUS Act proposed CIP rule",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-06-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Schuman Financial: issuer and ACPR authorization disclosure",
-        "url": "https://schuman.io/about/",
+        "label": "Schuman Financial legal center: SALVUS SAS issuer and ACPR authorization disclosure",
+        "url": "https://schuman.io/legal-center/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Schuman Financial CEO discussion of MiCA and the U.S. GENIUS Act",
         "url": "https://schuman.io/blog/schuman-financial-ceo-at-ripple-swell-why-private-euro-stablecoins-will-define-europes-financial-future/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-11-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Schuman reserve attestations",
+        "url": "https://schuman.io/reserve-attestations/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KPMG attestation on EUROP tokens and reserves - 30 June 2026",
+        "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-03",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issued stablecoins proposal and expected GENIUS effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html: OCC GENIUS proposed rule and foreign-issuer registration framework",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-24.html: OCC reporting proposal for permitted and foreign issuers",
-        "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf: Federal Register proposed GENIUS CIP rule",
-        "https://schuman.io/about/: SALVUS SAS issuer and French ACPR authorization",
-        "https://schuman.io/blog/schuman-financial-ceo-at-ripple-swell-why-private-euro-stablecoins-will-define-europes-financial-future/: issuer discussion mentioning GENIUS but no token-specific U.S. filing",
-        "Federal Register/OCC searches for SALVUS, Schuman Financial, EURØP, and EUROP: no token-specific U.S. authorization or pending application found"
+        "OCC Bulletin 2026-3 and official Government Publishing Office mirror of the OCC GENIUS implementing proposal",
+        "OCC Digital Assets Licensing Applications table opened 2026-10-07; SALVUS/Schuman/EUROP absent; pending charter inventory is not an exhaustive PPSI register",
+        "Federal Register 91 FR 37234 proposed GENIUS customer-identification rule, OCC-hosted official PDF reopened 2026-10-07",
+        "Schuman about page, full EUROP whitepaper, legal center, reserve hub and full Q2 2026 KPMG attestation",
+        "Schuman CEO Ripple Swell GENIUS commentary dated 2025-11-18: no token-specific U.S. application announcement",
+        "Congress.gov Public Law 119-27 and Treasury 2026-08-17 foreign-issued stablecoin proposal",
+        "Federal Reserve 2026-09-24 prudential/application-process proposal announcement",
+        "State Stablecoin Regulatory Committee 2026-09-30 procedural interim rule and NYDFS regulated-entity/greenlist tables",
+        "FinCEN current public enforcement index",
+        "Scoped 2026-10-07 web searches for SALVUS, Schuman Financial, EURØP and EUROP approval, application, foreign registration and enforcement across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS, plus issuer GENIUS intent searches"
       ],
-      "summary": "The review found SALVUS SAS's French MiCA authorization and general issuer commentary about the U.S. GENIUS Act, but no public U.S. permitted-issuer approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration for SALVUS SAS or EURØP.",
+      "summary": "No public U.S. permitted-issuer approval, state qualification, regulator-confirmed GENIUS application or OCC foreign-issuer registration was located for SALVUS SAS or EURØP in the opened primary sources and scoped searches as of 2026-10-07. Exact-token French MiCA authorization was independently verified. No token-specific U.S. GENIUS enforcement action was located in the scoped search; this does not establish the absence of confidential filings or proceedings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Federal Register 91 FR 37234: GENIUS Act proposed CIP rule",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
           "sourceKind": "federal-register",
           "sourceDate": "2026-06-22",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issued stablecoins proposal and expected GENIUS effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "State Stablecoin Regulatory Committee procedural interim rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

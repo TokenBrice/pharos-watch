@@ -3,22 +3,38 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Transferable single-fiat-reference token with issuer or partner redemption terms and payment/settlement use.",
+      "summary": "ZARU is a transferable fixed-rand payment and settlement token, redeemable 1:1 for South African rand through authorised platforms, with no interest, fund-share or bank-deposit rights described in the issuer FAIS disclosure. Reserve investment in a money-market fund does not make holders owners of that fund.",
       "references": [
         {
           "label": "Issuer token terms",
           "url": "https://zaru.network/blog/zar-universal-white-paper",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory payment-stablecoin framework",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BlockTower FAIS disclosure naming exact ZARU issuer",
+          "url": "https://blocktower.tech/legal/fais-disclosure-notice",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-26",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Loop South Africa (Pty) Ltd trading as BlockTower",
+    "issuerEntity": "BlockTower South Africa (Pty) Ltd",
     "issuerDomicile": "South Africa",
+    "licensingRegulator": "Issuer FAIS disclosure claims South African FSCA Category I financial-services and crypto-asset services authorization, FSP 55172; this is not GENIUS approval.",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
     "redemptionPolicyPresent": true,
@@ -28,11 +44,192 @@
         "label": "Issuer token terms",
         "url": "https://zaru.network/blog/zar-universal-white-paper",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory payment-stablecoin framework",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Moore July 2026 ZARU agreed-upon procedures report",
+        "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-08-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "State Certification Review Committee procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Moore August 2026 ZARU reserve report: renamed legal issuer and fixed-rand token",
+        "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-10-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BlockTower FAIS disclosure naming exact ZARU issuer",
+        "url": "https://blocktower.tech/legal/fais-disclosure-notice",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-26",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BlockTower current ZARU distribution and payment uses",
+        "url": "https://blocktower.tech/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "notes": "GENIUS authorization and foreign-exception status are unresolved. Local financial-service or issuer claims do not prove U.S. permission. MiCA scope was not resolved and no MiCA row is authored. No negative authorization or enforcement finding is asserted. Reserve report engagement is AUP, not audit assurance.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "notes": "Reviewed 2026-10-07. Current issuerEntity is BlockTower South Africa (Pty) Ltd: issuer FAIS disclosure updated 2026-08-26 names registration 2025/058159/07 and ZARU; Moore report dated 2026-10-01 explicitly describes the company as formerly Loop South Africa (Pty) Ltd. Older white paper and privacy page retain the Loop name. This replaces the existing issuerEntity Loop South Africa (Pty) Ltd trading as BlockTower and requires approval because the Safety Score issuer key changes. The exact tracked Solana mint is corroborated by both reserve reports. ZARU is a transferable fixed-rand payment/settlement token, not a fluctuating fund share; cash and money-market funds are reserve assets. Institutional primary and partner retail redemptions have eligibility, compliance and liquidity conditions. Current issuer distribution identifies South Africa, Nigeria, Kenya and Uganda; no EU offer or admission was established. Latest issuer-linked report covers 2026-08-31 and is dated 2026-10-01 despite the homepage label September, 2026. Both it and the July snapshot report are AUP engagements explicitly without assurance opinion or conclusion. Two public monthly snapshots plus a reporting promise do not establish a continuous monthly publication cadence; monthlyAttestationPresent remains conservatively false. South African FSCA claims are issuer disclosures, not U.S. permission. No qualifying public GENIUS approval/application, foreign registration/comparability determination or matching enforcement action was found in the dated scoped review, including the new and former legal names. Foreign exception and pathway remain unknown. General GENIUS regulator materials remain proposals; SCRC procedures do not activate substantive obligations. DASP restrictions are not yet effective.",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 substantive raw HTML and complete pending digital-assets licensing table",
+        "Federal Reserve September 24, 2026 GENIUS proposals",
+        "Treasury April 8 AML/OFAC and August 17 foreign-issuer proposals",
+        "September 30 State Certification Review Committee procedural interim final rule",
+        "NYDFS virtual-currency business directory",
+        "Official ZAR Universal white paper including exact issuing entity and institutional/retail redemption terms",
+        "Actual Moore July 2026 reserve AUP report",
+        "Token and legal-name web searches restricted to OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS for GENIUS, PPSI, approval and application",
+        "Token and legal-name searches restricted to SEC, CFTC, OFAC, FinCEN and OCC for enforcement, sanctions and cease-and-desist notices",
+        "Current ZARU homepage, newly linked August snapshot report dated 2026-10-01, current issuer site and FAIS disclosure dated 2026-08-26; older privacy page still names Loop",
+        "Exact new legal-name search for BlockTower South Africa across OCC, FDIC, NCUA, Federal Reserve, Treasury, NYDFS, SEC, CFTC, FinCEN and OFAC domains"
+      ],
+      "summary": "As of 2026-10-07, the consulted primary regulator sources, public directory and issuer disclosures and scoped token/legal-name searches did not identify a token-specific PPSI approval, state-qualified approval, official pending GENIUS application or foreign-issuer registration/comparability determination for ZARU / BlockTower South Africa (Pty) Ltd (formerly Loop South Africa (Pty) Ltd). This records bounded public negative evidence, not a ruling that the token is unlawful, that no confidential filing exists or that the foreign jurisdiction has been rejected. No matching public enforcement action was located in the scoped searches.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "State Certification Review Committee procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities directory",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Issuer token terms",
+          "url": "https://zaru.network/blog/zar-universal-white-paper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Moore July 2026 ZARU agreed-upon procedures report",
+          "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-08-28",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Moore August 2026 ZARU reserve report: renamed legal issuer and fixed-rand token",
+          "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-10-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BlockTower FAIS disclosure naming exact ZARU issuer",
+          "url": "https://blocktower.tech/legal/fais-disclosure-notice",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-26",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BlockTower current ZARU distribution and payment uses",
+          "url": "https://blocktower.tech/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

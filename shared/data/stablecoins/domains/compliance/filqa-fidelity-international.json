@@ -20,25 +20,28 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "The exact native token represents a yield-bearing money-market fund share with NAV-based dealing, rather than a payment-stablecoin promise. GENIUS section 2(22)(B)(iii) excludes securities. ",
+      "summary": "FILQ-A represents the accumulating Class 1 ACC shares of Fidelity USD Digital Liquidity Fund, a segregated portfolio of Fidelity International Strategies Funds SPC. The September 14, 2026 prospectus describes tokenized mutual-fund equity interests, NAV-based dealing and accumulation of net income in the share price. These fund-share rights support the securities exclusion in GENIUS Act section 2(22)(B)(iii), independently of yield or reserve composition.",
       "references": [
         {
           "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
-          "label": "Fidelity September 14, 2026 fund prospectus",
+          "label": "Fidelity September 14, 2026 prospectus (official pointer; text verified via linked mirror)",
           "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-          "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-02"
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-14"
         },
         {
-          "label": "Retrieved Fidelity prospectus text",
+          "label": "Fidelity September 14, 2026 issuer prospectus text via Jina retrieval mirror",
           "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-          "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-02"
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-14"
         }
       ]
     },
@@ -48,28 +51,31 @@
     "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Reviewed as a tokenized fund-share security. No GENIUS payment-stablecoin authorization or MiCA EMT/ART permission is asserted; manager or distributor licensing is not token authorization.",
+    "notes": "Reviewed as tokenized fund-share equity, not a GENIUS-authorized payment stablecoin or a MiCA EMT/ART. The official issuer PDF endpoint returned HTTP 403 and the dedicated browser attempt timed out; its issuer-authored September 14, 2026 prospectus text was independently reopened through the linked Jina mirror. Cayman fund registration and manager/distributor licensing are not token-specific GENIUS permissions. This is distinct from Fidelity Digital Assets National Association's FIDD.",
     "references": [
       {
         "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
-        "label": "Fidelity September 14, 2026 fund prospectus",
+        "label": "Fidelity September 14, 2026 prospectus (official pointer; text verified via linked mirror)",
         "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-        "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-02"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-14"
       },
       {
-        "label": "Retrieved Fidelity prospectus text",
+        "label": "Fidelity September 14, 2026 issuer prospectus text via Jina retrieval mirror",
         "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-        "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-02"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-14"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

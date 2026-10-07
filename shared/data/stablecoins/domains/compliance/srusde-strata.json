@@ -4,13 +4,75 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed; no Strata or srUSDe match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Strata srUSDe market: senior structured-yield tranche",
+        "url": "https://docs.strata.markets/markets/ethena-usde"
       },
       {
-        "label": "Strata markets: srUSDe is a senior structured-yield tranche over Ethena sUSDe",
-        "url": "https://docs.strata.markets/markets"
+        "label": "Strata FAQs: appreciating ERC-4626 exchange rate and redemption",
+        "url": "https://docs.strata.markets/resources/faqs"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "srUSDe represents a senior ERC-4626 yield tranche over sUSDe. Its exchange-rate value accrues strategy yield and redemption returns USDe or sUSDe at that exchange rate; the reviewed materials establish no fixed fiat-value redemption obligation.",
+      "references": [
+        {
+          "label": "Strata senior-tranche market documentation",
+          "url": "https://docs.strata.markets/markets",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Strata FAQs: ERC-4626 exchange rate and redemption",
+          "url": "https://docs.strata.markets/resources/faqs",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to srUSDe, not to the USDe underlying token or the Ethena issuer. Interface terms name Frontera Labs, Inc. as interface operator, which is insufficient to assign it as a legal srUSDe issuer. No issuerEntity is asserted. MiCA and GENIUS wrapper scope are determined from the token mechanics, without claiming a legally registered fund or a blanket exemption from other crypto-asset laws.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Strata senior-tranche market documentation",
+        "url": "https://docs.strata.markets/markets",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Strata FAQs: ERC-4626 exchange rate and redemption",
+        "url": "https://docs.strata.markets/resources/faqs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

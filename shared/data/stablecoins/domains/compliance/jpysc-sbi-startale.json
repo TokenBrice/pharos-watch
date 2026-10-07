@@ -26,82 +26,138 @@
           "label": "Startale/SBI JPYSC launch announcement",
           "url": "https://startale.com/ja/blog/jpysc-launch",
           "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-06-24",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-24"
         },
         {
           "label": "Japan FSA: trust-bank route for electronic payment instruments",
           "url": "https://www.fsa.go.jp/en/news/2018/20180717.html",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "issuerEntity": "SBI Shinsei Trust Bank, Ltd.",
     "issuerDomicile": "Japan",
     "licensingRegulator": "Japan FSA; trust-bank / electronic payment instrument framework",
-    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
-    "notes": "The issuer's announcement describes JPYSC as a Japanese electronic payment instrument, initially usable only inside SBI VC Trade accounts; public-chain circulation, including overseas use, is prospective after legal, tax, and supervisory treatment is clarified. The current U.S. GENIUS rulemaking materials and OCC application list contain no JPYSC or SBI Shinsei Trust Bank approval, application, or foreign-issuer registration. issuerPathway remains unknown because Japanese authorization is not a GENIUS pathway and no U.S. or GENIUS foreign-exception route was found.",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "JPYSC is a Japanese trust-issued electronic payment instrument. The FSA distinguishes the trust-bank issuance route, and the opened token disclosures do not establish the statutory bank-deposit exclusion. SBI VC Trade discloses buy/sell at 1 JPY per JPYSC, with initial distribution limited to customer accounts and external-wallet withdrawals disabled. Overseas/public-chain use remains prospective. The September 7 reserve release is issuer self-reporting; no dated monthly independent attestation was found. Japanese trust-bank authorization does not establish GENIUS PPSI approval or a registered foreign exception. No named U.S. approval, official GENIUS application or concrete token-specific filing intention was located. Treasury's August 17 proposal gives January 18, 2027 as the expected effectiveness date, subject to the statutory final-rule trigger. The September 30 SCRC interim final rule is procedural. not-yet-restricted describes only GENIUS's phased DASP restriction, not general U.S. legality or authorization. The broad DASP prohibition starts July 18, 2028; the foreign lawful-order condition starts when the Act becomes effective.",
     "references": [
       {
         "label": "OCC Digital Assets Licensing Applications: no JPYSC or SBI Shinsei Trust Bank applicant listed",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC proposed GENIUS Act rule",
         "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Treasury proposed GENIUS Act AML/sanctions rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-08"
       },
       {
         "label": "Startale/SBI JPYSC launch announcement",
         "url": "https://startale.com/ja/blog/jpysc-launch",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-06-24",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-24"
+      },
+      {
+        "label": "SBI VC Trade: JPYSC account-only trading, redemption and non-deposit disclosure",
+        "url": "https://www.sbivc.co.jp/jpysc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SBI Group: JPYSC trust reserves and short-term JGB holdings",
+        "url": "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-07"
+      },
+      {
+        "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury: State Stablecoin Regulatory Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and approved issuance list",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Digital Assets Licensing Applications list, checked 2026-08-14",
-        "OCC GENIUS Act proposed-rule announcement and Federal Register proposal",
-        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials",
-        "Federal Reserve GENIUS Act proposed-rule materials",
-        "Startale/SBI JPYSC issuer and launch disclosures",
-        "Japan FSA electronic-payment-instrument and trust-bank materials",
-        "ESMA/EBA MiCA registers and official register guidance"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html - independently reopened primary source on 2026-10-07",
+        "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html - independently reopened primary source on 2026-10-07",
+        "https://home.treasury.gov/news/press-releases/sb0435 - independently reopened primary source on 2026-10-07",
+        "https://startale.com/ja/blog/jpysc-launch - independently reopened primary source on 2026-10-07",
+        "https://www.sbivc.co.jp/jpysc - independently reopened primary source on 2026-10-07",
+        "https://www.sbigroup.co.jp/news/pdf/group/2026/0907_a.pdf - independently reopened primary source on 2026-10-07",
+        "https://home.treasury.gov/news/press-releases/sb0605 - independently reopened primary source on 2026-10-07",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm - independently reopened primary source on 2026-10-07",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses - independently reopened primary source on 2026-10-07",
+        "https://www.fsa.go.jp/en/news/2018/20180717.html - independently reopened primary source on 2026-10-07",
+        "Independent bounded search on 2026-10-07: (JPYC OR JPYSC OR SBI Shinsei Trust Bank OR KGST OR KGSToken OR KRWQ) (GENIUS approval application registration enforcement), restricted to occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, ncua.gov and dfs.ny.gov; no named token/issuer GENIUS authorization record surfaced."
       ],
-      "summary": "No public U.S. GENIUS permitted-payment-stablecoin approval, state-qualified approval, official application, or registered foreign-issuer exception was located for JPYSC or SBI Shinsei Trust Bank. The reviewed issuer materials describe a Japan-only closed-loop launch and do not disclose a U.S. offering or GENIUS pathway.",
+      "summary": "No public U.S. GENIUS permitted-issuer approval, state qualification, official application or registered foreign exception was located for JPYSC or SBI Shinsei Trust Bank as of 2026-10-07. Current primary disclosures establish Japanese trust-issued electronic payment instruments, not a GENIUS route or deposit exclusion. This is a bounded public-record conclusion, not proof of no confidential application.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC Digital Assets Licensing Applications",
-          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "label": "OCC Digital Assets Licensing Applications: no JPYSC or SBI Shinsei Trust Bank applicant listed",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Treasury proposed GENIUS Act AML/sanctions rule",
           "url": "https://home.treasury.gov/news/press-releases/sb0435",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and approved issuance list",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    }
   }
 }

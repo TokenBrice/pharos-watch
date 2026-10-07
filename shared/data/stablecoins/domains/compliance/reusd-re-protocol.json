@@ -9,11 +9,19 @@
       },
       {
         "label": "Re Protocol: What is reUSD?",
-        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+        "url": "https://docs.re.xyz/products/about-reusd"
       },
       {
         "label": "Re Protocol: How the Re Protocol Works",
-        "url": "https://docs.re.xyz/protocol/how-the-re-protocol-works"
+        "url": "https://docs.re.xyz/getting-started-with-re/how-re-works"
+      },
+      {
+        "label": "reUSD Token Purchase Agreement: BVI derivative debt and NAV-linked investment",
+        "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf"
+      },
+      {
+        "label": "ESMA MiCA Article 2(4): financial-instrument and securitisation exclusions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
   },
@@ -26,74 +34,149 @@
           "label": "Re Protocol disclosure page",
           "url": "https://re.xyz/disclosure",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Re Protocol About reUSD",
           "url": "https://docs.re.xyz/products/about-reusd.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "reUSD Token Purchase Agreement: holder rights and derivative debt",
           "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act section 2(22): payment-stablecoin definition and exclusions",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Resilience (BVI) Ltd",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://app.re.xyz/transparency",
+    "reserveDisclosureUrl": "https://app.re.xyz/metrics",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reviewed under D17 on 2026-10-01: the former non-payment-token exemption based on yield, NAV and non-U.S. access restrictions is withdrawn; the proposed excluded-security replacement is also unsupported by a qualified U.S. legal determination. Resilience (BVI) Ltd remains the token issuer under the purchase agreement; the Cayman foundation/operator and SPC roles are separate. Applicability, authorization, pathway, foreign-exception and DASP posture remain unresolved, not findings of authorization or wrongdoing. The no-public-action-found observation is retained as historical evidence from the 2026-07-14 review, not a newly exhaustive regulator search.",
+    "notes": "Retain the October 1, 2026 applicability withdrawal: a qualified U.S. token-specific legal determination remains unavailable, so derivative-debt status under BVI law, NAV accrual and non-U.S. distribution terms are not promoted to a categorical U.S. exclusion. Resilience (BVI) Ltd remains the issuer named by the reUSD purchase agreement; Cayman foundation/operator, Cayman SPC custody and licensed reinsurer are separate roles. The purchase agreement prohibits U.S. persons, describes offerings under securities exemptions/safe harbors, links token value to senior-class NAV and disclaims an obligation to maintain redemption liquidity. Current documentation describes accrued-price deposit-asset repayment with buffers/queues. No GENIUS issuer approval, state qualification, official application or foreign registration was found in the bounded dated public-source review. DASP not-yet-restricted describes federal timing only, not U.S. distribution eligibility. The former historical enforcement observation is refreshed by exact-name indexed OCC/SEC/FDIC/NCUA/NYDFS searches, with no public action found and no exhaustive non-indexed database claim. Metrics disclose reserve/portfolio data; the October 2025 Network Firm AUP and ongoing proof claims do not demonstrate publicly available monthly independent GENIUS reserve assurance. Independent verification used issuer markdown/PDF sources and isolated Chromium for the OCC pending-bank-application and BMA tables. Indexed enforcement searches located no matching SEC, OCC, NYDFS or FDIC action; these limited searches do not establish the absence of private or non-public proceedings.",
     "references": [
       {
         "label": "Re Protocol disclosure page",
         "url": "https://re.xyz/disclosure",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Re Protocol About reUSD",
         "url": "https://docs.re.xyz/products/about-reusd.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-07-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Re Protocol disclaimers",
         "url": "https://docs.re.xyz/glossary-and-reference/disclosures",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "reUSD Token Purchase Agreement: legal issuer and derivative debt claim",
         "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Re Protocol: token issuance and custody legal structure",
         "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Re Protocol terms of service: issuer, offering documents and prohibited persons",
+        "url": "https://re.xyz/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Re Protocol public metrics and reserve/portfolio transparency",
+        "url": "https://app.re.xyz/metrics",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC23), scoped D17 applicability withdrawal; enforcement observation remains historical",
-    "reviewedAt": "2026-10-01"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC formal proposed rule, 91 FR 10202, and pending Digital Assets Licensing Applications table, recovered with isolated Chromium after incomplete reader extraction",
+        "Federal Reserve September 24, 2026 GENIUS proposed-rule release, updated September 29",
+        "Treasury SCRC procedural IFR, Federal Register September 30, 2026",
+        "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+        "Combined exact-token/issuer GENIUS and enforcement indexed searches across OCC, Federal Reserve, FDIC, NCUA, NYDFS and SEC domains; no matching authorization found",
+        "Issuer product, legal and redemption disclosures"
+      ],
+      "summary": "On 2026-10-07, no public GENIUS issuer approval, state qualification, official pending application or registered foreign exception naming Resilience (BVI) Ltd for reUSD was found in the inspected directories, rulemaking materials, issuer disclosures and targeted regulator-domain searches. The OCC table concerns pending bank licensing, and NYDFS listings concern existing state licenses; neither is a complete GENIUS approval census. Rulemaking is pre-effective; absence does not establish illegality, refusal or absence of non-public applications. Token applicability remains independently unresolved.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC public pending digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

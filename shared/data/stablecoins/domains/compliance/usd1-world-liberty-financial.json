@@ -9,8 +9,8 @@
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "OKX Europe USD1 spot listing",
-        "url": "https://www.okx.com/en-eu/help/okx-to-list-usd1-world-liberty-financial-usd-for-spot-trading"
+        "label": "Coinbase EEA retail MiCA restricted stablecoins: USD1",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
         "label": "ESMA MiCA Article 3 definitions",
@@ -21,7 +21,22 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USD1 is a U.S. dollar payment stablecoin issued 1:1 via BitGo Trust infrastructure with reserve attestations and public redemption policy: squarely within the apparent-payment-stablecoin definition."
+      "summary": "USD1 is a U.S. dollar payment stablecoin issued by BitGo Bank & Trust, N.A. Eligible BitGo clients can redeem it for dollars at a 1:1 ratio, subject to onboarding and the published minting and redemption terms.",
+      "references": [
+        {
+          "label": "WLFI USD1 official documentation: BitGo as legal issuer",
+          "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BitGo coin minting and redemption terms",
+          "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
@@ -30,84 +45,128 @@
     "licensingRegulator": "OCC (BitGo Bank & Trust national trust bank; proposed World Liberty Trust Company received preliminary conditional charter approval August 14, 2026)",
     "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Issuer and charter update checked 2026-10-01: OCC Corporate Decision 1385, dated August 14, 2026, names BitGo Bank & Trust, N.A. as USD1's current exclusive issuer and custodian and grants World Liberty Trust Company preliminary conditional approval only. Final authorization to commence business requires completion of preopening requirements; the proposed bank intends to assume issuance and reserve liabilities from BitGo after establishment. The August 2026 KPMG reserve report continues to identify BitGo Bank & Trust as issuer. Preliminary national trust charter approval is not a token-specific GENIUS PPSI approval, so the existing authorizationStatus is retained. The June 18, 2026 negative-authorization and enforcement review remains historical and has not been re-dated by this issuer-specific update.",
+    "notes": "Reviewed October 7, 2026. OCC Corporate Decision 1385 names BitGo Bank & Trust, N.A. as the current exclusive USD1 issuer and custodian. World Liberty Trust Company has preliminary conditional national trust charter approval only; it intends to assume issuance and reserve liabilities after establishment and cannot commence business before final approval. The OCC BitGo conversion record is effective December 12, 2025. Neither charter record supplies a GENIUS PPSI approval or PPSI application. Issuer-announced-intent and the announced federal-qualified-nonbank route are retained on the WLFI GENIUS-alignment disclosures and proposed uninsured national trust bank business model. The August 2026 KPMG examination, signed September 24, still names BitGo as issuer. Published terms distinguish eligible clients with redemption access from holders without an account. No token-specific GENIUS enforcement action was located in the bounded regulator/issuer search. Proposed federal rules and the Treasury SCRC procedural rule do not establish an effective PPSI approval regime. The opened December 30, 2020 OFAC settlement concerns BitGo, Inc., a separately named non-custodial wallet company, and predates USD1. It does not establish an action against BitGo Bank & Trust or USD1. A search also surfaced a possible April 2021 Connecticut consent order naming predecessor BitGo Trust Company. The Connecticut index, order PDF and bulletin could not be reopened because DNS resolution failed in plain fetch and the uniquely named browser fallback. EnforcementStatus is omitted pending primary-source verification of that predecessor history; no warning or prohibition is inferred from a search result.",
     "references": [
       {
         "label": "OCC Corporate Decision 1385: World Liberty Trust preliminary conditional approval",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1385.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-08-14",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC Dec 12 2025 conditional approval: BitGo Bank & Trust, N.A. national trust charter",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125c.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2025-12-12",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing: World Liberty Trust Company application",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/world-liberty-trust-company.pdf",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-05"
       },
       {
         "label": "World Liberty Financial USD1 page",
         "url": "https://worldlibertyfinancial.com/usd1",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "BitGo USD1 attestations",
         "url": "https://www.bitgo.com/usd1/attestations/",
-        "sourceKind": "auditor-report"
-      },
-      {
-        "label": "WLTC Holdings OCC charter application announcement (BusinessWire Jan 2026)",
-        "url": "https://www.businesswire.com/news/home/20260107876750/en/World-Liberty-Financial-Announces-that-WLTC-Holdings-LLC-has-Submitted-an-Application-for-a-National-Trust-Bank-Charter-to-Issue-and-Custody-USD1-Stablecoins",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-01-07",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "WLFI USD1 official documentation: BitGo as legal issuer",
         "url": "https://docs.worldlibertyfinancial.com/usd1-token/what-is-usd1",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC BitGo conversion record: approved and effective December 12, 2025",
+        "url": "https://apps.occ.gov/CAS/home/details?FilingID=41LYO1wg5oje&FilingSubtypeID=1117&FilingTypeID=23",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Conditional Approval 1353: BitGo uninsured national trust conversion",
+        "url": "https://occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/ca1353.pdf?download=1",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KPMG USD1 reserve examination for August 2026",
+        "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_August_2026.pdf?version=0",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BitGo coin minting and redemption terms",
+        "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities and approved issuance list",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OFAC historical settlement: separately named BitGo, Inc. wallet service",
+        "url": "https://ofac.treasury.gov/recent-actions/20201230_33",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2020-12-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC digital assets licensing applications page (WLTC filing)",
-        "BitGo national trust and OCC conditional approval materials",
-        "South Dakota trust-company materials",
-        "BitGo USD1 terms and attestations",
-        "World Liberty Financial USD1 issuer disclosures and official docs",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "2026-10-07: OCC Corporate Decision 1385, BitGo conditional approval and CAS conversion record, World Liberty Trust public national-trust charter application and current digital-assets licensing table",
+        "2026-10-07: OCC Bulletin 2026-3, Federal Reserve September 24 implementation proposals and Treasury September 30 SCRC procedural interim rule",
+        "2026-10-07: NYDFS virtual-currency entity and approved-issuance tables; exact BitGo/World Liberty/USD1 official-domain GENIUS search",
+        "2026-10-07: WLFI USD1 product page and legal-issuer documentation, BitGo mint/redemption terms, monthly reserve hub and August KPMG examination",
+        "2026-10-07: USD1/BitGo enforcement search and OFAC December 2020 BitGo, Inc. settlement; Connecticut predecessor-order URLs attempted but inaccessible"
       ],
-      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located for USD1. The January 2026 OCC charter filing by WLTC Holdings is a trust-charter application under existing OCC authority, not a GENIUS PPSI application.",
+      "summary": "No token-specific GENIUS PPSI approval, state qualification, or official PPSI application was located. The WLTC charter filing and conditional decision are existing-authority national trust charter actions. NYDFS lists BitGo New York Trust Company, LLC, a different entity, and its listing is not USD1 PPSI authorization. Search conclusions are bounded to the opened official and issuer corpus.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

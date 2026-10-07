@@ -1,0 +1,167 @@
+{
+  "id": "nxusd-nereus",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "The current Nereus homepage identifies NXUSD stablecoin separately from NXUSD Earn. Its first-party application bundle matches the tracked Avalanche NXUSD contract and defines crypto-collateral Cauldron borrowing, repayment and liquidation interfaces. Official publication RSS describes transaction and yield utility; the March 2024 RWA upgrade is a roadmap, not verified implementation. Reviewed disclosures do not substantiate an identifiable legal issuer obligation to redeem holders for fixed currency or currency-denominated deposit. General dollar-stablecoin utility supports unclear applicability rather than categorical internal-unit exclusion or an apparent fiat payment-stablecoin determination.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nereus official ecosystem and NXUSD stablecoin disclosure",
+          "url": "https://www.nereus.finance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nereus official publication RSS: NXUSD product disclosures",
+          "url": "https://medium.com/feed/nereus-protocol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NXUSD official application collateral-borrowing configuration",
+          "url": "https://nxusd.nereus.finance/js/app.60bde321.js",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "The current homepage separately links NXUSD and NXUSD Earn. Raw official publication RSS supplies dated historical text; its RWA upgrade announcement is prospective, not verified implementation. The reopened first-party application bundle supplies collateral borrowing configuration and the tracked Avalanche contract match, not verification of live balances or enforceable terms. No current formal token terms or identifiable currency-redemption obligor were recovered from the homepage and product sources. IssuerEntity/domicile and affirmative redemption-policy claims are omitted. NXUSD Earn is not treated as underlying NXUSD. No public token-specific GENIUS approval, official application or foreign registration was located; general proposals and ordinary licenses are not token authorization.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issuer proposal and implementation timing",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS framework and approval proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nereus official ecosystem and NXUSD stablecoin disclosure",
+        "url": "https://www.nereus.finance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nereus official publication RSS: NXUSD product disclosures",
+        "url": "https://medium.com/feed/nereus-protocol",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NXUSD official application collateral-borrowing configuration",
+        "url": "https://nxusd.nereus.finance/js/app.60bde321.js",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS statutory definitions",
+        "OCC Bulletin 2026-3 and current digital-asset pending bank applications table",
+        "Federal Reserve September 24 framework and application-procedure proposals",
+        "Treasury April comparability and August foreign-issuer proposals and September 30 SCRC procedural IFR",
+        "NYDFS regulated virtual currency entity table and Greenlist",
+        "Exact token/protocol and disclosed operator-name searches across OCC, Federal Reserve, FDIC, NCUA and NYDFS public indexed materials for approval, application, registration or GENIUS enforcement",
+        "Nereus NXUSD official product/control/legal disclosures"
+      ],
+      "summary": "As of October 7, 2026, opened regulator directories, implementation publications, product disclosures and exact-name regulator searches yielded no public token-specific PPSI approval, GENIUS state qualification, official pending application, registered foreign exception or GENIUS enforcement action for Nereus NXUSD. These are bounded public checks, not proof that every nonpublic record is absent. The OCC bank-applications table and NYDFS ordinary licensing list are not complete GENIUS authorization registers. Legal issuer identity remains unresolved, so undisclosed-entity records cannot be excluded.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS framework and approval proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issuer proposal and implementation timing",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

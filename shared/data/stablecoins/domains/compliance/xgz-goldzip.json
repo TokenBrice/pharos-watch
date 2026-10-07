@@ -3,19 +3,26 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "The token references physical gold or gold-strategy NAV rather than a fixed amount of national-currency monetary value.",
+      "summary": "XGZ references one gram of physical gold and provides conditional gold-bar redemption. Gold is not national-currency monetary value under GENIUS Act section 2(17), so the token does not satisfy the fixed-monetary-value payment-stablecoin definition in section 2(22).",
       "references": [
         {
           "label": "GENIUS Act section 2(22) payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Exact token product claim",
           "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GoldZip terms: gold-bar redemption and no cash-value claim",
+          "url": "https://goldzip.info/terms-conditions/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -29,11 +36,37 @@
         "label": "Exact token product claim",
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act section 2(22) payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GoldZip Singapore operator and issuer disclosure",
+        "url": "https://goldzip.info/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GoldZip terms: Singapore administrator and physical redemption",
+        "url": "https://goldzip.info/terms-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "issuerEntity": "GoldZip Digital Pte. Ltd.",
     "issuerDomicile": "Singapore"
   }

@@ -1,0 +1,137 @@
+{
+  "id": "mai-qidao",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "MAI is a transferable USD-targeted protocol stablecoin minted against overcollateralized loans. Its permissionless PSM returns approved digital stablecoins at nominal 1:1 after a three-day queue and fee. No named legal issuer obligated to redeem for national currency or a national-currency deposit was established. Dollar-oriented utility plus protocol exchange mechanics leave GENIUS payment-stablecoin applicability unclear.",
+      "references": [
+        {
+          "label": "QiDao MAI issuance and governance",
+          "url": "https://docs.mai.finance/docs",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.mai.finance/docs/stablecoin-economics",
+    "monthlyAttestationPresent": false,
+    "notes": "No legal token issuer or issuer domicile was established; both fields are omitted. Published collateral and PSM mechanics are protocol backing disclosure only. The PSM returns digital stablecoins, with a three-day queue and fee, and does not establish a fiat-dollar issuer redemption obligation. No monthly independent reserve attestation was located in the opened official documentation. No token-specific public regulator action or GENIUS intent announcement was found in targeted exact-name searches. Current website identifies Base and Polygon as live and legacy deployments as wound down. GENIUS not-yet-restricted is a pre-effective regime label, not a conclusion about every distribution law.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-01"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "QiDao MAI issuance and governance",
+        "url": "https://docs.mai.finance/docs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "QiDao MAI PSM redemption mechanics",
+        "url": "https://docs.mai.finance/docs/peg-stability-module",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "QiDao collateral and peg economics",
+        "url": "https://docs.mai.finance/docs/stablecoin-economics",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "QiDao MAI custody and control disclosures",
+        "url": "https://docs.mai.finance/docs/risks/security",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS Act section 2 payment-stablecoin and monetary-value definitions",
+        "OCC Bulletin 2026-3 and complete pending digital-assets bank-charter directory",
+        "Treasury April state-regime proposal, August issuance/offer-sale proposal and September SCRC procedure",
+        "Federal Reserve September issuer and application proposals",
+        "Independent combined exact-name regulatory-domain query for lisUSD/Lista DAO, MAI/QiDao, Mezo/MUSD, defi.money/MONEY, Supernormal OpCo and River Delta on OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; separate SEC, CFTC, OFAC and NYDFS enforcement/licensing query",
+        "Official protocol issuance, collateral, redemption, governance and legal disclosures listed in references"
+      ],
+      "summary": "As of October 7, 2026, the opened federal sources and exact protocol/token/entity searches did not locate a token-specific public GENIUS permitted-issuer approval, state-qualified designation, official pending application or registered foreign-issuer exception for MAI. No legal issuer entity with a fixed monetary-value redemption obligation was established. The negative finding is bounded by the consulted public sources and does not exclude unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC certification forms and procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

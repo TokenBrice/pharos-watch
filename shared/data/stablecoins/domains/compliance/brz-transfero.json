@@ -9,13 +9,13 @@
           "label": "Transfero BRZ: payments, global transfers, 1:1 backing and redemption",
           "url": "https://transfero.com/brz-stablecoin",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin and foreign payment stablecoin issuer definitions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -31,60 +31,136 @@
     "reserveDisclosureUrl": "https://transfero.com/brz-stablecoin",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The base-entry Switzerland/VQF hint applies to Transfero Swiss AG, which its official site describes as a Swiss VASP and VQF member; the BRZ whitepaper names Transfero Asset Management LTD in the Bahamas as the mint administrator. This issuer-affiliate distinction matters for GENIUS. No public U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located. The GENIUS rulemaking phase remains proposed-rules.",
+    "notes": "The BRZ whitepaper sections 6.2 and 6.3 identify Transfero Asset Management LTD in the Bahamas as mint administrator and issuer responsible for buy/repurchase through reserve managers and tellers. The Swiss VQF statement belongs to Transfero Swiss AG; current URL was blocked, so its official-site June 15, 2026 Wayback snapshot was opened. Swiss AML/SRO membership does not establish Bahamas issuer eligibility or GENIUS approval. Published reserve material is a dated issuer transparency report, with no current monthly independent-attestation series established. Transfero's GENIUS social commentary describes the law and USD-stablecoin settlement connections, with no specific BRZ U.S. application intent. Public negative findings refreshed 2026-10-07; substantive proposed rules and the procedural SCRC IFR do not authorize BRZ.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register 91 FR 10202: foreign payment stablecoin framework",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Transfero BRZ stablecoin page",
         "url": "https://transfero.com/brz-stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "BRZ whitepaper: mint administrator and reserve/redemption structure",
         "url": "https://framerusercontent.com/assets/GFtIQP1hPK7HoQ6lvk68orcX3o.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Transfero Swiss AG: VQF SRO membership disclosure",
-        "url": "https://transferoswiss.ch/",
+        "label": "Transfero Swiss AG: VQF disclosure (official-site archive)",
+        "url": "https://web.archive.org/web/20260615210612/https://transferoswiss.ch/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS prudential and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and issuance context",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Transfero GENIUS commentary and settlement uses",
+        "url": "https://www.linkedin.com/posts/transfero-group_genius-act-activity-7354507794034622464-dokp",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "Federal Register 91 FR 10202 OCC GENIUS proposed rules",
-        "OCC Digital Assets Licensing Applications table and Corporate Applications Search",
-        "GENIUS Act Public Law 119-27",
-        "Treasury proposed state-regime comparability rule",
-        "Transfero BRZ page, BRZ whitepaper, and Transfero Swiss AG disclosure",
-        "Federal Register and regulator searches for Transfero, BRZ, and Transfero Asset Management LTD"
+        "Opened OCC current digital-asset bank application table (not a complete GENIUS register)",
+        "Opened OCC Bulletin 2026-3 and March 2 GENIUS proposed-rule PDF",
+        "Opened Treasury April 1 state comparability and April 8 AML/CFT proposals; August 17 section 3 proposal",
+        "Opened September 30 SCRC interim procedural rule and September 24 Federal Reserve proposals",
+        "Opened NYDFS current regulated-entity and greenlisted issuance tables",
+        "Primary issuer product, reserve, redemption and terms disclosures",
+        "Public indexed searches of OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS for BRZ, Transfero, Transfero Asset Management LTD and Transfero Swiss AG; excluded unrelated acronym/OCR hits"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for BRZ or its identified Bahamas mint administrator. Swiss VQF membership is foreign AML/SRO context, not a U.S. GENIUS authorization.",
+      "summary": "As of 2026-10-07, no public GENIUS permitted-issuer approval, state qualification, official GENIUS application, OCC foreign registration, Treasury issuer/jurisdiction comparability determination or token-specific GENIUS enforcement action was located for BRZ, Transfero, Transfero Asset Management LTD and Transfero Swiss AG. This is a bounded public-evidence finding, not proof that no nonpublic filing exists. Foreign-exception eligibility remains unknown; existing foreign AML, banking or corporate status does not establish GENIUS approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS prudential and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and issuance context",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -9,13 +9,26 @@
           "label": "Definitive legal characterization and related-party facility",
           "url": "https://forestroadvault.com/legal",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDfr primary redemption and holder controls",
+          "url": "https://forestroadvault.com/docs/how-to",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "notes": "Forest Road is the named protocol operator/originator, but the exact token-contracting legal entity is not established by the reviewed public legal page. No approval or absence-of-authorization finding is inferred from KYC or timelocked governance. MiCA is intentionally unassessed because fund/security characterization and EU offering scope are unverified.",
+    "notes": "Forest Road is the named protocol operator/originator, but the exact token-contracting legal entity is not established by the reviewed public legal page. Public how-to documentation says USDfr itself does not earn yield and permits transfers and secondary Uniswap purchases by nonblocked wallets; sUSDfr is a separate yield-bearing token. Primary minting and redemption use USDC at 1:1, with instant redemption limited to idle liquidity. GENIUS section 2(22)(A)(ii)(I) requires an issuer obligation to redeem a fixed amount of monetary value and excludes redemption solely into a digital asset denominated in that amount; the private agreements are needed to establish any additional dollar obligation and securities characterization. Public transparency describes idle USDC and credit principal, but no independent current balances or monthly accountant report were exposed. Dated public-source review found no GENIUS authorization for USDfr or the named Forest Road project; this bounded negative does not establish illegality or an exact legal issuer. MiCA cannot be positively classified: public documents defer legal characterization and geographic eligibility to private onboarding materials; generic wallet availability and register absence do not prove an EU offer or an exclusion.",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://forestroadvault.com/transparency",
     "redemptionPolicyPresent": true,
@@ -24,16 +37,102 @@
         "label": "Definitive legal characterization and related-party facility",
         "url": "https://forestroadvault.com/legal",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USDfr primary redemption and holder controls",
         "url": "https://forestroadvault.com/docs/how-to",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Forest Road terms: definitive onboarding agreements control eligibility and geographic restrictions",
+        "url": "https://forestroadvault.com/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Forest Road transparency: idle USDC and credit principal methodology",
+        "url": "https://forestroadvault.com/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementing-rule proposal",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Forest Road legal, terms, how-to, overview and transparency pages, independently reopened 2026-10-07",
+        "OCC digital asset licensing applications table, all nine current pending names inspected; no Forest Road or USDfr match",
+        "Federal Reserve September 24, 2026 GENIUS implementing-rule proposal",
+        "Treasury September 30, 2026 SCRC procedural interim final rule, which conditions acceptance on PRA approval and a Treasury notice",
+        "NYDFS virtual-currency regulated-entity roster and Greenlist, independently inspected; no Forest Road or USDfr match",
+        "Named USDfr/Forest Road GENIUS/stablecoin searches across OCC, FDIC, NCUA, Federal Reserve, Treasury and NYDFS domains; no qualifying token-specific public record located"
+      ],
+      "summary": "As of October 7, 2026, no public token-specific GENIUS PPSI approval, state-qualified authorization, official GENIUS application or registered foreign-issuer exception was located for USDfr or the publicly named Forest Road project. Rulemaking and unrelated banking applications are not issuer approvals. The private legal issuer and securities/payment-obligation characterization remain unresolved, so this is a limited public-evidence finding rather than a statement that an unidentified legal obligor has no licenses.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital asset licensing applications tracker",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementing-rule proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual-currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

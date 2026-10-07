@@ -1,7 +1,7 @@
 {
   "id": "usdai-usd-ai",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "USD.AI Foundation",
@@ -13,66 +13,170 @@
     "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The issuer Terms modified 2026-09-25 state that base USDai is backed 1:1 by PYUSD, while sUSDai separately holds loan-related exposure. Earlier M0/Usual/Gauntlet references do not describe the current base-USDai reserve. The Network Firm's July 15, 2026 Proof of Loans engagement covers GPU-loan attributes, not base-USDai reserve-to-liability assurance. The existing GENIUS authorization finding remains a dated negative-evidence review, not proof of an authorization or a legal conclusion.",
+    "notes": "The issuer Terms modified 2026-09-25 state that base USDai is backed 1:1 by PYUSD, while sUSDai separately holds loan-related exposure. Earlier M0/Usual/Gauntlet references do not describe the current base-USDai reserve. The Network Firm's July 15, 2026 Proof of Loans engagement covers GPU-loan attributes, not base-USDai reserve-to-liability assurance. Token-for-token redemption does not establish the fixed monetary-value issuer obligation required by section 2(22). Payment marketing and unresolved legal redemption rights support unclear applicability. The October 1 issuer update restores permissionless direct minting and redemption without whitelist or KYC, superseding the older institutional-only operational description; September 25 terms and technical docs still contain that older description. The Foundation announcement describes a legal steward and attributes GENIUS compliance to underlying PYUSD, not USDai. The September terms identify the Foundation as the protocol operator and contracting entity. No token-specific approval or foreign registration was found. Reserve disclosure is protocol-wide; no monthly independent base-USDai reserve attestation was found.",
     "references": [
       {
         "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
         "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-25",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD.AI Proof of Loans: July 15, 2026 GPU-loan AUP scope",
         "url": "https://docs.usd.ai/usdai/proof-of-loans.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "USDai",
         "url": "https://usd.ai/usdai",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD.AI technical overview",
         "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD.AI proof of reserves",
         "url": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS virtual-currency regulated entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD.AI Foundation and CHIP announcement",
         "url": "https://usd.ai/insights/usdai-foundation-chip",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDai mint and redeem update: permissionless access restored October 1",
+        "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-01"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "USD.AI Foundation announcement confirming Cayman Islands domicile",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and complete current digital-assets licensing applications table; official www HTML extracted after reader returned navigation only",
+        "Federal Reserve September 24 issuer/application proposal release, updated September 29",
+        "Treasury September 30 SCRC interim procedural rule; certifications await PRA approval and website opening notice",
+        "NYDFS complete regulated-entities and issuance Greenlist tables",
+        "FDIC April 10 prudential and FinCEN/OFAC April 10 AML proposals, official GovInfo PDFs",
+        "USD.AI September 25 terms, technical overview, USDai product page, proof-of-reserves and proof-of-loans disclosures",
+        "2026-10-07 regulator-domain query for Covered Agents, Cap Protocol, USD.AI Foundation and USDai with GENIUS, approval and enforcement terms across OCC, FDIC, Federal Reserve, NCUA and NYDFS; no exact relevant result",
+        "USD.AI Foundation/CHIP and October 1 mint/redemption update; full article bodies decoded from official embedded Next.js HTML"
       ],
-      "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; USD.AI Foundation confirmed as Cayman Islands DAO steward with no U.S. regulatory presence.",
+      "summary": "No public GENIUS permitted-issuer approval, state qualification, official application or foreign exception was found naming USD.AI Foundation or USDai in these sources. No matching applicant appears in the pending OCC digital-assets table, which itself is not a GENIUS approval register. NYDFS lists no matching entity or token. The Foundation is Cayman-based; foreign comparability or registration is not established. A confidential or unindexed filing cannot be ruled out. General federal proposals and SCRC procedure do not approve a named issuer.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual-currency regulated entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-25"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "USDai is marketed for payments and stable-value liquidity, but disclosed direct redemption returns PYUSD or other supported stablecoins. Section 2(22) requires an issuer obligation to convert, redeem or repurchase for fixed monetary value and expressly excludes a digital asset denominated in fixed monetary value as the redemption amount. The current public materials do not establish a fixed national-currency redemption obligation. Applicability remains genuinely ambiguous rather than a regulator-confirmed exclusion.",
+      "references": [
+        {
+          "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-25"
+        },
+        {
+          "label": "USD.AI technical overview",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2(22)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    }
   }
 }

@@ -1,0 +1,80 @@
+{
+  "id": "jaaa-janus-henderson-anemoy",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Anemoy JAAA: regulated open-ended BVI fund for professional investors",
+        "url": "https://www.anemoy.io/funds/jaaa"
+      },
+      {
+        "label": "MiCA Article 2(4)(a): financial instruments excluded from scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "JAAA represents a tokenized regulated open-ended BVI fund investing in actively managed AAA CLO exposures for eligible non-US professional investors. The issuer product page describes fund subscriptions/redemptions and a transparent investment NAV rather than an issuer obligation to redeem a payment token at a fixed dollar value. The GENIUS Act payment-stablecoin definition excludes digital assets that are securities. This scope assessment relies on the disclosed fund interest, without claiming a US regulator has specifically adjudicated JAAA.",
+      "references": [
+        {
+          "label": "Anemoy JAAA regulated fund disclosure",
+          "url": "https://www.anemoy.io/funds/jaaa",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anemoy JAAA onchain fund launch disclosure",
+          "url": "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-06-05"
+        },
+        {
+          "label": "GENIUS Act enacted text: securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Tokenized fund classification is assessed independently from MiCA and from the USD portfolio denomination. A stablecoin subscription/redemption rail does not make the fund token a cash-par payment stablecoin. The primary issuer marketing confirms regulated BVI fund status, but the exact issuing legal vehicle was not established from opened token-specific documents; issuerEntity is omitted. Anemoy Limited website footer, Anemoy Capital SPC Limited registry lead, and Janus Henderson investment-manager roles do not independently establish the JAAA token legal issuer. No GENIUS or SEC issuer authorization is claimed.",
+    "references": [
+      {
+        "label": "Anemoy JAAA regulated fund disclosure",
+        "url": "https://www.anemoy.io/funds/jaaa",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anemoy JAAA onchain fund launch disclosure",
+        "url": "https://www.anemoy.io/news/janus-henderson-anemoy-aaa-clo-onchain",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-06-05"
+      },
+      {
+        "label": "GENIUS Act enacted text: securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      }
+    ],
+    "reviewer": "Pharos independent compliance verifier s075",
+    "reviewedAt": "2026-10-07"
+  }
+}

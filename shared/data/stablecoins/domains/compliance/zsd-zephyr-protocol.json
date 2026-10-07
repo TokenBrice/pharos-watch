@@ -1,0 +1,147 @@
+{
+  "id": "zsd-zephyr-protocol",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "ZSD is a native dollar-targeting stablecoin marketed for stable value and transferable on the Zephyr network, so a general payment use cannot be ruled out. Its reserve-mint/redemption process converts ZEPH through autonomous protocol rules and oracle prices. The reviewed documentation does not identify a legal issuer undertaking fixed monetary-value repayment to holders; collateral can constrain redemption. GENIUS section 2(22) applicability therefore remains genuinely ambiguous under the CDP rubric, rather than being inferred solely from decentralization.",
+      "references": [
+        {
+          "label": "Zephyr Protocol whitepaper: protocol minting and crypto redemption",
+          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2023-06-05",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Zephyr Protocol: native dollar stablecoin design",
+          "url": "https://zephyrprotocol.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reserve disclosure is a self-reported native-chain reserve snapshot, not an independent monthly cash-reserve attestation or proof that reserves satisfy GENIUS requirements. The opened 7 October snapshot reports a ZEPH reserve and ZSD/ZYS liabilities. Redemption policy refers to the public crypto-conversion algorithm, not a fiat par-redemption entitlement. No monthly independent attestation was located in the reviewed official disclosures. No legal issuer entity, domicile or regulator is assigned without evidence. Foreign-exception eligibility and enforcement posture remain unresolved; no blanket no-action assurance is asserted. GENIUS payment-issuer implementation is still in proposed-rule stages; Treasury's September 30 SCRC procedural rule does not itself activate the general issuer prohibition or accelerate section 3(b) DASP restrictions. Not-yet-restricted describes the GENIUS timing condition only and does not assure legality under other U.S. law.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Zephyr Protocol whitepaper",
+        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2023-06-05",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Zephyr Protocol documentation",
+        "url": "https://zephyrprotocol.com/documentation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Zephyr reserve snapshot: ZEPH backing and native liabilities",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://zephyrprotocol.com/",
+        "https://zephyrprotocol.com/documentation",
+        "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf",
+        "Independent indexed search on 2026-10-07: (Zephyr OR ZSD) with stablecoin or GENIUS across OCC, FDIC, NCUA, Federal Reserve and NYDFS domains; no matching result found"
+      ],
+      "summary": "As of 7 October 2026, the independently opened OCC digital-assets licensing applications list, NYDFS regulated-entity directory and Greenlist, Federal Reserve GENIUS implementation proposals, Treasury SCRC procedural rule, and Zephyr disclosures did not establish token-specific Zephyr/ZSD GENIUS approval, officially pending application, state qualification, issuer-announced route, or registered foreign exception. An independent indexed search across OCC, FDIC, NCUA, Federal Reserve and NYDFS domains likewise found no matching Zephyr/ZSD stablecoin record. These are bounded public-evidence findings, not proof that confidential filings or permissions cannot exist. ZUSD on the NYDFS Greenlist is GMO USD, a different token. Zephyr disclosures do not identify a legal fixed-monetary-value repayment obligor.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

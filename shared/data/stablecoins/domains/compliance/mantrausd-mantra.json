@@ -1,0 +1,159 @@
+{
+  "id": "mantrausd-mantra",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "mantraUSD is designed as a dollar-denominated payment and settlement token. Its whitepaper names MANTRA International Limited as the BVI designer and operational participant and describes T+2 redemption into USDC, while separately discussing underlying collateral or fiat redemption. Direct redemption is generally restricted to authorized Minters and institutional participants. The document disclaims MANTRA liability and does not establish an unambiguous token-issuer obligation to repay fixed monetary value under GENIUS section 2(22). Payment-stablecoin applicability remains unclear; crypto payout and ecosystem reward distribution alone do not establish exclusion.",
+      "references": [
+        {
+          "label": "mantraUSD product disclosure",
+          "url": "https://mantrausd.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "mantraUSD minting and burning",
+          "url": "https://docs.mantrausd.com/how-it-works/minting-burning",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "mantraUSD whitepaper landing page",
+          "url": "https://docs.mantrausd.com/resources/whitepaper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Enacted GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "mantraUSD whitepaper v1.0: MANTRA role, redemption and risk disclosures",
+          "url": "https://assets.mantrausd.com/whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "The reopened primary whitepaper identifies MANTRA International Limited as the BVI designer and describes MANTRA minting, redemption and discretionary ecosystem reward distribution. It states that holding mantraUSD creates no right to interest, dividends or income. Its operational section describes USDC redemption on a T+2 cycle; risk disclosures restrict direct redemption to authorized institutional participants, disclaim MANTRA liability and identify uncertainty over redemption-right enforceability. These disclosures do not identify an unambiguous fixed-monetary-value legal obligor for all holders, so issuerEntity and issuerDomicile are omitted rather than equating the designer with the legal issuer. A public technical redemption policy and underlying collateral disclosure exist. The M0 dashboard opened as a JavaScript shell and the verifier browser attempt returned ERR_ABORTED; no live reserve figures were extracted. No mantraUSD-specific monthly independent accountant reserve attestation, qualifying GENIUS approval, official application or issuer GENIUS-intent statement was located in the reviewed public sources.",
+    "references": [
+      {
+        "label": "mantraUSD product disclosure",
+        "url": "https://mantrausd.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "mantraUSD minting and burning",
+        "url": "https://docs.mantrausd.com/how-it-works/minting-burning",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "mantraUSD whitepaper landing page",
+        "url": "https://docs.mantrausd.com/resources/whitepaper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Enacted GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "M0 underlying collateral and mint/burn documentation",
+        "url": "https://docs.m0.org/protocol/minting-burning",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "mantraUSD whitepaper v1.0: MANTRA role, redemption and risk disclosures",
+        "url": "https://assets.mantrausd.com/whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and current OCC interpretations and decisions index reopened on 2026-10-07",
+        "Federal Reserve September 24, 2026 GENIUS issuer and application proposal announcement reopened",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural rule reopened",
+        "NYDFS virtual-currency business directory and Greenlist reopened; MoonPay USA LLC and MoonPay Trust Company, LLC distinguished",
+        "Official-domain search for MoonPay USA, Bridge Building Inc., NASD Inc. (Noble), mantraUSD and M0 with GENIUS or PPSI found no qualifying exact-token approval or official application",
+        "SEC, FinCEN, NYDFS, OCC and OFAC exact-entity enforcement search returned no matching action; historical securities-SRO NASD and unrelated Noble Corporation matches excluded",
+        "mantraUSD product page, mint/burn docs, whitepaper landing page and complete assets.mantrausd.com whitepaper including risk disclosures reopened",
+        "M0 dashboard returned a JavaScript shell; unique verifier browser tab navigation returned ERR_ABORTED; no live reserve figures extracted"
+      ],
+      "summary": "As of 2026-10-07, the checked public regulator and issuer sources did not identify a qualifying GENIUS PPSI approval, state-qualified designation, official GENIUS application or registered foreign-issuer exception for mantraUSD / its unresolved legal issuer. This finding concerns the reviewed public record and does not exclude confidential or unpublished filings. Ordinary licenses and affiliate charter decisions are separate from token-specific GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

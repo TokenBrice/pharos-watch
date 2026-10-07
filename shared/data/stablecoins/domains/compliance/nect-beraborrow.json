@@ -1,0 +1,169 @@
+{
+  "id": "nect-beraborrow",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Official Beraborrow documentation markets NECT as an overcollateralized dollar stablecoin usable for game transactions, quotes and liquidity provision. Holders can redeem at dollar face value for crypto collateral, subject to protocol fees. Crypto collateral is a digital asset excluded from the statutory monetary-value definition. Reviewed legal terms do not substantiate an identifiable issuer obligation to redeem for currency or a currency-denominated deposit. Transaction-oriented marketing prevents a confident non-payment exclusion, while collateral redemption alone does not establish the Act-required obligation. Applicability remains unclear.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Beraborrow: what is Nectar NECT",
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/what-is-nectar-usdnect",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Beraborrow NECT collateral redemptions",
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Beraborrow legal terms",
+          "url": "https://www.beraborrow.com/legal",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-03-03",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "March 3, 2025 terms prohibit US/UK persons and identify Base Zero Labs Ltd as intellectual-property owner. This role and BVI governing law do not establish NECT legal issuer or issuer domicile; fields are omitted. A US interface exclusion does not create GENIUS authorization or resolve all secondary transfers. Opened regulator publications/directories and exact-name searches yielded no public token-specific approval, state qualification, official application or foreign registration. DASP status follows the current pre-effective framework, not issuer permission. Protocol crypto redemptions are distinguished from a legal fiat issuer redemption promise.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issuer proposal and implementation timing",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS framework and approval proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Beraborrow: what is Nectar NECT",
+        "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/what-is-nectar-usdnect",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Beraborrow NECT collateral redemptions",
+        "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Beraborrow legal terms",
+        "url": "https://www.beraborrow.com/legal",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-03",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS statutory definitions",
+        "OCC Bulletin 2026-3 and current digital-asset pending bank applications table",
+        "Federal Reserve September 24 framework and application-procedure proposals",
+        "Treasury April comparability and August foreign-issuer proposals and September 30 SCRC procedural IFR",
+        "NYDFS regulated virtual currency entity table and Greenlist",
+        "Exact token/protocol and disclosed operator-name searches across OCC, Federal Reserve, FDIC, NCUA and NYDFS public indexed materials for approval, application, registration or GENIUS enforcement",
+        "Beraborrow NECT official product/control/legal disclosures"
+      ],
+      "summary": "As of October 7, 2026, opened regulator directories, implementation publications, product disclosures and exact-name regulator searches yielded no public token-specific PPSI approval, GENIUS state qualification, official pending application, registered foreign exception or GENIUS enforcement action for Beraborrow NECT. These are bounded public checks, not proof that every nonpublic record is absent. The OCC bank-applications table and NYDFS ordinary licensing list are not complete GENIUS authorization registers. Legal issuer identity remains unresolved, so undisclosed-entity records cannot be excluded.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS framework and approval proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issuer proposal and implementation timing",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -18,6 +18,18 @@
       {
         "label": "StablR USDR whitepaper",
         "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
+      },
+      {
+        "label": "ESMA EMT whitepaper register CSV: StablR Ltd entries",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "StablR current EURR and USDR whitepaper index",
+        "url": "https://www.stablr.com/whitepapers"
+      },
+      {
+        "label": "StablR August 25, 2026 recovery update: minting and redemption remain suspended",
+        "url": "https://stablr.com/insights/notification-update-25-08-2026"
       }
     ]
   },
@@ -35,53 +47,149 @@
     "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit triggered public EFRI concerns and a StablR DORA/MiCA incident disclosure; Pharos removed a previously misattributed MFSA Ref. 2026-19 citation because that notice concerned an unrelated entity. No PPSI approval, state-qualified status, official application, or foreign exception found.",
+    "notes": "StablR Ltd remains the Malta MFSA-authorized EMI issuer. The reserve hub is an issuer disclosure linking quarterly independent reviews, not an auditor-authored report or monthly public attestation cadence. The August 25, 2026 recovery update says minting and redemption remain temporarily suspended; preserve redemptionPolicyPresent as existence of a policy, not current ability to redeem. The published terms restrict direct legal-entity customer eligibility by U.S. residence, control and representation criteria; these restrictions do not establish a universal ban on secondary-market holding. No token-specific GENIUS approval, official application or foreign registration was located in the dated scoped review. MiCA authorization does not establish a U.S. foreign-issuer exception. Expected Act effective date remains January 18, 2027; not-yet-restricted describes GENIUS timing rather than issuer service availability.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "StablR USDR",
         "url": "https://www.stablr.com/usdr",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StablR proof of reserve",
         "url": "https://www.stablr.com/proof-of-reserve",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StablR USDR whitepaper",
         "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CoinDesk: StablR freezes USDR and EURR (May 2026)",
         "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
-        "sourceKind": "news"
+        "sourceKind": "news",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-26"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "OFAC 2026 civil penalties and enforcement information",
+        "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StablR August 25, 2026 recovery update",
+        "url": "https://stablr.com/insights/notification-update-25-08-2026",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-25"
+      },
+      {
+        "label": "StablR customer terms and U.S.-person eligibility restrictions",
+        "url": "https://www.stablr.com/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "EFRI public concerns and StablR cybersecurity incident disclosure for the May 2026 USDR/EURR exploit",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Independent exact-issuer search for Telcoin LLC, Telcoin Digital Asset Bank and StablR Ltd with GENIUS approval, PPSI, registration and enforcement terms across OCC, Treasury, Nebraska NDBF, FDIC and NYDFS domains, 2026-10-07; indexed results are not a complete agency docket",
+        "OCC Bulletin 2026-3, substantive raw HTML",
+        "OCC digital-assets licensing index, full pending-applicant table in raw HTML",
+        "Treasury August 17, 2026 section 3 proposal",
+        "Treasury September 30, 2026 SCRC procedural IFR",
+        "Federal Reserve September 24, 2026 issuer/application proposals",
+        "OFAC 2026 civil-penalty chart",
+        "StablR USDR whitepaper, token product, customer terms, reserve hub and August 25 recovery update"
       ],
-      "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit is tracked through StablR incident disclosures and public EFRI concerns; the previously cited MFSA Ref. 2026-19 item was removed as unrelated.",
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official pending application or registered foreign-issuer exception naming StablR Ltd/USDR was found in the opened issuer, OCC and Treasury materials or recorded exact-name regulator searches. No U.S. action naming the issuer was located in those searches or the opened OFAC 2026 chart. Foreign qualification remains unknown. This review does not rule out confidential or unindexed filings and does not treat the Malta operational incident as a U.S. enforcement action.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "OFAC 2026 civil penalties and enforcement information",
+          "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "The USDR whitepaper describes a transferable payment token issued by StablR Ltd with a fixed USD 1 redemption claim. The continuing operational redemption suspension does not change its stated payment-token design.",
+      "references": [
+        {
+          "label": "StablR USDR whitepaper",
+          "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

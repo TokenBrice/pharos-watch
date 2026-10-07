@@ -13,26 +13,31 @@
       },
       {
         "label": "Matrixdock XAGm launch announcement",
-        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain-under-the-frs-framework"
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain"
+      },
+      {
+        "label": "Matrixdock prohibited countries: EU member states",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/legal/prohibited-countries-regions.md"
       }
     ]
   },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "XAGm is a tokenized silver claim, not a token designed to maintain a fixed value relative to a national currency or function as a payment stablecoin.",
+      "summary": "XAGm represents a fee-adjusted quantity of physical silver, redeemable at the prevailing ozPerToken value. It does not maintain a fixed amount of national currency, as required by the GENIUS payment-stablecoin definition.",
       "references": [
         {
           "label": "GENIUS Act statutory payment-stablecoin framework",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Matrixdock XAGm product page",
           "url": "https://www.matrixdock.com/xagm",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -41,29 +46,49 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "XAGm is described as an LBMA Good Delivery silver-backed token for collateral and trading. It is a commodity-referenced product, so GENIUS payment-stablecoin authorization is not applicable on the reviewed facts.",
+    "notes": "XAGm is described as an LBMA Good Delivery silver-backed token for collateral and trading. It is a commodity-referenced product, so GENIUS payment-stablecoin authorization is not applicable on the reviewed facts. The live ozPerToken starts at one fine troy ounce and decreases through a 0.3% annual custody fee. Redemption represents silver at the prevailing ozPerToken value, not a fixed amount of national currency. No enforcement action naming the reviewed products or Matrix Mining Limited was located in the opened FinCEN index or the 2026-10-07 SEC/OCC/Treasury/OFAC domain searches for Matrixdock, XAUm, XAGm and Matrix Mining Limited. The issuer-authored March 17, 2026 whitepaper does not name the legal issuer. EX.IO attributes XAGm issuance to Matrix Mining Limited, but issuer-specific legal terms were not located to corroborate that attribution; issuerEntity remains omitted. Prometheus is not inferred from STBT.",
     "references": [
       {
         "label": "GENIUS Act statutory payment-stablecoin framework",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "Matrixdock XAGm product page",
         "url": "https://www.matrixdock.com/xagm",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Matrixdock XAGm launch announcement",
-        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain-under-the-frs-framework",
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-03-17",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Matrixdock XAGm token features",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/token-features.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FinCEN public enforcement actions",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Matrixdock Silver XAGm whitepaper",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

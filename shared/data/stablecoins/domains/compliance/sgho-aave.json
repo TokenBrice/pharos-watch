@@ -1,0 +1,66 @@
+{
+  "id": "sgho-aave",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "sGHO: appreciating ERC-4626 savings shares",
+        "url": "https://aave.com/docs/ecosystem/gho/sgho"
+      },
+      {
+        "label": "MiCA Article 3: stable-value EMT and ART definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sGHO is an ERC-4626 savings-vault share, not the underlying GHO stablecoin. Each share redeems for a changing amount of GHO as yield accrues, rather than a fixed amount of monetary value. It records a variable savings position and is not designed as the fixed-value payment or settlement token defined by GENIUS Act Section 2(22).",
+      "references": [
+        {
+          "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "sGHO: ERC-4626 savings share and redemption mechanics",
+          "url": "https://aave.com/docs/ecosystem/gho/sgho",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "notes": "Assessment is specific to the appreciating vault-share token, not its underlying stablecoin or protocol. It is not an authorization claim, a legal securities determination, or a finding about compliance of the parent. No corporate issuer identity is inferred from developer or governance labels.",
+    "references": [
+      {
+        "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "sGHO: ERC-4626 savings share and redemption mechanics",
+        "url": "https://aave.com/docs/ecosystem/gho/sgho",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-applicable"
+  }
+}

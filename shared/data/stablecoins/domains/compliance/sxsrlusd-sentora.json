@@ -1,0 +1,79 @@
+{
+  "id": "sxsrlusd-sentora",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Sentora x Spark RLUSD partially verified VaultV2 source and constructor arguments",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+      },
+      {
+        "label": "MiCA Article 3 EMT and ART definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sxsRLUSD represents ERC-4626 shares in Sentora x Spark RLUSD, a RLUSD-denominated lending vault. The reopened VaultV2 source accrues interest, charges fees, recognizes losses and redeems shares for a variable quantity of underlying RLUSD. The reviewed code and terms do not establish an issuer obligation to redeem these shares for a fixed monetary value under GENIUS Act section 2(22). This instrument-level assessment is separate from the underlying payment stablecoin.",
+      "references": [
+        {
+          "label": "Morpho Vault V2 lending-share mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sentora x Spark RLUSD partially verified VaultV2 source and constructor arguments",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sentora terms and vaults addendum",
+          "url": "https://sentora.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed 2026-10-07. sxsRLUSD is a variable-net-asset-value lending position. Interest, fees and recognized lending losses change assets per share; withdrawals depend on underlying-token liquidity and contract permissions. Blockscout marks the deployment source partially verified, with an exact decoded constructor asset matching the tracked RLUSD contract. Morpho Vault V2 documentation independently describes the lending-share mechanics. Sentora terms identify Sentora Digital Holdings (BVI) Ltd as the website/offering counterparty and describe non-custodial vault software without guaranteed yield or capital preservation. Those terms do not establish that company as a fixed-monetary-redemption obligor for these shares. issuerEntity, issuerDomicile and licensing fields are omitted; the underlying issuer's licenses or announced GENIUS pathway are not attributed to the vault. This classification does not determine securities, deposit or broader MiCA applicability. Underlying-token reserve attestations do not attest to vault assets. The OCC and Federal Register references concern a proposed rule, not an approval of this token.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS proposed rule official Federal Register text",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Ripple RLUSD user terms",
+        "url": "https://ripple.com/legal/stablecoin/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-10-03",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

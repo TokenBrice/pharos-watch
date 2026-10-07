@@ -3,7 +3,23 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "AED-RAKBANK is a pre-launch dirham-backed payment token planned for 1:1 AED redemption under CBUAE oversight."
+      "summary": "AED-RAKBANK is a pre-launch dirham-backed payment token planned for 1:1 AED redemption under CBUAE oversight.",
+      "references": [
+        {
+          "label": "RAKBank in-principle approval announcement",
+          "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-372774",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-01-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act national-currency payment-stablecoin definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -16,40 +32,122 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "RAKBank has announced CBUAE in-principle approval for an AED payment token, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+    "notes": "RAKBank has announced CBUAE in-principle approval for an AED payment token, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration or Treasury comparability determination was found in the reviewed sources and searches as of 2026-10-07. The January 7 issuer-supplied press release remains conditional on completion of regulatory and operational requirements. It describes planned 1:1 AED reserves, par redemption and real-time attestations, rather than a published operating reserve report, binding holder redemption policy or monthly attestation series. The existing issuerEntity is retained verbatim as the announced bank sponsor/issuer; no separate token issuing vehicle is named. Domestic CBUAE oversight establishes no U.S. GENIUS pathway. Primary issuer implementation remains proposed; the September 30 SCRC procedural rule does not approve an issuer or make the Act effective. The DASP field records the pre-effective GENIUS posture only.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "RAKBank in-principle approval announcement",
         "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-372774",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-01-07",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "RAKBank corporate profile and legal name",
+        "url": "https://www.rakbank.ae/en/about-us/who-we-are/aboutus/rakbank-profile",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications tracker",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury issuance and offer-or-sale proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC state certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS NPRM and reporting-form notices",
-        "Treasury foreign-comparability materials",
-        "RAKBank AED stablecoin announcement and public materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 (https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html), primary full HTML",
+        "OCC digital assets licensing pending-application table (https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html), primary full HTML",
+        "Treasury August 17 issuance and offer/sale NPRM announcement (https://home.treasury.gov/news/press-releases/sb0605)",
+        "Federal Reserve September 24 implementation proposals (https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm)",
+        "SCRC September 30 procedural IFR (https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm)",
+        "NYDFS regulated entity and greenlist tables (https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses)",
+        "FDIC April 7 standards NPRM (https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act)",
+        "NCUA GENIUS implementation FAQ (https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets)",
+        "AED-RAKBANK / RAKBank primary product and legal disclosures opened",
+        "Independent 2026-10-07 searches: (RAKBank OR Ripio OR Moonbird OR wARS) with GENIUS, stablecoin registration or enforcement on OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS domains; no qualifying token-specific public result. Separate RAKBank GENIUS and wARS issuer Moonbird searches did not supply primary authorization or exact-issuer evidence."
       ],
-      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for AED-RAKBANK or RAKBank.",
+      "summary": "As of 2026-10-07, no public token-specific PPSI approval, official GENIUS application, state-qualified approval, OCC foreign-issuer registration, Treasury foreign comparability determination or GENIUS enforcement action was located for AED-RAKBANK / RAKBank. The reviewed primary issuer-implementation materials are proposals. The September 30 SCRC procedural rule does not approve an issuer. This bounded negative-evidence review does not prove that no private filing exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications tracker",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury issuance and offer-or-sale proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC state certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "RAKBank in-principle approval announcement",
+          "url": "https://www.zawya.com/en/press-release/companies-news/rakbank-receives-in-principle-approval-to-launch-an-aed-backed-stablecoin-372774",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-01-07",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

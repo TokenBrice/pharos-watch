@@ -3,57 +3,137 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDA is an Anzens-issued U.S. dollar stablecoin designed for mint, burn, send, receive, and off-ramp payment flows."
+      "summary": "USDA is an Anzens-issued U.S. dollar stablecoin designed for mint, burn, send, receive, and off-ramp payment flows.",
+      "references": [
+        {
+          "label": "Anzens terms and conditions",
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-04-14",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "EMURGO Labs Anzens and Encryptus USDA partnership",
+          "url": "https://www.emurgolabs.io/news/posts/emurgo-labs-partners-with-anzens-and-encryptus-to-strengthen-usda-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-04-21",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Anzens Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN MSB / 17 US state no-objection letters; BitGo Trust qualified custodian",
+    "licensingRegulator": "FinCEN MSB registration (issuer-reported); BitGo third-party custody under published terms",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.linkedin.com/posts/anzens-usda_anzens-january-attestation-report-activity-7430042803411271680-9qRD",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Anzens describes USDA as 100% backed and issued by Anzens Inc. (FinCEN MSB, 17 state no-objection letters), with reserves held at BitGo Trust. Pharos found no GENIUS PPSI approval, state-qualified approval, official application, or public intent statement. A LinkedIn post from EMURGO (2026) references a first proof-of-reserves examination report, but no dedicated reserve attestation or transparency URL is published on anzens.com or findable from public sources; reserveDisclosurePresent corrected to false. USDA relaunched under Encryptus partnership after a 2023 pause.",
+    "monthlyAttestationPresent": true,
+    "notes": "Reviewed October 7, 2026. Published terms identify Anzens Inc., a Delaware company, and specify KYC-gated mint/redemption and fiat withdrawal, including separate arrangements for foreign entities. The AML statement claims alignment with the GENIUS Act and close regulator cooperation but names no qualification route, PPSI application or approval; this general alignment claim is not upgraded to issuer-announced-intent. Partner disclosure calls Anzens a FinCEN MSB; registration was not independently verified and supplies no PPSI authority. The previously asserted 17 state no-objection letters were not verified and are removed. The public Anzens January attestation post contains a five-page independent accountant examination; its LinkedIn-hosted transcript was opened. The Network Firm LLP signed February 9, 2026, examining January 31 reserves of $12,079,477 against 11,728,518 USDA. Reserves consisted of $11,965,192 Superstate Short Duration U.S. Government Securities Fund shares held directly by Anzens and $114,285 dollars with BitGo custody. ReserveDisclosurePresent is corrected to true using the stable issuer publication URL; monthlyAttestationPresent records the publicly available monthly report and issuer-published monthly cadence claim. No later monthly reserve report was located, so these flags do not assert current October reserve coverage or uninterrupted cadence. The report expressly excludes examination of legal/regulatory compliance. Its custody naming is preserved as historical report wording; the whole reserve portfolio must not be described as cash held at BitGo. No token-specific GENIUS authorization or enforcement action was located in the bounded opened official/issuer corpus.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anzens USDA homepage",
         "url": "https://www.anzens.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anzens terms and conditions",
         "url": "https://www.anzens.com/landing/terms-and-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2025-04-14",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "EMURGO post: Anzens publishes first proof-of-reserves report for USDA",
         "url": "https://www.linkedin.com/posts/emurgo-io_examination-over-usda-reserve-assets-report-activity-7328334550667821056-s0vH",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anzens January attestation report publication",
+        "url": "https://www.linkedin.com/posts/anzens-usda_anzens-january-attestation-report-activity-7430042803411271680-9qRD",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anzens AML and compliance statement: GENIUS alignment claim",
+        "url": "https://anzens.com/landing/aml-cft-compliance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "EMURGO Labs Anzens and Encryptus USDA partnership",
+        "url": "https://www.emurgolabs.io/news/posts/emurgo-labs-partners-with-anzens-and-encryptus-to-strengthen-usda-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-04-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anzens stablecoin risk disclosures",
+        "url": "https://www.anzens.com/landing/risk-disclosure",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-05",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities and approved issuance list",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "EMURGO Anzens launch: eligible states and Europe minting limitation",
+        "url": "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/?s=s064",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-21",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "2026-10-01: Anzens homepage and terms; EMURGO launch/custody disclosures",
-        "2026-10-01: OCC Bulletin 2026-3 public proposed-rule disclosure",
-        "2026-10-01 web search: Anzens USDA GENIUS PPSI authorization application site:occ.gov OR site:federalregister.gov OR site:fincen.gov"
+        "2026-10-07: Anzens homepage, terms, risk and AML/GENIUS-alignment disclosures; EMURGO launch and issuer-specific partnership disclosures",
+        "2026-10-07: Issuer January attestation publication, LinkedIn structured publication date and full attached accountant-report transcript; historical EMURGO examination announcement",
+        "2026-10-07: OCC Bulletin 2026-3 and full digital-assets licensing application table, Federal Reserve September 24 implementation proposal, Treasury September 30 SCRC procedures and NYDFS regulated entities/approved-issuance tables",
+        "2026-10-07: Exact Anzens/USDA GENIUS approval/application/enforcement search across OCC, FDIC, Federal Reserve and NYDFS domains; Anzens/USDA Europe/EEA/MiCA listing search"
       ],
-      "summary": "No token-specific PPSI authorization or official application source for Anzens/USDA was located in this review scope. Anzens MSB registration is not itself PPSI authorization. This is a scoped negative public search, not proof of absence from every official register.",
-      "reviewer": "Sol curation pass 2026-10-01 (ValB43scrvUSD)",
-      "reviewedAt": "2026-10-01"
+      "summary": "No token-specific PPSI approval, GENIUS state qualification, official PPSI application or registered foreign exception was located for Anzens Inc./USDA in the checked corpus. The issuer AML page asserts regulatory alignment without a qualification route or filed application. MSB status and an off-ramp partner foreign license do not evidence PPSI authorization. Negative authorization and action findings are limited to reviewed public sources, not every register or private filing.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -3,7 +3,22 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDGO is publicly described as a U.S. dollar token issued by Anchorage Digital Bank with 1:1 redemption and reserve attestations."
+      "summary": "USDGO is publicly described as a U.S. dollar token issued by Anchorage Digital Bank with 1:1 redemption and reserve attestations.",
+      "references": [
+        {
+          "label": "Anchorage Covered Stablecoin Terms",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-10-13"
+        },
+        {
+          "label": "USDGO issuer product and redemption disclosure",
+          "url": "https://www.usdgo.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
@@ -18,57 +33,154 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Anchorage Digital Bank N.A. holds an OCC national trust bank charter (granted 2021) and is an uninsured national trust bank: not FDIC-insured and not an IDI subsidiary. Under the GENIUS Act, the federal-qualified-nonbank pathway covers uninsured national banks chartered by the OCC approved to issue payment stablecoins; this is the correct pathway for Anchorage. Anchorage has publicly announced intent to qualify as a PPSI and submitted comment letters to the OCC on the GENIUS Act NPRM, but no PPSI approval or formal application has been submitted: the approval framework is still in proposed-rules rulemaking as of 2026-06-18 (GENIUS Act effective Jan 18, 2027 or 120 days after final rules). No token-specific public OCC GENIUS approval found for USDGO. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Anchorage Digital Bank, N.A. remains the USDGO issuerEntity, consistent with USAT, USDtb and USDPT sidecars. Its covered-stablecoin terms identify the bank as sole issuer/obligor, describe payment/settlement use and provide dollar par-value redemption to onboarded Clients; Non-Clients lack a contractual redemption right until becoming Clients. The bank's May 1, 2026 disclosure expressly expects to become a PPSI once GENIUS is effective, supporting issuer-announced-intent and the federal-qualified-nonbank pathway. The ordinary OCC national trust charter does not establish GENIUS approval. No public named PPSI approval or official pending application was located; no assertion is made about nonpublic submissions. The August 31 reserve examination, signed September 28, supports monthlyAttestationPresent but expressly provides no opinion on legal compliance. Federal issuer frameworks remain proposed; Treasury expects January 18, 2027 effectiveness and July 18, 2028 for the general DASP offer-sale prohibition.",
     "references": [
       {
         "label": "OCC: Anchorage national trust bank charter",
         "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2021-01-13"
       },
       {
         "label": "Anchorage to serve as USDGO issuer under U.S. federal bank charter",
         "url": "https://www.anchorage.com/insights/anchorage-digital-serve-issuer-osls-new-us-regulated-stablecoin-usdgo",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage USDGO launch under federal oversight",
         "url": "https://www.anchorage.com/insights/usdgo-officially-launches-under-federal-oversight",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage Digital Bank first federally chartered stablecoin issuer following GENIUS Act",
         "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage USDGO reserve attestations",
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC GENIUS issuer requirements proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "NCUA GENIUS implementation and proposed application framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anchorage Covered Stablecoin Terms",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-10-13"
+      },
+      {
+        "label": "USDGO issuer product and redemption disclosure",
+        "url": "https://www.usdgo.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anchorage GENIUS PPSI expectation and OCC comment letter",
+        "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-01"
+      },
+      {
+        "label": "USDGO August 2026 independent accountant report",
+        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-28"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC Anchorage Digital Bank public charter materials",
-        "USDGO issuer metadata and reserve attestation pages",
-        "Anchorage Digital Bank insights and platform pages (June 2026)",
-        "OCC Federal Register NPRM for GENIUS Act implementation",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Opened OCC Bulletin 2026-3 and searched OCC public regulator records for the token and issuer names",
+        "Opened Federal Reserve September 24, 2026 GENIUS issuer and application proposals",
+        "Opened FDIC April 7, 2026 GENIUS issuer requirements proposal",
+        "Opened NCUA GENIUS implementation and application FAQ",
+        "Opened Treasury September 30, 2026 SCRC procedural rule and August 17 issuance/offer-sale proposal",
+        "Targeted searches of OCC, Federal Reserve, FDIC, NCUA and NYDFS domains for token/issuer GENIUS approvals, applications and enforcement",
+        "Opened OCC Anchorage charter announcement",
+        "Opened Anchorage USDGO issuer announcement, launch, GENIUS issuance announcement, covered-stablecoin terms and comment-letter disclosure",
+        "Opened USDGO monthly reserve hub and August 2026 independent accountant report; report explicitly excludes legal-compliance opinion"
       ],
-      "summary": "No token-specific public OCC GENIUS PPSI approval, official application, or registration was located for USDGO. Anchorage has publicly announced intent and submitted GENIUS Act comment letters, but the PPSI approval framework is still in proposed-rules rulemaking as of 2026-06-18.",
+      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state qualification or named official pending application was located for Anchorage Digital Bank, N.A. as USDGO issuer in the checked regulator materials and targeted searches. The reviewed federal documents describe proposed issuer frameworks; Treasury's September 30 interim final rule concerns state certification procedures and states that certifications await PRA approval. Ordinary licenses and reserve disclosures do not establish PPSI approval. No token-specific GENIUS warning or prohibition was located. This is a bounded public-evidence finding, not proof about nonpublic filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "FDIC GENIUS issuer requirements proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Treasury GENIUS issuance and offer-sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NCUA GENIUS implementation and proposed application framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -1,22 +1,34 @@
 {
   "id": "usda-alpha-partner",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Inherited catalog metadata tracks USDA as a one-dollar, issuer-controlled token, so apparent-payment-stablecoin applicability remains provisional. The October1 recheck of AP U-Card and Alpha Partners documentation does not establish a current USDA-specific fixed-dollar redemption obligation or identify the legal issuer.",
+      "summary": "The tracked BSC USDA token is catalogued as a one-dollar issuer-controlled token, but current Alpha Partners public material describes USDT deposits converted to UCard USD balances and reward points. It does not identify USDA-specific legal issuance, a fixed-dollar token redemption obligation, or a named legal issuer. The available evidence is insufficient to affirm payment-stablecoin applicability or a non-payment exclusion.",
       "references": [
         {
           "label": "Alpha Partner official site",
           "url": "https://alphapartner.vip/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Alpha Partners current UCard overview",
+          "url": "https://ap-organization-1.gitbook.io/alpha-partners/overview.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Alpha Partners card usage guidelines",
+          "url": "https://ap-organization-1.gitbook.io/alpha-partners/core-features/usage-guidelines.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -28,47 +40,91 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "The scoped October1 recheck of Alpha Partners documents and the OCC digital-assets application page found no identifiable USDA issuer or token-specific authorization record. Unknown legal identity prevents an exhaustive regulator or enforcement search; no public-action absence is established by this check. Reserve composition, binding holder redemption terms, and monthly independent reconciliation remain undisclosed in the reviewed issuer corpus. Historical metadata, not current USDA issuer documentation, underlies the apparent dollar-payment-token mapping.",
+    "notes": "Reviewed October 7, 2026. Current official site and GitBook corpus describe AP UCard, USDT top-ups, USD card balances, KYC and internal reward points; no current USDA token-specific issuance or fixed-dollar redemption terms were located. The historical catalog contract is 0x17eafd08994305d8ace37efb82f1523177ec70ee on BSC. Worldwide card-use statements and a claimed payment license do not establish USDA token offering, token deposit status, reserve insurance or authorization. The existing descriptive issuerEntity is preserved and does not purport to identify a legal company. Legal identity and domicile remain unresolved; enforcementStatus is omitted because unknown identity prevents a meaningful comprehensive issuer enforcement search. No current public reserve composition, token-holder redemption policy or independent monthly token reserve examination was found in the reviewed public material. Applicability is corrected to unclear rather than retained as apparent-payment-stablecoin solely on historical catalog metadata. A September 11, 2025 AlphaPartners promotional announcement mentions USDA payment aspirations and regulatory progress but supplies no legal issuer, binding dollar redemption terms or actual regulatory authorization. The opened body does not substantiate the search-index claim of completed French/German regulatory evaluations.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications: no Alpha Partner/USDA applicant identified",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Reserve GENIUS customer-identification proposal",
         "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Alpha Partner official site",
         "url": "https://alphapartner.vip/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Alpha Partners current UCard overview",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners/overview.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Alpha Partners card usage guidelines",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners/core-features/usage-guidelines.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Alpha Partners rules and trust: reward points and USDT deposits",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners/rules-and-trust.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and issuance list",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AlphaPartners September 2025 ecosystem announcement",
+        "url": "https://paragraph.com/@alphapartners/ap-web3-seven-years-of-glory-embarking-on-a-new-global-chapter",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-11",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "OCC digital assets licensing applications page, searched for Alpha Partner, AP Web3, and USDA",
-        "Federal Reserve GENIUS customer-identification proposal",
-        "GENIUS Act Public Law 119-27",
-        "Alpha Partner official site and linked public materials"
+        "2026-10-07: OCC Bulletin 2026-3 and full digital-assets licensing application table; Alpha Partner/AP Web3/USDA exact-name search across OCC, Federal Reserve, FDIC, NCUA and NYDFS domains",
+        "2026-10-07: Federal Reserve customer-identification proposal and September 24 implementation proposal release; NYDFS regulated entities and approved-issuance tables",
+        "2026-10-07: Alpha Partner site, GitBook background, overview, rules/trust, usage guidelines, KYC/use cases and FAQ",
+        "2026-10-07: AlphaPartners September 11, 2025 ecosystem announcement reopened through publisher markdown; Alpha Partners/USDA MiCA and European-venue search"
       ],
-      "summary": "As of 2026-08-14, no token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for Alpha Partner USDA. The public material did not identify a legal issuer or a U.S. regulatory filing, so no issuer pathway can be assigned.",
+      "summary": "No token-specific GENIUS PPSI approval, state qualification, official application, issuer qualification-intent statement or registered foreign exception was located in the checked sources. Current material does not identify the USDA legal issuer, limiting negative-evidence completeness and preventing an issuer pathway assignment. This is a bounded public-source result, not proof that no private filing or authorization exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

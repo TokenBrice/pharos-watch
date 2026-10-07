@@ -1,6 +1,82 @@
 {
   "id": "eurspkcc-spiko",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Spiko Digital Assets Cash And Carry Fund prospectus, 1 February 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+      },
+      {
+        "label": "MiCA Article 2 excludes financial instruments",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "ESMA guidelines on qualification of crypto-assets as financial instruments: units in collective investment undertakings",
+        "url": "https://www.esma.europa.eu/sites/default/files/2025-03/ESMA75453128700-1323_Guidelines_on_the_conditions_and_criteria_for_the_qualification_of_CAs_as_FIs.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "EURSPKCC is EUR hedged class FR0014010ON7 of a French professional specialized investment fund. Its token records a fund co-ownership share with accumulating investment returns and redemption at net asset value, rather than a fixed monetary-value payment obligation.",
+      "references": [
+        {
+          "label": "Spiko Digital Assets Cash And Carry Fund prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "SPIKO DIGITAL ASSETS CASH AND CARRY FUND",
+    "issuerDomicile": "France",
+    "licensingRegulator": "AMF authorizes the management company Twenty First Capital under GP-11000029; the professional specialized fund itself is not AMF-authorized",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The issuing vehicle is an unincorporated French FCP co-ownership fund established on 24 July 2025 and managed by Twenty First Capital SAS; Spiko Finance acts as distributor and DLT technology provider, and this fund is separate from SPIKO SICAV. The prospectus states that the fund is a professional specialized fund not authorized by the AMF, that shares are reserved for professional clients under Article 423-27 of the AMF General Regulation, and that shares may not be offered or sold, directly or indirectly, on behalf of or for the benefit of a US Person as defined in Regulation S. Subscription and redemption occur at the daily net asset value, so there is no obligation to redeem for a fixed amount of monetary value. Management-company authorization does not establish a GENIUS payment stablecoin approval. Fund reporting and NAV publication are not stablecoin reserve attestations. The AMF Enforcement Committee decision of 20 December 2021 issued a warning and a 100,000 euro fine to Twenty First Capital over capital, traceability and conflict-of-interest procedures; this review located no U.S. action naming the fund, its manager or Spiko Finance.",
+    "references": [
+      {
+        "label": "Spiko Digital Assets Cash And Carry Fund prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AMF Enforcement Committee decision of 20 December 2021 on Twenty First Capital",
+        "url": "https://www.amf-france.org/en/news-publications/news-releases/enforcement-committee-news-releases/amf-enforcement-committee-fines-asset-management-company-several-breaches-its-professional",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2021-12-20",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

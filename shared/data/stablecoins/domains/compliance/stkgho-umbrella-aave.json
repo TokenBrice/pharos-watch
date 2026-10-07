@@ -1,0 +1,67 @@
+{
+  "id": "stkgho-umbrella-aave",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Umbrella stkGHO is an ERC-4626 staking receipt representing GHO contributed to automated deficit coverage. Redemption delivers GHO after a cooldown at an exchange rate that can decrease through slashing; rewards are claimed separately. It represents a risk-absorption protocol position without a fixed national-currency redemption obligation, outside GENIUS section 2(22).",
+      "references": [
+        {
+          "label": "Aave Umbrella: StakeToken vault shares, cooldown and slashing",
+          "url": "https://www.aave.com/docs/aave-v3/umbrella",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: sections 2(17) and 2(22)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The assessment covers Umbrella stkGHO.v1, separately from GHO, legacy Safety Module stkGHO, and the non-slashable sGHO savings vault. Aave's technical documentation explicitly distinguishes all three staking/savings paths. GHO staking does not itself accrue underlying lending yield; it earns separately claimable Safety Incentives while accepting deficit slashing and withdrawal constraints. The underlying GHO's unsettled payment-stablecoin applicability is not inherited by this risk-absorption receipt. Aave DAO governance or Aave Labs interface operation does not establish a corporate legal token issuer, so issuerEntity and licensing fields are omitted. No payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "Aave Umbrella: StakeToken vault shares, cooldown and slashing",
+        "url": "https://www.aave.com/docs/aave-v3/umbrella",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aave Umbrella help: GHO staking and legacy migration distinction",
+        "url": "https://aave.com/help/umbrella/umbrella",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-06-05",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aave governance: Umbrella StakeToken architecture",
+        "url": "https://governance.aave.com/t/arfc-aave-umbrella-activation/21521",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-20",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: sections 2(17) and 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

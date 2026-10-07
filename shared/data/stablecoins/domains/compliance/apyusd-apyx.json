@@ -16,5 +16,54 @@
         "url": "https://docs.apyx.fi/technical-overview/protocol-contracts-overview/glossary"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "apyUSD is an ERC-4626 non-rebasing yield-vault share over apxUSD. Its exchange rate accrues yield and redemption returns a variable amount of apxUSD, rather than a fixed dollar or other monetary-value payment obligation. It is classified separately from the underlying token as a non-payment-token savings/strategy position; this is not an inherited GENIUS authorization or a finding that the underlying token is excluded.",
+      "references": [
+        {
+          "label": "Apyx apyUSD overview: ERC-4626 savings token",
+          "url": "https://docs.apyx.fi/product-overview/apyusd-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "apyUSD is treated as a non-payment token on its own yield-accruing vault rights, not because of crypto/preferred-equity collateral or user geographic restrictions. No GENIUS payment-stablecoin authorization or foreign exception is asserted. Parent apxUSD remains separately assessed as unclear/no-public-authorization-found. IssuerEntity and issuerDomicile omitted consistently with apxUSD: terms establish Preference Capital (BVI) Ltd. as operator but deny protocol-asset claims against a specific entity, while Preference Foundation is evidenced only as securities owner. Public documentation gives conflicting redemption cooldown descriptions; neither timing claim is needed for the variable-share classification.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Apyx apyUSD overview: ERC-4626 savings token",
+        "url": "https://docs.apyx.fi/product-overview/apyusd-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

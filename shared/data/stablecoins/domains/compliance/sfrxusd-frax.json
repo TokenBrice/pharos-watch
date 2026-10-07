@@ -16,5 +16,62 @@
         "url": "https://docs.frax.com/frxusd/stake-and-unstake-overview"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sfrxUSD is a yield-accruing ERC-4626-like savings-vault share whose frxUSD value per share increases with strategy returns. Share redemption delivers a variable amount of frxUSD rather than a fixed national-currency payment claim.",
+      "references": [
+        {
+          "label": "Frax sfrxUSD strategy and value-accruing share disclosure",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Frax frxUSD staking and unstaking overview",
+          "url": "https://docs.frax.com/frxusd/stake-and-unstake-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assess the savings share separately from frxUSD. The issuer documentation describes Treasury/carry/AMO strategies and increasing asset-per-share value. FIP-430 also describes possible strategy-loss constraints, so public fully-redeemable marketing is not treated as an unconditional guaranteed fiat redemption right. Parent frxUSD charter intent does not authorize sfrxUSD.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "FIP-430 separate sfrxUSD strategy risk",
+        "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-04-21"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking: scope and effective-date discussion",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

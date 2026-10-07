@@ -1,23 +1,5 @@
 {
   "id": "thusd-theo",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "Theo terms reviewed 2026-09-30: Panama operator disclaims governmental registration or licensing; services remain subject to local-law and discretionary geographic restrictions",
-        "url": "https://docs.theo.xyz/legal/terms.md"
-      },
-      {
-        "label": "Theo announcement: gold-backed stablecoin opened in 200 countries (April 2026)",
-        "url": "https://www.prnewswire.com/news-releases/theos-gold-backed-stablecoin-held-steady-through-global-disruption-now-targets-1b-in-deposits-302745928.html"
-      },
-      {
-        "label": "ESMA EMT issuer register (24 September 2026 release, reviewed 2026-09-30): no Theo Protocol Corporation or thUSD entry",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -28,13 +10,19 @@
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-09-30"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Theo thUSD documentation (1:1 USD stablecoin, payments and transfers)",
           "url": "https://docs.theo.xyz/products/thusd.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-09-30"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Theo thUSD mint/redeem documentation: whitelisted stablecoin redemption",
+          "url": "https://docs.theo.xyz/products/thusd/mint-and-redeem.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -49,60 +37,87 @@
     "reserveDisclosureUrl": "https://app.theo.xyz/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Theo Protocol Corporation identifies a Panama registered address in its terms; no incorporation certificate or token-specific issuer agreement is linked. The terms expressly state that the company, platform and services are not registered or licensed by any governmental or regulatory authority. The OCC pending digital-assets licensing table and issuer sources reviewed on 2026-09-30 do not identify a Theo authorization or GENIUS pathway; this is a bounded public-source finding, not an exhaustive review of every federal or state register. The issuer pathway and foreign-exception posture remain unknown. The transparency dashboard displays Theo Protocol Corp and Libeara thBILL attestations and lists Accountable's auditor engagement as in progress, without linking a monthly aggregate independent reserve report. Additional custodian corroboration is described by Theo, not independently verified here. The apparent-payment-stablecoin label is an implementation-watch classification, not a definitive legal conclusion, given the stablecoin-only redemption disclosure.",
+    "notes": "Theo Protocol Corporation and its Panama address are named in the opened platform terms and corroborated by the Bloomberg LEI record, which establishes no financial authorization. Preserve the existing issuerEntity string unchanged. The terms state that the company, platform and services are not registered or licensed by a governmental or regulatory authority. No qualifying public Theo/thUSD approval, application, state qualification, foreign registration or GENIUS pathway statement was identified in the bounded regulator-directory and issuer-source review on 2026-10-07. The issuer pathway and foreign exception remain unknown. The transparency dashboard was retrieved through the web reader using its Jina fallback and displays Theo Protocol Corp attested 2026-06-22, Libeara thBILL holdings attested 2026-06-01, and Accountable auditor engagement in progress. These labels do not establish a monthly aggregate independent reserve attestation. The apparent-payment-stablecoin label remains an implementation-watch assessment rather than definitive statutory inclusion because disclosed direct redemption is only in USDC/USDT. The September Federal Reserve source is a proposal, not issuer authorization; the GENIUS regime remains pre-effective.",
     "references": [
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications: no Theo application identified",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-09-30"
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Theo terms (Theo Protocol Corporation, Panama registration; no license claim)",
         "url": "https://docs.theo.xyz/legal/terms.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Theo transparency dashboard (real-time reserves, self attestation)",
         "url": "https://app.theo.xyz/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act implementation proposal",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Bloomberg LEI: Theo Protocol Corporation identity and Panama address",
+        "url": "https://lei.bloomberg.com/leis/view/213800Z54CHZBZPDL411",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC pending digital assets licensing applications table (reviewed 2026-09-30; no Theo or thUSD applicant)",
-        "Theo legal terms (reviewed 2026-09-30; Panama registered address and explicit governmental registration/license disclaimer)",
-        "Theo thUSD documentation, gold-carry explanation and rendered transparency dashboard (reviewed 2026-09-30; no GENIUS pathway statement)",
-        "Web search for Theo Protocol Corporation license, GENIUS, MiCA, registration or enforcement statements (2026-09-30; no token-specific authorization evidence found)"
+        "OCC digital-assets licensing applications: full public applicant table retrieved by direct HTTP and HTML extraction on 2026-10-07; no Theo applicant identified; this is a bank-licensing table, not an exhaustive GENIUS registry",
+        "NYDFS regulated virtual-currency entity directory and Greenlist opened 2026-10-07; no Theo entity or thUSD identified; existing state licensing is distinct from GENIUS state qualification",
+        "Theo platform terms and thUSD overview/mint-and-redeem documentation opened 2026-10-07; Panama operator, governmental-license disclaimer, payments marketing, whitelist and stablecoin-only redemption",
+        "Theo transparency dashboard opened through web-reader Jina fallback on 2026-10-07; issuer/custodian attestation labels and Accountable engagement in progress, no monthly aggregate independent report established",
+        "OCC Bulletin 2026-3 and September 29 Federal Reserve GENIUS NPRM reopened 2026-10-07; general proposed implementation rules, no Theo approval",
+        "Exact-name Theo Protocol Corporation GENIUS/license/enforcement/OCC and thUSD Theo GENIUS searches run 2026-10-07; no qualifying public issuer-specific approval, application, foreign registration or enforcement record identified"
       ],
-      "summary": "No qualifying Theo Protocol Corporation or thUSD authorization, application or foreign-issuer registration was identified in the OCC pending digital-assets licensing table and issuer disclosures reviewed on 2026-09-30. This negative finding does not assert an exhaustive search of all federal or state registers.",
+      "summary": "No qualifying Theo Protocol Corporation/thUSD GENIUS approval, application, state qualification or foreign-issuer registration was identified in the opened OCC applicant table, NYDFS directory, issuer terms and product disclosures, or exact-name searches on 2026-10-07. General rulemaking proposals and the corporate LEI do not establish issuer approval. This is a bounded public-source finding, not an exhaustive review of every register or proof of illegality. Issuer pathway and foreign exception remain unknown.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-09-30",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC digital assets licensing applications",
           "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "regulator-directory",
-          "accessedAt": "2026-09-30"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Theo terms of use",
           "url": "https://docs.theo.xyz/legal/terms.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-09-30"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-30"
+    "reviewedAt": "2026-10-07"
   }
 }

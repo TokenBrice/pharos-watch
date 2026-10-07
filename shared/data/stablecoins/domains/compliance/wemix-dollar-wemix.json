@@ -1,21 +1,49 @@
 {
   "id": "wemix-dollar-wemix",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "WEMIX Dollar (WEMIX$) is a USD-pegged, fiat-backed stablecoin issued by WEMIX PTE. LTD. (Singapore) under a permissioned mint-and-redemption model collateralized by USDC and fiat reserves. It circulated as the native settlement currency of the WEMIX3.0 gaming blockchain and was accessible to US-person users via international exchanges, matching the GENIUS Act definition of a payment stablecoin. The issuer announced a wind-down and transition to USDC.e in 2025; circulating supply has declined significantly but remains non-zero as of mid-2026 (CoinGecko reports approximately 14.5M WEMIX$ in circulation). Applicability is assessed on the basis of the token's design and issuance during its active life.",
+      "summary": "Historical WEMIX$ was an ecosystem settlement stablecoin whose whitepaper describes USDC collateral and DIOS mint/burn market stabilization, not proven fiat reserves or an issuer obligation to redeem in monetary value. The transition supported conversion to bridged USDC.e; after the July 26, 2026 compromise, the September 21 update describes a separate restricted eqWEMIX$ compensation token exchangeable for USDC.e. Digital-asset conversion does not establish the GENIUS section 2(22) monetary-value obligation, so applicability is unclear for this frozen token.",
       "references": [
         {
           "label": "WEMIX3.0 USD Stablecoin Transition Plan",
           "url": "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "WEMIX Stablecoin Transition announcement (X)",
-          "url": "https://x.com/WemixNetwork/status/1965310595655500170",
+          "label": "WEMIX3.0 Whitepaper v1.15, WEMIX Dollar and DIOS",
+          "url": "https://www.wemix.com/assets/download/WEMIX3.0_Whitepaper_v1.15.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Transition in the WEMIX3.0 Ecosystem",
+          "url": "https://wemix.com/news/stablecoin-transition-in-the-wemix30-ecosystem-0b3d9f934873",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-09-09",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "WEMIX security incident and emergency suspension",
+          "url": "https://wemix.com/ko/news/update-on-the-wemix-security-issue-and-response-measures-06359e6f2a8e",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-26",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "WEMIX$ Security Incident Compensation Update",
+          "url": "https://www.wemix.com/news/wemix-security-incident-compensation-update-be4fc1510d59",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-21",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -29,26 +57,183 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "WEMIX PTE. LTD. (UEN 201903432D, formerly WEMADE TREE PTE. LTD.) is a Singapore-incorporated subsidiary of South Korean game developer WEMADE. The issuer announced in 2025 that WEMIX$ would be wound down and replaced by USDC.e (Circle bridged USDC via Chainlink CCIP). As of June 2026, CoinGecko (the coin's configured detailProvider) reports approximately 14.5M WEMIX$ still in circulation with minimal trading activity (~$33/day volume on WEMIX.Fi), indicating the wind-down is substantially advanced but not yet complete. No GENIUS Act PPSI application, foreign-issuer registration, or authorization announcement has been located. The foreign exception status is not-applicable because the GENIUS Act's foreign-issuer registration framework (Treasury comparability rule) remains in proposed-rules phase as of June 2026 and no determinations have been made. The issuer has made no public announcement of intent to engage with the GENIUS framework.",
+    "notes": "WEMIX PTE. LTD. and Singapore domicile are retained from the existing row: the official Q1 report identifies this entity as a WEMIX Foundation member, but it does not resolve the exact WEMIX$ holder-liability issuer; no stronger legal mapping is claimed. Unsupported fiat-reserve, U.S.-person access and current market/supply assertions are removed. The March 2026 transition plan is historical; July's owner-key compromise halted related services, and September's compensation notice provides a distinct eqWEMIX$ -> USDC.e process, not normal current WEMIX$ fiat redemption. No current WEMIX$ reserve report, ordinary holder redemption policy or monthly attestation was verified; flags remain false. Applicability is corrected to unclear because the evidence establishes USDC/USDC.e mechanisms, not the required monetary-value redemption obligation. No public GENIUS PPSI approval, state qualification, official application or foreign registration was found. Foreign status remains unknown rather than incorrectly calling it not-applicable; proposed framework status does not exclude foreign-issuer obligations. The security incident is not regulator enforcement. Not-yet-restricted records pre-effective GENIUS timing, not live service availability. Independent verification on 2026-10-07 reopened every retained reference URL. The statutory applicability analysis is an editorial assessment rather than a regulator ruling.",
     "negativeEvidenceReview": {
       "sourcesChecked": [
+        "https://public-inspection.federalregister.gov/2026-04089.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
-        "https://www.sgpbusiness.com/company/Wemix-Pte-Ltd",
-        "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
-        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.wemix.com/assets/download/WEMIX3.0_Whitepaper_v1.15.pdf",
+        "https://wemix.com/news/stablecoin-transition-in-the-wemix30-ecosystem-0b3d9f934873",
+        "https://wemix.com/ko/news/update-on-the-wemix-security-issue-and-response-measures-06359e6f2a8e",
+        "https://www.wemix.com/news/wemix-security-incident-compensation-update-be4fc1510d59",
+        "https://wemix.com/news/wemix-quarterly-report-fy2026-q1-f0e0687740a3",
+        "2026-10-07 exact-name searches for wemix-dollar-wemix and its issuer/project on OCC, NYDFS, FDIC, Federal Reserve, Treasury, NCUA and SEC domains for GENIUS/PPSI approval, application, registration and enforcement; no qualifying result located.",
+        "https://x.com/WemixNetwork/status/1965310595655500170"
       ],
-      "summary": "Checked WEMIX official news (no GENIUS engagement found), Singapore corporate registry sources confirming entity identity (UEN 201903432D, formerly WEMADE TREE PTE. LTD.), OCC GENIUS NPRM and Federal Register (no mention of WEMIX or its issuer entity), and web searches for WEMIX + GENIUS Act or US payment stablecoin compliance (no results found). The token is being wound down and the issuer has made no public statements about US stablecoin regulation compliance.",
+      "summary": "As of 2026-10-07 the opened official federal framework sources and NYDFS regulated-entity and Greenlist sections, WEMIX primary disclosures, and bounded exact-name regulator searches did not establish a WEMIX$ PPSI approval, state qualification, official application or foreign registration. Existing money-transmitter/trust frameworks or USDC backing would not transfer regulatory authorization. No public token-specific GENIUS enforcement action was located. Frozen operation and compensation are not regulatory determinations; the exact legal token obligor remains uncertain.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Register: OCC GENIUS Act proposed rule",
+          "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act framework and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS Act requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury issuance, offering, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-regime certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "WEMIX Quarterly Report FY2026 Q1",
+          "url": "https://wemix.com/news/wemix-quarterly-report-fy2026-q1-f0e0687740a3",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-12",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "WEMIX$ Security Incident Compensation Update",
+          "url": "https://www.wemix.com/news/wemix-security-incident-compensation-update-be4fc1510d59",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-21",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "references": [
+      {
+        "label": "WEMIX3.0 USD Stablecoin Transition Plan",
+        "url": "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "WEMIX3.0 Whitepaper v1.15, WEMIX Dollar and DIOS",
+        "url": "https://www.wemix.com/assets/download/WEMIX3.0_Whitepaper_v1.15.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Transition in the WEMIX3.0 Ecosystem",
+        "url": "https://wemix.com/news/stablecoin-transition-in-the-wemix30-ecosystem-0b3d9f934873",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "WEMIX security incident and emergency suspension",
+        "url": "https://wemix.com/ko/news/update-on-the-wemix-security-issue-and-response-measures-06359e6f2a8e",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-26",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "WEMIX$ Security Incident Compensation Update",
+        "url": "https://www.wemix.com/news/wemix-security-incident-compensation-update-be4fc1510d59",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "WEMIX Quarterly Report FY2026 Q1",
+        "url": "https://wemix.com/news/wemix-quarterly-report-fy2026-q1-f0e0687740a3",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-12",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: OCC GENIUS Act proposed rule",
+        "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act framework and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS Act requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury issuance, offering, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-regime certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "WEMIX official transition announcement",
+        "url": "https://x.com/WemixNetwork/status/1965310595655500170",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-09",
+        "accessedAt": "2026-10-07"
+      }
+    ]
   }
 }

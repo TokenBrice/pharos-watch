@@ -1,0 +1,85 @@
+{
+  "id": "aa-falconx-mev-capital",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Pareto exact Ethereum FalconX LP token address",
+        "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md"
+      },
+      {
+        "label": "Pareto integrator guide: variable tranche prices and accrued-interest valuation",
+        "url": "https://docs.pareto.credit/developers/integrators/smart-contract.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "AA_FalconXUSDC is the exact Ethereum FalconX credit-vault LP token, representing an interest-accruing institutional lending position. Deposited USDC is sent to the borrower, with exits dependent on repayment and lending cycles. No fixed monetary-value payment obligation is established for the vault share. The USDC parent is a separate asset.",
+      "references": [
+        {
+          "label": "Pareto exact FalconX vault token addresses",
+          "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Pareto Credit Vault lending and redemption mechanics",
+          "url": "https://docs.pareto.credit/product/credit-vaults.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Pareto FalconX structured credit disclosure",
+          "url": "https://paragraph.com/%40pareto/pareto-structured-products-falconx-m11credit-termfinance",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-09-17",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The tracked address is an Ethereum LP share, not the newer/other Optimism facility, Falcon Finance USDf, or a MEV Capital token. FalconX is described as borrower and M11 Credit as curator, neither establishing an exact legal token issuer or a GENIUS route. issuerEntity is omitted. The token accrues lending performance and repayment risk; USDC reserve attestations or Circle authorizations do not apply to this vault receipt. This scope call does not adjudicate separate securities law.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Pareto exact FalconX vault token addresses",
+        "url": "https://docs.pareto.credit/developers/addresses/product/credit-vaults.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Pareto Credit Vault lending and redemption mechanics",
+        "url": "https://docs.pareto.credit/product/credit-vaults.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Pareto FalconX structured credit disclosure",
+        "url": "https://paragraph.com/%40pareto/pareto-structured-products-falconx-m11credit-termfinance",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-17",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

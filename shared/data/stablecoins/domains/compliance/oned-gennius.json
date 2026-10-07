@@ -1,43 +1,164 @@
 {
   "id": "oned-gennius",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "ONED is a transferable USD-referenced settlement token convertible 1:1 with USDC through eligible Coinbase accounts."
+      "summary": "ONED is marketed as a USD-referenced settlement token, but the governing Coinbase Custom Stablecoin terms give holders ownership of underlying USDC and redemption into that crypto-asset, not an established issuer obligation to repay a fixed amount of national-currency monetary value. Payment use is evidenced; GENIUS classification therefore remains genuinely ambiguous.",
+      "references": [
+        {
+          "label": "Coinbase Custom Stablecoin holder rights and USDC redemption, Appendix 4 section 13",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-22"
+        },
+        {
+          "label": "GENIUS Act section 2: monetary value excludes digital assets",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "redemptionPolicyPresent": true,
-    "notes": "Token-specific U.S. GENIUS authorization, legal issuer pathway and independent financial assurance were not established by the reviewed product, holder and reserve disclosures. Upstream PYUSD/USDC authorization is not local-token authorization. MiCA status is intentionally unassessed; geographic platform restrictions are not a regulatory out-of-scope ruling.",
+    "notes": "Reviewed October 7 2026. Coinbase identifies ONED as a Custom Stablecoin backed 1:1 by USDC and excludes EEA users from its custom-token buy/sell/conversion service. ONED holder terms expressly incorporate Coinbase's U.S. User Agreement. Appendix 4 section 13 gives transferable ownership of custodial USDC and 1:1 redemption into USDC for eligible Coinbase account holders; it does not guarantee the reserve asset's value or fiat repayment. The agreement names Coinbase, Inc. as counterparty but allows Custom Stablecoins to be issued by Coinbase or affiliates; no exact ONED issuing affiliate was established, so issuerEntity and domicile are not guessed. Gennius platform payment marketing does not establish a monetary-value repayment obligation or GENIUS permission. Live itemized Coinbase reserves are an issuer display, not a monthly independent attestation. No downstream token permission is inherited from USDC or Coinbase licensing. General GENIUS DASP restrictions are not yet active; existing sanctions and service eligibility remain separate.",
     "references": [
       {
         "label": "Coinbase ONED custody and conversion",
         "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Coinbase ONED itemized reserve dashboard",
         "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "ONED native holder terms",
         "url": "https://oned.global/#/end-user-terms-and-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Gennius ONED platform terms",
         "url": "https://tc.oned.global/#/oned",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Coinbase Custom Stablecoin legal terms: counterparty, reserve ownership and redemption",
+        "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-22"
+      },
+      {
+        "label": "NYDFS virtual-currency licensing directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS issuer framework remains a proposal",
+        "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Federal Reserve GENIUS standards and applications proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "ONED operative end-user legal module recovered from official application",
+        "url": "https://oned.global/57.ccb54daaf37f73d43cb8.js",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gennius ONED operative platform terms in official application bundle",
+        "url": "https://tc.oned.global/main.90324ac699644a47a9f4.js",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+    "reserveDisclosureUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "monthlyAttestationPresent": false,
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Coinbase Custom Stablecoin help and ONED proof-of-reserves dashboard",
+        "Coinbase U.S. User Agreement Appendix 4 section 13; issuer may be Coinbase or an affiliate",
+        "ONED holder terms recovered from official lazy-loaded legal module https://oned.global/57.ccb54daaf37f73d43cb8.js",
+        "Gennius platform terms recovered from complete official bundle https://tc.oned.global/main.90324ac699644a47a9f4.js",
+        "Independent grouped exact-token GENIUS search for ONED, Open USD, Origin Dollar and Polymarket USD on OCC, FDIC, NCUA, Federal Reserve and Treasury domains; no matching issuer authorization located",
+        "Independent grouped exact-token enforcement search on OCC, Treasury, NYDFS, SEC and CFTC domains; no token-specific GENIUS action located",
+        "OCC February 25 2026 proposed GENIUS rule bulletin, reopened official occ.treas.gov mirror",
+        "Federal Reserve September 24 2026 issuer standards and applications proposals",
+        "Treasury September 30 2026 SCRC certification-procedure interim final rule",
+        "Treasury August 17 2026 announcement distinguishing January 18 2027 expected effective date and July 18 2028 general DASP restriction",
+        "NYDFS virtual-currency regulated-business directory; legacy licenses not equated with GENIUS approval"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified issuer authorization, official GENIUS application or foreign registration was located for ONED and any Coinbase/Gennius ONED issuer in the stated materials and exact-token searches. This is a bounded public-source review, not proof of legal non-compliance or an assertion that no nonpublic application exists. The SCRC IFR is procedural and legacy trust/MTL permissions are not GENIUS issuer qualification. No token-specific GENIUS enforcement action was located; platform or affiliate regulatory history is not treated as token enforcement. The exact legal token issuer remains unresolved, limiting entity-level completeness; the negative conclusion covers the stated token names and opened public materials only.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer framework remains a proposal",
+          "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS standards and applications proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        }
+      ]
+    }
   }
 }

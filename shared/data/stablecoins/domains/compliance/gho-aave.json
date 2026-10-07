@@ -9,20 +9,26 @@
           "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Aave GHO: decentralized, overcollateralized stablecoin",
           "url": "https://aave.com/gho?trk=public_post_main-feed-card-text",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Aave GHO facilitators",
           "url": "https://aave.com/help/gho-stablecoin/facilitators",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Aave current terms: protocol and issuer-role disclosures",
+          "url": "https://aave.com/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -35,49 +41,119 @@
         "label": "GENIUS Act enacted text: payment stablecoin definition and exclusions",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC digital assets licensing applications: public pending-application table",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Aave GHO: decentralized, overcollateralized stablecoin",
         "url": "https://aave.com/gho?trk=public_post_main-feed-card-text",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Aave GHO facilitators",
         "url": "https://aave.com/help/gho-stablecoin/facilitators",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aave current terms: protocol and issuer-role disclosures",
+        "url": "https://aave.com/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve September 2026 GENIUS proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC proposed payment stablecoin issuer standards",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "NCUA GENIUS implementation and proposed applications framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "GENIUS Act enacted text (Public Law 119-27)",
-        "OCC GENIUS Act proposed rule and public releases",
-        "OCC digital assets licensing applications tracker",
-        "Federal Reserve, FDIC, and NCUA GENIUS implementation proposals",
-        "Aave GHO and facilitator disclosures",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "OCC Bulletin 2026-3 and complete digital-assets pending-licensing table",
+        "Federal Reserve September 24, 2026 GENIUS proposals",
+        "FDIC April 7, 2026 proposed PPSI requirements",
+        "NCUA digital-assets GENIUS implementation FAQ",
+        "Treasury September 30, 2026 SCRC procedural rule",
+        "Aave current GHO, facilitators, and terms disclosures",
+        "Token-specific Aave/GHO GENIUS searches across OCC, Federal Reserve, FDIC, NCUA, and NYDFS domains"
       ],
-      "summary": "As of 2026-08-14, the reviewed federal GENIUS implementation and OCC licensing materials showed proposed frameworks and unrelated applicant names, but no public qualifying approval or issuer-specific application naming Aave, GHO, or an identified GHO issuer was located.",
+      "summary": "As of 2026-10-07, the opened federal implementation sources describe proposed issuer frameworks and the OCC pending-charter table lists unrelated applicants. No public qualifying GENIUS approval, application, state qualification, or foreign registration naming Aave, GHO, or a disclosed GHO issuer was located. This bounded public-source conclusion does not exclude confidential or unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications: public pending-application table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve September 2026 GENIUS proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "FDIC proposed payment stablecoin issuer standards",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-07"
+        },
+        {
+          "label": "NCUA GENIUS implementation and proposed applications framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

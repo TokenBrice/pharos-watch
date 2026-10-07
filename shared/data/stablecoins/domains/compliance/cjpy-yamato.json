@@ -1,24 +1,143 @@
 {
   "id": "cjpy-yamato",
-  "mica": {
-    "status": "out-of-scope",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "CJPY targets one Japanese yen and can be minted and redeemed permissionlessly against ETH collateral. The reviewed materials establish a currency-referencing DeFi CDP, but no identified issuer obligation to repay national currency or a currency-denominated deposit. GENIUS section 2(22) therefore remains ambiguous rather than a verified payment-stablecoin classification.",
+      "references": [
+        {
+          "label": "Yamato: CJPY ETH-collateralized yen peg",
+          "url": "https://docs.yamato.fi/en",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yamato: permissionless CJPY minting and redemption",
+          "url": "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yamato: development, governance and risk disclaimer",
+          "url": "https://docs.yamato.fi/en/readme/disclaimer.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, sections 2(17), 2(22), 3 and 20",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "The identifiable developer community and DAO are not established as a legal issuer owing yen redemption. issuerEntity and issuerDomicile are omitted. ETH collateral and protocol redemption documentation are public collateral disclosures, not qualifying cash reserves or an independent monthly reserve attestation. redemptionPolicyPresent is false for an issuer fiat-par policy; the protocol does publish an ETH redemption mechanism. GENIUS remains pre-effective in the reviewed federal landscape; not-yet-restricted records that posture only. No token-specific public regulatory action was located in the recorded searches.",
     "references": [
       {
-        "label": "ESMA MiCA register landing page: ART/EMT issuer registers",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Yamato: CJPY ETH-collateralized yen peg",
+        "url": "https://docs.yamato.fi/en",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        "label": "Yamato: permissionless CJPY minting and redemption",
+        "url": "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Yamato Protocol documentation: decentralized, non-custodial CJPY CDP",
-        "url": "https://docs.yamato.fi/en"
+        "label": "Yamato: development, governance and risk disclaimer",
+        "url": "https://docs.yamato.fi/en/readme/disclaimer.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Yamato Protocol source repository: CJPY collateralized lending design",
-        "url": "https://github.com/DeFiGeek-Community/yamato"
+        "label": "GENIUS Act Public Law 119-27, sections 2(17), 2(22), 3 and 20",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: proposed GENIUS implementation",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Federal Reserve: proposed payment-stablecoin framework and applications",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury: SCRC interim certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS: virtual-currency entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Independently reopened Yamato English overview, CJPY contract/mint/redemption page, disclaimer and official GitHub repository.",
+        "Independently reopened OCC Bulletin 2026-3, Federal Reserve September 24 announcement updated September 29, Treasury September 30 SCRC procedural rule, and complete NYDFS regulated-entity and issuance Greenlist tables.",
+        "Named-token/project search: (CJPY OR JPYT OR APACX OR Alchemix) on OCC, FDIC, Federal Reserve, NCUA and NYDFS domains. No token-specific qualifying authorization located; FDIC academic discussion is not issuer approval.",
+        "Individual token/project searches for GENIUS approval and enforcement: CJPY/Yamato, JPYT/DePhaser, APACX LTD/PHT and Alchemix/alUSD. No qualifying token-specific authorization or action located.",
+        "Reopened Public Law 119-27, including sections 2(17), 2(22) and 3. Consulted the independently researched federal/state landscape briefs; proposed rules and SCRC procedural implementation do not approve named issuers."
+      ],
+      "summary": "As of 2026-10-07, no qualifying public GENIUS issuer approval, state qualification, official application, issuer-announced intent or foreign registration was located for cjpy-yamato in the independently opened token materials, NYDFS tables and named-token searches listed. This is a bounded public-evidence finding and does not exclude confidential or unindexed filings. Proposed implementing rules and ordinary licensing context do not establish token-specific GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: proposed GENIUS implementation",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve: proposed payment-stablecoin framework and applications",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury: SCRC interim certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS: virtual-currency entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.yamato.fi/en"
   }
 }

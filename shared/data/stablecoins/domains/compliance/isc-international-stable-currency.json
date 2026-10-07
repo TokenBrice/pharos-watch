@@ -1,6 +1,83 @@
 {
   "id": "isc-international-stable-currency",
-  "mica": {
-    "status": "out-of-scope"
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ISC is designed for transactions but expressly has no fiat-currency peg: its target price references an appreciating basket of commodities, bonds and equity. The opened documents do not promise redemption for a fixed amount of national currency or a bank deposit. It therefore falls outside the tracked GENIUS payment-stablecoin definition; this assessment does not resolve securities law.",
+      "references": [
+        {
+          "label": "ISC whitepaper: reference value",
+          "url": "https://wp.isc.money/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ISC issuer and reserve rights",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The ISC Issuer function is described as operated by ISC Foundation, but an exact incorporated legal issuer name and domicile were not established, so issuerEntity is omitted. Non-payment-token is a statutory scope label: the product can be used for transactions without satisfying fixed monetary-value stability/redemption. The reserve basket is not shown to be a fund share owned by holders, so excluded-security is not asserted. Proposed quarterly audits do not establish monthly independent attestations. Other securities, investment-product and distribution rules can remain applicable.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ISC whitepaper: reference value",
+        "url": "https://wp.isc.money/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ISC issuer and reserve rights",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ISC reserve basic mechanics",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ISC whitepaper offering disclaimer",
+        "url": "https://wp.isc.money/how-isc-works/disclaimer",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ISC reserve oversight proposal",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

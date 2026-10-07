@@ -14,7 +14,65 @@
       {
         "label": "Ondo IAUon product page",
         "url": "https://app.ondo.finance/assets/iauon"
+      },
+      {
+        "label": "IAUon Final Terms: debt instrument",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "IAUon is a debt-instrument security token issued by Ondo Global Markets (BVI) Limited to track iShares Gold Trust at a variable redemption value. It is an intermediary-issued tracker certificate, not direct ETF ownership or a fixed-dollar payment stablecoin. GENIUS Act section 2(22)(B)(iii) excludes securities.",
+      "references": [
+        {
+          "label": "IAUon Final Terms: debt instrument and exact Ethereum token",
+          "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-11-11"
+        },
+        {
+          "label": "GENIUS Act section 2(22) security exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Ondo Global Markets (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Final Terms identify ISIN VGG7001AAS39 and Ethereum token 0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf. They provide for EU/EEA retail and professional distribution under securities offering documents. This scope assessment does not assert payment-stablecoin authorization or direct title to the underlying IAU shares.",
+    "references": [
+      {
+        "label": "IAUon Final Terms: debt instrument and exact Ethereum token",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-11-11"
+      },
+      {
+        "label": "GENIUS Act section 2(22) security exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

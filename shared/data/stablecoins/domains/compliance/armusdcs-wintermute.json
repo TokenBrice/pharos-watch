@@ -1,0 +1,69 @@
+{
+  "id": "armusdcs-wintermute",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register: EMT and ART issuer files, last update 7 October 2026",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Wintermute USDC Select: exact Ethereum Morpho Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0xA2EAaD0D586cF9FD73bb2c09cF6A7E3e187D68cd/wintermute-usdc-select"
+      },
+      {
+        "label": "Morpho Vault V2: share accounting, strategies and liquidity",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "armUSDCs represents shares in Wintermute USDC Select, a USDC lending vault on Ethereum at 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd curated by Armitage by Wintermute. Morpho Vault V2 aggregates allocated strategy assets, accrues lending returns and recognizes losses in share value. Redemption depends on the current share-to-asset conversion and available liquidity rather than an issuer obligation to redeem each share for a fixed amount of national currency.",
+      "references": [
+        {
+          "label": "Wintermute USDC Select: exact Ethereum Morpho Vault V2",
+          "url": "https://app.morpho.org/ethereum/vault/0xA2EAaD0D586cF9FD73bb2c09cF6A7E3e187D68cd/wintermute-usdc-select",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2: share accounting, strategies and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Armitage by Wintermute: curator and vault allocation disclosure",
+          "url": "https://armitage.wintermute.com/vaults/ethereum/usdc-select",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a variable-value strategy-vault share against the GENIUS Act section 2(22) payment-stablecoin definition. The USDC underlying and its Circle issuer are assessed separately; their authorizations and attestations are not attributed to this share. Armitage by Wintermute is identified as curator in the product disclosures opened on 2026-10-07. No legal share issuer or fixed-dollar redemption obligor is established by those materials, so issuerEntity is omitted. This row does not resolve securities, fund, lending or interface regulation.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

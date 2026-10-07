@@ -3,50 +3,147 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "The issuer describes a transferable fiat-referenced payment token with face-value redemption, rather than a bank deposit or fund share. U.S. offer/sale scope and token-specific GENIUS authorization have not been established."
+      "summary": "The issuer describes a transferable fiat-referenced payment token with face-value redemption, rather than a bank deposit or fund share. U.S. offer/sale scope and token-specific GENIUS authorization have not been established.",
+      "references": [
+        {
+          "label": "Agant GBPA token design: GBP peg and face-value redemption",
+          "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Agant Finance Limited",
     "issuerDomicile": "United Kingdom",
     "foreignExceptionStatus": "unknown",
     "redemptionPolicyPresent": true,
-    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's current company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This is an issuer-disclosed AML registration, not evidence of prudential stablecoin authorization; the linked FCA register page returned a client-rendered loading shell in this review. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. A complete U.S. negative-evidence census was not performed; authorization is unknown, not no-public-authorization-found.",
+    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's current company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This issuer-disclosed AML registration is not evidence of prudential stablecoin authorization. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. The dated public-source negative-evidence review now supports no-public-authorization-found; its boundaries do not support an ineligibility finding. The Nephos September 30, 2026 report supplies public reserve-to-supply figures but expressly disclaims a full audit or formal assurance engagement; a recurring monthly report series was not established. Direct business platform onboarding is limited to UK-incorporated entities, with retail access through onboarded distributors. DASP status reflects the pre-effective GENIUS framework, not permission under other U.S. laws.",
     "references": [
       {
         "label": "Agant GBPA token design",
         "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Agant business platform terms",
         "url": "https://app.agant.io/terms-of-service",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Nephos GBPA reserve attestation as of September 30, 2026",
         "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
         "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital-assets licensing applications inventory",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Agant company-page regulatory footer: FCA FRN 1037671, MLR registration and FSCS/FOS exclusions",
         "url": "https://www.agant.io/company/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-03"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS offer and sale proposal: effective-date and foreign-issuer conditions",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and approved stablecoin list",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+    "reserveDisclosureUrl": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS NPRM, including proposed foreign-issuer registration",
+        "OCC pending digital-assets licensing applications inventory (limited charter-application scope)",
+        "GENIUS Act Public Law 119-27",
+        "Treasury August 17 GENIUS offer/sale proposal and September 30 SCRC procedural rule",
+        "FDIC April 7 prudential implementation NPRM",
+        "Federal Reserve September 29 prudential implementation NPRM",
+        "NYDFS regulated virtual-currency entities and approved-stablecoin lists",
+        "Exact-name public searches on OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Agant Finance/GBPA, BCP Technologies/tGBP, Anchorpoint Financial/HKDAP and HSBC RedCoin, with GENIUS/PPSI/enforcement terms, returned no exact token-specific public approval, application, foreign registration, comparability determination or GENIUS enforcement action (searched 2026-10-07). No nonpublic process or exhaustive all-state census is claimed.",
+        "Exact token issuer terms/product disclosures and reserve/redemption materials listed in this review"
+      ],
+      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official GENIUS application, OCC foreign-issuer registration or Treasury comparability determination was located for Agant Finance Limited or GBPA. The finding is limited to the opened public materials and exact-name searches; it does not establish that the issuer is ineligible or has no nonpublic application.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets licensing applications inventory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS offer and sale proposal: effective-date and foreign-issuer conditions",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and approved stablecoin list",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        }
+      ]
+    },
+    "licensingRegulator": "UK Financial Conduct Authority cryptoasset AML registration (issuer-disclosed FRN 1037671); this is not a GENIUS authorization",
+    "monthlyAttestationPresent": false
   }
 }

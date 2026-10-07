@@ -1,0 +1,82 @@
+{
+  "id": "usp-pikudao",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Piku documentation: USP is classified as a yield-vault whose value rises above the initial $1.00 as strategy yield accrues",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault.md"
+      },
+      {
+        "label": "Piku Terms of Use (last updated 2 June 2026), clause 4.1: 'USP is not linked to USD on a 1-to-1 basis'; PikuDAO is not obliged to maintain any value and USP may depreciate; minting/redemption requires a whitelisted virtual wallet",
+        "url": "https://docs.piku.co/piku/terms-of-use.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Piku's own documentation classifies USP as a yield-vault: it starts at $1.00 of stablecoin backing and its unit value rises as Morini Capital's FX-arbitrage, DeFi and real-world-asset strategies accrue yield. The Terms of Use state that USP is not linked to USD on a 1-to-1 basis, that PikuDAO is not obliged to maintain any value, and that USP may depreciate. There is no issuer obligation to convert or redeem USP for a fixed amount of monetary value, so it is a value-accruing vault position rather than a payment stablecoin.",
+      "references": [
+        {
+          "label": "Piku USP Yield Vault documentation: USP is 'classified as a yield-vault' and its value increases beyond the initial peg as yield accrues",
+          "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Piku Terms of Use clause 4.1: USP is not linked to USD 1-to-1, offers no undertaking of value appreciation or financial benefit, and may depreciate",
+          "url": "https://docs.piku.co/piku/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-02",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Piku Finance Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "New active-coin row assessed under the strategy-vault rubric. Piku Terms of Use identify Piku Finance Limited, British Virgin Islands, as the contracting firm for the platform and its token services. This legal counterparty is used for issuerEntity; no sibling Piku asset was located in the catalog. USP redemption is at a variable current token value in accepted stablecoins, rather than an obligation for a fixed amount of monetary value. The terms exclude U.S. Persons, require wallet whitelisting/KYC for minting and redemption, and disclaim a 1:1 USD link. Non-payment-token describes the product evidence; no securities-law exclusion or regulator authorization is asserted.",
+    "references": [
+      {
+        "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act implementation proposed rule (91 FR 10202)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Piku Terms of Use: Piku Finance Limited (BVI) as contracting firm; United States listed as a Prohibited Jurisdiction; whitelisted-wallet minting and redemption",
+        "url": "https://docs.piku.co/piku/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Piku USP Yield Vault documentation: yield-vault classification and NAV behaviour",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-vault.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Piku documentation introduction: vault product line and PikuDAO governance over backing strategies",
+        "url": "https://docs.piku.co/piku/introduction.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

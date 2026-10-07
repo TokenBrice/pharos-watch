@@ -1,0 +1,77 @@
+{
+  "id": "gtusdcp-gauntlet",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho: gtUSDCp exact vault deployment",
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Morpho: proportional vault shares and ERC-4626 mechanics",
+        "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "gtUSDCp represents proportional USDC lending-vault shares in Morpho Vault V2 on Ethereum and MetaMorpho on Base and Arbitrum. Shares accrue investment yield at a variable asset-per-share exchange rate and redeem into underlying digital assets subject to liquidity. The reviewed materials present a strategy position without a fixed monetary-value issuer redemption obligation or a fixed-value payment-token design.",
+      "references": [
+        {
+          "label": "Morpho: gtUSDCp exact vault deployment",
+          "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho: proportional vault shares and ERC-4626 mechanics",
+          "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho: Vault V2 lending strategies and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho: Base Gauntlet USDC Prime deployment",
+          "url": "https://app.morpho.org/base/vault/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho: Arbitrum Gauntlet USDC Prime deployment",
+          "url": "https://app.morpho.org/arbitrum/vault/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the vault share separately from underlying USDC. GENIUS Act section 2(22) requires a payment/settlement design, an issuer obligation to redeem for fixed monetary value, and a stable-value representation. The reviewed strategy-vault mechanics support the non-payment-token category. No GENIUS authorization, foreign registration or issuer-specific regulator finding is asserted. Gauntlet is identified as curator; the opened product materials do not establish a separate legal token issuer, so issuerEntity and issuerDomicile are omitted. Underlying-token reserve attestations and issuer licenses are not attributed to this vault.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: proposed GENIUS regulations",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

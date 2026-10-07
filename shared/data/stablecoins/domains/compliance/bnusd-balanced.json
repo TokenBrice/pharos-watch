@@ -1,16 +1,171 @@
 {
   "id": "bnusd-balanced",
-  "mica": {
-    "status": "out-of-scope",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "This record tracks legacy ICON bnUSD(old), used to repay collateralized loans and migrate 1:1 into the distinct new bnUSD. Current payment marketing and the v2 Stability Fund concern the new token. No legal issuer obligation to redeem the legacy token for fixed national-currency monetary value is identified in the opened legacy instructions, leaving GENIUS applicability genuinely ambiguous.",
+      "references": [
+        {
+          "label": "Balanced v1 transition guide",
+          "url": "https://docs.balanced.network/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Balanced old/new bnUSD migration",
+          "url": "https://docs.balanced.network/migrate-assets",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Balanced legacy loan repayment and collateral withdrawal",
+          "url": "https://docs.balanced.network/withdraw-funds",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Balanced interface disclaimer",
+          "url": "https://balanced.network/disclaimer/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-26"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Assessment is restricted to the base record's legacy ICON bnUSD(old) and its cross-chain representations. The current v2 stablecoin page does not establish legacy fiat redemption rights, reserves, authorization or an issuer transfer. December 1, 2026 v1 shutdown is still future on the review date. No legal issuer entity was established, so issuerEntity and domicile are omitted. No qualifying public GENIUS approval, state qualification, pending application, foreign registration or issuer-announced route was found in the consulted sources. The framework remains proposed; SCRC procedures do not certify a state or authorize this token. not-yet-restricted records GENIUS pre-effective posture rather than a finding of universal lawful availability. No v2 collateral dashboard or underlying-token report is attributed to legacy reserves.",
     "references": [
       {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Balanced v1 transition guide",
+        "url": "https://docs.balanced.network/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Balanced Dollar official description: decentralised, collateral-backed DeFi dollar",
-        "url": "https://balanced.network/stablecoin/"
+        "label": "Balanced old/new bnUSD migration",
+        "url": "https://docs.balanced.network/migrate-assets",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Balanced legacy loan repayment and collateral withdrawal",
+        "url": "https://docs.balanced.network/withdraw-funds",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Balanced interface disclaimer",
+        "url": "https://balanced.network/disclaimer/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-26"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer requirements proposal",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "New York DFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury proposed GENIUS issuance, offer, and sale rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-08-18/html/2026-16796.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-18"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://docs.balanced.network/",
+        "https://docs.balanced.network/migrate-assets",
+        "https://docs.balanced.network/withdraw-funds",
+        "https://balanced.network/disclaimer/",
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-08-18/html/2026-16796.htm",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22bnUSD%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Balanced+Dollar%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07",
+        "2026-10-07 independent official-domain query: (\"Base Dollar\" OR \"Basedollar\" OR \"bnUSD\" OR \"Balanced Dollar\" OR \"BTCFi\" OR \"BtcUSD\") (GENIUS OR PPSI OR stablecoin), restricted to OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; no exact-token authorization result located."
+      ],
+      "summary": "No qualifying public authorization, state-qualified status, official application, foreign exception or announced GENIUS issuer route for legacy bnUSD(old) was located. Exact-name Federal Register API searches through October 7, 2026 returned zero bnUSD or Balanced Dollar records; OCC and NYDFS public tables contain no matching issuer/token. This public-source review cannot exclude confidential or unindexed filings, and unresolved statutory applicability remains separate from the authorization non-finding.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve GENIUS issuer requirements proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "New York DFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

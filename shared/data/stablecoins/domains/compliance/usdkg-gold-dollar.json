@@ -1,93 +1,181 @@
 {
   "id": "usdkg-gold-dollar",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "USDKG official site: Kyrgyz oversight and distribution information reviewed; no EU offer or venue identified",
-        "url": "https://www.usdkg.com/"
-      },
-      {
-        "label": "Building USDKG for Regulated Markets in 2026",
-        "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026",
-        "quoted": true
-      },
-      {
-        "label": "ESMA Interim MiCA Register landing page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDKG is a USD-pegged, issuer-redeemable stablecoin backed by physical LBMA gold under Kyrgyz Republic oversight; it circulates on Ethereum and TRON and is available to retail and institutional investors globally."
+      "summary": "USDKG was marketed as an issuer-redeemable, USD-referenced token with a 1:1 U.S. dollar peg for cross-border payments on Ethereum and TRON, backed by physical gold. Gold is the collateral, not the promised unit of account, so the securities/commodity-token exclusion is not established. The current issuer website announces termination of all activities, including blockchain operations, under Kyrgyz Cabinet order 639-t dated August 20, 2026, and directs holders to contact the issuer to exchange tokens for fiat or USDT.",
+      "references": [
+        {
+          "label": "USDKG launch: Kyrgyz state-owned issuer, gold reserves and USD payments",
+          "url": "https://www.usdkg.com/blog/kyrgyzstan-launches-50m-gold-backed-usdkg-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-11-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDKG website",
+          "url": "https://www.usdkg.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "OJSC Virtual Asset Issuer (state-owned, Ministry of Finance of the Kyrgyz Republic); Gold Dollar operates the issuance; LLC Virelint Group previously cited as operator",
     "issuerDomicile": "Kyrgyz Republic",
-    "licensingRegulator": "Financial Market Regulatory and Supervisory Service under the Ministry of Economy and Commerce of the Kyrgyz Republic",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
-    "redemptionPolicyPresent": true,
+    "reserveDisclosureUrl": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
     "monthlyAttestationPresent": false,
-    "notes": "USDKG is commodity-backed (physical LBMA gold) but USD-referenced and issuer-redeemable; the gold backing raises a question whether it qualifies as a payment stablecoin under GENIUS (which targets fiat-referenced instruments), but no definitive exclusion exists and the USD peg makes apparent-payment-stablecoin the more conservative classification. No public GENIUS approval, PPSI application, or foreign-issuer exception was found. The issuer is a Kyrgyz state-owned entity (OJSC Virtual Asset Issuer) with no known U.S. regulatory presence. Listed on Hong Kong's OSL HK exchange (May 2026): no U.S. regulatory event. No OFAC, FinCEN, or enforcement action found.",
+    "notes": "The USD reference and advertised payment/redemption function, not physical gold collateral, support apparent-payment-stablecoin applicability. No automatic commodity-token exclusion is inferred. The current homepage is a wind-down notice citing a Kyrgyz Cabinet order and providing a contact-based fiat/USDT exchange route; it does not prove that every redemption was performed or that an unconditional current 1:1 redemption promise survives. Historical November 2025 issuer disclosures identify the Kyrgyz state-owned OJSC issuer and separate Gold Dollar reserve operations. Current license validity is not established, so the previous licensingRegulator field is removed rather than presented as current authorization. The transparency hub now returns 404; reserveDisclosureUrl is replaced by the live historical November 2025 Kreston agreed-upon-procedures report. That limited-scope historical report is neither a current reserve audit opinion nor evidence of monthly attestation. The May 2026 OSL Hong Kong professional-investor listing was a historical distribution event, not U.S. approval or proof of current global availability. No token-specific GENIUS approval, official GENIUS application or registered foreign-issuer exception was located in the dated public-source review. U.S. no-public-action-found is limited to the reviewed regulator searches and FinCEN action list; the foreign wind-down is not misclassified as U.S. GENIUS prohibition. Not-yet-restricted describes the statutory GENIUS DASP timing, not permission to sell under other laws. The public contact-based wind-down exchange notice does not specify a current unconditional 1:1 redemption policy, so redemptionPolicyPresent is omitted. The issuer-hosted cabinet-order PDF was opened separately; its Russian text directs liquidation of OJSC EVA and Coin Nomad Exchange but the extracted text does not display the cited order number or date. The linkage of that order to USDKG termination remains attributed to the issuer homepage.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USDKG website",
         "url": "https://www.usdkg.com/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "USDKG transparency page",
-        "url": "https://www.usdkg.com/transparency",
-        "sourceKind": "issuer-disclosure"
+        "label": "USDKG November 2025 Kreston agreed-upon procedures report",
+        "url": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2025-11-30",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USDKG blog: Building for regulated markets in 2026",
         "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OSL HK USDKG listing announcement (May 2026): no US regulatory event",
         "url": "https://chainwire.org/2026/05/21/osl-strengthens-asias-digital-asset-ecosystem-with-listing-of-state-supervised-gold-backed-stablecoin-usdkg/",
         "sourceKind": "news",
         "sourceDate": "2026-05-21",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDKG launch: Kyrgyz state-owned issuer, gold reserves and USD payments",
+        "url": "https://www.usdkg.com/blog/kyrgyzstan-launches-50m-gold-backed-usdkg-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-11-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementing-rule proposal",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FinCEN public enforcement-action list",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "USDKG website and transparency page",
-        "USDKG blog post on regulated markets 2026",
-        "Federal Register GENIUS Act NPRMs (OCC 2026-04089, FinCEN/OFAC 2026-06963)",
-        "OFAC sanctions list and FinCEN enforcement search for USDKG/Gold Dollar/OJSC Virtual Asset Issuer",
-        "OSL HK listing announcement and press coverage (May 2026)",
-        "Web search for USDKG + GENIUS Act / foreign exception / US regulatory action",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Current USDKG termination homepage, February 10, 2026 regulated-markets article, November 25, 2025 launch/legal-issuer article, all independently reopened",
+        "USDKG transparency URL returned HTTP 404; historical November 2025 Kreston agreed-upon-procedures report independently reopened",
+        "OCC Bulletin 2026-3 proposal and digital asset licensing applications table, all nine current pending names inspected; no USDKG, Gold Dollar or Virtual Asset Issuer match",
+        "Federal Reserve September 24, 2026 GENIUS implementing-rule proposal",
+        "Treasury September 30, 2026 SCRC procedural interim final rule",
+        "NYDFS regulated-entity roster and Greenlist, independently inspected; no USDKG or named issuer match",
+        "FinCEN public enforcement-action list independently inspected",
+        "Named-token/issuer searches across OCC, FDIC, NCUA, Federal Reserve, Treasury and NYDFS for GENIUS/stablecoin authorization, plus OFAC, FinCEN, SEC and CFTC for regulatory actions; no qualifying exact-entity public record located",
+        "May 21, 2026 OSL Hong Kong listing release independently reopened; professional-investor OTC distribution, not U.S. authorization"
       ],
-      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, registered foreign-issuer exception, or enforcement action was located for USDKG, Gold Dollar, or OJSC Virtual Asset Issuer. The issuer operates entirely under Kyrgyz Republic licensing with no known U.S. regulatory presence.",
+      "summary": "As of October 7, 2026, no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official GENIUS application or registered foreign-issuer exception was located for USDKG, Gold Dollar or the publicly identified OJSC Virtual Asset Issuer. No token/issuer-specific U.S. action was located in the reviewed public regulator searches and FinCEN action list; this is not a sanctions-clearance opinion or exhaustive enforcement certification. Foreign licensing, government ownership, an old Hong Kong listing and generic regulatory-design marketing do not establish U.S. permission. The current Kyrgyz termination notice materially supersedes the former claim of ongoing worldwide availability.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital asset licensing applications tracker",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementing-rule proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual-currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN public enforcement-action list",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDKG website",
+          "url": "https://www.usdkg.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-05"
+    "reviewedAt": "2026-10-07"
   }
 }

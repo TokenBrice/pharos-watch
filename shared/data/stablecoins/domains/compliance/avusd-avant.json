@@ -3,12 +3,32 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "avUSD is a non-yield base token with a USDC-denominated mint/redemption rail and an actively managed leveraged market-neutral backing portfolio."
+      "summary": "avUSD is a non-yield base stable token with a 1:1 USDC-denominated mint and redemption rail and an actively managed leveraged market-neutral backing portfolio. The apparent-payment classification is a conservative tracker assessment of its stable-value and redemption presentation, not a finding that the disclosed smart-contract claim establishes the statutory currency or deposit repayment obligation.",
+      "references": [
+        {
+          "label": "Avant core tokens",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Avant Terms of Use (BVI governing law; Avant Protocol Foundation)",
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Enacted GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Avant Protocol Foundation",
-    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -16,43 +36,132 @@
     "reserveDisclosureUrl": "https://app.avantprotocol.com/api/metrics/avusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "avUSD has stablecoin-like reserve and redemption disclosures; no public GENIUS approval or foreign-issuer exception source was found. Terms of Use (avantprotocol.com) govern under BVI law and refer to 'Avant Protocol Foundation and its affiliates' as the operating entity; company profiles list Palo Alto, CA as operational HQ but no US legal entity name is disclosed. BVI domicile retained as primary; issuerPathway kept unknown pending clearer entity structure disclosure.",
+    "notes": "Avant terms identify Avant Protocol Foundation and affiliates, describe avUSD as a programmatic claim against protocol reserves, and state that exchanged assets are beneficially owned by the Foundation. The existing issuerEntity string is retained. BVI governing law does not establish the Foundation's place of incorporation or domicile, so issuerDomicile is omitted pending entity evidence. Platform access is restricted for U.S. persons under the specified terms; EU/EEA persons are not expressly excluded. Public issuer portfolio data is present, but an independent monthly reserve attestation was not located in the reviewed disclosures. No public token-specific GENIUS authorization or foreign registration was found on October 7, 2026. Apparent-payment applicability retains uncertainty about the statutory monetary-value repayment obligation and does not infer authorization from USDC redemption. The pre-effective GENIUS DASP field does not override issuer platform restrictions.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Avant core tokens",
         "url": "https://docs.avantprotocol.com/overview/core-tokens",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Avant dated avUSD portfolio disclosure",
         "url": "https://app.avantprotocol.com/api/metrics/avusd",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Avant Terms of Use (BVI governing law; Avant Protocol Foundation)",
         "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Enacted GENIUS Act: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Avant direct redemption process",
+        "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule (fetched 2026-10-01)",
-        "OCC digital asset licensing applications directory (full applicant table fetched 2026-10-01; no Avant Protocol Foundation or avUSD entry)",
-        "Avant Terms of Use (fetched 2026-10-01)",
-        "Avant core-token documentation (fetched 2026-10-01)",
-        "Scoped web search on 2026-10-01 for Avant and avUSD on occ.gov, occ.treas.gov, federalregister.gov and home.treasury.gov; no exact match returned"
+        "OCC Bulletin 2026-3 and pending digital asset licensing application table, reopened 2026-10-07; official HTML main content extracted directly",
+        "NYDFS virtual currency regulated-entity directory and Greenlist, reopened 2026-10-07",
+        "Federal Reserve September 29 GENIUS NPRM, reopened 2026-10-07 by direct official HTML extraction; Treasury September 30 SCRC procedural rule, reopened 2026-10-07",
+        "Avant core-token documentation, protocol redemption guide and Terms of Use, reopened 2026-10-07 through official GitBook markdown alternates",
+        "Avant Protocol Foundation, avUSD and savUSD with GENIUS, PPSI, enforcement, approval and application: scoped search of OCC, FDIC, Federal Reserve, NCUA, Treasury, NYDFS, SEC, CFTC and FinCEN domains on 2026-10-07"
       ],
-      "summary": "The 2026-10-01 review found no Avant Protocol Foundation or avUSD entry in the OCC digital-asset licensing applicant table and no token-specific GENIUS authorization in the fetched OCC bulletin or issuer disclosures. The scoped search returned no exact match on the named federal domains. The June 2026 broader review is historical and was not renewed; this review is not an exhaustive federal/state approval, foreign-exception or enforcement search.",
-      "reviewer": "Sol curation pass 2026-10-01 (ValA53avUSD)",
-      "reviewedAt": "2026-10-01"
+      "summary": "The opened OCC licensing table and NYDFS directory contain no matching Avant avUSD or Avant Protocol Foundation entry. The opened regulator rulemaking materials and current issuer disclosures provide no token-specific GENIUS approval, pending application or foreign registration. Scoped regulator-domain and issuer-intent searches located no qualifying public authorization or enforcement record. These are bounded public-source findings; confidential or unindexed filings are not excluded. The Treasury procedural rule is not issuer approval.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Avant core tokens",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Avant Terms of Use (BVI governing law; Avant Protocol Foundation)",
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

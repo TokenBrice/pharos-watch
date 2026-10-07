@@ -1,0 +1,101 @@
+{
+  "id": "zys-zephyr-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Zephyr v2.0.0 release: ZYS represents yield-reserve participation",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.0.0"
+      },
+      {
+        "label": "Zephyr Protocol: ZYS yield-reserve share and variable yield",
+        "url": "https://zephyrprotocol.com/"
+      },
+      {
+        "label": "MiCA Article 3: EMT and ART definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ZYS represents a share of the native ZSD yield reserve obtained by staking/converting ZSD. The official v2.0.0 release explains the new reserve-share asset and protocol block-reward yield allocation; the current homepage states variable APY rather than a fixed currency unit. The opened 7 October reserve snapshot gives a ZYS yield price of approximately 1.983929 ZSD per share, consistent with reserve-share accounting. Holders bear protocol reserve/conversion rights in a digital underlying asset, without an evidenced undertaking by a legal issuer to repay each share for fixed national-currency or deposit money. Apply the savings/position-share rubric, independently of the underlying ZSD applicability question.",
+      "references": [
+        {
+          "label": "Zephyr v2.0.0 release: ZYS yield-reserve share mechanics",
+          "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.0.0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Zephyr Protocol: ZYS is a share of the ZSD yield reserve",
+          "url": "https://zephyrprotocol.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Zephyr reserve snapshot: variable ZYS share price",
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The current share value differs from one ZSD and is expected to change with reserve yield and liabilities. This scope assessment rests on native yield-reserve participation and variable redemption accounting, rather than a generic exclusion for all yield-bearing tokens or an asserted securities exemption. A protocol oracle or operating team does not provide evidence of a licensed payment-stablecoin issuer or fixed-money redemption obligation. No legal issuerEntity is assigned. ZSD's unclear GENIUS applicability does not automatically pass through to its yield-share receipt.",
+    "references": [
+      {
+        "label": "Zephyr v2.0.0 release: ZYS yield-reserve share mechanics",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.0.0",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Zephyr Protocol: ZYS is a share of the ZSD yield reserve",
+        "url": "https://zephyrprotocol.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Zephyr reserve snapshot: variable ZYS share price",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

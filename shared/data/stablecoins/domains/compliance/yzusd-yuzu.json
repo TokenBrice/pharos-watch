@@ -1,0 +1,269 @@
+{
+  "id": "yzusd-yuzu",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "yzUSD targets US$1 and supports stablecoin settlement and secondary use, but it is a senior tranche of an actively managed strategy pool. Primary minting/redemption uses USDT0, a digital asset rather than statutory monetary value. The issuer expressly disclaims a guaranteed peg, put and unconditional par redemption and can pause or limit redemptions. Whether it satisfies the GENIUS issuer fixed-monetary-value redemption obligation is therefore genuinely unclear, rather than established by the dollar target alone.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27: statutory text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu Money platform terms",
+          "url": "https://app.yuzu.money/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-15",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu USD stablecoin documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu mint and redeem documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "YUZU FINTECH LLC",
+    "issuerDomicile": "Georgia",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://yuzu.accountable.capital/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "IssuerEntity is the exact legal name in the platform terms and matches the syzUSD wrapper. Georgian FEZ/VASP status is issuer-disclosed, not independently verified here, and does not establish U.S. PPSI status or a registered foreign exception. Accountable publishes live reserve and cryptographic attestation data; no monthly independent CPA reserve examination was located. redemptionPolicyPresent records public USDT0 procedures and eligibility, not a legally unconditional cash redemption right. Qualified/institutional primary access does not by itself create a statutory securities or MiCA exemption. No GENIUS-specific public enforcement action or named official application was found in the bounded reviewed sources. DASP status reflects the opened pre-effective implementation sources, not a general U.S. permission.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act NPRM (Bulletin 2026-3)",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: statutory text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu Money platform terms",
+        "url": "https://app.yuzu.money/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-15",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu USD stablecoin documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu mint and redeem documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu Accountable transparency documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu Accountable reserve dashboard",
+        "url": "https://yuzu.accountable.capital/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Yuzu Accountable live reserve API",
+        "url": "https://cache.accountable.capital/dashboard/yuzu",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act state-regime comparability NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FinCEN/OFAC Joint GENIUS Act AML/CFT NPRM (FR 2026-06963)",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS Act issuer and application rules",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC proposed GENIUS Act requirements and standards",
+        "url": "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA proposed payment stablecoin issuer standards",
+        "url": "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-05-15",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act implementation request for comment",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural regulations",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency business directory and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC public digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+        "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards",
+        "https://home.treasury.gov/news/press-releases/sb0428",
+        "https://home.treasury.gov/news/press-releases/sb0435",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://app.yuzu.money/terms",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem",
+        "Regulator-domain authorization search: \"YUZU FINTECH\" OR \"yzUSD\" \"GENIUS\" OR \"MiCA\" OR \"OCC\"; targeted U.S. regulator-domain authorization search",
+        "SEC/CFTC/Treasury/OCC-domain enforcement search for YUZU FINTECH LLC / yzUSD",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, named official application, foreign-exception registration or GENIUS-specific warning/revocation for YUZU FINTECH LLC / yzUSD was located in the opened sources and named searches. The independent verifier retrieved the OCC digital-assets application tracker through direct HTTP and inspected its public table; no matching applicant was listed. This bank-licensing tracker is not a comprehensive GENIUS approval register, and the bounded negative review is not proof that no application or authorization exists. The opened federal implementation sources describe proposals; the SCRC procedural final rule is not a final primary federal PPSI rule. No foreign qualification is inferred from issuer geography or ordinary licensing.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act NPRM (Bulletin 2026-3)",
+          "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS Act issuer and application rules",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC proposed GENIUS Act requirements and standards",
+          "url": "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA proposed payment stablecoin issuer standards",
+          "url": "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-05-15",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act state-regime comparability NPRM",
+          "url": "https://home.treasury.gov/news/press-releases/sb0428",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act implementation request for comment",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural regulations",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency business directory and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu Money platform terms",
+          "url": "https://app.yuzu.money/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-15",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu USD stablecoin documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Yuzu mint and redeem documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/mint-and-redeem",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC public digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

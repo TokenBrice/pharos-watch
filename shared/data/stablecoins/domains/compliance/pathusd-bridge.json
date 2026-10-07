@@ -4,26 +4,43 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA interim register and scope",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Bridge supported routes: EEA users restricted to USDC and EURC",
+        "url": "https://apidocs.bridge.xyz/get-started/introduction/what-we-support/payment-routes"
       },
       {
-        "label": "Tempo pathUSD documentation: routing and quote-token infrastructure",
-        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
-      },
-      {
-        "label": "Bridge issuance FAQ: partner-issued stablecoins and Bridge issuer-of-record infrastructure",
-        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+        "label": "Tempo pathUSD documentation: Bridge issuance and USD backing",
+        "url": "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens"
       }
     ]
   },
   "genius": {
-    "applicability": "unclear",
+    "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "pathUSD functions as Tempo routing and quote-token infrastructure; its payment-stablecoin treatment remains less clear than consumer-facing Bridge issued stablecoins."
+      "summary": "Tempo documents pathUSD as a Bridge-issued, one-dollar-backed token used as a quote/routing asset in stablecoin payment settlement and as a fallback fee token. Bridge Building Inc. stablecoin terms provide eligible holders a fixed one-dollar fiat redemption obligation. Routing infrastructure rather than consumer-facing promotion does not itself exclude a token designed for settlement from the GENIUS payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "Tempo pathUSD docs",
+          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Bridge Building Inc. stablecoin terms: issuer, reserves and redemption",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory definition, effective date and DASP transition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
     "licensingRegulator": "FinCEN MSB registration and applicable state money-transmitter regulators for Bridge Building Inc. The OCC preliminary conditional approval applies to proposed Bridge National Trust Bank, not the current pathUSD issuer.",
@@ -35,65 +52,146 @@
     "reserveDisclosureUrl": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge (OCC filing ID 343543) received conditional approval for a federally chartered national trust bank on Feb 12, 2026: the same track as Circle, Ripple, Paxos, BitGo, and Fidelity Digital Assets. This is a trust charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act; the PPSI application framework itself remains in proposed-rulemaking. Bridge publicly describes its stack as GENIUS Act-ready. pathUSD is Tempo's TIP-20 quote token issued via Bridge infrastructure; no token-specific GENIUS authorization was located.",
+    "notes": "Current issuer is Bridge Building Inc., not proposed Bridge National Trust Bank. OCC Corporate Decision 1365 conditionally approves organization of that separate bank and withholds final opening approval until conditions are met; it is not a GENIUS PPSI grant. September 2026 Bridge disclosure still describes the bank as non-operational. Bridge publicly markets Open Issuance as GENIUS-ready; issuer-announced-intent here denotes that issuer-level positioning, not a token-specific application or approval. No established GENIUS pathway or primary federal payment-stablecoin regulator for the current issuer was found, so both are unknown. pathUSD's routing/settlement and fee uses, together with BBI's fixed-fiat redemption terms, support apparent-payment-stablecoin. Public reserve API is self-reported; quarterly-described attestations/monthly reports do not establish monthly independent attestations or statutory compliance. No evidence located in the checked sources establishes an earlier section 20 effective date or a current section 3(b) DASP prohibition on pathUSD.",
     "references": [
       {
         "label": "Tempo pathUSD docs",
         "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge Open Issuance",
         "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge issuance FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge OCC conditional trust charter approval (Feb 2026)",
         "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-02-18",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-17",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CoinDesk: Bridge wins OCC initial approval for national trust bank charter",
         "url": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter",
         "sourceKind": "news",
         "sourceDate": "2026-02-17",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin terms: issuer, reserves and redemption",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge reserve reporting and transparency: quarterly attestations and monthly reports",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge current U.S. licenses and registrations",
+        "url": "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mississippi money-transmitter licensee list: Bridge Building Inc., NMLS 2450917",
+        "url": "https://dbcf.ms.gov/wp-content/uploads/2026/02/Money-Transmitter-List-02102026.pdf",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge September 2026 issuer and non-operational trust-bank clarification",
+        "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory definition, effective date and DASP transition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve September 2026 GENIUS proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and approved assets",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge pathUSD live reserve disclosure",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC conditional approvals registry (CAAS filing ID 343543)",
-        "Tempo pathUSD documentation",
-        "Bridge issuance documentation and legal terms",
-        "Bridge blog (OCC conditional approval announcement Feb 2026)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf : proposed BNTB conditional charter; BBI current issuer identified",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html : GENIUS proposed-rule bulletin, title/date metadata reopened",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm : September 2026 proposals",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm : SCRC procedural rule, not issuer authorization",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses : regulated entities and approved-assets list",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc : BBI stablecoin terms",
+        "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations : BBI U.S. money-transmitter/MSB disclosure",
+        "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge : September 2026 non-operational BNTB clarification",
+        "Independent scoped public searches on 2026-10-07 for Bridge Building Inc. and separately USDB/pathUSD with GENIUS, permitted-payment-stablecoin and enforcement terms on OCC, FinCEN, Treasury and NYDFS domains."
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application was located for pathUSD or Bridge; the OCC conditional trust charter is a separate pre-existing pathway. No PPSI approval has been granted to any issuer as of 2026-06-18.",
+      "summary": "No token-specific PPSI/state-qualified grant or official GENIUS application for pathUSD or its current issuer Bridge Building Inc. was located in these checked materials. The opened OCC record approves organization of a separate proposed bank conditionally under existing charter authority, not BBI or pathUSD under GENIUS. No public GENIUS enforcement action naming the current issuer/token was located in the scoped searches. This is a dated, bounded public-evidence review, not an assertion that no application has been filed, no nonpublic matter exists, or no issuer anywhere has approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Bridge September 2026 issuer and non-operational trust-bank clarification",
+          "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and approved assets",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

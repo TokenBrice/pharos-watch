@@ -23,11 +23,10 @@
       "summary": "USDsui is a Bridge-issued U.S. dollar payment stablecoin for Sui with 1:1 redemption through Bridge Open Issuance."
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter, Feb 2026); FinCEN / state money transmitter regulators",
-    "primaryFederalRegulator": "OCC",
+    "licensingRegulator": "FinCEN / state money transmitter regulators (Bridge Building Inc., NMLS 2450917)",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -35,58 +34,165 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge received conditional OCC approval (Feb 12, 2026) to organize Bridge National Trust Bank, NA: an uninsured national trust bank, which maps to the 'federal-qualified-nonbank' PPSI pathway under the OCC's GENIUS Act NPRM. Bridge publicly states its compliance framework 'already positions Bridge to be GENIUS ready.' This is a trust-charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act (which remains in proposed-rules phase). No PPSI approvals exist as of 2026-06-18.",
+    "notes": "Existing issuerEntity Bridge Building Inc. is preserved. Sui identifies Bridge and its Open Issuance platform as USDsui issuer; BBI terms and OCC CD1365 identify BBI as the current xUSD issuer. These sources corroborate the mapping, but no USDsui-specific legal contract naming BBI was located. Bridge publicly markets USDsui/Open Issuance as GENIUS-ready, supporting issuer-announced-intent only. OCC CD1365 grants preliminary conditional approval to a separate proposed Bridge National Trust Bank sponsored by Bridge Ventures LLC, not PPSI approval for Bridge Building Inc. or USDsui. No exact USDsui issuer pathway or GENIUS application was located, so issuerPathway is unknown and OCC is not attributed as its primary GENIUS regulator. The live USDsui reserve API reports cash and Treasury holdings; this and FAQ redemption/reserve disclosures are not monthly accountant attestations. The dated negative review is limited to checked public sources. Rules remain proposed; Treasury expects January 18, 2027 effectiveness, with a separate July 18, 2028 general DASP deadline.",
     "references": [
       {
         "label": "Sui Dollar launch",
         "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-04"
       },
       {
         "label": "Bridge issuance overview",
         "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge issuance FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge OCC conditional approval blog",
         "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-17",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin issuance and par redemption terms",
+        "url": "https://withbridge.com/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDsui live cash and Treasury reserve disclosure",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC pending digital-asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS application and standards proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury issuance and sale proposal; expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures, not issuer approval",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency businesses and greenlisted tokens",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. U.S. money transmitter licenses",
+        "url": "https://bridge.xyz/legal/licenses/us-licenses-and-registrations",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-08"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC conditional charter approval for Bridge National Trust Bank, NA (Feb 12, 2026)",
-        "Sui Dollar launch materials",
-        "Bridge Open Issuance documentation and legal terms",
-        "Bridge OCC approval blog post",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://blog.sui.io/sui-dollar-launch-bridge/",
+        "https://apidocs.bridge.xyz/platform/issuance/overview",
+        "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+        "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "https://withbridge.com/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "https://transparency.bridge.xyz/v0/stablecoins/usd_sui",
+        "2026-10-07 indexed exact-name authorization/application and enforcement searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Bridge Building Inc. / USDsui"
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or approved for Bridge or USDsui. Bridge's OCC conditional charter approval is a trust-charter action under existing OCC authority, not a GENIUS Act PPSI authorization.",
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Bridge Building Inc. / USDsui was located in the listed sources. This is a dated public-evidence finding, not proof that no private or unindexed application exists. Bank-charter and legacy licensing tables are not comprehensive GENIUS registers; proposed rules and SCRC procedural forms do not authorize an issuer.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "OCC pending digital-asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS application and standards proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury issuance and sale proposal; expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures, not issuer approval",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency businesses and greenlisted tokens",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -1,0 +1,132 @@
+{
+  "id": "money-defi-money",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "MONEY was marketed as a transferable USD-targeted permissionless CDP stablecoin, with BTC/ETH collateral managed through LLAMMA rather than a legal issuer obligation to redeem for national currency or a national-currency deposit. The official sunset notice ends team/UI support but preserves autonomous contracts. Historical general stablecoin utility and residual contract operation leave applicability unclear rather than proving that MONEY is a protocol-internal non-payment unit.",
+      "references": [
+        {
+          "label": "defi.money MONEY token mechanics",
+          "url": "https://docs.defi.money/welcome/money/money-a-stablecoin.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md",
+    "monthlyAttestationPresent": false,
+    "notes": "Official May 7, 2025 notice sunsets the project and core support; UI shutdown was scheduled for June 1, 2025, while contracts stay operational for direct position management. No named legal token issuer/domicile or fiat-dollar issuer redemption undertaking was established. ReserveDisclosurePresent records published collateral-mechanics documentation only, which should be read with the sunset warning and is not evidence of a current independently audited reserve report. No monthly independent reserve attestation was located in opened official materials. No token-specific public GENIUS approval, intent statement or regulator action was found through consulted public sources/targeted searches. No official GENIUS status is inferred from historical DeFi branding. GENIUS remains pre-effective; not-yet-restricted is that regime state, not a claim that the discontinued UI accepts users.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-01"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "defi.money MONEY token mechanics",
+        "url": "https://docs.defi.money/welcome/money/money-a-stablecoin.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "defi.money MONEY collateral and LLAMMA mechanics",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "defi.money protocol sunset notice",
+        "url": "https://blog.defi.money/sunsetting-defimoney",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-05-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS Act section 2 payment-stablecoin and monetary-value definitions",
+        "OCC Bulletin 2026-3 and complete pending digital-assets bank-charter directory",
+        "Treasury April state-regime proposal, August issuance/offer-sale proposal and September SCRC procedure",
+        "Federal Reserve September issuer and application proposals",
+        "Independent combined exact-name regulatory-domain query for lisUSD/Lista DAO, MAI/QiDao, Mezo/MUSD, defi.money/MONEY, Supernormal OpCo and River Delta on OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; separate SEC, CFTC, OFAC and NYDFS enforcement/licensing query",
+        "Official protocol issuance, collateral, redemption, governance and legal disclosures listed in references"
+      ],
+      "summary": "As of October 7, 2026, the opened federal sources and exact protocol/token/entity searches did not locate a token-specific public GENIUS permitted-issuer approval, state-qualified designation, official pending application or registered foreign-issuer exception for MONEY. No legal issuer entity with a fixed monetary-value redemption obligation was established. The negative finding is bounded by the consulted public sources and does not exclude unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC certification forms and procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

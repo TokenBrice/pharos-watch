@@ -1,6 +1,130 @@
 {
   "id": "xusd-babelfish",
-  "mica": {
-    "status": "out-of-scope"
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "BabelFish XUSD is marketed as a 1:1 dollar stablecoin aggregator and cross-chain liquidity medium, but protocol withdrawals return underlying digital stablecoins with balancing fees. The opened documents do not establish an issuer legally obligated to redeem for fixed national-currency monetary value, as required by GENIUS section 2(22).",
+      "references": [
+        {
+          "label": "BabelFish XUSD product documentation",
+          "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/what-is-babelfish.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BabelFish stablecoin balancing and withdrawals",
+          "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "BabelFish documents XUSD as a meta-stablecoin aggregating and distributing deposited stablecoins across networks. Withdrawals deliver basket assets and can incur imbalance fees. Documentation identifies FISH governance and multisig-controlled parameters, without naming a legal fiat-redemption issuer or issuer domicile. Those fields are omitted, and DAO language does not establish a blanket regulatory exemption. The reserve-disclosure flag refers to published supported-asset and allocation-policy documentation, not a current independent attestation. No monthly independent reserve report, GENIUS issuer application or authorization was located in the public primary materials reviewed on 2026-10-07.",
+    "references": [
+      {
+        "label": "BabelFish XUSD product documentation",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/what-is-babelfish.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BabelFish stablecoin balancing and withdrawals",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BabelFish DAO governance",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/the-team.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BabelFish risk disclaimer",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/risk.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury section 3 GENIUS proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3: proposed rule, reopened full raw body on 2026-10-07",
+        "OCC pending digital-assets banking-license table: nine visible applicants, raw HTML reopened 2026-10-07; not a comprehensive PPSI register",
+        "GENIUS Act Public Law 119-27: sections 2, 3 and implementation provisions reopened 2026-10-07",
+        "Treasury September 30 SCRC procedural rule and August 17 section 3 proposed-rule release, reopened 2026-10-07",
+        "Independent targeted WSPN/Metallicus/MoonPay/BabelFish GENIUS/PPSI searches on OCC, FDIC, Federal Reserve, NCUA and Treasury domains on 2026-10-07",
+        "FinCEN enforcement index and independent SEC/CFTC/FinCEN/NYDFS named-entity enforcement searches on 2026-10-07",
+        "BabelFish first-party GitBook product, balancing/withdrawal, DAO team and risk documentation",
+        "Independent exact BabelFish/XUSD EU/MiCA search, ESMA EMT/ART files, Coinbase/Kraken venue lists; this is the Rootstock protocol, not StraitsX XUSD"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official application or registered foreign exception was located for BabelFish XUSD or an identified legal issuer. Opened protocol documentation describes DAO governance and digital-stablecoin withdrawals, while official-domain searches and the OCC pending banking-applicant table did not identify BabelFish. Legal applicability and issuer identity remain unresolved; this negative review does not itself prove non-compliance or a statutory exemption.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "BabelFish DAO governance",
+          "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/the-team.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

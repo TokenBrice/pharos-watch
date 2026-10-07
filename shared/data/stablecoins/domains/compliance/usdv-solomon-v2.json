@@ -1,0 +1,146 @@
+{
+  "id": "usdv-solomon-v2",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Replacement USDv is marketed as a spendable dollar at a $1 accounting reference, not a yield-accruing wrapper. Minting and redemption are available only to approved counterparties into approved payout assets; current reserves are USDC and USDG, and the public documents do not establish an identified issuer obligation to redeem holders for fixed monetary value rather than another digital asset. GENIUS payment-stablecoin applicability therefore remains genuinely ambiguous.",
+      "references": [
+        {
+          "label": "Solomon Main Website Terms of Use",
+          "url": "https://solomonlabs.org/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-15"
+        },
+        {
+          "label": "USDv acquiring and redeeming",
+          "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDv peg stability and reserves",
+          "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act payment-stablecoin and monetary-value definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "This row covers the replacement Chancery USDv mint USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk, not the original delta-neutral program or sUSDv. The current reserve description is USDC/USDG; direct Treasury exposure is prospective, not established current backing. Public mint/redemption documentation describes approved counterparties and approved payout assets; holding USDv alone confers no direct redemption access. Main-site terms identify Genesee Holdings Corporation as the Panama interface operator and SOLOMON DAO LLC as IP licensor, expressly not the token issuer; neither is entered as issuerEntity. Separate token/program rights require a written instrument identifying the responsible person, which was not located. Rewards are separate from the dollar token, so yield marketing does not by itself make USDv a non-payment wrapper. No public monthly accountant attestation was located. No official GENIUS approval, application or issuer pathway announcement was found; unclear applicability is not an exemption finding.",
+    "references": [
+      {
+        "label": "Solomon Main Website Terms of Use",
+        "url": "https://solomonlabs.org/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-15"
+      },
+      {
+        "label": "USDv acquiring and redeeming",
+        "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDv peg stability and reserves",
+        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDv transparency and risk",
+        "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Original USDv wind-down and separate replacement program",
+        "url": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-28"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS implementation timetable",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and raw public digital-asset pending-applicant table",
+        "Treasury 17 August 2026 implementation timetable",
+        "SCRC 30 September 2026 interim state-certification procedures",
+        "Federal Reserve 24 September 2026 GENIUS proposal",
+        "NYDFS virtual-currency licensee/greenlist page",
+        "Solomon main-site terms and product, acquiring/redeeming, peg/reserves and transparency/risk documentation; original-token wind-down notice",
+        "Independent exact token/brand searches for GENIUS, MiCA and EU posture; exact issuer/operator-name searches restricted to occ.gov, fdic.gov, ncua.gov, federalreserve.gov, dfs.ny.gov and home.treasury.gov"
+      ],
+      "summary": "No reviewed source identifies replacement USDv, Solomon, or an established legal issuer for this mint as a GENIUS permitted payment stablecoin issuer, state-qualified issuer, official applicant, or federally registered foreign issuer. No token-specific GENIUS pathway announcement or U.S. enforcement action was located. The public token issuer and fixed-monetary-value redemption obligation remain unresolved; website-operator/IP-owner names are not substituted for the issuer. These are bounded public-evidence findings, not proof of the absence of private applications or regulatory engagement.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Treasury GENIUS implementation timetable",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

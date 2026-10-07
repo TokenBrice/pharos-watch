@@ -8,13 +8,92 @@
         "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
       },
       {
-        "label": "Midas mMEV documentation: crypto-denominated yield strategy",
-        "url": "https://docs.midas.app/tokens/mmev"
+        "label": "Midas mMEV KID dated 2 February 2026: tokenized bearer debt security and variable performance redemption",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf"
       },
       {
         "label": "ESMA MiCA Article 3 definitions",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      },
+      {
+        "label": "ESMA MiCA Article 2(4)(a): financial instruments excluded from scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mMEV is a Midas Software GmbH tokenized bearer debt security under its February 2, 2026 key-information document, with redemption based on hypothetical best-efforts liquidation of the market-neutral strategy underlying less fees. Redemption follows underlying portfolio performance or NAV and does not promise a fixed USD 1 payment obligation. The documented debt-security/investment-certificate structure supports the tracker excluded-security classification.",
+      "references": [
+        {
+          "label": "mMEV legal investment-product documentation",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The issuer April 30, 2026 recap announced mMEV discontinuation on May 10 and directed holders to withdraw or reinvest in mROX. The active roster remains the coverage authority for this sweep, so this row covers the documented instrument without asserting a current new offer. That lifecycle notice is not regulatory enforcement. The February 2, 2026 KID provides performance-linked redemption less fees, not a fixed 1:1 USD commitment.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "mMEV legal investment-product documentation",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas eligibility and compliance: U.S. person restrictions",
+        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas mMEV final terms dated February 13, 2025",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2025/04/Midas-Software-Final-Terms-Document-dated-13-February-2025-REF-mMEV.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-02-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas April 2026 recap: announced May 10 mMEV discontinuation",
+        "url": "https://blog.midas.app/midas-in-april-2026-recap/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-30",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -3,67 +3,228 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "sUSD is explicitly designed as a yield-bearing stablecoin that passes T-bill interest to holders via Solana Token-2022 interest extension. The GENIUS Act Section 4(a)(11) prohibits permitted payment stablecoin issuers from paying any form of interest or yield to holders solely in connection with holding the stablecoin. Whether sUSD qualifies as a 'payment stablecoin' subject to this prohibition (and therefore potentially non-compliant as currently structured) or falls outside the payment-stablecoin definition as a yield-bearing investment instrument remains unresolved pending final GENIUS Act implementing regulations. No official guidance has classified yield-bearing RWA-backed stablecoins. Applicability is genuinely unclear."
+      "summary": "Solayer describes sUSD as a dollar-pegged token usable for payments, trading and collateral, with Treasury yield accrued through Token-2022 balance-multiplier mechanics. Its FAQ and withdrawal instructions describe USDC redemption through qualified liquidity providers and off-chain partners. Public token-specific documentation does not identify the legal issuer owing holders a fixed national-currency or bank-deposit redemption obligation, or establish that holders own fund shares. GENIUS Section 2(22) requires an issuer obligation to redeem for monetary value and excludes another digital asset denominated in fixed monetary value. The fixed-dollar payment marketing supports possible payment-stablecoin scope, while USDC-only protocol redemption and unresolved issuer rights leave applicability unclear. Yield alone neither establishes a securities exclusion nor requires waiting for final regulations to make a scope assessment.",
+      "references": [
+        {
+          "label": "Solayer sUSD payment use, Token-2022 mechanics and exact mint",
+          "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Solayer sUSD FAQ",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Solayer sUSD withdrawal process and partner settlement",
+          "url": "https://docs.solayer.org/susd/tutorials/withdraw.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory text: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act NPRM (official Federal Register PDF mirror)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Solayer current sUSD product and USDC redemption description",
+          "url": "https://solayer.org/product/susd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Solayer Labs, Inc.",
-    "issuerDomicile": "United States",
-    "foreignExceptionStatus": "not-applicable",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Solayer Labs, Inc. is a US-incorporated company headquartered in San Francisco (CA corp, doc #6557004). sUSD is a yield-bearing stablecoin backed by US Treasury bills via a partnership with OpenEden (Moody's-rated RWA platform). The yield is passed to holders through Solana Token-2022 interest extension mechanics: a design that sits in regulatory tension with the GENIUS Act's yield prohibition on payment stablecoin issuers. No GENIUS authorization, application, or registration found. No enforcement action found. The applicability question (payment stablecoin vs. excluded yield instrument) will only be resolved once final GENIUS implementing regulations are issued.",
+    "notes": "IssuerEntity retains the pre-sweep value Solayer Labs, Inc. under the strict adjudication rule: reopened sources do not establish a different issuer or a high-confidence basis for removing that attribution. This retained value is not independently verified as the legal sUSD obligor. IssuerDomicile remains omitted because the token-specific documents do not establish the legal issuer domicile. The opened documents identify Solayer protocol/vault authority and qualified liquidity providers, not a corporate holder-redemption obligation. Foreign-exception status is therefore unknown rather than not-applicable. The issuer describes Treasury-backed RWA composition and on-chain market-maker holdings; reserveDisclosurePresent records public backing disclosure, not proof of GENIUS-compliant reserve composition, custody or reconciliation. No monthly independent reserve attestation was found in the opened litepaper, transparency page and base-file sources; a smart-contract security audit is not a reserve audit. Withdrawal instructions require burning sUSD, partner processing and subsequent USDC claim, described as up to two business days (T+1). Eligibility terms exclude persons located or resident in the United States and explicitly permit a U.S. citizen living in France; geographic eligibility does not establish issuer domicile. GENIUS remains in proposal/implementation phase, and not-yet-restricted concerns the Act rather than separate geographic product restrictions. No public token-specific GENIUS approval, application, foreign registration or enforcement action was found in the dated sources searched. The current product page says sUSD is issued by accredited institutions without naming them. General website terms mention Solayer Labs, Inc. only in the copyright-notice contact and contain a placeholder mailing address; they do not establish the sUSD issuer or a token-specific redemption covenant. Dated targeted SEC, CFTC, OFAC, FinCEN and NYDFS enforcement searches found no relevant public action naming the Solayer crypto project; this remains a bounded search with unresolved legal-issuer identity.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC GENIUS Act NPRM (Federal Register)",
-        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
-        "sourceKind": "federal-register"
+        "label": "OCC GENIUS Act NPRM (official Federal Register PDF mirror)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Solayer sUSD FAQ",
         "url": "https://docs.solayer.org/susd/protocol-info/faqs.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Solayer sUSD litepaper",
         "url": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Perkins Coie: OCC GENIUS yield prohibition analysis",
-        "url": "https://www.jdsupra.com/legalnews/stablecoin-interest-yield-and-rewards-2333108/",
-        "sourceKind": "news"
+        "label": "Solayer sUSD payment use, Token-2022 mechanics and exact mint",
+        "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solayer sUSD withdrawal process and partner settlement",
+        "url": "https://docs.solayer.org/susd/tutorials/withdraw.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solayer sUSD eligibility and territorial restrictions",
+        "url": "https://docs.solayer.org/susd/protocol-info/eligibility&risks.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solayer sUSD on-chain market-maker backing and security description",
+        "url": "https://docs.solayer.org/susd/protocol-info/transparency&security.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory text: payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS standards and application procedures",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC organizational interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC proposed GENIUS requirements and standards",
+        "url": "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA digital assets and proposed GENIUS application framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solayer current sUSD product and USDC redemption description",
+        "url": "https://solayer.org/product/susd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solayer website terms and limits of company identification",
+        "url": "https://solayer.org/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM and public releases (Federal Register 2026-04089)",
-        "FDIC GENIUS Act NPRM (Federal Register 2026-06974)",
-        "Solayer issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Perkins Coie / Morgan Lewis / Sullivan & Cromwell GENIUS Act analysis",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and Federal Register 2026-04089 official PDF",
+        "Federal Reserve September 24, 2026 GENIUS standards and applications proposal",
+        "FDIC April 7, 2026 GENIUS standards proposal",
+        "NCUA financial technology and digital assets GENIUS application-framework index",
+        "Treasury September 30, 2026 SCRC organizational rule",
+        "NYDFS virtual-currency business directory and Greenlist",
+        "Official-domain searches for Solayer, Solayer Labs and sUSD across OCC, FDIC, Federal Reserve, Treasury, NCUA and NYDFS; issuer product and redemption disclosures",
+        "Targeted SEC, CFTC, OFAC, FinCEN and NYDFS enforcement searches for Solayer and Solayer Labs on 2026-10-07; unrelated historical equipment-company SEC hits excluded"
       ],
-      "summary": "No GENIUS authorization, official PPSI application, state-qualified status, or foreign-registration has been located for Solayer Labs, Inc. or sUSD. The GENIUS Act framework remains in proposed-rules phase; no PPSI approvals have been granted to any issuer as of 2026-06-18.",
+      "summary": "No public GENIUS approval, state-qualified designation, official application or foreign registration naming Solayer, Solayer Labs and sUSD was found in the opened regulatory materials and targeted official-domain searches as of 2026-10-07. The sources checked contain proposals or procedural implementation rather than an authorization for this token. This is bounded negative evidence, not proof that no confidential or unindexed application exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act NPRM (official Federal Register PDF mirror)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS standards and application procedures",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC organizational interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC proposed GENIUS requirements and standards",
+          "url": "https://www.fdic.gov/news/press-releases/2026/fdic-approves-proposal-implement-genius-act-requirements-and-standards",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA digital assets and proposed GENIUS application framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Solayer Labs, Inc."
   }
 }

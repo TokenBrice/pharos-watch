@@ -8,63 +8,115 @@
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
       },
       {
-        "label": "ESMA MiCA Article 2 scope: financial instruments and funds are excluded from MiCA",
+        "label": "ESMA MiCA Article 2 scope: financial instruments and securitisation positions excluded",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
   },
   "genius": {
-    "applicability": "excluded-security",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "mGLOBAL is a NAV-linked security token issued through a Luxembourg securitisation vehicle for a private-credit strategy, not a payment stablecoin.",
+      "summary": "Midas describes mGLOBAL as a NAV-linked Luxembourg securitisation-compartment security token, with monthly NAV redemptions and use as investment collateral. That issuer description does not establish a security under the U.S. statutes incorporated by GENIUS Act section 2(22). Public product contracts naming the exact legal issuer and its token redemption obligations could not be independently recovered. Applicability remains unclear rather than inferring a categorical U.S. securities exclusion from foreign structuring or variable NAV.",
       "references": [
         {
-          "label": "Midas mGLOBAL disclosure",
+          "label": "Midas mGLOBAL investment, issuer-vehicle and redemption disclosure",
           "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-23"
         },
         {
-          "label": "Midas mGLOBAL product page",
-          "url": "https://midas.app/mGLOBAL",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "label": "GENIUS Act section 2(22): payment definition and U.S. securities exclusions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "issuerEntity": "Aureum Securitisation Fund, Compartment mGLOBAL / Midas Software GmbH",
-    "issuerDomicile": "Luxembourg / Germany",
-    "foreignExceptionStatus": "not-applicable",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerDomicile": "Luxembourg",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Explicit GENIUS exclusion: Midas describes mGLOBAL as a security token with fluctuating NAV and a dedicated Luxembourg securitisation vehicle. The product is tracked here for boundary clarity because its on-chain stablecoin collateral use could otherwise be confused with payment-stablecoin compliance.",
+    "notes": "The June 23, 2026 issuer blog identifies a Luxembourg securitisation-compartment investment, monthly JTC NAV valuation, monthly NAV redemptions and a token-specific reserve/NAV attestation engine. Its security-token label is not a qualified determination under the U.S. securities statutes referenced by GENIUS. The unsupported excluded-security/not-applicable assessment is corrected to unclear with a dated negative authorization review. The previous composite issuerEntity, Aureum Securitisation Fund, Compartment mGLOBAL / Midas Software GmbH, is removed because it combines purported issuer and platform roles and the exact Luxembourg issuer could not be independently verified. The retained Luxembourg domicile describes the disclosed issuance vehicle, not a verified exact entity. Sibling Midas German issuance programmes do not establish mGLOBAL identity. Legal, product and reserve dashboard URLs returned 403 and isolated Chromium remained at Cloudflare verification; unrecovered references are removed. reserveDisclosurePresent refers to the public issuer blog describing its mGLOBAL-specific engine and links, not independently inspected dashboard balances or monthly assurance. Monthly JTC NAV valuation alone does not establish monthly reserve attestation. The no-public-action-found enforcement observation is retained only as historical incumbent metadata, not a fresh exhaustive enforcement search.",
     "references": [
       {
-        "label": "Midas mGLOBAL disclosure: security token, not a stablecoin",
+        "label": "Midas mGLOBAL security-token, NAV, redemption and attestation-engine disclosure",
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-23"
       },
       {
-        "label": "Midas mGLOBAL product page and eligibility notice",
-        "url": "https://midas.app/mGLOBAL",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "label": "GENIUS Act enacted text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC formal proposed rule, 91 FR 10202, and pending Digital Assets Licensing Applications table, recovered with isolated Chromium after incomplete reader extraction",
+        "Federal Reserve September 24, 2026 GENIUS proposed-rule release, updated September 29",
+        "Treasury SCRC procedural IFR, Federal Register September 30, 2026",
+        "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+        "Indexed GENIUS searches for mGLOBAL, Aureum Securitisation Fund and Midas Software GmbH across OCC, Federal Reserve, FDIC, NCUA, NYDFS and SEC domains",
+        "Midas June 23, 2026 token-specific blog; issuer legal/product/reserve pages attempted via reader and isolated Chromium but blocked by Cloudflare verification"
+      ],
+      "summary": "On 2026-10-07, no public GENIUS approval, state qualification, official pending application or registered foreign exception connected to mGLOBAL was found in the inspected OCC pending bank-license table, NYDFS regulated-entity list, federal implementation materials and indexed regulator-domain searches. Exact token issuer identity remains unverified: the composite incumbent names Aureum Securitisation Fund and Midas Software GmbH, while the working token-specific issuer disclosure identifies only a Luxembourg compartment vehicle. This limited negative search is not an exhaustive issuer census or a finding of illegality; token applicability remains independently unresolved.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC public pending digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and stablecoin greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

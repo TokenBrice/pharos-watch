@@ -1,31 +1,5 @@
 {
   "id": "brl1-brl1",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA statement on non-MiCA-compliant ARTs and EMTs",
-        "url": "https://www.esma.europa.eu/sites/default/files/2025-01/ESMA75-223375936-6099_Statement_on_stablecoins.pdf"
-      },
-      {
-        "label": "OKX Europe BRL1 listing",
-        "url": "https://www.okx.com/en-eu/help/okx-to-list-brl1-brl1-for-spot-trading"
-      },
-      {
-        "label": "BRL1 official how-it-works",
-        "url": "https://brl1.io/como_funciona"
-      },
-      {
-        "label": "Bitso BRL1 business page",
-        "url": "https://bitso.com/br/business/products/brl1-brazilian-real-stablecoin"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
@@ -34,67 +8,157 @@
     "issuerDomicile": "Brazil",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://brl1.io/como_funciona",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "The reserve statement for 2026-08-01 identifies BRL1 CONSORTIUM S.A. as issuer and describes the MB, Bitso, Foxbit and Cainvest consortium. This establishes issuer identity, not any U.S. GENIUS authorization or EU offer scope. The existing no-public-authorization and foreign-exception review remains dated 2026-08-14; this pass does not refresh those negative findings.",
+    "monthlyAttestationPresent": false,
+    "notes": "The October 1, 2026 reserve report identifies BRL1 CONSORTIUM S.A. as issuer and explicitly states that it was prepared internally and has not been independently audited. Monthly reserve-report marketing does not establish a monthly independent attestation. GENIUS no-public-authorization and foreign-exception findings were refreshed on 2026-10-07; issuer pathway and foreign qualification remain unknown. Treasury section 3 and substantive federal rules are proposals; the September 30 SCRC rule is procedural. The expected general effective date remains January 18, 2027 and the general DASP restriction begins July 18, 2028. This timing field does not assert unrestricted market access under other law.",
     "references": [
       {
-        "label": "BRL1 issuer reserve self-report for 2026-08-01",
-        "url": "https://drive.google.com/uc?export=download&id=1xIHWuHqRiuNJNaBO4s-9xXbiiEp_24AD",
+        "label": "BRL1 issuer reserve self-report for 2026-10-01",
+        "url": "https://drive.google.com/uc?export=download&id=1BuRUC6u3UTzf17kOChhKby_L9hE5IU73",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-01"
       },
       {
         "label": "OCC GENIUS Act proposed rule (91 FR 10202)",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury state-regime comparability NPRM",
         "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-01",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "BRL1 official how-it-works",
         "url": "https://brl1.io/como_funciona",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OKX Europe BRL1 listing",
+        "label": "OKX BRL1 listing announcement (regional availability conditional)",
         "url": "https://www.okx.com/en-eu/help/okx-to-list-brl1-brl1-for-spot-trading",
         "sourceKind": "news",
         "sourceDate": "2025-12-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bitso BRL1 business page",
         "url": "https://bitso.com/br/business/products/brl1-brazilian-real-stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS prudential and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and issuance context",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal (91 FR 10202)",
-        "OCC GENIUS Act AML/CFT proposed rule and reporting proposal",
-        "FDIC GENIUS Act application and prudential proposals",
-        "Treasury state-regime comparability and AML/CFT proposals",
-        "Public search of Federal Register, OCC, FDIC, Treasury, and state-qualified/foreign-issuer materials for BRL1, BRL1 Network, and consortium members",
-        "BRL1, Bitso, and OKX Europe issuer/venue disclosures"
+        "Opened OCC current digital-asset bank application table (not a complete GENIUS register)",
+        "Opened OCC Bulletin 2026-3 and March 2 GENIUS proposed-rule PDF",
+        "Opened Treasury April 1 state comparability and April 8 AML/CFT proposals; August 17 section 3 proposal",
+        "Opened September 30 SCRC interim procedural rule and September 24 Federal Reserve proposals",
+        "Opened NYDFS current regulated-entity and greenlisted issuance tables",
+        "Primary issuer product, reserve, redemption and terms disclosures",
+        "Public indexed searches of OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS for BRL1, BRL1 CONSORTIUM S.A. and BRL1 Network; excluded unrelated acronym/OCR hits"
       ],
-      "summary": "No public GENIUS approval, official application, state-qualified approval, or registered foreign-issuer exception was located for BRL1 or the BRL1 consortium as of 2026-08-14. Public materials establish a Brazilian-real payment token and reserve/redemption disclosures, but not a U.S. GENIUS filing or registration.",
+      "summary": "As of 2026-10-07, no public GENIUS permitted-issuer approval, state qualification, official GENIUS application, OCC foreign registration, Treasury issuer/jurisdiction comparability determination or token-specific GENIUS enforcement action was located for BRL1, BRL1 CONSORTIUM S.A. and BRL1 Network. This is a bounded public-evidence finding, not proof that no nonpublic filing exists. Foreign-exception eligibility remains unknown; existing foreign AML, banking or corporate status does not establish GENIUS approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS prudential and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and issuance context",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "BRL1 is issued against BRL funding, represented to maintain 1:1 BRL value and burned for redemption in BRL through consortium partners. Its payment and settlement use and fixed fiat redemption support the apparent payment-stablecoin classification; a BRL peg does not exclude the statutory national-currency definition.",
+      "references": [
+        {
+          "label": "BRL1 official how-it-works",
+          "url": "https://brl1.io/como_funciona",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    }
   }
 }

@@ -1,34 +1,34 @@
 {
   "id": "yusd-aegis",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register and scope",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Aegis YUSD product and legal disclosures",
-        "url": "https://aegis.im/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "YUSD is marketed as a 1:1 USD digital dollar and is integrated with wallets, exchanges, and card infrastructure, but it is BTC-backed, yield-bearing, and rewards holders through a delta-neutral funding strategy. Whether that synthetic yield product is a GENIUS payment stablecoin remains unresolved.",
+      "summary": "YUSD is marketed as a 1:1 USD digital dollar and is integrated with wallets, exchanges, and card infrastructure, but it is BTC-backed, yield-bearing, and rewards holders through a delta-neutral funding strategy. Whether that synthetic yield product is a GENIUS payment stablecoin remains unresolved. The reviewed public materials do not establish a token-specific legal issuer obligation to redeem YUSD for a fixed amount of monetary value, as required by Section 2(22).",
       "references": [
         {
           "label": "Aegis YUSD product and legal disclosures",
           "url": "https://aegis.im/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "GENIUS Act statutory summary: payment stablecoins and permitted issuers",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Aegis yield documentation: wallet, exchange and card infrastructure",
+          "url": "https://aegis.im/yield-as-a-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Aegis mint access and collateral",
+          "url": "https://aegis.im/mint",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -41,67 +41,125 @@
     "reserveDisclosureUrl": "https://aegis.accountable.capital:10443/dashboard/YUSD",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Aegis publicly describes YUSD as a BTC-backed, delta-neutral, yield-bearing digital dollar and says its offers are informational rather than a public offer. A legal issuer entity and domicile were not established from the public product materials reviewed. No public Aegis/YUSD GENIUS PPSI approval, official application, state-qualified pathway, or foreign-issuer exception registration was found as of 2026-08-14; GENIUS remains in proposed-rules phase.",
+    "notes": "Aegis describes YUSD as a BTC-backed, delta-neutral, yield-bearing dollar product. Public mint access is KYC/whitelist-restricted and accepts USDT, USDC and DAI; the opened product pages do not establish a public fixed monetary-value redemption obligation. A public Accountable collateral/liability dashboard is available, but its signed reserve snapshots do not establish a monthly independent reserve attestation. Archived June 13, 2025 service terms identify Aegis Vault Ltd. (British Virgin Islands) and separately Aegis DAO Foundation (Cayman Islands); current legal pages returned HTTP 403, so issuerEntity and issuerDomicile remain omitted pending current token-specific attribution. No public GENIUS PPSI approval, official application, state qualification, foreign exception registration or token-specific enforcement action was located in the sources checked on October 7, 2026. The OCC digital-assets table is a limited pending charter-application list, not a complete GENIUS approval register; NYDFS licenses are not GENIUS approvals. Treasury's August 17 proposal anticipates a January 18, 2027 general effective date and a July 18, 2028 DASP offer/sale restriction; neither future milestone establishes a present prohibition. The prior informational-not-public-offer assertion is removed because it was not re-established on the current homepage.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Digital Assets Licensing Applications",
         "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Aegis YUSD product and legal disclosures",
         "url": "https://aegis.im/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "GENIUS Act statutory summary",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis yield documentation: wallet, exchange and card infrastructure",
+        "url": "https://aegis.im/yield-as-a-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis mint access and collateral",
+        "url": "https://aegis.im/mint",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis Accountable public collateral and liability dashboard",
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis service terms (archived 2025-06-13)",
+        "url": "https://web.archive.org/web/20250613164141/https://legal.aegis.im/knowledge-base/terms-of-service-of-aegis-dao-foundation/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-12-10"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and approved stablecoins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury payment stablecoin issuance and foreign-issuer proposal: effective-date expectations",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS Act proposed rules",
-        "OCC Digital Assets Licensing Applications table (checked 2026-08-14; Aegis/YUSD not listed)",
-        "Congress.gov GENIUS Act / Public Law 119-27",
-        "Treasury FinCEN/OFAC GENIUS proposed rule",
-        "Aegis YUSD product and legal disclosures",
-        "Public search for Aegis/YUSD U.S. GENIUS approval, application, or foreign-issuer registration"
+        "OCC Bulletin 2026-3 (February 25, 2026 proposed rules; reopened October 7, 2026)",
+        "OCC Digital Assets Licensing Applications pending table (opened October 7, 2026; no Aegis, Aegis Vault or YUSD entry)",
+        "NYDFS regulated virtual-currency entities and approved stablecoin list (opened October 7, 2026; no Aegis or YUSD entry)",
+        "GENIUS Act enacted Public Law 119-27",
+        "Treasury FinCEN/OFAC April 8, 2026 proposed rule announcement",
+        "Treasury August 17, 2026 issuance/foreign-issuer proposal announcement and future effective-date expectations",
+        "Current Aegis product, yield-infrastructure and mint pages; public Accountable YUSD dashboard",
+        "Archived June 13, 2025 Aegis legal terms; live legal portal blocked by HTTP 403",
+        "October 7, 2026 public searches for Aegis/YUSD GENIUS approval, application and enforcement; exact Aegis Vault name with GENIUS across OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS domains; Aegis/YUSD enforcement searches across SEC, OCC, CFTC, DOJ and NYDFS. No matching token-specific approval, official application, foreign registration or action was located."
       ],
-      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for Aegis or YUSD. The public materials did not identify a legal issuer entity sufficient to map a foreign pathway.",
+      "summary": "No public Aegis/YUSD PPSI approval, state-qualified approval, official GENIUS application or registered/comparable foreign-issuer exception was located as of October 7, 2026 in the bounded regulator records and searches above. The OCC pending charter table and NYDFS licensing list do not constitute complete GENIUS authorization registers; their negative results are limited to those publications. Archived generic terms identify a BVI company, but current token-specific issuer attribution and a fixed monetary redemption obligation remain unresolved. No token-specific GENIUS enforcement action was found in the reviewed records or targeted searches. These negative findings do not establish illegality, a legal exemption, or absence from every possible regulatory record.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Digital Assets Licensing Applications",
           "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Treasury FinCEN/OFAC GENIUS Act proposed rule announcement",
           "url": "https://home.treasury.gov/news/press-releases/sb0435",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-04-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury payment stablecoin issuance and foreign-issuer proposal: effective-date expectations",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

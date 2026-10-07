@@ -1,0 +1,59 @@
+{
+  "id": "autousd-auto-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Auto Finance Autopools: ERC-4626 share valuation and withdrawals",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools"
+      },
+      {
+        "label": "Auto Finance deployment addresses: exact autoUSD Autopool",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "autoUSD is the Ethereum Autopool at 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35 in Auto Finance's deployment list. Autopools are ERC-4626 pooled strategy vaults whose receipt shares represent assets deployed to destinations. Compounding, asset valuation, dilutive fees and withdrawal slippage change the assets claim per share. This is a variable-value strategy position, not an issuer obligation to convert, redeem or repurchase each token for a fixed monetary amount under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Auto Finance Autopool mechanics and share valuation",
+          "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Auto Finance exact autoUSD deployment",
+          "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Scope assessment concerns the autoUSD vault share, not its USDC underlying. A redemption of variable-value vault assets is not a promise of fixed-dollar payment-stablecoin redemption. Circle's USDC authorization does not authorize Auto Finance's share and is not inherited. This does not determine securities, fund or other regulatory treatment and is not a regulator-issued exemption. No verified exact-share legal issuer is assigned.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22) payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

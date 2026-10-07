@@ -3,73 +3,126 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDH is a Bridge-issued U.S. dollar payment stablecoin for Hyperliquid with 1:1 redemption and monthly reserve attestations."
+      "summary": "USDH is a Bridge-issued USD-referenced payment token with issuer redemption at one dollar. The current USDH site directs holders to a Bridge redemption process after the USDH dashboard was withdrawn.",
+      "references": [
+        {
+          "label": "Bridge Building Inc. stablecoin terms",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDH current redemption page",
+          "url": "https://usdh.com/reserves",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter granted Feb 12 2026) / FinCEN MSB",
-    "primaryFederalRegulator": "OCC",
+    "licensingRegulator": "State money-transmitter licenses for Bridge Building Inc., as identified in OCC CD-1365",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://usdh.com/reserves",
+    "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Bridge Building Inc. (Stripe subsidiary) received OCC conditional approval on Feb 12 2026 to organize a federally chartered national trust bank (Bridge National Trust Bank), positioning it as a federal-qualified nonbank under the GENIUS Act framework. No PPSI approval exists: the GENIUS Act PPSI framework remains in proposed-rules phase. USDH sunset was announced May 14 2026 (Coinbase acquires brand assets, Hyperliquid transitions to USDC); USDH dashboard closes July 17 2026 but redemption via Bridge (redeem.bridge.xyz) remains available indefinitely. Circulating supply has declined from ~$101M to ~$21M as of June 2026. Reserve attestations continue during sunset period. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "monthlyAttestationPresent": false,
+    "notes": "USDH is frozen in the Pharos catalog. Bridge Open Issuance expressly includes USDH and advertises GENIUS-ready compliance, supporting issuer-announced-intent only. OCC CD-1365 conditionally approves the proposed Bridge National Trust Bank, a distinct Bridge Ventures LLC subsidiary, and describes Bridge Building Inc. as the existing state-licensed issuer. No opened source establishes that the proposed bank became the issuer of USDH; issuerPathway is therefore unknown for the retained Bridge Building Inc. issuerEntity. The former reserves and migration URLs now redirect to a redemption page saying the USDH dashboard is no longer available. No current public USDH reserve reconciliation or monthly independent attestation was retrievable there, so the presence flags are false for currently available disclosure; this does not deny historical reports. Bridge still provides a redemption procedure subject to eligibility and identity verification. not-yet-restricted describes GENIUS timing only and does not establish unrestricted distribution under other laws.",
     "references": [
       {
         "label": "OCC Conditional Approval: Bridge National Trust Bank (CD-1365, Feb 12 2026)",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "USDH reserves",
-        "url": "https://usdh.com/reserves",
-        "sourceKind": "auditor-report"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge Open Issuance",
         "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge issuance overview",
         "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "USDH migration / sunset page",
-        "url": "https://usdh.com/migration",
+        "label": "USDH current redemption page (former reserves and migration pages)",
+        "url": "https://usdh.com/reserves",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-05-14",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin terms",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (OCC Bulletin 2026-3, CD-1365)",
-        "USDH reserves and issuer documentation",
-        "Bridge issuance documentation and legal terms",
-        "USDH migration/sunset announcement (May 14 2026)",
-        "Federal Register GENIUS Act NPRMs (OCC, FDIC, FinCEN/OFAC, Treasury)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3; grouped exact-issuer GENIUS approval/application/enforcement search across OCC, Federal Reserve, FDIC, NCUA and Treasury",
+        "Federal Reserve September 24, 2026 proposals",
+        "Treasury August 17, 2026 Section 3 proposal",
+        "September 30, 2026 SCRC interim final rule",
+        "NYDFS licensed virtual-currency entities and approved stablecoin list",
+        "FinCEN enforcement-action index",
+        "OCC CD-1365 proposed-bank issuer structure",
+        "OCC active national trust bank list",
+        "Bridge Open Issuance, issuance API documentation and current USDH redemption page"
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application exists for Bridge or USDH as of June 7 2026. Bridge received a conditional OCC national trust bank charter (Feb 12 2026) which maps to the federal-qualified-nonbank pathway but is not a PPSI approval. GENIUS rulemaking remains at NPRM stage; no approvals have been granted to any issuer.",
+      "summary": "As of 2026-10-07, the opened federal proposals, SCRC certification procedure, state licensing list, issuer disclosures and targeted regulator-domain searches did not establish an issuer-specific GENIUS PPSI approval, state qualification, or registered foreign exception for Bridge Building Inc. / USDH. Licensing or registration under earlier regimes is not such authorization. No public GENIUS-specific enforcement action was located in the checked sources; this is a bounded public-evidence review, not a legal compliance finding.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed regulations",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-regime certification interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

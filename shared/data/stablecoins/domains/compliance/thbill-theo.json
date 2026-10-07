@@ -4,32 +4,42 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
+        "label": "MiCA Article 2: qualifying financial instruments are outside MiCA scope",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       },
       {
-        "label": "Theo thBILL product page: tokenized Treasury product representing a proportional fund share with NAV appreciation",
+        "label": "Theo thBILL product page: NAV-appreciating tokenized Treasury exposure",
         "url": "https://theo.xyz/thbill"
+      },
+      {
+        "label": "Theo thBILL yield documentation: fixed share of pooled ULTRA and FILQ exposure; no claim on underlying fund units",
+        "url": "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md"
       }
     ]
   },
   "genius": {
-    "applicability": "excluded-security",
+    "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "thBILL is a NAV-appreciating token backed by institutional money-market fund units, with redemption in USDC or USDT. Theo expressly states holders have no claim on underlying fund units or securities. The GENIUS Act excludes securities from the payment-stablecoin definition; the existing excluded-security classification is an editorial perimeter assessment.",
+      "summary": "thBILL is an appreciating pooled-investment token. The token count remains fixed while redemption value changes with the NAV of Wellington ULTRA and Fidelity FILQ. Redemption settles in USDC or USDT, and holders have no claim on underlying fund units or securities. These features support a non-payment-token assessment without asserting that thBILL itself has an established legal securities classification or a fixed monetary-value redemption obligation.",
       "references": [
         {
           "label": "GENIUS Act: payment stablecoin definition and securities exclusion",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Theo thBILL product page",
           "url": "https://theo.xyz/thbill",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Theo thBILL yield documentation: pooled investments and NAV appreciation",
+          "url": "https://docs.theo.xyz/products/thbill/how-thbill-generates-yield.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -38,36 +48,42 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Theo's current documentation describes exposure to Wellington ULTRA and Fidelity FILQ, appreciating redemption value, and no holder claim on underlying fund units or securities. The existing excluded-security assessment does not establish that thBILL itself is a legally recognized fund share or constitute a formal securities-law opinion.",
+    "notes": "Theo describes a fixed share of a managed investment pool and NAV-based stablecoin redemption. This review classifies the appreciating investment position as non-payment-token/not-applicable. Underlying fund holdings and pooled returns do not independently establish that thBILL itself is a legally recognized fund unit or security. The legal securities classification remains unconfirmed and is unnecessary to this payment-stablecoin perimeter assessment.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications: no Theo/thBILL application identified",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Theo thBILL product page",
         "url": "https://theo.xyz/thbill",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Theo thBILL mint and redeem documentation: KYC and USDC/USDT redemption",
+        "url": "https://docs.theo.xyz/products/thbill/mint-and-redeem.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

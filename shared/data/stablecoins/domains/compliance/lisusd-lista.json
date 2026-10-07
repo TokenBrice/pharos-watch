@@ -1,0 +1,137 @@
+{
+  "id": "lisusd-lista",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "lisUSD is a USD-targeting transferable CDP stablecoin, but the opened materials show collateralized borrowing and limited USDT/USDC PSM conversion rather than a legal issuer obligation to redeem for national currency or a national-currency deposit. PSM exchange into another digital asset does not establish statutory monetary-value redemption. Payment-stablecoin applicability remains genuinely ambiguous.",
+      "references": [
+        {
+          "label": "Lista lisUSD protocol documentation",
+          "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd.md",
+    "monthlyAttestationPresent": false,
+    "notes": "Legal lisUSD issuer entity and domicile were not established and are omitted. Lista terms prohibit U.S.-person interface access, which does not decide GENIUS token applicability or foreign qualification. ReserveDisclosurePresent records published protocol collateral/PSM mechanics rather than an independent monthly financial reserve attestation. No monthly independent reserve attestation or issuer-backed fiat par-redemption policy was located in the opened documentation. Governance retains core-team controls. No token-specific public regulator action was located in targeted regulatory-domain searches. GENIUS is pre-effective; not-yet-restricted describes that regime posture, not permission to bypass issuer interface terms.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-01"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Lista lisUSD protocol documentation",
+        "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Lista DAO interface terms",
+        "url": "https://docs.bsc.lista.org/introduction/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Lista lisUSD PSM conversion limits",
+        "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd/stable-pool-price-stability-module-psm.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Lista governance and core-team powers",
+        "url": "https://docs.bsc.lista.org/governance/lista/governance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS Act section 2 payment-stablecoin and monetary-value definitions",
+        "OCC Bulletin 2026-3 and complete pending digital-assets bank-charter directory",
+        "Treasury April state-regime proposal, August issuance/offer-sale proposal and September SCRC procedure",
+        "Federal Reserve September issuer and application proposals",
+        "Independent combined exact-name regulatory-domain query for lisUSD/Lista DAO, MAI/QiDao, Mezo/MUSD, defi.money/MONEY, Supernormal OpCo and River Delta on OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; separate SEC, CFTC, OFAC and NYDFS enforcement/licensing query",
+        "Official protocol issuance, collateral, redemption, governance and legal disclosures listed in references"
+      ],
+      "summary": "As of October 7, 2026, the opened federal sources and exact protocol/token/entity searches did not locate a token-specific public GENIUS permitted-issuer approval, state-qualified designation, official pending application or registered foreign-issuer exception for lisUSD. No legal issuer entity with a fixed monetary-value redemption obligation was established. The negative finding is bounded by the consulted public sources and does not exclude unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC certification forms and procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

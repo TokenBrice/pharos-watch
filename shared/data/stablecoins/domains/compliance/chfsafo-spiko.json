@@ -26,7 +26,8 @@
           "label": "Exact CHF KID, ISIN FR0014015LG6",
           "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "sourceDate": "2026-07-29",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -37,22 +38,45 @@
     "licensingRegulator": "AMF; UCITS governed by Directive 2009/65/EC",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Fund authorization does not imply GENIUS payment-stablecoin approval. Exact KID and prospectus establish the security/fund exclusion.",
+    "notes": "CHFSAFO is the CHF accumulation share class FR0014015LG6 of SPIKO AMUNDI OVERNIGHT SWAP FUND, a sub-fund of Spiko SICAV. Subscriptions and redemptions execute at the fund net asset value, so there is no issuer obligation to redeem for a fixed amount of monetary value. The prospectus states that the sub-fund's shares may not be offered or sold to a US Person as defined in Regulation S. Fund authorization by the AMF is a securities and fund authorization, not a GENIUS permitted payment stablecoin issuer approval. The AMF Enforcement Committee decision of 20 December 2021 issued a warning and a 100,000 euro fine to the management company Twenty First Capital; that foreign action concerns the manager's capital, traceability and conflict-of-interest procedures, and this review located no U.S. action naming the fund, its manager or Spiko Finance.",
     "references": [
       {
         "label": "Spiko SICAV prospectus, 1 September 2026",
         "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "sourceDate": "2026-09-01",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Exact CHF KID, ISIN FR0014015LG6",
         "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "sourceDate": "2026-07-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AMF Enforcement Committee decision of 20 December 2021 on Twenty First Capital",
+        "url": "https://www.amf-france.org/en/news-publications/news-releases/enforcement-committee-news-releases/amf-enforcement-committee-fines-asset-management-company-several-breaches-its-professional",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2021-12-20",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

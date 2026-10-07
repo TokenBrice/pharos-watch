@@ -1,20 +1,66 @@
 {
   "id": "ybold-yearn",
-  "mica": {
-    "status": "out-of-scope",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "The exact yBOLD product is a transferable ERC-4626 Stability Pool position receipt. Yearn states that one yBOLD represents one BOLD and bare yBOLD does not accrue yield; the separate ysyBOLD product compounds yield. Redemption is for underlying BOLD subject to protocol principal-loss risk, rather than an issuer obligation to pay a fixed amount of national currency or deposit money. The strategy-position classification follows the reviewed holder accounting and GENIUS section 2(17) and 2(22), rather than a general DeFi or securities exclusion.",
+      "references": [
+        {
+          "label": "Yearn yBOLD documentation: BOLD Stability Pool receipt and separate ysyBOLD product",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Bare yBOLD must not be described as the appreciating ysyBOLD vault. DEX liquidity and transferability do not establish a fixed-monetary-value issuer repayment obligation. No token-specific GENIUS approval or legally identified payment-stablecoin issuer is claimed. Liquity BOLD authorization or applicability does not pass through to the Yearn receipt. This is an editorial scope assessment, not a binding legal determination.",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer CSVs reviewed; no Yearn/yBOLD match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Yearn yBOLD documentation: BOLD Stability Pool receipt and separate ysyBOLD product",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Yearn yBOLD: tokenized BOLD Stability Pool vault product, not a fiat-redeemable EMT issuer disclosure",
-        "url": "https://yearn.fi/v3/1/0x9F4330700a36B29952869fac9b33f45EEdd8A3d8"
+        "label": "Yearn yBOLD product page",
+        "url": "https://yearn.fi/v3/1/0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Liquity BOLD & Earn: yBOLD is a third-party Stability Pool product built around decentralized BOLD",
-        "url": "https://docs.liquity.org/v2-faq/bold-and-earn"
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

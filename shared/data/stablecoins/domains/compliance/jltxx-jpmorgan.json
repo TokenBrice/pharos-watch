@@ -5,8 +5,27 @@
     "applicabilityBasis": {
       "summary": "JLTXX represents Token Class shares in a registered U.S. government money-market fund under the Investment Company Act of 1940, rather than a payment-stablecoin claim. GENIUS Act Section2(22)(B)(iii) excludes securities under the 1933/1934/1940 Acts while preserving the statutory proviso for an instrument that otherwise meets the payment-stablecoin definition. This fund-share review establishes excluded-security applicability, not GENIUS authorization.",
       "references": [
-        { "label": "SEC-filed exact fund Token Class prospectus", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm", "sourceKind": "issuer-filing" },
-        { "label": "GENIUS Act, Public Law119-27, Section2", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf", "sourceKind": "statute" }
+        {
+          "label": "JPMorgan JLTXX Token Class factsheet and investment-company fund-share terms",
+          "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-31",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "JPMorgan fund launch, registered government-MMF identity",
+          "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-13",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act, Public Law119-27, Section2",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
       ]
     },
     "authorizationStatus": "not-applicable",
@@ -15,10 +34,28 @@
     "issuerDomicile": "United States",
     "licensingRegulator": "SEC (Investment Company Act registration; not GENIUS payment-stablecoin issuer authorization)",
     "references": [
-      { "label": "SEC-filed fund Token Class registration and prospectus", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm", "sourceKind": "issuer-filing" },
-      { "label": "JPMorgan fund launch, registered government-MMF identity", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/", "sourceKind": "issuer-disclosure" }
+      {
+        "label": "JPMorgan JLTXX Token Class factsheet and investment-company fund-share terms",
+        "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-31",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "JPMorgan fund launch, registered government-MMF identity",
+        "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "JPMorgan JLTXX current product facts and CUSIP",
+        "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

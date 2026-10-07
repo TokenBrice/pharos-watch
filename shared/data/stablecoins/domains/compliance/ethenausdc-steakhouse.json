@@ -1,0 +1,65 @@
+{
+  "id": "ethenausdc-steakhouse",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho Ethena x Steakhouse USDC vault",
+        "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+      },
+      {
+        "label": "Morpho ERC-4626 proportional shares and share-price appreciation",
+        "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ethenaUSDC represents a yield-accruing USDC-denominated lending-vault position with variable assets per share and liquidity-dependent withdrawals. The opened product and protocol disclosures establish a strategy share rather than a fixed-value payment or settlement instrument or an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho Ethena x Steakhouse USDC vault",
+          "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho ERC-4626 assets and shares mechanics",
+          "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-07 applies to the vault share separately from underlying USDC. Carniceria Tropical SA is identified in current terms as the Panama service operator and vault curator; the opened materials do not establish it, Steakhouse Financial Ltd, Circle, Ethena, or Zama as a separate legal payment-stablecoin issuer for this share. issuerEntity is therefore omitted consistently across these vault variants. Redemption follows smart-contract asset/share accounting and available strategy liquidity, without a fixed-dollar issuer promise. No GENIUS issuer authorization, foreign registration, or issuer pathway is asserted. Underlying USDC reserve reports and authorizations are not vault-level attestations or authorizations. This scope assessment does not determine the application of securities law or authorize distribution of the yield product.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

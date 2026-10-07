@@ -12,5 +12,103 @@
         "url": "https://assets.backed.fi/products/bc3m"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "bC3M is a tokenized tracker certificate and debt security referencing the Amundi ETF GOVIES 0-6 Months EUROMTS Investment Grade UCITS ETF. Its price follows underlying EUR-denominated government-bill ETF value rather than an issuer commitment to redeem for a fixed euro amount. Issuer documentation describes bTokens as tokenized securities/debt instruments; GENIUS section 2(22)(B)(iii) excludes securities from the payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "Backed bC3M product and eligibility disclosure",
+          "url": "https://assets.backed.fi/products/bc3m",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-05-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Backed bToken debt-instrument structure",
+          "url": "https://assets.backed.fi/structure",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act enacted security exclusion, section 2(22)(B)(iii)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Backed Assets (JE) Limited",
+    "issuerDomicile": "Jersey",
+    "licensingRegulator": "Swiss DLT Act registered uncertificated securities framework",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://assets.backed.fi/structure",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Security exclusion is supported by the exact tracker-certificate product rights and issuer debt-instrument disclosure. US-person restrictions are a separate distribution fact, not the basis of the security exclusion. New bToken issuance is closed; standard redemption remains supported during the end-2026 wind-down. Swiss DLT issuance structure does not change the Jersey issuer domicile or confer GENIUS PPSI authorization. Reserve disclosure denotes public underlying-collateral/product disclosure; the retired live dashboard is not treated as current quantitative reserve evidence. Automated Chainlink/Network Firm PoR does not establish a monthly independent accountant attestation. No named U.S. regulator enforcement action was found in exact-issuer official-domain searches on 2026-10-07. NAV-based redemption remains available to eligible holders. It does not establish a fixed 1:1 national-currency redemption policy, so redemptionPolicyPresent is false under the tracker field definition.",
+    "references": [
+      {
+        "label": "GENIUS Act enacted full text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed bC3M product and eligibility disclosure",
+        "url": "https://assets.backed.fi/products/bc3m",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-05-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed product structure and underlying collateral disclosure",
+        "url": "https://assets.backed.fi/structure",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed current onboarding and redemption eligibility",
+        "url": "https://assets.backed.fi/onboarding",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed bToken wind-down and continued redemption",
+        "url": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed issuer identity and Jersey address",
+        "url": "https://assets.backed.fi/privacy-notice",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed proof-of-reserve methodology",
+        "url": "https://backed.fi/news-updates/chainlink-proof-of-reserve-is-now-active",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

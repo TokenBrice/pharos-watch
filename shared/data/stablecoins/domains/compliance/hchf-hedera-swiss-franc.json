@@ -1,0 +1,157 @@
+{
+  "id": "hchf-hedera-swiss-franc",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "HLiquity official repository: no operator, control or holder claim against Swisscoast AG or another entity",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md"
+      },
+      {
+        "label": "European Commission MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "HCHF is offered as a Swiss-franc-pegged stablecoin, but its immutable, governance-free protocol exchanges burned HCHF for HBAR collateral, not issuer fiat redemption. The developer disclaims operation, transaction control and any holder claim against a person or entity. Payment-stablecoin applicability is therefore genuinely uncertain.",
+      "references": [
+        {
+          "label": "GENIUS Act enacted payment-stablecoin and monetary-value definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "HLiquity official repository: Swisscoast AG disclaims operation, control and holder claims",
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "HLiquity docs: HCHF redemption for HBAR collateral",
+          "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "HCHF is not Swiss national currency merely because it targets CHF. Swisscoast AG is identified as the software developer, not established as a legally obligated payment-stablecoin issuer; issuerEntity is intentionally omitted. Public documentation describes technical collateral redemption rather than a contractual fixed-monetary-value repayment obligation. No token-specific GENIUS authorization, official filing or foreign exception was located; pre-effective GENIUS timing is not a finding of unlawful U.S. distribution.",
+    "references": [
+      {
+        "label": "GENIUS Act enacted statutory definitions and effective date",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "HLiquity official repository: Swisscoast AG disclaims operation, control and holder claims",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "HLiquity docs: HCHF redemption for HBAR collateral",
+        "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "Federal Reserve September 24, 2026 issuer and application proposals",
+        "FDIC April 7, 2026 requirements-and-standards proposal",
+        "NCUA Financial Technology and Digital Assets page: GENIUS implementation and licensing FAQs",
+        "SCRC September 30, 2026 procedural interim final rule",
+        "NYDFS regulated-entities table and Greenlist",
+        "Federal Register API document search: Frankencoin OR ZCHF OR dEURO OR EURO3 OR HLiquity OR HCHF; count 0",
+        "Enacted GENIUS Act Public Law 119-27, sections 2, 18 and 20",
+        "HLiquity official README legal disclaimer and overview",
+        "HLiquity HCHF collateral-redemption documentation",
+        "Public HLiquity/HCHF GENIUS searches",
+        "Independent verifier query: named tokens and Swisscoast with GENIUS/PPSI/OCC/enforcement; no qualifying public match located on 2026-10-07"
+      ],
+      "summary": "No HCHF / HLiquity / Swisscoast AG-specific federal PPSI approval, official application, state-qualified GENIUS authorization or OCC-registered foreign-issuer exception was located in the opened public regulatory sources and protocol disclosures. The search does not rule out a non-public filing. Collateralized protocol mechanics do not establish an issuer obligation to redeem for fixed monetary value, so applicability remains unclear rather than authorized or definitively excluded.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS Act requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA GENIUS Act implementation and proposed applicant framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register document search for HCHF, HLiquity, ZCHF, Frankencoin, dEURO and EURO3: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frankencoin%22%20OR%20%22ZCHF%22%20OR%20%22dEURO%22%20OR%20%22EURO3%22%20OR%20%22HLiquity%22%20OR%20%22HCHF%22&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "HLiquity official repository: Swisscoast AG disclaims operation, control and holder claims",
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "HLiquity docs: HCHF redemption for HBAR collateral",
+          "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

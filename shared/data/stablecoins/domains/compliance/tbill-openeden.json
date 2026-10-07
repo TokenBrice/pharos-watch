@@ -3,19 +3,32 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "TBILL is a tokenized fund interest (NAV-appreciating share of Treasury Bills Institutional Liquidity Limited, a BVI Registered Professional Fund). The GENIUS Act expressly excludes securities under the Securities Act of 1933 and Investment Company Act of 1940 from the definition of payment stablecoin. A BVI professional fund interest is a securities-law construct, not a fixed-value payment instrument, and TBILL's NAV-based pricing, yield-bearing structure, and KYC-gated institutional-only access are all inconsistent with a payment stablecoin.",
+      "summary": "TBILL contractually represents an investor economic interest in a pooled BVI professional fund and a proportional legal claim on its net asset redemption value. The issuer docs and platform name the fund and describe NAV-per-token pricing and whitelisted subscriptions/transfers. These fund-interest rights support the GENIUS section 2(22)(B)(iii) securities exclusion independently of reserve assets or yield alone.",
       "references": [
         {
           "label": "OpenEden TBILL introduction: BVI Registered Professional Fund structure",
           "url": "https://docs.openeden.com/tbill/introduction",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "GENIUS Act S.1582: payment stablecoin definition excludes securities",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "label": "GENIUS Act Public Law 119-27, payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
           "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "OpenEden TBILL product structuring",
+          "url": "https://docs.openeden.com/tbill/product-structuring",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OpenEden TBILL platform issuer disclosure",
+          "url": "https://app.openeden.com/tbill?chain=mainnet",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -27,25 +40,58 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "TBILL is a tokenized Treasury fund interest issued by Treasury Bills Institutional Liquidity Limited, a BVI-regulated professional fund managed by BNY Investment Management and custodied by BNY. It is explicitly excluded from the GENIUS payment stablecoin definition as a fund/securities construct. NAV-based pricing, yield-bearing structure, and institutional-only KYC access are all inconsistent with a payment stablecoin. No GENIUS authorization posture applies.",
+    "notes": "TBILL is a tokenized fund interest issued by Treasury Bills Institutional Liquidity Limited, a BVI professional fund. The live platform confirms that legal issuer; issuer docs identify BNY Mellon Investment Management Singapore Pte. Limited as investment manager and BNY as custodian. Subscription/redemption and legal economic rights are NAV-based and whitelist-gated. Public fund-asset/NAV disclosure and a NAV redemption policy are present. The redemptionPolicyPresent field remains false because the tracker defines it as a public 1:1 redemption policy, which the fund does not offer. Fund-administrator daily/monthly NAV reports and the EY processes/controls review are not monthly independent stablecoin reserve attestations. GENIUS payment-stablecoin authorization posture is not applicable to this fund security. A 2026-10-07 public search for OpenEden/TBILL SEC, CFTC and OFAC enforcement did not locate an action naming this token or issuer; this is not regulatory clearance or a statement about nonpublic investigations.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OpenEden TBILL introduction",
         "url": "https://docs.openeden.com/tbill/introduction",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OpenEden TBILL product structuring",
+        "url": "https://docs.openeden.com/tbill/product-structuring",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OpenEden TBILL platform issuer disclosure",
+        "url": "https://app.openeden.com/tbill?chain=mainnet",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OpenEden TBILL FAQ",
+        "url": "https://docs.openeden.com/tbill/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OpenEden TBILL Trust & Transparency",
+        "url": "https://docs.openeden.com/tbill/trust-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosureUrl": "https://docs.openeden.com/tbill/trust-and-transparency"
   }
 }

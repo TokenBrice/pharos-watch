@@ -9,16 +9,16 @@
           "label": "Issuer token terms",
           "url": "https://tether.to/en/legal/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Tether International, S.A. de C.V.",
     "issuerDomicile": "El Salvador",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
     "redemptionPolicyPresent": true,
@@ -28,11 +28,128 @@
         "label": "Issuer token terms",
         "url": "https://tether.to/en/legal/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC digital assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BDO aggregate fiat-token reserve report at June 30, 2026",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-31"
+      },
+      {
+        "label": "Tether USA₮ launch and USDT readiness statement",
+        "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-27"
       }
     ],
-    "notes": "GENIUS authorization and foreign-exception status are unresolved. Local financial-service or issuer claims do not prove U.S. permission. MiCA scope was not resolved and no MiCA row is authored. No negative authorization or enforcement finding is asserted. Reserve report engagement is aggregate quarterly reasonable assurance, not dedicated MXNT reserves.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "notes": "Reviewed 2026-10-07. Tether International, S.A. de C.V. is the exact current issuer in the February 26, 2026 terms. MXN tokens are redeemable for one Mexican peso per token, less fees, by eligible verified customers. The published June 30, 2026 BDO report is aggregate quarterly reasonable assurance over shared fiat-token reserves; it does not establish dedicated MXNT reserves or monthly attestations. No MXNT-specific GENIUS approval, application, intent or foreign exception was located. Tether statements concerning USDT GENIUS readiness and Anchorage-issued USA₮ do not establish MXNT intent or authorization. Current issuer licensing claims concern Salvadoran CNAD registration. GENIUS remains pre-effective; expected January 18, 2027 effectiveness and separate July 18, 2028 general DASP restriction do not establish current foreign registration.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "licensingRegulator": "CNAD, El Salvador (issuer disclosure; not U.S. GENIUS permission)",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and March 2, 2026 GENIUS implementation proposed rule, including the full official Federal Register HTML",
+        "OCC current pending digital-assets licensing applications table (nine rows)",
+        "Federal Reserve September 29, 2026 implementation proposed rule in the Federal Register",
+        "FDIC April 7, 2026 notice of proposed GENIUS requirements and standards",
+        "NCUA financial-technology and digital-assets page describing its proposed GENIUS approval framework",
+        "Treasury August 17, 2026 issuance, offer and sale proposal announcement",
+        "Treasury September 30, 2026 SCRC certification procedural rule",
+        "NYDFS regulated virtual-currency entity directory and greenlist",
+        "Exact MXNT GENIUS, OCC and enforcement searches",
+        "Tether February 26, 2026 legal terms identifying Tether International, S.A. de C.V. and MXN redemption",
+        "BDO aggregate Tether fiat-token reserve assurance report at June 30, 2026",
+        "Tether USA(T) launch statement identifying Anchorage Digital Bank as USA(T) issuer and discussing USDT separately"
+      ],
+      "summary": "In the public sources checked on 2026-10-07, no token-specific GENIUS PPSI approval, state qualification, official application, OCC foreign-issuer registration or Treasury foreign comparability determination was found for MXNT / Tether International, S.A. de C.V. This is a bounded public-evidence finding, not proof that no confidential application exists. No token-specific public U.S. regulatory action was located. Existing charters and foreign licenses are not GENIUS approval.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury GENIUS issuance, offer and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC digital assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

@@ -1,35 +1,29 @@
 {
   "id": "thgold-theo",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "MiCA Article 2: financial instruments and funds are outside MiCA scope",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
-      {
-        "label": "thGOLD product page (tokenized gold fund exposure, early access)",
-        "url": "https://theo.xyz/thgold"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "excluded-security",
+    "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "thGOLD is a tokenized proportional share of the MG999 Onchain Gold Fund, a yield-bearing private credit fund, not a fixed-value payment instrument; the GENIUS Act excludes securities from the payment-stablecoin definition.",
+      "summary": "Current Theo documentation describes thGOLD as a non-rebasing, non-appreciating token pegged to one troy ounce of physical gold, with any yield confined to separate sthGOLD. GENIUS monetary value concerns national currency or deposits denominated in it; this commodity unit does not disclose an issuer obligation to redeem for a fixed amount of monetary value. Assess non-payment-token/not-applicable rather than infer that the token itself is a security from its historical MG999 backing description.",
       "references": [
         {
           "label": "GENIUS Act: payment stablecoin definition and securities exclusion",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-09-29"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Theo: Introducing thGOLD (tokenized share of the MG999 fund)",
+          "label": "Theo: Introducing thGOLD (historical MG999 fund exposure)",
           "url": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-09-29"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-01-27"
+        },
+        {
+          "label": "Theo thGOLD and thSLVR documentation: fixed physical-metal units and separate yield wrappers",
+          "url": "https://docs.theo.xyz/products/thgold-and-thslvr.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -38,23 +32,43 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "thGOLD is treated as a tokenized gold-linked fund share rather than a GENIUS payment stablecoin, mirroring the thBILL perimeter classification for Theo's fund-share products. This is a GENIUS perimeter classification, not a formal securities-law opinion.",
+    "notes": "Current canonical documentation supersedes the older fund-exposure description for perimeter assessment: one thGOLD tracks one troy ounce of physical gold and does not appreciate with yield. A separate sthGOLD position receives yield. No token-specific securities-law determination was identified. The existing pre-launch lifecycle and historical MG999 description conflict with current documentation stating thGOLD is available on secondary venues, while direct mint/redeem is still forthcoming. Non-payment-token is a GENIUS perimeter assessment and establishes no MiCA authorization or financial-instrument exclusion.",
     "references": [
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-09-29"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Theo: Introducing thGOLD",
         "url": "https://theo.xyz/articles/introducing-thgold-gold-that-works-for-you",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-29"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-27"
+      },
+      {
+        "label": "Theo thGOLD and thSLVR documentation: fixed physical-metal units and separate yield wrappers",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Theo thGOLD mint/redeem documentation: direct access forthcoming and secondary acquisitions described",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr/mint-and-redeem.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-29"
+    "reviewedAt": "2026-10-07"
   }
 }

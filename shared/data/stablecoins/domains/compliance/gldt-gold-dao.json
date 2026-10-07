@@ -1,0 +1,71 @@
+{
+  "id": "gldt-gold-dao",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "GLDT is described as a gold-linked token with 100 GLDT corresponding to one gram of gold through GLD NFT swaps. The operative terms disclaim legal gold ownership and any guarantee of redemption, convertibility or liquidity. These disclosures do not establish an issuer obligation to redeem for a fixed amount of national-currency monetary value, supporting commodity-token treatment under the GENIUS definition.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27: national-currency monetary value and payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Gold DAO Terms of Service: GLDT ownership and redemption disclaimers",
+          "url": "https://docs.gold-dao.org/legal/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Gold DAO physical redemption guide: 100 GLDT per gram and GLD NFT conversion",
+          "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The legal issuer entity is unresolved in the reviewed primary documents. Original terms name Gold DAO without an exact incorporated issuer; the current token page says GLDT has merged into ORIGYN without naming the legal token issuer. Bity support is identified as the physical-redemption contact after a GLDT-to-GLD-NFT swap; that collateral/redemption role does not establish Bity as the issuer of GLDT. The procedural redemption guide describes a gold-linked mechanism, while the operative terms disclaim guaranteed redemption and legal gold ownership for GLDT itself. Swiss governing law does not establish issuer domicile. No GENIUS payment-stablecoin authorization or foreign-issuer exception posture applies to this commodity-linked token.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gold DAO Terms of Service: GLDT ownership and redemption disclaimers",
+        "url": "https://docs.gold-dao.org/legal/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gold DAO GLDT disclosure: merger into ORIGYN",
+        "url": "https://docs.gold-dao.org/tokens/gldt",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gold DAO physical redemption guide: GLDT to GLD NFT then Bity support",
+        "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

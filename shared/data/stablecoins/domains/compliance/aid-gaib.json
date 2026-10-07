@@ -1,65 +1,163 @@
 {
   "id": "aid-gaib",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "AID is presented as a 1:1 mintable and redeemable AI-dollar stablecoin backed by U.S. Treasuries and stable assets, consistent with a payment stablecoin as defined under the GENIUS Act."
+      "summary": "AID is marketed as a stable synthetic dollar and DeFi base currency minted 1:1 for USDC, USDT and accepted stablecoins. Current documentation limits direct mint/redemption to whitelisted users and describes redemption into deposited stablecoins; ordinary holders use swaps. An enforceable issuer obligation to redeem for fiat USD or another fixed amount of monetary value was not established. GENIUS Act section 2(22)(A)(ii)(I) expressly distinguishes redemption for monetary value from redemption for a digital asset denominated in fixed monetary value. Stable-dollar/base-currency marketing supports potential payment or settlement use, but the described digital-asset redemption and unidentified legal obligor leave applicability genuinely unresolved.",
+      "references": [
+        {
+          "label": "GAIB AID product documentation",
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GAIB platform terms",
+          "url": "https://docs.gaib.ai/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerDomicile": "Singapore",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://aid.gaib.ai/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: AID has issuer-style 1:1 mint/redeem and reserve disclosures attested by McMillan Woods (HK) CPA Limited, but no public GENIUS authorization or foreign-issuer comparability exception was found. The GENIUS Act was enacted July 18, 2025; all implementing rules remain at NPRM stage as of 2026-06-18 with no PPSI approvals granted and no Singapore comparability determination issued by Treasury. GAIB is Singapore-domiciled; the foreign-exception pathway (GENIUS Act s.18) requires a Treasury comparability determination for Singapore's regime, which has not been published. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. AID applicability is unclear because the product describes a stable synthetic dollar used as a DeFi base currency, minted for accepted stablecoins, with direct redemption into deposited stablecoins for whitelisted users. A named legal issuer obligation to redeem into fiat USD or other fixed monetary value was not established. The published redemption-policy flag records the stablecoin redemption policy and does not imply unconditional retail fiat redemption. The legal terms distinguish technology providers, GAIB group companies, and Spiceflow vault operators; none is established as the exact AID legal issuance/redemption obligor. Unsupported Singapore issuer domicile is omitted. The transparency dashboard was independently rendered and offers a report labelled Last: October 2026. Its first-page preview is a McMillan Woods limited-assurance engagement on Spiceflow Corp asset deployment as of 30 September 2026, covering existence, composition and valuation of deployed assets. This supports availability of deployment disclosure, not a verified AID circulating-liability/reserve reconciliation or GENIUS monthly reserve certification. monthlyAttestationPresent is omitted rather than overclaiming the report scope. No public GENIUS authorization or announced U.S. application was found within the reviewed sources. Treasury's 17 August 2026 proposal identifies 18 January 2027 as the expected Act effective date and 18 July 2028 for the broader DASP licensed-issuer offer/sale restriction. The 30 September 2026 SCRC interim rule establishes procedural forms and does not authorize an issuer or certify a state regime; certifications await Paperwork Reduction Act approval. These general materials support pre-effective not-yet-restricted posture, subject to final-rule developments.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act NPRM",
         "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "Federal Register 2026-04089: OCC GENIUS Act proposed rule",
-        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
-        "sourceKind": "federal-register"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GAIB AID product documentation",
         "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GAIB 2026 outlook blog post",
         "url": "https://blog.gaib.ai/gaib-2026-outlook/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GAIB platform terms",
+        "url": "https://docs.gaib.ai/legal/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GAIB disclaimers and risk disclosures",
+        "url": "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GAIB transparency hub",
+        "url": "https://aid.gaib.ai/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GAIB Q1 2026 Review: issuer claim of monthly independent reports",
+        "url": "https://blog.gaib.ai/gaib-q1-2026-review/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury payment stablecoin issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "McMillan Woods limited-assurance report: Spiceflow deployed assets at 30 September 2026; first page independently inspected",
+        "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GAIB privacy policy: group entities and independent Spiceflow distinction",
+        "url": "https://docs.gaib.ai/legal/privacy",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and Federal Register 2026-04089 (GENIUS Act NPRM)",
-        "FDIC GENIUS Act NPRMs (FR 2025-23510, 2026-06974)",
-        "FinCEN/OFAC joint AML NPRM (FR 2026-06963)",
-        "Treasury state-regime comparability NPRM (FR 2026-06489)",
-        "GAIB AID product documentation and blog",
-        "GAIB transparency page (aid.gaib.ai/transparency)",
-        "Web search for GAIB GENIUS Act authorization, PPSI filings, and Singapore comparability determination",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        "https://blog.gaib.ai/gaib-2026-outlook/",
+        "https://docs.gaib.ai/legal/terms-of-use",
+        "https://docs.gaib.ai/legal/disclaimers-and-risk-disclosures",
+        "https://aid.gaib.ai/transparency",
+        "https://blog.gaib.ai/gaib-q1-2026-review/",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "2026-10-07 indexed search: GAIB, Good AI, Spiceflow; occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, dfs.ny.gov, dfpi.ca.gov; GENIUS authorization and enforcement",
+        "2026-10-07 indexed search: (StraitsX OR GAIB) AND (GENIUS Act OR OCC application OR US stablecoin license)"
       ],
-      "summary": "No PPSI approval, state-qualified approval, official application, registered foreign-exception, or Singapore comparability determination was found for GAIB or AID. The foreign-exception framework is still being built through NPRMs; no state has been certified as substantially similar and no third-country comparability determination has been issued by Treasury as of 2026-06-18.",
+      "summary": "No public GENIUS approval, token-specific official application, issuer-announced U.S. application, registered foreign exception, or enforcement action naming GAIB, Good AI, Spiceflow was found in the reviewed issuer material, public OCC pending digital-asset licensing table, NYDFS directory, and indexed agency-domain searches. These search-bounded findings do not establish that a private or unindexed filing or action does not exist. General licensing and rulemaking are distinct from issuer-specific GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC pending digital-asset licensing applications; limited to listed bank applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

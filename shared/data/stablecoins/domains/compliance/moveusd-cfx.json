@@ -3,61 +3,186 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "CFX markets MOVEUSD settlement through tokenized bank deposits, while its July 2025 MOVEUSD release describes a CFX-issued, 1:1 redeemable payment stablecoin. Governing account and holder agreements are needed to determine whether MOVEUSD itself is a legally excluded deposit. Applicability remains uncertain under owner ruling D17; authorization research is unchanged."
+      "summary": "CFX currently markets tokenized deposits in beneficiary bank accounts, while its July 2025 issuer release expressly describes CFX-issued MOVEUSD as a 1:1 redeemable stablecoin. Public website terms and withdrawal API documentation do not establish that each MOVEUSD holder has a legally enforceable deposit claim against an insured depository institution. Governing holder/account agreements remain necessary to distinguish an excluded deposit from an apparent payment stablecoin.",
+      "references": [
+        {
+          "label": "CFX launches GENIUS-ready MOVEUSD on Ethereum and Base (July 30 2025)",
+          "url": "https://www.bitwire.com/feed/cfx-launches-genius-ready-stablecoin-moveusd-on-ethereum-and-base-with-wormhole",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-07-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "CFX MOVEUSD launch and tokenized-deposit description",
+          "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-04-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "CFX payment network and tokenized deposits",
+          "url": "https://cfx.to/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "CFX withdrawal estimate API",
+          "url": "https://docs.cfx.to/reference/get_v1-withdrawal-estimate",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "CFX Labs Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / state money transmitter regulators; Metropolitan Capital Bank & Trust banking partner context",
+    "licensingRegulator": "Mississippi Department of Banking and Consumer Finance (money transmitter); FinCEN MSB registration is issuer-reported",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source. CFX's July 30 2025 press release describes MOVEUSD as 'GENIUS-ready' (first on Ethereum and Base), framing this as architectural alignment with reserve and redemption requirements: this is marketing language, not a formal PPSI pathway announcement, and does not meet the bar for issuer-announced-intent. The original reserveDisclosureUrl (docs.moveusd.com/docs/disclosures-disclaimers) now redirects to docs.cfx.to with no dedicated reserve disclosure page found; reserveDisclosurePresent updated to false accordingly.",
+    "notes": "CFX Labs Inc. is corroborated by the Mississippi money-transmitter list and retained verbatim as the issuer entity. The FinCEN registration statement is issuer-reported. GENIUS-ready and designed-to-comply descriptions identify architecture, without formal issuer permission, a filed application or a specified permission pathway; issuer-announced-intent is not assigned. Published 1:1 redemption claims and withdrawal mechanics support policy presence, but do not establish unrestricted retail fiat redemption or legally excluded deposits. No token-level reserve report or monthly independent attestation was located in current public documentation. Ordinary money-transmitter and partner-bank status do not establish GENIUS approval. No matching public regulator enforcement action was found in the bounded domain search. Section 20 sets the Act's effective date to January 18, 2027 or 120 days after implementing final regulations, whichever is earlier; no earlier-triggering final rules were located in the reviewed materials. The distinct general DASP offer/sale gate in section 3(b)(1) starts July 18, 2028. No current GENIUS offer/sale prohibition is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CFX platform overview (docs.cfx.to)",
         "url": "https://docs.cfx.to/docs/key-features",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CFX launches GENIUS-ready MOVEUSD on Ethereum and Base (July 30 2025)",
         "url": "https://www.bitwire.com/feed/cfx-launches-genius-ready-stablecoin-moveusd-on-ethereum-and-base-with-wormhole",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-07-30",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CFX MOVEUSD launch and tokenized-deposit description",
+        "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-04-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CFX payment network and tokenized deposits",
+        "url": "https://cfx.to/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CFX Trust Center issuer description",
+        "url": "https://trust.cfx.to/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mississippi licensed money transmitters, February 2026",
+        "url": "https://dbcf.ms.gov/wp-content/uploads/2026/02/Money-Transmitter-List-02102026.pdf",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CFX withdrawal estimate API",
+        "url": "https://docs.cfx.to/reference/get_v1-withdrawal-estimate",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer and application rules",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "CFX Labs homepage (cfx.to): NMLS and MSB registrations confirmed, no PPSI application or GENIUS pathway mentioned",
-        "CFX documentation (docs.cfx.to, formerly docs.moveusd.com): no reserve disclosure page or GENIUS Act filing found",
-        "CFX July 2025 'GENIUS-ready' press release: marketing language only, no formal authorization intent",
-        "FDIC and FinCEN GENIUS Act NPRM public releases: no CFX Labs application listed",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 proposed-rule main body and OCC digital-assets licensing applications full table: no MOVEUSD / CFX Labs Inc. token-specific GENIUS permission or named applicant located.",
+        "Federal Reserve September 24, 2026 issuer standards and application proposals announcement, updated September 29.",
+        "September 30, 2026 SCRC procedural rule: no issuer-specific state qualification established by this rule.",
+        "NYDFS public regulated-entities table and Greenlist: no MOVEUSD / CFX Labs Inc. named authorization identified; absence is limited to these published lists.",
+        "CFX current homepage and Trust Center, complete docs index, platform and withdrawal documentation, and April/July 2025 issuer releases reopened: no filed GENIUS application or formal issuer pathway located.",
+        "Mississippi February 2026 licensed money-transmitter list names CFX Labs Inc.; it is not GENIUS state qualification.",
+        "Current website terms return 404; same issuer June 16, 2026 Wayback snapshot has only website-use terms, not a token holder/deposit agreement.",
+        "Domain-restricted searches of OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury for MOVEUSD / CFX Labs Inc. plus GENIUS/approval/application, including enforcement terms: no matching issuer-specific public result found."
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for MOVEUSD. CFX's 'GENIUS-ready' marketing claim describes architectural alignment, not a regulatory pathway.",
+      "summary": "No token-specific PPSI approval, state qualification, official GENIUS application or registered foreign exception was located for MOVEUSD / CFX Labs Inc. in the opened sources and bounded name searches. Published proposals and bank/money-transmitter licenses do not establish GENIUS permission. This review is limited to public materials and does not establish that an authorization or nonpublic application cannot exist.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer and application rules",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

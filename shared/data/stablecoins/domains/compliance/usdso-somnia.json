@@ -1,0 +1,152 @@
+{
+  "id": "usdso-somnia",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDso is marketed for dollar-denominated settlement, but the documented branded-token claim redeems 1:1 into frxUSD. Terms attribute issuance to Frax Inc and/or affiliates and defer redemption to Frax infrastructure terms. A USDso issuer obligation to redeem directly for fixed national-currency monetary value was not established, leaving the statutory redemption limb unresolved.",
+      "references": [
+        {
+          "label": "Somnia USDso settlement and Frax infrastructure disclosure",
+          "url": "https://somnia.network/usdso-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDso terms: issuer and redemption allocation",
+          "url": "https://somnia.network/usdso-terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-05"
+        },
+        {
+          "label": "Frax branded stablecoin frxUSD backing and redemption",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "The terms attribute USDso issuance to Frax Inc and/or affiliates without naming the issuing affiliate; exact issuerEntity and domicile are therefore omitted. Panama-based USDSO S.A. operates the website and expressly is not the issuer. Published materials describe 1:1 frxUSD backing and onchain mint/redemption architecture, not a verified USDso-specific reserve-disclosure or attestation hub, so reserveDisclosurePresent is false. The opened Somnia explorer address page exposed metadata but no holdings; it was not treated as a verified reserve report. RedemptionPolicyPresent records the public onchain 1:1 frxUSD policy, not a proven fixed bank-dollar redemption obligation. That distinction leaves payment-stablecoin applicability unclear. GENIUS-compatible parent marketing and frxUSD charter intent do not establish a USDso application, approval or route. No token-specific independent monthly reserve attestation was established. Public regulator review is bounded and does not exclude confidential or differently named filings.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC public pending digital-asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "SCRC state-regime review interim procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Somnia USDso settlement and Frax infrastructure disclosure",
+        "url": "https://somnia.network/usdso-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDso terms: issuer and redemption allocation",
+        "url": "https://somnia.network/usdso-terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-05"
+      },
+      {
+        "label": "Frax branded stablecoin frxUSD backing and redemption",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking: scope and effective-date discussion",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "2026-10-07 independent indexed official-domain searches across OCC, FDIC, Federal Reserve, NCUA and NYDFS for Frax, FinresPBC, Financial Reserves and Asset Exploration, FRAX Inc, Frax DAO, USDso and USDSO S.A.; no relevant public GENIUS approval, application or enforcement result located. Searches do not exclude confidential or unindexed filings."
+      ],
+      "summary": "Public OCC digital-asset pending applications, NYDFS directory, federal implementation materials and official-domain exact-name searches for Frax, FRAX Inc, Financial Reserves and Asset Exploration and USDso did not establish USDso PPSI approval, state qualification, public GENIUS application or foreign registration. No issuer identity was borrowed from the Panama website operator. Parent charter intent and GENIUS-compatible infrastructure language are insufficient to identify a USDso license path; confidential or differently named filings are not excluded.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC public pending digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "SCRC state-regime review interim procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

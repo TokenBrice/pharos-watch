@@ -3,7 +3,22 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Sonic Labs markets USSD as a Treasury-backed, 1:1 mint/redeem dollar built on GENIUS-compatible frxUSD infrastructure; the issuer's public positioning treats it as a payment stablecoin subject to the GENIUS Act."
+      "summary": "USSD is a non-yield, dollar-denominated payment/settlement branded token. The issuer-linked disclaimer describes a 1:1 wrapper of deposited frxUSD: holders first unwrap USSD into frxUSD through smart contracts, then seek any upstream redemption through Frax/providers. Sonic promotes payments and GENIUS-compatible infrastructure, but is expressly not the issuer. Apparent-payment-stablecoin describes payment positioning, not an unconditional dollar-redemption finding.",
+      "references": [
+        {
+          "label": "USSD disclaimer: issuer/deployer roles and frxUSD wrapper redemption",
+          "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FFigzFE2ScpiZHSkLRCev%2Fuploads%2F6pFXKqf7Kq4tnm3p3bmw%2FFRXUSD%20_%20USSD%20Disclaimer.pdf?alt=media&token=234509c8-e339-4a05-8ac9-a101c5963313",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sonic USSD launch: payment use and future fiat redemption",
+          "url": "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-09",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
@@ -11,45 +26,170 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://facts.frax.finance/frxusd/balance-sheet",
+    "reserveDisclosureUrl": "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reviewed on 2026-10-01: Sonic markets USSD on GENIUS-compatible frxUSD infrastructure. The linked USSD disclaimer states that Frax Inc. and its affiliates deploy USSD and that Sonic does not issue, administer, or control it. USSD wraps frxUSD, whose reserves, custody, redemption, and compliance are managed by Frax Inc. and its service providers. The issuer pages and OCC sources reviewed did not establish token-specific GENIUS authorization; this limited review does not determine all federal/state filings or Frax Inc.'s domicile.",
+    "notes": "USSD is a separate non-yield branded wrapper deployed by Frax Inc. and affiliates. The token-linked disclaimer states that Sonic Labs does not issue, administer, control or endorse the token; Frax documentation maps this exact token address to a BrandedCustodian holding frxUSD 1:1. Holders unwrap USSD into frxUSD before seeking upstream redemption; no unconditional direct USSD fiat obligation is inferred. The existing issuer-announced-intent status is retained solely as a token-specific partner signal under the tracker rubric: Sonic promotes USSD itself as GENIUS-compatible, including full-compliance marketing. This language does not establish legal compliance, a filed application, an approved issuer route, or official authorization. FIP-430/FIP-432 concern Frax intent for frxUSD; their proposed license is not automatically inherited by USSD. The disclaimer supplies the Frax legal-issuer/deployer mapping, while the GENIUS positioning is attributed to Sonic rather than represented as a Frax regulatory undertaking. Existing issuerEntity Frax Inc. is preserved; the frxusd-frax sibling uses the fuller Financial Reserves and Asset Exploration Inc. name. Published USSD reserve composition describes upstream backing, not independently audited token-specific balances. The Frax Facts page returned a client shell and current figures were not verified; no USSD monthly CPA attestation was located. Treasury continues to describe an expected January 18, 2027 effective date; general DASP restrictions are not yet active.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sonic USSD product page: GENIUS compatibility claim",
         "url": "https://www.soniclabs.com/ussd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sonic USSD docs",
         "url": "https://docs.soniclabs.com/sonic/ussd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sonic Labs USSD launch: Crowdfund Insider",
         "url": "https://www.crowdfundinsider.com/2026/03/266190-sonic-labs-launches-ussd-stablecoin/",
-        "sourceKind": "news"
+        "sourceKind": "news",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USSD disclaimer: issuer/deployer roles and frxUSD wrapper redemption",
+        "url": "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FFigzFE2ScpiZHSkLRCev%2Fuploads%2F6pFXKqf7Kq4tnm3p3bmw%2FFRXUSD%20_%20USSD%20Disclaimer.pdf?alt=media&token=234509c8-e339-4a05-8ac9-a101c5963313",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Sonic USSD launch: payment use and future fiat redemption",
+        "url": "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Frax FIP-430: corporate identity and frxUSD-specific charter preparation",
+        "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-04-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Frax FIP-432: frxUSD compliance delegation and license pursuit",
+        "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule and expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated entities and stablecoin issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Frax primary documentation: exact USSD token and 1:1 branded-custodian backing",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Frax team project update: Sonic partnership and native USSD launch",
+        "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-c2a",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-23",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://docs.soniclabs.com/sonic/ussd",
-        "https://www.soniclabs.com/ussd",
-        "USSD disclaimer linked by the Sonic USSD documentation",
         "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.soniclabs.com/ussd",
+        "https://docs.soniclabs.com/sonic/ussd",
+        "https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FFigzFE2ScpiZHSkLRCev%2Fuploads%2F6pFXKqf7Kq4tnm3p3bmw%2FFRXUSD%20_%20USSD%20Disclaimer.pdf?alt=media&token=234509c8-e339-4a05-8ac9-a101c5963313",
+        "https://www.soniclabs.com/blog/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+        "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+        "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+        "Exact query: \"USSD\" \"GENIUS\" (site:frax.com OR site:frax.finance OR site:gov.frax.finance OR site:docs.frax.com)",
+        "2026-10-07 exact-brand searches on OCC, FDIC, Federal Reserve, NCUA and NYDFS domains for GENIUS/PPSI/application/authorization/enforcement; no token-specific match located.",
+        "https://docs.frax.com/fraxnet/branded-stablecoins",
+        "https://news.frax.com/p/frax-finance-biweekly-project-update-c2a"
       ],
-      "summary": "No token-specific USSD authorization or token-issuer application mapping was established in these issuer disclosures and OCC sources. The disclaimer identifies Frax Inc. and its affiliates, not Sonic, as USSD deployers. This limited search is not a conclusion about all federal or state databases.",
-      "reviewer": "Sol validation pass 2026-10-01 (ValB06GBPSAFO)",
-      "reviewedAt": "2026-10-01"
+      "summary": "No public token-specific USSD PPSI approval, acknowledged GENIUS application, state qualification, foreign-exception decision or enforcement action was found in the consulted primary materials and exact-brand official-domain search. Sonic supplies token-specific GENIUS positioning as a partner, not an issuer approval. Frax governance proposals concern upstream frxUSD and do not establish a USSD-specific filing. The OCC licensing tracker returned navigation-only reader content and was not treated as a complete inspected application list.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "FDIC GENIUS requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated entities and stablecoin issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

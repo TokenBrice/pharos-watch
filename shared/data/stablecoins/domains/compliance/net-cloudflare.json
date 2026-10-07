@@ -3,27 +3,130 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Cloudflare announces a planned 1:1 USD-backed payment stablecoin for automated web commerce."
+      "summary": "Cloudflare announces a planned 1:1 USD-backed payment stablecoin for automated web commerce.",
+      "references": [
+        {
+          "label": "Cloudflare NET Dollar announcement",
+          "url": "https://www.cloudflare.com/press/press-releases/2025/cloudflare-introduces-net-dollar-to-support-a-new-business-model-for-the-ai-driven-internet/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-09-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NET Dollar product FAQ",
+          "url": "https://netdollar.cloudflare.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "notes": "Cloudflare, Inc. is the announced sponsor. The exact legal issuing entity, authorization and issuer pathway are undisclosed in the inspected announcement and product FAQ. Cloudflare sponsor identity is not evidence of issuer authorization. The 1:1 backing promise and generic stablecoin definition do not establish a token-specific reserve report or holder redemption policy. No comprehensive negative authorization search is claimed.",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Cloudflare, Inc. is the announced sponsor. The exact legal issuing entity, its domicile and GENIUS issuer pathway remain undisclosed in the reopened announcement and FAQ, so no issuerEntity or issuer regulator is inferred from the sponsor. The 1:1 backing statement and general stablecoin explanation do not establish a token-specific public reserve report, monthly attestation or contractual holder redemption policy. Bounded token/sponsor searches and the opened OCC application table, federal proposals, SCRC procedure and NYDFS public lists produced no token-specific approval, formal filing or foreign registration. The unidentified issuer limits the completeness of this negative result. The token remains pre-launch according to the current FAQ. Section 20 sets the Act's effective date to January 18, 2027 or 120 days after implementing final regulations, whichever is earlier; no earlier-triggering final rules were located in the reviewed materials. The distinct general DASP offer/sale gate in section 3(b)(1) starts July 18, 2028. No current GENIUS offer/sale prohibition is asserted.",
     "references": [
       {
         "label": "Cloudflare NET Dollar announcement",
         "url": "https://www.cloudflare.com/press/press-releases/2025/cloudflare-introduces-net-dollar-to-support-a-new-business-model-for-the-ai-driven-internet/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02",
-        "sourceDate": "2025-09-25"
+        "sourceDate": "2025-09-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "NET Dollar product FAQ",
         "url": "https://netdollar.cloudflare.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer and application rules",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 proposed-rule main body and OCC digital-assets licensing applications full table: no NET Dollar / Cloudflare token-specific GENIUS permission or named applicant located.",
+        "Federal Reserve September 24, 2026 issuer standards and application proposals announcement, updated September 29.",
+        "September 30, 2026 SCRC procedural rule: no issuer-specific state qualification established by this rule.",
+        "NYDFS public regulated-entities table and Greenlist: no NET Dollar / Cloudflare named authorization identified; absence is limited to these published lists.",
+        "Cloudflare September 25, 2025 NET Dollar announcement and current NET Dollar FAQ reopened: no exact legal issuance entity, GENIUS permission or application route disclosed.",
+        "Name searches cover NET Dollar and Cloudflare sponsor; the undisclosed actual issuer prevents a comprehensive issuer-identity search.",
+        "Domain-restricted searches of OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury for NET Dollar / Cloudflare plus GENIUS/approval/application, including enforcement terms: no matching issuer-specific public result found."
+      ],
+      "summary": "No token-specific PPSI approval, state qualification, official GENIUS application or registered foreign exception was located for NET Dollar / Cloudflare in the opened sources and bounded name searches. Published proposals and bank/money-transmitter licenses do not establish GENIUS permission. This review is limited to public materials and does not establish that an authorization or nonpublic application cannot exist.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer and application rules",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

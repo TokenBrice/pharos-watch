@@ -1,6 +1,205 @@
 {
   "id": "usdnr-nerona",
-  "mica": {
-    "status": "out-of-scope"
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDnr is marketed as a dollar-stable payment and spending unit, separate from the sUSDnr yield vault. The transparency page represents redemption 1:1 for USD, but detailed redemption documentation specifies 1:1 wM followed by market conversion into USDC with fees and slippage. These reviewed disclosures do not identify a legal issuer obligated to redeem for fixed monetary value. This conflict makes the Section 2(22) monetary-redemption limb genuinely ambiguous; conversion into another fixed-value digital asset alone is insufficient.",
+      "references": [
+        {
+          "label": "Nerona overview",
+          "url": "https://docs.nerona.xyz/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona USDnr redemption mechanics",
+          "url": "https://docs.nerona.xyz/redemptions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona USDnr transparency disclosure",
+          "url": "https://app.nerona.xyz/transparency",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona privacy policy and platform operator",
+          "url": "https://www.nerona.xyz/legal/privacy-policy",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-15",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona M0 partnership and backing",
+          "url": "https://docs.nerona.xyz/partners",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.nerona.xyz/transparency",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Nerona Inc. is identified as the BVI platform operator in the privacy policy; the exact USDnr legal token issuer and fixed-money redemption obligor remain unresolved, so issuerEntity and issuerDomicile are omitted. The transparency disclosure represents 1:1 USD redemption, whereas detailed documentation specifies wM followed by a Uniswap USDC swap with fees and slippage. Published digital-asset conversion mechanics do not establish a fixed-money issuer redemption policy, so redemptionPolicyPresent is false. ReserveDisclosurePresent records public composition disclosure, not verified live reserve figures or independent financial assurance. No USDnr-specific monthly signed reserve attestation was found. sUSDnr vault rights are separate. No qualifying token-specific public GENIUS authorization or foreign-exception evidence was located. Treasury expects Act effectiveness January 18, 2027; the broader DASP restriction beginning July 18, 2028 is separate.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury Section 3 implementation proposal and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve stablecoin standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification review procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nerona overview",
+        "url": "https://docs.nerona.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nerona USDnr redemption mechanics",
+        "url": "https://docs.nerona.xyz/redemptions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nerona USDnr transparency disclosure",
+        "url": "https://app.nerona.xyz/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nerona privacy policy and platform operator",
+        "url": "https://www.nerona.xyz/legal/privacy-policy",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-15",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nerona M0 partnership and backing",
+        "url": "https://docs.nerona.xyz/partners",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Public Law 119-27, Section 2(22), independently reopened PDF",
+        "OCC Bulletin 2026-3, full primary HTML inspected",
+        "OCC current digital-asset bank licensing applications table, full primary HTML inspected; this is not a PPSI register",
+        "Federal Reserve September 24, 2026 standards and application proposals",
+        "Treasury August 17, 2026 Section 3 proposal and September 30, 2026 SCRC procedural rule",
+        "NYDFS full current virtual-currency regulated-entity and Greenlist page",
+        "Official-domain search for Nerona, USDnr, Startale, USDSC, RISE Dollar, M0 Foundation, MXON and Wrapped M across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
+        "https://docs.nerona.xyz/",
+        "https://docs.nerona.xyz/redemptions",
+        "https://app.nerona.xyz/transparency",
+        "https://www.nerona.xyz/legal/privacy-policy",
+        "https://docs.nerona.xyz/partners"
+      ],
+      "summary": "As of 2026-10-07, independently reopened regulator publications, the OCC bank-application table, NYDFS tables, token documentation and the recorded official-domain search did not identify a qualifying public GENIUS PPSI approval, state-qualified designation, official application, registered foreign exception, issuer licensing-intent announcement or token-specific GENIUS enforcement action for Nerona USD (USDnr). The legal token issuer and fixed-money redemption obligation remain unresolved. The search is bounded public negative evidence, not a complete register or a conclusion that confidential applications do not exist. Infrastructure partners and similarly named tokens do not establish this wrapper's authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona overview",
+          "url": "https://docs.nerona.xyz/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona USDnr redemption mechanics",
+          "url": "https://docs.nerona.xyz/redemptions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona USDnr transparency disclosure",
+          "url": "https://app.nerona.xyz/transparency",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona privacy policy and platform operator",
+          "url": "https://www.nerona.xyz/legal/privacy-policy",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-15",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nerona M0 partnership and backing",
+          "url": "https://docs.nerona.xyz/partners",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

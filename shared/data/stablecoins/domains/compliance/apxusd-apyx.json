@@ -16,12 +16,37 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "apxUSD has stablecoin-like mint/redeem mechanics, but collateral consists of preferred equity in Digital Asset Treasury companies rather than cash or government securities, the Terms of Service explicitly disclaim that financial terminology carries its customary legal meaning, and US persons are blocked from the platform: all of which cloud GENIUS payment-stablecoin applicability."
+      "summary": "apxUSD is marketed as a synthetic dollar and used as a collateral and quote asset, with USDC settlement on primary-market redemption. Current documentation says its Redemption Value tracks preferred-equity collateral and cash rather than guaranteeing a fixed dollar amount, and the Terms describe protocol-generated claims against modules rather than a named legal issuer. GENIUS section 2(22) requires payment/settlement design and an issuer obligation to redeem for fixed monetary value. Whether apxUSD holder rights meet that obligation remains unresolved. Preferred-share collateral, foreign domicile and U.S. access restrictions are not themselves statutory exclusions, and holding preferred shares in reserves does not make apxUSD an excluded security.",
+      "references": [
+        {
+          "label": "Apyx apxUSD overview",
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Apyx glossary: variable Redemption Value",
+          "url": "https://docs.apyx.fi/technical-overview/glossary",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act section 2(17) and 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Preference Capital (BVI) Ltd. / Apyx",
-    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -29,49 +54,130 @@
     "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": true,
-    "notes": "apxUSD is stablecoin-adjacent but its preferred-share collateral (primarily STRC, Strategy preferred equity) and BVI domicile make GENIUS payment-stablecoin classification unresolved. The Terms of Service explicitly state the protocol is facilitated by Preference Capital (BVI) Ltd. under BVI law, describe apxUSD as a protocol-generated asset rather than a claim against any legal entity, and block US, EU, UK, and Canadian persons from accessing the platform. A depeg event occurred on 2026-06-04 with apxUSD trading at $0.90 to $0.93 due to STRC preferred-share volatility.",
+    "notes": "Current terms name Preference Capital (BVI) Ltd. and affiliates as the Site/protocol operator, but expressly deny that apxUSD/apyUSD is a claim against a particular legal person. The former issuerEntity \"Preference Capital (BVI) Ltd. / Apyx\" and issuerDomicile have therefore been omitted: the named BVI operator is not substantiated as the token obligor. The monthly accountant report instead identifies Preference Foundation or its subsidiaries as securities owners; neither reserve ownership nor the Apyx brand establishes a legal token issuer. A primary-market redemption policy exists and pays USDC at variable Redemption Value; redemptionPolicyPresent remains false because this tracker field concerns public 1:1/par redemption, not merely any redemption mechanism. MonthlyAttestationPresent remains true for published monthly accountant examinations of Preference Foundation securities holdings, not complete apxUSD reserve-to-liability reconciliation or GENIUS-compliant monthly certification. The August report covers assets at August 13/31 and was signed September 11; cash sleeves, token liabilities and the full protocol reserve reconciliation are not covered. The Terms restrict U.S., EU, UK and Canadian persons; these territorial restrictions do not establish an exclusion, authorization or foreign exception. No token-specific public GENIUS approval, state qualification, filed application, foreign registration or enforcement action was found in the bounded opened-source review. September SCRC procedures are not Act effectiveness or issuer qualification. The Act remains pre-effective in the reviewed landscape, and the broad DASP restriction has the separate July 18, 2028 statutory start date.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Apyx apxUSD overview",
         "url": "https://docs.apyx.fi/product-overview/apxusd-overview",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Apyx terms of service",
         "url": "https://docs.apyx.fi/resources/terms-of-service",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Apyx transparency",
         "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Apyx glossary: variable Redemption Value",
+        "url": "https://docs.apyx.fi/technical-overview/glossary",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Apyx published monthly third-party attestations",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Independent accountant report: Preference Foundation August 2026 securities holdings",
+        "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=0386fd1d-2316-4320-b799-96ec6c4e827e",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-11"
+      },
+      {
+        "label": "OCC public digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated entities and approved stablecoin greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS framework and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Apyx product, terms, and transparency pages",
-        "Apyx Terms of Service (confirmed BVI jurisdiction, US persons blocked, no regulatory licensing disclosed)",
-        "ValueTheMarkets article on apxUSD challenges (June 2026): no regulatory filings or GENIUS Act references",
-        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases: no results",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3: substantive body recovered from HTML",
+        "OCC digital-assets licensing application table: all currently displayed applicants",
+        "NYDFS Virtual Currency Business Licensing: regulated-entity and greenlist tables",
+        "Federal Reserve September 24, 2026 GENIUS framework/application proposals",
+        "September 30, 2026 SCRC procedural interim final rule",
+        "2026-10-07 exact-name official-domain query across OCC, Federal Reserve, FDIC, NCUA, NYDFS and Treasury for Falcon Digital Limited, USDf, Preference Capital, Preference Foundation, Apyx and apxUSD with GENIUS, stablecoin approval and enforcement terms",
+        "Apyx current apxUSD overview, Terms of Service, glossary, transparency and third-party attestation pages",
+        "September 11 independent accountant report on Preference Foundation August securities holdings"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception found. Apyx ToS confirms BVI domicile and blocks US persons; no GENIUS Act reference in any issuer document.",
+      "summary": "No opened regulator record or exact-name official-domain search established Apyx/apxUSD, Preference Capital (BVI) Ltd. or Preference Foundation GENIUS permitted-issuer approval, state qualification, filed token-specific application, or registered foreign-issuer exception. Current issuer/operator materials disclose no token-specific GENIUS pathway. The OCC digital-assets bank application table and NYDFS directory are bounded public sources, not exhaustive GENIUS registers. No public token-specific enforcement action was found. This negative observation neither proves legal non-compliance nor resolves the unidentified token obligor.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC public digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated entities and approved stablecoin greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS framework and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

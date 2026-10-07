@@ -1,0 +1,129 @@
+{
+  "id": "usdxl-last",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDXL targets a dollar value through CDP repayment and supplementary stablecoin facilitation. HypurrFi describes protocol-based issuance and no centralized issuer redemption window; Last Labs terms disclaim value and performance guarantees. The current app advertises burning USDXL to redeem USDT0 from the GSM at the current rate, subject to available liquidity. The April 2026 article's statement that direct reserve redemptions were disabled is therefore historical. Protocol debt repayment and a disclosed token-to-token redemption route do not establish an issuer obligation to redeem for national currency or a bank deposit under GENIUS section 2(22). General synthetic-dollar marketing and unresolved issuer rights support unclear applicability.",
+      "references": [
+        {
+          "label": "HypurrFi USDXL CDP and hybrid-reserve explanation",
+          "url": "https://hypurrfi.com/blog-posts/usdxl-position-backed-cdp",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-20"
+        },
+        {
+          "label": "HypurrFi terms naming Last Labs operator",
+          "url": "https://app.hypurrfi.com/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "HypurrFi USDXL mint interface and partial reserve",
+          "url": "https://app.hypurrfi.com/usdxl",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Last Labs Inc., described as a Delaware S-Corp in the terms, is the service operator and is not assigned to issuerEntity. The article body is dated 2026-04-20 while page metadata says 2026-04-29; sourceDate uses the visible article date. Its no-direct-reserve-redemption statement is historical. On 2026-10-07 the reopened current app describes burning USDXL to redeem USDT0 from the GSM at the current rate, subject to available liquidity. This is an interface disclosure, not transaction execution evidence or a fiat par-redemption obligation. Existing base-file no-public-redemption wording should be separately reviewed against this newer disclosure; no tracked base file was edited in this compliance-only assignment. GENIUS review is informational and does not assert a current approval, violation, or exemption from other laws. The September Treasury procedural rule is separate from Act-wide effectiveness.",
+    "references": [
+      {
+        "label": "HypurrFi USDXL CDP and hybrid-reserve explanation",
+        "url": "https://hypurrfi.com/blog-posts/usdxl-position-backed-cdp",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-20"
+      },
+      {
+        "label": "HypurrFi terms naming Last Labs operator",
+        "url": "https://app.hypurrfi.com/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "HypurrFi USDXL mint interface and partial reserve",
+        "url": "https://app.hypurrfi.com/usdxl",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://hypurrfi.com/blog-posts/usdxl-position-backed-cdp",
+        "https://app.hypurrfi.com/terms-of-service",
+        "https://app.hypurrfi.com/usdxl",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "Independent regulator-domain search: (site:occ.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov) (\"RIF On Chain\" OR Kava OR \"Last Labs\" OR \"Tangent Finance\" OR \"MOC INVESTMENT\") (GENIUS OR stablecoin)",
+        "Independent exact-token search: (USDRIF OR \"Kava USDX\" OR USDXL OR \"Tangent USG\") (MiCA OR \"GENIUS Act\" OR PPSI OR \"EU listing\")"
+      ],
+      "summary": "The reviewed token/project materials, current Federal Reserve implementation release, Treasury SCRC procedure and NYDFS public directory did not identify a qualifying GENIUS approval, official token-issuer application, state-qualified designation, foreign registration or token-specific announced GENIUS pathway for usdxl-last. Targeted regulator-domain token/project/operator searches returned no qualifying public record. This is a dated, bounded negative finding; unpublished or confidential filings are not ruled out, and ordinary licenses or proposed procedures are not treated as issuer approval.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve proposed GENIUS issuer framework",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
+  }
+}

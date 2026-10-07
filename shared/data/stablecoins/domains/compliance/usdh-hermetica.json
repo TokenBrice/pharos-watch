@@ -1,0 +1,171 @@
+{
+  "id": "usdh-hermetica",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Hermetica Terms of Service: excluded EU/EEA jurisdictions",
+        "url": "https://docs.hermetica.fi/resources/legal/terms-of-service"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Base USDh is issued directly through Hermetica to approved KYC participants, has a $1 target and 1:1 reserve-backing representation, and supports exits to USDC or USDT. The reviewed mint/redemption documentation does not establish an issuer obligation to redeem a fixed amount of national currency or bank-deposit money. GENIUS expressly excludes another fixed-value digital asset from monetary value. These payment-like dollar representations and crypto-only, pauseable exit mechanics leave statutory applicability genuinely ambiguous; the sUSDh wrapper and the securities held in reserves are not substituted for the base USDh token.",
+      "references": [
+        {
+          "label": "Hermetica USDh mint and redemption process",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/mint",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hermetica USDh backing and monthly report index",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Hermetica Labs, Inc.",
+    "issuerDomicile": "Panama",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": true,
+    "notes": "Terms identify Hermetica Labs, Inc., Panama registration 155736526, as the service-contracting company; mint documentation states issuance is directly through Hermetica. No separate legal redemption obligor was identified. Terms exclude EU/EEA and U.S. persons and state secondary-market holdings do not confer mint/redeem rights. Foreign registration or comparability is not inferred from Panama incorporation. A public crypto-redemption process exists for approved participants, but an explicit 1:1 monetary-redemption obligation was not established; redemptionPolicyPresent is therefore false under its public 1:1-policy definition. Monthly issuer/custodian attestations are publicly present: the September snapshot was published October 1. Their presence is not an independent accountant assurance or a conclusion of GENIUS-compliant reserves. Current reserves materially include tokenized STRCx, unlike older BTC-strategy descriptions; holding securities in backing does not establish that USDh itself is a security. The August 21 policy newsletter encourages Treasury consultation but does not announce Hermetica filing a GENIUS application or choosing an issuer pathway. The broad GENIUS DASP prohibition is not yet effective; this does not override the issuer own U.S. restrictions.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "New York DFS virtual currency licensing and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hermetica Terms of Service",
+        "url": "https://docs.hermetica.fi/resources/legal/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hermetica USDh mint and redemption process",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/mint",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hermetica USDh backing and monthly report index",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hermetica September 2026 custodian attestations",
+        "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-september-2026",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hermetica Treasury consultation commentary",
+        "url": "https://blog.hermetica.fi/p/u-s-treasury-wants-your-input",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-21",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Digital Assets Licensing Applications directory",
+        "OCC GENIUS implementation and foreign-registration proposal",
+        "Federal Reserve June 18 customer-identification and September 24 issuer/application proposals",
+        "NYDFS licensed-business directory and Greenlist",
+        "Treasury September 30 state-regime certification procedural interim rule",
+        "Hermetica legal Terms, mint/redemption, backing, monthly custodian disclosures and August 21 Treasury consultation commentary",
+        "Targeted primary-regulator and public searches for Hermetica Labs, Hermetica USDh, GENIUS approval, application or foreign registration",
+        "Independent exact-name searches across OCC, NYDFS, Federal Reserve and FDIC, plus SEC, CFTC, DOJ and Treasury public sites; no matching GENIUS authorization or action located"
+      ],
+      "summary": "No public GENIUS PPSI approval, state qualification, official application or foreign registration naming Hermetica Labs, Inc. or USDh was found in the reviewed public sources as of 2026-10-07. No token-specific issuer-pathway announcement was found. The federal sources are proposals or state-certification procedures rather than USDh authorization. This negative result is bounded by public sources and does not assert that no non-public filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Federal Register proposed rule: foreign issuer registration",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer framework",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "New York DFS virtual currency licensing and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hermetica Treasury consultation commentary",
+          "url": "https://blog.hermetica.fi/p/u-s-treasury-wants-your-input",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-21",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -7,15 +7,16 @@
       "references": [
         {
           "label": "VNX Gold product description",
-          "url": "https://vnx.li/gold/?trk=organization_guest_main-feed-card-text",
+          "url": "https://vnx.li/vnxau",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "FMA Liechtenstein notice on physical precious metals",
           "url": "https://www.fma-li.li/en/warning/hinweis-veranlagungen-in-physische-edelmetalle-1610",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-09"
         }
       ]
     },
@@ -28,27 +29,34 @@
     "references": [
       {
         "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "VNX Gold product description",
-        "url": "https://vnx.li/gold/?trk=organization_guest_main-feed-card-text",
+        "url": "https://vnx.li/vnxau",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FMA Liechtenstein current register: VNX Commodities AG TVTG registrations",
+        "url": "https://register.fma-li.li/search?searchText=VNX&number=&searchType=active&sortColumn=name&ascending=true&page=0",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "notes": "Reviewed as a gold-backed commodity/investment token. GENIUS payment-stablecoin authorization does not apply.",
+    "notes": "VNXAU represents one gram of allocated physical gold with holder ownership and physical redemption, not an obligation to redeem a fixed amount of national currency or currency-denominated monetary value. Market-price sale/exchange into cash does not itself create that obligation. GENIUS payment-stablecoin authorization and DASP payment-stablecoin offering restrictions are therefore not applicable. FMA TVTG registrations and its general physical-metals notice are not U.S. issuer authorization or a token-specific MiCA exemption.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-applicable"
   }
 }

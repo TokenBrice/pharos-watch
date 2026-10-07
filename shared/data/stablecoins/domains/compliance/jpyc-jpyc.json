@@ -1,98 +1,141 @@
 {
   "id": "jpyc-jpyc",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "JPYC is a yen-linked stablecoin issued for payment and real-world spending use, with JPYC's materials describing use for purchases and the 2025 funds-transfer issuance of JPYC.",
+      "summary": "JPYC is the yen-linked electronic payment instrument issued by JPYC Inc. under Japan's funds-transfer framework. The issuer's official repository identifies issuance and redemption through JPYC EX and distinguishes it from legacy prepaid JPYC; the listed canonical contracts match this coin.",
       "references": [
         {
-          "label": "JPYC Inc.: company and JPY Coin description",
-          "url": "https://corporate.jpyc.co.jp/en",
+          "label": "JPYC official GitHub: funds-transfer token, issuing company and canonical contracts",
+          "url": "https://github.com/jpycoin",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "JPYC: Japanese funds-transfer registration and stablecoin issuance announcement",
-          "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2025-08-18",
-          "accessedAt": "2026-08-14"
+          "label": "Japan FSA: registered funds-transfer service providers, including JPYC Inc.",
+          "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-31"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "issuerEntity": "JPYC Inc.",
     "issuerDomicile": "Japan",
     "licensingRegulator": "Japan Financial Services Agency / Kanto Local Finance Bureau",
-    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "JPYC Inc.'s Japanese funds-transfer registration is a foreign regulatory authorization, not a U.S. GENIUS approval. No token-specific U.S. permitted-issuer approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration was found. The conservative status is no-public-authorization-found while GENIUS rulemaking remains proposed-rules phase.",
+    "notes": "JPYC Inc.'s Type II funds-transfer registration (Kanto No. 00099, August 18, 2025) is domestic Japanese authorization, not GENIUS approval. No named U.S. permitted-issuer approval, state qualification, regulator-confirmed application, issuer-announced GENIUS filing plan, foreign-regime comparability determination or OCC foreign-issuer registration was located. Treasury's August 17 proposal gives January 18, 2027 as the expected effectiveness date, subject to the statutory final-rule trigger. The September 30 SCRC interim final rule is procedural. not-yet-restricted describes only GENIUS's phased DASP restriction, not general U.S. legality or authorization. The broad DASP prohibition starts July 18, 2028; the foreign lawful-order condition starts when the Act becomes effective.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Federal Register 91 FR 37234: GENIUS Act proposed CIP rule",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-06-22/html/2026-12460.htm",
         "sourceKind": "federal-register",
-        "sourceDate": "2026-06-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-22"
       },
       {
         "label": "Japan FSA: registered funds-transfer service providers, including JPYC Inc.",
         "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf",
         "sourceKind": "foreign-regulator",
-        "sourceDate": "2026-07-31",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-31"
       },
       {
-        "label": "JPYC: funds-transfer registration announcement",
-        "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc",
+        "label": "JPYC official GitHub: funds-transfer token, issuing company and canonical contracts",
+        "url": "https://github.com/jpycoin",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2025-08-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury: State Stablecoin Regulatory Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and approved issuance list",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html: OCC GENIUS proposed rule and foreign-issuer framework",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-24.html: OCC reporting proposal for permitted and foreign issuers",
-        "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf: Federal Register proposed GENIUS CIP rule",
-        "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf: Japanese funds-transfer register, JPYC Inc. entry",
-        "https://corporate.jpyc.co.jp/en: JPYC issuer and product description",
-        "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc: JPYC Japanese registration and issuance disclosure",
-        "Federal Register/OCC searches for JPYC and JPYC Inc.: no token-specific U.S. approval or pending application found"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html - independently reopened primary source on 2026-10-07",
+        "https://www.govinfo.gov/content/pkg/FR-2026-06-22/html/2026-12460.htm - independently reopened primary source on 2026-10-07",
+        "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf - independently reopened primary source on 2026-10-07",
+        "https://github.com/jpycoin - independently reopened primary source on 2026-10-07",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html - independently reopened primary source on 2026-10-07",
+        "https://home.treasury.gov/news/press-releases/sb0605 - independently reopened primary source on 2026-10-07",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm - independently reopened primary source on 2026-10-07",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses - independently reopened primary source on 2026-10-07",
+        "Independent bounded search on 2026-10-07: (JPYC OR JPYSC OR SBI Shinsei Trust Bank OR KGST OR KGSToken OR KRWQ) (GENIUS approval application registration enforcement), restricted to occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, ncua.gov and dfs.ny.gov; no named token/issuer GENIUS authorization record surfaced."
       ],
-      "summary": "The review found JPYC Inc. registered in Japan as a funds-transfer service provider, but no public U.S. GENIUS approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration for JPYC Inc. or JPYC.",
+      "summary": "Japan FSA confirms JPYC Inc. is a Type II funds-transfer provider, but the opened U.S. materials and bounded named-issuer searches disclosed no GENIUS approval, state qualification, official application or registered foreign exception as of 2026-10-07. Official pending bank-charter lists are incomplete for GENIUS; absence is not proof that no confidential filing exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
         },
         {
-          "label": "Japan FSA: registered funds-transfer service providers",
+          "label": "Japan FSA: registered funds-transfer service providers, including JPYC Inc.",
           "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf",
           "sourceKind": "foreign-regulator",
-          "sourceDate": "2026-07-31",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-31"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and approved issuance list",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    }
   }
 }

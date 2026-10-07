@@ -1,0 +1,200 @@
+{
+  "id": "usdh-hubble",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Hubble USDH is a dollar-soft-pegged Solana token minted through collateralized borrowing. Its own FAQ expressly calls it a medium of exchange or payment for goods and services. The peg-stability module swaps USDH for USDC tokens with a redemption fee; crypto-collateral and USDC-token conversion do not by themselves establish an issuer obligation to redeem for fixed monetary value under GENIUS sections 2(17) and 2(22). The payment limb is supported, but a legally obligated cash/deposit issuer is not established, so applicability remains unclear rather than definitively non-payment.",
+      "references": [
+        {
+          "label": "Hubble USDH payment and collateral description",
+          "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hubble USDH USDC peg-stability module",
+          "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition and commencement",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act proposed implementation rule",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.hubbleprotocol.io/resources/technical-resources",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "The May 19, 2025 terms identify Vertex Labs INC., a Republic of Panama company, only as the site operator. Sections 1.3 and 6.3 disclaim operation/control of the Hubble Smart Contract System and responsibility for traded tokens. Do not equate this operator with the USDH issuer; issuerEntity and issuerDomicile are omitted. Public reserve disclosure means protocol collateral/vault transparency, not confirmation of GENIUS-eligible reserves or reserve sufficiency. No public issuer 1:1 cash/deposit redemption policy or monthly independent reserve attestation was located in the checked disclosures; documented collateral/token redemption mechanics still exist. The Act remains pre-effective under the October 7, 2026 regime review: the September 30 SCRC procedural interim rule is not the comprehensive final-regulation trigger. General DASP restrictions begin July 18, 2028; foreign-offer lawful-order requirements follow Act effectiveness. No approval, unlawful status, whole-protocol exemption or registered foreign exception is inferred.",
+    "references": [
+      {
+        "label": "Hubble USDH payment and collateral description",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hubble USDH USDC peg-stability module",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hubble collateral and token deployment resources",
+        "url": "https://docs.hubbleprotocol.io/resources/technical-resources",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hubble current terms: published application module",
+        "url": "https://app.hubbleprotocol.io/assets/Terms.3851f17c.js",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-05-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment-stablecoin definition and commencement",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed implementation rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed issuer standards and application process",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC proposed GENIUS Act issuer standards",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA implementation status and proposed application framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-06-10",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-regime certification procedural interim rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency businesses and approved issuance list",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury proposed Section 3 implementation and distinct effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://docs.hubbleprotocol.io/faq/usdh-stablecoin",
+        "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module.md",
+        "https://docs.hubbleprotocol.io/resources/technical-resources",
+        "https://app.hubbleprotocol.io/assets/Terms.3851f17c.js",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "2026-10-07 independent exact-token/protocol/operator searches on occ.gov, fdic.gov, federalreserve.gov, ncua.gov, treasury.gov and dfs.ny.gov for GENIUS approval, PPSI applications and issuer intent; ticker-only records excluded."
+      ],
+      "summary": "No public GENIUS PPSI approval, state qualification, official pending application, foreign registration/comparability decision, or issuer-announced GENIUS intent naming Hubble USDH, Hubble Protocol and Vertex Labs INC. was found in the opened implementation materials, NYDFS directory, protocol/legal disclosures and exact-name regulator-domain searches. General rulemaking pages are not comprehensive issuer approval directories; this is a dated bounded negative-evidence finding, not proof that no confidential filing exists or a finding of unlawful issuance. The May 19, 2025 terms identify Vertex Labs INC., a Republic of Panama company, only as the site operator. Sections 1.3 and 6.3 disclaim operation/control of the Hubble Smart Contract System and responsibility for traded tokens. Do not equate this operator with the USDH issuer; issuerEntity and issuerDomicile are omitted.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed implementation rule",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed issuer standards and application process",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC proposed GENIUS Act issuer standards",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA implementation status and proposed application framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-06-10",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-regime certification procedural interim rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency businesses and approved issuance list",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury proposed Section 3 implementation and distinct effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

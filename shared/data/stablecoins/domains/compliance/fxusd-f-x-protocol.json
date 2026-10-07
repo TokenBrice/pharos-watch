@@ -1,0 +1,135 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "fxUSD is marketed as a dollar-pegged decentralized stablecoin and minted against wstETH/WBTC through borrowing and leverage positions. Its documented peg-protection redemption is conditional and delivers dollar-valued crypto collateral, subject to a fee. No issuer obligation to redeem a fixed amount of national currency or a bank deposit was established, leaving payment-stablecoin applicability ambiguous.",
+      "references": [
+        {
+          "label": "f(x) fxUSD collateralized borrowing mechanics",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fxmint-borrowing-fxusd-against-your-btc-and-eth.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "f(x) fxUSD conditional collateral redemption",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Dollar-denominated crypto-collateral redemption does not establish statutory monetary-value redemption. Protocol operations and treasury are governed by a six-signature multisig with a public timelock and limited emergency controls, so decentralized branding alone is not treated as an issuerless legal determination. No legal issuer, GENIUS route or token-specific public authorization was established. The separate appreciating fxSAVE share receives its own assessment. Interface terms effective March 5, 2026 identify community contributors rather than a legal entity and exclude U.S. residents, citizens and agents. Those interface restrictions do not establish a GENIUS foreign exception or an EU exclusion, and they do not prove that governance participants cannot constitute an issuer.",
+    "references": [
+      {
+        "label": "f(x) fxUSD collateralized borrowing mechanics",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/fxmint-borrowing-fxusd-against-your-btc-and-eth.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "f(x) fxUSD conditional collateral redemption",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/advanced-peg-protection-mechanisms/understanding-the-redemption-mechanism.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "f(x) multisig and timelock controls",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/more/resources/multisig.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer framework proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "f(x) interface terms and territorial eligibility",
+        "url": "https://fx.aladdin.club/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-05",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "f(x) official product website, fxMINT, collateral redemption and multisig documentation",
+        "OCC Bulletin 2026-3 official proposal metadata",
+        "Federal Reserve September 24, 2026 GENIUS issuer proposals",
+        "Treasury September 30, 2026 SCRC procedural rule",
+        "Independent 2026-10-07 exact-token and protocol-name searches on OCC, FDIC, Federal Reserve, NCUA and NYDFS domains; no matching authorization or GENIUS filing located",
+        "f(x) interface Terms of Use effective March 5, 2026 and current fxSAVE interface eligibility warning"
+      ],
+      "summary": "No public qualifying fxUSD-specific PPSI approval, state qualification, filed GENIUS application, foreign registration or issuer-announced GENIUS route was located in the opened issuer/regulator sources and dated targeted searches. The implementation sources describe proposed rules and certification procedures rather than a decision naming fxUSD or its issuer. Unpublished or confidential applications are outside this public-source conclusion.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer framework proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "f(x) interface terms and territorial eligibility",
+          "url": "https://fx.aladdin.club/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-05",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

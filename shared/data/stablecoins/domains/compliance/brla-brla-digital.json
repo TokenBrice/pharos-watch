@@ -9,13 +9,14 @@
           "label": "Avenia BRLA product and reserve disclosures",
           "url": "https://avenia.io/brla",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "GENIUS Act statutory summary: payment stablecoins and permitted issuers",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "label": "GENIUS Act Public Law 119-27: payment stablecoins and permitted issuers",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
@@ -30,67 +31,130 @@
     "reserveDisclosureUrl": "https://avenia.io/brla",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Avenia describes BRLA as a 1:1 BRL-backed stablecoin with monthly collateral reporting and attestations. The public materials reviewed identify a Brazil-focused issuer/correspondent context, but no U.S. GENIUS PPSI approval, state-qualified pathway, official application, or foreign-issuer exception registration was found as of 2026-08-14. GENIUS remains in proposed-rules phase. On 2026-10-01, the issuer reserve report and OCC digital-asset charter application index were re-fetched. No BRLA/Avenia application was listed in that index; this narrow check does not establish a comprehensive PPSI/state/foreign-exception or enforcement negative review.",
+    "notes": "The current Avenia platform terms name AVENIA SOCIEDADE PRESTADORA DE SERVICOS DE ATIVOS VIRTUAIS LTDA, CNPJ 50.224.164/0001-70, and describe BRLA backing and redemption. The August 31, 2026 independent assurance report, issued September 16 by UHY Bendoraytes, remains addressed to BRLA DIGITAL LTDA. The existing issuerEntity is preserved because these sources do not establish that the contractual platform operator replaces the token issuer or that a legal-name change has occurred. The primary Notion archive was reopened in an isolated managed browser; it lists January-August 2026 reports. The August PDF was downloaded and extracted, and contains an independent reasonable-assurance opinion comparing reserved assets with BRLA circulation. MonthlyAttestationPresent remains true on actual public report evidence. Terms restrict US persons and provide PIX purchase/redemption rails, without an express EEA exclusion. Avenia GENIUS commentary does not announce a specific U.S. filing or authorization route. The dated public review found no token-specific GENIUS authorization or registered foreign exception. Substantive rules remain proposals alongside the procedural SCRC IFR; the DASP field records pre-effective timing, not permission to distribute in the United States.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Digital Assets Licensing Applications",
         "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Avenia BRLA product and reserve disclosures",
         "url": "https://avenia.io/brla",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Avenia terms: BRLA backing and transparency report policy",
         "url": "https://app.avenia.io/Avenia-TC.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS prudential and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and issuance context",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Avenia GENIUS commentary: reserve and reporting principles",
+        "url": "https://www.linkedin.com/posts/avenia-io_brla-stablecoin-geniusact-activity-7355941642501001216-tsZZ",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BRLA primary monthly reserve assurance archive: August 2026 UHY report reopened",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS Act proposed rules",
-        "OCC Digital Assets Licensing Applications table (checked 2026-08-14; BRLA/Avenia not listed)",
-        "Congress.gov GENIUS Act / Public Law 119-27",
-        "Treasury FinCEN/OFAC GENIUS proposed rule",
-        "Avenia BRLA product, terms, and reserve disclosures",
-        "Public search for BRLA/Avenia U.S. GENIUS approval, application, or foreign-issuer registration"
+        "Opened OCC current digital-asset bank application table (not a complete GENIUS register)",
+        "Opened OCC Bulletin 2026-3 and March 2 GENIUS proposed-rule PDF",
+        "Opened Treasury April 1 state comparability and April 8 AML/CFT proposals; August 17 section 3 proposal",
+        "Opened September 30 SCRC interim procedural rule and September 24 Federal Reserve proposals",
+        "Opened NYDFS current regulated-entity and greenlisted issuance tables",
+        "Primary issuer product, reserve, redemption and terms disclosures",
+        "Public indexed searches of OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS for BRLA, BRLA Digital and Avenia / AVENIA SOCIEDADE PRESTADORA DE SERVICOS DE ATIVOS VIRTUAIS LTDA; excluded unrelated acronym/OCR hits"
       ],
-      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for BRLA or BRLA Digital LTDA. Brazilian local-law and correspondent disclosures do not establish a U.S. GENIUS pathway.",
+      "summary": "As of 2026-10-07, no public GENIUS permitted-issuer approval, state qualification, official GENIUS application, OCC foreign registration, Treasury issuer/jurisdiction comparability determination or token-specific GENIUS enforcement action was located for BRLA, BRLA Digital and Avenia / AVENIA SOCIEDADE PRESTADORA DE SERVICOS DE ATIVOS VIRTUAIS LTDA. This is a bounded public-evidence finding, not proof that no nonpublic filing exists. Foreign-exception eligibility remains unknown; existing foreign AML, banking or corporate status does not establish GENIUS approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC Digital Assets Licensing Applications",
-          "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
-          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "label": "Treasury GENIUS section 3 proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
         },
         {
-          "label": "Treasury FinCEN/OFAC GENIUS Act proposed rule announcement",
-          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "label": "SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS prudential and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and issuance context",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

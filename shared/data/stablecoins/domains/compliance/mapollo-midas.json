@@ -12,9 +12,86 @@
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
       },
       {
-        "label": "BaFin guidance: crypto securities and crypto fund units normally constitute financial instruments",
-        "url": "https://www.bafin.de/webcode?id=19627396"
+        "label": "ESMA MiCA Article 2(4)(a): financial instruments excluded from scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mAPOLLO is a performance-linked blockchain-based investment certificate issued by Midas Software GmbH. Its July 17, 2026 final terms link value to the ACM International Ltd reference portfolio and identify Swiss-law ledger-based securities. Redemption follows underlying portfolio performance or NAV and does not promise a fixed USD 1 payment obligation. The documented debt-security/investment-certificate structure supports the tracker excluded-security classification.",
+      "references": [
+        {
+          "label": "mAPOLLO legal investment-product documentation",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The token-specific reserve API reopened on October 7, 2026 reports issuer portfolio positions, assets, liabilities and equity, with an October 7 source timestamp. These are issuer disclosures and do not establish independent monthly accountant assurance. Redemption follows NAV rather than a fixed 1:1 USD obligation.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "mAPOLLO legal investment-product documentation",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas eligibility and compliance: U.S. person restrictions",
+        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas Attestation Engine: verification coverage caveat",
+        "url": "https://docs.midas.app/transparency/the-midas-attestation-engine",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas mAPOLLO issuer portfolio disclosure API",
+        "url": "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false
   }
 }

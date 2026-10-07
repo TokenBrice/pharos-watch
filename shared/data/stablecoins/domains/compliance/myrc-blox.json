@@ -9,13 +9,13 @@
           "label": "Blox MYRC product term sheet",
           "url": "https://www.blox.my/policies/product-term-sheet",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Blox MYRC whitepaper",
           "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -30,80 +30,146 @@
     "reserveDisclosureUrl": "https://www.blox.my/myrc/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-08-14 review: Blox's current MYRC materials identify BLOX Blockchain Sdn. Bhd. as issuer, require Malaysia-focused eKYC and banking details, and describe MYRC as 1:1 redeemable for MYR. The product term sheet says MYRC is not legal tender, electronic money, a payment instrument, or remittance tool under Malaysian law unless Blox obtains required approvals; that local-law disclaimer does not remove the token's confusable payment-stablecoin characteristics for GENIUS review. No U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located. The latest independently assured reserve report reviewed was dated 2026-06-30. Reserve-report date recorded as of 2026-08-14 review: 2026-06-30 (date kind unspecified).",
+    "notes": "Evidence as of 2026-10-07: Blox materials identify BLOX Blockchain Sdn. Bhd. as issuer and MYRC as 1:1 redeemable for MYR. The current onboarding guide accepts MyKad or passport, uses Malaysian banking rails, and describes payment and DeFi uses; it does not establish a Malaysian-residents-only rule. The product term sheet says MYRC is not legal tender, electronic money, a payment instrument or remittance tool under Malaysian law without required approvals and makes issuance/redemption subject to Blox discretion. Those local-law caveats do not erase its apparent payment-stablecoin design. The opened August 31 reserve examination, signed September 29, is an independent ISAE 3000 reasonable-assurance report by Tommy Ung & Partners PLT. No U.S. GENIUS approval, state qualification, official application, issuer-announced GENIUS pathway or foreign registration was located. Foreign-exception status remains unknown; the general GENIUS offer/sale restriction is not yet effective.",
     "references": [
       {
         "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-06-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Blox MYRC product term sheet",
         "url": "https://www.blox.my/policies/product-term-sheet",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Blox MYRC transparency",
         "url": "https://www.blox.my/myrc/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "MYRC reserve assurance report (2026-06-30)",
         "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf",
         "sourceKind": "auditor-report",
-        "sourceDate": "2026-06-30",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2026-07-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposed rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Blox MYRC getting started",
+        "url": "https://docs.blox.my/user/getting-started",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MYRC reserve assurance report (2026-08-31)",
+        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA interim MiCA register landing page and ART/EMT register files, last updated 2026-08-12",
-        "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
-        "Federal Register joint PPSI CIP NPRM, 91 FR 37234",
-        "FDIC GENIUS Act PPSI proposed rule materials",
-        "Blox MYRC website, product term sheet, user-facing documentation, whitepaper, and transparency materials",
-        "Securities Commission Malaysia list of registered digital asset exchanges, updated 2026-07-20",
-        "Targeted searches for Blox Blockchain Sdn. Bhd., MYRC, and GENIUS authorization or application records"
+        "OCC Bulletin 2026-3 and current Digital Assets Licensing Applications table; no named issuer or token approval/application located",
+        "Federal Reserve September 29, 2026 GENIUS implementation NPRM (R-1899)",
+        "Treasury August 17, 2026 Section 3 NPRM announcement and September 30, 2026 SCRC interim procedural rule",
+        "Exact token and legal-issuer GENIUS, enforcement and sanctions search across OCC, FDIC, Federal Reserve, Treasury, FinCEN, NCUA and NYDFS public domains; no exact matching authorization or action located",
+        "Joint PPSI customer-identification NPRM, 91 FR 37234; Malaysia SC July 20 registered DAX directory (not stablecoin licensing)",
+        "Blox MYRC product term sheet, whitepaper, onboarding guide, transparency page, June and August independent reserve examinations"
       ],
-      "summary": "No reviewed U.S. regulator, Federal Register, or issuer source identifies BLOX Blockchain Sdn. Bhd. or MYRC as a GENIUS permitted payment stablecoin issuer, state-qualified issuer, official applicant, or registered foreign issuer. Blox's materials instead identify a Malaysia-focused issuer and platform, with no U.S. regulatory pathway disclosed.",
+      "summary": "No public GENIUS permitted-payment-stablecoin-issuer approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination or token-specific GENIUS enforcement action was located for BLOX Blockchain Sdn. Bhd. or its token as of 2026-10-07. The reviewed rules are proposals or interim procedural rules, not issuer approvals. This is a bounded public-evidence finding, not proof of illegality or absence of unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
           "sourceKind": "federal-register",
           "sourceDate": "2026-06-22",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Securities Commission Malaysia registered digital asset exchange list",
           "url": "https://www.sc.com.my/regulation/guidelines/recognizedmarkets/list-of-registered-digital-asset-exchanges",
           "sourceKind": "foreign-regulator",
           "sourceDate": "2026-07-20",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposed rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -1,0 +1,129 @@
+{
+  "id": "usdx-kava",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Kava Mint describes USDX as a USD-targeting crypto-collateralized CDP stablecoin. One USDX is credited at $1 when repaying protocol debt, while its market price can vary. Debt cancellation does not establish an issuer obligation to redeem a holder's token for a fixed amount of national currency or a bank deposit. The legal issuer and payment-stablecoin obligation remain unresolved, supporting unclear applicability.",
+      "references": [
+        {
+          "label": "Kava Mint CDP and repayment description",
+          "url": "https://help.app.kava.io/article/15-what-is-kava-mint",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2023-04-03"
+        },
+        {
+          "label": "Kava Labs website terms",
+          "url": "https://www.kava.io/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Kava CDP module debt parameters",
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/params/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Kava Labs Inc is established as the website contracting party in California, not as a dollar-redemption obligor or legal issuer of USDX. issuerEntity and issuerDomicile are omitted. The help article's 2023 update and current module docs are mechanism evidence, not assurance of a functioning fiat redemption rail or current reserve attestation. GENIUS review is informational and does not assert a current approval, violation, or exemption from other laws. The regime remains in primary-regulator rulemaking; the September Treasury procedural rule is separate from Act-wide effectiveness.",
+    "references": [
+      {
+        "label": "Kava Mint CDP and repayment description",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2023-04-03"
+      },
+      {
+        "label": "Kava Labs website terms",
+        "url": "https://www.kava.io/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Kava CDP module debt parameters",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/params/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://help.app.kava.io/article/15-what-is-kava-mint",
+        "https://www.kava.io/terms-of-use",
+        "https://docs.kava.io/docs/cosmos/modules/cdp/params/",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "Independent regulator-domain search: (site:occ.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov) (\"RIF On Chain\" OR Kava OR \"Last Labs\" OR \"Tangent Finance\" OR \"MOC INVESTMENT\") (GENIUS OR stablecoin)",
+        "Independent exact-token search: (USDRIF OR \"Kava USDX\" OR USDXL OR \"Tangent USG\") (MiCA OR \"GENIUS Act\" OR PPSI OR \"EU listing\")"
+      ],
+      "summary": "The reviewed token/project materials, current Federal Reserve implementation release, Treasury SCRC procedure and NYDFS public directory did not identify a qualifying GENIUS approval, official token-issuer application, state-qualified designation, foreign registration or token-specific announced GENIUS pathway for usdx-kava. Targeted regulator-domain token/project/operator searches returned no qualifying public record. This is a dated, bounded negative finding; unpublished or confidential filings are not ruled out, and ordinary licenses or proposed procedures are not treated as issuer approval.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve proposed GENIUS issuer framework",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
+  }
+}

@@ -5,38 +5,98 @@
     "applicabilityBasis": {
       "summary": "USDU is a transferable U.S.-dollar-denominated fiat-referenced token with professional-client par USD redemption; domestic UAE payment use is restricted."
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Universal Digital INTL Limited",
     "issuerDomicile": "United Arab Emirates",
     "licensingRegulator": "ADGM FSRA",
     "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.universal.ae/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "ADGM FSP250089 confirms local fiat-referenced-token issuance only. It does not establish GENIUS authorization or a U.S. foreign-issuer exception. The issuer whitepaper describes UAE foreign-payment-token registration, which remains issuer-attributed. U.S. posture is unresolved; MiCA has not been assessed.",
+    "notes": "ADGM FSP250089 confirms local fiat-referenced-token issuance only. It does not establish GENIUS authorization or a U.S. foreign-issuer exception. The issuer whitepaper describes UAE foreign-payment-token registration, which remains issuer-attributed. USDU is transferable for settlement and professional clients can redeem at par through Aquanow after onboarding, normally within two business days. Crowe has public monthly reserve examinations, including August 2026; these are reserve assurance, not GENIUS approval. No public U.S. approval, application or GENIUS pathway intent was found in the dated review. MiCA territorial assessment is separate.",
     "references": [
       {
         "label": "Crowe August 2026 reserve examination",
         "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
         "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-18"
       },
       {
         "label": "USDU January 2026 whitepaper",
         "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-30"
       },
       {
         "label": "ADGM FSRA issuer register FSP250089",
         "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS implementation timetable",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and raw public digital-asset pending-applicant table",
+        "Treasury 17 August 2026 implementation timetable",
+        "SCRC 30 September 2026 interim state-certification procedures",
+        "Federal Reserve 24 September 2026 GENIUS proposal",
+        "NYDFS virtual-currency licensee/greenlist page",
+        "Universal USDU product, transparency archive, January 2026 whitepaper, August Crowe examination, ADGM FSRA FSP250089",
+        "Independent exact token/brand searches for GENIUS, MiCA and EU posture; exact issuer/operator-name searches restricted to occ.gov, fdic.gov, ncua.gov, federalreserve.gov, dfs.ny.gov and home.treasury.gov"
+      ],
+      "summary": "No reviewed source identifies this token or its established legal issuer as a GENIUS permitted payment stablecoin issuer, state-qualified issuer, official applicant, or federally registered foreign issuer; no token-specific GENIUS pathway announcement or U.S. enforcement action was located. This is a dated, bounded public-evidence finding, not proof that no private application or regulatory engagement exists. Non-U.S. licenses, bank or trust charters, reserve assurances and proposed rules do not establish GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Treasury GENIUS implementation timetable",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

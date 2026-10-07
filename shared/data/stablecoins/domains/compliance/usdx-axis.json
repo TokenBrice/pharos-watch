@@ -5,26 +5,172 @@
     "applicabilityBasis": {
       "summary": "USDx targets a dollar value but direct redemption is an approved-account signed-order exchange for supported digital-asset collateral. Axis terms disclaim a guaranteed value and guaranteed redemption availability. GENIUS section 2(22) separately requires a fixed monetary-value repayment obligation, excluding a digital asset merely denominated in fixed monetary value. These public terms do not settle USDx's U.S. legal category; synthetic backing and U.S.-person restrictions alone do not establish a statutory exclusion.",
       "references": [
-        { "label": "Axis terms, issuer identity and redemption conditions", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-        { "label": "Axis primary-market signed orders", "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-        { "label": "GENIUS Act section 2(22)", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+        {
+          "label": "Axis terms, issuer identity and redemption conditions",
+          "url": "https://www.axis.to/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Axis primary-market signed orders",
+          "url": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act section 2(22)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
       ]
     },
-    "authorizationStatus": "unknown",
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Coordinate Origin Limited",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.axis.to/transparency",
-    "notes": "Terms identify Coordinate Origin Limited as the BVI entity for issuance/redemption, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. Axis states USDx and sUSDx are not offered to U.S. persons. No token-specific regulatory authorization, foreign registration or legal opinion was retrieved; unknown records that unresolved posture without claiming a completed negative regulator-register search. The Accountable feed and Solidity security audits are not GENIUS authorization evidence. EU/EEA applications receive enhanced due diligence, which does not establish MiCA authorization; MiCA is intentionally unassessed rather than copied from the Ethena precedent.",
+    "notes": "Coordinate Origin Limited is preserved as the BVI issuance/redemption entity named in current terms, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. USDx is marketed as a dollar-linked settlement asset, but collateral exchange through approved signed orders and disclaimed guaranteed redemption do not settle whether an issuer is obligated to repay fixed monetary value under GENIUS. U.S.-person restrictions do not establish a statutory exclusion. The dated public-source review found no exact GENIUS approval, official application, state qualification or registered foreign exception; issuerPathway and foreignExceptionStatus remain unknown. Current transparency reserves are disclosed, but the live Accountable feed/security audits are not monthly statutory financial attestations or authorization. EU/EEA enhanced-due-diligence applications prevent a territorial MiCA out-of-scope inference; no named NCA/venue non-compliance decision was located, so parent MiCA remains unable to verify rather than importing the Ethena precedent. GENIUS issuance/sale rules remain pre-effective with Treasury expecting January 18, 2027.",
     "references": [
-      { "label": "Axis legal issuer and platform operator", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "Axis U.S.-person restrictions and disclosures", "url": "https://docs.axis.to/resources-and-legal/compliance.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "Axis primary-market eligibility and EU/EEA due diligence", "url": "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "GENIUS Act statutory definition", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+      {
+        "label": "Axis legal issuer and platform operator",
+        "url": "https://www.axis.to/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis U.S.-person restrictions and disclosures",
+        "url": "https://docs.axis.to/resources-and-legal/compliance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis primary-market eligibility and EU/EEA due diligence",
+        "url": "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis live reserve composition and backing disclosure",
+        "url": "https://app.axis.to/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC pending digital-asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS application and standards proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury issuance and sale proposal; expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures, not issuer approval",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency businesses and greenlisted tokens",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.axis.to/terms-of-service",
+        "https://docs.axis.to/resources-and-legal/compliance.md",
+        "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md",
+        "2026-10-07 indexed exact-name authorization/application and enforcement searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Coordinate Origin Limited / Axis USDx"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Coordinate Origin Limited / Axis USDx was located in the listed sources. This is a dated public-evidence finding, not proof that no private or unindexed application exists. Bank-charter and legacy licensing tables are not comprehensive GENIUS registers; proposed rules and SCRC procedural forms do not authorize an issuer.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "OCC pending digital-asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS application and standards proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury issuance and sale proposal; expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures, not issuer approval",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency businesses and greenlisted tokens",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

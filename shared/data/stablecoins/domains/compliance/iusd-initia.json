@@ -9,97 +9,172 @@
           "label": "Independent iUSD asset profile",
           "url": "https://defillama.com/stablecoin/initia-iusd",
           "sourceKind": "news",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Agora company disclosure: AUSD issuer",
+          "label": "Agora company disclosure: group context",
           "url": "https://www.agora.finance/company",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Initia iUSD FAQ: backing, fixed-unit conversion and no holder yield",
+          "url": "https://contents.initia.xyz/app/iusd-faq.json",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Initia platform Terms of Use",
+          "url": "https://initia.xyz/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-09-15"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
-    "notes": "The OCC granted preliminary conditional approval to establish Agora National Trust Bank on September 18, 2026 (Corporate Decision 1393). Final approval to commence business remains subject to preopening requirements; the decision describes a future AUSD issuance cutover from Agora Bermuda, not authorization of Initia iUSD. The related Agora charter therefore does not establish an iUSD-specific GENIUS approval, application, state-qualified authorization, or foreign-issuer registration, and the iUSD authorization status is unchanged.",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://contents.initia.xyz/app/iusd-faq.json",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "The OCC granted preliminary conditional approval to establish Agora National Trust Bank on September 18, 2026 (Corporate Decision 1393). Final approval to commence business remains subject to preopening requirements; the decision describes a future AUSD issuance cutover from Agora Bermuda, not authorization of Initia iUSD. The related Agora charter therefore does not establish an iUSD-specific GENIUS approval, application, state-qualified authorization, or foreign-issuer registration, and the iUSD authorization status is unchanged. Initia's primary FAQ identifies iUSD as the primary medium of exchange across its ecosystem, smart-contract mint/burn convertibility at 1 iUSD to 1 AUSD, and no reserve yield entitlement for holders. This is a pure fixed-unit wrapper rather than an appreciating savings share. Its documented exit is conversion to AUSD, bridging to Ethereum and swapping to USDC; that does not establish an enforceable iUSD-holder fiat redemption obligation against Agora. Agora terms specifically distinguish third-party tokens and do not automatically grant their holders direct fiat redemption. Initia Technologies Incorporated is identified as platform provider in the platform terms, not proven here to be the token's statutory legal issuer; issuerEntity and domicile remain unset. Monthly AUSD attestations are upstream and are not represented as iUSD-specific monthly attestations. No public GENIUS enforcement action naming Initia/iUSD was located in the scoped agency-domain searches. Reserve disclosure presence records the official FAQ explanation of 1:1 AUSD backing, not an independent iUSD reserve report or regulatory-compliant reserve certification.",
     "references": [
       {
         "label": "OCC Corporate Decision 1393: Agora preliminary conditional charter approval",
-        "url": "https://occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-09-18",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Digital Assets Licensing Applications",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Federal Register proposed rule: foreign issuer registration",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "New York DFS virtual currency licensing and Greenlist",
-        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "sourceKind": "state-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Independent iUSD asset profile",
         "url": "https://defillama.com/stablecoin/initia-iusd",
         "sourceKind": "news",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Initia iUSD FAQ: backing, fixed-unit conversion and no holder yield",
+        "url": "https://contents.initia.xyz/app/iusd-faq.json",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Initia platform Terms of Use",
+        "url": "https://initia.xyz/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-09-15"
+      },
+      {
+        "label": "Agora Terms of Use: third-party tokens and direct redemption limits",
+        "url": "https://static.agora.finance/termsofuse.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposal and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC forms and procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA MiCA EMT and ART registers",
-        "OCC Digital Assets Licensing Applications directory",
-        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal",
-        "Federal Reserve GENIUS Act customer-identification proposal",
-        "New York DFS virtual-currency licensing page and Greenlist",
-        "Initia and Agora public disclosures",
-        "Public searches for Initia/iUSD GENIUS approval, application, or foreign registration"
+        "OCC Bulletin 2026-3 and current digital-assets pending charter application table, independently reopened",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural interim final rule, independently reopened",
+        "Federal Reserve September 24, 2026 issuer standards/application proposal, independently reopened",
+        "NYDFS current virtual-currency regulated-entity directory and Greenlist, independently reopened",
+        "Scoped exact issuer/project-name public web searches across OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS domains; no relevant indexed approval or enforcement source established",
+        "Official iUSD FAQ from contents.initia.xyz and September 15, 2025 Initia platform terms",
+        "Agora current terms and full OCC Corporate Decision 1393; upstream issuer rights distinguished from iUSD wrapper rights",
+        "Federal Reserve June 18, 2026 customer-identification proposal and OCC March 2, 2026 Federal Register proposal"
       ],
-      "summary": "No public GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration naming Initia or iUSD was found. The Agora bank application is for a related AUSD issuer and does not establish a token-specific iUSD authorization.",
+      "summary": "No public GENIUS PPSI approval, official section 5 application, state-qualified authorization or registered foreign-issuer exception naming Initia/iUSD was located in the opened regulator sources and exact-name searches, including Initia Technologies Incorporated. The related Agora conditional bank charter and proposed AUSD cutover do not authorize this separately controlled wrapper. This is a dated public-evidence finding, not a claim that registration is legally required today or that private applications cannot exist.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Digital Assets Licensing Applications",
-          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Federal Reserve GENIUS Act customer-identification proposal",
           "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260618a.htm",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-06-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "New York DFS virtual currency licensing and Greenlist",
-          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
           "sourceKind": "state-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposal and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC forms and procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Corporate Decision 1393: Agora preliminary conditional charter approval",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

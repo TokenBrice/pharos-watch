@@ -1,22 +1,5 @@
 {
   "id": "zarp-zarp",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA Interim Register and register guidance",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ZARP purchase and distribution page",
-        "url": "https://www.zarpstablecoin.com/get-zarp/"
-      },
-      {
-        "label": "ZARP transparency page",
-        "url": "https://www.zarpstablecoin.com/transparency/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -24,15 +7,23 @@
       "references": [
         {
           "label": "GENIUS Act statutory payment-stablecoin framework",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "ZARP purchase and distribution page",
           "url": "https://www.zarpstablecoin.com/get-zarp/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZARP stablecoin terms and conditions",
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-07-01",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -48,83 +39,207 @@
     "reserveDisclosureUrl": "https://www.zarpstablecoin.com/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Evidence as of 2026-08-14 review: ZARP's public pages describe a one-Rand redemption promise, reserves held at Old Mutual Wealth, and a July 2026 independent review. The website also states that Inves Capital (Pty) Ltd's CASP license is pending. No public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer determination was found for ZARP or its named entities. Reserve-report date recorded as of 2026-08-14 review: 2026-08-01 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. ZARP is a rand-denominated payment token with approved-partner primary issuance/redemption and public 1:1 backing disclosures. Official homepage still describes Inves Capital CASP license as pending; this local claim is not GENIUS authorization. Kempen report is dated 2026-09-01 and its publication page is dated 2026-09-21; it is an AUP engagement explicitly without an assurance opinion. The archive does not establish a continuous monthly attestation series. No qualifying public GENIUS approval/application or foreign registration/comparability determination was found in the scoped review; foreign exception remains unknown. Regulator materials remain proposal-stage, and the September 30 SCRC procedural rule does not activate the Act. DASP restrictions are not yet effective at review; no public enforcement match was located. The existing legal issuerEntity is preserved exactly.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act statutory payment-stablecoin framework",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-08",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications table",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "ZARP purchase and distribution page",
         "url": "https://www.zarpstablecoin.com/get-zarp/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "ZARP transparency page",
         "url": "https://www.zarpstablecoin.com/transparency/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ZARP stablecoin terms and conditions",
+        "url": "https://www.zarpstablecoin.com/terms/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-07-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Kempen September 2026 ZARP agreed-upon procedures report",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Kempen September report publication",
+        "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-september-2026/",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "State Certification Review Committee procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ZARP official homepage regulatory footer",
+        "url": "https://www.zarpstablecoin.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA MiCA Interim Register page and linked register categories (reviewed 2026-08-14)",
-        "OCC GENIUS Act proposed rule and foreign payment-stablecoin registration/application provisions (Bulletin 2026-3)",
-        "OCC digital assets licensing applications table (reviewed 2026-08-14)",
-        "Treasury/FinCEN/OFAC GENIUS Act proposed rulemaking and foreign-issuer comparability rulemaking",
-        "FDIC and NCUA GENIUS Act proposal pages",
-        "ZARP purchase, product, and transparency disclosures",
-        "Web searches for ZARP plus GENIUS Act, PPSI, permitted issuer, and foreign registration"
+        "OCC Bulletin 2026-3 substantive raw HTML and complete pending digital-assets licensing table",
+        "Federal Reserve September 24, 2026 GENIUS proposals",
+        "Treasury April 8 AML/OFAC and August 17 foreign-issuer proposals",
+        "September 30 State Certification Review Committee procedural interim final rule",
+        "NYDFS virtual-currency business directory",
+        "ZARP terms, purchase/distribution and transparency disclosures; official homepage regulatory footer",
+        "Kempen latest report and accountant publication",
+        "Token and legal-name web searches restricted to OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS for GENIUS, PPSI, approval and application",
+        "Token and legal-name searches restricted to SEC, CFTC, OFAC, FinCEN and OCC for enforcement, sanctions and cease-and-desist notices"
       ],
-      "summary": "Review found a ZAR-denominated payment-like token and North America distribution, but no public token-specific PPSI approval, state-qualified approval, official application, or foreign-issuer exception/comparability determination for ZARP Stablecoin (Pty) Ltd as of 2026-08-14.",
+      "summary": "As of 2026-10-07, the consulted primary regulator sources, public directory and issuer disclosures and scoped token/legal-name searches did not identify a token-specific PPSI approval, state-qualified approval, official pending GENIUS application or foreign-issuer registration/comparability determination for ZARP / ZARP Stablecoin (Pty) Ltd / Inves Capital (Pty) Ltd. This records bounded public negative evidence, not a ruling that the token is unlawful, that no confidential filing exists or that the foreign jurisdiction has been rejected. No matching public enforcement action was located in the scoped searches.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC digital assets licensing applications table",
           "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
           "url": "https://home.treasury.gov/news/press-releases/sb0435",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-04-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "State Certification Review Committee procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities directory",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZARP purchase and distribution page",
+          "url": "https://www.zarpstablecoin.com/get-zarp/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZARP transparency page",
+          "url": "https://www.zarpstablecoin.com/transparency/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZARP stablecoin terms and conditions",
+          "url": "https://www.zarpstablecoin.com/terms/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-07-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Kempen September 2026 ZARP agreed-upon procedures report",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-09-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Kempen September report publication",
+          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-september-2026/",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-09-21",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZARP official homepage regulatory footer",
+          "url": "https://www.zarpstablecoin.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

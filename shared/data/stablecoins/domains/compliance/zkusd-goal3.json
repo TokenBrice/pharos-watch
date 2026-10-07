@@ -1,16 +1,187 @@
 {
   "id": "zkusd-goal3",
-  "mica": {
-    "status": "out-of-scope",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "zkUSD is the tracked transferable USD-named Goal3/ZKsync token, not a different same-symbol zkUSD project. Explorer verified proxy initialization and linked initial implementation establish a centrally controlled mint/burn/vesting token footprint, but current Goal3 issuer terms were unreachable and no identified legal issuer obligation to redeem for fixed national currency or bank deposits was found. Reported token-conversion or portal mechanics alone would not satisfy GENIUS section 2(22), which excludes a dollar-denominated digital asset from monetary-value redemption. Payment-stablecoin scope is therefore genuinely ambiguous rather than automatically inferred from the ticker or metadata archetype.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory payment-stablecoin framework",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZKsync explorer verified zkUSD proxy source and initialization",
+          "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0xfc7e56298657b002b3e656400e746b7212912757",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZKsync explorer linked initial zkUSD token implementation source",
+          "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0x501e7ab98b8d1b5f3c24c4a551898f9561e3ef2f",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-07. Exact tracked contract is 0xfc7e56298657b002b3e656400e746b7212912757 on ZKsync, not similarly named Mina/Zero or other zkUSD projects. No exact legal issuerEntity or domicile is asserted: onchain creator/owner or Goal3 project branding is not a verified legal issuance entity. Current Goal3 website and documentation could not be fetched by static reader or isolated browser navigation. Public reserve, fiat-redemption-policy and monthly-attestation presence was not corroborated in the accessible exact-token sources, so disclosure flags are false as not located, not assertions that backing or obligations cannot exist. Verified proxy constructor identifies an initial implementation, not guaranteed current implementation after upgrades. Statutory payment/monetary-value obligation remains genuinely unresolved, supporting unclear. Scoped regulator/directory/token-name searches found no qualifying public GENIUS approval/application or foreign registration/comparability determination; no categorical illegality or definitive issuer absence is alleged. Enforcement remains unknown because issuer identity is unestablished. General regime evidence remains proposal-stage and DASP restrictions are not effective at review.",
     "references": [
       {
-        "label": "ESMA interim MiCA register: ART/EMT register page reviewed; no Goal3/zkUSD issuer entry located on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "GENIUS Act statutory payment-stablecoin framework",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "ZKsync token explorer: zkUSD is identified as a ZKsync ecosystem token; no EU issuer authorization information is provided",
-        "url": "https://explorer.zksync.io/tokens"
+        "label": "ZKsync explorer verified zkUSD proxy source and initialization",
+        "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0xfc7e56298657b002b3e656400e746b7212912757",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ZKsync explorer linked initial zkUSD token implementation source",
+        "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0x501e7ab98b8d1b5f3c24c4a551898f9561e3ef2f",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "State Certification Review Committee procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 substantive raw HTML and complete pending digital-assets licensing table",
+        "Federal Reserve September 24, 2026 GENIUS proposals",
+        "Treasury April 8 AML/OFAC and August 17 foreign-issuer proposals",
+        "September 30 State Certification Review Committee procedural interim final rule",
+        "NYDFS virtual-currency business directory",
+        "Exact tracked token proxy, linked initial implementation and contract-creation APIs independently reopened",
+        "Goal3 official site and documentation fetch attempts, both unavailable; no inaccessible text treated as verified",
+        "Searches for Goal3 zkUSD terms, issuer, redemption and GENIUS intent; unrelated same-symbol projects excluded",
+        "Token and legal-name web searches restricted to OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS for GENIUS, PPSI, approval and application",
+        "Token and legal-name searches restricted to SEC, CFTC, OFAC, FinCEN and OCC for enforcement, sanctions and cease-and-desist notices"
+      ],
+      "summary": "As of 2026-10-07, the consulted primary regulator sources, public directory and issuer disclosures and scoped token/legal-name searches did not identify a token-specific PPSI approval, state-qualified approval, official pending GENIUS application or foreign-issuer registration/comparability determination for Goal3 zkUSD / zkUSD Dollar (exact tracked ZKsync contract; legal issuer unestablished). This records bounded public negative evidence, not a ruling that the token is unlawful, that no confidential filing exists or that the foreign jurisdiction has been rejected. No matching public enforcement action was located in the scoped searches.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury foreign-issuer framework proposal and effective-date discussion",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "State Certification Review Committee procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities directory",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZKsync explorer verified zkUSD proxy source and initialization",
+          "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0xfc7e56298657b002b3e656400e746b7212912757",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "ZKsync explorer linked initial zkUSD token implementation source",
+          "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getsourcecode&address=0x501e7ab98b8d1b5f3c24c4a551898f9561e3ef2f",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

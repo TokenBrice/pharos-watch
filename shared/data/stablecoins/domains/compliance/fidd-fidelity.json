@@ -1,26 +1,25 @@
 {
   "id": "fidd-fidelity",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "Fidelity FIDD page: retail purchase and redemption are limited to eligible U.S. states and territories",
-        "url": "https://www.fidelitydigitalassets.com/stablecoin"
-      },
-      {
-        "label": "FIDD Terms and Conditions: issuer, U.S.-dollar redemption, and account eligibility terms",
-        "url": "https://www.fidelitydigitalassets.com/fidd-terms"
-      },
-      {
-        "label": "ESMA Interim MiCA Register landing page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "FIDD is a Fidelity-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations, issued by a federally chartered OCC-supervised national trust bank."
+      "summary": "FIDD is a Fidelity-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations, issued by a federally chartered OCC-supervised national trust bank.",
+      "references": [
+        {
+          "label": "FIDD terms",
+          "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-13"
+        },
+        {
+          "label": "FIDD August reserve attestation",
+          "url": "https://fwc.widen.net/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&download=true",
+          "sourceKind": "auditor-report",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-25"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "federal-qualified-nonbank",
@@ -35,61 +34,116 @@
     "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Fidelity Digital Assets received a conditional OCC national trust bank charter approval on December 12, 2025 (conversion from NY state trust company). This is a trust-charter conditional approval under existing OCC chartering authority: it is not a PPSI approval under the GENIUS Act, which remains in proposed-rules rulemaking. No PPSI application framework exists yet and no issuer has received PPSI status. FIDD launched publicly on February 4, 2026; Fidelity positions FIDD as aligning with GENIUS Act reserve standards but has not announced a formal PPSI application. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. Fidelity Digital Assets, National Association is the sole FIDD issuer and USD redemption obligor. OCC active-trust-bank list as of August 31, 2026 names charter 25398; NYDFS confirms conversion effective December 12, 2025. Existing federal-qualified-nonbank pathway records the statutory route for an uninsured national bank, not an attained PPSI authorization. OCC December 12 decision conditions 3 and 5 distinguish future GENIUS compliance and separate written nonobjection for a bank-issued stablecoin from ordinary charter approval. No public section 5 GENIUS approval or official GENIUS application was located. February 4 issuer launch commentary describes GENIUS regulatory clarity but does not announce a formal PPSI application. Latest opened PwC examination dated September 25, 2026 addresses August 7 and 31 reserves and explicitly does not examine legal/regulatory compliance. Removed stale categorical assertions that no approval framework or PPSI approvals exist anywhere.",
     "references": [
       {
         "label": "OCC Conditional Approval: Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2025-12-12",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Fidelity FIDD launch press release (Feb 4, 2026)",
         "url": "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-04",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Fidelity Digital Assets stablecoin",
         "url": "https://www.fidelitydigitalassets.com/stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "FIDD terms",
         "url": "https://www.fidelitydigitalassets.com/fidd-terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-13"
+      },
+      {
+        "label": "OCC Fidelity conditional charter decision and stablecoin conditions",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125d.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-12"
+      },
+      {
+        "label": "OCC active national trust banks, August 31, 2026",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-31"
+      },
+      {
+        "label": "NYDFS Fidelity federal conversion effective December 12, 2025",
+        "url": "https://www.dfs.ny.gov/reports-and-publications/weekly-bulletins/wb20251219",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-19"
+      },
+      {
+        "label": "FIDD August 2026 PwC reserve examination",
+        "url": "https://fwc.widen.net/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&download=true",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-25"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC news release nr-occ-2025-125 (Dec 12, 2025): conditional trust charter approval, not PPSI status",
-        "OCC Bulletin 2026-3 GENIUS Act NPRM (Feb 25, 2026): PPSI application framework still in proposed rules",
-        "OCC national trust bank materials and rulemaking tracker",
-        "Fidelity Digital Assets stablecoin and FIDD terms pages",
-        "Fidelity FIDD launch press release (Feb 4, 2026)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "Independent exact-name searches (FIDD / Fidelity Digital Assets) of OCC, FDIC, Federal Reserve, Treasury and NYDFS domains, 2026-10-07",
+        "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125d.pdf",
+        "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
+        "https://www.fidelitydigitalassets.com/stablecoin",
+        "https://www.fidelitydigitalassets.com/fidd-terms",
+        "https://www.fidelitydigitalassets.com/research-and-insights/fidelity-investmentsr-expands-digital-asset-investment-lineup-stablecoin",
+        "https://fwc.widen.net/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&download=true",
+        "https://www.dfs.ny.gov/reports-and-publications/weekly-bulletins/wb20251219",
+        "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4"
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official PPSI application found for FIDD. The OCC conditional trust charter (Dec 12, 2025) confirms issuer pathway but is explicitly not a PPSI approval. No PPSI application framework exists; rulemaking is at NPRM stage.",
+      "summary": "No qualifying exact Fidelity Digital Assets, National Association / FIDD public section 5 GENIUS PPSI approval, state qualification, official GENIUS application, or GENIUS enforcement action was located. The opened OCC charter decision and active-bank list establish bank status, not PPSI approval. Issuer commentary on GENIUS regulatory clarity is not a filed application.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS proposed rule official GPO mirror",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS standards proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "State certification procedural interim rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

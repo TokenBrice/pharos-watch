@@ -1,0 +1,77 @@
+{
+  "id": "fxd-fathom",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "FXD targets one dollar through collateralized minting, debt repayment and arbitrage. Reviewed terms do not establish an identifiable issuer's obligation to redeem holders for a fixed amount of national-currency monetary value; protocol collateral release and stablecoin swaps do not establish that obligation. General dollar use nevertheless prevents a conclusive non-payment-token classification.",
+      "references": [
+        {
+          "label": "Fathom FXD minting and burning",
+          "url": "https://docs.fathom.fi/fxd-stablecoin.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Fathom interface and protocol terms",
+          "url": "https://docs.fathom.fi/terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-04-09",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: monetary value, payment stablecoin and effective-date definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "notes": "No legal issuing entity or fixed-dollar issuer redemption undertaking was verified. Fathom DAO governance and upgradeable contracts are not themselves proof of statutory exemption. No named GENIUS authorization was located; this is not a finding of non-compliance. Implementation proposals and Treasury state-certification procedures do not authorize FXD.",
+    "references": [
+      {
+        "label": "Fathom soft peg and StableSwapModule",
+        "url": "https://docs.fathom.fi/fxd-stablecoin/soft-pegging-to-the-us-dollar.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS framework and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency licensees and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Fathom FXD documentation, soft-peg mechanism and terms of service",
+        "Named Fathom/FXD searches on OCC, Federal Reserve, FDIC, NCUA and NYDFS domains",
+        "Federal Reserve 2026-09-24 GENIUS implementation and application proposals",
+        "Treasury 2026-09-30 SCRC forms and procedural rule",
+        "NYDFS current virtual currency business directory and Greenlist",
+        "Fathom FXD GENIUS issuer-intent search"
+      ],
+      "summary": "The checked disclosures and regulator sources did not locate a named FXD or Fathom GENIUS approval, public official application, state qualification, foreign registration or issuer-announced pathway. NYDFS licensing and a Greenlist are not GENIUS authorization registers. This bounded negative review is not proof that no private application exists or a finding of illegality.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

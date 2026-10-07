@@ -1,22 +1,41 @@
 {
   "id": "sparkusdc-spark",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Verified exact Spark USDC Vault ERC-4626 source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+      },
+      {
+        "label": "MiCA Article 3 ART and EMT definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "This is an appreciating ERC-4626 yield receipt redeemable at an asset exchange rate, not an issuer promise to redeem for a fixed amount of monetary value.",
+      "summary": "Spark USDC Vault is a variable-exchange-rate ERC-4626 investment receipt. Interest, fees and investment results affect the assets redeemable per share; the share has no documented issuer obligation to redeem for a fixed amount of monetary value.",
       "references": [
         {
           "label": "GENIUS Act payment stablecoin definition, section 2(22)",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+          "label": "Morpho exact Spark USDC vault portfolio and control API, reviewed 2026-10-07",
           "url": "https://api.morpho.org/graphql",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Verified exact Spark USDC Vault ERC-4626 source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -24,23 +43,36 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Reviewed as a yield share under GENIUS section 2(22). No payment-stablecoin authorization is asserted. MiCA is intentionally unassessed: transferable share mechanics alone do not resolve EU offering or instrument classification.",
+    "notes": "Reviewed 2026-10-07 as the exact Base Spark USDC Vault holder receipt (0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a), distinct from Spark Savings spUSDC and from direct parent USDC holdings. The native ERC-4626 share redeems at a variable asset exchange rate subject to strategy liquidity and investment results. GENIUS section 2(22) fixed monetary-value issuer obligation is not established for this yield receipt, so payment-stablecoin authorization, issuer pathway, foreign exception and DASP payment-stablecoin restriction are not applicable. No parent token authorization or issuerEntity is inherited. MiCA scope is independently assessed as outside this tracker EMT/ART model.",
     "references": [
       {
         "label": "GENIUS Act payment stablecoin definition, section 2(22)",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
+        "label": "Morpho exact Spark USDC vault portfolio and control API, reviewed 2026-10-07",
         "url": "https://api.morpho.org/graphql",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Verified exact Spark USDC Vault ERC-4626 source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

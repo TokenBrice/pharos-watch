@@ -1,65 +1,209 @@
 {
   "id": "usdsc-startale",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDSC is marketed as a dollar-stable payment, transfer and trading token, separate from its earn vault. The binding product terms describe discretionary, immediately completed principal-to-principal swaps with no continuing rights or obligations; they do not identify the legal token issuer or promise fixed monetary redemption. Conversion into USDC.e or another digital asset does not alone satisfy Section 2(22). Payment design is apparent, but the issuer monetary-redemption limb is unresolved, so applicability is unclear.",
+      "references": [
+        {
+          "label": "Startale USD",
+          "url": "https://usd.startale.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 extensions documentation",
+          "url": "https://docs.m0.org/protocol/extensions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD FAQ",
+          "url": "https://startale.com/en/blog/usdsc-faq",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-12-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD product Terms of Use",
+          "url": "https://usd.startale.com/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-12-03",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD product FAQ",
+          "url": "https://usd.startale.com/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Startale Group",
-    "issuerDomicile": "Singapore",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://usd.startale.com/",
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USDSC is marketed as issued by Startale Group; the product terms identify Startale Development (BVI) Ltd as website and swap counterparty. These reviewed sources do not resolve the exact token liability issuer or establish token-specific GENIUS authorization or a foreign-issuer exception.",
+    "notes": "USDSC is marketed as issued by Startale Group, while binding product terms identify Startale Development (BVI) Ltd as the website and principal swap counterparty. These sources do not establish the exact legal token issuer or a fixed-money redemption obligation. The pre-sweep issuerEntity Startale Group is retained because the current issuer FAQ explicitly attributes USDSC issuance to that group and omission is not demonstrably more accurate. This preserves the existing attribution under the strict adjudication rule, without resolving the precise legal token liability entity. Issuer domicile remains omitted because the token terms do not establish the domicile of that unresolved legal issuer. Swaps are discretionary immediate transactions with no continuing rights or obligations; redemptionPolicyPresent is false for an issuer fixed-money redemption policy. USDSC and the Earn Vault are distinct products. Public reserve-composition disclosure is retained; no USDSC-specific monthly signed reserve attestation was found. Underlying M0 validator reporting does not establish a wrapper-level monthly attestation or GENIUS approval. No qualifying token-specific public approval, official application, announced licensing intent or foreign exception was located.",
     "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury Section 3 implementation proposal and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve stablecoin standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification review procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Startale USD",
         "url": "https://usd.startale.com/",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "Startale USD launch",
-        "url": "https://startale.com/blog/startale-launches-usdsc",
-        "sourceKind": "news"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 extensions documentation",
         "url": "https://docs.m0.org/protocol/extensions",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Startale USD FAQ",
         "url": "https://startale.com/en/blog/usdsc-faq",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Startale USD product Terms of Use",
+        "url": "https://usd.startale.com/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-03",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Startale USD product FAQ",
+        "url": "https://usd.startale.com/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation (usd.startale.com, startale.com/en/blog/usdsc-faq)",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Web search for Startale USDSC GENIUS Act authorization June 2026",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Public Law 119-27, Section 2(22), independently reopened PDF",
+        "OCC Bulletin 2026-3, full primary HTML inspected",
+        "OCC current digital-asset bank licensing applications table, full primary HTML inspected; this is not a PPSI register",
+        "Federal Reserve September 24, 2026 standards and application proposals",
+        "Treasury August 17, 2026 Section 3 proposal and September 30, 2026 SCRC procedural rule",
+        "NYDFS full current virtual-currency regulated-entity and Greenlist page",
+        "Official-domain search for Nerona, USDnr, Startale, USDSC, RISE Dollar, M0 Foundation, MXON and Wrapped M across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
+        "https://usd.startale.com/",
+        "https://docs.m0.org/protocol/extensions",
+        "https://startale.com/en/blog/usdsc-faq",
+        "https://usd.startale.com/terms",
+        "https://usd.startale.com/faq"
       ],
-      "summary": "Startale and M0 issuer materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDSC. Startale Group remains Singapore-domiciled with no announced U.S. regulatory authorization intent.",
+      "summary": "As of 2026-10-07, independently reopened regulator publications, the OCC bank-application table, NYDFS tables, token documentation and the recorded official-domain search did not identify a qualifying public GENIUS PPSI approval, state-qualified designation, official application, registered foreign exception, issuer licensing-intent announcement or token-specific GENIUS enforcement action for Startale USD (USDSC). The legal token issuer and fixed-money redemption obligation remain unresolved. The search is bounded public negative evidence, not a complete register or a conclusion that confidential applications do not exist. Infrastructure partners and similarly named tokens do not establish this wrapper's authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD",
+          "url": "https://usd.startale.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 extensions documentation",
+          "url": "https://docs.m0.org/protocol/extensions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD FAQ",
+          "url": "https://startale.com/en/blog/usdsc-faq",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-12-08",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD product Terms of Use",
+          "url": "https://usd.startale.com/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-12-03",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale USD product FAQ",
+          "url": "https://usd.startale.com/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Startale Group"
   }
 }

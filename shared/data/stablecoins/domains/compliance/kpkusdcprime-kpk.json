@@ -1,0 +1,87 @@
+{
+  "id": "kpkusdcprime-kpk",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "KPK USDC Prime exact Ethereum Morpho Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0x4Ef53d2cAa51C447fdFEEedee8F07FD1962C9ee6/kpk-usdc-prime"
+      },
+      {
+        "label": "Morpho Vault V2: share accounting, interest, losses and redemption",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "MiCA Article 3: EMT/ART stable-value definitions",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "KPK USDC Prime is a USDC-denominated ERC-4626-style Morpho Vault V2 receipt share, not USDC itself. Redemption returns a variable pro-rata amount of underlying USDC calculated from total assets and shares; interest, management fees and realized losses can change share value. No fixed-fiat issuer redemption obligation or separate payment-stablecoin issuance is established by the opened product/contract evidence.",
+      "references": [
+        {
+          "label": "KPK USDC Prime exact Ethereum Morpho Vault V2",
+          "url": "https://app.morpho.org/ethereum/vault/0x4Ef53d2cAa51C447fdFEEedee8F07FD1962C9ee6/kpk-usdc-prime",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2: share accounting, interest, losses and redemption",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "KPK USDC Prime partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Strategy-vault shares are assessed separately from parent USDC. Circle's MiCA authorization or U.S. issuer intent does not authorize this vault share. KPK is identified as curator, not treated as a verified legal payment-stablecoin issuer. The assessment concerns the tracker's EMT/ART and GENIUS payment-stablecoin models; it does not decide whether the shares are securities/financial instruments or otherwise subject to financial-services rules. Explorer-hosted Morpho source is partially verified; the exact Morpho product page and protocol documentation independently corroborate the variable-share structure.",
+    "references": [
+      {
+        "label": "KPK USDC Prime exact Ethereum Morpho Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0x4Ef53d2cAa51C447fdFEEedee8F07FD1962C9ee6/kpk-usdc-prime",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Morpho Vault V2: share accounting, interest, losses and redemption",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KPK USDC Prime partially verified, explorer-hosted Morpho VaultV2 source and redemption formula",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

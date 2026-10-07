@@ -1,0 +1,194 @@
+{
+  "id": "hyusd-hylo",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Hylo hyUSD is a general dollar-stable base claim on onchain crypto-collateral pools, distinct from the yield-accruing eHYUSD receipt and xASSET risk tranches. Mint/redemption routing converts among USDC and volatile collateral using protocol prices, fees, reserve availability and pool conditions. The reviewed public disclosures do not identify a legal issuer obliged to redeem hyUSD for a fixed amount of national-currency monetary value, leaving the section 2(22) payment-stablecoin test unresolved.",
+      "references": [
+        {
+          "label": "Hylo stablecoin documentation",
+          "url": "https://docs.hylo.so/product-guide/stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hylo dynamic collateral routing",
+          "url": "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hylo protocol introduction",
+          "url": "https://docs.hylo.so/introduction",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed on 2026-10-07 for Hylo Solana hyUSD, mint 5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E. The token is a dollar-stable base across collateral pools, distinct from eHYUSD appreciating Earn Pool shares and xASSET leverage tranches. The USDC route has a 0.2% redemption fee and requires reserve availability and USDC par tolerance; volatile-pool redemptions have collateral-ratio-dependent fees and restrictions. These conversion mechanics do not establish a legal fixed-national-currency issuer obligation. Issuer entity, domicile and licensing context are omitted because public sources did not establish them. Smart-contract audits are not reserve attestations. Territorial legal terms remain unavailable: the homepage returned HTTP 429, and an isolated named browser attempt returned an unrelated target URL, so its content was discarded and the tab released. No categorical issuerless or DeFi exemption is asserted.",
+    "references": [
+      {
+        "label": "Hylo stablecoin documentation",
+        "url": "https://docs.hylo.so/product-guide/stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hylo dynamic collateral routing",
+        "url": "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hylo protocol introduction",
+        "url": "https://docs.hylo.so/introduction",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS Act proposed rule materials",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA GENIUS Act implementation FAQ",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Hylo protocol security audits",
+        "url": "https://docs.hylo.so/security/audits.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register GENIUS inventory through 2026-10-07, both pages: 112 records; no StandX, Flying Tulip, Hylo or hyUSD name match",
+        "OCC Bulletin 2026-3 and digital-assets licensing table: main content independently fetched from official raw HTML; nine pending bank applicants, no target issuer",
+        "FDIC April 7 issuer proposal, Federal Reserve September 24 issuer/application proposals and NCUA implementation FAQ",
+        "Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedural interim final rule",
+        "NYDFS live regulated entities and Greenlisted issuance-approved coins",
+        "Independent regulator-domain search for StandX, Flying Tulip, Hylo and hyUSD with GENIUS, PPSI, enforcement and stablecoin terms",
+        "Hylo introduction, stablecoin guide, dynamic collateral routing, audit index and llms.txt; independent legal/terms and EU/MiCA searches"
+      ],
+      "summary": "As of 2026-10-07, the independently opened regulator implementation materials, Federal Register inventory, NYDFS tables, token disclosures and regulator-domain searches did not identify a qualifying public GENIUS approval, state qualification, named official application, registered foreign exception or GENIUS enforcement action for Hylo Solana hyUSD. Its legal token issuer remains unidentified. This is a bounded negative-evidence finding and does not establish the absence of confidential or unindexed filings. Ordinary licenses and proposed rules do not establish token-specific GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA GENIUS Act implementation FAQ",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}
