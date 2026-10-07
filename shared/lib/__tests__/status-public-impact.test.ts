@@ -17,6 +17,15 @@ describe("transitionHasPublicImpact", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
   });
 
+  it.each([
+    ["price_gap_reviews_expiring", "info"],
+    ["price_gap_reviews_expiring", "warning"],
+    ["reserve_feed_reviews_expiring", "info"],
+    ["reserve_feed_reviews_expiring", "warning"],
+  ] as const)("keeps %s at %s severity admin-only", (code, severity) => {
+    expect(transitionHasPublicImpact([cause({ code, severity })])).toBe(false);
+  });
+
   it("treats a duration-degraded persistent price gap as public impact", () => {
     expect(transitionHasPublicImpact([cause({ code: "active_price_coverage_duration_degraded" })])).toBe(true);
   });

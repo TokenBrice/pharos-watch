@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
+import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
 import {
@@ -15,7 +16,11 @@ import {
   type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
-import { evaluateStablecoinActivePriceCoverage, STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  STABLECOIN_PRICE_GAP_REVIEWS,
+  type StablecoinPriceGapReview,
+} from "../stablecoin-publication-coverage";
 
 function makeReserveComposition(
   overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,
@@ -64,6 +69,7 @@ function makeDataQualityEvaluationInput(
 ): DataQualityEvaluationInput {
   const publicHealth = makePublicHealth();
   return {
+    nowSec: 1_700_000_000,
     dataQuality: makeDataQuality(),
     repairRunnerAutoRepairCount: null,
     activePriceCoverage: publicHealth.activePriceCoverage,
@@ -643,6 +649,7 @@ describe("status cause text", () => {
       { nowSec: review.reviewedAt, priceGapReviews: [review] },
     );
     const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      nowSec: review.reviewedAt,
       activePriceCoverage: {
         ...evaluated, status: "incomplete", observedAt: review.reviewedAt,
         expiredGapReviewIds: ["expired-coin"], invalidGapReviewIds: ["invalid-coin"],
@@ -1045,5 +1052,154 @@ describe("status rule-set behavior at policy boundaries", () => {
   ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("classifies data quality at policy boundaries", (overrides, status) => {
     const evaluation = evaluateDataQualityStatus(makeDataQualityEvaluationInput(overrides));
     expect(evaluation.status).toBe(status);
+  });
+});
+
+describe("review expiry reminders", () => {
+  const nowSec = 1_700_000_000;
+  const runbookUrl = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/review-renewal.md";
+
+  function priceReview(stablecoinId: string, remainingSec: number): StablecoinPriceGapReview {
+    return {
+      stablecoinId, owner: "ops", reason: "Reviewed missing-price evidence.",
+      sources: ["https://example.com/price-evidence"],
+      reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
+    };
+  }
+
+  function priceInput(
+    reviews: StablecoinPriceGapReview[],
+    coverageClock = nowSec,
+    price: number | null = null,
+  ): DataQualityEvaluationInput {
+    const evaluated = evaluateStablecoinActivePriceCoverage(
+      reviews.map((review) => ({ id: review.stablecoinId, price })),
+      reviews.map((review) => review.stablecoinId),
+      { nowSec: coverageClock, priceGapReviews: reviews },
+    );
+    return makeDataQualityEvaluationInput({
+      nowSec,
+      activePriceCoverage: { ...evaluated, status: evaluated.complete ? "complete" : "incomplete", observedAt: coverageClock },
+    });
+  }
+
+  function reserveReview(stablecoinId: string, remainingSec: number): ReserveFeedReview {
+    return {
+      stablecoinId, adapterKey: "midas-mtbill", failureCategory: "unknown",
+      warningCodes: [], errorPrefix: "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
+      owner: "ops", reason: "Reviewed stale portfolio evidence.",
+      sources: [{ url: "https://example.com/reserve-evidence", evidenceDate: "2023-11-13" }],
+      reviewedAt: nowSec - 86400, expiresAt: nowSec + remainingSec,
+    };
+  }
+
+  function reserveInput(reviews: ReserveFeedReview[]): DataQualityEvaluationInput {
+    return makeDataQualityEvaluationInput({
+      nowSec,
+      reserveComposition: makeReserveComposition({
+        acknowledgedFeedIds: reviews.map((review) => review.stablecoinId),
+        acknowledgedFeeds: reviews,
+      }),
+    });
+  }
+
+  for (const lane of ["price", "reserve"] as const) {
+    const code = lane === "price" ? "price_gap_reviews_expiring" : "reserve_feed_reviews_expiring";
+    const metric = lane === "price" ? "priceGapReviewsExpiringSoonestSec" : "reserveFeedReviewsExpiringSoonestSec";
+
+    it.each([
+      [172740, true],
+      [172800, true],
+      [172801, false],
+      [0, false],
+      [-1, false],
+    ] as const)(`${lane} lane reminds only inside the inclusive 48h boundary (%i seconds)`, (remainingSec, reminds) => {
+      const input = lane === "price"
+        ? priceInput([priceReview("coin-a", remainingSec)], nowSec - 2)
+        : reserveInput([reserveReview("coin-a", remainingSec)]);
+      const result = evaluateDataQualityStatus(input);
+      const reminder = result.causes.find((cause) => cause.code === code);
+      expect(result.status).toBe("healthy");
+      if (reminds) {
+        expect(reminder).toMatchObject({
+          layer: "data-quality", severity: "info", metric, value: remainingSec, threshold: 172800, runbookUrl,
+        });
+        expect(reminder?.message).toContain("coin-a");
+        expect(reminder?.message).toContain(new Date((nowSec + remainingSec) * 1000).toISOString());
+        expect(reminder?.message).toContain(`${Math.floor(remainingSec / 3600)}h left`);
+      } else {
+        expect(reminder).toBeUndefined();
+      }
+      if (lane === "reserve") {
+        expect(result.causes).toContainEqual(expect.objectContaining({
+          code: "reserve_feed_reviews_acknowledged", severity: "info",
+        }));
+      }
+    });
+
+    it(`${lane} lane aggregates reminders by expiry then stablecoin ID`, () => {
+      const entries = [
+        { id: "coin-c", remainingSec: 172740 },
+        { id: "coin-b", remainingSec: 3600 },
+        { id: "coin-a", remainingSec: 3600 },
+        { id: "coin-d", remainingSec: 172801 },
+      ];
+      const input = lane === "price"
+        ? priceInput(entries.map(({ id, remainingSec }) => priceReview(id, remainingSec)))
+        : reserveInput(entries.map(({ id, remainingSec }) => reserveReview(id, remainingSec)));
+      const reminders = evaluateDataQualityStatus(input).causes.filter((cause) => cause.code === code);
+      expect(reminders).toHaveLength(1);
+      const reminder = reminders[0];
+      expect(reminder.value).toBe(3600);
+      expect(reminder.message.indexOf("coin-a")).toBeLessThan(reminder.message.indexOf("coin-b"));
+      expect(reminder.message.indexOf("coin-b")).toBeLessThan(reminder.message.indexOf("coin-c"));
+      expect(reminder.message).not.toContain("coin-d");
+    });
+  }
+
+  it("reports expired price reviews without a reminder", () => {
+    const input = priceInput([priceReview("coin-a", 0)]);
+    expect(input.activePriceCoverage.missingActiveAssets[0].acknowledgedGap).toBeNull();
+    const reviewCauses = evaluateDataQualityStatus(input).causes.filter((cause) => cause.code.startsWith("price_gap_reviews_"));
+    expect(reviewCauses).toEqual([expect.objectContaining({ code: "price_gap_reviews_expired", severity: "info", runbookUrl })]);
+  });
+
+  it("reports expired reserve reviews without acknowledgement or a reminder", () => {
+    const input = reserveInput([]);
+    input.reserveComposition = makeReserveComposition({ acknowledgedFeeds: [], expiredFeedReviewIds: ["coin-a"] });
+    const reviewCauses = evaluateDataQualityStatus(input).causes.filter((cause) => cause.code.startsWith("reserve_feed_reviews_"));
+    expect(reviewCauses).toEqual([expect.objectContaining({ code: "reserve_feed_reviews_expired", severity: "info", runbookUrl })]);
+  });
+
+  it("does not remind about a price review once its asset is priced", () => {
+    const input = priceInput([priceReview("coin-a", 3600)], nowSec, 1);
+    expect(input.activePriceCoverage.missingActiveAssets).toEqual([]);
+    expect(evaluateDataQualityStatus(input).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(false);
+  });
+
+  it("reminds about a weekly-window price review only while acknowledging the gap", () => {
+    // The fixed evaluation clock falls on Tuesday, 22:13 UTC.
+    const weekSec = 2 * 86400 + 22 * 3600 + 13 * 60 + 20;
+    const review = priceReview("coin-a", 3600);
+    review.weeklyUtcWindow = { start: weekSec, end: weekSec + 7200 };
+    expect(evaluateDataQualityStatus(priceInput([review])).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(true);
+    review.weeklyUtcWindow = { start: weekSec + 1, end: weekSec + 7200 };
+    expect(evaluateDataQualityStatus(priceInput([review])).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(false);
+  });
+
+  it("keeps independent reserve degradation gating alongside an informational reminder", () => {
+    const input = reserveInput([reserveReview("coin-a", 3600)]);
+    input.reserveComposition = makeReserveComposition({
+      status: "degraded", acknowledgedFeedIds: ["coin-a"], acknowledgedFeeds: [reserveReview("coin-a", 3600)],
+    });
+    input.reserveCompositionStatus = "degraded";
+    const result = evaluateDataQualityStatus(input);
+    expect(result.status).toBe("degraded");
+    expect(result.causes.filter((cause) => cause.severity !== "info")).toEqual([
+      expect.objectContaining({ code: "reserve_sync_degraded", severity: "warning" }),
+    ]);
+    expect(result.causes).toContainEqual(expect.objectContaining({
+      code: "reserve_feed_reviews_expiring", severity: "info",
+    }));
   });
 });

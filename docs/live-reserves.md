@@ -47,6 +47,8 @@ The `worker/src/lib/live-reserves/store.ts` barrel contains only producer-safe s
 
 Operational feed reviews live separately in `worker/src/lib/reserve-feed-reviews.ts`, schema-derived from `ReserveFeedReviewSchema`: configured independent **or** static-validated identity, adapter, failure category, exact warning codes/error prefix, owner/reason, HTTPS sources with valid evidence dates, review and expiry. Reviews must be nonfuture and expire within 14 days; at `now >= expiresAt` the gate re-arms. Unknown/new failures do not inherit acknowledgement. Circuit-open inherits only the latest non-skipped attempt; unreadable/missing history fails closed.
 
+Matched in-use reviews emit the admin-only info cause `reserve_feed_reviews_expiring` in their final 48 hours (inclusive, `STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` in `shared/lib/status-thresholds.ts`); [review renewal](./runbooks/review-renewal.md) requires fresh evidence and never changes snapshot freshness, quarantine, or the automatic gate re-arming at expiry.
+
 `LiveReservesConfig` fields:
 
 | Field              | Meaning                                                                               |

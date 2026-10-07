@@ -182,6 +182,7 @@ export async function computeRawStatus(db: D1Database, now: number, schedulerLiv
     cronLeaseQueryFailed,
   });
   const dataQualityEvaluation = evaluateDataQualityStatus({
+    nowSec: now,
     dataQuality,
     missingPriceRatio,
     blacklistMissingRatio,

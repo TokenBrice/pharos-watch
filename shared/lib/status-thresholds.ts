@@ -304,6 +304,9 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 /** Reviews suppress only matched operational health gates, never evidence admission. */
 export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
 
+/** Reminder lead time before a currently acknowledging review lapses (price-gap and reserve-feed lanes). */
+export const STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC = 48 * 3600;
+
 export const STATUS_SCHEDULER_LIVENESS_THRESHOLDS = {
   warningAfterSec: 600,
   staleAfterSec: 1200,
