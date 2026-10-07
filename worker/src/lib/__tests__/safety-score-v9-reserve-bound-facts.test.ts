@@ -13,6 +13,9 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import rawReserveBounds from "@shared/data/safety-score-v9/reserve-bound-facts-v1.json";
 import { V9FactSetCoreV3Schema } from "@shared/types/safety-score-v9-facts";
+import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { computeV9FactSetDigest, computeValidatedV9FactSetDigest, parseCompiledV9FactSetV3 } from "@shared/lib/safety-score-v9/facts";
+import { findV9ReserveBoundFactorStatusIssues } from "@shared/lib/safety-score-v9/reserve-bound-facts";
 
 function factorBound(kind: "contractual-maturity-maximum" | "observed-portfolio-maturity" | "currently-liquid-fraction" | "stressed-realization-bound", overrides: Record<string, unknown> = {}): ReserveBoundedFact {
   const envelope = research();
@@ -238,7 +241,7 @@ describe("reserve bound compiler admission", () => {
     const partialOnly = compileFactorBounds([partial, second]).assets.find(row => row.assetId === "alpha")!;
     expect(partialOnly.reserveExposures[0]?.factorStatuses?.liquidity?.observationState).toBe("missing");
   });
-  it("requires the factor's selected evidence reference and current bound in the fact-set contract", () => {
+  it("requires selected references and current support at semantic publication boundaries", () => {
     const compiled = compileFactorBounds([factorBound("contractual-maturity-maximum")]);
     const asset = compiled.assets.find(row => row.assetId === "alpha")!;
     const exposure = asset.reserveExposures[0]!;
@@ -249,11 +252,64 @@ describe("reserve bound compiler admission", () => {
       } : row),
     };
     expect(V9FactSetCoreV3Schema.safeParse(missingReference).success).toBe(false);
+    expect(() => compileV9FactSetV3(missingReference)).toThrow("Unknown reserve subfield");
     const staleBound = {
       ...compiled, assets: compiled.assets.map(row => row.assetId === "alpha" ? {
         ...row, reserveBoundFacts: row.reserveBoundFacts!.map(bound => ({ ...bound, freshnessMaxAgeSec: 1 })),
       } : row),
     };
+    // Existing wire-level clock/budget consistency also rejects this fixture.
     expect(V9FactSetCoreV3Schema.safeParse(staleBound).success).toBe(false);
+    const staleAsset = staleBound.assets.find(row => row.assetId === "alpha")!;
+    expect(findV9ReserveBoundFactorStatusIssues(staleAsset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, clock))
+      .toContainEqual({ exposureIndex: 0, factor: "maturity", message: "Unknown reserve subfield requires its own cause-bearing status" });
+    expect(() => compileV9FactSetV3(staleBound)).toThrow();
+    expect(() => computeV9FactSetDigest(staleBound)).toThrow();
+    expect(() => parseCompiledV9FactSetV3({
+      ...staleBound, v9FactSetDigest: computeValidatedV9FactSetDigest(staleBound),
+    })).toThrow();
+    // Asset-local admission uses its available source clock; the cached-asset
+    // compilation path must still recheck the authoritative fact-set clock.
+    const admitted = safeParseV9AssetFactsV3(staleBound.assets.find(row => row.assetId === "alpha"));
+    expect(admitted.success).toBe(true);
+    if (!admitted.success) throw new Error("Invalid standalone fixture");
+    expect(() => compileV9FactSetV3({
+      ...staleBound, assets: staleBound.assets.map(row => row.assetId === "alpha" ? admitted.data : row),
+    })).toThrow();
+  });
+  it("rejects forged whole-factor status for structurally referenced partial availability", () => {
+    const compiled = compileFactorBounds([factorBound("currently-liquid-fraction")]);
+    const partial = {
+      ...compiled, assets: compiled.assets.map(row => row.assetId === "alpha" ? {
+        ...row, reserveBoundFacts: row.reserveBoundFacts!.map(bound => bound.fact.kind === "currently-liquid-fraction"
+          ? { ...bound, fact: { ...bound.fact, currentlyWithdrawable: 50 } } : bound),
+      } : row),
+    };
+    expect(V9FactSetCoreV3Schema.safeParse(partial).success).toBe(true);
+    expect(safeParseV9AssetFactsV3(partial.assets.find(row => row.assetId === "alpha")).success).toBe(false);
+    expect(() => compileV9FactSetV3(partial)).toThrow("Unknown reserve subfield");
+    expect(() => parseCompiledV9FactSetV3({
+      ...partial, v9FactSetDigest: computeValidatedV9FactSetDigest(partial),
+    })).toThrow("Invalid reserve bound status");
+  });
+  it("rejects a weaker bound's reference instead of the evaluator-selected supporting reference", () => {
+    const compiled = compileFactorBounds([
+      factorBound("contractual-maturity-maximum"), factorBound("observed-portfolio-maturity"),
+    ]);
+    const wrongReference = {
+      ...compiled, assets: compiled.assets.map(row => row.assetId === "alpha" ? {
+        ...row, reserveExposures: row.reserveExposures.map(exposure => ({
+          ...exposure, factorStatuses: {
+            ...exposure.factorStatuses,
+            maturity: { ...exposure.factorStatuses!.maturity!, evidenceRefIds: ["alpha:reserve-bound:fixture:observed-portfolio-maturity"] },
+          },
+        })),
+      } : row),
+    };
+    expect(V9FactSetCoreV3Schema.safeParse(wrongReference).success).toBe(true);
+    expect(() => compileV9FactSetV3(wrongReference)).toThrow("Unknown reserve subfield");
+    expect(() => parseCompiledV9FactSetV3({
+      ...wrongReference, v9FactSetDigest: computeValidatedV9FactSetDigest(wrongReference),
+    })).toThrow("Invalid reserve bound status");
   });
 });

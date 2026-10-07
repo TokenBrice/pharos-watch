@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
-import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "../lib/safety-score-v9/reserve-bound-policy";
-import { v9FullyBoundReserveFactorEvidence } from "../lib/safety-score-v9/reserve-bound-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
@@ -1848,10 +1846,9 @@ const V9AssetFactsV3ObjectSchema = z
 
 function validateReserveFactorStatuses(
   asset: z.infer<typeof V9AssetFactsV3ObjectSchema>, ctx: z.RefinementCtx,
-  path: (string | number)[], clockSec: number,
+  path: (string | number)[],
 ): void {
   for (const [index, exposure] of asset.reserveExposures.entries()) {
-    const boundEvidence = v9FullyBoundReserveFactorEvidence(exposure, asset.reserveBoundFacts ?? [], V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, clockSec);
     for (const [key, missing] of [
       ["assetClass", exposure.assetClass === null],
       ["liquidity", exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown"],
@@ -1859,9 +1856,11 @@ function validateReserveFactorStatuses(
       ["obligorConcentration", exposure.issuerOrObligorKey === null],
     ] as const) {
       const status = exposure.factorStatuses?.[key];
-      const fullyBound = (key === "liquidity" || key === "maturity") &&
-        boundEvidence[key].length > 0 && boundEvidence[key].every(id => status?.evidenceRefIds.includes(id));
-      if (missing && !fullyBound && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
+      const carriesBoundEvidence = (key === "liquidity" || key === "maturity") &&
+        (asset.reserveBoundFacts ?? []).some(row => row.status.observationState === "known" &&
+          row.fact.scope.kind !== "reserve-envelope" && row.fact.scope.exposureKey === exposure.exposureKey &&
+          row.status.evidenceRefIds.some(id => status?.evidenceRefIds.includes(id)));
+      if (missing && !carriesBoundEvidence && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
         addIssue(ctx, [...path, "reserveExposures", index, "factorStatuses", key], "Unknown reserve subfield requires its own cause-bearing status");
       }
     }
@@ -1870,9 +1869,9 @@ function validateReserveFactorStatuses(
 
 export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) => {
   validateAssetFacts(asset, ctx);
-  // Standalone assets can check bound identity/coverage; the enclosing fact set
-  // repeats this validation with its authoritative clock to enforce freshness.
-  validateReserveFactorStatuses(asset, ctx, [], (asset.reserveBoundFacts ?? []).reduce((latest, row) => Math.max(latest, row.fact.asOfSec), 0));
+  // The wire schema checks bound-reference structure only. Shared compilation
+  // and serialized readers enforce the selected bound at the fact-set clock.
+  validateReserveFactorStatuses(asset, ctx, []);
   if (asset.wrapperLocalFacts.applicability === "wrapper") {
     const wrapper = asset.wrapperLocalFacts;
     if (!["reviewed", "not-applicable"].includes(wrapper.formDisposition) && (!wrapper.formStatus || wrapper.formStatus.gapIds.length === 0)) {
@@ -2437,7 +2436,7 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
   }
   for (const [assetIndex, asset] of value.assets.entries()) {
     if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
-      validateReserveFactorStatuses(asset, ctx, ["assets", assetIndex], value.asOfSec);
+      validateReserveFactorStatuses(asset, ctx, ["assets", assetIndex]);
     }
     const claimGraph = asset.accessReview.freeze.claimGraph;
     if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {

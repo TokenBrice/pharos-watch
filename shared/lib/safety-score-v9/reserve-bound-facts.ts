@@ -1,8 +1,9 @@
 import type { ReserveBoundedFact, V9ReserveBoundedFact } from "../../types/reserve-bounded-facts";
-import type { V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9AssetFactsV3, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9BackingSemanticPolicy } from "./backing-primitives";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { maximumBusinessDaySettlement } from "../business-calendars";
+import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 
 export function reserveBoundScopeKey(scope: ReserveBoundedFact["scope"]): string {
   return stableJsonStringifyV1(scope.kind === "reserve-envelope" ? [scope.kind] : scope.kind === "exposure" ? [scope.kind, scope.exposureKey] : [scope.kind, scope.exposureKey, scope.instrumentId]);
@@ -158,11 +159,16 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
   };
 }
 
+export interface V9FullyBoundReserveFactorEvidence {
+  liquidity: readonly string[];
+  maturity: readonly string[];
+}
+
 /** A factor is known only when the evaluator's selected bound covers the entire exposure. */
 export function v9FullyBoundReserveFactorEvidence(
   exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[],
   policy: V9BackingSemanticPolicy, clockSec: number,
-): { liquidity: readonly string[]; maturity: readonly string[] } {
+): V9FullyBoundReserveFactorEvidence {
   const bounds = resolveV9ReserveFactorBounds(exposure, rows, policy, clockSec, {
     liquidity: policy.reserve.liquidityQuality.unknown,
     maturity: policy.reserve.maturityUnknownQuality,
@@ -174,6 +180,41 @@ export function v9FullyBoundReserveFactorEvidence(
       ? bounds.maturityEvidenceRefIds : [],
   };
 }
+
+type V9ReserveBoundFactorStatusIssue = {
+  exposureIndex: number;
+  factor: "liquidity" | "maturity";
+  message: string;
+};
+const BOUNDED_RESERVE_FACTORS = ["liquidity", "maturity"] as const;
+
+/** Semantic admission stays in lib; wire schemas can only verify bound references. */
+export function findV9ReserveBoundFactorStatusIssues(
+  asset: Pick<V9AssetFactsV3, "reserveExposures" | "reserveBoundFacts">,
+  policy: V9BackingSemanticPolicy, clockSec: number,
+): readonly V9ReserveBoundFactorStatusIssue[] {
+  let issues: V9ReserveBoundFactorStatusIssue[] | undefined;
+  for (const [exposureIndex, exposure] of asset.reserveExposures.entries()) {
+    let selected: V9FullyBoundReserveFactorEvidence | undefined;
+    for (const factor of BOUNDED_RESERVE_FACTORS) {
+      const missing = factor === "liquidity"
+        ? exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown"
+        : exposure.maturityDaysMax === null;
+      const status = exposure.factorStatuses?.[factor];
+      if (!missing || status?.observationState !== "known" || status.applicability.state === "not-applicable") continue;
+      selected ??= v9FullyBoundReserveFactorEvidence(exposure, asset.reserveBoundFacts ?? V9_EMPTY_ARRAY, policy, clockSec);
+      const requiredRefs = selected[factor];
+      if (requiredRefs.length === 0 || !requiredRefs.every(id => status.evidenceRefIds.includes(id))) {
+        (issues ??= []).push({
+          exposureIndex, factor,
+          message: "Unknown reserve subfield requires its own cause-bearing status",
+        });
+      }
+    }
+  }
+  return issues ?? V9_EMPTY_ARRAY;
+}
+
 export function evaluateV9ReserveEligibilityEnvelope(rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number): { quality: number; evidenceRefIds: string[] } | null {
   if (rows.length === 0) return null;
   const candidates = coherentFacts(rows, clockSec).filter((row) => row.fact.scope.kind === "reserve-envelope" && row.fact.kind === "eligibility-envelope");
