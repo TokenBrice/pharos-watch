@@ -101,6 +101,8 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // chain order (chain prerequisites are derived from this plan).
     // Declared peak 2 + 1 = 3/6.
     jobChains: [
+      // Redemption can consume prior sealed acceptance after an incomplete head;
+      // only the sentinel requires the current cohort's successful exhaustion.
       ["sync-live-reserves", "sync-redemption-backstops", "cron-sentinel"],
       ["sync-kinesis-supply"],
     ],

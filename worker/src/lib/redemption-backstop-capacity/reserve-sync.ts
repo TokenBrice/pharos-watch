@@ -87,9 +87,10 @@ function buildReserveSyncCapacityFields(params: {
 function pickRouteStatusFields(
   liveMetadata: RedemptionBackstopLiveMetadata,
 ): Partial<
-  Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
+  Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt" | "consumedReserveRouteStatus">
 > {
   return {
+    consumedReserveRouteStatus: liveMetadata.routeStatus != null,
     ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
     ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
     ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
@@ -114,7 +115,7 @@ function buildReserveSyncFallbackFields(
   | "capacitySemantics"
 > &
   Partial<
-    Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
+    Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt" | "consumedReserveRouteStatus">
   > {
   const { capacityConfidence, capacitySemantics } = params;
   return {
@@ -167,6 +168,7 @@ export async function resolveReserveSyncCapacity(
         ? ("documented-bound" as const)
         : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence ?? liveCapacityConfidence);
     return {
+      consumedReserveCapacity: true,
       immediateCapacityUsd: null,
       immediateCapacityRatio: null,
       scoringCapacityUsd: null,
@@ -257,6 +259,7 @@ export async function resolveReserveSyncCapacity(
         : null;
 
     return {
+      consumedReserveCapacity: true,
       ...capacityFields,
       eventualCapacityUsd:
         model.eventualCapacityModel === "supply-full" && hasSupplyCeiling ? supplyUsd : undefined,
@@ -301,6 +304,7 @@ export async function resolveReserveSyncCapacity(
       applyDailyLimit: true,
     });
     return {
+      consumedReserveCapacity: liveMetadata.dailyLimitUsd != null,
       immediateCapacityUsd: capacityFields.immediateCapacityUsd,
       immediateCapacityRatio: capacityFields.immediateCapacityRatio,
       scoringCapacityUsd: capacityFields.scoringCapacityUsd,
@@ -328,6 +332,7 @@ export async function resolveReserveSyncCapacity(
       applyDailyLimit: model.fallbackUsd > 0,
     });
     return {
+      consumedReserveCapacity: liveMetadata.dailyLimitUsd != null,
       immediateCapacityUsd: capacityFields.immediateCapacityUsd,
       immediateCapacityRatio: capacityFields.immediateCapacityRatio,
       scoringCapacityUsd: capacityFields.scoringCapacityUsd,

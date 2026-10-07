@@ -67,6 +67,7 @@ ${SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS}`;
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
     RedemptionBackstopDetailsSchema.parse({
+      ...(record.reserveInput ? { reserveInput: record.reserveInput } : {}),
       resolutionState: record.resolutionState,
       capacityConfidence: record.capacityConfidence,
       ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),

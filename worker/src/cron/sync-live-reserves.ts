@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { sealAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { throwIfAborted } from "../lib/abort";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { reportCronProgress } from "../lib/cron-progress";
@@ -513,7 +514,7 @@ export async function syncLiveReserves(
     telemetry,
   });
 
-  return finalizeReserveSyncRun({
+  const result = await finalizeReserveSyncRun({
     db,
     signal,
     total: cohortTotal,
@@ -532,4 +533,11 @@ export async function syncLiveReserves(
     adapterLatency: telemetry.finalize(),
     adapterTelemetryProgress: telemetry.progress(),
   });
+  if (checkpointIdentity && queueResult.counts.deferredCoins === 0) {
+    const accepted = await sealAcceptedReserveGeneration(db, checkpointIdentity, LIVE_RESERVE_QUEUE_HASH, CONFIGURED_COINS.map((coin) => coin.id), result);
+    if (accepted) {
+      result.metadata = JSON.stringify({ ...JSON.parse(result.metadata ?? "{}"), acceptedReserveGenerationId: accepted.generationId, acceptedReserveContentSha256: accepted.contentSha256 });
+    }
+  }
+  return result;
 }
