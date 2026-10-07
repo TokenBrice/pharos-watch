@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import { BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
+import type * as FetchRetry from "../../../../lib/fetch-retry";
 
 const supply = vi.fn();
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: [{
@@ -10,8 +11,9 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: [{
   contracts: [{ chain: "ethereum", address: "0x09864f52b035ae22ee739dfa5c748fa080d07bd8", decimals: 2 }],
   liveReservesConfig: { adapter: "jpmorgan-nav", version: 1, semantics: "single-asset", inputs: { primary: { kind: "http-html", url: "https://am.jpmorgan.com" } } },
 }] }));
-vi.mock("../../../../lib/fetch-retry", () => ({
-  fetchTextWithRetry: async () => ({ response: new Response('{}'), body: '{"coins":{}}' }),
+vi.mock("../../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
+  fetchTextWithRetry: async () => ({ response: new Response('{"coins":{}}'), body: '{"coins":{}}' }),
 }));
 vi.mock("../../../reserve-adapters/helpers", () => ({ probeTrackedTokenSupply: (...args: unknown[]) => supply(...args) }));
 vi.mock("../../../../lib/authoritative-price-sources", () => ({ resolveVaultNavSupplyPrice: vi.fn().mockResolvedValue(null) }));

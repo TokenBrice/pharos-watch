@@ -112,6 +112,7 @@ it("persists an authenticated prefix before a later discovery timeout", async ()
   vi.spyOn(dbCache, "getCache").mockResolvedValue(null);
   const saved = vi.spyOn(dbCache, "setCache").mockResolvedValue(undefined);
   const controller = new AbortController(), original = f.fetcher.getMockImplementation()!;
+  const onDiagnostic = vi.fn();
   let windows = 0;
   f.fetcher.mockImplementation(async (raw, init) => {
     if (String(raw).includes("/pathway/") && ++windows === 2) {
@@ -123,12 +124,15 @@ it("persists an authenticated prefix before a later discovery timeout", async ()
   await expect(observeLayerZeroOftPending({
     source: f.source, headers: [header(2_000_099), header(2_000_099)],
     chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal,
+    onDiagnostic,
   })).rejects.toThrow("test timeout");
   expect(saved).toHaveBeenCalledTimes(1);
   expect(JSON.parse(saved.mock.calls[0]![2]).pathways[0]).toMatchObject({
     sentNonce: "1", sent: { nextBlock: 1_000_100, anchor: 1_000_099 },
     destinationAnchor: 2_000_099, destinationAnchorHash: header(2_000_099).hash,
   });
+  expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({ observer: "layerzero-oft", beforeCursor: "100", afterCursor: "1000100", targetCursor: "2000100", persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true, hardEvidenceFailure: false }));
+  expect(onDiagnostic.mock.calls.every(([value]) => !value.hardEvidenceFailure)).toBe(true);
 });
 
 it("anchors omitted delivered messages on every lane before a prefix is saved", async () => {
@@ -383,11 +387,19 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
       deploymentKey: plan.deployments[0]!.deploymentKey, amount: read.amount, observedAtSec: header(100).timestamp,
       anchor: "100", anchorHash: header(100).hash, responseSha256: read.responseSha256, layerZeroOftPendingProof: read.proof };
     const meta = { contracts: f.source.sides.map(side => ({ chain: side.chainId, address: side.tokenAddress, decimals: side.localDecimals })) } as StablecoinMeta;
+    const onDiagnostic = vi.fn();
     const derive = () => deriveReviewedEconomicDeploymentPartition({ plan, meta, baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`, sourceGeneration: "source", registryFingerprint: "b".repeat(64), clockSec: CLOCK,
       aggregate: { sourceGeneration: "source", observedAtSec: header(100).timestamp, supplyUsd: 3.234567 },
       referencePrice: { sourceId: "reference", sourceGeneration: "source", observedAtSec: header(100).timestamp, value: "1", responseSha256: sha256Hex("reference") },
-      conversions: [], observations, inFlight: [pending] });
+      conversions: [], observations, inFlight: [pending], onDiagnostic });
     expect(derive()).toMatchObject({ quantitativeCompleteness: true, unattributedSupplyUsd: 1.234567 });
+    if (family === "lock-mint") {
+      const escrowObservation = observations.find(row => row.id === "oft")!;
+      escrowObservation.amount = "2234567000000000001";
+      expect(derive()).toBeNull();
+      expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ failurePredicate: "escrow-represented-equals-backing", hardEvidenceFailure: true, laneId: "oft", operands: expect.objectContaining({ representedNumerator: "2234567000000000000", backingNumerator: "2234567000000000001" }) }));
+      escrowObservation.amount = "2234567000000000000";
+    }
     const differentCanonical = { ...plan.deployments[0]!, deploymentKey: `ethereum:${address(888)}`, address: address(888) };
     plan.deployments.unshift(differentCanonical);
     const escrow = plan.escrows[0];
@@ -399,9 +411,11 @@ describe("authenticated LayerZero V2 OFT pending census", () => {
     read.proof.pins[1]!.anchorHash = word(999n);
     pending.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof: read.proof, amount: pending.amount }));
     expect(derive()).toBeNull();
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ failurePredicate: "oft-pin-equals-holding", operands: expect.objectContaining({ chainId: "base", pinHash: word(999n), holdingHash: header(100).hash }) }));
     read.proof.pins[1]!.anchorHash = original;
     read.proof.pathways[0]!.pendingAmountSD = "1";
     pending.responseSha256 = sha256Hex(stableJsonStringifyV1({ proof: read.proof, amount: pending.amount }));
     expect(derive()).toBeNull();
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ failurePredicate: "oft-amount-equals-pathway-sum", operands: { actual: pending.amount, expected: "1000000000000" } }));
   });
 });

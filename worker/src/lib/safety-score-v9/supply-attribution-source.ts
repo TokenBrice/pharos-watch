@@ -12,6 +12,8 @@ import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/s
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY =
   "safety-score-v9:supply-attribution-source:v1";
 
+export const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
+
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS = Object.freeze([
   "wm-m0",
   XAUT_ASSET_ID,

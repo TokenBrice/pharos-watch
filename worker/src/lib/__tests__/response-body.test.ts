@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cancelResponseBodyQuietly,
   cancelUnsuccessfulResponseBodyQuietly,
-  drainResponseBody,
   readResponseSnippetWithTimeout,
   readResponseTextBoundedWithSignal,
   readResponseTextWithinLimitWithSignal,
+  readResponseJsonWithinLimitWithSignal,
+  readResponseBytesWithinLimitWithSignal,
+  readResponseTextWithinLimitWithTimeout,
 } from "../response-body";
 
 afterEach(() => vi.useRealTimers());
@@ -58,53 +60,24 @@ describe("response body cancellation and byte boundaries", () => {
   });
 
   it("accepts exact UTF-8 byte limits and rejects overflow despite fewer characters", async () => {
-    await expect(readResponseTextWithinLimitWithSignal(new Response("éé"), 4)).resolves.toBe("éé");
+    const observe = vi.fn();
+    await expect(readResponseTextWithinLimitWithSignal(new Response("éé"), 4, undefined, observe)).resolves.toBe("éé");
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, outcome: "accepted" });
     await expect(readResponseTextWithinLimitWithSignal(new Response("éé"), 3)).rejects.toMatchObject({
       name: "ResponseBodyTooLargeError", maxBytes: 3, observedBytes: 4,
     });
   });
 });
 
-describe("drainResponseBody", () => {
-  it("returns without touching responses that are already consumed", async () => {
-    const response = new Response("ok");
-    await response.text();
-
-    await expect(drainResponseBody(response)).resolves.toBeUndefined();
-  });
-
-  it("cancels the stream when arrayBuffer consumption fails", async () => {
-    const cancel = vi.fn(async () => undefined);
-    const response = {
-      bodyUsed: false,
-      body: { cancel },
-      arrayBuffer: vi.fn(async () => {
-        throw new Error("stream failed");
-      }),
-    } as unknown as Response;
-
-    await expect(drainResponseBody(response)).resolves.toBeUndefined();
-    expect(cancel).toHaveBeenCalledTimes(1);
-  });
-
-  it("swallows cancellation failures after a read failure", async () => {
-    const response = {
-      bodyUsed: false,
-      body: {
-        cancel: vi.fn(async () => {
-          throw new Error("already cancelled");
-        }),
-      },
-      arrayBuffer: vi.fn(async () => {
-        throw new Error("stream failed");
-      }),
-    } as unknown as Response;
-
-    await expect(drainResponseBody(response)).resolves.toBeUndefined();
-  });
-});
 
 describe("cancelResponseBodyQuietly", () => {
+  it("cancels ignored bodies without reading or allocating them", async () => {
+    const response = new Response(new ReadableStream<Uint8Array>({ cancel: vi.fn() }));
+    const read = vi.spyOn(response, "arrayBuffer");
+    await cancelResponseBodyQuietly(response);
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it("returns for nullish responses", async () => {
     await expect(cancelResponseBodyQuietly(null)).resolves.toBeUndefined();
     await expect(cancelResponseBodyQuietly(undefined)).resolves.toBeUndefined();
@@ -171,6 +144,54 @@ describe("cancelUnsuccessfulResponseBodyQuietly", () => {
 });
 
 describe("readResponseTextWithinLimitWithSignal", () => {
+  it("accounts zero intake for declared preflight rejection and separates lying headers", async () => {
+    const observe = vi.fn();
+    await expect(readResponseTextWithinLimitWithSignal(new Response("abcdef", {
+      headers: { "Content-Length": "100" },
+    }), 5, undefined, observe)).rejects.toMatchObject({ code: "resource-budget-exceeded" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 100, outcome: "rejected" });
+    await expect(readResponseBytesWithinLimitWithSignal(new Response("abcdef", {
+      headers: { "Content-Length": "1" },
+    }), 5, undefined, observe)).rejects.toMatchObject({ observedBytes: 6 });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 6, declaredBytes: 1, outcome: "rejected" });
+  });
+
+  it("reports intake before JSON decoding and unavailable body-less evidence", async () => {
+    const observe = vi.fn();
+    await expect(readResponseJsonWithinLimitWithSignal(new Response("{bad"), 4, undefined, observe)).rejects.toBeInstanceOf(SyntaxError);
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, outcome: "accepted" });
+    const fake = { json: async () => ({ ok: true }) } as unknown as Response;
+    await readResponseJsonWithinLimitWithSignal(fake, 20, undefined, observe);
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "accepted" });
+  });
+
+  it("preserves partial streamed intake when a body stalls and is cancelled", async () => {
+    vi.useFakeTimers();
+    const observe = vi.fn();
+    const parent = new AbortController();
+    const response = new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); },
+    }));
+    const pending = readResponseBytesWithinLimitWithSignal(response, 5, parent.signal, observe);
+    const rejection = expect(pending).rejects.toThrow("stop");
+    await vi.advanceTimersByTimeAsync(0);
+    parent.abort(new Error("stop"));
+    await rejection;
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 3, declaredBytes: null, outcome: "rejected" });
+  });
+
+  it("caps timeout reads and cancels a stalled stream at the existing deadline", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const pending = readResponseTextWithinLimitWithTimeout(
+      new Response(new ReadableStream<Uint8Array>({ cancel })), { timeoutMs: 100, maxBytes: 4 },
+    );
+    const rejection = expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
+    await vi.advanceTimersByTimeAsync(100);
+    await rejection;
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
   it("throws when the declared content length exceeds the strict limit", async () => {
     const response = new Response("abcdef", {
       headers: { "Content-Length": "6" },

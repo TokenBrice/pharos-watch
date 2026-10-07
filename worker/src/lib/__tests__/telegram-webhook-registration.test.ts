@@ -133,6 +133,19 @@ describe("reconcileTelegramWebhookRegistration", () => {
   beforeEach(() => {
     fetchSpy = mockFetch([], { requireMatch: true });
   });
+  it("does not retry a registration mutation when its response exceeds the body cap", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    await expect(reconcileTelegramWebhookRegistration(mockD1([
+      cacheSelectEntry("telegram:webhook-reconciled"),
+      cacheSelectEntry("telegram:reconcile:429:setWebhook"),
+    ]), {
+      botToken: "bot-token", webhookSecret: "secret-token",
+    })).rejects.toMatchObject({ code: "resource-budget-exceeded" });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
 
   it("keeps Mini App MVP webhook updates limited to handled update types", () => {
     expect([...TELEGRAM_ALLOWED_UPDATES]).toEqual([...MINI_APP_MVP_ALLOWED_UPDATES]);

@@ -341,6 +341,14 @@ For the split DEX pipeline:
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 - `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded. The capacity coverage floor (`unresolvedMissingCapacity` above `missingCapacityOkThreshold`) is published the same way, under `metadata.quality.reason = "capacity-coverage-floor"`; only unresolved routes, a stale liquidity feed, no active configured rows or post-write warnings degrade the run.
 
+### Resource-pressure evidence
+
+Cron detail displays **current progress** and **last terminal** resource evidence separately; it never combines measurements across attempts. Both use the validated `ResourcePressureSchema` block in `crons[*].inFlight.metadata` / `lastRun.metadata`: phase and observation time, source body/cache/entry caps, concurrent decode policy, input/catalog admission, actual streamed intake, estimated retained cache and estimate basis, rejection count, guard, and reconciliation platform evidence. Generic metadata summaries append the same resource phase/intake/guard lines.
+
+`logCronRun()` ingests evidence before progress suppression/coalescing and carries the latest snapshot into success or thrown terminals; an equally recent result snapshot wins. Persisted metadata compaction preserves the complete block. Synthetic reconciliation preserves the last durable observation clock and measurements, adding only its existing proven `platform-abandoned` or `platform-interrupted` classification with source `slot-reconciliation`. Neither classification proves Cloudflare OOM or CPU exhaustion.
+
+Legacy missing/invalid blocks, nullable counters and unknown platform outcomes render as **unavailable**, never zero or healthy-green reassurance. `heapUsedBytes` is always null and the detail explicitly says **Heap unavailable** (`workers-runtime-no-heap-api`): Workers has no usable production heap API, and the installed unenv process-memory implementation is a zero stub. Body bytes and conservative cache estimates exclude in-flight decode allocations, warmed graphs, native storage and concurrent invocation heap. See [per-job resource evidence](./worker-and-api-limits.md#per-job-resource-evidence) for policy/accounting boundaries.
+
 ### Availability status
 
 Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
@@ -399,6 +407,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `reserveComposition.status === "degraded"`
 - `healthy` with an info `blacklist_gaps_recent` cause when `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-watch-threshold -->5<!-- GENERATED-END: status-blacklist-recent-watch-threshold -->` (last 24h) but the missing share is below 1%: a burst of freezes awaiting amount recovery is a watch signal, not a degraded surface. The public `/api/health` blacklist impact uses the same ratio-only rule.
+- Non-gating info causes `price_gap_reviews_expiring` and `reserve_feed_reviews_expiring` remind operators when a review currently acknowledging a missing price or matched stale/erroring reserve feed has `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, defined in `shared/lib/status-thresholds.ts`); dormant reviews are excluded. Each cause lists IDs by soonest expiry and links to [review renewal](./runbooks/review-renewal.md); reminders do not change public health or status transitions.
 - else `healthy`
 
 #### Missing-price ratio bands (2026-04-13)
@@ -561,6 +570,7 @@ Behavior:
 - an unavailable reserve overview renders **Unavailable / Unknown** in Live Reserve Sync, Score impact, triage and pipeline readiness; it never renders 0% coverage or a clear recovery queue
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
 - `persistentlyStaleIndependentCoins` retains the complete raw list; `unacknowledgedPersistentlyStaleIndependentCoins` owns its health gate. `healthConfiguredCoins`, `healthFreshCoins`, and `healthAuthoritativeFreshCoins` exclude each matched review's actual contribution. `acknowledgedFeeds` carries reason, evidence, owner, review date, and expiry; expired/invalid IDs re-arm gates and emit info causes even on otherwise healthy observations.
+- Matched in-use reserve reviews also emit `reserve_feed_reviews_expiring` during their final 48 hours, without changing reserve status; [review renewal](./runbooks/review-renewal.md) preserves the raw quarantine and automatic gate re-arming at expiry.
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
 - `adapterReliability` is a 30-day per-adapter rollup computed with one grouped scan over `reserve_sync_attempt_history` (`attempts`, `ok`/`degraded`/`error`/`skipped` counts, and `successRate` = `ok / attempts`). It is cached with the hourly status snapshot and rendered as a compact table on the `Live Reserve Sync` card; rows are ordered by attempt count descending.

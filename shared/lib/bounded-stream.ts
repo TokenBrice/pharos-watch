@@ -63,6 +63,8 @@ export async function bufferReadableStream(
     createOverflowError?: (maxBytes: number, observedBytes: number) => unknown;
     overflowCancelReason?: (error: unknown) => unknown;
     abortReason?: (signal: AbortSignal) => unknown;
+    /** Observes bytes actually read, including the chunk that exceeds the cap. */
+    onChunk?: (byteLength: number) => void;
   },
 ): Promise<BoundedByteBufferResult> {
   assertValidMaxBytes(options.maxBytes);
@@ -103,6 +105,7 @@ export async function bufferReadableStream(
         throw error;
       }
       if (result.done) break;
+      options.onChunk?.(result.value.byteLength);
 
       const observedBytes = totalBytes + result.value.byteLength;
       if (observedBytes > options.maxBytes) {

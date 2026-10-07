@@ -5,6 +5,7 @@ import { ScoreSchema } from "./safety-schema-primitives";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 import { isValidIsoDateOnly } from "./date-primitives";
 import { BusinessCalendarIdSchema, BusinessClockTimeSchema, BusinessTimezoneSchema } from "./business-calendars";
+import { ConsumedReserveInputSchema } from "./reserve-input";
 
 export const RedemptionRouteFamilySchema = z.enum([
   "stablecoin-redeem",
@@ -254,6 +255,7 @@ export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDet
 
 export const RedemptionBackstopEntrySchema = z.object({
   stablecoinId: z.string(),
+  reserveInput: ConsumedReserveInputSchema.optional(),
   score: ScoreSchema.nullable(),
   /**
    * Retired in redemption methodology v4.3. Nothing computes, writes, or reads
@@ -320,6 +322,7 @@ export const RedemptionBackstopEntrySchema = z.object({
 export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySchema>;
 
 export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntrySchema.pick({
+  reserveInput: true,
   resolutionState: true,
   outputDependencyResolution: true,
   capacityConfidence: true,

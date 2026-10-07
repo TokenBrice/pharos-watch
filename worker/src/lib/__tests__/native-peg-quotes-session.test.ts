@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as FetchRetry from "../fetch-retry";
 
 const fetchWithRetryMock = vi.fn();
 
-vi.mock("../fetch-retry", () => ({
+vi.mock("../fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
 }));
 

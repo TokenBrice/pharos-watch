@@ -1,5 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { ConsumedReserveInputSchema } from "@shared/types/reserve-input";
+import { assessConsumedRedemptionReserves } from "./accepted-reserve-generation";
 import type {  RedemptionBackstopEntry,
   RedemptionBackstopDetails,
   RedemptionBackstopMap,
@@ -93,6 +95,8 @@ export interface RedemptionBackstopLoadResult {
   runId?: string | null;
   methodologyVersion?: string | null;
   snapshotSource?: RedemptionSnapshotSource;
+  reserveInputHealth?: "fresh" | "stale" | "unavailable";
+  runMetadata?: RedemptionBackstopRunMetadata;
 }
 
 interface RedemptionBackstopRunRow {
@@ -175,6 +179,7 @@ function pickUrlArray(value: unknown): string[] | undefined {
 
 function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetails {
   const result: RedemptionBackstopDetails = {};
+  result.reserveInput = pickSchemaValue(ConsumedReserveInputSchema, raw.reserveInput);
   if (raw.docs != null) result.docs = pickSchemaValue(RedemptionDocsSchema.nullable(), raw.docs);
   result.notes = pickStringArray(raw.notes);
   result.capsApplied = pickStringArray(raw.capsApplied);
@@ -208,17 +213,19 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   return result;
 }
 
-function parseDetails(value: string | null): RedemptionBackstopDetails {
+function parseDetails(value: string | null): RedemptionBackstopDetails | null {
   if (!value) return {};
+  let invalidReserveInput = false;
   const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
       const raw = parsed as Record<string, unknown>;
+      if (raw.reserveInput !== undefined && !ConsumedReserveInputSchema.safeParse(raw.reserveInput).success) invalidReserveInput = true;
       const parsedDetails = RedemptionBackstopDetailsSchema.safeParse(raw);
       return { ok: true, payload: parsedDetails.success ? parsedDetails.data : pickValidDetails(raw) };
     },
   });
-  return decoded.payload ?? {};
+  return invalidReserveInput ? null : decoded.payload ?? {};
 }
 
 export function normalizeRedemptionBackstopRunMetadata(
@@ -270,6 +277,7 @@ export function normalizeRedemptionBackstopRunMetadata(
 
 function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
   const details = parseDetails(row.details_json);
+  if (!details) return null;
   const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
   const capacityConfidence =
     details.capacityConfidence ??
@@ -564,6 +572,8 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         runId: run.run_id,
         methodologyVersion: run.methodology_version,
         snapshotSource: "run-rows",
+        runMetadata: run.metadata,
+        reserveInputHealth: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
       };
     }
 

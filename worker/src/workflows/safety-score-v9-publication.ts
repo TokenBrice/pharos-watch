@@ -1,5 +1,10 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { describeError } from "@shared/lib/error-utils";
+import { z } from "zod";
+import { SafetyScoreV9InputIdentitySchema } from "@shared/types/safety-score-publication";
+import { safetyScoreV9InputIdentitiesMatch } from "@shared/lib/safety-score-v9-input-identity";
+import { FixedInputCacheEnvelopeFields } from "../lib/report-cards-fixed-input-cache-codec";
+import { SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, parseSafetyScoreV9CaptureControl } from "../lib/safety-score-v9/capture-control";
 import type {
   WorkflowEvent,
   WorkflowStep,
@@ -9,10 +14,7 @@ import { resolveCronDegradedReason, type CronResult } from "../lib/cron-logger";
 import { stripSensitive } from "../lib/safe-error-message";
 import { parseJsonObject } from "../lib/json-parse";
 import type { Env } from "../lib/env";
-import {
-  NATIVE_V9_INPUT_CACHE_KEY,
-  parseNativeV9InputCacheArtifact,
-} from "../lib/safety-score-v9/native-input";
+import { NATIVE_V9_INPUT_CACHE_KEY } from "../lib/safety-score-v9/native-input";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-store";
 
 export const SAFETY_SCORE_V9_WORKFLOW_JOB =
@@ -28,6 +30,14 @@ const WORKFLOW_STEP_CONFIG = {
   },
   timeout: "14 minutes",
 } as const;
+
+const FixedInputReferenceEnvelopeSchema = z.object({
+  schemaVersion: z.literal(2),
+  kind: FixedInputCacheEnvelopeFields.kind,
+  encoding: FixedInputCacheEnvelopeFields.encoding,
+  sourceGeneration: FixedInputCacheEnvelopeFields.sourceGeneration,
+  safetyScoreIdentity: SafetyScoreV9InputIdentitySchema,
+});
 
 interface FixedInputReference {
   sourceGeneration: string;
@@ -242,15 +252,38 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
 async function loadFixedInputReference(
   db: D1Database,
 ): Promise<FixedInputReference> {
-  const row = await getCache(db, NATIVE_V9_INPUT_CACHE_KEY);
+  // Project only the envelope identity and small capture-control sidecar in one
+  // SQL snapshot. The compile step alone decompresses and admits the payload.
+  const row = await db.prepare(`
+    SELECT json_object(
+      'schemaVersion', json_extract(input.value, '$.schemaVersion'),
+      'kind', json_extract(input.value, '$.kind'),
+      'encoding', json_extract(input.value, '$.encoding'),
+      'sourceGeneration', json_extract(input.value, '$.sourceGeneration'),
+      'safetyScoreIdentity', json_extract(input.value, '$.safetyScoreIdentity')
+    ) AS reference, control.value AS capture_control
+    FROM cache input LEFT JOIN cache control ON control.key = ?
+    WHERE input.key = ?
+  `).bind(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, NATIVE_V9_INPUT_CACHE_KEY)
+    .first<{ reference: string; capture_control: string | null }>();
   if (row === null) {
     throw new Error("Safety Score V9 Workflow fixed input is missing");
   }
-  const artifact = await parseNativeV9InputCacheArtifact(row.value);
+  if (row.capture_control === null) {
+    throw new Error("Safety Score V9 Workflow capture control is missing");
+  }
+  const reference = FixedInputReferenceEnvelopeSchema.parse(parseJsonObject(row.reference));
+  const { capture } = parseSafetyScoreV9CaptureControl(row.capture_control);
+  if (!safetyScoreV9InputIdentitiesMatch(reference.safetyScoreIdentity, capture.safetyScoreIdentity) ||
+    reference.sourceGeneration !== capture.sourceGeneration ||
+    reference.safetyScoreIdentity.baseInputGenerationId !== capture.baseInputGenerationId ||
+    reference.safetyScoreIdentity.publicationGenerationId !== capture.sourceGeneration) {
+    throw new Error("Safety Score V9 Workflow fixed input reference does not match capture control");
+  }
   return {
-    sourceGeneration: artifact.input.sourceGeneration,
-    baseInputGenerationId: artifact.input.baseInputGenerationId,
-    clockSec: artifact.input.clockSec,
+    sourceGeneration: capture.sourceGeneration,
+    baseInputGenerationId: capture.baseInputGenerationId,
+    clockSec: capture.clockSec,
   };
 }
 

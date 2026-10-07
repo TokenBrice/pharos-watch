@@ -38,6 +38,7 @@ export interface V9SlotWindowOptions {
 }
 
 export interface V9ExecutionWindow {
+  slotStartedAtSec: number;
   deadlineMs: number;
   minimumRemainingMs: number;
 }
@@ -50,6 +51,17 @@ export const V9_MEMORY_LANE_LEASE_KEY =
   "worker-memory-lane:safety-score-v9";
 const V9_MEMORY_LANE_POLL_MS = 1_000;
 const V9_MEMORY_LANE_TTL_MARGIN_SEC = 30;
+
+export const V9_EXECUTION_WINDOW_POLICY = {
+  publication: { deadlineOffsetMs: 3 * 60_000, minimumRemainingMs: 10_000 },
+  supplyAttribution: { deadlineOffsetMs: 3 * 60_000, minimumRemainingMs: 60_000 },
+} as const;
+
+/** The pre-quarter clamp applies equally to admission and capture provenance. */
+export function getV9ExecutionDeadlineMs(scheduledTimeMs: number, deadlineOffsetMs: number): number {
+  const nextCoreSlotStartedAt = Math.floor(scheduledTimeMs / 900_000) * 900 + 900;
+  return Math.min(scheduledTimeMs + deadlineOffsetMs, nextCoreSlotStartedAt * 1_000);
+}
 
 function neutralSkip(
   reason: string,
@@ -180,11 +192,7 @@ export async function runV9AfterCoreWithinWindow(
     options.scheduledTimeMs ?? options.slotStartedAt * 1_000;
   const scheduledTimeSec = Math.floor(scheduledTimeMs / 1_000);
   const coreSlotStartedAt = Math.floor(scheduledTimeSec / 900) * 900;
-  const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
-  const deadlineMs = Math.min(
-    scheduledTimeMs + options.deadlineOffsetMs,
-    nextCoreSlotStartedAt * 1_000,
-  );
+  const deadlineMs = getV9ExecutionDeadlineMs(scheduledTimeMs, options.deadlineOffsetMs);
   const effectiveWindowMs = Math.max(0, deadlineMs - scheduledTimeMs);
   const initialRemainingMs = deadlineMs - Date.now();
 
@@ -313,7 +321,11 @@ export async function runV9AfterCoreWithinWindow(
           });
         }
 
-        return run(signal, { deadlineMs, minimumRemainingMs: options.minimumRemainingMs });
+        return run(signal, {
+          slotStartedAtSec: options.slotStartedAt,
+          deadlineMs,
+          minimumRemainingMs: options.minimumRemainingMs,
+        });
       },
       {
         abortSignal: timeout.signal,

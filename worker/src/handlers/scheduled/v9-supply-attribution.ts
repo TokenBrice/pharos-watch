@@ -1,9 +1,7 @@
-import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
+import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
-const V9_SUPPLY_WINDOW_MS = 3 * 60_000;
-const V9_SUPPLY_MINIMUM_REMAINING_MS = 60_000;
 
 export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeContext) {
   return bindScheduledSlotPlan("v9SupplyAttributionOffset", {
@@ -18,9 +16,7 @@ export function buildV9SupplyAttributionSlotGroups(runtime: ScheduledRuntimeCont
             slotStartedAt: runtime.slotStartedAt,
             workerVersion: runtime.workerVersion ?? null,
             signal,
-            deadlineOffsetMs: V9_SUPPLY_WINDOW_MS,
-            minimumRemainingMs:
-              V9_SUPPLY_MINIMUM_REMAINING_MS,
+            ...V9_EXECUTION_WINDOW_POLICY.supplyAttribution,
             lane: "sync-v9-supply-attribution",
             currentSlotKey: runtime.scheduleKey,
           },

@@ -5,6 +5,7 @@ import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-leas
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { buildResourcePressure } from "../cron-resource-pressure";
 
 describe("logCronRun", () => {
   const fixtures = createLatestSchemaFixtureTracker();
@@ -16,6 +17,79 @@ describe("logCronRun", () => {
   const db = mockD1([
     { match: "cron_runs", rows: [] },
   ]);
+
+  it.each([-1, 0, 1])("selects result evidence only when equally recent or newer (%s)", async (offset) => {
+    const { sqlite, db } = fixtures.open();
+    const progress = buildResourcePressure({ phase: "decode", observedAt: 100, intakeBytes: 4 });
+    const terminal = buildResourcePressure({ phase: "publish", observedAt: 100 + offset, intakeBytes: 8 });
+    await logCronRun(db, "test-job", async (_signal, report) => {
+      await report({ stage: "decode", metadata: { resourcePressure: progress } });
+      return { metadata: JSON.stringify({ resourcePressure: terminal }) };
+    });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(offset < 0 ? progress : terminal);
+  });
+
+  it("retains valid progress evidence when later progress or terminal evidence is invalid", async () => {
+    const { sqlite, db } = fixtures.open();
+    const pressure = buildResourcePressure({ phase: "decode", observedAt: 100, intakeBytes: 4 });
+    const invalid = { ...pressure, observedAt: -1 };
+    await logCronRun(db, "test-job", async (_signal, report) => {
+      await report({ stage: "decode", metadata: { resourcePressure: pressure } });
+      await report({ stage: "publish", metadata: { resourcePressure: invalid } });
+      return { metadata: JSON.stringify({ resourcePressure: invalid }) };
+    });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(pressure);
+  });
+
+  it("retains coalesced evidence on throw without refreshing its observation clock", async () => {
+    const { sqlite, db } = fixtures.open();
+    const first = buildResourcePressure({ phase: "intake", observedAt: 100, intakeBytes: 2 });
+    const latest = buildResourcePressure({ phase: "decode", observedAt: 101, intakeBytes: 4 });
+    await expect(logCronRun(db, "test-job", async (_signal, report) => {
+      await report({ stage: "work", metadata: { resourcePressure: first } });
+      await report({ stage: "work", metadata: { resourcePressure: latest } });
+      throw new Error("decode failed");
+    })).rejects.toThrow("decode failed");
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(latest);
+  });
+
+  it("keeps suppressed progress evidence at terminal and compacts durable progress", async () => {
+    const { sqlite, db } = fixtures.open();
+    const pressure = buildResourcePressure({ phase: "intake", observedAt: 100, intakeBytes: 0 });
+    await logCronRun(db, "test-job", async (_signal, report) => {
+      await report({ stage: "work", metadata: { resourcePressure: pressure, bulk: "x".repeat(100_000) } });
+      const progress = sqlite.prepare("SELECT metadata FROM cron_run_progress").get() as { metadata: string };
+      expect(JSON.parse(progress.metadata).resourcePressure).toEqual(pressure);
+      expect(progress.metadata.length).toBeLessThan(65_536);
+      return {};
+    });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(pressure);
+  });
+
+  it("does not infer heap or platform failure for uninstrumented errors", async () => {
+    const { sqlite, db } = fixtures.open();
+    await expect(logCronRun(db, "test-job", async () => { throw new Error("memory"); })).rejects.toThrow("memory");
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toMatchObject({
+      intakeBytes: null, cacheBytes: null, guard: "not-measured", heapUsedBytes: null, platformOutcome: null,
+    });
+  });
+
+  it("retains valid resource evidence when this job suppresses progress writes", async () => {
+    const { sqlite, db } = fixtures.open();
+    const pressure = buildResourcePressure({ phase: "read", observedAt: 100, intakeBytes: 5 });
+    await logCronRun(db, "future-watchdog", async (_signal, report) => {
+      await report({ stage: "read", metadata: { resourcePressure: pressure } });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
+      return {};
+    });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(pressure);
+  });
 
   it("passes AbortSignal to the job function", async () => {
     let receivedSignal: AbortSignal | undefined;

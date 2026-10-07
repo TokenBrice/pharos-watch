@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { mockFetchRetry } from "../../../test-helpers/cron";
+import type * as FetchRetry from "../../../lib/fetch-retry";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
+  ...mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }),
+}));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { buildAlchemyRpcUrl, type ChainRpcConfig, type RpcEndpoint } from "../../../lib/chain-registry";
@@ -601,7 +605,13 @@ describe("fetchJsonWithRetry", () => {
         },
       },
       2,
-      { timeoutMs: 1234, returnFinalResponse: true },
+      {
+        timeoutMs: 1234,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 
@@ -653,7 +663,13 @@ describe("fetchJsonWithRetry", () => {
         },
       },
       2,
-      { timeoutMs: 1234, returnFinalResponse: true },
+      {
+        timeoutMs: 1234,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 
@@ -685,7 +701,13 @@ describe("fetchJsonWithRetry", () => {
       "https://solana-mainnet.g.alchemy.com/v2/alchemy-key",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 
@@ -757,7 +779,13 @@ describe("fetchJsonWithRetry", () => {
       "https://runtime.example/solana",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 });
@@ -794,7 +822,12 @@ describe("fetchDefiLlamaPrices", () => {
       "https://coins.llama.fi/prices/current/hyperliquid:0x5555555555555555555555555555555555555555",
       { signal },
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 });

@@ -94,6 +94,16 @@ The same cleanup rule applies to Worker-side integration clients. Telegram deliv
 ## Cron Budgeting
 
 
+### Per-job resource evidence
+
+`ResourcePressureSchema` in `shared/types/status/cron.ts` is the single contract for progress and terminal `resourcePressure`. `logCronRun()` keeps the latest validated snapshot before progress suppression/coalescing; result evidence wins observation-time ties. Error paths retain the last observation time instead of stamping old intake as freshly measured. Metadata compaction preserves the complete validated block. Uninstrumented jobs expose null policy/measurements and `not-measured`, not zero or a green heap claim.
+
+Reserve request retention is estimated, not measured heap: JSON counts **8 × actual intake bytes**, strings count `max(intake bytes, 2 × characters)` (plus 512 bytes for response wrappers), binary counts its byte length, and branch-price Maps declare `sum(128 + 2 × key.length)`. `REQUEST_CACHE_MAX_TOTAL_BYTES` is 16 MiB; `REQUEST_CACHE_MAX_ENTRY_BYTES` is 4 MiB. Pending deduplication is separate from retained entries. Valid entries evict the LRU **before insertion**; unknown/oversized estimates bypass retention without failing work. The existing two-operation adapter I/O limiter also bounds fetch/body/decode work; no new trigger or separate heap boundary is implied.
+
+Intake counts streamed bytes across retries, separately from declared `Content-Length`; declared preflight rejection consumes zero bytes. Missing body evidence is null. The snapshot's body cap is the maximum source cap admitted this run, not a claimed heap ceiling. Cache and input/catalog admission fields do not include in-flight buffers, parse expansion, source-result groups, warmed module graphs, concurrent HTTP work, or native/Wasm storage.
+
+`heapUsedBytes` is always null with `workers-runtime-no-heap-api`. The installed unenv `node/internal/process/process.mjs` memory-usage implementation is a zero stub; [Workers process documentation](https://developers.cloudflare.com/workers/runtime-apis/nodejs/process/) and the [workerd native process declaration](https://github.com/cloudflare/workerd/blob/main/src/workerd/api/node/process.h) do not establish a usable production heap API. Never sample `process.memoryUsage()` as production heap evidence. `platformOutcome` is populated only by the existing slot reconciler's proven abandonment/interruption classification and names `slot-reconciliation`; it is **not** inferred OOM/CPU evidence.
+
 ### Discovery and reserve run budgets
 
 | Area | Current repo budget | Source | Notes |
@@ -294,7 +304,11 @@ Longer sequential failover chains cost latency, not correctness. Each extra URL 
 
 ### Response-Body Limits
 
-`fetchJsonWithRetry()` / `fetchTextWithRetry()` default to a `16 MiB` body cap, and the DEX source stage names a tighter cap for every source it reads so that one mis-served response (HTML error page, doubled payload, proxy interstitial) cannot be buffered and parsed inside the 128 MB isolate. Caps are stated per source because the legitimate shape differs by an order of magnitude between a ticker list and a whole-catalog catalog payload.
+`fetchJsonWithRetry()` / `fetchTextWithRetry()` / `fetchBinaryWithRetry()` default to a `16 MiB` body cap (`DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES`). Native-peg/address providers, Bluechip, Telegram member/registration reads, and HTTP health self-probes use the same strict default, preserving their failure boundaries and timeouts. Raw 429 passthrough is capped before rebuilding a Response. The DEX source stage names tighter measured caps; strict data reads reject rather than truncate.
+
+CoinGecko status supplements use the module-local `STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 KiB` constant in `worker/src/lib/status/supplements.ts`, an explicit estimated 250-ID × 1 KiB envelope. Overflow fails the supplement, not a partial-price parse-and-skip. Twitter image intake uses its existing 5 MiB cap and signal. Only diagnostic snippets truncate: pricing errors read at most 4,096 bytes / 240 characters in five seconds; GitHub rejection details read 4,096 bytes / 200 characters under the existing ten-second signal, preserving known HTTP rejection. Ignored response bodies are cancelled without buffering.
+
+Reviewed economic supply conversion APIs use a 256 KiB body ceiling; XRPL gateway balances use 1 MiB and its ledger response uses 128 KiB (`ECONOMIC_SUPPLY_BODY_CAPS`). These are reviewer-calibrated shape budgets, not measured production heap claims. The same signal covers streaming reads, HTTP error bodies are cancelled before parsing, and overflow remains the typed `observer-body-over-cap` rejected-upstream outcome rather than partial evidence. Intake telemetry distinguishes actual streamed bytes from declared size and preserves unavailable measurements. XRPL hashes the unchanged two UTF-8 bodies incrementally rather than allocating their concatenation.
 
 Measured 2026-09-23 by calling the same public endpoints from a workstation with the repository's own query and page parameters (`worker/src/cron/dex-liquidity/constants.ts` query builders, `pageSize`/`page_size` values as configured). The `The Graph` gateway refused the 2026-09-23 measurement without `GRAPH_API_KEY`, so the Uni V3 / V4 / PancakeSwap page caps were first justified against the measured page budget of the same 1,000-row shape; the 2026-09-27 subgraph-lane repair re-measured the credentialed gateway directly with the repository's own key and confirmed the estimate (table row below).
 
@@ -320,7 +334,7 @@ Overflow semantics (R1-R8: unavailable is not zero, a failed read never becomes 
 
 - The reader rejects a declared over-cap `Content-Length` before reading and otherwise streams and aborts at the cap, so an over-cap body is never parsed and never becomes partial data; the connection returns to the pool immediately.
 - The DEX stage turns the overflow into that source's own failure: `fetchSubgraphEntities()` reports `failed: true` with the machine-readable `failureReason: "body-over-cap"` (also `"http"` / `"graphql"`), `readDexApiJson()` returns `"<context> response body exceeded <n> bytes"`, and `fetchFluidPools()` records `fluid <chain> response body exceeded <n> bytes`. Consumers keep the existing degraded/failed-source accounting (`failedSources`, `criticalSourceFailures`, circuit outcomes) instead of publishing a short pool list.
-- `worker/src/lib/response-body.ts` exports `ResponseBodyTooLargeError` and `isResponseBodyTooLargeError()` so callers can classify the overflow without string matching; `fetchJsonWithRetry()` remains the owner of the cap check, retries, and body cancellation.
+- `worker/src/lib/response-body.ts` keeps `ResponseBodyTooLargeError` module-local and exports `isResponseBodyTooLargeError()` so callers can classify the overflow without string matching; `fetchJsonWithRetry()` remains the owner of the cap check, retries, and body cancellation.
 - Callers that must classify the final failure pass `throwOnFinalNetworkError: true` (DEX subgraph pages, Fluid tickers, PancakeSwap subgraph pages); the retry loop still retries the earlier attempts, and the last attempt's typed error reaches the caller's failure path.
 
 Long synchronous work in these phases yields between pages (`yieldToEventLoop()` in the subgraph page loop and the direct-API pagination loop) so slot heartbeats and abort timers keep firing during a multi-page fan-out instead of waiting for the whole provider family to drain.

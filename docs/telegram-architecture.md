@@ -216,7 +216,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 - Inline subscriber-query SQL into the entrypoint. Add new fan-out paths in `dispatch-telegram-alerts-fanout.ts` or one of the existing helper modules.
 - Duplicate admin-broadcast target selection SQL. Broadcast scopes call the Dispatch-owned `loadBroadcastTargetChatIds(db, scope)` helper so global/per-coin/preset watcher predicates evolve in one place.
 - Import API action-handler modules for alert context. Dispatch-owned context and reason helpers live under `worker/src/cron/`.
-- Exceed the repo's six-connection trigger budget. Consume response bodies (`drainResponseBody`) before later fetch phases so cleanup and byte use stay bounded.
+- Exceed the repo's six-connection trigger budget. Consume or cancel response bodies (`cancelResponseBodyQuietly` for ignored bodies, bounded readers for consumed ones) before later fetch phases so cleanup and byte use stay bounded.
 
 ---
 

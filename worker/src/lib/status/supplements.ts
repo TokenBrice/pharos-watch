@@ -26,7 +26,7 @@ import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../coingecko";
 import { USER_AGENT } from "../constants";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
-import { cancelResponseBodyQuietly } from "../response-body";
+import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseJsonWithinLimitWithSignal } from "../response-body";
 import {
   hasAnyCloudflareD1StatusBinding,
   resolveCloudflareD1StatusConfig,
@@ -153,6 +153,9 @@ function coverageClasses(raw: unknown): CoverageClassCounts {
   };
 }
 
+// 250 IDs × a 1 KiB source envelope; overflow fails the supplement, never partial prices.
+const STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 * 1024;
+
 async function fetchCoinGeckoUsdPrices(
   geckoIds: string[],
   coingeckoApiKey: string,
@@ -168,9 +171,10 @@ async function fetchCoinGeckoUsdPrices(
       vs_currencies: "usd",
       include_last_updated_at: "true",
     });
+    const signal = AbortSignal.timeout(5_000);
     const response = await fetch(cgUrl(cgSimplePricePath(params), coingeckoApiKey), {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
-      signal: AbortSignal.timeout(5_000),
+      signal,
     });
     if (!response.ok) {
       await cancelResponseBodyQuietly(response);
@@ -179,8 +183,9 @@ async function fetchCoinGeckoUsdPrices(
 
     let payload: Record<string, { usd?: number; last_updated_at?: number }> | null;
     try {
-      payload = await response.json();
-    } catch {
+      payload = await readResponseJsonWithinLimitWithSignal(response, STATUS_COINGECKO_MAX_RESPONSE_BYTES, signal);
+    } catch (error) {
+      if (isResponseBodyTooLargeError(error) || signal.aborted) throw error;
       logWorkerEvent({
         scope: "status",
         level: "warn",

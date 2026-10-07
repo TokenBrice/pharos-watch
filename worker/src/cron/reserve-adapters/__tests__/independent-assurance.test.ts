@@ -387,7 +387,7 @@ describe("independent-assurance manifest framework", () => {
   it("fails closed when the official PDF is unreachable", async () => {
     const fetchMock = installFetch({ rejectPdf: true });
 
-    await expect(verify()).rejects.toThrow("Fetch failed for www.audxtoken.com");
+    await expect(verify()).rejects.toThrow("network unreachable");
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "https://www.audxtoken.com/reviewed.pdf",

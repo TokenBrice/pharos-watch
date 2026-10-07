@@ -4,6 +4,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { logCronRun, cronEventCacheKey } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
+import { buildResourcePressure } from "../cron-resource-pressure";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createMigratedDb = fixtures.open;
@@ -825,6 +826,22 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
 describe("bounded abandonment progress evidence", () => {
   afterEach(() => fixtures.closeAll());
+  it("preserves last resource observation and adds only reconciliation platform evidence", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    const pressure = buildResourcePressure({ phase: "decode", observedAt: nowSec - 1200, intakeBytes: 100, cacheBytes: 800 });
+    sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ resourcePressure: pressure }));
+    await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get() as { metadata: string };
+    const metadata = JSON.parse(row.metadata);
+    expect(metadata.progressSnapshot.resourcePressure).toEqual(pressure);
+    expect(metadata.resourcePressure).toEqual({
+      ...pressure, platformOutcome: "platform-abandoned", platformOutcomeSource: "slot-reconciliation",
+    });
+    expect(metadata.resourcePressure.heapUsedBytes).toBeNull();
+  });
+
 
   it.each([
     { name: "valid", metadata: JSON.stringify({ currentCoinId: "usdnr-nerona", currentAdapter: "m0-wrapper-underlying",
@@ -833,7 +850,7 @@ describe("bounded abandonment progress evidence", () => {
       adapterTelemetryProgress: { attemptCount: 261, ioCallCount: 300, elapsedTotalMs: 1234, overflow: false,
         providerError: "SECRET RESPONSE", groupCount: -1 } }), status: "parsed" },
     { name: "malformed", metadata: "{SECRET RESPONSE", status: "malformed" },
-    { name: "oversized", metadata: JSON.stringify({ currentCoinId: "usdnr-nerona", body: "SECRET RESPONSE".repeat(2000) }), status: "oversized" },
+    { name: "oversized", metadata: JSON.stringify({ currentCoinId: "usdnr-nerona", body: "SECRET RESPONSE".repeat(6000) }), status: "oversized" },
     { name: "invalid fields", metadata: JSON.stringify({ currentCoinId: "https://secret.example/key", synced: -1,
       currentAdapter: "a".repeat(161), adapterTelemetryProgress: ["SECRET RESPONSE"] }), status: "parsed" },
   ])("retains only bounded evidence for $name metadata and remains idempotent", async ({ metadata, status, name }) => {

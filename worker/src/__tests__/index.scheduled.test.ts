@@ -4,6 +4,7 @@ import {
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import type * as V9SlotWindow from "../lib/v9-slot-window";
 
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
@@ -273,7 +274,8 @@ vi.mock("../cron/sync-v9-supply-attribution", () => ({
 vi.mock("../cron/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: cronMocks.computeSafetyScoreV9,
 }));
-vi.mock("../lib/v9-slot-window", () => ({
+vi.mock("../lib/v9-slot-window", async (importOriginal) => ({
+  ...await importOriginal<typeof V9SlotWindow>(),
   waitForV9MemoryLaneRelease: vi.fn(async () => undefined),
   runV9AfterCoreWithinWindow: vi.fn(
     (

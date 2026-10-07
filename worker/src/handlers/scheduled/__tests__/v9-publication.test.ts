@@ -18,7 +18,8 @@ vi.mock("../slot-groups", async (importOriginal) => ({
   ...await importOriginal<typeof import("../slot-groups")>(),
   runScheduledSlotGroups: mocks.runScheduledSlotGroups,
 }));
-vi.mock("../../../lib/v9-slot-window", () => ({
+vi.mock("../../../lib/v9-slot-window", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/v9-slot-window")>(),
   runV9AfterCoreWithinWindow: mocks.runV9AfterCoreWithinWindow,
 }));
 vi.mock("../../../cron/compute-safety-score-v9", () => ({
@@ -78,10 +79,12 @@ describe("V9 publication scheduling", () => {
     const workflow = { create: vi.fn().mockResolvedValue({}), get: vi.fn() };
     scheduledRuntime.env = {
       ...scheduledRuntime.env, WORKER_V9_WORKFLOW_MODE: mode,
+      CF_VERSION_METADATA: { id: "executing-worker", timestamp: "2026-10-07T20:00:00Z", tag: "" },
       SAFETY_SCORE_V9_WORKFLOW: workflow,
     } as unknown as ScheduledRuntimeContext["env"];
     mocks.computeSafetyScoreV9.mockResolvedValue({ status: "ok", metadata: JSON.stringify(metadata) });
-    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) => run(new AbortController().signal));
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) =>
+      run(new AbortController().signal, { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 }));
     return { scheduledRuntime, workflow };
   }
 
@@ -131,6 +134,10 @@ describe("V9 publication scheduling", () => {
     const { scheduledRuntime, workflow } = compilingRuntime();
     expect(await runV9PublicationSlot(scheduledRuntime)).toBe(published);
     expect(mocks.computeSafetyScoreV9).toHaveBeenCalledOnce();
+    expect(mocks.computeSafetyScoreV9).toHaveBeenCalledWith(scheduledRuntime.db, expect.any(AbortSignal), expect.any(Function), {
+      workerMetadata: scheduledRuntime.env.CF_VERSION_METADATA,
+      executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 },
+    });
     expect(workflow.create).toHaveBeenCalledExactlyOnceWith({
       id: "v9-publication-1800", params: { slotStartedAt: 1800 },
     });
@@ -226,13 +233,12 @@ describe("V9 publication scheduling", () => {
     );
   });
 
-  it("records a neutral workflow row for an identity-bearing cadence deferral", async () => {
+  it("records a neutral workflow row for deployment-only recapture without triggering a shadow", async () => {
     const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
       status: "skipped_neutral",
       metadata: {
-        stage: "supply-generation",
-        reason: "supply-attribution-generation-cadence-deferred",
-        ...identities,
+        stage: "input-identity",
+        reason: "v9-evaluator-changed-recapture-pending",
       },
     });
 
@@ -243,8 +249,8 @@ describe("V9 publication scheduling", () => {
     expect(parseObjectMetadata(String(inserts[0]!.bindings[3]))).toMatchObject({
       reason: "upstream-compute-publication-absent",
       upstreamStatus: "skipped_neutral",
-      upstreamReason: "supply-attribution-generation-cadence-deferred",
-      upstreamStage: "supply-generation",
+      upstreamReason: "v9-evaluator-changed-recapture-pending",
+      upstreamStage: "input-identity",
     });
   });
 

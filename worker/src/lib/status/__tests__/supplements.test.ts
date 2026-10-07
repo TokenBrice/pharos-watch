@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import type { StatusResponse } from "@shared/types/status";
+import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../stablecoins-cache";
 
 vi.mock("../../stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "error", reason: "missing", updatedAt: null })),
@@ -90,6 +91,26 @@ function cronsWithDexLiquidityRuns(
 
 
 describe("loadStatusSupplements", () => {
+  it("fails the CoinGecko supplement on overflow rather than accepting partial prices", async () => {
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok", updatedAt: NOW, payload: { peggedAssets: [
+        { id: "usdc-circle", geckoId: "usd-coin", price: 1 },
+      ] },
+    } as StablecoinsCacheLoadResult);
+    vi.mocked(hasUsableStablecoinsPayload).mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(256 * 1024 + 1) },
+    }));
+    try {
+      const supplements = await loadStatusSupplements(statusDb(), NOW, {}, "key");
+      expect(supplements.coingeckoPriceDiff).toBeNull();
+      expect(fetchMock).toHaveBeenCalledOnce();
+    } finally {
+      fetchMock.mockRestore();
+      vi.mocked(hasUsableStablecoinsPayload).mockReturnValue(false);
+    }
+  });
+
   it("preserves absent operational dispatch flags as null", () => {
     expect(parseTelegramDispatchCronMetadata({})).toMatchObject({
       cappedAtLimit: null,

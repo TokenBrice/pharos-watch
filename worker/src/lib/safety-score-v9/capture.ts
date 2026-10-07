@@ -32,6 +32,8 @@ import { createRuntimeGapVerdict } from "./fact-set-context";
 import type { PipelineGapByAssetId } from "@shared/lib/report-cards-fixed-input-identity";
 import type { ReportCardEvidenceJournalByIdV1 } from "@shared/lib/report-card-evidence-journal";
 import { compareCodeUnits } from "@shared/lib/compare";
+import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
 export function captureReservePipelineGaps(
@@ -117,12 +119,12 @@ export async function buildNativeSafetyScoreV9Capture(
   const {
     stablecoinsCached,
     dexLiquiditySnapshot,
-    redemptionBackstopMap,
+    redemptionBackstopMap: readRedemptionBackstopMap,
     redemptionSnapshotProvenance,
     liveReserveMap,
     liveReserveProvenanceMap,
     liquidityStale,
-    redemptionStale,
+    redemptionStale: readRedemptionStale,
     inputFreshness,
     v9PublicationInputHealth,
   } = await loadReportCardsSnapshotInputs(db, {
@@ -152,6 +154,13 @@ export async function buildNativeSafetyScoreV9Capture(
     dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, clockSec, "DEX liquidity"),
     redemptionBackstops: freshnessAtClock(inputFreshness.redemptionBackstops, clockSec, "redemption backstops"),
   };
+  const consumedInputState = v9PublicationInputHealth.redemption.state === "current"
+    ? assessConsumedRedemptionReserves(Object.values(readRedemptionBackstopMap), redemptionSnapshotProvenance.runMetadata, redemptionSnapshotProvenance.latestUpdatedAt ?? 0, clockSec)
+    : v9PublicationInputHealth.redemption.state === "stale" ? "stale" : v9PublicationInputHealth.redemption.state === "not-applicable" ? "fresh" : "unavailable";
+  const redemptionOutputExpired = scoringInputFreshness.redemptionBackstops.ageSeconds != null && scoringInputFreshness.redemptionBackstops.ageSeconds > CRON_INTERVALS["sync-redemption-backstops"] * 2;
+  const redemptionStale = readRedemptionStale || scoringInputFreshness.redemptionBackstops.stale || redemptionOutputExpired || consumedInputState !== "fresh";
+  if (redemptionStale) scoringInputFreshness.redemptionBackstops.stale = true;
+  const redemptionBackstopMap = redemptionStale ? {} : readRedemptionBackstopMap;
 
   const activeDepegPeakBpsById = new Map<string, number>();
   for (const [stablecoinId, events] of pegAnalytics.eventsByCoin ?? new Map()) {
@@ -246,7 +255,8 @@ export async function buildNativeSafetyScoreV9Capture(
       },
       redemption: {
         ...v9PublicationInputHealth.redemption,
-        generationId: redemptionGenerationId,
+        state: consumedInputState === "unavailable" ? "unavailable" : redemptionStale ? "stale" : v9PublicationInputHealth.redemption.state,
+        generationId: redemptionSnapshotProvenance.runId ?? redemptionGenerationId,
         updatedAtSec: redemptionUpdatedAt,
       },
     },

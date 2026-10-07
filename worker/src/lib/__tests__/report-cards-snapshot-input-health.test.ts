@@ -87,6 +87,7 @@ describe("report-card V9 publication input health", () => {
       latestUpdatedAt: NOW_SEC - 60,
       runId: "redemption:current",
       methodologyVersion: "redemption:test",
+      reserveInputHealth: "fresh",
     });
     mocks.loadFreshIndependentLiveReserveMap
       .mockReset()
@@ -209,6 +210,17 @@ describe("report-card V9 publication input health", () => {
       state: "available",
       coverageRatio: 0,
     });
+  });
+
+  it.each(["stale", "unavailable"] as const)("holds expired or incompatible consumed evidence as %s without changing the run clock", async (state) => {
+    mocks.loadRedemptionBackstopSnapshot.mockResolvedValue({
+      map: { test: { stablecoinId: "test" } }, latestUpdatedAt: NOW_SEC - 60,
+      runId: "redemption:actual", methodologyVersion: "redemption:test", reserveInputHealth: state,
+    });
+    const inputs = await loadReportCardsSnapshotInputs(db(), { preloadedStablecoinsCache: stablecoinsCache() });
+    expect(inputs.redemptionBackstopMap).toEqual({});
+    expect(inputs.v9PublicationInputHealth.redemption).toEqual({ state, generationId: "redemption:actual", updatedAtSec: NOW_SEC - 60 });
+    expect(inputs.inputFreshness.redemptionBackstops.ageSeconds).toBe(60);
   });
 
   it("marks a completed empty redemption snapshot as not applicable", async () => {

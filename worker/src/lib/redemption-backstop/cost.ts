@@ -10,6 +10,7 @@ import {
 import { resolveRedemptionDocs } from "@shared/lib/redemption-backstop-docs";
 
 export interface ResolvedRedemptionCost {
+  selectedLiveFee?: boolean;
   score: number;
   feeBps: number | null;
   feeDescription?: string;
@@ -20,6 +21,7 @@ export interface ResolvedRedemptionCost {
 }
 
 export interface RedemptionStaticFields {
+  selectedLiveFee?: boolean;
   accessScore: number;
   settlementScore: number;
   executionCertaintyScore: number;
@@ -93,8 +95,10 @@ function resolveRedemptionCost(
     costScenarioScores: ResolvedRedemptionCost["costScenarioScores"];
     notes: string[];
     feeDescription?: string;
+    selectedLiveFee?: boolean;
   }): ResolvedRedemptionCost => ({
     score: fields.score,
+    selectedLiveFee: fields.selectedLiveFee,
     feeBps: fields.feeBps,
     feeConfidence,
     feeModelKind,
@@ -115,6 +119,7 @@ function resolveRedemptionCost(
   ) {
     const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
     return buildCost({
+      selectedLiveFee: true,
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
@@ -126,6 +131,7 @@ function resolveRedemptionCost(
   if (resolvedLiveMetadata.canUseFee && resolvedLiveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
     const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
     return buildCost({
+      selectedLiveFee: true,
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
       costScenarioScores: resolveCostScenarioScores(costModel, feeBps),
@@ -178,6 +184,7 @@ export function resolveRedemptionStaticFields(
 ): RedemptionStaticFields {
   const {
     score: costScore,
+    selectedLiveFee,
     feeBps,
     feeDescription,
     feeConfidence,
@@ -189,6 +196,7 @@ export function resolveRedemptionStaticFields(
   return {
     ...scores,
     costScore,
+    selectedLiveFee,
     feeBps,
     feeDescription,
     feeConfidence,

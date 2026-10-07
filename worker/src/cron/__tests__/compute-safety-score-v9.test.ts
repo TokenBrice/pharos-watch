@@ -7,6 +7,12 @@ import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persi
 import type { NativeSafetyScoreV9Input } from "../../lib/safety-score-v9/native-input";
 import { normalizeNativeV9Input } from "../../lib/safety-score-v9/native-input";
 import { createRuntimeGapVerdict } from "../../lib/safety-score-v9/fact-set-context";
+import { afterEach } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import {
+  buildSafetyScoreV9CaptureControl, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
+} from "../../lib/safety-score-v9/capture-control";
+import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
@@ -15,14 +21,14 @@ const mocks = vi.hoisted(() => ({
   parseFixedInput: vi.fn(),
   parsePegSeed: vi.fn(),
   parseSupplyGeneration: vi.fn(),
-  supplyGenerationCadenceDeferred: vi.fn(),
   applySupplyGeneration: vi.fn(),
   loadEvidenceJournalById: vi.fn(),
   loadSupplyAttributionJournalById: vi.fn(),
   runPublication: vi.fn(),
 }));
 
-vi.mock("../../lib/db-cache", () => ({
+vi.mock("../../lib/db-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/db-cache")>(),
   getCaches: mocks.getCaches,
   getCacheUpdatedAt: mocks.getCacheUpdatedAt,
 }));
@@ -66,8 +72,6 @@ vi.mock(
         mocks.applySupplyGeneration,
       parseSafetyScoreV9SupplyAttributionGeneration:
         mocks.parseSupplyGeneration,
-      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred:
-        mocks.supplyGenerationCadenceDeferred,
     };
   },
 );
@@ -91,6 +95,38 @@ const { computeSafetyScoreV9 } = await import("../compute-safety-score-v9");
 // Parsers/publication are mocked in gate cases; build the valid transport control only once.
 const validNativeInput = createNativeSafetyScoreV9FullRegistryInput();
 let fixedInput: NativeSafetyScoreV9Input;
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+
+function captureControlFixture() {
+  return buildSafetyScoreV9CaptureControl({
+    safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+      methodologyVersion: fixedInput.methodologyVersion, baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: fixedInput.sourceGeneration,
+    }),
+    baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
+    clockSec: fixedInput.clockSec, registryFingerprint: fixedInput.registryFingerprint,
+    workerVersion: "worker-old", workerUploadedAtSec: fixedInput.clockSec - 60,
+  }, fixedInput.clockSec);
+}
+
+async function installControl(control: SafetyScoreV9CaptureControl) {
+  const caches = await mocks.getCaches();
+  caches.set(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, { value: JSON.stringify(control) });
+  mocks.getCaches.mockImplementation(async () => new Map(caches));
+}
+
+function mockPublishedPreparation() {
+  mocks.runPublication.mockImplementation(async (input: {
+    fixedInput: NativeSafetyScoreV9Input;
+    prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+  }) => {
+    const prepared = await input.prepareFixedInput(input.fixedInput, new AbortController().signal);
+    expect(prepared.baseInputGenerationId).toBe(fixedInput.baseInputGenerationId);
+    return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
+      candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
+  });
+}
 describe("computeSafetyScoreV9", () => {
   beforeEach(() => {
     fixedInput = {
@@ -112,7 +148,7 @@ describe("computeSafetyScoreV9", () => {
       rejectedAssetIds: [],
     };
 
-    mocks.getCaches.mockReset().mockResolvedValue(
+    mocks.getCaches.mockReset().mockImplementation(async () =>
       new Map([
         ["report-cards:fixed-input:exact", { value: "fixed-input" }],
         [
@@ -144,9 +180,6 @@ describe("computeSafetyScoreV9", () => {
     mocks.parseSupplyGeneration
       .mockReset()
       .mockReturnValue(generation);
-    mocks.supplyGenerationCadenceDeferred
-      .mockReset()
-      .mockReturnValue(true);
     mocks.applySupplyGeneration
       .mockReset()
       .mockReturnValue({
@@ -167,7 +200,6 @@ describe("computeSafetyScoreV9", () => {
   });
 
   it.each([true, false])("retains accepted replay only when requested (%s)", async (retainAcceptedReplay) => {
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.runPublication.mockResolvedValue({
       status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
     });
@@ -187,7 +219,6 @@ describe("computeSafetyScoreV9", () => {
     });
     fixedInput = normalizeNativeV9Input({ ...fixedInput, baseInputGenerationId: undefined,
       pipelineGapByAssetId: { "usdc-circle": [failure] } });
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.applySupplyGeneration.mockReturnValue({ status: "applied", generationId: "fixture-supply-generation",
       fixedInput, acceptedAssetIds: [], rejectedAssetIds: [], invalidAssetIds: [] });
     const identity = buildSafetyScoreV9InputIdentity({
@@ -213,24 +244,35 @@ describe("computeSafetyScoreV9", () => {
     expect(result.status).toBe("ok");
   });
 
-  it("skips neutrally when the only supply attribution generation belongs to a later cadence phase", async () => {
+  it("publishes aggregate-only input with bounded pending provenance instead of admitting future packets", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedInput.clockSec * 1_000);
+    const control = buildSafetyScoreV9CaptureControl({
+      safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+        methodologyVersion: fixedInput.methodologyVersion, baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publicationGenerationId: fixedInput.sourceGeneration,
+      }),
+      baseInputGenerationId: fixedInput.baseInputGenerationId, sourceGeneration: fixedInput.sourceGeneration,
+      clockSec: fixedInput.clockSec, registryFingerprint: fixedInput.registryFingerprint,
+      workerVersion: "capture-worker", workerUploadedAtSec: fixedInput.clockSec - 60,
+    }, fixedInput.clockSec);
+    await installControl(control);
+    mocks.applySupplyGeneration.mockReturnValue({
+      status: "incompatible", reason: "capture-clock-after-consumer", generationId: "future",
+      fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: {} },
+    });
+    mockPublishedPreparation();
     const result = await computeSafetyScoreV9({} as D1Database);
-
-    expect(result).toMatchObject({
-      status: "skipped_neutral",
-      itemCount: 1,
-      productivity: {
-        productive: false,
-        reason: "supply-attribution-generation-cadence-deferred",
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      supplyAttributionGeneration: {
+        status: "pending", reason: "attribution-pending",
+        pendingUntilSec: control.attribution.pendingUntilSec,
+        targetBaseInputGenerationId: fixedInput.baseInputGenerationId,
       },
     });
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      stage: "supply-generation",
-      reason: "supply-attribution-generation-cadence-deferred",
-      acceptedCount: 1,
-      rejectedCount: 0,
-    });
-    expect(mocks.runPublication).not.toHaveBeenCalled();
+    expect(mocks.runPublication).toHaveBeenCalledOnce();
+    expect(mocks.loadSupplyAttributionJournalById).toHaveBeenCalledOnce();
   });
 
   it("rejects a fixed input captured from an older stablecoin cache generation", async () => {
@@ -311,7 +353,6 @@ describe("computeSafetyScoreV9", () => {
   });
 
   it("keeps tolerated partial V9 publications green when supply attribution applied", async () => {
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.runPublication.mockImplementationOnce(async (input: {
       fixedInput: unknown;
       prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
@@ -352,7 +393,6 @@ describe("computeSafetyScoreV9", () => {
   });
 
   it("bounds published bridge-join diagnostics under the persistence cap", async () => {
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.runPublication.mockImplementationOnce(async (input: {
       fixedInput: unknown;
       prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
@@ -416,7 +456,6 @@ describe("computeSafetyScoreV9", () => {
   });
 
   it("keeps the coverage-floor verdict readable after metadata compaction", async () => {
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.runPublication.mockImplementationOnce(async (input: {
       fixedInput: unknown;
       prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
@@ -487,7 +526,6 @@ describe("computeSafetyScoreV9", () => {
   });
 
   it("degrades a published V9 attempt when supply attribution is incompatible", async () => {
-    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.applySupplyGeneration.mockReturnValueOnce({
       status: "incompatible",
       generationId:
@@ -596,5 +634,106 @@ describe("computeSafetyScoreV9", () => {
         expectedCount: 1, presentCount: ids.length });
       expect(mocks.runPublication).not.toHaveBeenCalled();
     }
+  });
+  it.each([
+    ["new", 1, true], ["same", 1, false], ["older", -1, false], ["missing", null, false],
+  ] as const)("classifies only a strictly newer deployed Worker (%s)", async (kind, uploadOffset, neutral) => {
+    const control = captureControlFixture();
+    const identity = { ...control.capture.safetyScoreIdentity, evaluationBuildDigest: "0".repeat(64) };
+    control.capture.safetyScoreIdentity = identity;
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: identity });
+    mocks.parsePegSeed.mockReturnValue({ sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
+      safetyScoreIdentity: identity, pegProvenanceById: {} });
+    await installControl(control);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)")
+      .run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify(control), fixedInput.clockSec);
+    const workerMetadata = kind === "missing" ? undefined : {
+      id: kind === "same" ? control.capture.workerVersion! : `worker-${kind}`,
+      timestamp: new Date((control.capture.workerUploadedAtSec! + uploadOffset!) * 1_000).toISOString(),
+    };
+    const result = await computeSafetyScoreV9(db, undefined, undefined, { workerMetadata });
+    expect(result.status).toBe(neutral ? "skipped_neutral" : "degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.reason).toBe(neutral ? "v9-evaluator-changed-recapture-pending" : "base-v9-exact-identity-mismatch");
+    expect(metadata.identityMismatch.changedFields).toContain("evaluationBuildDigest");
+    expect(JSON.stringify(metadata.identityMismatch).length).toBeLessThan(1_200);
+    const persisted = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key=?")
+      .get(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY)!.value));
+    expect(persisted.recaptureRequest !== null).toBe(neutral);
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("does not make a newer deployment neutral when seed provenance is corrupt", async () => {
+    const control = captureControlFixture();
+    control.capture.safetyScoreIdentity.evaluationBuildDigest = "0".repeat(64);
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: control.capture.safetyScoreIdentity });
+    await installControl(control);
+    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined, {
+      workerMetadata: { id: "new", timestamp: new Date(fixedInput.clockSec * 1_000).toISOString() },
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!).identityMismatch.changedFields).toContain("capture-pair");
+  });
+
+  it.each(["expired", "non-ok", "malformed"] as const)("keeps %s attribution requests fail-closed", async (kind) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedInput.clockSec * 1_000);
+    const control = captureControlFixture();
+    if (kind === "expired") vi.setSystemTime(control.attribution.pendingUntilSec * 1_000);
+    if (kind === "non-ok") control.attribution = { ...control.attribution, status: "settled", outcome: "degraded" };
+    if (kind === "malformed") mocks.parseSupplyGeneration.mockImplementation(() => { throw new Error("bad generation"); });
+    await installControl(control);
+    mocks.applySupplyGeneration.mockReturnValue({
+      status: "unavailable", reason: "generation-missing", generationId: null,
+      fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: {} },
+    });
+    mockPublishedPreparation();
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!).supplyAttributionGeneration.status).toBe(kind === "malformed" ? "incompatible" : "unavailable");
+  });
+
+  it("throws instead of claiming a neutral recapture when marker persistence fails", async () => {
+    const control = captureControlFixture();
+    control.capture.safetyScoreIdentity.evaluationBuildDigest = "0".repeat(64);
+    const identity = control.capture.safetyScoreIdentity;
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: identity });
+    mocks.parsePegSeed.mockReturnValue({ sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
+      safetyScoreIdentity: identity, pegProvenanceById: {} });
+    await installControl(control);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache(key,value,updated_at) VALUES (?,?,?)")
+      .run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify(control), fixedInput.clockSec);
+    sqlite.exec("CREATE TRIGGER fail_request BEFORE UPDATE ON cache BEGIN SELECT RAISE(ABORT,'marker write failed'); END");
+    await expect(computeSafetyScoreV9(db, undefined, undefined, {
+      workerMetadata: { id: "new", timestamp: new Date(fixedInput.clockSec * 1_000).toISOString() },
+    })).rejects.toThrow("marker write failed");
+  });
+  it.each([397, 398])("admits complete active inventory within its reviewed boundary (%s)", async count => {
+    fixedInput = { ...fixedInput, activeAssetIds: Array.from({ length: count }, (_, index) => `asset-${index}`) };
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: captureControlFixture().capture.safetyScoreIdentity });
+    mockPublishedPreparation();
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(result.status).toBe(count === 397 ? "ok" : "degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 488, catalogAssets: 488 });
+    if (count === 398) {
+      expect(metadata.reason).toBe("resource-budget-exceeded");
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+    } else expect(result.itemCount).toBe(397);
+  });
+
+  it("rejects expanded-byte overflow before decompression while retaining accepted publication", async () => {
+    mocks.getCaches.mockResolvedValue(new Map([
+      ["report-cards:fixed-input:exact", { value: '{"uncompressedBytes":8000001,"payload":"unparsed"}' }],
+      ["report-cards:v9-peg-provenance-seed:exact", { value: "seed" }],
+    ]));
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "resource-budget-exceeded", resourcePressure: { inputBytes: 8_000_001, inputCapBytes: 8_000_000 },
+    });
+    expect(mocks.parseFixedInput).not.toHaveBeenCalled();
+    expect(mocks.runPublication).not.toHaveBeenCalled();
   });
 });

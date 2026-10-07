@@ -11,7 +11,10 @@ import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 
+import type { ConsumedReserveInput } from "@shared/types/reserve-input";
 export interface CapacityResolution {
+  consumedReserveCapacity?: boolean;
+  consumedReserveRouteStatus?: boolean;
   immediateCapacityUsd: number | null;
   immediateCapacityRatio: number | null;
   scoringCapacityUsd: number | null;
@@ -47,6 +50,7 @@ export interface CapacityResolution {
 export interface RedemptionBackstopBuildOptions {
   signal?: AbortSignal;
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
+  reserveInput?: ConsumedReserveInput;
   redemptionLiveMetadata?: RedemptionBackstopLiveMetadata;
   routeAvailability?: RedemptionRouteAvailability | null;
   rpcOptions?: EvmRpcOptions;

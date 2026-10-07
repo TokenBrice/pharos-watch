@@ -21,6 +21,9 @@ import {
   RedemptionRouteStatusSchema,
   RedemptionRouteStatusSourceSchema,
 } from "./redemption";
+import { ReserveFreshnessViewSchema } from "./reserve-input";
+export { ReserveFreshnessViewSchema } from "./reserve-input";
+export type { ReserveFreshnessView } from "./reserve-input";
 
 export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
 export * from "./live-reserve-core";
@@ -403,36 +406,6 @@ const LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES = [
 ] as const;
 export type LiveReserveAdmissionRejectionCode = (typeof LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)[number];
 
-/** Which cap set the effective source-age budget: reviewed coin scoring cap (wins ties), adapter validation cap, or the fetch budget when neither declares one. */
-const LIVE_RESERVE_SOURCE_AGE_BUDGET_CAP_VALUES = ["scoring", "adapter", "fetch-budget"] as const;
-const LIVE_RESERVE_STALE_REASON_VALUES = ["fetch-age", "source-age"] as const;
-
-/**
- * ADR-30: the reserve freshness verdict together with the budgets, assessment
- * clock, and generation it used. Every value is the evaluator's own output
- * (`assessReserveSnapshotFreshness`), never re-derived by the view. Source
- * fields are `null` when source age did not take part in the verdict
- * (non-`verified` freshness, no finite source timestamp, or no stored
- * snapshot); `attemptId` is `null` for legacy rows written before attempt IDs.
- */
-export const ReserveFreshnessViewSchema = /* @__PURE__ */ (() => z
-  .object({
-    stale: z.boolean(),
-    staleReasons: z.array(z.enum(LIVE_RESERVE_STALE_REASON_VALUES)),
-    /** Unix seconds: the evaluation clock the verdict used. */
-    assessedAt: z.number().finite(),
-    /** Generation described: the Worker fetch time and attempt of the judged snapshot. */
-    fetchedAt: z.number().finite().nullable(),
-    attemptId: z.string().nullable(),
-    fetchAgeSec: z.number().finite().nullable(),
-    fetchBudgetSec: NonNegativeFiniteSecondsSchema,
-    sourceTimestamp: z.number().finite().nullable(),
-    sourceAgeSec: z.number().finite().nullable(),
-    sourceAgeBudgetSec: NonNegativeFiniteSecondsSchema.nullable(),
-    sourceAgeBudgetCap: z.enum(LIVE_RESERVE_SOURCE_AGE_BUDGET_CAP_VALUES).nullable(),
-  })
-  .strict())();
-export type ReserveFreshnessView = z.output<typeof ReserveFreshnessViewSchema>;
 
 export const ReserveProvenanceViewSchema = /* @__PURE__ */ (() => z
   .object({

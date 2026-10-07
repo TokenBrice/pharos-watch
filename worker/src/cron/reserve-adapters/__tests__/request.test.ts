@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import {
   buildBrowserHeaders,
+  createRequestBodyObserver,
   fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
@@ -10,6 +11,7 @@ import {
   fetchWithBrowserFallback,
   fetchTextWithRetry,
   getCachedRequest,
+  getRequestResourceSnapshot,
   REQUEST_CACHE_MAX_ENTRY_BYTES,
   REQUEST_CACHE_MAX_TOTAL_BYTES,
 } from "../request";
@@ -75,7 +77,7 @@ describe("buildBrowserHeaders", () => {
 
     const recovered = await getCachedRequest("recoverable", async () => {
       calls++;
-      return "ok";
+      return { value: "ok", cacheBytes: 2, basis: "declared-estimate" };
     }, ctx);
 
     expect(recovered).toBe("ok");
@@ -88,10 +90,10 @@ describe("buildBrowserHeaders", () => {
     const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES);
 
     for (const key of ["first", "second", "third", "fourth"]) {
-      await getCachedRequest(key, async () => body, ctx);
+      await getCachedRequest(key, async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx);
     }
-    await getCachedRequest("first", async () => "unused", ctx);
-    await getCachedRequest("fifth", async () => body, ctx);
+    await getCachedRequest("first", async () => ({ value: "unused", cacheBytes: 6, basis: "declared-estimate" }), ctx);
+    await getCachedRequest("fifth", async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx);
 
     expect(cache.has("first")).toBe(true);
     expect(cache.has("second")).toBe(false);
@@ -106,8 +108,60 @@ describe("buildBrowserHeaders", () => {
     const ctx = { requestCache: cache };
     const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES + 1);
 
-    await expect(getCachedRequest("oversized", async () => body, ctx)).resolves.toBe(body);
+    await expect(getCachedRequest("oversized", async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx)).resolves.toBe(body);
     expect(cache.has("oversized")).toBe(false);
+  });
+
+  it("dedupes pending work without retaining it and cleans failed promises", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const onRequestCache = vi.fn();
+    const ctx = { requestCache: cache, onRequestCache };
+    let resolve!: (value: { value: string; cacheBytes: null; basis: "unavailable" }) => void;
+    const factory = vi.fn(() => new Promise<{ value: string; cacheBytes: null; basis: "unavailable" }>((done) => { resolve = done; }));
+    const first = getCachedRequest("pending", factory, ctx);
+    const second = getCachedRequest("pending", factory, ctx);
+    expect(first).toBe(second);
+    expect(cache.size).toBe(0);
+    await Promise.resolve();
+    resolve({ value: "ok", cacheBytes: null, basis: "unavailable" });
+    await expect(first).resolves.toBe("ok");
+    expect(factory).toHaveBeenCalledOnce();
+    expect(onRequestCache.mock.calls.map(([event]) => event.hit)).toEqual([false, true]);
+    expect(getRequestResourceSnapshot(ctx, "settled")).toMatchObject({ cacheBytes: 0, guard: "cache-bypassed" });
+  });
+
+  it("never serializes returned values or invokes getters to account retention", async () => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const getter = vi.fn(() => { throw new Error("must not inspect"); });
+    const value = Object.defineProperty({}, "toJSON", { get: getter });
+    await expect(getCachedRequest("opaque", async () => ({
+      value, cacheBytes: 100, basis: "declared-estimate",
+    }), ctx)).resolves.toBe(value);
+    expect(getter).not.toHaveBeenCalled();
+    expect(getRequestResourceSnapshot(ctx, "retained")).toMatchObject({ cacheBytes: 100, cacheBasis: "declared-estimate" });
+  });
+
+  it("never exceeds the prospective total at Map insertion", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const ctx = { requestCache: cache };
+    const insert = vi.spyOn(cache, "set");
+    for (let index = 0; index < 6; index++) {
+      await getCachedRequest(String(index), async () => ({
+        value: index, cacheBytes: REQUEST_CACHE_MAX_ENTRY_BYTES, basis: "declared-estimate",
+      }), ctx);
+      expect(cache.size).toBeLessThanOrEqual(4);
+      expect(getRequestResourceSnapshot(ctx, "admitted").cacheBytes).toBeLessThanOrEqual(REQUEST_CACHE_MAX_TOTAL_BYTES);
+    }
+    expect(insert).toHaveBeenCalledTimes(6);
+  });
+
+  it.each([null, -1, Infinity, 0.5])("bypasses unknown or invalid estimates %s without failing work", async (cacheBytes) => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    await expect(getCachedRequest("uncached", async () => ({
+      value: "ok", cacheBytes, basis: "declared-estimate",
+    }), ctx)).resolves.toBe("ok");
+    expect(ctx.requestCache.size).toBe(0);
+    expect(getRequestResourceSnapshot(ctx, "done").guard).toBe("cache-bypassed");
   });
 });
 
@@ -331,7 +385,7 @@ describe("binary fetch lifecycle", () => {
     const startedAt = Date.now();
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 50, undefined, { maxRetries: 0 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ name: "TimeoutError" });
     expect(Date.now() - startedAt).toBeLessThan(1_000);
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -356,7 +410,7 @@ describe("binary fetch lifecycle", () => {
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 1024 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -377,7 +431,7 @@ describe("binary fetch lifecycle", () => {
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 8 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -396,7 +450,7 @@ describe("JSON POST retry and size limits", () => {
     await expect(fetchJsonPostWithRetry(
       "https://issuer.example/graphql", { coin: "usdc" }, new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 64 },
-    )).rejects.toThrow("POST fetch failed for https://issuer.example/graphql");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -409,5 +463,20 @@ describe("JSON POST retry and size limits", () => {
       { maxRetries: 1 },
     )).rejects.toThrow("HTTP 500 for POST https://issuer.example/graphql");
     expect(network.fetchSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("body intake attribution", () => {
+  it("counts partial interruption without inventing a budget rejection", () => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const observer = createRequestBodyObserver(ctx, 4);
+    observer.onBodyRead({ intakeBytes: 2, declaredBytes: null, outcome: "rejected" });
+    expect(getRequestResourceSnapshot(ctx, "abort")).toMatchObject({
+      intakeBytes: 2, rejectedBodies: 0, guard: "within-policy",
+    });
+    observer.onBodyRead({ intakeBytes: 5, declaredBytes: 1, outcome: "rejected" });
+    expect(getRequestResourceSnapshot(ctx, "overflow")).toMatchObject({
+      intakeBytes: 7, rejectedBodies: 1, guard: "resource-budget-exceeded",
+    });
   });
 });

@@ -3,9 +3,21 @@ import { timingSafeCompare, hasValidAdminCredential, requireAdmin, withAdmin } f
 import {
   resetTelegramInvalidSecretLogStateForTests,
 } from "../../lib/telegram/log";
-import { validateTelegramWebhookSecret } from "../telegram-webhook-auth";
+import { isGroupAdminActor, validateTelegramWebhookSecret } from "../telegram-webhook-auth";
 
 describe("timingSafeCompare", () => {
+  it("denies group authorization on oversized Telegram member evidence", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    try {
+      expect(await isGroupAdminActor("bot-token", "-100", "1")).toBe(false);
+      expect(fetchMock).toHaveBeenCalledOnce();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
   it("returns true for matching strings", async () => {
     expect(await timingSafeCompare("secret123", "secret123")).toBe(true);
   });

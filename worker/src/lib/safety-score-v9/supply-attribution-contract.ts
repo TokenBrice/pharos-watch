@@ -15,6 +15,8 @@ import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { authenticateCcipPendingObservation } from "./ccip-pending-observer";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
 
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
 const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
@@ -1110,25 +1112,32 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   aggregate: ReviewedEconomicDeploymentPartition["aggregate"];
   referencePrice: EconomicSupplyReference; conversions: EconomicSupplyReference[];
   observations: EconomicSupplyObservation[]; inFlight: EconomicSupplyObservation[];
+  onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): ReviewedEconomicDeploymentPartition | null {
   const inventory = buildReviewedEconomicDeploymentInventory(input.plan.assetId, input.plan, input.meta);
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
   const current = (clock: number, budget: number) => Number.isInteger(clock) && clock <= input.clockSec && input.clockSec - clock <= budget;
-  if (!inventory || input.clockSec < input.plan.reviewedAtSec || input.clockSec >= input.plan.expiresAtSec ||
-    !current(input.aggregate.observedAtSec, policy.observationMaxAgeSec) ||
-    input.aggregate.sourceGeneration !== input.sourceGeneration ||
-    !current(input.referencePrice.observedAtSec, policy.referencePriceMaxAgeSec) ||
-    input.referencePrice.sourceId !== input.plan.sourceId ||
-    input.conversions.some(row => !current(row.observedAtSec, policy.referencePriceMaxAgeSec))) return null;
+  const rejected = (failurePredicate: string, operands?: SupplyAttributionAttemptDiagnostic["operands"], laneId: string | null = null): null => {
+    emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "economic-deployment", sourceId: input.plan.sourceId, laneId, phase: "partition-derivation", method: "exact-unit-reconciliation", hardEvidenceFailure: true, failurePredicate, ...(operands ? { operands } : {}) });
+    return null;
+  };
+  if (!inventory) return rejected("reviewed-inventory-present");
+  if (input.clockSec < input.plan.reviewedAtSec || input.clockSec >= input.plan.expiresAtSec) return rejected("review-window-contains-clock", { clockSec: input.clockSec, reviewedAtSec: input.plan.reviewedAtSec, expiresAtSec: input.plan.expiresAtSec });
+  if (!current(input.aggregate.observedAtSec, policy.observationMaxAgeSec)) return rejected("aggregate-observation-current", { observedAtSec: input.aggregate.observedAtSec, clockSec: input.clockSec, maxAgeSec: policy.observationMaxAgeSec });
+  if (input.aggregate.sourceGeneration !== input.sourceGeneration) return rejected("aggregate-source-generation-equals-input", { actual: input.aggregate.sourceGeneration, expected: input.sourceGeneration });
+  if (!current(input.referencePrice.observedAtSec, policy.referencePriceMaxAgeSec)) return rejected("reference-price-current", { observedAtSec: input.referencePrice.observedAtSec, clockSec: input.clockSec, maxAgeSec: policy.referencePriceMaxAgeSec });
+  if (input.referencePrice.sourceId !== input.plan.sourceId) return rejected("reference-price-source-identity", { actual: input.referencePrice.sourceId, expected: input.plan.sourceId });
+  const staleConversion = input.conversions.find(row => !current(row.observedAtSec, policy.referencePriceMaxAgeSec));
+  if (staleConversion) return rejected("conversion-observation-current", { sourceId: staleConversion.sourceId, observedAtSec: staleConversion.observedAtSec, clockSec: input.clockSec, maxAgeSec: policy.referencePriceMaxAgeSec });
   if (new Set(input.conversions.map(row => row.sourceId)).size !== input.conversions.length ||
     input.conversions.length !== input.plan.conversionSources.length ||
-    input.conversions.some(row => !input.plan.conversionSources.some(source => source.sourceId === row.sourceId))) return null;
+    input.conversions.some(row => !input.plan.conversionSources.some(source => source.sourceId === row.sourceId))) return rejected("conversion-roster-equals-review", { actualCount: input.conversions.length, expectedCount: input.plan.conversionSources.length });
   const all = [...input.observations, ...input.inFlight];
-  if (all.length === 0 || new Set(all.map(row => row.id)).size !== all.length) return null;
+  if (all.length === 0 || new Set(all.map(row => row.id)).size !== all.length) return rejected("observation-roster-nonempty-and-unique", { count: all.length });
   const observations = new Map(all.map(row => [row.id, row]));
   const units = new Map<string, EconomicFraction>();
   const rawBasis = input.plan.deployments.every(row => row.amountBasis === "circulating-usd");
-  if (!rawBasis && input.plan.deployments.some(row => row.amountBasis === "circulating-usd")) return null;
+  if (!rawBasis && input.plan.deployments.some(row => row.amountBasis === "circulating-usd")) return rejected("amount-bases-not-mixed");
   const chainAnchors = new Map<string, string>();
   const apiObservationIds = new Set([
     ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)),
@@ -1137,37 +1146,38 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   ]);
   const convert = (key: string, observation: EconomicSupplyObservation): EconomicFraction | null => {
     const row = input.plan.deployments.find(row => row.deploymentKey === key);
-    if (!row || observation.deploymentKey !== key || !current(observation.observedAtSec, policy.observationMaxAgeSec)) return null;
+    if (!row || observation.deploymentKey !== key) return rejected("observation-deployment-identity", { expected: key, actual: observation.deploymentKey }, observation.id);
+    if (!current(observation.observedAtSec, policy.observationMaxAgeSec)) return rejected("deployment-observation-current", { observedAtSec: observation.observedAtSec, clockSec: input.clockSec, maxAgeSec: policy.observationMaxAgeSec }, observation.id);
     if (!apiObservationIds.has(observation.id)) {
       const evmState = row.read.kind === "evm-total-supply" || row.read.kind === "evm-balance" ||
         (row.holdingKind === "native-gas" && observation.id !== row.deploymentKey);
       if (evmState) {
-        if (!/^(0|[1-9][0-9]*)$/.test(observation.anchor) || !EVM_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
+        if (!/^(0|[1-9][0-9]*)$/.test(observation.anchor) || !EVM_BLOCK_HASH_RE.test(observation.anchorHash)) return rejected("evm-anchor-shape", { anchor: observation.anchor, anchorHash: observation.anchorHash }, observation.id);
         const anchor = `${observation.anchor}:${observation.anchorHash}:${observation.observedAtSec}`;
         const previous = chainAnchors.get(row.chainId);
-        if (previous !== undefined && previous !== anchor) return null;
+        if (previous !== undefined && previous !== anchor) return rejected("evm-chain-anchors-equal", { previous, actual: anchor }, observation.id);
         chainAnchors.set(row.chainId, anchor);
       }
-      if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return null;
-      if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return null;
+      if (row.read.kind === "solana-mint" && !SOLANA_BLOCK_HASH_RE.test(observation.anchorHash)) return rejected("solana-anchor-shape", { anchorHash: observation.anchorHash }, observation.id);
+      if (row.read.kind === "xrpl-issued-currency" && !SHA256_RE.test(observation.anchorHash)) return rejected("xrpl-anchor-shape", { anchorHash: observation.anchorHash }, observation.id);
       if (row.read.kind === "cosmos-bank-supply") {
-        if (!/^[1-9][0-9]*$/.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash)) return null;
+        if (!/^[1-9][0-9]*$/.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash)) return rejected("cosmos-anchor-shape", { anchor: observation.anchor, anchorHash: observation.anchorHash }, observation.id);
         const anchor = `${observation.anchor}:${observation.anchorHash}:${observation.observedAtSec}`;
         const previous = chainAnchors.get(row.chainId);
-        if (previous !== undefined && previous !== anchor) return null;
+        if (previous !== undefined && previous !== anchor) return rejected("cosmos-chain-anchors-equal", { previous, actual: anchor }, observation.id);
         chainAnchors.set(row.chainId, anchor);
       }
       if (row.read.kind === "move-fa-supply" &&
         (!RAW_SUPPLY_RE.test(observation.anchor) || !SHA256_RE.test(observation.anchorHash) ||
-          observation.anchorHash !== observation.responseSha256)) return null;
+          observation.anchorHash !== observation.responseSha256)) return rejected("move-anchor-authentication", { anchor: observation.anchor, anchorHash: observation.anchorHash, responseSha256: observation.responseSha256 }, observation.id);
       if (row.read.kind === "ton-jetton-supply" &&
-        (!/^[1-9][0-9]*$/.test(observation.anchor) || !/^[A-Za-z0-9+/]{43}=$/.test(observation.anchorHash))) return null;
+        (!/^[1-9][0-9]*$/.test(observation.anchor) || !/^[A-Za-z0-9+/]{43}=$/.test(observation.anchorHash))) return rejected("ton-anchor-shape", { anchor: observation.anchor, anchorHash: observation.anchorHash }, observation.id);
     }
-    if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return null;
+    if (row.decimals !== null && !RAW_SUPPLY_RE.test(observation.amount)) return rejected("token-amount-unsigned-integer", { amount: observation.amount, decimals: row.decimals }, observation.id);
     let value = economicDecimal(observation.amount, row.decimals);
     if (row.claimUnit !== input.plan.commonClaimUnit) {
       const rates = input.conversions.filter(rate => rate.sourceId === row.conversionSourceId);
-      if (rates.length !== 1) return null;
+      if (rates.length !== 1) return rejected("conversion-source-unique", { rateCount: rates.length, sourceId: row.conversionSourceId }, observation.id);
       const rate = economicDecimal(rates[0]!.value);
       value = { n: value.n * rate.n, d: value.d * rate.d };
     }
@@ -1178,32 +1188,34 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     observation: EconomicSupplyObservation,
   ): boolean => {
     const proof = observation.layerZeroOftPendingProof;
-    if (!proof || observation.curvePendingProof !== undefined || observation.l2MessengerPendingProof !== undefined || observation.ccipPendingProof !== undefined ||
-      proof.sourceDigest !== sha256Hex(stableJsonStringifyV1(source)) ||
-      proof.pins.length !== source.sides.length || proof.pathways.length !== source.pathways.length ||
-      proof.pins.some((pin, index) => {
-        const side = source.sides[index]!;
-        const holding = observations.get(`${side.chainId}:${side.tokenAddress}`);
-        return pin.chainId !== side.chainId || pin.eid !== side.eid || pin.anchor < side.deploymentBlock ||
-          !holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash ||
-          holding.observedAtSec !== pin.observedAtSec;
-      }) || proof.pathways.some((path, index) => {
-        const reviewed = source.pathways[index]!;
-        return path.sourceIndex !== reviewed.sourceIndex || path.destinationIndex !== reviewed.destinationIndex ||
-          BigInt(path.lazyInboundNonce) > BigInt(path.inboundNonce) || BigInt(path.inboundNonce) > BigInt(path.sentNonce) ||
-          (path.pendingCount === 0 && BigInt(path.pendingAmountSD) !== 0n);
-      })) return false;
+    if (!proof) { rejected("oft-proof-present", { observationId: observation.id }); return false; }
+    if (observation.curvePendingProof !== undefined || observation.l2MessengerPendingProof !== undefined || observation.ccipPendingProof !== undefined) { rejected("oft-proof-exclusive", { observationId: observation.id }); return false; }
+    const expectedDigest = sha256Hex(stableJsonStringifyV1(source));
+    if (proof.sourceDigest !== expectedDigest) { rejected("oft-proof-source-digest", { actual: proof.sourceDigest, expected: expectedDigest }); return false; }
+    if (proof.pins.length !== source.sides.length || proof.pathways.length !== source.pathways.length) { rejected("oft-proof-roster-size", { pins: proof.pins.length, expectedPins: source.sides.length, pathways: proof.pathways.length, expectedPathways: source.pathways.length }); return false; }
+    for (let index = 0; index < proof.pins.length; index++) {
+      const pin = proof.pins[index]!, side = source.sides[index]!, holding = observations.get(`${side.chainId}:${side.tokenAddress}`);
+      if (pin.chainId !== side.chainId || pin.eid !== side.eid || pin.anchor < side.deploymentBlock) { rejected("oft-pin-side-identity", { chainId: pin.chainId, expectedChainId: side.chainId, eid: pin.eid, expectedEid: side.eid, anchor: pin.anchor, deploymentBlock: side.deploymentBlock }); return false; }
+      if (!holding || holding.anchor !== String(pin.anchor) || holding.anchorHash !== pin.anchorHash || holding.observedAtSec !== pin.observedAtSec) { rejected("oft-pin-equals-holding", { chainId: side.chainId, pinAnchor: pin.anchor, holdingAnchor: holding?.anchor ?? null, pinHash: pin.anchorHash, holdingHash: holding?.anchorHash ?? null, pinObservedAtSec: pin.observedAtSec, holdingObservedAtSec: holding?.observedAtSec ?? null }); return false; }
+    }
+    for (let index = 0; index < proof.pathways.length; index++) {
+      const path = proof.pathways[index]!, reviewed = source.pathways[index]!;
+      if (path.sourceIndex !== reviewed.sourceIndex || path.destinationIndex !== reviewed.destinationIndex) { rejected("oft-pathway-identity", { sourceIndex: path.sourceIndex, expectedSourceIndex: reviewed.sourceIndex, destinationIndex: path.destinationIndex, expectedDestinationIndex: reviewed.destinationIndex }); return false; }
+      if (BigInt(path.lazyInboundNonce) > BigInt(path.inboundNonce) || BigInt(path.inboundNonce) > BigInt(path.sentNonce) || (path.pendingCount === 0 && BigInt(path.pendingAmountSD) !== 0n)) { rejected("oft-pathway-nonce-and-pending", { lazyInboundNonce: path.lazyInboundNonce, inboundNonce: path.inboundNonce, sentNonce: path.sentNonce, pendingCount: path.pendingCount, pendingAmountSD: path.pendingAmountSD }); return false; }
+    }
     const canonical = proof.pins[0]!;
     const amount = proof.pathways.reduce((sum, path) => sum + BigInt(path.pendingAmountSD), 0n) *
       10n ** BigInt(source.localDecimals - source.sharedDecimals);
-    return observation.amount === amount.toString() && observation.anchor === String(canonical.anchor) &&
-      observation.anchorHash === canonical.anchorHash && observation.observedAtSec === canonical.observedAtSec &&
-      observation.responseSha256 === sha256Hex(stableJsonStringifyV1({ proof, amount: observation.amount }));
+    if (observation.amount !== amount.toString()) { rejected("oft-amount-equals-pathway-sum", { actual: observation.amount, expected: amount.toString() }); return false; }
+    if (observation.anchor !== String(canonical.anchor) || observation.anchorHash !== canonical.anchorHash || observation.observedAtSec !== canonical.observedAtSec) { rejected("oft-observation-equals-canonical-pin", { anchor: observation.anchor, expectedAnchor: canonical.anchor, hash: observation.anchorHash, expectedHash: canonical.anchorHash, observedAtSec: observation.observedAtSec, expectedObservedAtSec: canonical.observedAtSec }); return false; }
+    const expectedResponseHash = sha256Hex(stableJsonStringifyV1({ proof, amount: observation.amount }));
+    if (observation.responseSha256 !== expectedResponseHash) { rejected("oft-response-hash", { actual: observation.responseSha256, expected: expectedResponseHash }); return false; }
+    return true;
   };
   try {
     for (const row of input.plan.deployments) {
       const observation = observations.get(row.deploymentKey);
-      if (!observation) return null;
+      if (!observation) return rejected("deployment-observation-present", { deploymentKey: row.deploymentKey });
       const value = convert(row.deploymentKey, observation);
       if (!value) return null;
       units.set(row.deploymentKey, value);
@@ -1211,9 +1223,9 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
     for (const rule of input.plan.exclusions) {
       const observation = observations.get(rule.id);
       const deduction = observation && convert(rule.deploymentKey, observation);
-      if (!deduction) return null;
+      if (!deduction) return rejected("exclusion-deduction-present", { observationId: rule.id, deploymentKey: rule.deploymentKey });
       const free = addEconomicUnits(units.get(rule.deploymentKey)!, deduction, true);
-      if (free.n < 0n) return null;
+      if (free.n < 0n) return rejected("excluded-free-units-nonnegative", { freeNumerator: free.n.toString(), freeDenominator: free.d.toString() }, rule.id);
       units.set(rule.deploymentKey, free);
     }
     let remainder: EconomicFraction = { n: 0n, d: 1n };
@@ -1223,12 +1235,10 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       const pendingObservation = observations.get(`in-flight:${escrow.id}`);
       if (escrow.inFlightSource !== null && "kind" in escrow.inFlightSource) {
         const canonical = observations.get(escrow.canonicalDeploymentKey);
-        if (!pendingObservation || !canonical || !observation ||
-          !/^(0|[1-9][0-9]*)$/.test(pendingObservation.anchor) || !EVM_BLOCK_HASH_RE.test(pendingObservation.anchorHash) ||
-          pendingObservation.anchor !== canonical.anchor || pendingObservation.anchorHash !== canonical.anchorHash ||
-          pendingObservation.observedAtSec !== canonical.observedAtSec ||
-          pendingObservation.anchor !== observation.anchor || pendingObservation.anchorHash !== observation.anchorHash ||
-          pendingObservation.observedAtSec !== observation.observedAtSec) return null;
+        if (!pendingObservation || !canonical || !observation) return rejected("escrow-observation-roster-present", { hasPending: !!pendingObservation, hasCanonical: !!canonical, hasEscrow: !!observation }, escrow.id);
+        if (!/^(0|[1-9][0-9]*)$/.test(pendingObservation.anchor) || !EVM_BLOCK_HASH_RE.test(pendingObservation.anchorHash)) return rejected("pending-anchor-shape", { anchor: pendingObservation.anchor, anchorHash: pendingObservation.anchorHash }, escrow.id);
+        if (pendingObservation.anchor !== canonical.anchor || pendingObservation.anchorHash !== canonical.anchorHash || pendingObservation.observedAtSec !== canonical.observedAtSec) return rejected("pending-pin-equals-canonical-holding", { pendingAnchor: pendingObservation.anchor, canonicalAnchor: canonical.anchor, pendingHash: pendingObservation.anchorHash, canonicalHash: canonical.anchorHash, pendingObservedAtSec: pendingObservation.observedAtSec, canonicalObservedAtSec: canonical.observedAtSec }, escrow.id);
+        if (pendingObservation.anchor !== observation.anchor || pendingObservation.anchorHash !== observation.anchorHash || pendingObservation.observedAtSec !== observation.observedAtSec) return rejected("pending-pin-equals-escrow", { pendingAnchor: pendingObservation.anchor, escrowAnchor: observation.anchor, pendingHash: pendingObservation.anchorHash, escrowHash: observation.anchorHash, pendingObservedAtSec: pendingObservation.observedAtSec, escrowObservedAtSec: observation.observedAtSec }, escrow.id);
         if (escrow.inFlightSource.kind === "evm-curve-lz-pending") {
           const source = escrow.inFlightSource, proof = pendingObservation.curvePendingProof;
           if (!proof || pendingObservation.l2MessengerPendingProof !== undefined || pendingObservation.layerZeroOftPendingProof !== undefined || pendingObservation.ccipPendingProof !== undefined ||
@@ -1271,7 +1281,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       }
       const pending: EconomicFraction | null | undefined = escrow.inFlightSource === null && input.plan.inFlightTreatment === "atomic-native-wrapper"
         ? { n: 0n, d: 1n } : pendingObservation && convert(escrow.canonicalDeploymentKey, pendingObservation);
-      if (!backing || !pending) return null;
+      if (!backing || !pending) return rejected("escrow-backing-or-pending-conversion", { hasBacking: !!backing, hasPending: !!pending }, escrow.id);
       let represented: EconomicFraction = pending;
       for (const key of escrow.receiptDeploymentKeys) {
         const subset = escrow.receiptClaimSources.find(source => source.deploymentKey === key);
@@ -1281,12 +1291,12 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
         const holdingObservation = observations.get(key);
         const holding = holdingObservation && convert(key, holdingObservation);
         const claim = subset ? claimObservation && convert(key, claimObservation) : holding;
-        if (!claim || !holding || claim.n * holding.d > holding.n * claim.d) return null;
+        if (!claim || !holding || claim.n * holding.d > holding.n * claim.d) return rejected("receipt-claim-within-holding", { deploymentKey: key, claimNumerator: claim?.n.toString() ?? null, claimDenominator: claim?.d.toString() ?? null, holdingNumerator: holding?.n.toString() ?? null, holdingDenominator: holding?.d.toString() ?? null }, escrow.id);
         represented = addEconomicUnits(represented, claim);
       }
-      if (represented.n * backing.d !== backing.n * represented.d) return null;
+      if (represented.n * backing.d !== backing.n * represented.d) return rejected("escrow-represented-equals-backing", { representedNumerator: represented.n.toString(), representedDenominator: represented.d.toString(), backingNumerator: backing.n.toString(), backingDenominator: backing.d.toString(), pendingNumerator: pending.n.toString(), pendingDenominator: pending.d.toString() }, escrow.id);
       const free = addEconomicUnits(units.get(escrow.canonicalDeploymentKey)!, backing, true);
-      if (free.n < 0n) return null;
+      if (free.n < 0n) return rejected("escrow-free-units-nonnegative", { freeNumerator: free.n.toString(), freeDenominator: free.d.toString() }, escrow.id);
       units.set(escrow.canonicalDeploymentKey, free);
       remainder = addEconomicUnits(remainder, pending);
     }
@@ -1294,7 +1304,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       const pendingObservation = observations.get("in-flight:liability");
       const source = input.plan.liabilityInFlightSource;
       if ("kind" in source) {
-        if (!pendingObservation) return null;
+        if (!pendingObservation) return rejected("liability-pending-observation-present");
         if (source.kind === "evm-layerzero-oft-pending") {
           if (!validOftPending(source, pendingObservation)) return null;
         } else if (source.kind === "evm-ccip-pending") {
@@ -1306,26 +1316,26 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       if (!pending) return null;
       remainder = addEconomicUnits(remainder, pending);
     }
-    if (input.inFlight.length !== input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).length + (input.plan.liabilityInFlightSource === null ? 0 : 1)) return null;
+    if (input.inFlight.length !== input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).length + (input.plan.liabilityInFlightSource === null ? 0 : 1)) return rejected("in-flight-roster-equals-review", { actualCount: input.inFlight.length });
     const expectedIds = new Set([...input.plan.deployments.map(row => row.deploymentKey), ...input.plan.exclusions.map(row => row.id), ...input.plan.escrows.map(row => row.id), ...input.plan.escrows.filter(escrow => escrow.inFlightSource !== null).map(row => `in-flight:${row.id}`), ...input.plan.escrows.flatMap(escrow => escrow.receiptClaimSources.map(source => `receipt:${escrow.id}:${source.deploymentKey}`)), ...(input.plan.liabilityInFlightSource === null ? [] : ["in-flight:liability"])]);
-    if (all.length !== expectedIds.size || all.some(row => !expectedIds.has(row.id))) return null;
+    if (all.length !== expectedIds.size || all.some(row => !expectedIds.has(row.id))) return rejected("complete-observation-roster-equals-review", { actualCount: all.length, expectedCount: expectedIds.size });
     const times = all.map(row => row.observedAtSec);
     const started = Math.min(...times), ended = Math.max(...times);
-    if (ended - started > policy.observationMaxSkewSec) return null;
+    if (ended - started > policy.observationMaxSkewSec) return rejected("observation-skew-within-policy", { started, ended, maxSkewSec: policy.observationMaxSkewSec });
     let total = remainder;
     for (const value of units.values()) total = addEconomicUnits(total, value);
-    if (!rawBasis && total.n === 0n && input.aggregate.supplyUsd > 0) return null;
+    if (!rawBasis && total.n === 0n && input.aggregate.supplyUsd > 0) return rejected("nonzero-units-for-positive-aggregate", { totalNumerator: total.n.toString(), aggregateSupplyUsd: input.aggregate.supplyUsd });
     const tolerance = Math.max(policy.conservationAbsoluteToleranceUsd, input.aggregate.supplyUsd * policy.conservationRelativeTolerance);
     const quantity = (value: EconomicFraction) => Number(value.n) / Number(value.d);
     const amount = (value: EconomicFraction) => rawBasis ? quantity(value) :
       total.n === 0n ? 0 : input.aggregate.supplyUsd * (Number(value.n * total.d) / Number(value.d * total.n));
     const measuredTotal = quantity(total);
-    if (rawBasis && (measuredTotal > input.aggregate.supplyUsd + tolerance)) return null;
+    if (rawBasis && (measuredTotal > input.aggregate.supplyUsd + tolerance)) return rejected("raw-total-within-aggregate", { measuredTotal: String(measuredTotal), aggregateSupplyUsd: input.aggregate.supplyUsd, tolerance });
     const deployments = input.plan.deployments.map(row => ({ deploymentKey: row.deploymentKey, chainId: row.chainId, routeId: row.routeId, holdingKind: row.holdingKind, currentSupplyUsd: amount(units.get(row.deploymentKey)!) }));
-    if (deployments.some((row, index) => !Number.isFinite(row.currentSupplyUsd) || row.currentSupplyUsd < 0 || (units.get(input.plan.deployments[index]!.deploymentKey)!.n > 0n && input.aggregate.supplyUsd > 0 && row.currentSupplyUsd === 0))) return null;
+    if (deployments.some((row, index) => !Number.isFinite(row.currentSupplyUsd) || row.currentSupplyUsd < 0 || (units.get(input.plan.deployments[index]!.deploymentKey)!.n > 0n && input.aggregate.supplyUsd > 0 && row.currentSupplyUsd === 0))) return rejected("allocated-deployment-values-valid");
     const unattributedSupplyUsd = rawBasis ? Math.max(0, input.aggregate.supplyUsd - deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)) : amount(remainder);
     const allocated = deployments.reduce((sum, row) => sum + row.currentSupplyUsd, unattributedSupplyUsd);
-    if (!Number.isFinite(allocated) || Math.abs(allocated - input.aggregate.supplyUsd) > tolerance) return null;
+    if (!Number.isFinite(allocated) || Math.abs(allocated - input.aggregate.supplyUsd) > tolerance) return rejected("allocated-total-conserved", { allocated: String(allocated), aggregateSupplyUsd: input.aggregate.supplyUsd, tolerance });
     return ReviewedEconomicDeploymentPartitionSchema.parse({
       model: "reviewed-economic-deployment-partition-v1", assetId: input.plan.assetId,
       baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration, registryFingerprint: input.registryFingerprint,
@@ -1334,7 +1344,7 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
       referencePrice: input.referencePrice, conversions: input.conversions, observations: input.observations, inFlight: input.inFlight,
       deployments, unattributedSupplyUsd, quantitativeCompleteness: true,
     });
-  } catch { return null; }
+  } catch (error) { return rejected("partition-derivation-exception", { errorClass: error instanceof Error ? error.name : "unknown" }); }
 }
 
 export function normalizeReviewedEconomicDeploymentAttribution(packet: ReviewedEconomicDeploymentPartition): ReviewedEconomicDeploymentPartition {

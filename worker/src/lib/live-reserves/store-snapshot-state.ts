@@ -1,5 +1,6 @@
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { AcceptedReserveSnapshot } from "@shared/types/accepted-reserve-generation";
 import type {
   LiveReserveAdapterValidationPolicy,
   LiveReserveAdmissionRejectionCode,
@@ -150,8 +151,8 @@ export interface LiveReserveAdmissionResult {
 
 /** Snapshot admission deliberately does not depend on a later attempt's status. */
 export function evaluateLiveReserveAdmission(
-  record: ReserveCompositionRecord | null,
-  syncState: ReserveSyncStateRecord | null,
+  record: ReserveCompositionRecord | AcceptedReserveSnapshot | null,
+  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null,
   coin: Pick<StablecoinMeta, "liveReservesConfig"> | undefined,
   now: number,
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
@@ -178,6 +179,6 @@ export function evaluateLiveReserveAdmission(
   if (freshness?.stale) reasons.push("stale");
   if (!hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
   if (selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
-  if (record.slices.length < minSlices) reasons.push("insufficient-slices");
+  if (("sliceCount" in record ? record.sliceCount : record.slices.length) < minSlices) reasons.push("insufficient-slices");
   return { eligible: reasons.length === 0, reasons, freshness };
 }

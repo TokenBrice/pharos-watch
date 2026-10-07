@@ -12,10 +12,11 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import type { RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
-import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves/store";
+import { AcceptedReserveViewError, acceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
 import {
   buildFailedRedemptionBackstopEntry,
@@ -106,6 +107,13 @@ export async function syncRedemptionBackstops(
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  await reportProgress?.({ stage: "loading-redemption-reserves" });
+  let acceptedReserveGeneration;
+  try {
+    acceptedReserveGeneration = await loadAcceptedReserveGeneration(db);
+  } catch (error) {
+    return createCronResult({ status: "error", metadata: { reason: error instanceof AcceptedReserveViewError ? error.reason : "accepted-reserve-view-unavailable" } });
+  }
 
   await reportProgress?.({ stage: "loading-redemption-stablecoins" });
   const stablecoinsCache = await loadStablecoinsCache(db, {
@@ -146,18 +154,7 @@ export async function syncRedemptionBackstops(
     preloadWarnings.push(`dex-liquidity:${message}`);
   }
 
-  let reserveSnapshotMetadataById = new Map<string, ReserveSnapshotMetadataRecord>();
-  await reportProgress?.({ stage: "loading-redemption-reserves" });
-  try {
-    reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
-  } catch (error) {
-    const message = toErrorMessage(error);
-    logWorkerEventArgs("handler", "warn",
-      "[sync-redemption-backstops] Reserve metadata preload failed; live capacity will fail closed to static/fallback rows:",
-      error,
-    );
-    preloadWarnings.push(`reserve-metadata:${message}`);
-  }
+  const reserveSnapshotMetadataById = acceptedReserveMetadataMap(acceptedReserveGeneration, now);
 
   await reportProgress?.({ stage: "loading-redemption-availability" });
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
@@ -200,6 +197,7 @@ export async function syncRedemptionBackstops(
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           signal,
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
+          ...(reserveSnapshotMetadataById.has(stablecoinId) ? { reserveInput: consumedReserveInput(acceptedReserveGeneration, stablecoinId, reserveSnapshotMetadataById.get(stablecoinId)!) } : {}),
           routeAvailability,
           rpcOptions,
           stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
@@ -210,6 +208,7 @@ export async function syncRedemptionBackstops(
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             signal,
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
+            ...(reserveSnapshotMetadataById.has(stablecoinId) ? { reserveInput: consumedReserveInput(acceptedReserveGeneration, stablecoinId, reserveSnapshotMetadataById.get(stablecoinId)!) } : {}),
             routeAvailability,
             rpcOptions,
             stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
@@ -272,7 +271,14 @@ export async function syncRedemptionBackstops(
   // every snapshot it could resolve, so it travels as quality, not a degraded run.
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
-  const runMetadata: CronMetadataRecord = {
+  const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
+    reserveViewSchemaVersion: 1,
+    reserveGenerationId: acceptedReserveGeneration.generationId,
+    reserveContentSha256: acceptedReserveGeneration.contentSha256,
+    runClockSec: now,
+    consumedReserveInputs: Object.fromEntries(
+      snapshots.flatMap((entry) => entry.reserveInput ? [[entry.stablecoinId, entry.reserveInput]] : []),
+    ),
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,

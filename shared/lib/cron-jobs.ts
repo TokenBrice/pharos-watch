@@ -36,15 +36,12 @@ const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
     ...CRON_SCHEDULE_CADENCES.quarterHourly,
   },
-  // The capture must land BEFORE the fixed input it will be consumed against.
-  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
-  // captureClockSec <= fixedInput.clockSec, because a publication must not depend
-  // on an observation taken after its own input snapshot. prepare-safety-score-v9-input
-  // stamps that clock at :17-:18, so :08/:38 are the captures the :22/:52 publications
-  // actually consume. A capture placed in the prepare->publish gap is after the clock
-  // by construction: it is never admitted, and isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred
-  // then skips the publication every cycle. Verified in production on 2026-08-09 (see
-  // the 10:22 skip); do not move this grid later without changing that admission rule.
+  // A packet must precede the scoring clock: capture/completion clocks after
+  // that clock are never admitted. The :08/:38 opportunities normally provide
+  // the :22/:52 publications with an older packet that can be re-derived.
+  // Fresh :16/:46 preparation also requests the following :23/:53 opportunity;
+  // compilation may report bounded attribution-pending without applying packets
+  // while that exact-source request remains unexpired. Keep this grid unchanged.
   // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
   // qualifying each invocation for the 15-minute hourly Cron CPU class. Under the
   // single sub-hourly expression the 30-second class killed the isolate on ~29% of
@@ -194,8 +191,12 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
   maxPhysicalTriggersBeforeRebalance: 41,
   // The digest publication watchdog is a one-connection serial sidecar on the
   // existing status lane; admit that reviewed entry without changing trigger
-  // topology or the per-trigger peak.
-  maxFetchCapableEntriesBeforeRebalance: 33,
+  // topology or the per-trigger peak (33). The 2026-10-07 redemption review
+  // corrected `sync-redemption-backstops` from a declared weight of 0 to its
+  // measured serial RPC peak of 1 (earnUSD queue observation); that is an
+  // accounting correction of existing work, not new fetch surface, so the
+  // reviewed count moves to 34 with per-trigger peaks unchanged (3/6, 2/6).
+  maxFetchCapableEntriesBeforeRebalance: 34,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
@@ -714,7 +715,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
+    maxConnections: 1, // Serial direct RPC observers plus sealed accepted reserve inputs
     connectionGroup: "reserve-sync-chain",
   },
   {

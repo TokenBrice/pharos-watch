@@ -3,14 +3,14 @@ import { logWorkerEventArgs } from "./structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import { USER_AGENT } from "./constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
-import { fetchWithRetry } from "./fetch-retry";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchWithRetry } from "./fetch-retry";
 import {
   endpointLabel,
   errorClassFor,
   errorMessageFor,
   type PricingProviderAttemptDiagnostic,
 } from "./pricing-provider-diagnostics";
-import { readResponseSnippetWithTimeout, readResponseTextWithTimeout } from "./response-body";
+import { readResponseSnippetWithTimeout, readResponseTextWithinLimitWithTimeout } from "./response-body";
 
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
@@ -18,7 +18,10 @@ const COINGECKO_NATIVE_PEG_ERROR_BODY_MAX_BYTES = 2_000;
 const COINGECKO_NATIVE_PEG_FUTURE_SKEW_SEC = 5 * 60;
 
 async function readNativePegResponseText(response: Response, signal?: AbortSignal): Promise<string> {
-  return readResponseTextWithTimeout(response, COINGECKO_NATIVE_PEG_TIMEOUT_MS, signal);
+  return readResponseTextWithinLimitWithTimeout(response, {
+    timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS,
+    maxBytes: DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+  }, signal);
 }
 
 async function readNativePegResponseSnippet(response: Response, signal?: AbortSignal): Promise<string | undefined> {

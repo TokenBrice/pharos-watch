@@ -10,13 +10,11 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
+import { SupplyAttributionAttemptDiagnosticsSchema, SupplyAttributionCaptureFailureReasonSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import { SafetyScoreV9SupplyAttributionSchema } from "../report-cards-fixed-input";
-import {
-  normalizeSafetyScoreV9CompilerInput,
-  type SafetyScoreV9CompilerInput,
-} from "./native-input";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   deriveReviewedDeploymentUnitPartition,
@@ -49,8 +47,6 @@ const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =
   14 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC =
   45 * 60;
-const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC =
-  30 * 60;
 
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
 const GenerationIdSchema = z
@@ -64,6 +60,7 @@ const SupplyAttributionGenerationOutcomeSchema = z.discriminatedUnion(
       .object({
         status: z.literal("accepted"),
         journalId: SupplyAttributionJournalIdSchema,
+        diagnostics: SupplyAttributionAttemptDiagnosticsSchema.optional(),
       })
       .strict(),
     z
@@ -72,6 +69,8 @@ const SupplyAttributionGenerationOutcomeSchema = z.discriminatedUnion(
         rejectionCode: SupplyAttributionRejectionCodeSchema,
         failedRouteId: z.string().min(1).nullable(),
         journalId: SupplyAttributionJournalIdSchema,
+        diagnostics: SupplyAttributionAttemptDiagnosticsSchema.optional(),
+        captureFailureReason: SupplyAttributionCaptureFailureReasonSchema.optional(),
       })
       .strict(),
   ],
@@ -400,18 +399,24 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
   const outcomesById = Object.fromEntries(
     observedAssetIds.map((assetId) => {
       const record = recordsByAsset.get(assetId)!;
+      const diagnostics = input.capture.diagnosticsById?.[assetId];
+      const diagnosticFields = diagnostics?.length ? { diagnostics } : {};
+      const captureFailureReason = input.capture.failureReasonById?.[assetId];
       return [
         assetId,
         record.admissionCode === "supply-attribution.admission.accepted"
           ? {
               status: "accepted" as const,
               journalId: record.journalId,
+              ...diagnosticFields,
             }
           : {
               status: "rejected" as const,
               rejectionCode: record.rejectionCode!,
               failedRouteId: record.failedRouteId,
               journalId: record.journalId,
+              ...diagnosticFields,
+              ...(captureFailureReason ? { captureFailureReason } : {}),
             },
       ];
     }),
@@ -480,12 +485,12 @@ type SupplyAttributionGenerationCompatibilityReason =
   | "generation-stale";
 
 function withoutSupplyAttribution(
-  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): SafetyScoreV9CompilerInput {
-  return normalizeSafetyScoreV9CompilerInput({
+  return {
     ...fixedInput,
     safetyScoreV9SupplyAttributionById: {},
-  });
+  };
 }
 
 export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
@@ -536,32 +541,6 @@ export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
   ) === null;
 }
 
-export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  generation: SafetyScoreV9SupplyAttributionGeneration,
-): boolean {
-  const expectedAssetIds = uniqueSorted(
-    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
-  );
-  const latestGenerationClockSec = Math.max(
-    generation.captureClockSec,
-    generation.capturedAtSec,
-  );
-  const futureClockSkewSec =
-    latestGenerationClockSec - fixedInput.clockSec;
-  return (
-    generation.registryFingerprint === fixedInput.registryFingerprint &&
-    generation.sourceBaseInputGenerationId ===
-      fixedInput.baseInputGenerationId &&
-    generation.sourceGeneration === fixedInput.sourceGeneration &&
-    generation.sourceClockSec === fixedInput.clockSec &&
-    exactStrings(generation.expectedAssetIds, expectedAssetIds) &&
-    generation.rejectedAssetIds.length === 0 &&
-    futureClockSkewSec > 0 &&
-    futureClockSkewSec <=
-      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC
-  );
-}
 
 function rederiveEconomicSupplyAttribution(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -684,10 +663,10 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   return {
     status: "applied",
     generationId: generation.generationId,
-    fixedInput: normalizeSafetyScoreV9CompilerInput({
+    fixedInput: {
       ...fixedInput,
       safetyScoreV9SupplyAttributionById: attributionById,
-    }),
+    },
     acceptedAssetIds: appliedAssetIds,
     rejectedAssetIds: [...generation.rejectedAssetIds],
     invalidAssetIds,

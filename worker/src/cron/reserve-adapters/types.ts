@@ -22,6 +22,8 @@ export interface AdapterContext {
   nowSec?: number;
   observedBlock?: { chain: string; number: number; timestamp: number };
   requestCache?: Map<string, Promise<unknown>>;
+  /** Request helper observes retained and pending hits explicitly; never infer from Map operations. */
+  onRequestCache?: (event: { key: string; hit: boolean; promise: Promise<unknown> }) => void;
   ioLimiter?: AdapterIoLimiter;
   abortSignal?: AbortSignal;
 }

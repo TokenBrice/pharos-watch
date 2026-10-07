@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
+import { getCachedRequest } from "./request";
 import {
   fetchDefiLlamaPrices,
   makeOnchainCallers,
@@ -143,7 +144,6 @@ export async function fetchAbracadabraReserves(
     }),
   );
 
-  const cache = ctx?.requestCache;
   const readings: CauldronCollateralReading[] = await Promise.all(
     shareReadings.map(async ({ cauldron, share }): Promise<CauldronCollateralReading> => {
       if (share === 0n) {
@@ -152,12 +152,12 @@ export async function fetchAbracadabraReserves(
 
       const collateralKey = cauldron.collateralAddress.toLowerCase();
       const cacheKey = `abracadabra:toAmount:${input.chain}:${params.bentoBoxAddress.toLowerCase()}:${collateralKey}:${share.toString()}`;
-      const cached = cache?.get(cacheKey) as Promise<bigint | null> | undefined;
-      const promise: Promise<bigint | null> =
-        cached
-        ?? onchain.uint256(params.bentoBoxAddress, encodeToAmountCall(cauldron.collateralAddress, share));
-      if (!cached && cache) cache.set(cacheKey, promise);
-      const amount = await promise;
+      const amount = await getCachedRequest(cacheKey, async () => ({
+        value: await onchain.uint256(params.bentoBoxAddress, encodeToAmountCall(cauldron.collateralAddress, share)),
+        // One bounded uint256 bigint/null and cache-key bookkeeping, not measured heap.
+        cacheBytes: 128 + 2 * cacheKey.length,
+        basis: "declared-estimate",
+      }), ctx);
 
       if (amount == null) {
         throw new Error(

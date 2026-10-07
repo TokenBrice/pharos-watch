@@ -90,11 +90,13 @@ async function loadCachedStablecoinPricesById(
       mode: "lenient",
       contract: "critical-fields",
     });
-    if (!hasUsableStablecoinsPayload(loaded)) return new Map<string, number>();
+    if (!hasUsableStablecoinsPayload(loaded)) {
+      return { value: new Map<string, number>(), cacheBytes: 0, basis: "declared-estimate" as const };
+    }
 
     const now = ctx.nowSec ?? Math.floor(Date.now() / 1000);
     if (loaded.updatedAt == null || loaded.updatedAt <= 0) {
-      return new Map<string, number>();
+      return { value: new Map<string, number>(), cacheBytes: 0, basis: "declared-estimate" as const };
     }
     const ageSec = now - loaded.updatedAt;
     if (ageSec > STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC) {
@@ -103,16 +105,18 @@ async function loadCachedStablecoinPricesById(
         `Branch-price cache is ${ageSec}s old (> ${STABLECOINS_CACHE_BRANCH_PRICE_MAX_AGE_SEC}s threshold); ` +
           "tracked-coin fallback prices unavailable until next stablecoins-cache refresh.",
       ));
-      return new Map<string, number>();
+      return { value: new Map<string, number>(), cacheBytes: 0, basis: "declared-estimate" as const };
     }
 
     const prices = new Map<string, number>();
+    let cacheBytes = 0;
     for (const asset of loaded.payload.peggedAssets) {
       if (typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0) {
         prices.set(asset.id, asset.price);
+        cacheBytes += 128 + 2 * asset.id.length;
       }
     }
-    return prices;
+    return { value: prices, cacheBytes, basis: "declared-estimate" as const };
   }, ctx);
 }
 

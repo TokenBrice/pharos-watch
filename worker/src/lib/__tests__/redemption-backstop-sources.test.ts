@@ -17,6 +17,7 @@ import {
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-metadata";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { buildChainRpcs } from "../chain-registry";
+import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -106,6 +107,28 @@ describe("buildRedemptionBackstopEntry", () => {
     nowSec: now,
     options: { exitExecutionReviews: [], ...options },
   });
+  it("binds only selected live capacity or fee evidence, not unused static telemetry", async () => {
+    const stablecoinId = "lusd-liquity";
+    const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId, attemptId: "success", configFingerprint: null,
+      freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: "success" }, now, 172800) };
+    const snapshot = liveSnapshot(stablecoinId, { freshnessMode: "not-applicable", redemption: {
+      capacityUsd: 100_000, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain", feeBps: 50,
+    } }, { source: "liquity-v1", sourceModel: "single-bucket" });
+    const selected = await buildEntry(stablecoinId, route({ capacityModel: { kind: "reserve-sync-metadata" } }), 1_000_000, null,
+      { reserveSnapshotMetadata: snapshot, reserveInput });
+    expect(selected.reserveInput).toEqual(reserveInput);
+    const unused = await buildEntry(stablecoinId, route({ costModel: { kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" } }), 1_000_000, null,
+      { reserveSnapshotMetadata: snapshot, reserveInput });
+    expect(unused.reserveInput).toBeUndefined();
+    const feeOnly = await buildEntry(stablecoinId, route(), 1_000_000, null, { reserveSnapshotMetadata: snapshot, reserveInput });
+    expect(feeOnly.reserveInput).toEqual(reserveInput);
+    const unknownStatus = await buildEntry(stablecoinId, route({ capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 },
+      costModel: { kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" } }), 1_000_000, null, {
+      reserveInput, reserveSnapshotMetadata: liveSnapshot(stablecoinId, { freshnessMode: "not-applicable", redemption: { routeStatus: "unknown" } }),
+    });
+    expect(unknownStatus.reserveInput).toEqual(reserveInput);
+  });
+
 
   beforeAll(async () => {
     const mod = await import("../redemption-backstop/sources");
@@ -186,7 +209,10 @@ describe("buildRedemptionBackstopEntry", () => {
       const config = getRedemptionBackstopConfig("earnusd-lido")!;
       const rpcOptions = { chainRpcs: buildChainRpcs(), beforeRequest: vi.fn(() => true) };
       const signal = new AbortController().signal;
-      const entry = await buildEntry("earnusd-lido", config, supplyUsd, null, { rpcOptions, signal });
+      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: "earnusd-lido", attemptId: null, configFingerprint: null,
+        freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: null }, now, 172800) };
+      const entry = await buildEntry("earnusd-lido", config, supplyUsd, null, { rpcOptions, signal, reserveInput });
+      expect(entry.reserveInput).toBeUndefined();
       expect(entry).toMatchObject({
         feeBps: 27, feeConfidence: "formula", routeStatus: "open", routeStatusSource: "onchain",
         capacitySemantics: "eventual-only", resolutionState: "missing-capacity",

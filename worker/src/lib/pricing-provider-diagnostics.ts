@@ -1,5 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { readResponseSnippetWithTimeout } from "./response-body";
 
 export type PricingProviderDiagnosticSource =
   | "binance"
@@ -182,10 +183,9 @@ function sanitizeSnippet(value: string): string {
 }
 
 export async function readResponseSnippet(response: Response): Promise<string | undefined> {
-  try {
-    const text = await response.text();
-    return responseSnippet(text);
-  } catch {
-    return undefined;
-  }
+  return await readResponseSnippetWithTimeout(response, {
+    timeoutMs: 5_000,
+    maxBytes: 4_096,
+    maxChars: MAX_SNIPPET_CHARS,
+  });
 }
