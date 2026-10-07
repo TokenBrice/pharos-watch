@@ -192,7 +192,6 @@ export async function runV9AfterCoreWithinWindow(
     options.scheduledTimeMs ?? options.slotStartedAt * 1_000;
   const scheduledTimeSec = Math.floor(scheduledTimeMs / 1_000);
   const coreSlotStartedAt = Math.floor(scheduledTimeSec / 900) * 900;
-  const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
   const deadlineMs = getV9ExecutionDeadlineMs(scheduledTimeMs, options.deadlineOffsetMs);
   const effectiveWindowMs = Math.max(0, deadlineMs - scheduledTimeMs);
   const initialRemainingMs = deadlineMs - Date.now();
