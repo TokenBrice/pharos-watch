@@ -41,10 +41,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-reviewed-observation",
       timeout: "Uses the existing producer/capture AbortSignal; Solana transport remains in the shared bounded RPC reader.",
-      body: "Consumes reviewed API response text before parsing; validated-ledger reads consume successful JSON.",
+      body: "Cancels non-OK bodies and reads reviewed API/validated-ledger JSON as abort-aware text under route-specific ECONOMIC_SUPPLY_BODY_CAPS; oversized bodies fail closed before parsing.",
       circuitSources: [],
     },
-    requiredMarkers: ["signal", "response.text", "rethrowIfAborted"],
+    requiredMarkers: ["signal", "readResponseTextWithinLimitWithSignal", "ECONOMIC_SUPPLY_BODY_CAPS", "cancelResponseBodyQuietly", "rethrowIfAborted"],
   },
   {
     id: "fetch-with-retry-core",
@@ -212,12 +212,13 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch plus D1-authoritative Telegram transport permit",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
-      body: "Drains success bodies and consumes error bodies for Bot API diagnostics.",
+      body: "Cancels unused successful send bodies and reads failure diagnostics with a 16 KiB bounded text reader.",
       circuitSources: ["telegram_transport_circuit"],
     },
     requiredMarkers: [
       "AbortSignal.timeout",
-      "drainResponseBody",
+      "cancelResponseBodyQuietly",
+      "readResponseTextBoundedWithSignal",
       "drainTelegramDigestOutbox",
       "telegram_transport_circuit",
       "runTelegramDigestDeliveryWithPermit",
@@ -247,7 +248,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout() and caller signals.",
-      body: "Drains success/edit/callback bodies and reads failure bodies for retry classification.",
+      body: "Cancels unused successful send and callback/inline-query bodies; reads send failures and edit responses with a 16 KiB bounded text reader for retry classification.",
       circuitSources: ["CIRCUIT_SOURCE.TELEGRAM_API"],
     },
     requiredMarkers: [
@@ -256,7 +257,8 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "CIRCUIT_SOURCE.TELEGRAM_API",
       "shouldAttemptFetch",
       "recordOutcome",
-      "drainResponseBody",
+      "cancelResponseBodyQuietly",
+      "readResponseTextBoundedWithSignal",
     ],
   },
   {
@@ -328,12 +330,15 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
-      body: "Drains success bodies and reads bounded failure text.",
+      body: "Reads tweet/media-upload responses with a 16 KiB abort-aware bounded text reader; caps image bytes and cancels rejected image bodies.",
       circuitSources: ["CIRCUIT_SOURCE.TWITTER_API"],
     },
     requiredMarkers: [
       "AbortSignal.timeout",
-      "drainResponseBody",
+      "readResponseTextBoundedWithSignal",
+      "readResponseBytesWithinLimitWithSignal",
+      "TWITTER_IMAGE_MAX_BYTES",
+      "cancelResponseBodyQuietly",
       "CIRCUIT_SOURCE.TWITTER_API",
       "runDigestChannelDelivery",
       "shouldAttemptFetch",
@@ -352,10 +357,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
-      body: "Drains success bodies and reads bounded failure text.",
+      body: "Cancels successful issue bodies and reads failure snippets under a 4 KiB byte cap, 200-character cap, and 10-second body timeout.",
       circuitSources: [],
     },
-    requiredMarkers: ["AbortSignal.timeout", "drainResponseBody", "GITHUB_PAT", "X-GitHub-Api-Version"],
+    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "readResponseSnippetWithTimeout", "GITHUB_PAT", "X-GitHub-Api-Version"],
   },
   {
     id: "live-reserve-adapter-requests",
@@ -403,10 +408,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
-      body: "Cancels non-OK bodies and parses JSON in a bounded batch loop.",
+      body: "Cancels non-OK bodies and parses successful JSON with an abort-aware reader capped at STATUS_COINGECKO_MAX_RESPONSE_BYTES (256 KiB); overflow fails the supplement without partial prices.",
       circuitSources: [],
     },
-    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "cgUrl", "response.json"],
+    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "cgUrl", "readResponseJsonWithinLimitWithSignal", "STATUS_COINGECKO_MAX_RESPONSE_BYTES"],
   },
   {
     id: "status-self-check-external-probes",
