@@ -37,20 +37,21 @@ describe("handleDexLiquidity", () => {
   });
 
   it.each([
-    ["ok", ["major-tvl-cliff:crvusd-curve"], false, false],
-    ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], true, true],
-    ["degraded", ["major-tvl-cliff:crvusd-curve"], true, true],
-    ["error", [], true, true],
-  ])("scopes %s advisory flags %j without hiding dataset-wide failures", async (
+    ["ok", ["major-tvl-cliff:crvusd-curve"], [], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], [], true],
+    ["ok", ["major-tvl-cliff:crvusd-curve"], ["uniswap-v4-subgraph:arbitrum"], true],
+    ["degraded", ["major-tvl-cliff:crvusd-curve"], [], true],
+    ["error", ["major-tvl-cliff:crvusd-curve"], [], true],
+  ])("keeps %s run findings %j (failedSources %j) off unaffected coin rows", async (
     status,
     flags,
-    affectsOtherCoins,
+    failedSources,
     affectsGlobalSurface,
   ) => {
     const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
-      { match: "cron_runs", rows: [], first: { status, metadata: JSON.stringify({ sourceCoverage: {
+      { match: "cron_runs", rows: [], first: { status, metadata: JSON.stringify({ failedSources, sourceCoverage: {
         qualityDriftSeverity: "high", qualityDriftFlags: flags,
       } }) } },
       { match: "dex_liquidity", rows: [row, makeDexLiquidityRow({ stablecoin_id: "crvusd-curve" })] },
@@ -60,8 +61,10 @@ describe("handleDexLiquidity", () => {
     const globalWarning = res.headers.get("Warning");
     if (affectsGlobalSurface) expect(globalWarning).toBeTruthy();
     else expect(globalWarning).toBeNull();
-    expect(body["crvusd-curve"].warning).toBeTruthy();
-    expect(Boolean(body["usdt-tether"].warning)).toBe(affectsOtherCoins);
+    // Dataset-wide provider failures, guards, drift severity and run outcomes are
+    // operator findings; a coin row warns only when a flag names that coin.
+    expect(body["crvusd-curve"].warning).toContain("major-tvl-cliff:crvusd-curve");
+    expect(body["usdt-tether"].warning).toBeNull();
   });
 
   it("keeps a coin-scoped cliff flag off the global surface and on its own coin row", async () => {

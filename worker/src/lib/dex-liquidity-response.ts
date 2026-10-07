@@ -328,7 +328,9 @@ export type DexLiquidityWarningSurface =
 const GLOBAL_WARNING_SURFACE: DexLiquidityWarningSurface = { scope: "global" };
 
 // Flags that name exactly one stablecoin. Everything else (failed sources, guard
-// proximity, pipeline-wide drift counters) is dataset-wide.
+// proximity, pipeline-wide drift counters, run-level outcomes) is dataset-wide and
+// an operator concern: it surfaces on the global header and /liquidity, never on a
+// coin page, whose freshness banner already covers an aging dataset.
 const COIN_SCOPED_DRIFT_FLAG = /^(major-tvl-cliff|watchlist-pool-drop):.+$/;
 
 export function buildDexLiquidityWarning(
@@ -358,20 +360,24 @@ export function buildDexLiquidityWarning(
     }
   }
 
+  if (surface.scope === "coin") {
+    const coinFlags = qualityDriftFlags.filter(
+      (flag) => COIN_SCOPED_DRIFT_FLAG.test(flag) && flag.endsWith(`:${surface.stablecoinId}`),
+    );
+    if (coinFlags.length === 0) return null;
+    return `199 - "Latest sync-dex-liquidity run flagged this asset (qualityDriftFlags=${coinFlags.join(",")})"`;
+  }
+
   if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
 
   // A successful run whose only quality findings name individual coins does not
-  // warrant a page-level advisory: the global surface never banners for another
-  // coin's cliff, and a coin page reacts only to a flag naming that coin.
+  // warrant a dataset-wide advisory.
   const coinScopedOnly =
     failedSources.length === 0
     && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard
     && qualityDriftFlags.length > 0
     && qualityDriftFlags.every((flag) => COIN_SCOPED_DRIFT_FLAG.test(flag));
-  if (latestCron.status === "ok" && coinScopedOnly) {
-    if (surface.scope === "global") return null;
-    if (!qualityDriftFlags.some((flag) => flag.endsWith(`:${surface.stablecoinId}`))) return null;
-  }
+  if (latestCron.status === "ok" && coinScopedOnly) return null;
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);
