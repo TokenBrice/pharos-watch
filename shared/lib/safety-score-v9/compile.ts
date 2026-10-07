@@ -68,7 +68,10 @@ const admittedAssetSchema = V9AssetFactsV3Schema.superRefine((asset, ctx) => {
   for (const { gapIndex, message } of findV9CauseEvidenceBindingIssues(asset)) {
     ctx.addIssue({ code: "custom", path: ["gaps", gapIndex, "causeProof"], message });
   }
-  const boundClockSec = (asset.reserveBoundFacts ?? V9_EMPTY_ARRAY).reduce((latest, row) => Math.max(latest, row.fact.asOfSec), 0);
+  // Only admitted bounds can define the asset-level clock: a rejected (e.g. future-dated) diagnostic
+  // row must not push the clock past the fact-set clock and stale every admitted bound.
+  const boundClockSec = (asset.reserveBoundFacts ?? V9_EMPTY_ARRAY).reduce((latest, row) =>
+    row.status.observationState === "known" && row.rejectionReason === null ? Math.max(latest, row.fact.asOfSec) : latest, 0);
   for (const { exposureIndex, factor, message } of findV9ReserveBoundFactorStatusIssues(asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, boundClockSec)) {
     ctx.addIssue({ code: "custom", path: ["reserveExposures", exposureIndex, "factorStatuses", factor], message });
   }
