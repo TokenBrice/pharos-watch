@@ -20,38 +20,26 @@ import {
 import type { FailureDomainMember, FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
 import type { ControlComponentRoles, ControlStripComponent } from "@/lib/pillar-evidence-strips";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import type { BridgeRouteClientRow, BridgeRouteRiskClientSummary } from "@/lib/stablecoin-detail-bridge-client";
+import type { BridgeRouteRiskClientSummary, BridgeRouteWireRow } from "@/lib/stablecoin-detail-bridge-client";
 
 const AUTHORED_SUMMARY = "Reviewer narrative about the route inventory.";
 
-function route(
-  key: string,
-  chainId: string,
-  overrides: Partial<BridgeRouteClientRow> = {},
-): BridgeRouteClientRow {
-  const tierKey = overrides.tierKey ?? "issuer-native-burn-mint";
-  return {
-    key,
-    chainId,
-    chainLabel: chainId.charAt(0).toUpperCase() + chainId.slice(1),
-    tierKey,
-    tierLabel: BRIDGE_TIER_LABELS[tierKey],
-    protocolLabel: "Bridge",
-    protocolKey: null,
-    reviewed: true,
-    controlComponentKey: null,
-    ...overrides,
-  };
+/** A bridged route as projected; the key prefix is its chain. */
+function route(key: string, overrides: Partial<BridgeRouteWireRow> = {}): BridgeRouteWireRow {
+  return { key, tierKey: "issuer-native-burn-mint", bridged: true, ...overrides };
+}
+
+function nativeRoute(key: string): BridgeRouteWireRow {
+  return { key, tierKey: "single-chain-or-native" };
 }
 
 /** Mirrors `projectBridgeRouteRiskClientSummary`: counts and labels come from the same routes. */
 function summaryOf(
-  rows: BridgeRouteClientRow[],
+  rows: BridgeRouteWireRow[],
   overrides: Partial<BridgeRouteRiskClientSummary> = {},
 ): BridgeRouteRiskClientSummary {
-  const chainCount = overrides.chainCount ?? new Set(rows.map((row) => row.chainId)).size;
-  const routes = rows.map((row) => ({ ...row, tierLabel: getBridgeTierLabel(row.tierKey, chainCount) }));
-  const reviewed = routes.filter((row) => row.reviewed);
+  const chainCount = overrides.chainCount ?? new Set(rows.map((row) => row.key.split(":")[0])).size;
+  const reviewed = rows.filter((row) => !row.unresolved);
   const tierCounts: Partial<Record<BridgeRouteRiskTier, number>> = {};
   for (const row of reviewed) tierCounts[row.tierKey] = (tierCounts[row.tierKey] ?? 0) + 1;
   const weakest = BRIDGE_TIER_POLICY_ORDER.filter((tier) => (tierCounts[tier] ?? 0) > 0).at(-1) ?? null;
@@ -64,21 +52,21 @@ function summaryOf(
     reviewedAt: "2026-09-04",
     confidence: "verified",
     confidenceLabel: "Verified",
-    routeCount: routes.length,
-    unresolvedRouteCount: routes.length - reviewed.length,
+    routeCount: rows.length,
+    unresolvedRouteCount: rows.length - reviewed.length,
     chainCount,
     thirdPartyRouteCount: reviewed.filter((row) => BRIDGE_THIRD_PARTY_TIERS[row.tierKey]).length,
     tierCounts,
     homeChainId: "ethereum",
-    routes,
+    routes: rows,
     routesTruncated: 0,
     sources: [{ label: "Issuer bridge docs", url: "https://example.com/bridge" }],
     ...overrides,
   };
 }
 
-function bridgeKey(row: BridgeRouteClientRow): string {
-  return `bridge:${row.key}:bridge-meta:${row.chainId}`;
+function bridgeKey(row: BridgeRouteWireRow): string {
+  return `bridge:${row.key}:bridge-meta:fixture`;
 }
 
 function component(
@@ -126,12 +114,12 @@ function legendCounts(container: HTMLElement): number[] {
   return [...container.querySelectorAll("[data-legend-count]")].map((node) => Number(node.textContent));
 }
 
-const NATIVE = route("ethereum:0xe", "ethereum", { protocolLabel: null, tierKey: "single-chain-or-native" });
+const NATIVE = nativeRoute("ethereum:0xe");
 
 /** USDe shape: a native home chain and 31 OFT routes whose bridge components sit outside the eligible set. */
 function usdeShape() {
   const oft = Array.from({ length: 31 }, (_, index) =>
-    route(`chain${index}:0x${index}`, `chain${index}`, { tierKey: "external-lock-mint" }),
+    route(`chain${index}:0x${index}`, { tierKey: "external-lock-mint" }),
   );
   const summary = summaryOf([NATIVE, ...oft]);
   const roles = rolesOf([
@@ -146,8 +134,8 @@ function usdeShape() {
 function ustbShape() {
   const summary = summaryOf([
     NATIVE,
-    route("solana:0xs", "solana", { tierKey: "single-chain-or-native", protocolLabel: null }),
-    route("plume:0xp", "plume"),
+    nativeRoute("solana:0xs"),
+    route("plume:0xp"),
   ]);
   const roles = rolesOf([
     component("bridge:unverified", "bridge", 45, "limiting", {
@@ -162,9 +150,9 @@ function ustbShape() {
 
 describe("BridgingDeploymentsModule", () => {
   it("outlines only routes whose bridge component is the limiting input", () => {
-    const arbitrum = route("arbitrum:0xa", "arbitrum", { tierKey: "external-lock-mint" });
-    const base = route("base:0xb", "base", { tierKey: "issuer-native-lock-mint" });
-    const optimism = route("optimism:0xo", "optimism", { tierKey: "external-lock-mint" });
+    const arbitrum = route("arbitrum:0xa", { tierKey: "external-lock-mint" });
+    const base = route("base:0xb", { tierKey: "issuer-native-lock-mint" });
+    const optimism = route("optimism:0xo", { tierKey: "external-lock-mint" });
     const summary = summaryOf([NATIVE, arbitrum, base, optimism]);
     const roles = rolesOf([
       component(bridgeKey(arbitrum), "bridge", 40, "limiting", { posture: "external-lock-mint" }),
@@ -244,7 +232,7 @@ describe("BridgingDeploymentsModule", () => {
   });
 
   it("names an undrawn limiting route on the caveat line instead of outlining the drawn ones", () => {
-    const drawn = [NATIVE, route("base:0xb", "base"), route("arbitrum:0xa", "arbitrum", { tierKey: "external-lock-mint" })];
+    const drawn = [NATIVE, route("base:0xb"), route("arbitrum:0xa", { tierKey: "external-lock-mint" })];
     const summary = summaryOf(drawn, {
       routeCount: 51,
       routesTruncated: 48,
@@ -267,9 +255,9 @@ describe("BridgingDeploymentsModule", () => {
   it("leads with the majority instead of one unresolved route (USDC shape)", () => {
     const routes = [
       NATIVE,
-      ...Array.from({ length: 6 }, (_, index) => route(`burn${index}:0x${index}`, `burn${index}`)),
-      route("arbitrum:0xa", "arbitrum", { tierKey: "canonical-rollup-bridge" }),
-      route("corn:0xc", "corn", { tierKey: "opaque-or-unknown", reviewed: false }),
+      ...Array.from({ length: 6 }, (_, index) => route(`burn${index}:0x${index}`)),
+      route("arbitrum:0xa", { tierKey: "canonical-rollup-bridge" }),
+      route("corn:0xc", { tierKey: "opaque-or-unknown", unresolved: true }),
     ];
     const summary = summaryOf(routes);
 
@@ -288,12 +276,12 @@ describe("BridgingDeploymentsModule", () => {
   it("moves the tier count of a mixed inventory into the verdict and keeps the header and index chip identical", () => {
     const routes = [
       NATIVE,
-      route("burn0:0x0", "burn0"),
-      route("burn1:0x1", "burn1"),
-      route("lz0:0x0", "lz0", { tierKey: "external-lock-mint" }),
-      route("lz1:0x1", "lz1", { tierKey: "external-lock-mint" }),
-      route("axelar:0xa", "axelar", { tierKey: "external-validated-network" }),
-      route("corn:0xc", "corn", { tierKey: "opaque-or-unknown", reviewed: false }),
+      route("burn0:0x0"),
+      route("burn1:0x1"),
+      route("lz0:0x0", { tierKey: "external-lock-mint" }),
+      route("lz1:0x1", { tierKey: "external-lock-mint" }),
+      route("axelar:0xa", { tierKey: "external-validated-network" }),
+      route("corn:0xc", { tierKey: "opaque-or-unknown", unresolved: true }),
     ];
     const summary = summaryOf(routes);
 
@@ -311,11 +299,11 @@ describe("BridgingDeploymentsModule", () => {
     // ~160 px at 11 px: what a 480 px tile header leaves beside the coin and title.
     const HEADER_CHIP_MAX_CHARS = 25;
     for (const tier of BRIDGE_TIER_POLICY_ORDER) {
-      const lead = Array.from({ length: 4 }, (_, index) => route(`${tier}${index}:0x${index}`, `${tier}${index}`, { tierKey: tier }));
+      const lead = Array.from({ length: 4 }, (_, index) => route(`${tier}${index}:0x${index}`, { tierKey: tier }));
       const other = tier === "external-lock-mint" ? "issuer-native-burn-mint" : "external-lock-mint";
       const inventories = [
         summaryOf(lead),
-        summaryOf([...lead, route("other:0xo", "other", { tierKey: other }), route("corn:0xc", "corn", { reviewed: false })]),
+        summaryOf([...lead, route("other:0xo", { tierKey: other }), route("corn:0xc", { unresolved: true })]),
       ];
       for (const summary of inventories) {
         const label = buildBridgingDeploymentsIndexChip(summary, null, null)!.label;
@@ -325,7 +313,7 @@ describe("BridgingDeploymentsModule", () => {
   });
 
   it("keeps the chip with the drawn cells and states a disagreeing authored tier in the notes fold (MAI shape)", () => {
-    const routes = Array.from({ length: 15 }, (_, index) => route(`chain${index}:0x${index}`, `chain${index}`));
+    const routes = Array.from({ length: 15 }, (_, index) => route(`chain${index}:0x${index}`));
     const summary = summaryOf(routes, { authoredTier: "external-lock-mint" });
 
     const chip = buildBridgingDeploymentsIndexChip(summary, null, null)!;
@@ -339,12 +327,12 @@ describe("BridgingDeploymentsModule", () => {
 
   it("counts third-party routes from the same tiers the legend draws (EURC shape)", () => {
     const natives = ["ethereum", "base", "avalanche", "stellar", "solana", "arc", "plasma", "cronos", "worldchain"]
-      .map((chain) => route(`${chain}:0x`, chain, { tierKey: "single-chain-or-native", protocolLabel: null }));
+      .map((chain) => nativeRoute(`${chain}:0x`));
     const representations = [
-      route("polygon:0x", "polygon", { tierKey: "external-validated-network" }),
-      route("sonic:0x", "sonic", { tierKey: "external-validated-network" }),
-      route("cardano:0x", "cardano", { tierKey: "external-validated-network" }),
-      route("tempo:0x", "tempo", { tierKey: "external-lock-mint" }),
+      route("polygon:0x", { tierKey: "external-validated-network" }),
+      route("sonic:0x", { tierKey: "external-validated-network" }),
+      route("cardano:0x", { tierKey: "external-validated-network" }),
+      route("tempo:0x", { tierKey: "external-lock-mint" }),
     ];
     const summary = summaryOf([...natives, ...representations], { authoredTier: "single-chain-or-native" });
 
@@ -364,15 +352,15 @@ describe("BridgingDeploymentsModule", () => {
   it("says all routes are native when nothing is weaker", () => {
     const summary = summaryOf([
       NATIVE,
-      route("solana:0xs", "solana", { tierKey: "single-chain-or-native", protocolLabel: null }),
+      nativeRoute("solana:0xs"),
     ]);
     expect(buildBridgingDeploymentsIndexChip(summary, null, null)?.label).toBe("All routes native");
     expect(buildBridgingDeploymentsVerdict(summary, null)).not.toMatch(/weakest|third-party/i);
   });
 
   it("brackets the cells a failure domain spans, keeping a partly known share and never '?'", () => {
-    const plasma = route("plasma:0xp", "plasma", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
-    const solana = route("solana:0xs", "solana", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
+    const plasma = route("plasma:0xp", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
+    const solana = route("solana:0xs", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
     const summary = summaryOf([NATIVE, plasma, solana]);
     const failureDomains: FailureDomainsView = {
       rows: [
@@ -429,7 +417,7 @@ describe("BridgingDeploymentsModule", () => {
   });
 
   it("puts the #failure-domains anchor on the fold itself, so the section scroll margin applies to it", () => {
-    const plasma = route("plasma:0xp", "plasma", { tierKey: "external-lock-mint" });
+    const plasma = route("plasma:0xp", { tierKey: "external-lock-mint" });
     const failureDomains: FailureDomainsView = {
       rows: [domainRow({ key: "chain:Plasma", label: "Plasma", span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] } })],
       totalAdjustmentPoints: 0,
@@ -440,6 +428,21 @@ describe("BridgingDeploymentsModule", () => {
     );
 
     expect(container.querySelector("section#bridging details#failure-domains")).not.toBeNull();
+  });
+
+  it("names each route of a chain carrying several by protocol, and a native one as native", () => {
+    const summary = summaryOf([
+      NATIVE,
+      route("ethereum:0xf", { tierKey: "external-lock-mint", protocolLabel: "LayerZero OFT" }),
+      route("arbitrum:0xa", { tierKey: "canonical-rollup-bridge" }),
+    ]);
+
+    const { container } = render(<BridgingDeploymentsModule summary={summary} failureDomains={null} variant="tile" />);
+
+    expect(container.querySelector(`[data-cell="${NATIVE.key}"]`)?.getAttribute("title")).toMatch(/^Ethereum · native · /);
+    expect(container.querySelector('[data-cell="ethereum:0xf"]')?.getAttribute("title")).toMatch(/^Ethereum · LayerZero OFT · /);
+    expect(container.querySelector('[data-cell="arbitrum:0xa"]')?.getAttribute("title"))
+      .toBe(`Arbitrum · ${getBridgeTierLabel("canonical-rollup-bridge", 2)}`);
   });
 
   it("renders a single-chain coin in strip form without a one-cell strip", () => {
@@ -453,10 +456,13 @@ describe("BridgingDeploymentsModule", () => {
     expect(container.querySelector("section#bridging")?.getAttribute("data-evidence-module")).toBe("strip");
     expect(container.querySelector("[data-cell]")).toBeNull();
     expect(container.textContent).toContain(BRIDGE_TIER_LABELS["single-chain-or-native"]);
+    expect(buildBridgingDeploymentsVerdict(summary, null)).toMatch(/\bnative deployment\b/);
+    expect(buildBridgingDeploymentsVerdict(summaryOf([route("plasma:0xp", { tierKey: "external-lock-mint" })]), null))
+      .not.toMatch(/\bnative\b/);
   });
 
   it("counts every route in a truncated strip's legend and says how many are drawn", () => {
-    const drawn = [NATIVE, route("base:0xb", "base"), route("arbitrum:0xa", "arbitrum", { tierKey: "external-lock-mint" })];
+    const drawn = [NATIVE, route("base:0xb"), route("arbitrum:0xa", { tierKey: "external-lock-mint" })];
     const truncatedSummary = summaryOf(drawn, {
       routeCount: 51,
       routesTruncated: 48,
@@ -479,7 +485,7 @@ describe("BridgingDeploymentsModule", () => {
   });
 
   it("keeps the authored summary and sources in one closed fold after the domain detail", () => {
-    const plasma = route("plasma:0xp", "plasma", { tierKey: "external-lock-mint" });
+    const plasma = route("plasma:0xp", { tierKey: "external-lock-mint" });
     const summary = summaryOf([NATIVE, plasma]);
     const failureDomains: FailureDomainsView = {
       rows: [domainRow({ key: "chain:Plasma", label: "Plasma", span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] } })],
@@ -529,10 +535,9 @@ describe("BridgingDeploymentsModule", () => {
 describe("buildBridgingDeploymentsVerdict", () => {
   it("stays within the verdict budget for the largest inventories and states unresolved routes", () => {
     const routes = Array.from({ length: 40 }, (_, index) =>
-      route(`chain${index}:0x${index}`, `chain${index}`, {
-        tierKey: index < 2 ? "opaque-or-unknown" : index % 4 === 0 ? "external-lock-mint" : "external-validated-network",
-        reviewed: index >= 2,
-      }),
+      index < 2
+        ? route(`chain${index}:0x${index}`, { tierKey: "opaque-or-unknown", unresolved: true })
+        : route(`chain${index}:0x${index}`, { tierKey: index % 4 === 0 ? "external-lock-mint" : "external-validated-network" }),
     );
     const summary = summaryOf(routes, {
       routeCount: 88,
@@ -557,9 +562,9 @@ describe("buildBridgingDeploymentsVerdict", () => {
     const { roles } = ustbShape();
     const routes = [
       NATIVE,
-      ...Array.from({ length: 5 }, (_, index) => route(`burn${index}:0x${index}`, `burn${index}`)),
-      ...Array.from({ length: 4 }, (_, index) => route(`lz${index}:0x${index}`, `lz${index}`, { tierKey: "external-lock-mint" })),
-      route("corn:0xc", "corn", { tierKey: "opaque-or-unknown", reviewed: false }),
+      ...Array.from({ length: 5 }, (_, index) => route(`burn${index}:0x${index}`)),
+      ...Array.from({ length: 4 }, (_, index) => route(`lz${index}:0x${index}`, { tierKey: "external-lock-mint" })),
+      route("corn:0xc", { tierKey: "opaque-or-unknown", unresolved: true }),
     ];
     const verdict = buildBridgingDeploymentsVerdict(summaryOf(routes), null, roles)!;
     expect(findSummaryBudgetViolations(verdict)).toEqual([]);

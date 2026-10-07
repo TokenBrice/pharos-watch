@@ -18,6 +18,7 @@ import type { ControlComponentRoles, ControlStripComponent, PillarStripTone } fr
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   bindBridgeRouteControlComponents,
+  expandBridgeRoutes,
   type BridgeRouteClientRow,
   type BridgeRouteRiskClientSummary,
 } from "@/lib/stablecoin-detail-bridge-client";
@@ -200,7 +201,7 @@ function routesByComponentKey(
 ): Map<string, BridgeRouteClientRow> {
   if (!summary) return new Map();
   const bound = bindBridgeRouteControlComponents(summary, controlRoles?.components ?? []);
-  return new Map(bound.routes.flatMap((route) => (route.controlComponentKey ? [[route.controlComponentKey, route] as const] : [])));
+  return new Map(bound.flatMap((route) => (route.controlComponentKey ? [[route.controlComponentKey, route] as const] : [])));
 }
 
 /**
@@ -255,7 +256,7 @@ function resolveBridgingHeader(
   }
   if (!summary) return { kind: "chip", label: "Routes not reviewed" };
   if (summary.routeCount === 0) return { kind: "chip", label: summary.authoredTierLabel };
-  const lone = summary.routeCount === 1 ? summary.routes[0] : undefined;
+  const lone = summary.routeCount === 1 ? expandBridgeRoutes(summary)[0] : undefined;
   if (lone) return { kind: "chip", label: lone.reviewed ? lone.tierLabel : UNRESOLVED_TIER_LABEL };
   return { kind: "chip", label: describeMixChip(describeRouteMix(summary), summary.unresolvedRouteCount) };
 }
@@ -365,11 +366,11 @@ export function buildBridgingDeploymentsVerdict(
     return fitVerdict([[limitingSentence, `Bridge routes not reviewed; ${plural(domainCount, "shared failure domain")} traced.`]]);
   }
   if (summary.routeCount === 0) return fitVerdict([[limitingSentence, "No deployment routes in the review."]]);
-  const lone = summary.routeCount === 1 ? summary.routes[0] : undefined;
+  const lone = summary.routeCount === 1 ? expandBridgeRoutes(summary)[0] : undefined;
   if (lone) {
     const loneSentence = !lone.reviewed
       ? `One route, on ${lone.chainLabel}; unresolved, tier not established.`
-      : lone.protocolLabel === null
+      : !lone.bridged
         ? `One native deployment, on ${lone.chainLabel}; no bridge route.`
         : `One route, on ${lone.chainLabel}: ${lone.tierLabel.toLowerCase()}.`;
     return fitVerdict([[limitingSentence, loneSentence]]);
@@ -440,17 +441,18 @@ interface RouteCell {
  * from its bound bridge component; unscored components make no claim.
  */
 function buildRouteCells(
-  summary: BridgeRouteRiskClientSummary,
+  routes: readonly BridgeRouteClientRow[],
+  homeChainId: string | null,
   roleByKey: ReadonlyMap<string, ControlComponentRole>,
 ): RouteCell[] {
   const routesPerChain = new Map<string, number>();
-  for (const route of summary.routes) routesPerChain.set(route.chainId, (routesPerChain.get(route.chainId) ?? 0) + 1);
+  for (const route of routes) routesPerChain.set(route.chainId, (routesPerChain.get(route.chainId) ?? 0) + 1);
   const usedKeys = new Set<string>();
   let homeMarked = false;
-  return summary.routes.map((route, index) => {
+  return routes.map((route, index) => {
     const key = usedKeys.has(route.key) ? `${route.key}#${index}` : route.key;
     usedKeys.add(key);
-    const home = !homeMarked && route.chainId === summary.homeChainId;
+    const home = !homeMarked && route.chainId === homeChainId;
     if (home) homeMarked = true;
     const role = route.controlComponentKey ? roleByKey.get(route.controlComponentKey) : undefined;
     return {
@@ -691,15 +693,15 @@ export function BridgingDeploymentsModule({
 
   const roleComponents = controlRoles?.components ?? [];
   // Role components carry the same `key` / `kind` pair, so they bind routes when the raw list is not passed.
-  const bound = summary ? bindBridgeRouteControlComponents(summary, controlComponents ?? roleComponents) : null;
+  const boundRoutes = summary ? bindBridgeRouteControlComponents(summary, controlComponents ?? roleComponents) : [];
   const roleByKey = new Map(roleComponents.map((component) => [component.key, component.role]));
-  const routeCells = bound && form === "tile" ? buildRouteCells(bound, roleByKey) : [];
+  const routeCells = summary && form === "tile" ? buildRouteCells(boundRoutes, summary.homeChainId, roleByKey) : [];
   const domainView = failureDomains && failureDomains.rows.length > 0 ? failureDomains : null;
   const { brackets, spanningCount } = buildBrackets(domainView?.rows ?? [], routeCells);
 
   const bridgeComponents = roleComponents.filter((component) => component.kind === "bridge");
   const routeByComponentKey = new Map(
-    (bound?.routes ?? []).flatMap((route) => (route.controlComponentKey ? [[route.controlComponentKey, route] as const] : [])),
+    boundRoutes.flatMap((route) => (route.controlComponentKey ? [[route.controlComponentKey, route] as const] : [])),
   );
 
   const routesTruncated = form === "tile" ? (summary?.routesTruncated ?? 0) : 0;

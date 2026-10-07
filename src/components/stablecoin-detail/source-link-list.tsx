@@ -1,14 +1,20 @@
-import { ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface SourceLink {
   label: string;
   url: string;
+  /** Trailing annotation after the link, e.g. "Supports capacity". */
+  note?: string;
 }
 
 /**
  * A reviewed-evidence source list: one external link per row behind an
- * ExternalLink glyph, opening in a new tab. Spacing and the accessible list
+ * external-link glyph, opening in a new tab. Spacing and the accessible list
  * name stay with the caller.
+ *
+ * Detail pages render 50+ of these rows, so the glyph, link and note styling
+ * live in the `.pharos-source-list` descendant rules in `globals.css`; each
+ * row stays a bare `<li><a>`.
  */
 export function SourceLinkList({
   sources,
@@ -20,18 +26,13 @@ export function SourceLinkList({
   "aria-label"?: string;
 }) {
   return (
-    <ul aria-label={ariaLabel} className={className}>
+    <ul aria-label={ariaLabel} className={cn("pharos-source-list", className)}>
       {sources.map((source) => (
-        <li key={`${source.label}:${source.url}`} className="flex min-w-0 gap-2">
-          <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring min-w-0 break-words rounded-sm underline underline-offset-2 transition-colors hover:text-foreground motion-reduce:transition-none"
-          >
+        <li key={`${source.label}:${source.url}`}>
+          <a href={source.url} target="_blank" rel="noopener noreferrer">
             {source.label}
           </a>
+          {source.note ? <span>{source.note}</span> : null}
         </li>
       ))}
     </ul>

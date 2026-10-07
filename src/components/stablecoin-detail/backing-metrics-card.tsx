@@ -12,6 +12,7 @@ import {
   type RailMetricSubMetric,
 } from "@/components/stablecoin-detail/rail-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import { SourceLinkList } from "@/components/stablecoin-detail/source-link-list";
 import {
   getCollateralCoverageTone,
   ShareMeter,
@@ -796,21 +797,7 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
         </div>
       ) : null}
       {withSources && view.sources.length > 0 ? (
-        <ul aria-label="Sources" className="space-y-1.5 border-t border-border/40 pt-2">
-          {view.sources.map((source) => (
-            <li key={source.url} className="flex min-w-0 gap-2">
-              <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring min-w-0 break-words rounded-sm underline underline-offset-2 transition-colors motion-reduce:transition-none hover:text-foreground"
-              >
-                {source.label}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <SourceLinkList aria-label="Sources" sources={view.sources} className="space-y-1.5 border-t border-border/40 pt-2" />
       ) : null}
     </>
   );
