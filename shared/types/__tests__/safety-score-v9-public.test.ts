@@ -20,6 +20,20 @@ import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-cause
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("Compact public cause contracts", () => {
+  it("validates distinct obligation summaries independently of the retained witness count", () => {
+    const response = boundedResponse();
+    const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;
+    evidence.facts.push(["bounded-mechanism-review", "backing:second-witness", 0, "unresearched", false, "U", [0]]);
+    evidence.facts.push(["bounded-mechanism-review", "backing:causal-alias", null, "unresearched", false, "U", [0]]);
+    evidence.totalFactCount = 3;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    const wrongSummary = structuredClone(response);
+    wrongSummary.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount = 3;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongSummary).success).toBe(false);
+    const wrongWitnessCount = structuredClone(response);
+    wrongWitnessCount.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongWitnessCount).success).toBe(false);
+  });
   it.each([-1, 0.5, 1])("rejects out-of-range/noninteger cause references %s before resolution", (ref) => {
     const response = boundedResponse();
     const card = response.cards[0]!;
