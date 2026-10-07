@@ -360,7 +360,9 @@ describe("handleHealth", () => {
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("stale");
     expect(body.warnings).toContain("scheduled_delivery_stalled");
-    expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
+    // The handler samples its own clock; allow the one-second boundary.
+    expect(body.schedulerLiveness?.ageSeconds).toBeGreaterThanOrEqual(1201);
+    expect(body.schedulerLiveness?.ageSeconds).toBeLessThanOrEqual(1203);
   });
   it.each([
     [1801, "degraded", "heavy_scheduled_delivery_stalled"],
