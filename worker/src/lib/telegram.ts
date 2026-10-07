@@ -2,7 +2,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
-import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
+import { cancelResponseBodyQuietly, readResponseTextBoundedWithSignal } from "./response-body";
 import { escapeHtml } from "./telegram/html";
 import { logTelegramEvent } from "./telegram/log";
 import {
@@ -206,7 +206,7 @@ async function sendTelegramPayload(
         statusCode: res.status,
       };
     }
-    await drainResponseBody(res);
+    await cancelResponseBodyQuietly(res);
     return {
       ok: true,
       blocked: false,
@@ -626,8 +626,8 @@ export async function editMessage(
 
 /**
  * Answer a Telegram callback_query. Required to dismiss the spinner on the
- * user's tapped button within a few seconds. The body is drained so response
- * bytes and transport cleanup stay bounded.
+ * user's tapped button within a few seconds. The unused body is cancelled
+ * without allocating response bytes.
  */
 export async function answerCallbackQuery(
   callbackQueryId: string,
@@ -639,7 +639,7 @@ export async function answerCallbackQuery(
     text: options.text,
     show_alert: options.showAlert ?? false,
   });
-  await drainResponseBody(res);
+  await cancelResponseBodyQuietly(res);
   if (!res.ok) {
     logTelegramEvent({
       level: "warn",
@@ -668,7 +668,7 @@ export async function answerInlineQuery(
     cache_time: options.cacheTimeSec,
     is_personal: false,
   });
-  await drainResponseBody(res);
+  await cancelResponseBodyQuietly(res);
   if (res.ok) return true;
   logTelegramEvent({
     level: "warn",

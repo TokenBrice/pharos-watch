@@ -12,6 +12,8 @@ import { getTelegramPrivateBotCommands } from "@shared/lib/telegram-bot-registra
 import { getCache, setCache } from "../db-cache";
 import { sha256Hex } from "../hash";
 import { postTelegramBotApi } from "../telegram";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../fetch-retry";
+import { readResponseTextWithinLimitWithSignal } from "../response-body";
 
 export {
   TELEGRAM_ALLOWED_UPDATES,
@@ -231,7 +233,7 @@ async function executeTelegramReconciliationCall<T extends TelegramApiResponse =
   }
 
   const response = await postTelegramBotApi(botToken, method, payload, { signal: options.signal });
-  const responseText = await response.text();
+  const responseText = await readResponseTextWithinLimitWithSignal(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, options.signal);
   let parsed: T | null = null;
   try {
     parsed = JSON.parse(responseText) as T;

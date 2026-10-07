@@ -12,6 +12,7 @@ import type { FeedbackEnv } from "../feedback";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
+import { createGitHubIssue, GitHubIssueRejectedError } from "../feedback/github";
 // Stub fetch and crypto.subtle before importing the handler
 let fetchSpy: ReturnType<typeof mockFetch>;
 let fetchOutcomes: Array<Response | Error | Promise<Response>> = [];
@@ -44,6 +45,25 @@ const { handleFeedback } = await import("../feedback");
 const encoder = new TextEncoder();
 const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
 const fixtures = createLatestSchemaFixtureTracker();
+
+describe("bounded GitHub rejection evidence", () => {
+  it("preserves known HTTP rejection while capping diagnostics and cancelling remainder", async () => {
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode("x".repeat(4097))); }, cancel,
+    }), { status: 422 });
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(response);
+    try {
+      await expect(createGitHubIssue("pat", "title", "body", [])).rejects.toMatchObject({
+        name: "GitHubIssueRejectedError", status: 422, message: `GitHub Issues API 422: ${"x".repeat(200)}`,
+      });
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(GitHubIssueRejectedError).toBeDefined();
+    } finally {
+      fetch.mockRestore();
+    }
+  });
+});
 
 function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const canned = createMockD1(tables, options);

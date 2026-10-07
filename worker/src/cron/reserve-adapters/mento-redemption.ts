@@ -22,6 +22,7 @@ import {
   fetchOnchainUint256,
 } from "./helpers";
 import { throwIfAborted } from "../../lib/abort";
+import { getCachedRequest } from "./request";
 
 // --- Redemption telemetry ---------------------------------------------------
 //
@@ -88,21 +89,13 @@ function loadCachedMentoPoolRead<T>(
   cacheKey: string,
   callOptions: MentoPoolCallOptions,
   load: () => Promise<T>,
+  cacheBytes: number,
 ): Promise<T> {
-  const cache = callOptions.ctx?.requestCache;
-  const cached = cache?.get(cacheKey) as Promise<T> | undefined;
-  if (cached) return cached;
-
-  const request: Promise<T> = load().catch((error) => {
-    // Each coin has its own redemption deadline. Do not let one coin's abort
-    // leave a rejected promise that poisons every later Mento coin in the run.
-    if (callOptions.signal.aborted && cache?.get(cacheKey) === request) {
-      cache.delete(cacheKey);
-    }
-    throw error;
-  });
-  cache?.set(cacheKey, request);
-  return request;
+  return getCachedRequest(cacheKey, async () => ({
+    value: await load(),
+    cacheBytes: cacheBytes + 128 + 2 * cacheKey.length,
+    basis: "declared-estimate",
+  }), callOptions.ctx);
 }
 
 function loadMentoExchangeIds(
@@ -126,6 +119,8 @@ function loadMentoExchangeIds(
       }
       return exchangeIds;
     },
+    // Bounded 64-ID array: UTF-16 strings, element slots, and array bookkeeping.
+    512 + MENTO_BROKER_POOL_MAX_EXCHANGE_IDS * (128 + 2 * 66),
   );
 }
 
@@ -142,6 +137,8 @@ function loadMentoPoolExchange(
       contract: MENTO_BIPOOL_MANAGER_ADDRESS,
       data: `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
     })),
+    // Fixed nested ABI record: three addresses, one bytes32 and seven uint256s.
+    2_048,
   );
 }
 

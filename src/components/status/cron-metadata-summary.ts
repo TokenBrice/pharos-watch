@@ -1,4 +1,5 @@
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import { ResourcePressureSchema } from "@shared/types/status/cron";
 import {
   readMetadataArray as readArray,
   readMetadataBoolean as readBoolean,
@@ -453,6 +454,17 @@ export function summarizeCronMetadata(
     ...(summaryMetadata ? SUMMARIZER_BY_JOB[job]?.(summaryMetadata) ?? [] : []),
     ...getCronQualityReasons(metadata).map((reason) => `finding ${reason}`),
   ];
+  const pressure = ResourcePressureSchema.safeParse(metadata?.resourcePressure);
+  if (pressure.success) {
+    const value = pressure.data;
+    lines.push(
+      `resource ${value.phase} @${value.observedAt}: ${value.guard}`,
+      `intake ${value.intakeBytes == null ? "unavailable" : `${value.intakeBytes} bytes`} (${value.intakeBasis}); estimated cache ${value.cacheBytes == null ? "unavailable" : `${value.cacheBytes} bytes`} (${value.cacheBasis})`,
+      `rejected bodies ${value.rejectedBodies ?? "unavailable"}; platform ${value.platformOutcome ?? "unavailable"}; heap unavailable`,
+    );
+  } else if (metadata?.resourcePressure !== undefined) {
+    lines.push("resource evidence unavailable");
+  }
   if (reason && !lines.some((line) => line.includes(reason))) lines.push(`reason ${reason}`);
   return lines;
 }

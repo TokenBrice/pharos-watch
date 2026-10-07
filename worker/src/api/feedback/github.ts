@@ -1,4 +1,4 @@
-import { drainResponseBody } from "../../lib/response-body";
+import { cancelResponseBodyQuietly, readResponseSnippetWithTimeout } from "../../lib/response-body";
 import { GITHUB_OWNER, GITHUB_REPO } from "../../lib/github-repo";
 
 export class GitHubIssueRejectedError extends Error {
@@ -22,16 +22,19 @@ function buildGitHubHeaders(pat: string): Record<string, string> {
 }
 
 export async function createGitHubIssue(pat: string, title: string, body: string, labels: string[]): Promise<void> {
+  const signal = AbortSignal.timeout(10_000);
   const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues`, {
     method: "POST",
     headers: buildGitHubHeaders(pat),
     body: JSON.stringify({ title, body, labels }),
-    signal: AbortSignal.timeout(10_000),
+    signal,
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new GitHubIssueRejectedError(res.status, text.slice(0, 200));
+    const text = await readResponseSnippetWithTimeout(res, {
+      timeoutMs: 10_000, maxBytes: 4_096, maxChars: 200,
+    }, signal).catch(() => undefined);
+    throw new GitHubIssueRejectedError(res.status, text ?? "");
   }
 
-  await drainResponseBody(res);
+  await cancelResponseBodyQuietly(res);
 }

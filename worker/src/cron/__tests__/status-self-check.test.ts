@@ -143,6 +143,18 @@ describe("runStatusSelfCheck", () => {
     });
   });
 
+  it("keeps oversized HTTP health evidence a failed probe, not a healthy observation", async () => {
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      if (String(input).includes("/api/health")) {
+        return new Response("{}", { headers: { "Content-Length": String(16 * 1024 * 1024 + 1) } });
+      }
+      return buildProbeResponse(input, "healthy", init);
+    });
+    const result = await runStatusSelfCheck({} as D1Database, {});
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!).failCount).toBeGreaterThan(0);
+  });
+
   it("records latency summary and slowest probes in cron metadata", async () => {
     const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
     const metadata = JSON.parse(result.metadata ?? "{}") as {

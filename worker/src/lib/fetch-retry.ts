@@ -5,9 +5,9 @@ import {
   cancelResponseBodyQuietly,
   readResponseBytesWithinLimitWithSignal,
   readResponseJsonWithinLimitWithSignal,
-  readResponseTextWithSignal,
   readResponseTextWithinLimitWithSignal,
 } from "./response-body";
+import type { BodyReadObserver } from "./response-body";
 import { redactProviderUrls } from "./safe-error-message";
 import { logWorkerEvent } from "./structured-log";
 import type { z } from "zod";
@@ -18,6 +18,8 @@ interface FetchWithRetryOptions {
   logUrl?: string;
   /** Observes each received HTTP response before body handling or retry. */
   onResponse?: (response: Response) => void;
+  /** Actual body intake per attempt, before decoding; includes rejected reads. */
+  onBodyRead?: BodyReadObserver;
   passthrough404?: boolean;
   passthroughStatuses?: number[];
   returnFinalResponse?: boolean;
@@ -138,7 +140,7 @@ export async function fetchJsonWithRetry<TResult = unknown>(
     maxRetries,
     options,
     async (response, signal, maxResponseBytes) =>
-      await readResponseJsonWithinLimitWithSignal<TResult>(response, maxResponseBytes, signal),
+      await readResponseJsonWithinLimitWithSignal<TResult>(response, maxResponseBytes, signal, options?.onBodyRead),
   );
 }
 
@@ -181,7 +183,7 @@ export async function fetchTextWithRetry(
     maxRetries,
     options,
     async (response, signal, maxResponseBytes) =>
-      await readResponseTextWithinLimitWithSignal(response, maxResponseBytes, signal),
+      await readResponseTextWithinLimitWithSignal(response, maxResponseBytes, signal, options?.onBodyRead),
   );
 }
 
@@ -208,7 +210,7 @@ export async function fetchBinaryWithRetry(
         await cancelResponseBodyQuietly(response);
         return new Uint8Array(0);
       }
-      return await readResponseBytesWithinLimitWithSignal(response, maxResponseBytes, signal);
+      return await readResponseBytesWithinLimitWithSignal(response, maxResponseBytes, signal, options?.onBodyRead);
     },
   );
 }
@@ -239,9 +241,7 @@ async function fetchWithRetryInternal<TResult>(
   if (passthrough404) passthroughStatuses.add(404);
   const timeoutMs = options?.timeoutMs ?? 15_000;
   const maxRetryDelayMs = options?.maxRetryDelayMs;
-  const maxResponseBytes = readBody
-    ? options?.maxResponseBytes ?? DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES
-    : DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES;
+  const maxResponseBytes = options?.maxResponseBytes ?? DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES;
   if (readBody && (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 0)) {
     throw new RangeError(`maxResponseBytes must be a non-negative safe integer; received ${maxResponseBytes}`);
   }
@@ -280,7 +280,7 @@ async function fetchWithRetryInternal<TResult>(
               await sleepWithSignal(passthroughDelayMs, signal);
               return { response: res, body };
             }
-            const body = await readResponseTextWithSignal(res, perRequestTimeout.signal);
+            const body = await readResponseTextWithinLimitWithSignal(res, maxResponseBytes, perRequestTimeout.signal, options?.onBodyRead);
             perRequestTimeout.dispose();
             logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_passthrough_rate_limited", message: "Fetch rate-limited before passthrough", status: res.status, metadata: { url: logUrl, delayMs: passthroughDelayMs } });
             await sleepWithSignal(passthroughDelayMs, signal);

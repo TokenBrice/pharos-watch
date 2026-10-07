@@ -13,6 +13,15 @@ describe("getCachedChatAdministrators", () => {
     fetchSpy = mockFetch([], { requireMatch: true });
   });
 
+  it("keeps oversized administrator evidence unavailable without caching a partial list", async () => {
+    const db = mockD1([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null }]);
+    fetchSpy.mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    expect(await getCachedChatAdministrators(db, "bot-token", "-100")).toBeNull();
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT"))).toBe(false);
+  });
+
   it("fetches and caches the administrator list", async () => {
     const db = mockD1([
       {

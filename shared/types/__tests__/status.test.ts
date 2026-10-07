@@ -1,10 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
-import { CronRunSchema } from "../status/cron";
+import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("validates one resource block for terminal and progress metadata while retaining job keys", () => {
+    const resourcePressure = {
+      phase: "intake", observedAt: 100,
+      bodyCapBytes: 4, cacheCapBytes: null, cacheEntryCapBytes: null, maxConcurrentDecodes: 2,
+      inputCapBytes: null, catalogMaxAssets: null, intakeBytes: 0, cacheBytes: null, rejectedBodies: 1,
+      inputBytes: null, catalogAssets: null, intakeBasis: "actual-stream", cacheBasis: "unavailable",
+      guard: "resource-budget-exceeded", platformOutcome: null, platformOutcomeSource: null,
+      heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
+    };
+    const metadata = { resourcePressure, cursor: "coin-a" };
+    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata }).metadata).toEqual(metadata);
+    expect(CronInFlightSchema.parse({ startedAt: 1, updatedAt: 2, stale: false, metadata }).metadata).toEqual(metadata);
+    for (const invalid of [
+      { ...resourcePressure, intakeBytes: -1 }, { ...resourcePressure, cacheBytes: Infinity },
+      { ...resourcePressure, inputBytes: 0.5 }, { ...resourcePressure, catalogAssets: Number.MAX_SAFE_INTEGER + 1 },
+      { ...resourcePressure, phase: "x".repeat(81) }, { ...resourcePressure, heapUsedBytes: 0 },
+      { ...resourcePressure, platformOutcome: "platform-abandoned" },
+    ]) expect(ResourcePressureSchema.safeParse(invalid).success).toBe(false);
+    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata: { legacy: true } }).metadata).toEqual({ legacy: true });
+  });
+
   it("accepts additive cron reasons without requiring them on legacy runs", () => {
     const run = { startedAt: 1, durationMs: 2, status: "degraded" };
     expect(CronRunSchema.parse(run)).not.toHaveProperty("degradedReason");

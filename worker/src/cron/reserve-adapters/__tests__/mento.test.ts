@@ -829,7 +829,7 @@ describe("mento redemption telemetry", () => {
     expect(network.rpcCalls).toHaveLength(1);
   });
 
-  it("retains a failed exchange-id read for the run instead of retrying it per coin", async () => {
+  it("does not retain a failed exchange-id promise as a successful cache entry", async () => {
     const network = installAdapterNetwork({
       json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
       html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
@@ -859,9 +859,8 @@ describe("mento redemption telemetry", () => {
 
     expectWarnings(first, ["mento-redemption-telemetry-failed"]);
     expectWarnings(second, ["mento-redemption-telemetry-failed"]);
-    // The rejected census read is cached for the whole run: the second coin
-    // adds no further RPC traffic.
-    expect(network.rpcCalls).toHaveLength(callsAfterFirstCoin);
+    // A rejected load releases single-flight admission; the second coin may retry.
+    expect(network.rpcCalls).toHaveLength(callsAfterFirstCoin * 2);
   });
 
   it("bounds optional redemption telemetry without discarding reserve composition", async () => {

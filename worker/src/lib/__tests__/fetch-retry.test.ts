@@ -77,6 +77,30 @@ describe("fetchWithRetry", () => {
     vi.unstubAllGlobals();
   });
 
+  it("forwards consumed/rejected intake for every retry attempt", async () => {
+    const onBodyRead = vi.fn();
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response("12345"))
+      .mockResolvedValueOnce(new Response("{}")));
+    const result = await fetchJsonWithRetry("https://example.test", undefined, 1, { maxResponseBytes: 4, onBodyRead });
+    expect(result?.body).toEqual({});
+    expect(onBodyRead.mock.calls.map(([value]) => value)).toEqual([
+      { intakeBytes: 5, declaredBytes: null, outcome: "rejected" },
+      { intakeBytes: 2, declaredBytes: null, outcome: "accepted" },
+    ]);
+  });
+
+  it("caps raw 429 passthrough before rebuilding a Response", async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(encode("12345")); }, cancel,
+    }), { status: 429 })));
+    await expect(fetchWithRetry("https://example.test", undefined, 0, {
+      passthroughStatuses: [429], maxResponseBytes: 4, throwOnFinalNetworkError: true,
+    })).rejects.toMatchObject({ code: "resource-budget-exceeded" });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
   it("keeps the shared consumed-body default at 16 MiB", () => {
     expect(DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES).toBe(16 * 1024 * 1024);
   });

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as FetchRetry from "../../../lib/fetch-retry";
 
-vi.mock("../../../lib/fetch-retry", () => ({
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof FetchRetry>(),
   fetchTextWithRetry: vi.fn(),
 }));
 
@@ -68,9 +70,12 @@ describe("fetchDefiLlamaPrices", () => {
   });
 
   it("returns each caller's logical keys while sharing one upstream fetch for the same asset", async () => {
-    vi.mocked(fetchTextWithRetry).mockResolvedValue({
-      response: new Response(),
-      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1 } } }),
+    vi.mocked(fetchTextWithRetry).mockImplementation(async (_url, _init, _retries, options) => {
+      const body = JSON.stringify({ coins: { "ethereum:0xabc": {
+        price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1,
+      } } });
+      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, outcome: "accepted" });
+      return { response: new Response(body), body };
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -84,9 +89,12 @@ describe("fetchDefiLlamaPrices", () => {
   });
 
   it("does not let a caller's fallback prices leak into a later cached request", async () => {
-    vi.mocked(fetchTextWithRetry).mockResolvedValue({
-      response: new Response(),
-      body: JSON.stringify({ coins: { "ethereum:0xabc": { price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1 } } }),
+    vi.mocked(fetchTextWithRetry).mockImplementation(async (_url, _init, _retries, options) => {
+      const body = JSON.stringify({ coins: { "ethereum:0xabc": {
+        price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1,
+      } } });
+      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, outcome: "accepted" });
+      return { response: new Response(body), body };
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;

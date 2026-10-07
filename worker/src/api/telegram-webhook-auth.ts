@@ -4,7 +4,8 @@ import {
   logTelegramInvalidSecretAttempt,
   logTelegramMissingSecretAttempt,
 } from "../lib/telegram/log";
-import { drainResponseBody } from "../lib/response-body";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 export function isGroupChatType(chatType: string | null | undefined): boolean {
   return chatType === "group" || chatType === "supergroup";
@@ -77,11 +78,13 @@ async function getFreshChatMemberForAuthorization(
     return null;
   }
   if (!response.ok) {
-    await drainResponseBody(response);
+    await cancelResponseBodyQuietly(response);
     return null;
   }
   try {
-    const body = (await response.json()) as { ok?: boolean; result?: { status?: string } };
+    const body = await readResponseJsonWithinLimitWithSignal<{ ok?: boolean; result?: { status?: string } }>(
+      response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+    );
     return body.ok && body.result ? body.result : null;
   } catch {
     return null;
