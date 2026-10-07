@@ -165,6 +165,49 @@ function canonicalChainKey(raw: string): string {
   return resolveChainId(raw) ?? raw.toLowerCase();
 }
 
+/**
+ * DefiLlama's legacy "Hyperliquid L1" label includes these HyperEVM ERC-20
+ * observations. Their pinned adapters read the exact EVM contracts below, not
+ * HyperCore token IDs. This is provider identity repair, never a global chain
+ * alias or a new quantity; USDC's genuine HyperCore row stays on HyperCore.
+ *
+ * Reviewed 2026-10-07 against DefiLlama/peggedassets-server commit
+ * 43ea0e28655f7391e57ac687f84377c0bcf8a39a, under src/adapters/peggedAssets/.
+ * Each comment names the exact adapter evidence file.
+ */
+const DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES: Readonly<Record<string, {
+  llamaId: string;
+  address: string;
+}>> = {
+  // tether/layerzeroConfig.ts
+  "usdt-tether": { llamaId: "1", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb" },
+  // ethena-usde/layerzeroConfig.ts
+  "usde-ethena": { llamaId: "146", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34" },
+  // m-by-m^0/index.ts
+  "m-m0": { llamaId: "213", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b" },
+  // frax-usd/index.ts
+  "frxusd-frax": { llamaId: "235", address: "0x80eede496655fb9047dd39d9f418d5483ed600df" },
+  // reservoir-stablecoin/layerzeroConfig.ts
+  "rusd-reservoir": { llamaId: "217", address: "0x866d66f64fb81461903e1e38d998e747ecf35e78" },
+};
+
+function canonicalProviderSupplyChainKey(
+  assetId: string,
+  raw: string,
+  contracts?: V9ExtensionRegistryMeta["contracts"],
+): string {
+  const identity = DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES[assetId];
+  if (identity !== undefined && (raw === "Hyperliquid L1" || raw === "hyperliquid")) {
+    const meta = ACTIVE_META_BY_ID.get(assetId);
+    if (meta?.detailProvider === "defillama" && meta.llamaId === identity.llamaId &&
+        (contracts ?? meta.contracts)?.some(contract => contract.chain === "hyperevm" &&
+          contract.address.toLowerCase() === identity.address)) {
+      return "hyperevm";
+    }
+  }
+  return canonicalChainKey(raw);
+}
+
 function routeChain(routeId: string): string | null {
   const separator = routeId.indexOf(":");
   return separator > 0 ? canonicalChainKey(routeId.slice(0, separator)) : null;
@@ -684,7 +727,7 @@ export function buildSafetyScoreV9SupplyReview(
 
   const supplyByChain = new Map<string, { sourceChain: string; supplyUsd: number }>();
   for (const chain of chains) {
-    const key = canonicalChainKey(chain);
+    const key = canonicalProviderSupplyChainKey(assetId, chain, options.meta?.contracts);
     const existing = supplyByChain.get(key);
     supplyByChain.set(key, {
       sourceChain: existing?.sourceChain ?? chain,
@@ -778,7 +821,7 @@ export function buildSafetyScoreV9SupplyReview(
       // independent chains into one unknown remainder. Ambiguous profile
       // matches retain a separate fail-closed disposition.
       unknownUsd += supplyUsd;
-      const deploymentRouteKey = unmatchedRouteKey(assetId, sourceChain, chainRoutes.length);
+      const deploymentRouteKey = unmatchedRouteKey(assetId, chain, chainRoutes.length);
       selectedBridgeRoutes.push({
         deploymentRouteKey,
         supplyUsd,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { observeEconomicSolanaMint } from "../safety-score-v9/economic-supply-observer";
 import type { SafetyScoreV9SolanaRpcFetcher } from "../safety-score-v9/supply-observation-primitives";
+import type { fetchSafetyScoreV9SolanaRpc } from "../safety-score-v9/supply-observation-primitives";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildChainRpcs, logScanRpcEndpoints } from "../chain-registry";
@@ -64,6 +65,9 @@ function censusDependencies(moveOverride: Partial<MoveFungibleAssetSupplyObserva
       amount: "100", slot: "100:99", blockHash: "1".repeat(32),
       observedAtSec: CLOCK - 10, responseSha256: "a".repeat(64),
     }),
+    fetchSafetyScoreV9SolanaRpc: async <T>(_method: string, params: unknown[]): Promise<T | null> => ({
+      context: { slot: 100 }, value: (params[0] as string[]).map(() => null),
+    }) as T,
     fetchMoveFungibleAssetSupply: async () => ({
       rawSupply: 0n, decimals: 6, ledgerVersion: "123456789",
       ledgerTimestampSec: CLOCK - 10, ...moveOverride,
@@ -114,6 +118,64 @@ describe("complete independent-liability censuses", () => {
     expect(generation.observationsByAssetId["sfrxusd-frax"]?.find(row => row.deploymentKey.startsWith("aptos:")))
       .toMatchObject({ rawTokenUnits: "0", decimals: 6, blockNumber: "123456789", observedAtSec: CLOCK - 10, status: "accepted" });
   });
+
+  it("captures all finalized Solana mints before shared anchor reads can advance their context", async () => {
+    const methods: string[] = [];
+    const fetch: typeof fetchSafetyScoreV9SolanaRpc =
+      async <T>(method: string, params: unknown[]): Promise<T | null> => {
+        methods.push(method);
+        if (method === "getMultipleAccounts") return {
+          context: { slot: 100 },
+          value: (params[0] as string[]).map(address => ({
+            owner: PROGRAM, data: { parsed: { type: "mint", info: {
+              decimals: address === ADDRESS ? 6 : 9, supply: "100",
+            } } },
+          })),
+        } as T;
+        if (method === "getBlocks") return [99] as T;
+        if (method === "getBlock") return { blockTime: CLOCK - 10, blockhash: "1".repeat(32) } as T;
+        // No later getAccountInfo can silently substitute a newer snapshot.
+        throw new Error(`Unexpected sequential Solana read: ${method}`);
+      };
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      ...input(), activeAssetIds: ["usdai-usd-ai", "wsrusd-reservoir"],
+    }, { ...censusDependencies(), observeEconomicSolanaMint, fetchSafetyScoreV9SolanaRpc: fetch });
+    expect(methods).toEqual(["getMultipleAccounts", "getBlocks", "getBlock"]);
+    for (const assetId of ["usdai-usd-ai", "wsrusd-reservoir"]) {
+      expect(generation.observationsByAssetId[assetId].find(row => row.deploymentKey.startsWith("solana:")))
+        .toMatchObject({ status: "accepted", blockNumber: "100", observedAtSec: CLOCK - 10, rawTokenUnits: "100" });
+    }
+  });
+
+  it.each(["unavailable", "wrong-count", "future", "decimals", "missing-mint"] as const)(
+    "keeps %s batched Solana evidence rejected without a partial partition",
+    async fault => {
+      const fetch: typeof fetchSafetyScoreV9SolanaRpc =
+        async <T>(method: string, params: unknown[]): Promise<T | null> => {
+          if (method === "getMultipleAccounts") {
+            if (fault === "unavailable") return null;
+            return { context: { slot: 100 }, value: fault === "wrong-count" ? [] :
+              (params[0] as string[]).map(() => fault === "missing-mint" ? null : {
+                owner: PROGRAM, data: { parsed: { type: "mint", info: {
+                  decimals: fault === "decimals" ? 18 : 9, supply: "100",
+                } } },
+              }),
+            } as T;
+          }
+          if (method === "getBlocks") return [99] as T;
+          if (method === "getBlock") return {
+            blockTime: fault === "future" ? CLOCK + 1 : CLOCK - 10, blockhash: "1".repeat(32),
+          } as T;
+          return null;
+        };
+      const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+        ...input(), activeAssetIds: ["wsrusd-reservoir"],
+      }, { ...censusDependencies(), observeEconomicSolanaMint, fetchSafetyScoreV9SolanaRpc: fetch });
+      expect(generation.observationsByAssetId["wsrusd-reservoir"].find(row => row.deploymentKey.startsWith("solana:"))?.status)
+        .toBe("rejected");
+      expect(packet("wsrusd-reservoir", generation)).toBeNull();
+    },
+  );
 
   it.each([
     { decimals: 18 }, { ledgerVersion: "not-a-version" },
