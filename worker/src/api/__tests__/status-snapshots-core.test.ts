@@ -118,7 +118,7 @@ describe("handleStatus", () => {
     ]);
     const response = await handleStatus({ db, trustedAdmin: true, v9WorkflowMode });
     const body = await readJsonResponse<{ crons: Record<string, unknown> }>(response, 200);
-    expect(Object.hasOwn(body.crons, job)).toBe(v9WorkflowMode === "shadow");
+    expect(job in body.crons).toBe(v9WorkflowMode === "shadow");
     expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
   });
 

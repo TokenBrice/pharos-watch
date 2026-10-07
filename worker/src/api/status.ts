@@ -169,7 +169,7 @@ async function resolveRawStatusForResponse(
 
   const snapshot = await loadStatusRawSnapshot(db, now);
   const workflowExpectationChanged = snapshot.kind === "fresh"
-    && Object.hasOwn(snapshot.raw.crons, "compute-safety-score-v9-workflow")
+    && ("compute-safety-score-v9-workflow" in snapshot.raw.crons)
       !== isCronJobExpected("compute-safety-score-v9-workflow", v9WorkflowMode);
   const currentReserve = snapshot.kind === "fresh"
     ? await computeReserveCompositionOverview(db, now).catch(() => null) : null;
