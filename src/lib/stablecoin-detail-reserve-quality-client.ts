@@ -131,7 +131,8 @@ const TOP_POSITION_RISKS: ReadonlySet<ReserveRisk> = new Set(["medium", "high", 
  */
 export const LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT = 60;
 
-// Chip tone strings match the oracle/bridge TIER_TONES palette byte-for-byte.
+// Shared severity pills: the same strings the oracle tier chip and
+// `COLLATERAL_COVERAGE_PILL_CLASSES` (`@shared/lib/classification`) use.
 const CHIP_TONES = {
   ok: SEVERITY_TONE_CLASS.ok.pill,
   info: SEVERITY_TONE_CLASS.info.pill,

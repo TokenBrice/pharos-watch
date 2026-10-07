@@ -202,7 +202,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   mintVolume24hUsd={coin.mintVolume24hUsd}
                   burnVolume24hUsd={coin.burnVolume24hUsd}
                 />
-                <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+                <p className="mt-3 max-w-[36ch] text-pretty text-center text-xs leading-relaxed text-muted-foreground">
                   {volumeCaption}
                 </p>
               </>
@@ -244,7 +244,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                       : undefined
                   }
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                     {cell.label}
                     {isPartial && <span className="ml-1 normal-case tracking-normal">partial</span>}
                   </p>
@@ -297,7 +297,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           ) : (
             <UnreportedStat />
           )}
-          <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+          <p className="mt-2 text-pretty text-xs leading-relaxed text-muted-foreground">
             {pressureUnavailableNote ?? pressureSignal.helper}
           </p>
         </div>
@@ -319,7 +319,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           ) : (
             <UnreportedStat />
           )}
-          <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+          <p className="mt-2 text-pretty text-xs leading-relaxed text-muted-foreground">
             {buildFlowSummaryNarrative(netDirection, pressureState)}
           </p>
         </div>

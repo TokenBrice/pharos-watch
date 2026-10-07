@@ -18,6 +18,7 @@ import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-co
 import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { selectMintAuthorityDetailControls } from "@/lib/stablecoin-detail-mint-authority-client";
+
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -434,6 +435,13 @@ export interface PublishedMintProjection {
   issuanceSummary?: SafetyScoreV9IssuanceSummary | null;
 }
 
+/**
+ * Measured issuance-process values, shown under the grouped diagnostics. The
+ * governance `incompleteReasonCounts` are not projected: they count distinct
+ * reason strings on a different basis from the published diagnostic findings
+ * (GHO: economic reach 24 reasons vs 28 findings), so printing both made the
+ * fold contradict itself. The grouped diagnostics are the one reason ledger.
+ */
 function projectProcessMetrics(summary: SafetyScoreV9IssuanceSummary | null | undefined): MintAuthorityProcessMetricViewModel[] {
   const metrics: MintAuthorityProcessMetricViewModel[] = [];
   if (summary?.governance) {
@@ -441,9 +449,6 @@ function projectProcessMetrics(summary: SafetyScoreV9IssuanceSummary | null | un
     metrics.push({ label: "Actual governed-path delay", value: governance.minUnavoidableDelaySec === null ? "Unproved" : `${governance.minUnavoidableDelaySec} s` });
     const concentration = governance.votingControl.largestSingleControllerShareBps;
     metrics.push({ label: "Largest single voting controller", value: concentration === null ? "Unproved" : `${concentration / 100}% (diagnostic, not a concentration cap)` });
-    for (const reason of governance.incompleteReasonCounts) {
-      metrics.push({ label: `Governance coverage reason: ${reason.code}`, value: `${reason.count} occurrence(s)` });
-    }
   }
   if (summary?.process) {
     const process = summary.process;

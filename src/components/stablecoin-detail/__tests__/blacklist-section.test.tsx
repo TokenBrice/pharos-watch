@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -22,6 +22,43 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 import { BlacklistHistorySection, BlacklistSection } from "@/components/stablecoin-detail/blacklist-section";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistEvent } from "@shared/types";
+
+type EventsPageResult = ReturnType<typeof useBlacklistEventsPage>;
+
+const FREEZE_EVENT: BlacklistEvent = {
+  id: "evt-1",
+  stablecoin: "USDC",
+  chainId: "ethereum",
+  chainName: "Ethereum",
+  eventType: "blacklist",
+  address: "0x0000000000000000000000000000000000000001",
+  amountNative: null,
+  amountUsdAtEvent: null,
+  amountSource: "unavailable",
+  amountStatus: "permanently_unavailable",
+  txHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  blockNumber: 1,
+  timestamp: Date.parse("2026-05-30T00:00:00Z"),
+  methodologyVersion: "5.91",
+  contractAddress: null,
+  configKey: null,
+  eventSignature: null,
+  eventTopic0: null,
+  explorerTxUrl: "https://etherscan.io/tx/0x0",
+  explorerAddressUrl: "https://etherscan.io/address/0x0",
+};
+
+const ONE_EVENT_PAGE = {
+  data: { events: [FREEZE_EVENT], total: 1 },
+  isLoading: false,
+  isError: false,
+} as unknown as EventsPageResult;
+
+const EMPTY_EVENT_PAGE = {
+  data: { events: [], total: 0 },
+  isLoading: false,
+  isError: false,
+} as unknown as EventsPageResult;
 
 function summaryStub(
   overrides: {
@@ -83,34 +120,8 @@ describe("BlacklistSection", () => {
   });
 
   it("links the full event feed through the canonical Freezewatch URL", () => {
-    const event: BlacklistEvent = {
-      id: "evt-1",
-      stablecoin: "USDC",
-      chainId: "ethereum",
-      chainName: "Ethereum",
-      eventType: "blacklist",
-      address: "0x0000000000000000000000000000000000000001",
-      amountNative: null,
-      amountUsdAtEvent: null,
-      amountSource: "unavailable",
-      amountStatus: "permanently_unavailable",
-      txHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      blockNumber: 1,
-      timestamp: Date.parse("2026-05-30T00:00:00Z"),
-      methodologyVersion: "5.91",
-      contractAddress: null,
-      configKey: null,
-      eventSignature: null,
-      eventTopic0: null,
-      explorerTxUrl: "https://etherscan.io/tx/0x0",
-      explorerAddressUrl: "https://etherscan.io/address/0x0",
-    };
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    vi.mocked(useBlacklistEventsPage).mockReturnValueOnce({
-      data: { events: [event], total: 1 },
-      isLoading: false,
-      isError: false,
-    } as unknown as ReturnType<typeof useBlacklistEventsPage>);
+    vi.mocked(useBlacklistEventsPage).mockReturnValueOnce(ONE_EVENT_PAGE);
 
     const { getByRole } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
 
@@ -156,5 +167,69 @@ describe("BlacklistSection", () => {
         .some((node) => node.textContent?.includes("refresh failed; showing the last available data")),
     ).toBe(true);
     expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
+  });
+
+  describe("Activity and History split", () => {
+    // Both sections mount on the same page; each piece of blacklist content
+    // must render in exactly one of them.
+    function renderBoth() {
+      const { container } = render(
+        <>
+          <BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />
+          <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />
+        </>,
+      );
+      const activity = container.querySelector<HTMLElement>("#blacklist");
+      const history = container.querySelector<HTMLElement>("#blacklist-history");
+      if (!activity || !history) throw new Error("both blacklist sections should be mounted");
+      return { activity, history };
+    }
+
+    beforeEach(() => {
+      vi.mocked(useBlacklistEventsPage).mockReturnValue(ONE_EVENT_PAGE);
+    });
+
+    afterEach(() => {
+      vi.mocked(useBlacklistEventsPage).mockReturnValue(EMPTY_EVENT_PAGE);
+    });
+
+    it("keeps summary stats in Activity and the event feed in History", () => {
+      vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
+      const { activity, history } = renderBoth();
+
+      expect(within(activity).queryAllByText(/Frozen addresses/i)).toHaveLength(1);
+      expect(within(history).queryAllByText(/Frozen addresses/i)).toHaveLength(0);
+      expect(within(history).queryAllByTestId("stablecoin-blacklist-events-table")).toHaveLength(1);
+      expect(within(activity).queryAllByTestId("stablecoin-blacklist-events-table")).toHaveLength(0);
+    });
+
+    it("reports a stale summary once, in Activity", () => {
+      vi.mocked(useBlacklistSummary).mockReturnValue({
+        ...summaryStub(),
+        error: new Error("summary refresh failed"),
+        dataUpdatedAt: Date.parse("2026-07-10T00:00:00Z"),
+        refetch: vi.fn(),
+      } as ReturnType<typeof useBlacklistSummary>);
+      const { activity, history } = renderBoth();
+
+      expect(within(activity).queryAllByRole("status").length).toBeGreaterThan(0);
+      expect(within(history).queryAllByRole("status")).toHaveLength(0);
+    });
+
+    it("reports an unavailable summary once and still shows the independently loaded feed", () => {
+      vi.mocked(useBlacklistSummary).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        error: new Error("summary failed"),
+        dataUpdatedAt: 0,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useBlacklistSummary>);
+      const { activity, history } = renderBoth();
+
+      expect(within(activity).getAllByRole("alert")).toHaveLength(1);
+      expect(within(history).queryAllByRole("alert")).toHaveLength(0);
+      expect(within(history).queryAllByTestId("stablecoin-blacklist-events-table")).toHaveLength(1);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { CONTROL_POSTURE_STYLES, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import { CONTROL_POSTURE_STYLES, GOVERNANCE_LABELS } from "@shared/lib/classification";
 import type { GovernanceQuality, StablecoinMeta } from "@shared/types";
 
 type ControlPostureCoin = Pick<
@@ -47,6 +47,12 @@ function deriveScope(key: GovernanceQuality, variantOf?: string): ControlPosture
   return "LOCAL";
 }
 
+const SCOPE_LABELS: Record<ControlPostureScope, string> = {
+  LOCAL: "Local",
+  INHERITED: "Inherited",
+  WRAPPER: "Wrapper",
+};
+
 function buildVariantDetail(
   coin: ControlPostureCoin,
   parent: ControlPostureParent | null | undefined,
@@ -54,15 +60,15 @@ function buildVariantDetail(
 ): string | null {
   if (!coin.variantOf) {
     return scope === "WRAPPER"
-      ? "This record is classified as a wrapper, but it does not declare a tracked parent through variantOf."
+      ? "This record is classified as a wrapper, but it does not name a tracked parent asset."
       : null;
   }
 
-  const parentLabel = parent ? `${parent.name} (${parent.symbol})` : coin.variantOf;
+  const parentLabel = parent ? `${parent.name} (${parent.symbol})` : "its parent asset";
   if (scope === "INHERITED") {
-    return `${coin.symbol} is a tracked variant of ${parentLabel}; this posture describes wrapper-level control inherited from that parent relationship.`;
+    return `${coin.symbol} is a tracked variant of ${parentLabel}; this posture describes wrapper-level control inherited from that parent.`;
   }
-  return `${coin.symbol} is a tracked variant of ${parentLabel}, but its posture is authored as local control rather than the wrapper / inherited category.`;
+  return `${coin.symbol} is a tracked variant of ${parentLabel}, but its posture is reviewed as its own local control rather than inherited.`;
 }
 
 export function buildControlPostureView(
@@ -74,7 +80,7 @@ export function buildControlPostureView(
 
   const style = CONTROL_POSTURE_STYLES[key];
   const scope = deriveScope(key, coin.variantOf);
-  const taxonomy = GOVERNANCE_LABELS_SHORT[coin.flags.governance].toUpperCase();
+  const taxonomy = GOVERNANCE_LABELS[coin.flags.governance];
   const variantDetail = buildVariantDetail(coin, parent, scope);
 
   return {
@@ -83,17 +89,17 @@ export function buildControlPostureView(
     shortLabel: style.shortLabel,
     badgeClassName: style.badgeClassName,
     scope,
-    summary: `${coin.symbol} control posture: ${style.label}. This classification is descriptive; V10 Economic Control is scored through mint, oracle, and bridge evidence.`,
+    summary: `${coin.symbol} control posture: ${style.label}. Descriptive only; the Economic Control score comes from mint, oracle and bridge evidence.`,
     facts: [
       { key: "posture", label: "Posture", value: style.label },
-      { key: "taxonomy", label: "Taxonomy", value: taxonomy },
-      { key: "scope", label: "Scope", value: scope },
-      { key: "scoring-role", label: "Scoring role", value: "DESCRIPTIVE" },
+      { key: "taxonomy", label: "Governance", value: taxonomy },
+      { key: "scope", label: "Scope", value: SCOPE_LABELS[scope] },
+      { key: "scoring-role", label: "Scoring role", value: "Descriptive" },
     ],
     details: [
       POSTURE_EXPLANATIONS[key],
-      `The ${taxonomy} taxonomy is the broader protocol classification from flags.governance. Control posture is the finer description of where operational authority sits.`,
-      "Control posture is not a Safety Score input. Mint Authority and the applicable oracle and bridge evidence provide the reviewed facts used by V10 Economic Control.",
+      `${taxonomy} is the broader governance classification. Control posture describes more precisely where operational authority sits.`,
+      "Control posture is not a Safety Score input. Economic Control is scored from the reviewed mint authority, oracle and bridge evidence.",
       ...(variantDetail ? [variantDetail] : []),
     ],
   };

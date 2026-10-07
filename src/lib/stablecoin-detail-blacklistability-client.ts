@@ -26,7 +26,7 @@ export interface BlacklistabilityClientSummary {
   /** How the status was established: cited sources, a rationale, or neither. */
   basisLabel: string;
   sourceFreeRationale: string | null;
-  /** Upstream coin name (or id) when the freeze power sits with a parent asset. */
+  /** Upstream coin name when the freeze power sits with a tracked parent asset; never a raw id. */
   upstreamLabel: string | null;
   sources: StablecoinLink[];
   reviewedAt: string | null;
@@ -60,13 +60,14 @@ function statusValue(value: unknown): BlacklistabilityClientStatus | null {
  * inheritance without a variant edge. Roughly half of the inherited reviews
  * carry neither — those are protocol tokens whose exposure runs through a
  * collateral basket rather than one named issuer, and their evidence prose
- * carries the explanation instead.
+ * carries the explanation instead. A parent the registry does not track has
+ * no reader name, so it resolves to null rather than leaking its coin id.
  */
 function resolveUpstream(coin: StablecoinMeta, parentById?: ReadonlyMap<string, StablecoinMeta>): string | null {
   const mintAuthority = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
   const upstreamId = stringValue(coin.variantOf) ?? stringValue(mintAuthority?.inheritedFrom);
   if (!upstreamId) return null;
-  return stringValue(parentById?.get(upstreamId)?.name) ?? upstreamId;
+  return stringValue(parentById?.get(upstreamId)?.name);
 }
 
 function buildStatusNote(status: BlacklistabilityClientStatus, upstreamLabel: string | null): string {

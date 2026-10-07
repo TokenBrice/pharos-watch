@@ -175,4 +175,50 @@ describe("PriceTransparencyCard", () => {
     expect(container.querySelector('img[src*="kraken.png"]')).toBeTruthy();
     expect(container.querySelector('img[src*="uniswap-v3.png"]')).toBeTruthy();
   });
+
+  describe("DEX check verdict", () => {
+    // A yield-bearing NAV token: the payload's deviation is measured against
+    // the token's own reference price, so a matching print agrees.
+    const navCheck = { agrees: true, dexPrice: 1.2513, dexDeviationBps: -1, sourcePools: 9, sourceTvl: 40_000_000 };
+
+    it.each([
+      { compact: false, agrees: true },
+      { compact: true, agrees: true },
+      { compact: false, agrees: false },
+      { compact: true, agrees: false },
+    ])("renders exactly the published verdict (compact=$compact, agrees=$agrees)", ({ compact, agrees }) => {
+      render(
+        <PriceTransparencyCard
+          coinData={{ ...makeCoinData("coingecko"), price: 1.2514 }}
+          consensusSources={["coingecko"]}
+          agreeSources={["coingecko"]}
+          dexPriceCheck={{ ...navCheck, agrees }}
+          compact={compact}
+        />,
+      );
+      expect(screen.queryByText("Agrees") !== null).toBe(agrees);
+      expect(screen.queryByText("Disagrees") !== null).toBe(!agrees);
+      expect(screen.getByText("$1.2513")).toBeTruthy();
+    });
+
+    it.each([
+      { label: "no published check", coinData: makeCoinData("coingecko"), check: null },
+      {
+        label: "an unobserved price",
+        coinData: { ...makeCoinData("protocol-par"), priceObservedAtMode: "nominal_reference" as const },
+        check: navCheck,
+      },
+    ])("shows no agree/disagree verdict with $label", ({ coinData, check }) => {
+      render(
+        <PriceTransparencyCard
+          coinData={coinData}
+          consensusSources={["coingecko"]}
+          agreeSources={["coingecko"]}
+          dexPriceCheck={check}
+        />,
+      );
+      expect(screen.queryByText("Agrees")).toBeNull();
+      expect(screen.queryByText("Disagrees")).toBeNull();
+    });
+  });
 });

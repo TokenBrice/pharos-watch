@@ -15,6 +15,7 @@ import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
+import type { BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
@@ -74,6 +75,10 @@ interface StablecoinDetailClientProps {
   mechanismBacking?: MechanismBackingView | null;
   mechanismCollateralization?: MechanismCollateralizationView | null;
   mechanismReview?: MechanismReviewView | null;
+  /** The variant parent's `deriveLiquidationEngine` result, for a wrapper's Mechanism flow. */
+  parentLiquidationEngine?: boolean | null;
+  /** A pure or savings pass-through wrapper's parent, for the Backing KPI's "via <parent>" look-through. */
+  backingParent?: NonNullable<BackingMetricsInput["parent"]> | null;
   transferReview?: TransferReviewView | null;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
@@ -111,6 +116,8 @@ function StablecoinDetailClientContent({
   mechanismBacking = null,
   mechanismCollateralization = null,
   mechanismReview = null,
+  parentLiquidationEngine = null,
+  backingParent = null,
   transferReview = null,
   exploreNextContent = null,
   faqContent = null,
@@ -184,6 +191,8 @@ function StablecoinDetailClientContent({
         mechanismBacking={mechanismBacking}
         mechanismCollateralization={mechanismCollateralization}
         mechanismReview={mechanismReview}
+        parentLiquidationEngine={parentLiquidationEngine}
+        backingParent={backingParent}
         transferReview={transferReview}
         onFeedbackOpenChange={setFeedbackOpen}
         overviewGateRef={overviewGateRef}

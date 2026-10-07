@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect, vi } from "vitest";
 import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
@@ -427,6 +428,71 @@ describe("handlePegSummary", () => {
       agrees: true,
       sourcePools: 4,
       sourceTvl: 10_000_000,
+    });
+  });
+
+  describe("DEX price check basis", () => {
+    async function dexCheckFor(asset: StablecoinData, dexPriceUsd: number) {
+      const cacheValue = JSON.stringify({ peggedAssets: [asset] });
+      const db = mockD1([
+        {
+          match: "cache",
+          rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+          first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+        },
+        { match: "depeg_events", rows: [] },
+        {
+          match: "dex_prices",
+          rows: [{
+            stablecoin_id: asset.id,
+            dex_price_usd: dexPriceUsd,
+            deviation_from_primary_bps: null,
+            source_pool_count: 4,
+            source_total_tvl: 10_000_000,
+            updated_at: nowSec - 60,
+          }],
+        },
+        { match: "supply_history", rows: [] },
+      ]);
+      const body = (await readJsonResponse(await handlePegSummary(db), 200)) as {
+        coins: Array<{ id: string; dexPriceCheck?: { dexDeviationBps: number; agrees: boolean } }>;
+      };
+      return body.coins.find((coin) => coin.id === asset.id)?.dexPriceCheck;
+    }
+
+    const navAsset = (overrides: Partial<StablecoinData> = {}) => makeAsset({
+      id: "susde-ethena",
+      name: "Ethena Staked USDe",
+      symbol: "sUSDe",
+      geckoId: "ethena-staked-usde",
+      price: 1.2514,
+      ...overrides,
+    });
+
+    it("measures a NAV token against its own reference price, not the peg unit", async () => {
+      const check = await dexCheckFor(navAsset(), 1.2513);
+      expect(check?.agrees).toBe(true);
+      expect(Math.abs(check?.dexDeviationBps ?? Number.POSITIVE_INFINITY)).toBeLessThan(50);
+    });
+
+    it("still flags a NAV token whose DEX print diverges from its reference price", async () => {
+      const check = await dexCheckFor(navAsset(), 1.2);
+      expect(check?.agrees).toBe(false);
+    });
+
+    it.each<{ label: string; overrides: Partial<StablecoinData> }>([
+      { label: "missing", overrides: { price: null } },
+      { label: "nominal-only", overrides: { priceObservedAtMode: "nominal_reference" } },
+    ])("publishes no verdict for a NAV token whose reference price is $label", async ({ overrides }) => {
+      expect(await dexCheckFor(navAsset(overrides), 1.2513)).toBeUndefined();
+    });
+
+    it("keeps comparing a fixed-peg token with its peg", async () => {
+      // Primary and DEX both read 0.97: the deviation is measured against the
+      // $1 peg, and the two sources agree on that depeg.
+      const check = await dexCheckFor(makeAsset({ price: 0.97 }), 0.97);
+      expect(check?.dexDeviationBps).toBe(-300);
+      expect(check?.agrees).toBe(true);
     });
   });
 

@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronDown, ExternalLink } from "lucide-react";
-import { MODULE_DISCLOSURE_SUMMARY_CLASS } from "@/components/stablecoin-detail/module-disclosure";
+import { ChevronDown } from "lucide-react";
+import { MODULE_DISCLOSURE_SUMMARY_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { SourceLinkList, type SourceLink } from "@/components/stablecoin-detail/source-link-list";
 import { useShowWorkMode } from "@/hooks/use-show-work-mode";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 import { cn } from "@/lib/utils";
 
-export interface EvidenceFooterSource {
-  label: string;
-  url: string;
-  /** Trailing annotation after the link, e.g. "Supports capacity". */
-  note?: string;
-}
+/** A folded source row; rendered by the shared `SourceLinkList`. */
+export type EvidenceFooterSource = SourceLink;
 
 /**
  * Footer controls keep the 16 px text line but carry a >= 32 px hit area: the
@@ -22,7 +19,6 @@ export interface EvidenceFooterSource {
  */
 const FOOTER_LINK_CLASS =
   "pharos-focus-ring -my-2 inline-flex min-h-8 items-center rounded-sm hover:text-foreground hover:underline hover:underline-offset-4";
-const FOOTER_TOGGLE_CLASS = "pharos-focus-ring -my-2 inline-flex min-h-11 items-center gap-1 rounded-sm lg:min-h-8";
 
 /**
  * The sitewide score-inputs switch, drawn as a disclosure: it folds the
@@ -42,21 +38,56 @@ function ScoreInputsDisclosure() {
       <span className="underline decoration-dashed underline-offset-2">Score inputs</span>
       <ChevronDown
         aria-hidden="true"
-        className={cn("h-3 w-3 shrink-0 transition-transform", enabled && "rotate-180")}
+        className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", enabled && "rotate-180")}
       />
     </button>
   );
 }
 
+const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
+
 /**
- * The standard module footer: one line carrying the methodology links, the
- * folded "Sources (N)" affordance, and the right-aligned reviewed/updated
- * stamp. Sources stay collapsed by default at every breakpoint; the list is
- * kept in the DOM (`hidden`) so citations remain crawlable.
+ * Footer dates are ISO (`YYYY-MM-DD`) everywhere, whatever the source field
+ * carries ("2026-10-06T…", "Oct 6, 2026"). A date-only string parses as local
+ * midnight on server and client alike, so its local calendar date is stable
+ * across hydration. Unparseable values pass through untouched.
+ */
+function toIsoDate(value: string): string {
+  if (ISO_DATE_PREFIX.test(value)) return value.slice(0, 10);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${parsed.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * The standard module provenance (plan §8c): **one** folded disclosure, then
+ * **one** footer line.
+ *
+ * - The fold is a `ModuleDisclosure` (native `<details>`, collapsed at every
+ *   breakpoint, kept in the DOM so citations stay crawlable). With `notes` it
+ *   reads "Review notes & sources (N)" and holds the notes, then the source
+ *   list; without notes it reads "Sources (N)". It merges what used to be a
+ *   separate "Review notes" fold and a footer sources toggle, and sits last in
+ *   the module's disclosure order, in the same zero-gap run as the folds above
+ *   it (`MODULE_FOLD_RHYTHM_CLASS`).
+ * - The line has one grammar: live freshness and links on the left
+ *   (methodology links, score inputs, `children`), the stamp on the right
+ *   (`trailing`, then `Reviewed <YYYY-MM-DD>`). The stamp never drops to a
+ *   row of its own: when space runs out the left cluster wraps beside it, so
+ *   the line stays one row in the 22rem rail whenever its content can fit.
+ * - `inline` puts the fold summary, the left items and the stamp on a single
+ *   row with no divider, for a module whose whole body is its provenance
+ *   (e.g. "Custody structure undisclosed"). An opened fold takes the full
+ *   width and the stamp wraps below it.
  *
  * The methodology version never prints in the footer: five modules with five
  * different version strings read as noise. It lives in the "View methodology"
  * link's tooltip instead.
+ *
+ * `className` lands on the outermost element: the footer line when there is
+ * nothing to fold, otherwise the wrapper around fold and line.
  *
  * Supersedes ad-hoc always-expanded evidence lists on the stablecoin detail
  * page; `MethodologyCardActions` remains for cards without source lists
@@ -68,89 +99,131 @@ export function EvidenceFooter({
   sources,
   sourcesLabel = "Sources",
   sourcesFootnote,
+  notes,
+  notesCount,
+  foldId,
+  reviewed,
   trailing,
+  inline = false,
   children,
   className,
 }: {
   topic?: MethodologyContextKey;
   showWorkToggle?: boolean;
   sources?: readonly EvidenceFooterSource[];
+  /** Fold label when there are no notes. */
   sourcesLabel?: string;
-  /** Rendered under the expanded source list, e.g. a provenance line. */
+  /** Rendered under the source list inside the fold, e.g. a provenance line. */
   sourcesFootnote?: ReactNode;
-  /** Right-aligned stamp, e.g. `Reviewed 2026-07-15`. */
+  /** Reviewer narrative, folded together with the sources. */
+  notes?: ReactNode;
+  /** Number of note items; added to the source count in the fold's `(N)`. */
+  notesCount?: number;
+  /** Anchor id on the fold, e.g. `mint-review-notes`; hash reveal opens it. */
+  foldId?: string;
+  /** Review date, rendered right-aligned as `Reviewed <YYYY-MM-DD>`. */
+  reviewed?: string;
+  /** Right-aligned stamp before the review date, e.g. `Live · 3h ago`. */
   trailing?: ReactNode;
-  /** Extra inline row items (module-specific links). */
+  /** Fold summary and footer line share one row, without the divider. */
+  inline?: boolean;
+  /** Extra inline row items on the left (freshness, module-specific links). */
   children?: ReactNode;
   className?: string;
 }) {
-  const [open, setOpen] = useState(false);
   const item = topic ? METHODOLOGY_CONTEXT[topic] : null;
-  const hasSources = (sources?.length ?? 0) > 0;
+  const sourceCount = sources?.length ?? 0;
+  const hasSources = sourceCount > 0;
+  const hasNotes = notes != null && notes !== false;
+  const hasFold = hasSources || hasNotes;
+  const hasChildren = children != null && children !== false;
+  const hasLeft = item != null || showWorkToggle || hasChildren;
+  const hasStamp = Boolean(trailing) || Boolean(reviewed);
+
+  const left = hasLeft ? (
+    <>
+      {item ? (
+        <>
+          <Link
+            href={item.methodologyPath}
+            title={item.versionLabel ? `Methodology ${item.versionLabel}` : undefined}
+            className={FOOTER_LINK_CLASS}
+          >
+            View methodology
+          </Link>
+          {item.changelogPath ? (
+            <Link href={item.changelogPath} className={FOOTER_LINK_CLASS}>
+              Version history &rarr;
+            </Link>
+          ) : null}
+        </>
+      ) : null}
+      {showWorkToggle ? <ScoreInputsDisclosure /> : null}
+      {children}
+    </>
+  ) : null;
+
+  const stamp = hasStamp ? (
+    <span className="ml-auto min-w-0 text-right">
+      {trailing}
+      {trailing && reviewed ? " · " : null}
+      {reviewed ? <span className="whitespace-nowrap">{`Reviewed ${toIsoDate(reviewed)}`}</span> : null}
+    </span>
+  ) : null;
+
+  const fold = hasFold ? (
+    <ModuleDisclosure
+      id={foldId}
+      // One label for the merged fold (plan §3 rule 6), even when the review
+      // cites no sources: the notes then state that none are published.
+      label={hasNotes ? "Review notes & sources" : sourcesLabel}
+      count={
+        hasNotes
+          ? (notesCount != null || hasSources ? (notesCount ?? 0) + sourceCount : undefined)
+          : sourceCount
+      }
+      className={inline ? "min-w-0 open:basis-full" : undefined}
+    >
+      <div className="mt-2 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">
+        {hasNotes ? <div className="space-y-2">{notes}</div> : null}
+        {sources && hasSources ? <SourceLinkList aria-label={sourcesLabel} sources={sources} className="space-y-2" /> : null}
+        {hasSources && sourcesFootnote ? <div>{sourcesFootnote}</div> : null}
+      </div>
+    </ModuleDisclosure>
+  ) : null;
+
+  if (inline) {
+    if (!hasFold && !hasLeft && !hasStamp) return null;
+    return (
+      <div
+        data-module-fold={hasFold ? "" : undefined}
+        className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground", className)}
+      >
+        {fold}
+        {left}
+        {stamp}
+      </div>
+    );
+  }
+
+  const line = hasLeft || hasStamp ? (
+    <div
+      className={cn(
+        "flex items-baseline gap-x-3 border-t border-border/50 pt-3 text-xs text-muted-foreground",
+        hasFold ? undefined : className,
+      )}
+    >
+      {hasLeft ? <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">{left}</div> : null}
+      {stamp}
+    </div>
+  ) : null;
+
+  if (!hasFold) return line;
 
   return (
-    <div className={cn("border-t border-border/50 pt-3 text-xs text-muted-foreground", className)}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {item ? (
-          <>
-            <Link
-              href={item.methodologyPath}
-              title={item.versionLabel ? `Methodology ${item.versionLabel}` : undefined}
-              className={FOOTER_LINK_CLASS}
-            >
-              View methodology
-            </Link>
-            {item.changelogPath ? (
-              <Link href={item.changelogPath} className={FOOTER_LINK_CLASS}>
-                Version history &rarr;
-              </Link>
-            ) : null}
-          </>
-        ) : null}
-        {showWorkToggle ? <ScoreInputsDisclosure /> : null}
-        {children}
-        {hasSources ? (
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            className={FOOTER_TOGGLE_CLASS}
-          >
-            <span className="underline decoration-dashed underline-offset-2">{sourcesLabel}</span>
-            <span aria-hidden="true" className="pharos-numeric">
-              ({sources?.length})
-            </span>
-            <ChevronDown
-              aria-hidden="true"
-              className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")}
-            />
-          </button>
-        ) : null}
-        {trailing ? <span className="ml-auto text-right">{trailing}</span> : null}
-      </div>
-      {hasSources ? (
-        <div hidden={!open}>
-          <ul className="mt-2.5 space-y-2">
-            {sources?.map((source) => (
-              <li key={`${source.label}:${source.url}`} className="flex min-w-0 gap-2 leading-relaxed">
-                <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-                <span className="min-w-0">
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pharos-focus-ring break-words rounded-sm underline underline-offset-2 transition-colors hover:text-foreground"
-                  >
-                    {source.label}
-                  </a>
-                  {source.note ? <span className="ml-2 text-muted-foreground/80">{source.note}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {sourcesFootnote ? <div className="mt-2">{sourcesFootnote}</div> : null}
-        </div>
-      ) : null}
+    <div data-module-fold="" className={cn("space-y-3", className)}>
+      {fold}
+      {line}
     </div>
   );
 }

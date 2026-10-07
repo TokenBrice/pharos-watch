@@ -101,6 +101,13 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
   );
 }
 
+/**
+ * History-zone event log. Activity (`BlacklistSection`) owns everything read
+ * from the summary query — stats, the quarterly chart, freshness and the
+ * summary's stale/unavailable notices — so none of it repeats here. The
+ * summary only gates visibility; the feed reports its own loading, error and
+ * empty states from the events query.
+ */
 export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
   const state = useBlacklistVisibility(symbol);
   if (!state.visible) return null;
@@ -117,25 +124,7 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
           <p className="mt-1 text-sm text-muted-foreground">
             Latest 10 freeze-ledger actions on this asset across all supported chains.
           </p>
-          {state.state === "unavailable" ? (
-            <QueryStateNotice
-              state="unavailable"
-              label="Blacklist activity data"
-              onRetry={() => void state.refetch()}
-            />
-          ) : (
-            <>
-              {state.state === "stale-with-data" ? (
-                <QueryStateNotice
-                  state="stale-with-data"
-                  label="Blacklist activity data"
-                  dataUpdatedAt={state.dataUpdatedAt}
-                  onRetry={() => void state.refetch()}
-                />
-              ) : null}
-              <BlacklistDetailEventFeed symbol={symbol} limit={10} />
-            </>
-          )}
+          <BlacklistDetailEventFeed symbol={symbol} limit={10} />
         </CardContent>
       </Card>
     </section>

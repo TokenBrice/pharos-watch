@@ -15,6 +15,7 @@ import {
   buildReserveFeedStatus,
   buildReserveSourceChip,
   liveCompositionDiffers,
+  lookThroughCompositionSlices,
   reserveSliceLabel,
   type ReserveCompositionSlice,
   formatReserveSnapshotLabel,
@@ -525,6 +526,24 @@ describe("reserve composition slices", () => {
     const slice = (label: string): ReserveCompositionSlice => ({ key: label, label, pct: 100, risk: "low", detail: null });
     expect(liveCompositionDiffers([slice("USDC")], [slice("ETH")])).toBe(true);
   });
+
+  it("draws a look-through from the parent's positive slices by share, carrying each slice's asset class as its role", () => {
+    const slices = lookThroughCompositionSlices({
+      parentId: "parent-coin",
+      parentSymbol: "PAR",
+      parentReviewedAt: null,
+      slices: [
+        { key: "a:0", name: "Hedged basis book", pct: 18.7, risk: "medium", obligor: null, assetClassLabel: null },
+        { key: "b:1", name: "CoreGhoDirectMinter", pct: 81.3, risk: "low", obligor: "Aave GHO facilitator", assetClassLabel: "Protocol position" },
+        { key: "c:2", name: "Retired sleeve", pct: 0, risk: "high", obligor: null, assetClassLabel: null },
+      ],
+    });
+    expect(slices.map((slice) => slice.pct)).toEqual([81.3, 18.7]);
+    expect(slices[0]!.label).toBe("Aave GHO facilitator");
+    expect(slices[0]!.role).toBe("Protocol position");
+    // An unclassified slice carries no role rather than an invented one.
+    expect(slices[1]!.role).toBeNull();
+  });
 });
 
 
@@ -544,10 +563,10 @@ describe("dated reserve disclosures", () => {
     });
     const stale = mode === "live-stale" ? " · Stale" : "";
     const composition = buildReserveFootnoteModel(reserves, true, "rwa backed")?.text;
-    expect(composition).toContain(`Composition as of 2026-06-30${stale} · Checked Sep 27`);
-    expect(composition).not.toContain("Sep 26");
+    expect(composition).toContain(`Composition as of 2026-06-30${stale} · Checked 2026-09-27 12:14 UTC`);
+    expect(composition).not.toContain("2026-09-26");
     const totals = formatReserveSnapshotLabel(reserves);
-    expect(totals).toContain(`Source as of Sep 26, 2026${stale} · Checked Sep 27`);
+    expect(totals).toContain(`Source as of 2026-09-26${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(totals).not.toContain("2026-06-30");
     const ageStatus = buildReserveFeedStatus(reserves, null);
     expect(ageStatus?.rows).toContain(totals);
@@ -565,8 +584,8 @@ describe("dated reserve disclosures", () => {
     });
     const stale = mode === "live-stale" ? " · Stale" : "";
     expect(buildReserveFootnoteModel(reserves, true, "commodity backed")?.text)
-      .toContain(`Composition date unavailable${stale} · Checked Sep 27`);
-    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of Sep 26, 2026");
+      .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
+    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
   });
 
   it.each(["live", "live-stale"] as const)("withholds retained legacy Tether composition dates without new metadata in %s mode", (mode) => {
@@ -578,8 +597,8 @@ describe("dated reserve disclosures", () => {
     });
     const stale = mode === "live-stale" ? " · Stale" : "";
     expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
-      .toContain(`Composition date unavailable${stale} · Checked Sep 27`);
-    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of Sep 26, 2026");
+      .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
+    expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
   });
 
   it.each(["2026-02-30", "2026-13-01", "2026-6-30", "2026-06-30T00:00:00Z", "", 20260630])(
@@ -643,7 +662,7 @@ describe("dated reserve disclosures", () => {
       true,
       "rwa backed",
     )?.text;
-    expect(label).toMatch(/^Source as of \w+ 30, 2026 · Checked /);
+    expect(label).toBe("Source as of 2026-06-30 · Checked 2026-09-05 12:14 UTC");
     expect(label).not.toContain("Report as of");
     expect(label).not.toContain("Source date unavailable");
   });

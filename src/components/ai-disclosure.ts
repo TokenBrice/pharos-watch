@@ -19,8 +19,25 @@ export function formatAiSummaryDate(rawDate: string): string {
   return formatUtcDayLabel(date);
 }
 
-export function buildAiDisclosureLine(fields: AiDisclosureFields): string | null {
+/** `YYYY-MM-DD` day of an ISO date or timestamp; anything else is returned as-is. */
+export function formatAiSummaryIsoDate(rawDate: string): string {
+  return rawDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? rawDate;
+}
+
+export interface AiDisclosureOptions {
+  /**
+   * `iso` prints review and facts dates as `YYYY-MM-DD`, the date grammar of
+   * the dossier's provenance footers; `label` (default) keeps the day label.
+   */
+  dateFormat?: "label" | "iso";
+}
+
+export function buildAiDisclosureLine(
+  fields: AiDisclosureFields,
+  { dateFormat = "label" }: AiDisclosureOptions = {},
+): string | null {
   const { authoredBy, model, reviewedBy, reviewedAt, factsAsOf } = fields;
+  const formatDate = dateFormat === "iso" ? formatAiSummaryIsoDate : formatAiSummaryDate;
 
   if (!authoredBy && !model && !reviewedBy && !reviewedAt && !factsAsOf) {
     return null;
@@ -33,12 +50,12 @@ export function buildAiDisclosureLine(fields: AiDisclosureFields): string | null
     segments.push(`drafted by ${model}`);
   }
   if (reviewedBy && reviewedAt) {
-    segments.push(`reviewed by ${reviewedBy} on ${formatAiSummaryDate(reviewedAt)}`);
+    segments.push(`reviewed by ${reviewedBy} on ${formatDate(reviewedAt)}`);
   } else if (reviewedBy) {
     segments.push(`reviewed by ${reviewedBy}`);
   }
   if (factsAsOf) {
-    segments.push(`facts as of ${formatAiSummaryDate(factsAsOf)}`);
+    segments.push(`facts as of ${formatDate(factsAsOf)}`);
   }
 
   return segments.join(" · ");

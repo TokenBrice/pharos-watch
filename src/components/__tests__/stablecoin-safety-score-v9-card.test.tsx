@@ -4,7 +4,13 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+
+/** `next/link` drops the trailing slash outside the app's `trailingSlash` config. */
+function canonicalPath(href: string): string {
+  return href.replace(/\/(?=[#?]|$)/, "");
+}
 
 // The shared V9 card fixture derives its pillars from one default quality
 // score; these suites assert on specific pillar values and on which pillar is
@@ -49,6 +55,51 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     expect(screen.getByRole("heading", { name: "Safety Score" })).toBeTruthy();
     expect(screen.queryByText("TUSD")).toBeNull();
+  });
+
+  it("links the methodology and its version history once, from the header only", () => {
+    const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    const { container } = render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+      />,
+    );
+
+    const { methodologyPath, changelogPath } = METHODOLOGY_CONTEXT.safetyScore;
+    const hrefs = Array.from(container.querySelectorAll("a[href]"), (link) => canonicalPath(link.getAttribute("href") ?? ""));
+    expect(changelogPath).toBeDefined();
+    expect(hrefs.filter((href) => href === canonicalPath(changelogPath!))).toHaveLength(1);
+    expect(hrefs.filter((href) => href === canonicalPath(methodologyPath)).length).toBeLessThanOrEqual(1);
+  });
+
+  it.each([
+    { name: "links every pillar when the page does not say which boards render", anchors: undefined, linked: ["Backing", "Exit", "Economic Control"] },
+    {
+      name: "links only the pillars whose evidence board renders",
+      anchors: { backing: "below-xl" as const, exit: "none" as const, control: "all" as const },
+      linked: ["Backing", "Economic Control"],
+    },
+  ])("$name", ({ anchors, linked }) => {
+    const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    const { container } = render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+        evidenceAnchors={anchors}
+      />,
+    );
+
+    const evidenceLinks = Array.from(container.querySelectorAll('a[href$="-evidence"]'), (link) => link.getAttribute("aria-label"));
+    expect(evidenceLinks).toEqual(linked.map((label) => `${label} evidence`));
   });
 
   it("renders rated V9 data in one full-width card without a reserve column", () => {

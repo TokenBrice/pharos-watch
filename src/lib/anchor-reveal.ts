@@ -1,14 +1,21 @@
+import { expandEvidenceModuleFor } from "@/components/stablecoin-detail/evidence-module";
+
 /**
- * Detail-page modules fold their evidence behind native `<details>`
- * (ModuleDisclosure). A hash jump that lands on — or inside — a folded
- * element must open every enclosing disclosure first, or the navigation
- * strands the user on a closed fold with no signal of where the target went.
+ * Detail-page modules hide part of their content until asked: below `md` an
+ * `EvidenceModule` tile folds to its header, and every module folds its
+ * evidence behind native `<details>` (ModuleDisclosure). A hash jump that
+ * lands on — or inside — a folded element must unfold the module and open
+ * every enclosing disclosure first, or the navigation strands the user on a
+ * closed fold with no signal of where the target went.
  *
  * Opened disclosures stay open (owner decision 2026-08-08): navigation is a
  * statement of intent, and auto-reclosing would fight the user.
  */
-export function revealAnchorTarget(target: HTMLElement | null): void {
+function revealAnchorTarget(target: HTMLElement | null): void {
   if (!target) return;
+
+  // Synchronous attribute flip, so the body is displayed before any scroll.
+  expandEvidenceModuleFor(target);
 
   // The target may itself be a disclosure (e.g. an id on a <details>).
   if (target instanceof HTMLDetailsElement) {
@@ -24,11 +31,24 @@ export function revealAnchorTarget(target: HTMLElement | null): void {
   }
 }
 
-/** Convenience for hash strings: resolve the id, then reveal. */
+/**
+ * Resolves a hash id to the element to scroll to, revealing it on the way.
+ *
+ * Some modules mount twice: the in-flow copy (below `xl`) owns the id, and the
+ * `xl+` rail copy marks itself `data-anchor-twin="<id>"`. When the owner is
+ * display-hidden at the current breakpoint (no `offsetParent` once its folds
+ * are open), the visible twin stands in, so a cold `#collateralization` at xl
+ * lands on the rail card instead of a `display: none` node.
+ */
 export function revealAnchorId(sectionId: string): HTMLElement | null {
   const target = document.getElementById(sectionId);
   revealAnchorTarget(target);
-  return target;
+  if (target && target.offsetParent !== null) return target;
+  // Inside a quoted attribute value only `"` and `\` need escaping.
+  const twin = document.querySelector<HTMLElement>(`[data-anchor-twin="${sectionId.replace(/["\\]/g, "\\$&")}"]`);
+  if (!twin) return target;
+  revealAnchorTarget(twin);
+  return twin;
 }
 
 /** Re-align a cold-load nested anchor while lazy dossier sections settle. */
