@@ -34,7 +34,7 @@ import {
   SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, settleAttribution,
 } from "../lib/safety-score-v9/capture-control";
 import { batchExecute } from "../lib/d1-primitives";
-import { buildSafetyScoreV9ResourcePressure } from "../lib/safety-score-v9/resource-budget";
+import { buildResourcePressure } from "../lib/cron-resource-pressure";
 import { ECONOMIC_SUPPLY_BODY_CAPS } from "../lib/safety-score-v9/economic-supply-observer";
 
 function diagnosticRejectedAssetIds(
@@ -191,7 +191,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
     });
   }
 
-  const resourcePressure = buildSafetyScoreV9ResourcePressure({
+  const resourcePressure = buildResourcePressure({
     phase: "supply-attribution-capture", bodyCapBytes: Math.max(...Object.values(ECONOMIC_SUPPLY_BODY_CAPS)),
   });
   try {

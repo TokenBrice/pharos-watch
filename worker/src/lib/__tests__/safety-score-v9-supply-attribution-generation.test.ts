@@ -501,6 +501,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         }, {
           startIndex: bucket,
           executionWindow: {
+            slotStartedAtSec: Math.floor(startedAtMs / 1_000),
             deadlineMs: startedAtMs + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 100,
             minimumRemainingMs: 0,
           },
@@ -544,7 +545,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         assetTimeoutMs: asset => asset === "wm-m0"
           ? SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.wmAssetTimeoutMs
           : SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
-        executionWindow: { deadlineMs: startedAtMs + 80_000, minimumRemainingMs: 0 },
+        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 80_000, minimumRemainingMs: 0 },
       });
       await vi.runAllTimersAsync();
       expect(await pending).toEqual([
@@ -563,6 +564,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs, signal);
         return 1;
       }, { executionWindow: {
+        slotStartedAtSec: Math.floor(Date.now() / 1_000),
         deadlineMs: Date.now() + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.publicationReserveMs + 100,
         minimumRemainingMs: 0,
       } });
@@ -1008,7 +1010,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       expect(result.fixedInput).not.toBe(input);
       for (const key of Object.keys(input) as Array<keyof typeof input>) {
         if (key !== "safetyScoreV9SupplyAttributionById") {
-          expect(result.fixedInput[key]).toBe(input[key]);
+          expect(Reflect.get(result.fixedInput, key)).toBe(input[key]);
         }
       }
       expect(stableJsonStringifyV1(input)).toBe(before);

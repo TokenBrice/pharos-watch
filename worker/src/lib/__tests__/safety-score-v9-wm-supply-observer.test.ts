@@ -366,7 +366,7 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
         assetDeadlineMs: startedAtMs + 90_000,
       }, f.deps);
       await vi.advanceTimersByTimeAsync(46_000);
@@ -395,7 +395,7 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(Date.now() / 1_000), deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
       await vi.advanceTimersByTimeAsync(46_000);
       expect(await pending).toEqual({ status: "rejected", rejectionCode: "deployment-observation-skew",
@@ -413,7 +413,7 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(Date.now() / 1_000), deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
       await vi.advanceTimersByTimeAsync(120_000);
       expect(await pending).toMatchObject({ status: "accepted" });
@@ -425,7 +425,7 @@ describe("wM reviewed deployment observer", () => {
       expect(await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(Date.now() / 1_000), deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, { ...f.deps, fetchSolanaObservation: async () => ({ ...solanaObservation(), blockTimeSec: CLOCK_SEC - 9 }) }))
         .toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
           failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
@@ -444,7 +444,7 @@ describe("wM reviewed deployment observer", () => {
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
         executionWindow: remainingMs === undefined ? undefined :
-          { deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
+          { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
       }, f.deps);
       expect(attempt).toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
         failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
@@ -462,7 +462,7 @@ describe("wM reviewed deployment observer", () => {
       const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
         assetDeadlineMs: startedAtMs + assetBudgetMs,
       }, f.deps);
       expect(attempt).toEqual({
@@ -488,7 +488,7 @@ describe("wM reviewed deployment observer", () => {
       const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { deadlineMs: startedAtMs + 125_999, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 125_999, minimumRemainingMs: 60_000 },
       }, f.deps);
       expect(attempt).toMatchObject({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient" });
       expect(Date.now() - startedAtMs).toBe(20_000);
@@ -505,7 +505,7 @@ describe("wM reviewed deployment observer", () => {
       const pending = observeWmReviewedDeploymentUnitPartitionAttempt({
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)), signal: controller.signal,
-        executionWindow: { deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
+        executionWindow: { slotStartedAtSec: Math.floor(Date.now() / 1_000), deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 },
       }, f.deps);
       const cancelled = expect(pending).rejects.toMatchObject({ name: "AbortError" });
       await vi.advanceTimersByTimeAsync(1);

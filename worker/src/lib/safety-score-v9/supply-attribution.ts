@@ -25,7 +25,8 @@ import {
   buildReviewedDeploymentRouteInventory,
 } from "./supply-attribution-contract";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
-import { observeReviewedEconomicDeploymentPartitionAttempt, type SupplyAttributionBodyReadObserver } from "./economic-supply-observer";
+import { observeReviewedEconomicDeploymentPartitionAttempt } from "./economic-supply-observer";
+import type { BodyReadObserver } from "../response-body";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
@@ -74,7 +75,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   notBeforeSec?: number;
   executionWindow?: V9ExecutionWindow;
   db?: D1Database;
-  onBodyRead?: SupplyAttributionBodyReadObserver;
+  onBodyRead?: BodyReadObserver;
 }
 
 export function aggregateSupplyUsd(
@@ -186,7 +187,7 @@ interface SupplyAttributionAssetDescriptor {
     assetDeadlineMs?: number;
     db?: D1Database;
     onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
-    onBodyRead?: SupplyAttributionBodyReadObserver;
+    onBodyRead?: BodyReadObserver;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
@@ -256,6 +257,18 @@ function supplyAttributionAssetDescriptors():
   ];
 }
 
+function findLastDiagnosticIndex(
+  diagnostics: readonly SupplyAttributionAttemptDiagnostic[] | undefined,
+  predicate: (diagnostic: SupplyAttributionAttemptDiagnostic) => boolean,
+): number {
+  if (diagnostics) {
+    for (let index = diagnostics.length - 1; index >= 0; index--) {
+      if (predicate(diagnostics[index])) return index;
+    }
+  }
+  return -1;
+}
+
 function buildSupplyAttributionJournalRecord(input: {
   descriptor: SupplyAttributionAssetDescriptor;
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
@@ -267,8 +280,11 @@ function buildSupplyAttributionJournalRecord(input: {
   diagnostics?: SupplyAttributionAttemptDiagnostic[];
 }): SupplyAttributionJournalV1 {
   const { descriptor, outcome } = input;
-  const diagnostic = input.diagnostics?.findLast(row => row.hardEvidenceFailure && row.failurePredicate) ??
-    input.diagnostics?.findLast(row => row.failurePredicate !== null);
+  let diagnosticIndex = findLastDiagnosticIndex(input.diagnostics, row => row.hardEvidenceFailure && row.failurePredicate !== null);
+  if (diagnosticIndex < 0) {
+    diagnosticIndex = findLastDiagnosticIndex(input.diagnostics, row => row.failurePredicate !== null);
+  }
+  const diagnostic = input.diagnostics?.[diagnosticIndex];
   return createSupplyAttributionJournalV1(withSupplyAttributionJournalDiagnosticV1({
     schemaVersion: 1,
     lane: "supply-attribution",
@@ -326,7 +342,7 @@ async function runSupplyAttributionAssetCapture(input: {
   journalRecords: SupplyAttributionJournalV1[];
   rejectionCode?: SupplyAttributionRejectionCode;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
-  onBodyRead?: SupplyAttributionBodyReadObserver;
+  onBodyRead?: BodyReadObserver;
   diagnostics?: SupplyAttributionAttemptDiagnostic[];
 }): Promise<void> {
   const attemptedAtSec = Math.floor(Date.now() / 1_000);
@@ -463,11 +479,11 @@ export async function captureSafetyScoreV9SupplyAttribution(
       rows.push(validated);
     } else {
       // Preserve both hard failures and authenticated progress over idle writes.
-      let index = rows.findLastIndex(row => !row.hardEvidenceFailure &&
+      let index = findLastDiagnosticIndex(rows, row => !row.hardEvidenceFailure &&
         !(row.persisted && row.authenticatedCursorAdvanced && row.incompleteBootstrap));
       if (index < 0 && (validated.hardEvidenceFailure ||
         (validated.persisted && validated.authenticatedCursorAdvanced && validated.incompleteBootstrap))) {
-        index = rows.findLastIndex(row => !row.hardEvidenceFailure);
+        index = findLastDiagnosticIndex(rows, row => !row.hardEvidenceFailure);
       }
       if (index >= 0) rows[index] = validated;
     }

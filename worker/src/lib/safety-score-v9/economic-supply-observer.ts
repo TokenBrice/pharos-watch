@@ -21,13 +21,11 @@ import { observeLayerZeroOftPending } from "./layerzero-oft-pending-observer";
 import { observeEconomicCosmosBank, pinEconomicCosmosBank, type CosmosBankPin } from "./cosmos-bank-observer";
 import { fetchMoveFungibleAssetSupply, fetchTonJettonSupply } from "../../cron/reserve-adapters/token-supply";
 import { observeCcipPending } from "./ccip-pending-observer";
-import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal } from "../response-body";
+import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseTextWithinLimitWithSignal, type BodyReadObserver } from "../response-body";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
 
 export const ECONOMIC_SUPPLY_BODY_CAPS = Object.freeze({ conversion: 256 * 1024, xrplGatewayBalances: 1024 * 1024, xrplLedger: 128 * 1024 });
-export type SupplyAttributionBodyReadObserver = (evidence: { intakeBytes: number | null; declaredBytes: number | null; outcome: "accepted" | "rejected" }) => void;
-const readCappedBody: (response: Response, maxBytes: number, signal?: AbortSignal, onBodyRead?: SupplyAttributionBodyReadObserver) => Promise<string> = readResponseTextWithinLimitWithSignal;
 
 /** Finalized mint snapshot, case-preserved identity, pinned chronology and response hash. */
 export async function observeEconomicSolanaMint(input: {
@@ -62,10 +60,10 @@ export async function observeEconomicSolanaMint(input: {
   })) };
 }
 
-async function readReviewedApiAmount(source: ReviewedEconomicSupplyPlan["conversionSources"][number], signal?: AbortSignal, onBodyRead?: SupplyAttributionBodyReadObserver): Promise<EconomicSupplyReference | null> {
+async function readReviewedApiAmount(source: ReviewedEconomicSupplyPlan["conversionSources"][number], signal?: AbortSignal, onBodyRead?: BodyReadObserver): Promise<EconomicSupplyReference | null> {
   const response = await fetch(source.url, { signal });
   if (!response.ok) { await cancelResponseBodyQuietly(response); return null; }
-  const text = await readCappedBody(response, ECONOMIC_SUPPLY_BODY_CAPS.conversion, signal, onBodyRead);
+  const text = await readResponseTextWithinLimitWithSignal(response, ECONOMIC_SUPPLY_BODY_CAPS.conversion, signal, onBodyRead);
   const body: unknown = JSON.parse(text);
   const field = (path: string[]) => path.reduce<unknown>((value, key) => value !== null && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, key) ? (value as Record<string, unknown>)[key] : undefined, body);
   const value = field(source.amountPath), observedAt = field(source.observedAtPath), generation = field(source.generationPath);
@@ -365,7 +363,7 @@ export async function observeReviewedEconomicDeploymentPartitionAttempt(
 async function observeReviewedEconomicDeploymentPartitionInternal(input: {
   assetId: string; fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>; scoringClockSec: number; chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
-  onBodyRead?: SupplyAttributionBodyReadObserver;
+  onBodyRead?: BodyReadObserver;
 }): Promise<ReviewedEconomicSupplyObservationAttempt> {
   let failedRouteId: string | null = null;
   let bodyOrigin: string | null = null;
@@ -580,7 +578,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
           const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...getRpcAuthHeaders(url) }, body: JSON.stringify({ method: "gateway_balances", params: [{ account: row.read.issuer, ledger_index: "validated", strict: true }] }), signal: input.signal });
           if (!response.ok) { await cancelResponseBodyQuietly(response); return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId }; }
           bodyOrigin = new URL(url).origin; bodyMethod = "gateway_balances";
-          const text = await readCappedBody(response, ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances, input.signal, input.onBodyRead);
+          const text = await readResponseTextWithinLimitWithSignal(response, ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances, input.signal, input.onBodyRead);
           const body = JSON.parse(text) as { result?: { validated?: boolean; ledger_index?: number; ledger_hash?: string; obligations?: Record<string, string> } };
           const result = body.result, value = result?.obligations?.[row.read.currency];
           if (response.ok && result?.validated === true && Number.isSafeInteger(result.ledger_index) && typeof result.ledger_hash === "string" && /^[A-Fa-f0-9]{64}$/.test(result.ledger_hash) && typeof value === "string") {
@@ -592,7 +590,7 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
               const ledgerResponse = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...getRpcAuthHeaders(url) }, body: JSON.stringify({ method: "ledger", params: [{ ledger_hash: result.ledger_hash }] }), signal: input.signal });
               if (!ledgerResponse.ok) { await cancelResponseBodyQuietly(ledgerResponse); return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId }; }
               bodyMethod = "ledger";
-              const ledgerText = await readCappedBody(ledgerResponse, ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger, input.signal, input.onBodyRead);
+              const ledgerText = await readResponseTextWithinLimitWithSignal(ledgerResponse, ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger, input.signal, input.onBodyRead);
               const ledger = JSON.parse(ledgerText) as { result?: { ledger?: { close_time?: number; ledger_hash?: string } } };
               const close = ledger.result?.ledger?.close_time;
               if (ledgerResponse.ok && ledger.result?.ledger?.ledger_hash === result.ledger_hash && Number.isInteger(close)) observation = { id: row.deploymentKey, deploymentKey: row.deploymentKey, amount: decimal.includes(".") ? decimal.replace(/0+$/, "").replace(/\.$/, "") : decimal, observedAtSec: close! + 946684800, anchor: String(result.ledger_index), anchorHash: result.ledger_hash.toLowerCase(), responseSha256: sha256HexFromUtf8Chunks([text, ledgerText]) };

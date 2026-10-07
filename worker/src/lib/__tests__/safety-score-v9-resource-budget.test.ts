@@ -13,7 +13,8 @@ import {
   expect,
   it,
 } from "vitest";
-import { assessSafetyScoreV9ResourceBudget, buildSafetyScoreV9ResourcePressure } from "../safety-score-v9/resource-budget";
+import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget";
+import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 
 describe("Safety Score V9 compile admission", () => {
@@ -52,13 +53,13 @@ describe("Safety Score V9 compile admission", () => {
   });
 
   it("keeps unmeasured producer fields null and assembles intake evidence", () => {
-    expect(buildSafetyScoreV9ResourcePressure()).toMatchObject({
+    expect(buildResourcePressure()).toMatchObject({
       phase: "not-measured", guard: "not-measured", intakeBytes: null,
       inputBytes: null, catalogAssets: null, inputCapBytes: null, catalogMaxAssets: null,
       intakeBasis: "unavailable", heapUsedBytes: null,
       heapUnavailableReason: "workers-runtime-no-heap-api",
     });
-    expect(buildSafetyScoreV9ResourcePressure({
+    expect(buildResourcePressure({
       phase: "supply-attribution-capture", bodyCapBytes: 1024 * 1024,
       intakeBytes: 192, rejectedBodies: 1, guard: "within-policy",
     })).toMatchObject({
