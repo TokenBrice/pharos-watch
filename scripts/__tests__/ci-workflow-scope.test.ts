@@ -394,3 +394,45 @@ it("runs the mechanism-refresh verifier only from a trusted snapshot inside the 
   expect(imports.length).toBeGreaterThan(0);
   for (const lib of imports) expect(run).toContain(`scripts/lib/${lib}`);
 });
+
+describe("external scheduler delivery monitor", () => {
+  function runMonitor(overrides: Record<string, unknown> = {}) {
+    const workflow = parseYaml(readRepoFile(".github/workflows/cron-liveness.yml"));
+    const run = workflow.jobs.delivery.steps.find((step: { id?: string }) => step.id === "health").run as string;
+    const script = run.split("<<'NODE'\n")[1].split("\nNODE")[0];
+    const now = Math.floor(Date.now() / 1000);
+    const health = {
+      status: "healthy", timestamp: now, warnings: [],
+      schedulerLiveness: {
+        status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+        lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+          scheduleKey, lastStartedAt: now - 30,
+        })),
+        heavy: { status: "healthy", scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30,
+          ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      },
+      ...overrides,
+    };
+    return spawnSync(process.execPath, ["-e",
+      `require('node:fs').readFileSync = () => process.argv[1];\n${script}`, JSON.stringify(health)], { encoding: "utf8" });
+  }
+  it("accepts healthy delivery from both roles", () => {
+    expect(runMonitor().status).toBe(0);
+  });
+  it.each(["heavy_scheduled_delivery_stalled", "heavy_scheduler_liveness_unavailable"])(
+    "fails on %s even if both role status fields claim healthy", (warning) => {
+      expect(runMonitor({ warnings: [warning] }).status).toBe(1);
+    },
+  );
+  it.each(["degraded", "stale", "unavailable"])("fails on a non-healthy heavy status (%s)", (status) => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status, scheduleKey: "v9SupplyAttributionOffset", warningAfterSec: 1800, staleAfterSec: 2700 },
+    } }).status).toBe(1);
+  });
+});

@@ -1,7 +1,7 @@
 import type { CronResultStatus } from "@shared/types/status/cron";
 import { resolveCronDegradedReason } from "../../lib/cron-logger";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { recordProducerOutcome } from "../../lib/producer-history";
+import { CronChildTerminalSupersededError, writeScheduledChildTerminal } from "../../lib/scheduled-child-terminal";
+import { projectChildDisposition } from "../../lib/cron-outcomes";
 import { getRuntimeProducerIdentity, type ScheduledRuntimeContext } from "./context";
 
 interface LogSkippedCronRunOptions {
@@ -18,13 +18,7 @@ export async function logSkippedCronRun(
 ): Promise<void> {
   const startedAt = Math.floor(Date.now() / 1000);
   const status = options.status ?? "degraded";
-  const idempotencyKey = [
-    "scheduled-preflight",
-    runtime.scheduleKey,
-    runtime.slotStartedAt,
-    options.job,
-    options.reason,
-  ].join(":");
+  if (!runtime.executionFence) throw new Error("Scheduled preflight terminal requires an execution fence");
   const metadataObject = {
     ...options.metadata,
     skippedReason: options.reason,
@@ -37,42 +31,27 @@ export async function logSkippedCronRun(
   const degradedReason = resolveCronDegradedReason(options.job, status, undefined, metadataObject);
 
   const producer = getRuntimeProducerIdentity(runtime, options.job);
-  await runWithOverloadRetry(() =>
-    runtime.db
-      .prepare(
-        `INSERT INTO cron_runs
-           (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, idempotency_key,
-            schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-            productive, publication_count, calendar_period, degraded_reason)
-         VALUES (?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
-         ON CONFLICT DO NOTHING`,
-      )
-      .bind(
-        options.job,
-        startedAt,
-        status,
-        metadata,
-        runtime.slotStartedAt,
-        idempotencyKey,
-        producer.scheduleKey,
-        producer.producerPath,
-        producer.producerKind,
-        producer.invocationId,
-        producer.workerVersion ?? null,
-        producer.calendarPeriod ?? null,
-        degradedReason,
-      )
-      .run(),
-  );
-  await recordProducerOutcome(runtime.db, {
-    ...producer,
-    idempotencyKey,
-    invokedAt: startedAt,
+  const terminal = await writeScheduledChildTerminal(runtime.db, {
+    identity: {
+      ...producer,
+      slotStartedAt: runtime.slotStartedAt,
+      attemptNo: runtime.jobAttemptNo ?? 1,
+      executionFence: runtime.executionFence,
+    },
+    source: "preflight",
+    startedAt,
     completedAt: startedAt,
-    outcome: status === "skipped_neutral" ? "skipped_neutral" : "not_started",
+    durationMs: 0,
+    status,
+    degradedReason,
+    disposition: "not_started",
+    producerOutcome: status === "skipped_neutral" ? "skipped_neutral" : projectChildDisposition("not_started").producerOutcome,
     itemCount: 0,
     metadata,
     error: status === "degraded" ? options.message ?? options.reason : null,
     productivity: { productive: false, reason: options.reason },
   });
+  if (!terminal.accepted) {
+    throw new CronChildTerminalSupersededError(terminal.attemptKey, undefined, null, false);
+  }
 }

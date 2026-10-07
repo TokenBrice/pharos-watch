@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildScheduledSlotSummary, summarizeCronResult, summarizeThrownScheduledJob } from "../slot-summary";
+import { buildScheduledSlotSummary, summarizeCronResult, summarizeSkippedScheduledJob, summarizeThrownScheduledJob } from "../slot-summary";
 import { CronTerminalAccountingError } from "../../../lib/cron-logger";
 import { runBestEffortScheduledJobWithOutcome } from "../run-best-effort-job";
 import type { ScheduledRuntimeContext } from "../context";
@@ -26,6 +26,22 @@ describe("slot-summary", () => {
     expect(summary.jobsSucceeded).toBe(0);
     expect(summary.jobsSkipped).toBe(0);
     expect(summary.jobsNeutralSkipped).toBe(1);
+  });
+
+  it("folds neutral skips, locked skips, degraded and error outcomes without changing counts", () => {
+    const neutral = summarizeCronResult("neutral", { status: "skipped_neutral" });
+    const locked = summarizeCronResult("locked", { status: "skipped_locked" });
+    const degraded = summarizeCronResult("degraded", { status: "degraded" });
+    const error = summarizeCronResult("error", { status: "error" });
+    expect(buildScheduledSlotSummary([neutral]).resultStatus).toBe("ok");
+    expect(buildScheduledSlotSummary([neutral, locked])).toMatchObject({
+      resultStatus: "degraded", jobsAttempted: 0, jobsSkipped: 1, jobsNeutralSkipped: 1,
+    });
+    expect(buildScheduledSlotSummary([degraded, error])).toMatchObject({
+      resultStatus: "error", jobsAttempted: 2, jobsDegraded: 1, jobsErrored: 1,
+    });
+    expect(buildScheduledSlotSummary([summarizeSkippedScheduledJob("preflight", "unsafe")]))
+      .toMatchObject({ resultStatus: "degraded", jobsSkipped: 1, jobsAttempted: 0 });
   });
 
   it.each(["degraded", "error"] as const)("projects %s child reasons", (status) => {

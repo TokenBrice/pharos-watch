@@ -15,6 +15,7 @@ import {
   getReserveProducerPriority,
   RESERVE_RECOVERY_CLAIM_SEC,
 } from "../../lib/reserve-producer-priority";
+import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 
 type ReserveRecoveryMode = "off" | "recover";
 
@@ -22,8 +23,6 @@ function normalizeReserveRecoveryMode(value: string | null | undefined): Reserve
   const normalized = value?.trim().toLowerCase();
   return normalized === "recover" ? "recover" : "off";
 }
-
-const RECOVERY_STALE_AFTER_SEC = 5 * 60;
 
 function createReserveRecoveryResult(
   result: Omit<CronResult, "metadata"> & { metadata: CronMetadataRecord },
@@ -48,11 +47,8 @@ async function runReserveRecovery(
   // sweeping is DB-only and independent of the reserve checkpoint machinery.
   await reportProgress({ stage: "sweeping-stale-slots" });
   await sweepStaleScheduledSlotExecutions(runtime.db, {
-    staleAfterSec: 5 * 60,
     limit: 10,
     signal,
-    reconcilerWorkerVersion: runtime.workerVersion ?? null,
-    reconcilerWorkerRole: runtime.workerRole,
   });
   if (mode === "off") {
     return createCronResult({
@@ -95,15 +91,12 @@ async function runReserveRecovery(
   await reportProgress({ stage: "preparing-reserve-checkpoint" });
   const sweep = await sweepStaleScheduledSlotExecutions(runtime.db, {
     slotKey: "fourHourlyReserveSync",
-    staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     limit: 1,
     signal,
-    reconcilerWorkerVersion: runtime.workerVersion ?? null,
-    reconcilerWorkerRole: runtime.workerRole,
   });
   const retiredCheckpoints = await retireSupersededLiveReserveCheckpoints(runtime.db);
   const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(runtime.db, {
-    staleAfterSec: RECOVERY_STALE_AFTER_SEC,
+    staleAfterSec: resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec,
     limit: 1,
   });
 
@@ -147,7 +140,9 @@ async function runReserveRecovery(
     scheduleKey: checkpoint.scheduleKey as "fourHourlyReserveSync",
     scheduledTimeMs: checkpoint.slotStartedAt * 1000,
     slotStartedAt: checkpoint.slotStartedAt,
-    slotBudgetStartedAtMs: runtime.slotBudgetStartedAtMs ?? Date.now(),
+    slotBudgetStartedAtMs: runtime.deadline.eventEntryMs,
+    deadline: runtime.deadline,
+    executionFence: runtime.executionFence,
     parentSignal: signal,
     jobAttemptNo: checkpoint.attemptNo,
     producerKind: "scheduled-recovery",

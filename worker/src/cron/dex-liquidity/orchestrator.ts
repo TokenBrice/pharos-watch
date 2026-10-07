@@ -4,6 +4,7 @@ import { CRON_SCHEDULE_CADENCES, isHourlyDexPriceSlot } from "@shared/lib/cron-c
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
+import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -196,6 +197,7 @@ export async function stageDexLiquidityScoring(
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
   sourceSlotStartedAt?: number,
+  deadline?: SlotDeadline,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const fallbackCounters = initLiquidityFallbackCounters();
@@ -212,6 +214,7 @@ export async function stageDexLiquidityScoring(
     reportDexProgress,
     syncStartSec,
     sourceSlotStartedAt,
+    deadline,
     fallbackCounters,
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
@@ -308,6 +311,7 @@ export async function consumeDexLiquidityScoringStage(
   options: {
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
+    deadline?: SlotDeadline;
     /** When provided, a terminally failed or never-started source stage is
      *  re-run inline for the exact expected slot instead of failing the run. */
     stageRecovery?: DexLiquidityStageRecoveryInput;
@@ -325,6 +329,7 @@ export async function consumeDexLiquidityScoringStage(
         expectedSourceSlotStartedAt,
         readyDeadlineMs: options.stageReadyDeadlineMs,
         recovery: options.stageRecovery ?? null,
+        deadline: options.deadline,
       },
       reportProgress,
       signal,
@@ -342,7 +347,7 @@ export async function consumeDexLiquidityScoringStage(
   return await consumeLoadedDexLiquidityScoringStage(
     db,
     staged,
-    { publishShadowTargets: options.publishShadowTargets },
+    { publishShadowTargets: options.publishShadowTargets, deadline: options.deadline },
     reportProgress,
     signal,
     recovery,
@@ -352,7 +357,7 @@ export async function consumeDexLiquidityScoringStage(
 async function consumeLoadedDexLiquidityScoringStage(
   db: D1Database,
   staged: LoadedDexLiquidityScoringStage,
-  options: { publishShadowTargets?: boolean },
+  options: { publishShadowTargets?: boolean; deadline?: SlotDeadline },
   reportProgress: CronProgressReporter | undefined,
   signal: AbortSignal | undefined,
   recovery: DexLiquidityStageRecoveryOutcome | null,
@@ -366,6 +371,7 @@ async function consumeLoadedDexLiquidityScoringStage(
       totalStablecoins: ACTIVE_STABLECOINS.length,
     }),
     syncStartSec: staged.syncStartSec,
+    deadline: options.deadline,
   };
   const measuredTargetPublicationMode: MeasuredTargetPublicationMode =
     options.publishShadowTargets === true ? "active-and-shadow" : "active";
@@ -409,7 +415,7 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   consumerSlotStartedAt?: number,
-  options: { stageRecovery?: DexLiquidityStageRecoveryInput } = {},
+  options: { stageRecovery?: DexLiquidityStageRecoveryInput; deadline?: SlotDeadline } = {},
 ): Promise<CronResult> {
   if (consumerSlotStartedAt != null) {
     const published = await publishHourStageAtHalfHourTick(
@@ -418,6 +424,7 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
       options.stageRecovery ?? null,
       reportProgress,
       signal,
+      options.deadline,
     );
     if (published != null) return published;
   }
@@ -463,6 +470,7 @@ async function publishHourStageAtHalfHourTick(
   recovery: DexLiquidityStageRecoveryInput | null,
   reportProgress: CronProgressReporter | undefined,
   signal?: AbortSignal,
+  deadline?: SlotDeadline,
 ): Promise<CronResult | null> {
   try {
     const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, signal);
@@ -480,7 +488,7 @@ async function publishHourStageAtHalfHourTick(
       return await consumeLoadedDexLiquidityScoringStage(
         db,
         staged,
-        { publishShadowTargets: false },
+        { publishShadowTargets: false, deadline },
         reportProgress,
         signal,
         {
@@ -498,6 +506,7 @@ async function publishHourStageAtHalfHourTick(
         expectedSourceSlotStartedAt,
         readyDeadlineMs: Date.now(),
         recovery,
+        deadline,
       },
       reportProgress,
       signal,
@@ -505,7 +514,7 @@ async function publishHourStageAtHalfHourTick(
     return await consumeLoadedDexLiquidityScoringStage(
       db,
       staged,
-      { publishShadowTargets: false },
+      { publishShadowTargets: false, deadline },
       reportProgress,
       signal,
       outcome,
@@ -539,6 +548,7 @@ async function loadDexLiquidityScoringStageForConsumer(
     expectedSourceSlotStartedAt: number;
     readyDeadlineMs: number;
     recovery: DexLiquidityStageRecoveryInput | null;
+    deadline?: SlotDeadline;
   },
   reportProgress: CronProgressReporter | undefined,
   signal?: AbortSignal,
@@ -592,6 +602,7 @@ async function loadDexLiquidityScoringStageForConsumer(
       reason,
       reportProgress,
       signal,
+      options.deadline,
     );
   }
 }
@@ -606,6 +617,7 @@ async function recoverDexLiquidityScoringStageOutput(
   reason: DexLiquidityStageRecoveryReason,
   reportProgress: CronProgressReporter | undefined,
   signal?: AbortSignal,
+  deadline?: SlotDeadline,
 ): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome }> {
   const leaseOwner = createLeaseOwner(DEX_LIQUIDITY_STAGE_RECOVERY_JOB);
   const acquired = await runWithOverloadRetry(
@@ -627,6 +639,7 @@ async function recoverDexLiquidityScoringStageOutput(
       recovery.chainRpcs,
       reportProgress,
       expectedSourceSlotStartedAt,
+      deadline,
     );
   } finally {
     try {
@@ -661,8 +674,9 @@ export interface DexLiquidityRunContext {
   db: D1Database;
   graphApiKey: string | null;
   syncStartSec: number;
-  /** Source-stage slot start; bounds wall-time budgets like V2 verification. */
+  /** Source-stage slot identity; execution budgets use the event deadline. */
   sourceSlotStartedAt?: number;
+  deadline?: SlotDeadline;
   signal?: AbortSignal;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -1172,7 +1186,7 @@ async function buildDexLiquidityPoolState(
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
     capturedAt: ctx.syncStartSec,
-    slotStartedAtSec: ctx.sourceSlotStartedAt,
+    deadline: ctx.deadline,
     pancakeMeasuredTargets: sourceState.pancakeMeasuredExecutionTargets,
     slipstreamMeasuredTargets: sourceState.slipstreamMeasuredExecutionTargets,
   });
@@ -1182,7 +1196,7 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
-    slotStartedAtSec: ctx.sourceSlotStartedAt,
+    deadline: ctx.deadline,
   });
   await enrichEvmV2ExecutionModels({
     metrics,
@@ -1191,7 +1205,7 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
-    slotStartedAtSec: ctx.sourceSlotStartedAt,
+    deadline: ctx.deadline,
   });
   await enrichCurveStableswapRateInputExecutionModels({
     metrics,

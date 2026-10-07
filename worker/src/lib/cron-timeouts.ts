@@ -12,6 +12,7 @@ export const SCHEDULED_SLOT_JOB_BUDGET_MS =
 export interface CronTimeoutBudgetOptions {
   nowMs?: number;
   slotBudgetStartedAtMs?: number | null;
+  deadline?: SlotDeadline;
   platformTimeoutMs?: number;
   controlledErrorReserveMs?: number;
 }
@@ -118,19 +119,26 @@ function getConfiguredCronTimeoutMs(job: string): number {
   return CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
 }
 
-export function getScheduledSlotControlledDeadlineMs(
-  slotBudgetStartedAtMs: number,
-  options: Pick<CronTimeoutBudgetOptions, "platformTimeoutMs" | "controlledErrorReserveMs"> = {},
-): number {
-  const platformTimeoutMs = positiveFiniteMs(options.platformTimeoutMs, SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS);
-  const reserveMs = Math.max(
-    0,
-    Math.min(
-      options.controlledErrorReserveMs ?? SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
-      platformTimeoutMs - 1,
-    ),
-  );
-  return slotBudgetStartedAtMs + platformTimeoutMs - reserveMs;
+/** One event-entry clock, inherited unchanged by waits and replay children. */
+export interface SlotDeadline {
+  readonly eventEntryMs: number;
+  readonly platformDeadlineMs: number;
+  remainingMs(nowMs?: number): number;
+  childCeilingMs(budgetMs: number, nowMs?: number): number;
+  latestAdmissionMs(budgetMs: number, reservedWorkMs: number): number;
+}
+
+export function createSlotDeadline(eventEntryMs: number): SlotDeadline {
+  const platformDeadlineMs = eventEntryMs + SCHEDULED_SLOT_JOB_BUDGET_MS;
+  return Object.freeze({
+    eventEntryMs,
+    platformDeadlineMs,
+    remainingMs: (nowMs = Date.now()) => Math.max(0, platformDeadlineMs - nowMs),
+    childCeilingMs: (budgetMs: number, nowMs = Date.now()) =>
+      Math.max(0, Math.min(budgetMs, platformDeadlineMs - nowMs)),
+    latestAdmissionMs: (budgetMs: number, reservedWorkMs: number) =>
+      platformDeadlineMs - budgetMs - reservedWorkMs,
+  });
 }
 
 export function resolveCronTimeoutBudget(
@@ -146,7 +154,7 @@ export function resolveCronTimeoutBudget(
       platformTimeoutMs - 1,
     ),
   );
-  const slotBudgetStartedAtMs = options.slotBudgetStartedAtMs ?? null;
+  const slotBudgetStartedAtMs = options.deadline?.eventEntryMs ?? options.slotBudgetStartedAtMs ?? null;
 
   if (slotBudgetStartedAtMs == null) {
     return {
@@ -165,9 +173,10 @@ export function resolveCronTimeoutBudget(
 
   const nowMs = options.nowMs ?? Date.now();
   const slotPlatformDeadlineMs = slotBudgetStartedAtMs + platformTimeoutMs;
-  const slotControlledDeadlineMs = slotPlatformDeadlineMs - controlledErrorReserveMs;
-  const remainingSlotBudgetMs = Math.max(0, slotControlledDeadlineMs - nowMs);
-  const effectiveTimeoutMs = Math.min(configuredTimeoutMs, remainingSlotBudgetMs);
+  const slotControlledDeadlineMs = options.deadline?.platformDeadlineMs ?? slotPlatformDeadlineMs - controlledErrorReserveMs;
+  const remainingSlotBudgetMs = options.deadline?.remainingMs(nowMs) ?? Math.max(0, slotControlledDeadlineMs - nowMs);
+  const effectiveTimeoutMs = options.deadline?.childCeilingMs(configuredTimeoutMs, nowMs)
+    ?? Math.min(configuredTimeoutMs, remainingSlotBudgetMs);
 
   return {
     configuredTimeoutMs,

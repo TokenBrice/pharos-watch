@@ -89,6 +89,15 @@ export const SchedulerLivenessSchema = z.object({
     lastStartedAt: z.number().finite().nullable(),
   })),
   unavailableReason: z.string().nullable(),
+  heavy: z.object({
+    scheduleKey: z.string().nullable(),
+    lastStartedAt: z.number().finite().nullable(),
+    ageSeconds: z.number().finite().nonnegative().nullable(),
+    warningAfterSec: z.number().positive(),
+    staleAfterSec: z.number().positive(),
+    status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+    unavailableReason: z.string().nullable(),
+  }),
 });
 export type SchedulerLiveness = z.output<typeof SchedulerLivenessSchema>;
 

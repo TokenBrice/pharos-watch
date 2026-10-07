@@ -45,7 +45,7 @@ import {
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
-import { loadSchedulerLiveness, schedulerLivenessWarnings } from "./status/scheduler-liveness";
+import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -494,7 +494,7 @@ export async function assessPublicHealth(
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
   const schedulerLiveness = options?.schedulerLiveness ?? await loadSchedulerLiveness(db, now);
-  const schedulerLivenessImpactStatus = schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status;
+  const schedulerLivenessImpactStatus = getSchedulerLivenessImpactStatus(schedulerLiveness);
   warnings.push(...schedulerLivenessWarnings(schedulerLiveness));
 
   const { dbHealthy, warning: dbWarning } = await checkDbHealth(db, logPrefix);

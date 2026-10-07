@@ -35,6 +35,8 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "db_unhealthy",
   "scheduled_delivery_stalled",
   "scheduler_liveness_unavailable",
+  "heavy_scheduled_delivery_stalled",
+  "heavy_scheduler_liveness_unavailable",
 ]);
 
 /**

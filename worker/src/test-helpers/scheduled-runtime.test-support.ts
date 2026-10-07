@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../handlers/scheduled/context";
+import { createSlotDeadline } from "../lib/cron-timeouts";
 import { createWorkerEnv } from "./__shared/worker-env";
 import { makeNoopD1 } from "./noop-d1";
 
@@ -48,6 +49,7 @@ export function makeScheduledRuntime(
     scheduleKey: "quarterHourly",
     scheduledTimeMs: 1_735_689_600_000,
     slotStartedAt: 1_735_689_600,
+    deadline: createSlotDeadline(overrides.slotBudgetStartedAtMs ?? Date.now()),
     mintBurnDisabledIds: [],
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],

@@ -1,10 +1,16 @@
 import type { PublicationSurfaceId } from "@shared/types/status";
+import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
-export type ProducerOutcome =
-  "ok" | "degraded" | "error" | "skipped_locked" | "skipped_neutral" | "not_started" | "abandoned";
+export interface ProducerTerminalGuard {
+  attemptKey: string;
+  terminalToken: string;
+  attemptNo: number;
+  executionSlotStartedAt: number;
+  executionGeneration: number;
+}
 
 export interface CronPublicationRecord {
   surface: PublicationSurfaceId;
@@ -132,14 +138,15 @@ function latestPublicationAt(publications: readonly CronPublicationRecord[]): nu
   );
 }
 
-async function recordGenericSurfacePublications(
+function prepareGenericSurfacePublications(
   db: D1Database,
   input: RecordProducerOutcomeInput,
   publications: readonly CronPublicationRecord[],
-): Promise<void> {
+  guard?: ProducerTerminalGuard,
+): D1PreparedStatement[] {
+  const statements: D1PreparedStatement[] = [];
   for (const publication of publications) {
-    await runWithOverloadRetry(() =>
-      db
+    statements.push(db
         .prepare(
           `INSERT INTO surface_publication_generations (
            surface, generation_id, started_at, validated_at, published_at, state,
@@ -147,7 +154,8 @@ async function recordGenericSurfacePublications(
            validation_summary_json, artifact_checksum, artifact_cache_key,
            producer_schedule_key, producer_job, producer_path, producer_kind,
            invocation_id, worker_version
-         ) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) SELECT ?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         WHERE ${guard ? "EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)" : "1"}
          ON CONFLICT(surface, generation_id) DO UPDATE SET
            validated_at = COALESCE(surface_publication_generations.validated_at, excluded.validated_at),
            published_at = COALESCE(surface_publication_generations.published_at, excluded.published_at),
@@ -188,10 +196,11 @@ async function recordGenericSurfacePublications(
           input.producerKind,
           input.invocationId,
           input.workerVersion ?? null,
-        )
-        .run(),
+          ...(guard ? [guard.attemptKey, guard.terminalToken] : []),
+        ),
     );
   }
+  return statements;
 }
 
 /**
@@ -199,23 +208,33 @@ async function recordGenericSurfacePublications(
  * are derived from the idempotent history table so retrying a partial write
  * cannot double count an invocation.
  */
-export async function recordProducerOutcome(db: D1Database, input: RecordProducerOutcomeInput): Promise<void> {
+export function prepareProducerOutcomeStatements(
+  db: D1Database, input: RecordProducerOutcomeInput, guard?: ProducerTerminalGuard,
+): D1PreparedStatement[] {
+  const statements: D1PreparedStatement[] = [];
   const productive = input.productivity?.productive === true;
   const publications = productive ? normalizePublications(input.productivity?.publications) : [];
   const publicationsJson = publications.length > 0 ? boundedJson(publications, MAX_HISTORY_METADATA_CHARS) : null;
   const publicationAt = latestPublicationAt(publications);
-  const metadataJson = normalizeHistoryMetadata(input.metadata);
+  const normalizedMetadata = normalizeHistoryMetadata(input.metadata);
+  const metadataJson = guard ? JSON.stringify({
+    ...(parseObjectMetadata(normalizedMetadata) ?? {}),
+    acceptedTerminalKey: guard.attemptKey,
+    acceptedAttemptNo: guard.attemptNo,
+    acceptedExecutionSlotStartedAt: guard.executionSlotStartedAt,
+    acceptedExecutionGeneration: guard.executionGeneration,
+  }) : normalizedMetadata;
   const error = input.error?.slice(0, MAX_HISTORY_ERROR_CHARS) ?? null;
 
-  await runWithOverloadRetry(() =>
-    db
+  statements.push(db
       .prepare(
         `INSERT INTO worker_producer_history (
          idempotency_key, schedule_key, job, producer_path, producer_kind,
          invocation_id, worker_version, slot_started_at, invoked_at, completed_at,
          outcome, productive, item_count, publication_count, publications_json,
          calendar_period, metadata_json, error, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE ${guard ? "EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)" : "1"}
        ON CONFLICT(idempotency_key) DO UPDATE SET
          completed_at = excluded.completed_at,
          outcome = excluded.outcome,
@@ -226,6 +245,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
          metadata_json = excluded.metadata_json,
          error = excluded.error
+       ${guard ? "WHERE worker_producer_history.idempotency_key = excluded.idempotency_key" : ""}
        ON CONFLICT(schedule_key, job, producer_path, producer_kind, invocation_id) DO UPDATE SET
          idempotency_key = excluded.idempotency_key,
          worker_version = excluded.worker_version,
@@ -241,7 +261,15 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          metadata_json = excluded.metadata_json,
          error = excluded.error,
          created_at = MIN(worker_producer_history.created_at, excluded.created_at)
-       WHERE worker_producer_history.outcome IN ('abandoned', 'not_started')`,
+       WHERE ${guard ? `(
+         COALESCE(json_extract(excluded.metadata_json, '$.acceptedAttemptNo'), 0),
+         COALESCE(json_extract(excluded.metadata_json, '$.acceptedExecutionSlotStartedAt'), 0),
+         COALESCE(json_extract(excluded.metadata_json, '$.acceptedExecutionGeneration'), 0)
+       ) > (
+         COALESCE(json_extract(worker_producer_history.metadata_json, '$.acceptedAttemptNo'), 0),
+         COALESCE(json_extract(worker_producer_history.metadata_json, '$.acceptedExecutionSlotStartedAt'), 0),
+         COALESCE(json_extract(worker_producer_history.metadata_json, '$.acceptedExecutionGeneration'), 0)
+       )` : "worker_producer_history.outcome IN ('abandoned', 'not_started')"}`,
       )
       .bind(
         input.idempotencyKey,
@@ -263,12 +291,11 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
         metadataJson,
         error,
         input.completedAt,
-      )
-      .run(),
+        ...(guard ? [guard.attemptKey, guard.terminalToken] : []),
+      ),
   );
 
-  await runWithOverloadRetry(() =>
-    db
+  statements.push(db
       .prepare(
         `INSERT INTO worker_producer_heads (
          schedule_key, job, producer_path, producer_kind,
@@ -276,7 +303,10 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          last_outcome, last_error, last_productive_invocation_id,
          last_productive_at, last_productive_item_count, last_publication_at,
          last_publications_json, invocation_count, productive_count, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+       ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
+       WHERE ${guard ? `EXISTS (
+         SELECT 1 FROM worker_producer_history WHERE idempotency_key = ?
+       ) AND EXISTS (SELECT 1 FROM scheduled_child_attempts WHERE attempt_key = ? AND terminal_token = ?)` : "1"}
        ON CONFLICT(schedule_key, job, producer_path, producer_kind) DO UPDATE SET
          last_invocation_id = CASE
            WHEN excluded.last_completed_at >= worker_producer_heads.last_completed_at
@@ -353,12 +383,17 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
         publicationsJson,
         productive ? 1 : 0,
         input.completedAt,
-      )
-      .run(),
+        ...(guard ? [guard.attemptKey, guard.attemptKey, guard.terminalToken] : []),
+      ),
   );
 
-  if (publications.length > 0) {
-    await recordGenericSurfacePublications(db, input, publications);
+  statements.push(...prepareGenericSurfacePublications(db, input, publications, guard));
+  return statements;
+}
+
+export async function recordProducerOutcome(db: D1Database, input: RecordProducerOutcomeInput): Promise<void> {
+  for (const statement of prepareProducerOutcomeStatements(db, input)) {
+    await runWithOverloadRetry(() => statement.run());
   }
 }
 

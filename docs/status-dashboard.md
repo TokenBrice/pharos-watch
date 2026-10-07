@@ -186,7 +186,7 @@ Probe groups are sourced from `shared/lib/api-endpoints/`:
 
 Source: `worker/src/api/status.ts`
 
-`workerVersions: { public: Marker | null, heavy: Marker | null }` is owned by `shared/types/status/response.ts`. Each marker is `{ scriptName, workerVersion, activatedAt }`, read directly from the deploy-verified `worker-active-version:<role>` cache key by `getActiveWorkerVersionMarker()` in `worker/src/lib/worker-version-first-seen.ts`. Missing/malformed evidence is null; failed D1 reads add the named `sectionErrors.workerVersions` / `worker_versions_query_failed` error, never a latest-run guess. Per-run `workerVersion` scalars remain execution UUIDs. Scheduler liveness lanes, query, thresholds and the GitHub monitor are unchanged.
+`workerVersions: { public: Marker | null, heavy: Marker | null }` is owned by `shared/types/status/response.ts`. Each marker is `{ scriptName, workerVersion, activatedAt }`, read directly from the deploy-verified `worker-active-version:<role>` cache key by `getActiveWorkerVersionMarker()` in `worker/src/lib/worker-version-first-seen.ts`. Missing/malformed evidence is null; failed D1 reads add the named `sectionErrors.workerVersions` / `worker_versions_query_failed` error, never a latest-run guess. Per-run `workerVersion` scalars remain execution UUIDs. The public three-lane five-minute liveness aggregate is unchanged; independent heavy delivery evidence extends the query and GitHub monitor with separate heavy budgets.
 
 The [history endpoint](#history-endpoint-get-apistatus-history) owns timeline responses and completeness evidence.
 
@@ -211,7 +211,7 @@ Related extracted loaders:
 - Requires a valid admin credential (`requireAdmin`)
 - Response cache policy: `Cache-Control: no-store`
 - Even when the 15-minute assessment snapshot is fresh, `/api/status` reads current cron history, progress, leases, and scheduled slots through `loadCronHealth()`. Per-job availability, cron/slot summary counts, and the informational cron availability causes (`degraded_cron_warning`, `watch_cron_error_runs`, `watch_unhealthy_crons_present`, and the `cron_*_query_failed` notices) all describe that one live read at the response `timestamp`, so a cause count never disagrees with its `summary` counterpart in the same response; the aggregate assessment, caches, and expensive supplements retain the persisted assessment generation. A failed live cron read remains unknown rather than replaying a cached success.
-- Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. Cached unhealthy scheduler floors force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
+- Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. The public aggregate and its three lanes remain unchanged; `schedulerLiveness.heavy` adds independent registry-owned heavy delivery evidence (`scheduleKey`, `lastStartedAt`, `ageSeconds`, `warningAfterSec`, `staleAfterSec`, `status`, `unavailableReason`). Cached unhealthy scheduler floors for either role force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
 
 `StatusResponseSchema` validates required fields for each retained nested section; malformed section payloads fail closed at the admin query boundary instead of being treated as typed-but-unchecked objects. Optional additive top-level fields remain passthrough-compatible, while the four retired projections listed above are not emitted.
 
@@ -272,6 +272,19 @@ unknown jobs or column-only rows; canonical quality findings append without repl
 summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
+
+Scheduled attempt evidence is independent of detailed in-flight progress: every protocol-v1 child has a
+durable `scheduled_child_attempts` start marker before work, including progress-suppressed jobs. Real and
+synthetic terminals arbitrate one deterministic full attempt identity under the executing slot fence.
+Replay retains producer source identity while naming its recovery execution fence. Reconciliation proves
+`not_started` only when a due protocol-v1 child has no marker; legacy missing evidence is
+`execution_unknown`, projected as an error/abandoned producer with explicit uncertainty, not success
+or a zero item count. Last durable activity durations are lower bounds, not reconstructed runtimes.
+Producer invocation aggregates and confirmed publication clocks remain separate from attempt terminals.
+`worker/src/lib/cron-outcomes.ts` owns outcome projections/folding: errors outrank degraded/nonneutral
+skips, which outrank `ok`; locked skips are nonneutral and neutral skips stay neutral. Fence admission
+status, child `resultStatus` and productivity remain distinct. Execution deadlines and the centralized
+slot/child silence policy do not change the freshness windows below.
 
 Successful observers report `ok` plus `metadata.quality` for semantic service degradation, stale producer output, detail-write markers, missing digest editions, duration/abandonment trends, and sustained DEX turnover. These findings do not increment `degradedCrons`; fresh operational `degraded` attempts still inherit behind neutral skips. The workbench includes findings in Attention and labels successful observations “Succeeded with findings” without changing execution state or group degraded totals. Observation success never renews a producer's output clock.
 
@@ -357,6 +370,8 @@ Legacy missing/invalid blocks, nullable counters and unknown platform outcomes r
 Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
 
 Scheduler delivery is an independent availability axis: the newest actual start across `fiveMinuteReserveRecovery`, `fiveMinuteTelegramAlerts`, and `digestTriggerPoll` must be within the shared 600-second warning / 1200-second stale budgets (strictly greater than the boundary escalates). `scheduled_delivery_stalled` is warning/critical; missing, future, or unreadable starts yield `scheduler_liveness_unavailable` and a degraded floor, never healthy. Overall MAX is diagnostic only: an hourly slot cannot mask five-minute delivery loss. Partial lane loss stays diagnostic while another canonical lane starts. See [delivery stall runbook](./runbooks/cron-delivery-stall.md).
+
+Heavy delivery is a separate gate, resolved from plans with `worker: "heavy"` in `shared/lib/scheduled-runner-registry.ts`, choosing the shortest logical cadence (currently the 15-minute `v9SupplyAttributionOffset` lane). Its evidence is `MAX(started_at)` for that slot, never scheduled clocks or child completions. `STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS` owns the warning budget of 1800 seconds (two missed 15-minute slots) and stale budget of 2700 seconds; escalation is strictly above each boundary. `heavy_scheduled_delivery_stalled` is warning/critical and floors public health/admin availability; `heavy_scheduler_liveness_unavailable` yields a degraded floor with a machine-readable unavailable reason. Public starts cannot mask heavy loss. The shared “Scheduled delivery” card on `/status/` and the admin workspace displays public and heavy evidence separately with both budgets and any unavailable reason.
 
 - `stale` if any of:
   - any shared cache impact is `stale`

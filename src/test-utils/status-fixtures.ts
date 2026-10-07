@@ -152,6 +152,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
     timestamp: 1_700_000_000,
     dbHealthy: true,
     workerVersions: { public: null, heavy: null },
+    schedulerLiveness: makeHealthyHealthResponse().schedulerLiveness,
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
     rawOverallStatus: "healthy",

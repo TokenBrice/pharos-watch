@@ -13,6 +13,13 @@ function cause(overrides: Partial<StatusCause> = {}): StatusCause {
 }
 
 describe("transitionHasPublicImpact", () => {
+  it.each(["heavy_scheduled_delivery_stalled", "heavy_scheduler_liveness_unavailable"])(
+    "retains %s in public incident history at warning/critical severity", (code) => {
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "warning" })])).toBe(true);
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "critical" })])).toBe(true);
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "info" })])).toBe(false);
+    },
+  );
   it("keeps incomplete active-price coverage warning-only", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
   });

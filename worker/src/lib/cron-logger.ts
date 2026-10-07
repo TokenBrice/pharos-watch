@@ -1,9 +1,14 @@
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
-import type { CronResultStatus, ResourcePressure } from "@shared/types/status/cron";
-import { sleep } from "./abort";
+import type { CronResultStatus, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
+import { settleAfterAbort, CRON_ABORT_GRACE_MS, CRON_ABORT_OBSERVATION_MARGIN_MS } from "./cron-abort-settlement";
 import {
-  CRON_ABANDONED_JOB_GRACE_MS,
+  markScheduledChildStarted, writeScheduledChildTerminal, CronChildTerminalSupersededError,
+  type ScheduledChildIdentity,
+} from "./scheduled-child-terminal";
+import type { ScheduledExecutionFence } from "./scheduled-slot-fence";
+import type { SlotDeadline } from "./cron-timeouts";
+import {
   CronJobAbandonedError,
   CronTimeoutError,
 } from "./cron-lease-primitives";
@@ -21,7 +26,6 @@ import {
   recordProducerOutcome,
   type CronProductivity,
   type ProducerIdentity,
-  type ProducerOutcome,
 } from "./producer-history";
 import { stripSensitive } from "./safe-error-message";
 import { sanitizeBoundedMetadata } from "./sensitive-metadata";
@@ -77,9 +81,6 @@ function serializeTerminalCronMetadata(error: unknown, descriptor: ErrorDescript
   return JSON.stringify(metadata);
 }
 
-type CronJobOutcome =
-  | { status: "fulfilled"; value: CronResult | void }
-  | { status: "rejected"; error: unknown };
 
 /**
  * Records a swallowed cron failure with a structured log line and in-memory
@@ -232,7 +233,7 @@ export class CronTerminalAccountingError extends Error {
   readonly reason = this.code;
   readonly cause: unknown;
   readonly completedResult?: CronResult;
-  readonly stage: "cron-run" | "producer-history";
+  readonly stage: CronTerminalAccountingStage;
   readonly outputPublishedAt: number | null;
   readonly productive: boolean;
   readonly originalError?: ErrorDescriptor;
@@ -240,7 +241,7 @@ export class CronTerminalAccountingError extends Error {
   constructor(input: {
     cause: unknown;
     completedResult?: CronResult | void;
-    stage: "cron-run" | "producer-history";
+    stage: CronTerminalAccountingStage;
     outputPublishedAt: number | null;
     productive: boolean;
     originalError?: ErrorDescriptor;
@@ -272,6 +273,9 @@ export interface CronRunLoggerOptions {
   timeoutBudget?: ResolvedCronTimeoutBudget;
   abortSignal?: AbortSignal;
   producer?: Omit<ProducerIdentity, "job">;
+  executionFence?: ScheduledExecutionFence;
+  jobAttemptNo?: number;
+  deadline?: SlotDeadline;
 }
 
 function inferCronProductivity(
@@ -442,7 +446,13 @@ export async function logCronRun(
   const startSec = Math.floor(startMs / 1000);
   const cronRunIdempotencyKey = createCronRunIdempotencyKey(job, startMs);
   const slotStartedAt = options?.slotStartedAt ?? null;
-  const timeoutBudget = options?.timeoutBudget ?? resolveCronTimeoutBudget(job);
+  const timeoutBudget = options?.timeoutBudget ?? resolveCronTimeoutBudget(job, { deadline: options?.deadline });
+  const scheduledIdentity: ScheduledChildIdentity | null = options?.executionFence && options.producer
+    ? { ...options.producer, job, slotStartedAt: options.producer.slotStartedAt ?? slotStartedAt!,
+      attemptNo: options.jobAttemptNo ?? 1, executionFence: options.executionFence }
+    : null;
+  let scheduledAttemptKey: string | null = null;
+  const terminalToken = crypto.randomUUID();
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const ac = new AbortController();
   const operationSignal = options?.abortSignal
@@ -451,7 +461,7 @@ export async function logCronRun(
   const timeoutError = new CronTimeoutError(job, timeoutMs, getCronTimeoutBudgetMetadata(timeoutBudget));
   let resolvedResult: CronResult | void = undefined;
   let persistingCompletedTelemetry = false;
-  let stage: "cron-run" | "producer-history" = "cron-run";
+  let stage: CronTerminalAccountingStage = "cron-run";
   let outputPublishedAt: number | null = null;
   let productivity: CronProductivity = { productive: false, reason: "no-confirmed-output" };
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
@@ -468,10 +478,23 @@ export async function logCronRun(
   let lastProgressWriteAtMs: number | null = null;
   let lastProgressWriteStage: string | null | undefined;
   let lastProgressLeaseOwner: string | null = null;
+  // Cleanup must match the detailed row, not a newer coalesced owner report.
+  let lastProgressWriteLeaseOwner: string | null = null;
   let latestResourcePressure: ResourcePressure | null = null;
   const reportProgress: CronProgressReporter = (update) => {
     // Keep valid evidence even when this job skips D1 progress or coalesces this update.
     latestResourcePressure = selectLatestResourcePressure(latestResourcePressure, update.metadata?.resourcePressure);
+    if (update.leaseOwner !== undefined) {
+      lastProgressLeaseOwner = update.leaseOwner ?? null;
+      if (scheduledAttemptKey) {
+        const owner = lastProgressLeaseOwner;
+        progressWriteTail = progressWriteTail.then(async () => {
+          await runWithOverloadRetry(() => db.prepare(
+            "UPDATE scheduled_child_attempts SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL",
+          ).bind(owner, scheduledAttemptKey).run());
+        });
+      }
+    }
     if (shouldSkipCronProgress(job)) return progressWriteTail;
     progressActivated = true;
     progressState = {
@@ -499,7 +522,7 @@ export async function logCronRun(
     lastProgressWriteStage = snapshot.stage;
     progressWriteTail = progressWriteTail.then(async () => {
       try {
-        lastProgressLeaseOwner = snapshot.leaseOwner;
+        lastProgressWriteLeaseOwner = snapshot.leaseOwner;
         await upsertCronProgress(db, job, startSec, slotStartedAt, snapshot);
       } catch (err) {
         console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
@@ -507,57 +530,33 @@ export async function logCronRun(
     });
     return progressWriteTail;
   };
+  // Required admission evidence is outside error accounting: no marker means no work.
+  if (operationSignal.aborted) throw operationSignal.reason;
+  if (scheduledIdentity) scheduledAttemptKey = await markScheduledChildStarted(db, scheduledIdentity, startSec);
   try {
     if (timeoutBudget.exhausted) {
       ac.abort(timeoutError);
       throw timeoutError;
     }
 
-    const jobOutcomePromise: Promise<CronJobOutcome> = Promise.resolve()
-      .then(() => fn(operationSignal, reportProgress))
-      .then(
-        (value) => ({ status: "fulfilled" as const, value }),
-        (error) => ({ status: "rejected" as const, error }),
-      );
-    const timeoutPromise = new Promise<{ type: "timeout"; error: CronTimeoutError }>((resolve) => {
-      timeoutHandle = setTimeout(() => {
-        ac.abort(timeoutError);
-        resolve({ type: "timeout", error: timeoutError });
-      }, timeoutMs);
+    timeoutHandle = setTimeout(() => ac.abort(timeoutError), timeoutMs);
+    const outcome = await settleAfterAbort(() => fn(operationSignal, reportProgress), operationSignal, {
+      observer: true,
+      platformDeadlineMs: options?.deadline?.platformDeadlineMs,
     });
-
-    const race = await Promise.race([
-      jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
-      timeoutPromise,
-    ]);
-    if (race.type === "timeout") {
-      const grace = await Promise.race([
-        jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
-        sleep(CRON_ABANDONED_JOB_GRACE_MS + 250).then(() => ({ type: "abandoned" as const })),
-      ]);
-
-      if (grace.type === "abandoned") {
-        throw new CronJobAbandonedError(job, race.error, {
-          stopReason: "timeout",
-          leaseOwner: null,
-          renewFailures: null,
-          leaseLost: null,
-          ttlSec: null,
-          graceMs: CRON_ABANDONED_JOB_GRACE_MS + 250,
-          leaseHeldUntilTtl: false,
+    clearTimeout(timeoutHandle ?? undefined);
+    if (outcome.status === "aborted") {
+      if (!outcome.settled) {
+        throw new CronJobAbandonedError(job, outcome.reason instanceof Error ? outcome.reason : timeoutError, {
+          stopReason: outcome.reason === timeoutError ? "timeout" : "aborted",
+          leaseOwner: lastProgressLeaseOwner, renewFailures: null, leaseLost: null, ttlSec: null,
+          graceMs: CRON_ABORT_GRACE_MS + CRON_ABORT_OBSERVATION_MARGIN_MS, leaseHeldUntilTtl: false,
         });
       }
-      if (grace.outcome.status === "rejected") {
-        throw grace.outcome.error;
-      }
-      throw race.error;
+      throw outcome.error ?? outcome.reason;
     }
-
-    if (race.outcome.status === "rejected") {
-      throw race.outcome.error;
-    }
-
-    resolvedResult = race.outcome.value;
+    if (outcome.status === "rejected") throw outcome.error;
+    resolvedResult = outcome.value;
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
     const parsedMetadata = parseJsonObject(resolvedResult?.metadata);
@@ -578,7 +577,18 @@ export async function logCronRun(
     const degradedReason = resolveCronDegradedReason(job, resultStatus, resolvedResult, parsedMetadata);
     const producer = options?.producer;
     persistingCompletedTelemetry = true;
-    if (producer) {
+    if (scheduledIdentity) {
+      stage = "terminal-batch";
+      const terminal = await writeScheduledChildTerminal(db, {
+        identity: scheduledIdentity, source: "real", token: terminalToken,
+        startedAt: startSec, completedAt, durationMs: Date.now() - startMs, status: resultStatus,
+        disposition: "completed", degradedReason, producerOutcome: producerOutcomeForResult(resolvedResult),
+        itemCount: resolvedResult?.itemCount ?? null, metadata: persistedMetadata, error: resolvedError, productivity,
+      });
+      if (!terminal.accepted) throw new CronChildTerminalSupersededError(
+        terminal.attemptKey, resolvedResult, outputPublishedAt, productivity.productive,
+      );
+    } else if (producer) {
       await runWithOverloadRetry(() =>
         db.prepare(
           `INSERT INTO cron_runs
@@ -648,6 +658,7 @@ export async function logCronRun(
     }
     persistingCompletedTelemetry = false;
   } catch (e) {
+    if (e instanceof CronChildTerminalSupersededError) throw e;
     if (persistingCompletedTelemetry) {
       throw new CronTerminalAccountingError({
         cause: e, stage, completedResult: resolvedResult, outputPublishedAt, productive: productivity.productive,
@@ -665,7 +676,18 @@ export async function logCronRun(
     try {
       const completedAt = Math.floor(Date.now() / 1000);
       const producer = options?.producer;
-      if (producer) {
+      if (scheduledIdentity) {
+        stage = "terminal-batch";
+        const terminal = await writeScheduledChildTerminal(db, {
+          identity: scheduledIdentity, source: "real", token: terminalToken,
+          startedAt: startSec, completedAt, durationMs: Date.now() - startMs, status: "error",
+          disposition: e instanceof CronJobAbandonedError ? "abandoned" : "completed",
+          degradedReason: terminalReason, producerOutcome: producerOutcomeForError(e), itemCount: null,
+          metadata: terminalMetadata, error: classifiedError.message,
+          productivity: { productive: false, reason: producerOutcomeForError(e) },
+        });
+        if (!terminal.accepted) throw new CronChildTerminalSupersededError(terminal.attemptKey, undefined, null, false);
+      } else if (producer) {
         await runWithOverloadRetry(() =>
           db.prepare(
             `INSERT INTO cron_runs
@@ -735,6 +757,7 @@ export async function logCronRun(
         );
       }
     } catch (logErr) {
+      if (logErr instanceof CronChildTerminalSupersededError) throw logErr;
       throw new CronTerminalAccountingError({
         cause: logErr, stage, outputPublishedAt: null, productive: false, originalError: classifiedError,
       });
@@ -745,7 +768,7 @@ export async function logCronRun(
     await progressWriteTail;
     if (progressActivated) {
       try {
-        await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressLeaseOwner);
+        await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressWriteLeaseOwner);
       } catch (err) {
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }

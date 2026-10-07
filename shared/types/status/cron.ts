@@ -13,6 +13,21 @@ export const CronRunStatusSchema = z.enum(CRON_RUN_STATUS_VALUES);
 export type CronRunStatus = z.infer<typeof CronRunStatusSchema>;
 export type CronResultStatus = Exclude<CronRunStatus, "skipped_duplicate" | "skipped_running">;
 
+export const SchedulerChildDispositionSchema = z.enum([
+  "completed", "abandoned", "not_started", "execution_unknown", "interrupted-by-deploy",
+]);
+export type SchedulerChildDisposition = z.output<typeof SchedulerChildDispositionSchema>;
+export const SchedulerTerminalSourceSchema = z.enum(["real", "preflight", "synthetic"]);
+export type SchedulerTerminalSource = z.output<typeof SchedulerTerminalSourceSchema>;
+export const ProducerOutcomeSchema = CronRunStatusSchema
+  .exclude(["skipped_duplicate", "skipped_running"])
+  .or(z.enum(["not_started", "abandoned"]));
+export type ProducerOutcome = z.output<typeof ProducerOutcomeSchema>;
+export const SchedulerSummaryOutcomeSchema = z.enum(["ok", "degraded", "error", "skipped"]);
+export type SchedulerSummaryOutcome = z.output<typeof SchedulerSummaryOutcomeSchema>;
+export const CronTerminalAccountingStageSchema = z.enum(["cron-run", "producer-history", "terminal-batch"]);
+export type CronTerminalAccountingStage = z.output<typeof CronTerminalAccountingStageSchema>;
+
 const ResourceCountSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable();
 
 /** Byte-policy evidence, not a heap measurement or inferred platform failure. */
@@ -136,7 +151,7 @@ export const BudgetOnlySurfaceStatusSchema = z.object({
   durationMs: z.number().nullable(),
   dueCount: z.number().nullable(),
   processedCount: z.number().nullable(),
-  outcome: z.enum(["ok", "degraded", "error", "skipped", "unknown"]),
+  outcome: SchedulerSummaryOutcomeSchema.or(z.literal("unknown")),
   skippedReason: z.string().nullable().optional(),
   error: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),

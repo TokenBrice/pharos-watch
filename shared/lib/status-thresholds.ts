@@ -312,6 +312,12 @@ export const STATUS_SCHEDULER_LIVENESS_THRESHOLDS = {
   staleAfterSec: 1200,
 } as const;
 
+/** Heavy delivery: warn after two missed 15-minute slots; stale after three. */
+export const STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS = {
+  warningAfterSec: 1800,
+  staleAfterSec: 2700,
+} as const;
+
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
 export interface ReserveScoreInputHoldInput {
   status: string;

@@ -18,14 +18,14 @@ describe("scheduled slot stale heartbeat boundary", () => {
     closeOpenLeaseDatabases();
   });
 
-  it("keeps a 70-second heartbeat live and claims one at 300 seconds", async () => {
+  it("keeps a 70-second heartbeat live and claims a long slot at 360 seconds", async () => {
     const now = Math.floor(Date.now() / 1_000);
     const liveSlotStartedAt = now - 600;
     const staleSlotStartedAt = now - 601;
     const db = makeLeaseDb({
       slots: [
         makeRunningSlot("fourHourlyReserveSync", liveSlotStartedAt, "live-owner", now - 70),
-        makeRunningSlot("fourHourlyReserveSync", staleSlotStartedAt, "stale-owner", now - 300),
+        makeRunningSlot("fourHourlyReserveSync", staleSlotStartedAt, "stale-owner", now - 360),
       ],
     });
 

@@ -1,26 +1,27 @@
+import type { CronTerminalAccountingStage, SchedulerSummaryOutcome } from "@shared/types/status/cron";
 import { CronTerminalAccountingError, resolveCronDegradedReason, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { describeError } from "@shared/lib/error-utils";
 import { stripSensitive } from "../../lib/safe-error-message";
 import type { ScheduledRuntimeContext } from "./context";
-
-export type ScheduledSlotJobOutcome = "ok" | "degraded" | "error" | "skipped";
+import { foldScheduledOutcomes, projectCronResultOutcome } from "../../lib/cron-outcomes";
 
 export type ScheduledSlotJobSummary = {
   job: string;
-  outcome: ScheduledSlotJobOutcome;
+  outcome: SchedulerSummaryOutcome;
   status?: CronResult["status"];
   itemCount?: number;
   reason?: string;
   error?: string;
   neutral?: boolean;
   terminalAccountingError?: {
-    stage: "cron-run" | "producer-history";
+    stage: CronTerminalAccountingStage;
     outputPublishedAt: number | null;
     productive: boolean;
   };
 };
 
 export type ScheduledSlotSummary = {
+  resultStatus: Exclude<SchedulerSummaryOutcome, "skipped">;
   jobsAttempted: number;
   jobsSucceeded: number;
   jobsRun: number;
@@ -63,49 +64,19 @@ function extractNeutralSkipReason(result: CronResult | null | void): string {
 
 export function summarizeCronResult(job: string, result: CronResult | null | void): ScheduledSlotJobSummary {
   const status = result?.status ?? "ok";
-  if (status === "skipped_locked") {
-    return {
-      job,
-      outcome: "skipped",
-      status,
-      itemCount: result?.itemCount,
-      reason: "lease-locked",
-    };
-  }
-  if (status === "skipped_neutral") {
-    return {
-      job,
-      outcome: "skipped",
-      status,
-      itemCount: result?.itemCount,
-      reason: extractNeutralSkipReason(result),
-      neutral: true,
-    };
-  }
-  if (status === "degraded") {
-    return {
-      job,
-      outcome: "degraded",
-      status,
-      itemCount: result?.itemCount,
-      reason: resolveCronDegradedReason(job, status, result, readMetadataObject(result?.metadata)) ?? undefined,
-    };
-  }
-  if (status === "error") {
-    return {
-      job,
-      outcome: "error",
-      status,
-      itemCount: result?.itemCount,
-      reason: resolveCronDegradedReason(job, status, result, readMetadataObject(result?.metadata)) ?? undefined,
-      error: result?.error ? truncateSummaryText(result.error) : undefined,
-    };
-  }
+  const projection = projectCronResultOutcome(status);
   return {
     job,
-    outcome: "ok",
+    outcome: projection.outcome,
     status,
     itemCount: result?.itemCount,
+    ...(projection.neutral ? { neutral: true } : {}),
+    ...(status === "skipped_locked" ? { reason: "lease-locked" }
+      : status === "skipped_neutral" ? { reason: extractNeutralSkipReason(result) }
+        : status === "degraded" || status === "error"
+          ? { reason: resolveCronDegradedReason(job, status, result, readMetadataObject(result?.metadata)) ?? undefined }
+          : {}),
+    ...(status === "error" ? { error: result?.error ? truncateSummaryText(result.error) : undefined } : {}),
   };
 }
 
@@ -151,6 +122,7 @@ export function buildScheduledSlotSummary(
     job.outcome === "ok" || job.outcome === "degraded" || job.outcome === "error"
   ).length;
   return {
+    resultStatus: foldScheduledOutcomes(jobs.map((job) => ({ outcome: job.outcome, neutral: job.neutral === true }))),
     jobsAttempted,
     jobsSucceeded,
     jobsRun: jobsSucceeded,

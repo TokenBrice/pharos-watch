@@ -29,7 +29,7 @@ import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registr
 import type { ProducerHeadStatus } from "@shared/types/status";
 import { loadProducerHeads } from "../lib/producer-history";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
-import { loadSchedulerLiveness } from "../lib/status/scheduler-liveness";
+import { loadSchedulerLiveness, schedulerLivenessImpactStatus } from "../lib/status/scheduler-liveness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { maxStatus } from "../lib/status/evaluation-state";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
@@ -173,8 +173,10 @@ async function resolveRawStatusForResponse(
     || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])
       !== JSON.stringify([cachedReserve?.acknowledgedFeeds, cachedReserve?.expiredFeedReviewIds, cachedReserve?.invalidFeedReviewIds]);
   const cachedSchedulerUnhealthy = snapshot.kind === "fresh"
-    && (snapshot.raw.schedulerLiveness?.status !== "healthy" || snapshot.raw.causes.availability.some((cause) =>
-      cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"));
+    && (snapshot.raw.schedulerLiveness?.status !== "healthy" || snapshot.raw.schedulerLiveness?.heavy?.status !== "healthy"
+      || snapshot.raw.causes.availability.some((cause) =>
+      cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"
+      || cause.code === "heavy_scheduled_delivery_stalled" || cause.code === "heavy_scheduler_liveness_unavailable"));
   if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged && schedulerLiveness) {
     // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
     const cronHealth = await loadCronHealth(db, now);
@@ -184,7 +186,8 @@ async function resolveRawStatusForResponse(
     // cause count next to a live summary count that disagrees with it (R5).
     const scheduler = evaluateSchedulerLiveness(schedulerLiveness);
     const availabilityCauses = [...rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability.filter((cause) =>
-      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"), {
+      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"
+      && cause.code !== "heavy_scheduled_delivery_stalled" && cause.code !== "heavy_scheduler_liveness_unavailable"), {
       degradedCronRuns: cronHealth.degradedCronRuns,
       cronErrorCount: cronHealth.cronErrorCount,
       availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,
@@ -198,6 +201,10 @@ async function resolveRawStatusForResponse(
     if (schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
       code: "scheduler_liveness_unavailable",
       message: `Scheduler delivery evidence unavailable (${schedulerLiveness.unavailableReason}).`,
+    };
+    else if (schedulerLiveness.heavy.status === "unavailable") sectionErrors.schedulerLiveness = {
+      code: "heavy_scheduler_liveness_unavailable",
+      message: `Heavy scheduler delivery evidence unavailable (${schedulerLiveness.heavy.unavailableReason}; warning >${schedulerLiveness.heavy.warningAfterSec}s; stale >${schedulerLiveness.heavy.staleAfterSec}s).`,
     };
     delete sectionErrors.scheduledSlots;
     applyCronHealthSectionErrors(sectionErrors, cronHealth);
@@ -292,7 +299,7 @@ export function handleStatus({
       };
 
       const effectiveOverallStatus = maxStatus(resolvedState.currentStatus,
-        schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status);
+        schedulerLivenessImpactStatus(schedulerLiveness));
       const probeIssues: StatusPersistenceIssue[] = [];
       const discrepancyIssues: StatusPersistenceIssue[] = [];
       const timelineIssues: StatusPersistenceIssue[] = [];
