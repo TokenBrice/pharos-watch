@@ -3,6 +3,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY } from "../../lib/safety-score-v9/capture-control";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -13,16 +15,7 @@ import type {
 } from "cloudflare:workers";
 
 const { computeSafetyScoreV9, parseNativeV9InputCacheArtifact } = vi.hoisted(
-  () => ({
-    computeSafetyScoreV9: vi.fn(),
-    parseNativeV9InputCacheArtifact: vi.fn(async () => ({
-      input: {
-        sourceGeneration: "report-cards:v9:1788433200",
-        baseInputGenerationId: "report-cards-input:v1:1788433200",
-        clockSec: 1788433200,
-      },
-    })),
-  }),
+  () => ({ computeSafetyScoreV9: vi.fn(), parseNativeV9InputCacheArtifact: vi.fn() }),
 );
 
 vi.mock("cloudflare:workers", () => ({
@@ -58,10 +51,39 @@ function d1Result(changes = 0): D1Result {
   } as unknown as D1Result;
 }
 
+const BASE_INPUT_ID = `report-cards-input:v1:${"a".repeat(64)}`;
+const INPUT_IDENTITY = buildSafetyScoreV9InputIdentity({
+  methodologyVersion: "9.0",
+  baseInputGenerationId: BASE_INPUT_ID,
+  publicationGenerationId: "report-cards:v9:1788433200",
+});
+
 function createWorkflowDb() {
   const fixture = fixtures.open();
   fixture.sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
-    "report-cards:fixed-input:exact", "fixed-input-envelope", 1788433200,
+    "report-cards:fixed-input:exact", JSON.stringify({
+      schemaVersion: 2, kind: "report-cards-fixed-input-exact", encoding: "gzip-base64",
+      sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+      safetyScoreIdentity: INPUT_IDENTITY,
+      // Deliberately not a valid compressed capture: identity loading must not decode it.
+      payload: "must-not-transfer-or-decompress".repeat(50_000),
+    }), 1788433200,
+  );
+  fixture.sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+    SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify({
+      schemaVersion: 1,
+      capture: {
+        safetyScoreIdentity: INPUT_IDENTITY, baseInputGenerationId: BASE_INPUT_ID,
+        sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+        clockSec: 1788433200, registryFingerprint: "b".repeat(64),
+        workerVersion: null, workerUploadedAtSec: null,
+      },
+      recaptureRequest: null,
+      attribution: {
+        status: "settled", dueSlotStartedAtSec: 1788433200, pendingUntilSec: 1788433200,
+        generationId: null, outcome: "ok",
+      },
+    }), 1788433200,
   );
   return fixture;
 }
@@ -122,7 +144,7 @@ async function compileCanonicalPublication(compilerDb: D1Database) {
     itemCount: 200,
     metadata: JSON.stringify({
       sourceGenerationId: "report-cards:v9:1788433200",
-      baseInputGenerationId: "report-cards-input:v1:1788433200",
+      baseInputGenerationId: BASE_INPUT_ID,
       publication: { status: "published" },
     }),
   };
@@ -208,13 +230,18 @@ describe("Safety Score V9 publication Workflow", () => {
     );
 
     expect(first).toEqual(second);
-    expect(parseNativeV9InputCacheArtifact).toHaveBeenCalledTimes(1);
+    expect(parseNativeV9InputCacheArtifact).not.toHaveBeenCalled();
+    expect(step.results.get("load fixed input")).toEqual({
+      sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+      baseInputGenerationId: BASE_INPUT_ID, clockSec: 1788433200,
+    });
     expect(computeSafetyScoreV9).toHaveBeenCalledTimes(1);
     expect(computeSafetyScoreV9.mock.calls[0].slice(1)).toEqual([
       undefined, undefined, { retainAcceptedReplay: false },
     ]);
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
       { key: "report-cards:fixed-input:exact" },
+      { key: SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY },
       { key: "safety-score-v9:shadow:report-cards:v9:1788433200" },
     ]);
     expect(sqlite.prepare("SELECT job, status FROM cron_runs").all()).toEqual([
@@ -482,9 +509,8 @@ describe("Safety Score V9 publication Workflow", () => {
       const { db, sqlite } = createWorkflowDb();
       if (failure === "missing") sqlite.exec("DELETE FROM cache");
       if (failure === "newer") {
-        parseNativeV9InputCacheArtifact.mockResolvedValueOnce({
-          input: { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433201 },
-        });
+        sqlite.prepare("UPDATE cache SET value = json_set(value, '$.capture.clockSec', ?) WHERE key = ?")
+          .run(1788433201, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
       }
       computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
         const result = await compileCanonicalPublication(compilerDb);
@@ -494,13 +520,43 @@ describe("Safety Score V9 publication Workflow", () => {
       });
       const result = await runSafetyScoreV9PublicationWorkflow({ DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep);
       expect(result).toEqual({ instanceId: EVENT.instanceId, shadowKey: null, sourceGeneration: null, status: "error" });
-      expect(sqlite.prepare("SELECT key FROM cache WHERE key != 'report-cards:fixed-input:exact'").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key NOT IN (?, ?)").all(
+        "report-cards:fixed-input:exact", SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
+      )).toEqual([]);
       expect(sqlite.prepare("SELECT status, error, degraded_reason FROM cron_runs").all()).toEqual([{
         status: "error", error: expect.stringContaining(failure === "missing" ? "missing" : failure === "newer" ? "newer" : "advanced"),
         degraded_reason: "workflow-execution-failed",
       }]);
     }
   });
+
+  it.each(["missing-control", "source", "base", "evaluator", "methodology"] as const)(
+    "rejects %s projected references before compilation without recapture writes",
+    async failure => {
+      const { db, sqlite } = createWorkflowDb();
+      if (failure === "missing-control") {
+        sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
+      } else {
+        const path = failure === "source" ? "$.sourceGeneration"
+          : failure === "base" ? "$.safetyScoreIdentity.baseInputGenerationId"
+          : failure === "evaluator" ? "$.safetyScoreIdentity.evaluationBuildDigest"
+          : "$.safetyScoreIdentity.methodologyVersion";
+        const value = failure === "source" ? "report-cards:v9:other"
+          : failure === "base" ? `report-cards-input:v1:${"c".repeat(64)}`
+          : failure === "evaluator" ? "c".repeat(64) : "9.1";
+        sqlite.prepare("UPDATE cache SET value = json_set(value, ?, ?) WHERE key = ?")
+          .run(path, value, "report-cards:fixed-input:exact");
+      }
+      const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      const step = new ReplayFakeStep();
+      const result = await runSafetyScoreV9PublicationWorkflow({ DB: db }, EVENT, step as unknown as WorkflowStep);
+      expect(result.status).toBe("error");
+      expect(computeSafetyScoreV9).not.toHaveBeenCalled();
+      expect(parseNativeV9InputCacheArtifact).not.toHaveBeenCalled();
+      expect(step.calls.map(call => call.name)).not.toContain("compile publication");
+      expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    },
+  );
 
   it("rejects identity mismatches and publication-envelope inconsistencies independently", async () => {
     const fixed = { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433200 };

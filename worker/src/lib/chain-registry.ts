@@ -89,6 +89,10 @@ const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
   ink: "ink-mainnet",
   berachain: "berachain-mainnet",
 };
+/** Eligibility is not entitlement proof for susdat's historical EIP-1898 pin.
+ * Provision and verify a canonical-hash archive before adding another route;
+ * latest or numbered-state fallbacks cannot satisfy this prerequisite. */
+export const CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON = "monad-canonical-hash-archive-required" as const;
 
 /** Existing supply-profile RPC; 10,000-block historical ramp logs and canonical
  * hash-pinned pool code verified 2026-10-06. No new credential is required. */

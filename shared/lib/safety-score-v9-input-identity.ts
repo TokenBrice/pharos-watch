@@ -41,3 +41,51 @@ export function safetyScoreV9InputIdentitiesMatch(
     left.publicationGenerationId === right.publicationGenerationId
   );
 }
+
+/**
+ * Exact admission remains unchanged. This diagnosis only proves whether a
+ * paired capture can request a newer deployed evaluator through prepare.
+ */
+export function diagnoseSafetyScoreV9InputIdentityMismatch(input: {
+  expected: SafetyScoreV9InputIdentity;
+  actual: SafetyScoreV9InputIdentity;
+  expectedRegistryFingerprint: string;
+  actualRegistryFingerprint: string;
+  expectedWorkerVersion: string | null;
+  actualWorkerVersion: string | null;
+  expectedWorkerUploadedAtSec: number | null;
+  actualWorkerUploadedAtSec: number | null;
+  pairedCaptureValid: boolean;
+}) {
+  const changedFields: string[] = [];
+  for (const field of [
+    "model", "schemaVersion", "methodologyVersion", "evaluationBuildDigest",
+    "baseInputGenerationId", "publicationGenerationId",
+  ] as const) {
+    if (input.expected[field] !== input.actual[field]) changedFields.push(field);
+  }
+  if (input.expectedRegistryFingerprint !== input.actualRegistryFingerprint) changedFields.push("registryFingerprint");
+  if (!input.pairedCaptureValid) changedFields.push("capture-pair");
+  const deploymentOnly = input.pairedCaptureValid && changedFields.length > 0 &&
+    changedFields.every(field => field === "evaluationBuildDigest" || field === "registryFingerprint") &&
+    input.expectedWorkerVersion !== null && input.actualWorkerVersion !== null &&
+    input.expectedWorkerVersion !== input.actualWorkerVersion &&
+    input.expectedWorkerUploadedAtSec !== null && input.actualWorkerUploadedAtSec !== null &&
+    input.expectedWorkerUploadedAtSec > input.actualWorkerUploadedAtSec;
+  return {
+    deploymentOnly,
+    changedFields,
+    expected: {
+      evaluationBuildDigest: input.expected.evaluationBuildDigest,
+      registryFingerprint: input.expectedRegistryFingerprint,
+      workerVersion: input.expectedWorkerVersion?.slice(0, 160) ?? null,
+      workerUploadedAtSec: input.expectedWorkerUploadedAtSec,
+    },
+    actual: {
+      evaluationBuildDigest: input.actual.evaluationBuildDigest,
+      registryFingerprint: input.actualRegistryFingerprint,
+      workerVersion: input.actualWorkerVersion?.slice(0, 160) ?? null,
+      workerUploadedAtSec: input.actualWorkerUploadedAtSec,
+    },
+  };
+}

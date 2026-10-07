@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
 import {
   buildSafetyScoreV9InputIdentity,
+  diagnoseSafetyScoreV9InputIdentityMismatch,
   safetyScoreV9InputIdentitiesMatch,
 } from "../safety-score-v9-input-identity";
 
@@ -56,5 +57,30 @@ describe("Safety Score V9 input identity", () => {
         evaluationBuildDigest: "b".repeat(64),
       }),
     ).toBe(false);
+  });
+  it.each(["evaluationBuildDigest", "registryFingerprint"] as const)("diagnoses deployment-only %s drift without relaxing exact matching", (field) => {
+    const expected = buildSafetyScoreV9InputIdentity(input);
+    const actual = field === "evaluationBuildDigest" ? { ...expected, evaluationBuildDigest: "0".repeat(64) } : expected;
+    const diagnosis = diagnoseSafetyScoreV9InputIdentityMismatch({
+      expected, actual, expectedRegistryFingerprint: "a".repeat(64),
+      actualRegistryFingerprint: field === "registryFingerprint" ? "b".repeat(64) : "a".repeat(64),
+      expectedWorkerVersion: "new-worker", actualWorkerVersion: "old-worker",
+      expectedWorkerUploadedAtSec: 200, actualWorkerUploadedAtSec: 100, pairedCaptureValid: true,
+    });
+    expect(diagnosis.deploymentOnly).toBe(true);
+    expect(diagnosis.changedFields).toEqual([field]);
+    expect(safetyScoreV9InputIdentitiesMatch(expected, actual)).toBe(field !== "evaluationBuildDigest");
+  });
+
+  it.each(["methodologyVersion", "baseInputGenerationId", "publicationGenerationId"] as const)("excludes %s drift from deployment-only classification", (field) => {
+    const expected = buildSafetyScoreV9InputIdentity(input);
+    const diagnosis = diagnoseSafetyScoreV9InputIdentityMismatch({
+      expected, actual: { ...expected, [field]: "different", evaluationBuildDigest: "0".repeat(64) },
+      expectedRegistryFingerprint: "a".repeat(64), actualRegistryFingerprint: "a".repeat(64),
+      expectedWorkerVersion: "new-worker", actualWorkerVersion: "old-worker",
+      expectedWorkerUploadedAtSec: 200, actualWorkerUploadedAtSec: 100, pairedCaptureValid: true,
+    });
+    expect(diagnosis.deploymentOnly).toBe(false);
+    expect(diagnosis.changedFields).toContain(field);
   });
 });

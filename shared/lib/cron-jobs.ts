@@ -36,15 +36,12 @@ const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
     ...CRON_SCHEDULE_CADENCES.quarterHourly,
   },
-  // The capture must land BEFORE the fixed input it will be consumed against.
-  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
-  // captureClockSec <= fixedInput.clockSec, because a publication must not depend
-  // on an observation taken after its own input snapshot. prepare-safety-score-v9-input
-  // stamps that clock at :17-:18, so :08/:38 are the captures the :22/:52 publications
-  // actually consume. A capture placed in the prepare->publish gap is after the clock
-  // by construction: it is never admitted, and isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred
-  // then skips the publication every cycle. Verified in production on 2026-08-09 (see
-  // the 10:22 skip); do not move this grid later without changing that admission rule.
+  // A packet must precede the scoring clock: capture/completion clocks after
+  // that clock are never admitted. The :08/:38 opportunities normally provide
+  // the :22/:52 publications with an older packet that can be re-derived.
+  // Fresh :16/:46 preparation also requests the following :23/:53 opportunity;
+  // compilation may report bounded attribution-pending without applying packets
+  // while that exact-source request remains unexpired. Keep this grid unchanged.
   // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
   // qualifying each invocation for the 15-minute hourly Cron CPU class. Under the
   // single sub-hourly expression the 30-second class killed the isolate on ~29% of

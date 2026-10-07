@@ -5,10 +5,17 @@ import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared
 import {
   admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
+  withSupplyAttributionJournalDiagnosticV1,
   SUPPLY_ATTRIBUTION_CAPTURE_BUDGET,
   type SupplyAttributionRejectionCode,
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import {
+  SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX,
+  SupplyAttributionAttemptDiagnosticSchema,
+  type SupplyAttributionAttemptDiagnostic,
+  type SupplyAttributionCaptureFailureReason,
+} from "@shared/types/safety-score-v9-supply-attribution";
 import { rethrowIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { V9ExecutionWindow } from "../v9-slot-window";
@@ -18,7 +25,7 @@ import {
   buildReviewedDeploymentRouteInventory,
 } from "./supply-attribution-contract";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
-import { observeReviewedEconomicDeploymentPartitionAttempt } from "./economic-supply-observer";
+import { observeReviewedEconomicDeploymentPartitionAttempt, type SupplyAttributionBodyReadObserver } from "./economic-supply-observer";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
@@ -58,6 +65,8 @@ export interface SafetyScoreV9SupplyAttributionCapture {
   captureClockSec: number;
   expectedAssetIds: string[];
   journalRecords: SupplyAttributionJournalV1[];
+  diagnosticsById?: Record<string, SupplyAttributionAttemptDiagnostic[]>;
+  failureReasonById?: Record<string, SupplyAttributionCaptureFailureReason>;
 }
 
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
@@ -65,6 +74,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   notBeforeSec?: number;
   executionWindow?: V9ExecutionWindow;
   db?: D1Database;
+  onBodyRead?: SupplyAttributionBodyReadObserver;
 }
 
 export function aggregateSupplyUsd(
@@ -175,6 +185,8 @@ interface SupplyAttributionAssetDescriptor {
     executionWindow?: V9ExecutionWindow;
     assetDeadlineMs?: number;
     db?: D1Database;
+    onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
+    onBodyRead?: SupplyAttributionBodyReadObserver;
   }) => Promise<SupplyAttributionObservationAttempt>;
 }
 
@@ -231,7 +243,7 @@ function supplyAttributionAssetDescriptors():
       assetId, sourceId: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
       sourceOriginClass: "issuer-disclosure-plus-onchain",
       routeInventoryDigest: () => buildReviewedEconomicDeploymentInventory(assetId)?.digest ?? null,
-      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db }),
+      observe: ({ fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }) => observeReviewedEconomicDeploymentPartitionAttempt({ assetId, fixedInput, scoringClockSec, chainRpcs, signal, db, onDiagnostic, onBodyRead }),
     })),
     {
       assetId: "wm-m0",
@@ -252,9 +264,12 @@ function buildSupplyAttributionJournalRecord(input: {
   completedAtSec: number;
   scoringClockSec: number;
   outcome: SupplyAttributionObservationAttempt;
+  diagnostics?: SupplyAttributionAttemptDiagnostic[];
 }): SupplyAttributionJournalV1 {
   const { descriptor, outcome } = input;
-  return createSupplyAttributionJournalV1({
+  const diagnostic = input.diagnostics?.findLast(row => row.hardEvidenceFailure && row.failurePredicate) ??
+    input.diagnostics?.findLast(row => row.failurePredicate !== null);
+  return createSupplyAttributionJournalV1(withSupplyAttributionJournalDiagnosticV1({
     schemaVersion: 1,
     lane: "supply-attribution",
     assetId: descriptor.assetId,
@@ -295,7 +310,7 @@ function buildSupplyAttributionJournalRecord(input: {
       outcome.status === "accepted"
         ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
         : null,
-  });
+  }, diagnostic));
 }
 
 async function runSupplyAttributionAssetCapture(input: {
@@ -310,10 +325,15 @@ async function runSupplyAttributionAssetCapture(input: {
   attributionById: V9SupplyAttributionById;
   journalRecords: SupplyAttributionJournalV1[];
   rejectionCode?: SupplyAttributionRejectionCode;
+  onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
+  onBodyRead?: SupplyAttributionBodyReadObserver;
+  diagnostics?: SupplyAttributionAttemptDiagnostic[];
 }): Promise<void> {
   const attemptedAtSec = Math.floor(Date.now() / 1_000);
   const scoringClockSec = input.observationClockSec(attemptedAtSec);
-  const attemptId = `supply-attribution:${crypto.randomUUID()}`;
+  // Lane/source are already explicit; keep the same UUID entropy without a
+  // redundant prefix consuming the bounded journal's diagnostic headroom.
+  const attemptId = crypto.randomUUID();
   let outcome: SupplyAttributionObservationAttempt;
   try {
     outcome =
@@ -333,6 +353,8 @@ async function runSupplyAttributionAssetCapture(input: {
             executionWindow: input.executionWindow,
             assetDeadlineMs: input.assetDeadlineMs,
             db: input.db,
+            onDiagnostic: input.onDiagnostic,
+            onBodyRead: input.onBodyRead,
           })
         : {
             status: "rejected",
@@ -363,6 +385,7 @@ async function runSupplyAttributionAssetCapture(input: {
       completedAtSec,
       scoringClockSec,
       outcome,
+      diagnostics: input.diagnostics,
     });
   } catch (error) {
     rethrowIfAborted(error, input.signal);
@@ -380,6 +403,7 @@ async function runSupplyAttributionAssetCapture(input: {
       completedAtSec,
       scoringClockSec,
       outcome,
+      diagnostics: input.diagnostics,
     });
   }
   if (outcome.status === "accepted") {
@@ -428,6 +452,26 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const expectedAssetIdSet = new Set(expectedAssetIds);
   const attributionById: V9SupplyAttributionById = {};
   const journalRecords: SupplyAttributionJournalV1[] = [];
+  const failureReasonById: Record<string, SupplyAttributionCaptureFailureReason> = {};
+  // Kept outside child task results so an authenticated prefix survives a
+  // timeout/abort that discards the child's eventual return value.
+  const diagnosticsById: Record<string, SupplyAttributionAttemptDiagnostic[]> = {};
+  const retainDiagnostic = (assetId: string, diagnostic: SupplyAttributionAttemptDiagnostic) => {
+    const validated = SupplyAttributionAttemptDiagnosticSchema.parse(diagnostic);
+    const rows = diagnosticsById[assetId] ??= [];
+    if (rows.length < SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX) {
+      rows.push(validated);
+    } else {
+      // Preserve both hard failures and authenticated progress over idle writes.
+      let index = rows.findLastIndex(row => !row.hardEvidenceFailure &&
+        !(row.persisted && row.authenticatedCursorAdvanced && row.incompleteBootstrap));
+      if (index < 0 && (validated.hardEvidenceFailure ||
+        (validated.persisted && validated.authenticatedCursorAdvanced && validated.incompleteBootstrap))) {
+        index = rows.findLastIndex(row => !row.hardEvidenceFailure);
+      }
+      if (index >= 0) rows[index] = validated;
+    }
+  };
 
   const descriptors = supplyAttributionAssetDescriptors().filter(
     descriptor => expectedAssetIdSet.has(descriptor.assetId),
@@ -437,12 +481,16 @@ export async function captureSafetyScoreV9SupplyAttribution(
     async (descriptor, assetSignal, assetDeadlineMs) => {
       const assetAttributionById: V9SupplyAttributionById = {};
       const assetJournalRecords: SupplyAttributionJournalV1[] = [];
+      const assetDiagnostics = diagnosticsById[descriptor.assetId] ??= [];
       await runSupplyAttributionAssetCapture({
         descriptor, fixedInput, chainRpcs, signal: assetSignal,
         executionWindow: options.executionWindow, db: options.db,
         assetDeadlineMs,
         observationClockSec, attributionById: assetAttributionById,
         journalRecords: assetJournalRecords,
+        onDiagnostic: diagnostic => retainDiagnostic(descriptor.assetId, diagnostic),
+        onBodyRead: options.onBodyRead,
+        diagnostics: assetDiagnostics,
       });
       return { attributionById: assetAttributionById, journalRecords: assetJournalRecords };
     },
@@ -463,11 +511,13 @@ export async function captureSafetyScoreV9SupplyAttribution(
       Object.assign(attributionById, result.value.attributionById);
       journalRecords.push(...result.value.journalRecords);
     } else {
+      failureReasonById[descriptors[index].assetId] = result.reason;
       // Every expected asset still receives an exact attempt outcome. Neither
       // timeout nor exhaustion is an empty inventory or a positive zero.
       await runSupplyAttributionAssetCapture({
         descriptor: descriptors[index], fixedInput, signal, observationClockSec,
         attributionById, journalRecords,
+        diagnostics: diagnosticsById[descriptors[index].assetId],
         rejectionCode: result.reason === "observer-failed"
           ? "deployment-state-unavailable"
           : "deployment-observation-window-insufficient",
@@ -480,6 +530,8 @@ export async function captureSafetyScoreV9SupplyAttribution(
     captureClockSec,
     expectedAssetIds,
     journalRecords,
+    diagnosticsById,
+    failureReasonById,
   };
 }
 

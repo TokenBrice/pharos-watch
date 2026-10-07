@@ -142,16 +142,10 @@ describe("cron job schedule metadata", () => {
     expect(slot("2028-03") - slot("2028-02")).toBe(29 * 86400);
   });
 
-  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
-  // captureClockSec <= fixedInput.clockSec: a publication must not depend on an
-  // observation taken after its own input snapshot. prepare-safety-score-v9-input
-  // stamps that clock, so a capture must precede the prepare slot it will be
-  // consumed against — NOT sit between prepare and the publication. A capture in
-  // that gap is rejected as capture-clock-after-consumer, and
-  // isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred then skips the
-  // publication on every subsequent cycle. Proven in production on 2026-08-09:
-  // moving the grid to 5,20,35,50 froze publications at the 10:22 slot with
-  // reason supply-attribution-generation-cadence-deferred.
+  // Packets must precede the scoring clock and retain the 45-minute consumer
+  // freshness window. The grid supplies older :08/:38 packets to :22/:52;
+  // missing or temporally incompatible packets can instead be bounded pending
+  // provenance under an exact prepare-owned :23/:53 request, never future data.
   //
   // The capture must also stay inside the 45-minute consumer acceptance window,
   // or the publication rejects it as generation-stale and xaut-tether falls to

@@ -13,7 +13,7 @@ const mockLoadInputs = vi.fn();
 const mockDerivePegAnalytics = vi.fn();
 const mockPublishPegAnalytics = vi.fn();
 const mockLoadExactDexGeneration = vi.fn();
-const mockSetCacheMany = vi.fn();
+const mockCommitCaptureControl = vi.fn();
 const mockGetCacheUpdatedAt = vi.fn();
 const mockLoadStablecoinsCache = vi.fn();
 const mockCapturePegProvenance = vi.fn();
@@ -50,8 +50,12 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 }));
 
 vi.mock("../../lib/db-cache", () => ({
-  setCacheMany: mockSetCacheMany,
   getCacheUpdatedAt: mockGetCacheUpdatedAt,
+}));
+
+vi.mock("../../lib/safety-score-v9/capture-control", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/safety-score-v9/capture-control")>(),
+  commitCaptureControl: mockCommitCaptureControl,
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -192,7 +196,7 @@ describe("prepareSafetyScoreV9Input", () => {
       mockDerivePegAnalytics,
       mockPublishPegAnalytics,
       mockLoadExactDexGeneration,
-      mockSetCacheMany,
+      mockCommitCaptureControl,
       mockGetCacheUpdatedAt,
       mockLoadStablecoinsCache,
       mockCapturePegProvenance,
@@ -213,7 +217,7 @@ describe("prepareSafetyScoreV9Input", () => {
       generationId: DEX_GENERATION_ID,
       updatedAt: DEX_UPDATED_AT,
     });
-    mockSetCacheMany.mockResolvedValue(undefined);
+    mockCommitCaptureControl.mockResolvedValue(undefined);
     mockGetCacheUpdatedAt.mockResolvedValue(STABLECOINS_UPDATED_AT);
     mockLoadStablecoinsCache.mockResolvedValue(stablecoinsCache());
     mockCapturePegProvenance.mockReturnValue({ [ASSET_ID]: { marker: "compact-peg-provenance" } });
@@ -242,8 +246,8 @@ describe("prepareSafetyScoreV9Input", () => {
   it("writes an envelope-v2 capture and its seed under one v9-input identity", async () => {
     const result = await prepareSafetyScoreV9Input(makeDb());
 
-    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
-    const [, entries] = mockSetCacheMany.mock.calls[0]!;
+    expect(mockCommitCaptureControl).toHaveBeenCalledTimes(1);
+    const [, entries] = mockCommitCaptureControl.mock.calls[0]!;
     expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
       "report-cards:fixed-input:exact",
       "safety-score-v9:supply-attribution-source:v1",
@@ -310,8 +314,8 @@ describe("prepareSafetyScoreV9Input", () => {
 
     const result = await prepareSafetyScoreV9Input(makeDb());
 
-    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
-    const [, entries] = mockSetCacheMany.mock.calls[0]!;
+    expect(mockCommitCaptureControl).toHaveBeenCalledTimes(1);
+    const [, entries] = mockCommitCaptureControl.mock.calls[0]!;
     expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
       "report-cards:fixed-input:exact",
       "safety-score-v9:supply-attribution-source:v1",
@@ -341,7 +345,7 @@ describe("prepareSafetyScoreV9Input", () => {
     await expect(
       prepareSafetyScoreV9Input(makeDb(), controller.signal),
     ).rejects.toThrow("observer cancelled");
-    expect(mockSetCacheMany).not.toHaveBeenCalled();
+    expect(mockCommitCaptureControl).not.toHaveBeenCalled();
   });
 
   it("captures a payload that parses under the native v4 schema and carries peg rows", async () => {
@@ -368,7 +372,7 @@ describe("prepareSafetyScoreV9Input", () => {
     await expect(
       prepareSafetyScoreV9Input(makeDb(), undefined, "dex-liquidity-1"),
     ).rejects.toThrow(/captured DEX generation .* expected dex-liquidity-1/);
-    expect(mockSetCacheMany).not.toHaveBeenCalled();
+    expect(mockCommitCaptureControl).not.toHaveBeenCalled();
   });
 
   it("passes the settled stablecoins cache into the native capture", async () => {
@@ -449,6 +453,24 @@ describe("prepareSafetyScoreV9Input", () => {
       pendingStablecoinsStage: "pricing",
     });
     expect(mockLoadInputs).not.toHaveBeenCalled();
-    expect(mockSetCacheMany).not.toHaveBeenCalled();
+    expect(mockCommitCaptureControl).not.toHaveBeenCalled();
+  });
+  it("recaptures real inputs with Worker provenance and atomically commits a complete seed", async () => {
+    const worker = { id: "worker-new", timestamp: "2026-07-12T00:00:00Z" };
+    await prepareSafetyScoreV9Input(makeDb(), undefined, DEX_GENERATION_ID, new Map(), worker);
+    expect(mockLoadInputs).toHaveBeenCalledOnce();
+    const [, entries, control, completeSeed] = mockCommitCaptureControl.mock.calls[0]!;
+    expect(completeSeed).toBe(true);
+    expect(control.capture.workerVersion).toBe(worker.id);
+    expect(control.capture.workerUploadedAtSec).toBe(Date.parse(worker.timestamp) / 1_000);
+    expect(control.capture.safetyScoreIdentity).toEqual(JSON.parse(entries[0].value).safetyScoreIdentity);
+  });
+
+  it("cannot clear a recapture request when exact seed capture fails", async () => {
+    mockCapturePegProvenance.mockImplementationOnce(() => { throw new Error("seed unavailable"); });
+    await prepareSafetyScoreV9Input(makeDb());
+    expect(mockCommitCaptureControl.mock.calls[0]![3]).toBe(false);
+    expect(mockCommitCaptureControl.mock.calls[0]![1].map((entry: { key: string }) => entry.key))
+      .not.toContain("report-cards:v9-peg-provenance-seed:exact");
   });
 });

@@ -3,18 +3,13 @@ import {
   recordSkippedSafetyScoreV9WorkflowRun,
   safetyScoreV9WorkflowInstanceId,
 } from "../../workflows/safety-score-v9-publication";
-import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
+import { runV9AfterCoreWithinWindow, V9_EXECUTION_WINDOW_POLICY } from "../../lib/v9-slot-window";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { parseObjectMetadata } from "../../lib/json-metadata";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
-// The publication runner has its own two-minute end-to-end timeout. Give that
-// controlled timeout room to settle while v9-slot-window still clamps the
-// outer memory lane to the next quarter-hour boundary.
-const V9_PUBLICATION_WINDOW_MS = 3 * 60_000;
-const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
 
 async function triggerSafetyScoreV9ShadowWorkflow(
   runtime: ScheduledRuntimeContext,
@@ -70,19 +65,18 @@ export function buildV9PublicationSlotGroups(
             slotStartedAt: runtime.slotStartedAt,
             workerVersion: runtime.workerVersion ?? null,
             signal,
-            deadlineOffsetMs: V9_PUBLICATION_WINDOW_MS,
-            minimumRemainingMs:
-              V9_PUBLICATION_MINIMUM_REMAINING_MS,
+            ...V9_EXECUTION_WINDOW_POLICY.publication,
             lane: "compute-safety-score-v9",
             currentSlotKey: runtime.scheduleKey,
           },
-          (windowSignal) =>
+          (windowSignal, executionWindow) =>
             import("../../cron/compute-safety-score-v9").then(
               async ({ computeSafetyScoreV9 }) => {
                 const compiled = await computeSafetyScoreV9(
                   runtime.db,
                   windowSignal,
                   reportProgress,
+                  { workerMetadata: runtime.env.CF_VERSION_METADATA, executionWindow },
                 );
                 recordComputeResult(compiled);
                 return compiled;

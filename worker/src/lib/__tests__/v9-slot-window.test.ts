@@ -19,6 +19,7 @@ import {
   runV9AfterCoreWithinWindow,
   V9_MEMORY_LANE_LEASE_KEY,
   waitForV9MemoryLaneRelease,
+  type V9ExecutionWindow,
 } from "../v9-slot-window";
 
 interface CoreSlotFixture {
@@ -96,7 +97,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       result_status: "ok",
       worker_version: "worker-v2",
     });
-    const run = vi.fn(async (signal: AbortSignal) => ({
+    const run = vi.fn(async (signal: AbortSignal, _window: V9ExecutionWindow) => ({
       status: signal.aborted
         ? ("error" as const)
         : ("ok" as const),
@@ -110,6 +111,11 @@ describe("runV9AfterCoreWithinWindow", () => {
 
     expect(result.status).toBe("ok");
     expect(run).toHaveBeenCalledTimes(1);
+    expect(run.mock.calls[0]?.[1]).toMatchObject({
+      slotStartedAtSec: scheduledTimeMs / 1_000,
+      deadlineMs: scheduledTimeMs + 30_000,
+      minimumRemainingMs: 10_000,
+    });
     expect(fixture.bind).toHaveBeenCalledWith(
       Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000),
     );

@@ -10,6 +10,8 @@ import { USER_AGENT } from "../constants";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
 
 // Discovery window width is independent of provider eth_getLogs limits: Scan
 // returns identifiers, never an exhaustive quantity. Dense windows subdivide;
@@ -60,10 +62,13 @@ export async function observeLayerZeroOftPending(input: {
   source: LayerZeroOftPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: LayerZeroOftPendingCheckpoint;
+  onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: LayerZeroOftPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: LayerZeroOftPendingCheckpoint }
 > {
+  let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
+  const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "layerzero-oft", sourceId: input.source.sourceId, ...context, ...detail });
   try {
     if (!LayerZeroOftPendingReadSchema.safeParse(input.source).success) fail("review-invalid");
     const source = input.source, options = { chainRpcs: input.chainRpcs, signal: input.signal };
@@ -85,8 +90,10 @@ export async function observeLayerZeroOftPending(input: {
       })) };
     }
     if (cp.pathways.reduce((sum, lane) => sum + lane.messages.length, 0) > MAX_MESSAGES) fail("checkpoint-capacity");
+    const savedCursors = cp.pathways.map(lane => lane.sent.nextBlock);
     const rpc = async (chain: string, method: string, params: unknown[]) => {
       throwIfAborted(input.signal);
+      context = { ...context, chainId: chain, method, phase: "rpc", providerOrigin: null };
       const result = await fetchEvmRpcBatch(chain, [{ method, params }], options);
       if (!result || result.length !== 1) fail("rpc-unavailable");
       return result[0];
@@ -114,9 +121,16 @@ export async function observeLayerZeroOftPending(input: {
       const serialized = stableJsonStringifyV1(cp);
       if (serialized.length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
       if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+      for (let index = 0; index < cp.pathways.length; index++) {
+        const path = source.pathways[index]!, cursor = cp.pathways[index]!.sent.nextBlock, pin = input.headers[path.sourceIndex]!;
+        if (cursor === savedCursors[index]) continue;
+        emit({ laneId: String(index), chainId: source.sides[path.sourceIndex]!.chainId, method: "authenticated-history", phase: "authenticated-prefix-persisted", beforeCursor: String(savedCursors[index]), afterCursor: String(cursor), targetCursor: String(pin.number + 1), pinObservedAtSec: pin.timestamp, persisted: input.db !== undefined, authenticatedCursorAdvanced: cursor > savedCursors[index]!, incompleteBootstrap: cp.pathways.some((lane, i) => lane.sent.nextBlock < input.headers[source.pathways[i]!.sourceIndex]!.number + 1) });
+        savedCursors[index] = cursor;
+      }
       return serialized;
     };
     const scan = async (url: string): Promise<{ data: ScanMessage[]; nextToken?: string }> => {
+      context = { ...context, method: "layerzero-scan", phase: "discovery", providerOrigin: new URL(url).origin };
       // Scan rejects Worker-egress requests without an explicit User-Agent.
       const result = await fetchJsonWithRetry<unknown>(url, { headers: { "User-Agent": USER_AGENT }, signal: input.signal }, 0, { timeoutMs: 10_000, maxResponseBytes: 2 * 1024 * 1024 });
       const parsed = z.object({ data: z.array(ScanMessageSchema).max(100), nextToken: z.string().max(8192).optional() }).safeParse(result?.body);
@@ -149,6 +163,8 @@ export async function observeLayerZeroOftPending(input: {
       if (CHAIN_META[side.chainId]?.type !== "evm") fail("unsupported-chain");
       const finalized = await fetchEvmBlockHeader(side.chainId, "finalized", options);
       const pinned = await fetchEvmBlockHeader(side.chainId, pin.number, options);
+      context = { chainId: side.chainId, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
+      emit({});
       if (!finalized || finalized.number < pin.number || pin.number < side.deploymentBlock ||
         !pinned || pinned.hash !== pin.hash || pinned.timestamp !== pin.timestamp) fail("pin-not-finalized");
       await authenticateRuntime(index, pin.hash);
@@ -241,6 +257,7 @@ export async function observeLayerZeroOftPending(input: {
     for (let index = 0; index < source.pathways.length; index++) {
       const path = source.pathways[index]!, a = source.sides[path.sourceIndex]!, b = source.sides[path.destinationIndex]!, pin = input.headers[path.sourceIndex]!;
       const checkpoint = cp.pathways[index]!, cursor = checkpoint.sent;
+      context = { laneId: String(index), chainId: a.chainId, method: "layerzero-scan", phase: "history-page", pinObservedAtSec: pin.timestamp };
       let pageBlocks = HISTORY_PAGE_BLOCKS;
       while (cursor.nextBlock <= pin.number) {
         // A receipted consecutive census equal to the pinned outbound nonce
@@ -337,7 +354,10 @@ export async function observeLayerZeroOftPending(input: {
     }
     const complete = cp.pathways.every((lane, index) => lane.sent.nextBlock === input.headers[source.pathways[index]!.sourceIndex]!.number + 1);
     const serialized = await saveCheckpoint();
-    if (!complete) return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
+    if (!complete) {
+      emit({ phase: "history-incomplete", incompleteBootstrap: true, failurePredicate: "history-incomplete" });
+      return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
+    }
     let amountSD = 0n;
     const pathways = cp.pathways.map((lane, index) => {
       const pending = lane.messages.reduce((sum, message) => sum + BigInt(message.amountSD), 0n);
@@ -349,6 +369,7 @@ export async function observeLayerZeroOftPending(input: {
     return { status: "accepted", amount, proof, responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })), checkpoint: cp };
   } catch (error) {
     rethrowIfAborted(error, input.signal);
+    emit({ hardEvidenceFailure: true, failurePredicate: error instanceof Error && error.message.startsWith("oft-pending:") ? error.message.slice(12) : "rpc-unavailable" });
     return { status: "rejected", reason: error instanceof Error && error.message.startsWith("oft-pending:") ? error.message.slice(12) : "rpc-unavailable" };
   }
 }
