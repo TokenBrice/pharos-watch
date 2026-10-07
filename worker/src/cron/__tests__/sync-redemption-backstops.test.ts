@@ -15,7 +15,7 @@ const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
-const loadReserveSnapshotMetadataMapMock = vi.fn();
+const loadAcceptedReserveGenerationMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
 const GATE_LOAD_TIMEOUT_MS = 15_000;
 
@@ -80,8 +80,9 @@ vi.mock("../../lib/redemption-backstops-store-write", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
 }));
 
-vi.mock("../../lib/live-reserves/store", () => ({
-  loadReserveSnapshotMetadataMap: loadReserveSnapshotMetadataMapMock,
+vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/accepted-reserve-generation")>()),
+  loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
 }));
 
 vi.mock("@shared/lib/redemption-backstops", () => ({
@@ -139,7 +140,10 @@ describe("syncRedemptionBackstops", () => {
         notes: ["Latest redemption-backstop sync failed"],
       }),
     );
-    loadReserveSnapshotMetadataMapMock.mockResolvedValue(new Map());
+    loadAcceptedReserveGenerationMock.mockReset().mockResolvedValue({
+      schemaVersion: 1, generationId: "reserve:1700000000:test", root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1700000000, queueHash: "test" },
+      sealedBy: { attemptNo: 1, executionGeneration: 1, invocationId: "test" }, producerCompletedAtSec: now, contentSha256: "a".repeat(64), members: [],
+    });
     upsertRedemptionBackstopSnapshotsMock.mockImplementation((_db: unknown, snapshots: unknown[]) =>
       Promise.resolve({
         runId: "redemption:test-run",
@@ -250,7 +254,7 @@ describe("syncRedemptionBackstops", () => {
     const result = await syncRedemptionBackstops(db, new AbortController().signal, undefined, reportProgress);
 
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
-      "loading-redemption-stablecoins", "loading-redemption-liquidity", "loading-redemption-reserves",
+      "loading-redemption-reserves", "loading-redemption-stablecoins", "loading-redemption-liquidity",
       "loading-redemption-availability", "resolving-redemption-backstops", "publishing-redemption-backstops",
     ]);
 
@@ -327,23 +331,15 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.liquidityStale).toBe(true);
   });
 
-  it("continues with fail-closed live metadata when optional reserve preload fails", async () => {
-    loadReserveSnapshotMetadataMapMock.mockRejectedValueOnce(new Error("reserve preload unavailable"));
-
+  it.each(["accepted-reserve-view-unavailable", "accepted-reserve-view-invalid"] as const)("writes no run when accepted input is %s", async (reason) => {
+    const { AcceptedReserveViewError } = await import("../../lib/accepted-reserve-generation");
+    loadAcceptedReserveGenerationMock.mockRejectedValueOnce(new AcceptedReserveViewError(reason));
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
-    expect(result.status).toBe("degraded");
-    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ id: "cusd-cap" }),
-      29,
-      expect.any(Number),
-      expect.objectContaining({ reserveSnapshotMetadata: null }),
-    );
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.preloadDegraded).toBe(true);
-    expect(metadata.preloadWarnings).toEqual([expect.stringContaining("reserve-metadata:reserve preload unavailable")]);
+    expect(result.status).toBe("error");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe(reason);
+    expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {

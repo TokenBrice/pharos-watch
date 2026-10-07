@@ -191,7 +191,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks reserve-dependent sidecars and still runs the independent chain after a reserve failure", async () => {
+  it("runs accepted redemption fallback but blocks the sentinel after a reserve failure", async () => {
     vi.mocked(syncLiveReserves).mockRejectedValue(new Error("sync blew up"));
     vi.mocked(loadLiveReserveCheckpoint).mockResolvedValue({
       ...recoveryCheckpoint(),
@@ -202,11 +202,11 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
       jobsErrored: 1,
-      jobsSkipped: 2,
+      jobsSkipped: 1,
     });
 
     expect(syncLiveReserves).toHaveBeenCalledTimes(1);
-    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncRedemptionBackstops).toHaveBeenCalledTimes(1);
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     // The watchdog validates the live-reserve generation this slot was supposed
     // to write, so an unfinished queue must leave the drift envelope untouched
@@ -222,6 +222,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(runLeasedCron.mock.calls.map(([job]) => job).sort()).toEqual([
       "sync-kinesis-supply",
       "sync-live-reserves",
+      "sync-redemption-backstops",
     ]);
     expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
     const errorLine = errorSpy.mock.calls
@@ -258,12 +259,13 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     const summary = await runFourHourlyReserveSyncSlot(buildRuntime(exhaustedCheckpoint));
 
-    expect(summary).toMatchObject({ jobsErrored: 1, jobsSkipped: 2 });
+    expect(summary).toMatchObject({ jobsErrored: 1, jobsSkipped: 1 });
     expect(runLeasedCron.mock.calls.map(([job]) => job).sort()).toEqual([
       "sync-kinesis-supply",
       "sync-live-reserves",
+      "sync-redemption-backstops",
     ]);
-    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncRedemptionBackstops).toHaveBeenCalledTimes(1);
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(checkCollateralDrift).not.toHaveBeenCalled();
     expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
@@ -376,7 +378,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     const expectedJobsThroughContention = {
       // A lease-contended producer leaves the queue unfinished, so both reserve
       // consumers stay blocked instead of observing a partial generation.
-      "sync-live-reserves": ["sync-kinesis-supply", "sync-live-reserves"],
+      "sync-live-reserves": ["sync-kinesis-supply", "sync-live-reserves", "sync-redemption-backstops"],
       "sync-redemption-backstops": [
         "cron-sentinel",
         "sync-kinesis-supply",
@@ -532,6 +534,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(runLeasedCron.mock.calls.map(([job]) => job).sort()).toEqual([
       "sync-kinesis-supply",
       "sync-live-reserves",
+      "sync-redemption-backstops",
     ]);
     expect(checkCollateralDrift).not.toHaveBeenCalled();
     expect(setLiveReserveCheckpointChildDisposition).toHaveBeenCalledWith(
@@ -546,7 +549,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       ...recoveryCheckpoint(
         {
           "sync-live-reserves": "not_started",
-          "sync-redemption-backstops": "not_started",
+          "sync-redemption-backstops": "completed",
           "sync-kinesis-supply": "completed",
           "cron-sentinel": "not_started",
         },
@@ -601,7 +604,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     await runFourHourlyReserveSyncSlot(buildRuntime(legacyCheckpoint));
 
-    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves"]);
+    expect(runLeasedCron.mock.calls.map(([job]) => job)).toEqual(["sync-live-reserves", "sync-redemption-backstops"]);
     expect(finishLiveReserveCheckpoint).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ attemptNo: 2 }),

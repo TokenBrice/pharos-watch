@@ -714,7 +714,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
+    maxConnections: 1, // Serial direct RPC observers plus sealed accepted reserve inputs
     connectionGroup: "reserve-sync-chain",
   },
   {

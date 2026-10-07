@@ -16,6 +16,10 @@ function isHourlyCpuTrigger(schedule: string): boolean {
 }
 
 describe("cron job schedule metadata", () => {
+  it("accounts for redemption's serial RPC observers", () => {
+    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({ maxConnections: 1 });
+  });
+
   it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
     expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
     expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual(["10 * * * *"]);

@@ -514,6 +514,8 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     );
 
     expect(result).toEqual({
+      consumedReserveCapacity: true,
+      consumedReserveRouteStatus: false,
       immediateCapacityUsd: 0,
       immediateCapacityRatio: 0,
       scoringCapacityUsd: 0,

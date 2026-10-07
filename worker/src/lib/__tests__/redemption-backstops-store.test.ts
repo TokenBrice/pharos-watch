@@ -24,6 +24,7 @@ import {
   mockRedemptionD1,
   runRowsQuery,
 } from "./redemption-backstops-store.test-support";
+import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 
 const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
   stablecoin_id: "usdc-circle",
@@ -77,6 +78,26 @@ function findWriteMetadata(
 }
 
 describe("loadRedemptionBackstopSnapshot", () => {
+  it("round-trips immutable bindings and rejects legacy admission without inferred inputs", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const db = createSqliteD1(sqlite);
+      const record = makeRedemptionWriteRecord();
+      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: record.stablecoinId, attemptId: null, configFingerprint: null,
+        freshness: assessReserveFetchFreshness({ fetchedAt: record.updatedAt - 60, attemptId: null }, record.updatedAt, 172800) };
+      record.reserveInput = reserveInput;
+      await upsertRedemptionBackstopSnapshots(db, [record], { runId: "redemption:binding", nowSec: record.updatedAt, metadata: {
+        reserveViewSchemaVersion: 1, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256, runClockSec: record.updatedAt,
+        consumedReserveInputs: { [record.stablecoinId]: reserveInput },
+      } });
+      const loaded = await loadRedemptionBackstopSnapshot(db);
+      expect(loaded.map[record.stablecoinId].reserveInput).toEqual(reserveInput);
+      expect(loaded.latestUpdatedAt).toBe(record.updatedAt);
+      sqlite.exec("UPDATE redemption_backstop_runs SET metadata_json = '{}'");
+      expect((await loadRedemptionBackstopSnapshot(db)).reserveInputHealth).toBe("unavailable");
+    } finally { sqlite.close(); }
+  });
+
   it("surfaces a missing mandatory run-manifest table", async () => {
     const db = mockD1Strict([
       {

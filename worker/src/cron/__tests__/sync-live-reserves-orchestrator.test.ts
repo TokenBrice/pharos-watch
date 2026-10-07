@@ -17,6 +17,10 @@ import {
   recordOutcomeSafeMock,
   shouldAttemptFetchMock,
 } from "./live-reserves.test-support";
+import { sealAcceptedReserveGeneration } from "../../lib/accepted-reserve-generation";
+
+// Cohort sealing and atomic fencing are covered by accepted-reserve-generation.test.
+vi.mock("../../lib/accepted-reserve-generation", () => ({ sealAcceptedReserveGeneration: vi.fn(async () => null) }));
 
 function mockD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockLiveReserveD1(tables, [
@@ -183,6 +187,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     );
 
     expect(result.status).toBe("ok");
+    expect(sealAcceptedReserveGeneration).toHaveBeenCalledWith(db, identity, expect.any(String),
+      CONFIGURED_COINS.map((coin) => coin.id), result);
     const history = db.getHistory();
     const checkpointUpdates = history.filter((entry) => (
       entry.sql.includes("UPDATE worker_scheduled_checkpoints")

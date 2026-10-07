@@ -10,6 +10,7 @@ import {
   loadRedemptionBackstopSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
+import type { RedemptionBackstopRunMetadata } from "./redemption-backstops-store";
 import {
   loadStablecoinsCache,
   type StablecoinsCacheLoadOk,
@@ -44,6 +45,7 @@ export interface ReportCardsSnapshotInputs {
     runId: string | null;
     methodologyVersion: string | null;
     latestUpdatedAt: number | null;
+    runMetadata?: RedemptionBackstopRunMetadata;
   };
   liveReserveMap: Map<string, ReserveSlice[]>;
   liveReserveProvenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
@@ -428,11 +430,15 @@ export async function loadReportCardsSnapshotInputs(
       : liveReserveMap.size / CONFIGURED_INDEPENDENT_LIVE_RESERVE_COIN_COUNT;
 
   const redemptionFreshness = buildFreshnessEntry(
+    // Input expiration never rewrites the actual redemption run timestamp.
     redemptionBackstopSnapshot.latestUpdatedAt,
     nowSec,
     REPORT_CARD_REDEMPTION_FRESHNESS_SEC,
     redemptionSnapshotUnavailable,
   );
+  const reserveInputHealth = redemptionBackstopSnapshot.reserveInputHealth ?? "unavailable";
+  if (reserveInputHealth === "unavailable") redemptionSnapshotUnavailable = true;
+  if (reserveInputHealth !== "fresh") redemptionFreshness.stale = true;
   const redemptionStale = redemptionFreshness.stale;
   const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopSnapshot.map;
   if (redemptionStale) {
@@ -460,9 +466,9 @@ export async function loadReportCardsSnapshotInputs(
   const redemptionState: V9PublicationInputHealth["redemption"]["state"] =
     !hasApplicableRedemption
       ? "not-applicable"
-      : redemptionSnapshotUnavailable
+      : redemptionSnapshotUnavailable || reserveInputHealth === "unavailable"
         ? "unavailable"
-        : redemptionFreshness.stale
+        : redemptionFreshness.stale || reserveInputHealth === "stale"
           ? "stale"
           : "current";
 
@@ -474,6 +480,7 @@ export async function loadReportCardsSnapshotInputs(
       runId: redemptionBackstopSnapshot.runId ?? null,
       methodologyVersion: redemptionBackstopSnapshot.methodologyVersion ?? null,
       latestUpdatedAt: redemptionBackstopSnapshot.latestUpdatedAt,
+      runMetadata: redemptionBackstopSnapshot.runMetadata,
     },
     liveReserveMap,
     liveReserveProvenanceMap,

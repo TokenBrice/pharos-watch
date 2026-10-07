@@ -423,6 +423,15 @@ export async function buildRedemptionBackstopEntry(
 
   const entry: RedemptionBackstopEntry = {
     stablecoinId,
+    ...(!directQueueObservation && options.reserveInput && (
+      (!routeSuspension && capacity.consumedReserveCapacity)
+      || staticFields.selectedLiveFee
+      || (capacity.consumedReserveRouteStatus && !routeSuspension && mergedRouteStatus.routeStatus === capacity.routeStatus && (
+        mergedRouteStatus.routeStatusSource === capacity.routeStatusSource
+        || (capacity.routeStatus === "unknown" && !capacity.routeStatusSource && mergedRouteStatus.routeStatusSource === "static-config")
+      ))
+      || (!routeSuspension && exitRouteObservation && (liveMetadata.v9SfrxusdCrosschainRouteState || liveMetadata.v9FpiControllerRouteState || liveMetadata.v9OutputValuation))
+    ) ? { reserveInput: options.reserveInput } : {}),
     score,
     dexLiquidityScore,
     accessScore: staticFields.accessScore,
