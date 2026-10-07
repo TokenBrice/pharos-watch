@@ -166,22 +166,25 @@ describe("HistoryClient", () => {
     expect(historyRefetch).not.toHaveBeenCalled();
   });
 
-  it("passes unavailable Worker runtime evidence through without manufacturing deployment metadata", async () => {
+  it("passes nullable role evidence without manufacturing deployment metadata", async () => {
     render(<HistoryClient />);
     await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
-
-    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
-      workerVersionEvidence: Record<string, unknown>;
-      transitionsLast24h: number;
-    };
-    expect(props.workerVersionEvidence).toEqual({
-      status: "unavailable",
-      version: null,
-      observedAt: null,
-      sourceCount: 0,
-      sources: [],
-    });
+    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as ComponentProps<typeof HistorySection>;
+    expect(props.workerVersions).toEqual({ public: null, heavy: null });
     expect(props.transitionsLast24h).toBe(status.summary.transitionsLast24h);
+  });
+
+  it("passes both verified markers even when producer history names a newer execution", () => {
+    const workerVersions = {
+      public: { scriptName: "stablecoin-api", workerVersion: "public-v1", activatedAt: 100 },
+      heavy: { scriptName: "stablecoin-heavy", workerVersion: "heavy-v2", activatedAt: 200 },
+    };
+    useStatusMock.mockReturnValue({
+      ...useStatusMock.getMockImplementation()!(),
+      data: { ...status, workerVersions, producerHeads: [{ lastWorkerVersion: "unverified-newer", lastInvokedAt: 300 }] },
+    });
+    render(<HistoryClient />);
+    expect(historySectionPropsMock.mock.calls.at(-1)?.[0].workerVersions).toBe(workerVersions);
   });
 
   it("owns both operational-history queries and passes source failures independently", async () => {

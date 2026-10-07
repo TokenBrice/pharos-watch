@@ -9,7 +9,6 @@ import {
   INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   findFirstDegradationAfter,
   type IncidentHistoryFilters,
-  type WorkerVersionEvidence,
 } from "@/lib/incident-history-view-model";
 import { formatTimestampSeconds, formatTransitionLabel } from "@/lib/status-dashboard-model";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -19,7 +18,7 @@ export interface HistorySectionProps {
   latestTransition: StatusResponse["timeline"][number] | null;
   reserveComposition: StatusResponse["reserveComposition"];
   releaseMetadataState: ReleaseMetadataState;
-  workerVersionEvidence: WorkerVersionEvidence;
+  workerVersions: StatusResponse["workerVersions"];
   adminActionLog: OperationalActivityProps["adminActions"];
   credentialAudit: OperationalActivityProps["credentialAudit"];
   nowSeconds: number;
@@ -121,7 +120,7 @@ function PagesReleaseCorrelation({
   );
 }
 
-function WorkerReleaseCorrelation({ evidence }: { evidence: WorkerVersionEvidence }) {
+function WorkerReleaseCorrelation({ versions }: { versions: StatusResponse["workerVersions"] }) {
   return (
     <section
       aria-labelledby="worker-deployment-title"
@@ -129,42 +128,39 @@ function WorkerReleaseCorrelation({ evidence }: { evidence: WorkerVersionEvidenc
     >
       <div>
         <h4 id="worker-deployment-title" className="text-sm font-semibold text-foreground">
-          Worker deployment
+          Worker deployments
         </h4>
-        <p className="mt-1 text-xs text-muted-foreground">Worker deployment correlation remains Unknown.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Verified 100% activations from Cloudflare deployment markers.</p>
       </div>
-      {evidence.status === "unavailable" ? (
-        <div className="border-l-2 border-border pl-3 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Runtime observation unavailable</p>
-          <p>No Worker version observation exists in the producer-head payload fields.</p>
-          <p className="mt-1">Deploy time, deployment ID, and deploy commit are Unknown.</p>
-        </div>
-      ) : (
-        <>
-          <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-            <div className="min-w-0">
-              <dt className="text-muted-foreground">Runtime observation</dt>
-              <dd className="break-all font-mono text-foreground">{evidence.version}</dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-muted-foreground">Observed at</dt>
-              <dd className="break-words text-foreground">
-                {evidence.observedAt == null ? "Unknown" : formatTimestampSeconds(evidence.observedAt)}
-              </dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-muted-foreground">Observation sources</dt>
-              <dd className="font-mono tabular-nums text-foreground">{evidence.sourceCount}</dd>
-            </div>
-          </dl>
-          <div className="border-l-2 border-amber-500/70 pl-3 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Deployment correlation Unknown</p>
-            <p>
-              Runtime observations do not provide a Worker deploy time. No transition is attributed to this version.
-            </p>
+      {(["public", "heavy"] as const).map((role) => {
+        const marker = versions[role];
+        return (
+          <div key={role} className="space-y-2 text-sm">
+            <h5 className="font-medium text-foreground">{role === "public" ? "Public Worker" : "Heavy Worker"}</h5>
+            {marker ? (
+              <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+                <div className="min-w-0">
+                  <dt className="text-muted-foreground">Script</dt>
+                  <dd className="break-all font-mono text-foreground">{marker.scriptName}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-muted-foreground">Version</dt>
+                  <dd className="break-all font-mono text-foreground">{marker.workerVersion}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-muted-foreground">Activated at</dt>
+                  <dd className="break-words text-foreground">{formatTimestampSeconds(marker.activatedAt)}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-muted-foreground">Verified activation unavailable. No deployment is inferred from runtime observations.</p>
+            )}
           </div>
-        </>
-      )}
+        );
+      })}
+      <p className="text-xs text-muted-foreground">
+        Deployment commit and deployment ID are Unknown. Activation does not attribute a transition to either Worker.
+      </p>
     </section>
   );
 }
@@ -172,14 +168,14 @@ function WorkerReleaseCorrelation({ evidence }: { evidence: WorkerVersionEvidenc
 function ReleaseCorrelationPanel({
   transitions,
   releaseMetadataState,
-  workerVersionEvidence,
+  workerVersions,
   nowSeconds,
   historyComplete,
   historyCoverage,
 }: {
   transitions: StatusResponse["timeline"];
   releaseMetadataState: ReleaseMetadataState;
-  workerVersionEvidence: WorkerVersionEvidence;
+  workerVersions: StatusResponse["workerVersions"];
   nowSeconds: number;
   historyComplete: boolean;
   historyCoverage: "complete" | "truncated" | "unknown" | "status-fallback";
@@ -191,7 +187,7 @@ function ReleaseCorrelationPanel({
           Deployment correlation
         </h3>
         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-          Pages has a release marker. Worker payloads currently expose runtime observations, not deployment metadata.
+          Pages has a release marker. Public and heavy Workers have independently verified activation markers.
         </p>
       </div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
@@ -202,7 +198,7 @@ function ReleaseCorrelationPanel({
           historyComplete={historyComplete}
           historyCoverage={historyCoverage}
         />
-        <WorkerReleaseCorrelation evidence={workerVersionEvidence} />
+        <WorkerReleaseCorrelation versions={workerVersions} />
       </div>
     </section>
   );
@@ -213,7 +209,7 @@ export function HistorySection({
   latestTransition,
   reserveComposition,
   releaseMetadataState,
-  workerVersionEvidence,
+  workerVersions,
   adminActionLog,
   credentialAudit,
   nowSeconds,
@@ -313,7 +309,7 @@ export function HistorySection({
       <ReleaseCorrelationPanel
         transitions={allTransitions}
         releaseMetadataState={releaseMetadataState}
-        workerVersionEvidence={workerVersionEvidence}
+        workerVersions={workerVersions}
         nowSeconds={nowSeconds}
         historyComplete={historyComplete}
         historyCoverage={historyCoverage}

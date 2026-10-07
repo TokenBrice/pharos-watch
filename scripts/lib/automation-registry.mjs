@@ -84,6 +84,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "worker/package.json",
       "worker/tsconfig.json",
       "worker/wrangler.toml",
+      "worker/wrangler.heavy.toml",
     ],
     prefixes: ["worker/assets/", "worker/migrations/", "worker/src/"],
     sharedExcludedPaths: [

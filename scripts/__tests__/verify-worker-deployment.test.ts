@@ -200,6 +200,27 @@ describe("Cloudflare deployment API verification", () => {
     );
   });
 
+  it.each(["stablecoin-heavy", "stablecoin-api"])("proves the requested %s script's first-ever sole 100% deployment", async (scriptName) => {
+    const env = apiEnv();
+    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture([
+      { ...activeDeployment(), created_on: ACTIVATED_AT },
+    ])));
+    await runWorkerDeploymentVerification(env, fetchApi, scriptName);
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    expect(String(fetchApi.mock.calls[0][0])).toContain(`/workers/scripts/${scriptName}/deployments`);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain("worker_version=version-2");
+  });
+
+  it("does not accept a heavy gradual rollout just because public is fully activated", async () => {
+    const fetchApi = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(apiFixture()))
+      .mockResolvedValueOnce(Response.json(apiFixture([activeDeployment({
+        versions: [{ percentage: 90, version_id: "heavy-new" }, { percentage: 10, version_id: "heavy-old" }],
+      })])));
+    await runWorkerDeploymentVerification(apiEnv(), fetchApi, "stablecoin-api");
+    await expect(runWorkerDeploymentVerification(apiEnv(), fetchApi, "stablecoin-heavy")).rejects.toThrow(/did not match this release/);
+  });
+
   it("uses the first API entry as active even when a later entry has a newer timestamp", async () => {
     const env = apiEnv();
     const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture()));

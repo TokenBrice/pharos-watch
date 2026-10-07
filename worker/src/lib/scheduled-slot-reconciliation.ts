@@ -3,6 +3,7 @@ import {
   getScheduledTaskDescriptor,
   isScheduledTaskDueAt,
   SCHEDULED_SLOT_PLANS,
+  type ScheduledWorkerRole,
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -12,12 +13,14 @@ import { ResourcePressureSchema, type CronResultStatus } from "@shared/types/sta
 import { parseJsonObject } from "./json-parse";
 import { stripSensitive } from "./safe-error-message";
 import {
+  getActiveWorkerVersionMarker,
   getWorkerVersionActivatedAt,
   getWorkerVersionFirstSeenAt,
 } from "./worker-version-first-seen";
 import { SLOT_EXECUTION_HEARTBEAT_SEC } from "./scheduled-slot-fence";
 import { buildResourcePressure } from "./cron-resource-pressure";
 import { MAX_PERSISTED_CRON_METADATA_BYTES } from "./cron-metadata-persistence";
+import { logWorkerEventArgs } from "./structured-log";
 
 
 export interface StaleSlotExecutionArtifact {
@@ -817,8 +820,23 @@ export async function reconcileStaleSlotArtifactsAndRecordEvent(
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
   reconcilerWorkerVersion?: string | null,
+  reconcilerWorkerRole?: ScheduledWorkerRole,
 ): Promise<StaleSlotReconciliationSummary> {
-  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence, reconcilerWorkerVersion);
+  const owner = SCHEDULED_SLOT_PLANS[slot.slot_key as CronScheduleKey]?.worker;
+  let ownerWorkerVersion: string | null = null;
+  if (owner && owner === reconcilerWorkerRole) {
+    ownerWorkerVersion = reconcilerWorkerVersion?.trim() || null;
+  } else if (owner) {
+    try {
+      const marker = await getActiveWorkerVersionMarker(db, owner);
+      // A marker activated after this sweep is not evidence for this death.
+      if (marker && marker.activatedAt <= nowSec) ownerWorkerVersion = marker.workerVersion;
+    } catch (error) {
+      // Marker read failure is missing evidence, never a deploy-neutral verdict.
+      logWorkerEventArgs("lib", "warn", "[cron-slot] Failed to read owner activation marker:", error);
+    }
+  }
+  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence, ownerWorkerVersion);
   await writeStaleSlotEventMarker(db, slot, nowSec, reconciliation);
   return reconciliation;
 }

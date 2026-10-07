@@ -270,6 +270,8 @@
         "shared/lib/cron-jobs.ts",
         "shared/lib/scheduled-runner-registry.ts",
         "worker/wrangler.toml",
+        "worker/wrangler.heavy.toml",
+        "worker/src/index.heavy.ts",
         "worker/src/handlers/scheduled.ts",
         "worker/src/handlers/scheduled/**",
         "worker/src/lib/scheduled-slot-*.ts",
@@ -450,6 +452,7 @@
         "shared/lib/env-contract/**",
         "worker/src/lib/env.ts",
         "worker/wrangler.toml",
+        "worker/wrangler.heavy.toml",
         "scripts/ci/check-env-contract.ts"
       ],
       "docs": [

@@ -122,6 +122,7 @@ export function statusResponse() {
   return {
     timestamp: 1_780_000_100,
     dbHealthy: true,
+    workerVersions: { public: null, heavy: null },
     availabilityStatus: "healthy",
     dataQualityStatus: "degraded",
     rawOverallStatus: "degraded",

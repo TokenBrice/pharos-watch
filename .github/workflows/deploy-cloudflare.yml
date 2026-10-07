@@ -85,6 +85,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       worker_version: ${{ steps.verify-worker-deployment.outputs.worker_version }}
+      heavy_worker_version: ${{ steps.verify-heavy-deployment.outputs.worker_version }}
     environment:
       name: production
       url: https://api.pharos.watch
@@ -98,36 +99,50 @@ jobs:
       - uses: $/.github/actions/setup-workspace
       - name: Check Worker migrations
         run: npm run check:migrations
-      - name: Package Worker before D1 mutation
+      - name: Package both Workers before D1 mutation
         run: npm run check:worker-package
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
-      - name: Deploy Worker
+      - name: Deploy heavy Worker
         run: >-
           cd worker
-          && npx --no-install wrangler deploy --strict
+          && npx --no-install wrangler deploy --strict --config wrangler.heavy.toml
+          --message "GitHub Actions deploy ${GITHUB_SHA}"
+      - id: verify-heavy-deployment
+        name: Verify active heavy Worker deployment
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-heavy
+      - name: Deploy public Worker
+        run: >-
+          cd worker
+          && npx --no-install wrangler deploy --strict --config wrangler.toml
           --message "GitHub Actions deploy ${GITHUB_SHA}"
       - id: verify-worker-deployment
-        name: Verify active Worker deployment
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
-      - name: Record Worker activation marker
+        name: Verify active public Worker deployment
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-api
+      - name: Record verified Worker activation markers
         env:
-          WORKER_ACTIVATED_AT: ${{ steps.verify-worker-deployment.outputs.worker_activation_at }}
-          WORKER_VERSION: ${{ steps.verify-worker-deployment.outputs.worker_version }}
+          PUBLIC_ACTIVATED_AT: ${{ steps.verify-worker-deployment.outputs.worker_activation_at }}
+          PUBLIC_VERSION: ${{ steps.verify-worker-deployment.outputs.worker_version }}
+          HEAVY_ACTIVATED_AT: ${{ steps.verify-heavy-deployment.outputs.worker_activation_at }}
+          HEAVY_VERSION: ${{ steps.verify-heavy-deployment.outputs.worker_version }}
         run: |
-          if [[ ! "${WORKER_VERSION}" =~ ^[A-Za-z0-9._:-]+$ ]]; then
-            echo "::warning::Skipping Worker activation marker: invalid verified version identity."
-            exit 0
-          fi
-          if [[ ! "${WORKER_ACTIVATED_AT}" =~ ^[1-9][0-9]*$ ]]; then
-            echo "::warning::Skipping Worker activation marker: Cloudflare created_on timestamp is unavailable."
-            exit 0
-          fi
-
-          marker_sql="INSERT INTO cache (key, value, updated_at) VALUES ('worker-version-activated:${WORKER_VERSION}', json_object('workerVersion', '${WORKER_VERSION}', 'activatedAt', ${WORKER_ACTIVATED_AT}, 'source', 'cloudflare-deployment.created_on'), ${WORKER_ACTIVATED_AT}) ON CONFLICT(key) DO NOTHING"
-          if ! (cd worker && npx --no-install wrangler d1 execute stablecoin-db --remote --command "${marker_sql}"); then
-            echo "::warning::Worker activation marker write failed for ${WORKER_VERSION}; deploy remains successful and classification will fail closed."
-          fi
+          for role in heavy public; do
+            if [ "${role}" = heavy ]; then
+              script_name=stablecoin-heavy
+              version="${HEAVY_VERSION}"
+              activated_at="${HEAVY_ACTIVATED_AT}"
+            else
+              script_name=stablecoin-api
+              version="${PUBLIC_VERSION}"
+              activated_at="${PUBLIC_ACTIVATED_AT}"
+            fi
+            if [[ ! "${version}" =~ ^[A-Za-z0-9._:-]+$ ]] || [[ ! "${activated_at}" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::Cannot record ${role} activation: verified identity or Cloudflare created_on is unavailable."
+              exit 1
+            fi
+            marker_sql="INSERT INTO cache (key, value, updated_at) VALUES ('worker-version-activated:${version}', json_object('workerVersion', '${version}', 'activatedAt', ${activated_at}, 'source', 'cloudflare-deployment.created_on'), ${activated_at}) ON CONFLICT(key) DO NOTHING; INSERT INTO cache (key, value, updated_at) VALUES ('worker-active-version:${role}', json_object('worker', '${role}', 'scriptName', '${script_name}', 'workerVersion', '${version}', 'activatedAt', ${activated_at}), ${activated_at}) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE excluded.updated_at >= cache.updated_at;"
+            (cd worker && npx --no-install wrangler d1 execute stablecoin-db --remote --command "${marker_sql}")
+          done
       - name: Summarize Worker release
         if: always()
         run: |
@@ -136,8 +151,8 @@ jobs:
             echo ""
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- Rollback: use Cloudflare deployment history or \`wrangler rollback [VERSION-ID] --yes\`."
-            echo "- Warning: Worker rollback does not reverse D1 migrations or other bound-resource changes."
+            echo "- Rollback topology: restore moved plans/triggers/Workflow to public first, then drain and disable heavy with explicit empty crons."
+            echo "- Warning: version rollback alone restores neither trigger ownership nor D1 migrations."
           } >> "$GITHUB_STEP_SUMMARY"
 
   pages-prepare:
@@ -206,12 +221,25 @@ jobs:
           install-deps: "false"
           bootstrap-generated: "false"
       - id: verify-worker-identity
-        name: Re-verify active Worker release identity
+        name: Re-verify active public Worker release identity
         if: ${{ needs.deploy-worker.result == 'success' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-api
+      - id: verify-heavy-identity
+        name: Re-verify active heavy Worker release identity
+        if: ${{ needs.deploy-worker.result == 'success' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-heavy
+      - name: Require unchanged heavy activation identity
+        if: ${{ needs.deploy-worker.result == 'success' }}
+        env:
+          EXPECTED_HEAVY_VERSION: ${{ needs.deploy-worker.outputs.heavy_worker_version }}
+          OBSERVED_HEAVY_VERSION: ${{ steps.verify-heavy-identity.outputs.worker_version }}
+        run: test -n "${EXPECTED_HEAVY_VERSION}" && test "${EXPECTED_HEAVY_VERSION}" = "${OBSERVED_HEAVY_VERSION}"
       - id: acceptance
         name: Record read-only operational acceptance
         env:

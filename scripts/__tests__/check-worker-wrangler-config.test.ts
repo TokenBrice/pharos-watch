@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { evaluateWorkerWranglerConfig } from "../ci/check-worker-wrangler-config";
 
 const VALID_CONFIG = `
 name = "stablecoin-api"
+main = "src/index.ts"
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
@@ -16,6 +18,13 @@ routes = [
 
 [alias]
 "#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[[d1_databases]]
+binding = "DB"
+database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
 [limits]
 cpu_ms = 300000
@@ -71,6 +80,21 @@ invocation_logs = true
 `;
 
 describe("check-worker-wrangler-config", () => {
+  it("validates the heavy scheduled-only configuration", () => {
+    const toml = readFileSync("worker/wrangler.heavy.toml", "utf8");
+    expect(evaluateWorkerWranglerConfig(toml, { workerRole: "heavy" })).toEqual({ failed: false, issues: [] });
+    for (const mutation of [
+      toml.replace("workers_dev = false", "workers_dev = true"),
+      toml.replace("preview_urls = false", "preview_urls = true"),
+      toml.replace('name = "stablecoin-heavy"', 'name = "stablecoin-api"'),
+      toml.replace('main = "src/index.heavy.ts"', 'main = "src/index.ts"'),
+      toml.replace('[alias]', 'routes = []\n[alias]'),
+      `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
+      toml.replace('binding = "SAFETY_SCORE_V9_WORKFLOW"', 'binding = "WRONG_WORKFLOW"'),
+    ]) {
+      expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
+    }
+  });
   it("rejects a missing lossless Worker catalog alias", () => {
     const report = evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
       '"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"', "",

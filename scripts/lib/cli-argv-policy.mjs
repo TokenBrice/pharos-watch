@@ -29,6 +29,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/ci/verify-mechanism-refresh-diff.ts"),
+    strict("scripts/ci/verify-worker-deployment.ts"),
     strict("scripts/lib/first-execution-acceptance.mts"),
     strict("scripts/maintenance/build-cemetery-logo-atlas.ts"),
     strict("scripts/maintenance/build-daily-social.ts"),

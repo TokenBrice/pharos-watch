@@ -25,7 +25,7 @@ describe("SafetyScoreV9PublicationWorkflow entrypoint", () => {
   it("keeps the publication runner out of the initial Worker module graph", async () => {
     vi.resetModules();
 
-    const workerModule = await import("../../index");
+    const workerModule = await import("../../index.heavy");
 
     expect(workerModule.SafetyScoreV9PublicationWorkflow).toBeTypeOf("function");
     expect(publicationImplementationFactory).not.toHaveBeenCalled();
@@ -33,9 +33,9 @@ describe("SafetyScoreV9PublicationWorkflow entrypoint", () => {
   });
 
   it("matches the Workflow class name configured in Wrangler", async () => {
-    const { SafetyScoreV9PublicationWorkflow } = await import("../../index");
+    const { SafetyScoreV9PublicationWorkflow } = await import("../../index.heavy");
     const { rawConfig } = experimental_readRawConfig({
-      config: resolve(process.cwd(), "worker/wrangler.toml"),
+      config: resolve(process.cwd(), "worker/wrangler.heavy.toml"),
     });
 
     expect(SafetyScoreV9PublicationWorkflow.name).toBe(
@@ -47,5 +47,11 @@ describe("SafetyScoreV9PublicationWorkflow entrypoint", () => {
           workflow.binding === "SAFETY_SCORE_V9_WORKFLOW",
       ),
     ).toMatchObject({ class_name: SafetyScoreV9PublicationWorkflow.name });
+  });
+  it("removes the Workflow export and binding from public", async () => {
+    const workerModule = await import("../../index");
+    expect("SafetyScoreV9PublicationWorkflow" in workerModule).toBe(false);
+    const { rawConfig } = experimental_readRawConfig({ config: resolve(process.cwd(), "worker/wrangler.toml") });
+    expect(rawConfig.workflows ?? []).toEqual([]);
   });
 });

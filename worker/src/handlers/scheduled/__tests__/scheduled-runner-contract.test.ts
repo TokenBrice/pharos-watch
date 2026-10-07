@@ -6,6 +6,8 @@ import {
 } from "@shared/lib/cron-jobs";
 import {
   flattenScheduledSlotPlanJobs,
+  getScheduledWorkerRoleForExpression,
+  listScheduledExpressionsForWorker,
   getScheduledSlotPlanBudgetEntries,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
@@ -25,12 +27,36 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,
 } from "../../../lib/public-dataset-snapshot-budget";
 import { SLOT_RUNNER_LOADER_BY_KEY } from "../../scheduled";
+import { fetchPancakeSwapPools } from "../../../cron/dex-liquidity/fetch-pancakeswap";
 
 function sorted(values: Iterable<string>): string[] {
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
 describe("scheduled runner contract", () => {
+  it("names missing GRAPH degradation on heavy DEX stage recovery", async () => {
+    expect(await fetchPancakeSwapPools(null)).toMatchObject({
+      ok: false, degraded: true, errors: ["missing GRAPH_API_KEY"],
+    });
+  });
+  it("owns only the three revised heavy plans without adding expressions", () => {
+    expect(Object.values(SCHEDULED_SLOT_PLANS).filter((plan) => plan.worker === "heavy")
+      .map((plan) => plan.scheduleKey).sort()).toEqual([
+      "halfHourlyChartsOffset", "v9PublicationOffset", "v9SupplyAttributionOffset",
+    ]);
+    expect(listScheduledExpressionsForWorker("heavy").sort()).toEqual([
+      "8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *",
+      "16 * * * *", "46 * * * *", "22 * * * *", "52 * * * *",
+    ].sort());
+    for (const role of ["public", "heavy"] as const) {
+      for (const expression of listScheduledExpressionsForWorker(role)) {
+        expect(getScheduledWorkerRoleForExpression(expression)).toBe(role);
+      }
+    }
+    expect(getScheduledWorkerRoleForExpression("11 */4 * * *")).toBe("public");
+    expect(getScheduledWorkerRoleForExpression("1,6,11,16,21,26,31,36,41,46,51,56 * * * *")).toBe("public");
+    expect(() => getScheduledWorkerRoleForExpression("unknown")).toThrow("Unknown");
+  });
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
     const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];

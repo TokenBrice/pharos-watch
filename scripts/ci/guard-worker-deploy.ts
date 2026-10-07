@@ -26,8 +26,8 @@ export function runWorkerDeployGuard(argv: readonly string[] = process.argv.slic
   if (writeCliHelpIfRequested(options, USAGE)) return;
   throw new Error(
     [
-      "Worker production publishing is intentionally disabled from npm scripts.",
-      "Use the production release workflow, which checks and applies D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged version owns 100% of production traffic.",
+      "Worker production publishing for stablecoin-api and stablecoin-heavy is intentionally disabled from npm scripts.",
+      "Use the production release workflow, which packages both Workers, applies D1 migrations once, deploys heavy then public with `wrangler deploy --strict`, and verifies each SHA-tagged version owns 100% of production traffic.",
       "For local debugging, use `cd worker && npm run dev`.",
     ].join("\n"),
   );

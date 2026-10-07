@@ -47,12 +47,26 @@ interface FixtureLiveState {
   }>;
   workerDomains: Array<{ hostname: string; service: string }>;
   rateLimitRules: FixtureRateLimitRule[];
+  heavyWorker: {
+    exists: boolean;
+    sharedDatabase: boolean;
+    workflowBinding: boolean;
+    workersDev: boolean;
+    previewUrls: boolean;
+    workflowOwner: string;
+    workflowClass: string;
+    routes: string[];
+  };
 }
 
 function readFixture(name: string): FixtureLiveState {
-  return JSON.parse(
-    readFileSync(resolve(process.cwd(), "scripts/__tests__/fixtures/cloudflare-account-state", name), "utf8"),
-  ) as FixtureLiveState;
+  return {
+    ...JSON.parse(readFileSync(resolve(process.cwd(), "scripts/__tests__/fixtures/cloudflare-account-state", name), "utf8")),
+    heavyWorker: {
+      exists: true, sharedDatabase: true, workflowBinding: true, workersDev: false, previewUrls: false,
+      workflowOwner: "stablecoin-heavy", workflowClass: "SafetyScoreV9PublicationWorkflow", routes: [],
+    },
+  } as FixtureLiveState;
 }
 
 function createFixtureFetch(
@@ -64,6 +78,24 @@ function createFixtureFetch(
     const account = "/client/v4/accounts/account-id-not-in-manifest";
     const project = `${account}/pages/projects/${liveState.pages.project.name}`;
     const ruleset = "/client/v4/zones/zone-id-not-in-manifest/rulesets/phases/http_ratelimit/entrypoint";
+    const heavy = liveState.heavyWorker;
+    const databaseId = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a";
+    const extra: Record<string, unknown> = {
+      [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [{ type: "d1", name: "DB", id: databaseId }] },
+      [`${account}/workers/scripts/stablecoin-heavy/settings`]: { bindings: [
+        { type: "d1", name: "DB", id: heavy.sharedDatabase ? databaseId : "wrong-database" },
+        ...(heavy.workflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
+        { type: "secret_text", name: "COINGECKO_API_KEY", text: "heavy-secret-sentinel" },
+      ] },
+      [`${account}/workers/scripts/stablecoin-heavy/subdomain`]: { enabled: heavy.workersDev, previews_enabled: heavy.previewUrls },
+      [`${account}/workflows/safety-score-v9-publication`]: { script_name: heavy.workflowOwner, class_name: heavy.workflowClass },
+      ["/client/v4/zones/zone-id-not-in-manifest/workers/routes"]: heavy.routes.map((pattern) => ({ script: "stablecoin-heavy", pattern })),
+    };
+    if (Object.hasOwn(extra, url.pathname)) {
+      if (!heavy.exists && url.pathname.endsWith("/stablecoin-heavy/settings")) return new Response("missing", { status: 404 });
+      const result = extra[url.pathname];
+      return override?.(url.pathname, result) ?? Response.json({ success: true, result });
+    }
     if (!["/client/v4/zones", project, `${project}/domains`, `${account}/access/apps`, `${account}/workers/domains`, ruleset].includes(url.pathname)) {
       throw new Error(`Unexpected fixture URL: ${url}`);
     }
@@ -148,6 +180,39 @@ describe("Cloudflare account-state drift comparison", () => {
     );
   });
 
+  it.each([
+    ["exists", false], ["sharedDatabase", false], ["workflowBinding", false],
+    ["workersDev", true], ["previewUrls", true], ["workflowOwner", "stablecoin-api"],
+    ["workflowClass", "WrongWorkflow"], ["routes", ["pharos.watch/heavy/*"]],
+  ] as const)("detects heavy %s drift from real GET response shapes", async (field, value) => {
+    const fixture = readFixture("healthy-live-state.json");
+    Object.assign(fixture.heavyWorker, { [field]: value });
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: createFixtureFetch(fixture) });
+    expect(compareCloudflareAccountState(manifest, state).some((entry: string) => entry.startsWith(`heavyWorker.${field}:`))).toBe(true);
+  });
+
+  it("rejects heavy custom domains and public retention of the moved Workflow binding", async () => {
+    const fixture = readFixture("healthy-live-state.json");
+    fixture.workerDomains.push({ hostname: "heavy.pharos.watch", service: "stablecoin-heavy" });
+    const fetchMock = createFixtureFetch(fixture, (path, result) => {
+      if (!path.endsWith("/stablecoin-api/settings")) return;
+      const settings = result as { bindings: unknown[] };
+      settings.bindings.push({ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" });
+      return Response.json({ success: true, result: settings });
+    });
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    expect(compareCloudflareAccountState(manifest, state)).toEqual(expect.arrayContaining([
+      "heavyWorker.customDomains: expected none", "heavyWorker.workflowBinding: expected true, found false",
+    ]));
+  });
+
+  it("never treats an unreadable route list as proof of no heavy routes", async () => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/workers/routes") ? Response.json({ success: true, result: {} }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("malformed route list");
+  });
+
   it("fetches live state with GET only and removes account IDs and secret values before comparison", async () => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"));
     const liveState = await fetchCloudflareAccountState({
@@ -157,7 +222,7 @@ describe("Cloudflare account-state drift comparison", () => {
     });
 
     expect(compareCloudflareAccountState(manifest, liveState)).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
     for (const [request, init] of fetchMock.mock.calls) {
       expect(new URL(String(request)).pathname).toContain("/client/v4/");
       expect(init?.method).toBe("GET");
@@ -165,6 +230,7 @@ describe("Cloudflare account-state drift comparison", () => {
     }
     expect(JSON.stringify(liveState)).not.toContain("account-id-not-in-manifest");
     expect(JSON.stringify(liveState)).not.toContain("secret-value-that-must-not-be-reported");
+    expect(JSON.stringify(liveState)).not.toContain("heavy-secret-sentinel");
   });
 
   it("prefers unified bindings, deduplicates resource names, and discards secret text", async () => {
