@@ -161,8 +161,10 @@ describe("digest publication watchdog", () => {
       at("2026-08-31T08:31:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-row"].state).toBe("stale");
+    expect(JSON.parse(result.metadata ?? "{}").quality).toEqual({ reason: "digest-publication-findings" });
+    expect(JSON.parse(result.metadata ?? "{}").firedRuleIds).toContain("daily-row");
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
   });
 
@@ -172,7 +174,7 @@ describe("digest publication watchdog", () => {
       at("2026-08-31T08:31:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-telegram"].state).toBe("stale");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("daily Telegram edition");
   });
@@ -183,7 +185,7 @@ describe("digest publication watchdog", () => {
       at("2026-08-31T08:31:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-twitter"].state).toBe("stale");
   });
 
@@ -225,7 +227,7 @@ describe("digest publication watchdog", () => {
       at("2026-08-31T08:36:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(monday.status).toBe("degraded");
+    expect(monday.status).toBe("ok");
     const metadata = JSON.parse(monday.metadata ?? "{}");
     expect(metadata.conditions["weekly-row"].state).toBe("stale");
     expect(metadata.conditions["weekly-telegram"].state).toBe("stale");
@@ -237,7 +239,7 @@ describe("digest publication watchdog", () => {
       at("2026-09-01T08:36:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(tuesday.status).toBe("degraded");
+    expect(tuesday.status).toBe("ok");
     expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-row"].state).toBe("stale");
     expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-twitter"].state).toBe("ok");
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
@@ -254,7 +256,7 @@ describe("digest publication watchdog", () => {
       at("2026-08-31T08:36:00Z"),
       { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
     );
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     const conditions = JSON.parse(result.metadata ?? "{}").conditions;
     expect(conditions["daily-twitter"].state).toBe("ok");
     expect(conditions["weekly-twitter"].state).toBe("stale");
@@ -325,6 +327,8 @@ describe("digest publication watchdog", () => {
     const first = await runDigestPublicationWatchdog(db, at(`${DATE}T08:31:00Z`), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
+    expect(first.status).toBe("degraded");
+    expect(JSON.parse(first.metadata ?? "{}").reason).toBe("operator-alert-delivery-failed");
     expect(JSON.parse(first.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["daily-row"], sent: false,
     });
@@ -333,6 +337,7 @@ describe("digest publication watchdog", () => {
     const retry = await runDigestPublicationWatchdog(db, at(`${DATE}T08:32:00Z`), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
+    expect(retry.status).toBe("ok");
     expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["daily-row"], sent: true,
     });
@@ -383,7 +388,7 @@ describe("digest publication watchdog", () => {
     });
     expect(sendToChatMock).not.toHaveBeenCalled();
     expect(db.cache.has("digest-publication-watchdog:state:v1")).toBe(false);
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
 
     const retry = await runDigestPublicationWatchdog(db, at("2026-08-31T08:32:00Z"), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },

@@ -1,9 +1,11 @@
-import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { CronTerminalAccountingError, resolveCronDegradedReason, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
+import { describeError } from "@shared/lib/error-utils";
+import { stripSensitive } from "../../lib/safe-error-message";
 import type { ScheduledRuntimeContext } from "./context";
 
 export type ScheduledSlotJobOutcome = "ok" | "degraded" | "error" | "skipped";
 
-export interface ScheduledSlotJobSummary {
+export type ScheduledSlotJobSummary = {
   job: string;
   outcome: ScheduledSlotJobOutcome;
   status?: CronResult["status"];
@@ -11,9 +13,14 @@ export interface ScheduledSlotJobSummary {
   reason?: string;
   error?: string;
   neutral?: boolean;
-}
+  terminalAccountingError?: {
+    stage: "cron-run" | "producer-history";
+    outputPublishedAt: number | null;
+    productive: boolean;
+  };
+};
 
-export interface ScheduledSlotSummary {
+export type ScheduledSlotSummary = {
   jobsAttempted: number;
   jobsSucceeded: number;
   jobsRun: number;
@@ -23,7 +30,7 @@ export interface ScheduledSlotSummary {
   jobsErrored: number;
   budgetOnlyJobs: number;
   jobs: ScheduledSlotJobSummary[];
-}
+};
 
 function truncateSummaryText(value: unknown): string {
   return String(value).slice(0, 300);
@@ -81,6 +88,7 @@ export function summarizeCronResult(job: string, result: CronResult | null | voi
       outcome: "degraded",
       status,
       itemCount: result?.itemCount,
+      reason: resolveCronDegradedReason(job, status, result, readMetadataObject(result?.metadata)) ?? undefined,
     };
   }
   if (status === "error") {
@@ -89,6 +97,7 @@ export function summarizeCronResult(job: string, result: CronResult | null | voi
       outcome: "error",
       status,
       itemCount: result?.itemCount,
+      reason: resolveCronDegradedReason(job, status, result, readMetadataObject(result?.metadata)) ?? undefined,
       error: result?.error ? truncateSummaryText(result.error) : undefined,
     };
   }
@@ -101,10 +110,21 @@ export function summarizeCronResult(job: string, result: CronResult | null | voi
 }
 
 export function summarizeThrownScheduledJob(job: string, err: unknown): ScheduledSlotJobSummary {
+  const descriptor = describeError(err, stripSensitive);
   return {
     job,
     outcome: "error",
-    error: truncateSummaryText(err instanceof Error ? err.message : err),
+    status: "error",
+    reason: err instanceof CronTerminalAccountingError ? err.reason
+      : descriptor.code || (descriptor.name === "NonError" ? "non-error-throw" : descriptor.name),
+    error: descriptor.message.slice(0, 300),
+    ...(err instanceof CronTerminalAccountingError ? {
+      terminalAccountingError: {
+        stage: err.stage,
+        outputPublishedAt: err.outputPublishedAt,
+        productive: err.productive,
+      },
+    } : {}),
   };
 }
 

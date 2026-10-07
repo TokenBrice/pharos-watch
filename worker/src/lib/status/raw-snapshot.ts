@@ -197,6 +197,15 @@ function hasRawStatusShape(value: unknown): value is RawStatusComputation {
     isRecord(value.datasetFreshness) &&
     isRecord(value.summary) &&
     isRecord(value.reserveComposition) &&
+    (value.reserveComposition.status === "unavailable"
+      || (typeof value.reserveComposition.healthConfiguredCoins === "number"
+        && typeof value.reserveComposition.healthFreshCoins === "number"
+        && typeof value.reserveComposition.healthAuthoritativeFreshCoins === "number"
+        && Array.isArray(value.reserveComposition.acknowledgedFeeds)
+        && Array.isArray(value.reserveComposition.acknowledgedFeedIds)
+        && Array.isArray(value.reserveComposition.expiredFeedReviewIds)
+        && Array.isArray(value.reserveComposition.invalidFeedReviewIds)
+        && Array.isArray(value.reserveComposition.unacknowledgedPersistentlyStaleIndependentCoins))) &&
     Array.isArray(value.freshnessDiagnostics)
   );
 }

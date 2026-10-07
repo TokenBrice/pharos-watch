@@ -19,6 +19,7 @@ import { reportCronProgress } from "../lib/cron-progress";
 import {
   drainPendingQueue,
   emptyDrainResult,
+  reconcilePendingQueueMaintenance,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   type PendingCapacitySnapshot,
 } from "./telegram-pending";
@@ -87,12 +88,14 @@ export async function executeAuthoritativeFanoutPath(
     nowSec,
     snapshotState,
   } = context;
+  const maintenanceResult = await reconcilePendingQueueMaintenance(db, nowSec);
   let pendingDrainSendMs = 0;
   const timedPendingDrain = async () => {
     const startedAtMs = Date.now();
     try {
       return await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
         softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+        maintenanceResult,
         markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
       });
     } finally {
@@ -189,6 +192,7 @@ export async function executeAuthoritativeFanoutPath(
     db,
     nowSec,
     pendingCapacityBefore: context.pendingCapacityBefore,
+    maintenanceResult,
     drainResult: prePlanDrainResult ?? ((planner?.enqueued ?? 0) > 0
       ? await timedPendingDrain()
       : emptyDrainResult()),

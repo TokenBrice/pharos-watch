@@ -24,7 +24,11 @@ const CHILD_JOBS = [
 ] as const;
 
 function createHarness() {
-  return createLatestSchemaSqlite();
+  const fixture = createLatestSchemaSqlite();
+  fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
+    (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
+    VALUES ('fourHourlyReserveSync', 660, 'finished', 'prior-producer', 1, 660, 700, 700)`).run();
+  return fixture;
 }
 
 async function seedCheckpointFrontier(
@@ -114,6 +118,14 @@ describe("scheduled recovery checkpoint", () => {
       pending_attempt_id: null, last_status: "error",
     });
     expect(sqlite.prepare("SELECT attempt_id FROM reserve_sync_attempt_history").all()).toEqual([{ attempt_id: "old-attempt" }]);
+    const supersededBy = {
+      scheduleKey: "fourHourlyReserveSync", slotStartedAt: 2000, job: "sync-live-reserves",
+      attemptNo: 1, executionGeneration: 1, invocationId: "new", queueHash: LIVE_RESERVE_QUEUE_HASH,
+    };
+    const retired = sqlite.prepare("SELECT superseded_by_json FROM worker_scheduled_checkpoints WHERE slot_started_at = 1000").get()!;
+    expect(JSON.parse(retired.superseded_by_json as string)).toEqual(supersededBy);
+    const attempt = sqlite.prepare("SELECT metadata FROM reserve_sync_attempt_history").get()!;
+    expect(JSON.parse(attempt.metadata as string)).toMatchObject({ supersededBy });
     await expect(markLiveReserveCheckpointItemStarted(db, old, {
       itemKey: "coin-a", domainAttemptId: "late", itemsDone: 0, itemsTotal: old.itemsTotal,
     })).rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
@@ -154,6 +166,97 @@ describe("scheduled recovery checkpoint", () => {
     });
     expect(await retireSupersededLiveReserveCheckpoints(db, 3000)).toBe(0);
   });
+
+  it("retires five active incompatible frontiers before more than 25 older abandoned rows and records the deterministic superseder", async () => {
+    const { sqlite, db } = harness();
+    for (let index = 0; index < 35; index++) {
+      const slotStartedAt = index < 30 ? 1000 + index : 2000 + index;
+      await seedCheckpointFrontier(db, { slotStartedAt, invocationId: `old-${index}`, queueHash: "obsolete", nowSec: slotStartedAt });
+      sqlite.prepare("UPDATE worker_scheduled_checkpoints SET state = ? WHERE slot_started_at = ?")
+        .run(index < 30 ? "platform_abandoned" : index % 2 ? "ready" : "recovering", slotStartedAt);
+    }
+    for (const slotStartedAt of [3000, 4000]) {
+      await seedCheckpointFrontier(db, { slotStartedAt, invocationId: `new-${slotStartedAt}`, nowSec: slotStartedAt });
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET state = 'completed', completed_at = ?,
+        next_item_key = NULL, items_done = items_total WHERE slot_started_at = ?`).run(slotStartedAt + 100, slotStartedAt);
+      sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, result_status, execution_owner, execution_generation, started_at, finished_at, updated_at)
+        VALUES ('fourHourlyReserveSync', ?, 'finished', 'degraded', 'producer', 1, ?, ?, ?)`)
+        .run(slotStartedAt, slotStartedAt, slotStartedAt + 100, slotStartedAt + 100);
+    }
+    sqlite.prepare(`INSERT INTO worker_scheduled_checkpoints
+      (schedule_key, slot_started_at, job, attempt_no, execution_generation, invocation_id, queue_hash,
+       state, items_done, items_total, created_at, updated_at, completed_at)
+      SELECT schedule_key, slot_started_at, job, 3, 3, 'newest-attempt', queue_hash,
+        'completed', items_done, items_total, created_at, updated_at, completed_at
+      FROM worker_scheduled_checkpoints WHERE slot_started_at = 4000`).run();
+    expect(await retireSupersededLiveReserveCheckpoints(db, 5000)).toBe(25);
+    const active = sqlite.prepare("SELECT state, superseded_by_json FROM worker_scheduled_checkpoints WHERE queue_hash = 'obsolete' AND slot_started_at >= 2000").all();
+    expect(active).toHaveLength(5);
+    for (const row of active) {
+      expect(row.state).toBe("failed");
+      expect(JSON.parse(row.superseded_by_json as string)).toEqual({
+        scheduleKey: "fourHourlyReserveSync", slotStartedAt: 4000, job: "sync-live-reserves",
+        attemptNo: 3, executionGeneration: 3, invocationId: "newest-attempt", queueHash: LIVE_RESERVE_QUEUE_HASH,
+      });
+    }
+    expect(await retireSupersededLiveReserveCheckpoints(db, 5000)).toBe(10);
+    expect(await retireSupersededLiveReserveCheckpoints(db, 5000)).toBe(0);
+  });
+
+  it("does not supersede against a changed identity between selection and the atomic retirement batch", async () => {
+    const { sqlite, db } = harness();
+    const old = await seedCheckpointFrontier(db, { slotStartedAt: 1000, invocationId: "old", queueHash: "obsolete", nowSec: 1000 });
+    await markLiveReserveCheckpointItemStarted(db, old, {
+      itemKey: "coin-a", domainAttemptId: "pending", itemsDone: 0, itemsTotal: old.itemsTotal, nowSec: 1000,
+    });
+    sqlite.prepare(`INSERT INTO reserve_sync_state
+      (stablecoin_id, adapter_key, breaker_key, last_status, last_attempt_id, pending_attempt_id)
+      VALUES ('coin-a', 'm0', 'live-reserves:m0', 'skipped', 'pending', 'pending')`).run();
+    await seedCheckpointFrontier(db, { slotStartedAt: 2000, invocationId: "superseder", nowSec: 2000 });
+    sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET state = 'completed', completed_at = 2100,
+      next_item_key = NULL, items_done = items_total WHERE slot_started_at = 2000`).run();
+    sqlite.prepare(`INSERT INTO cron_slot_executions
+      (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
+      VALUES ('fourHourlyReserveSync', 2000, 'finished', 'producer', 1, 2000, 2100, 2100)`).run();
+    const racingDb = createSqliteD1(sqlite, { onRun: (sql) => {
+      if (sql.includes("superseded_by_json = ?")) sqlite.prepare(
+        "UPDATE worker_scheduled_checkpoints SET invocation_id = 'replacement' WHERE slot_started_at = 2000",
+      ).run();
+    } });
+    expect(await retireSupersededLiveReserveCheckpoints(racingDb, 3000)).toBe(0);
+    expect(sqlite.prepare("SELECT state, superseded_by_json FROM worker_scheduled_checkpoints WHERE slot_started_at = 1000").get())
+      .toEqual({ state: "running", superseded_by_json: null });
+    expect(sqlite.prepare("SELECT pending_attempt_id FROM reserve_sync_state").get()).toEqual({ pending_attempt_id: "pending" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_attempt_history").get()).toEqual({ count: 0 });
+  });
+
+  it.each(["operator-without-slot", "wrong-hash", "incomplete", "active-heartbeat", "different-pending-attempt"])(
+    "preserves supersession and domain authority at the %s boundary", async (boundary) => {
+      const { sqlite, db } = harness();
+      const old = await seedCheckpointFrontier(db, { slotStartedAt: 1000, invocationId: "old", queueHash: "obsolete", nowSec: 1000 });
+      await markLiveReserveCheckpointItemStarted(db, old, {
+        itemKey: "coin-a", domainAttemptId: "old-attempt", itemsDone: 0, itemsTotal: old.itemsTotal, nowSec: 1000,
+      });
+      sqlite.prepare(`INSERT INTO reserve_sync_state
+        (stablecoin_id, adapter_key, breaker_key, last_status, last_attempt_id, pending_attempt_id)
+        VALUES ('coin-a', 'm0', 'live-reserves:m0', 'skipped', 'new-attempt', 'new-attempt')`).run();
+      await seedCheckpointFrontier(db, { slotStartedAt: 2000, invocationId: "superseder", nowSec: 2000 });
+      sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET state = 'completed', completed_at = 2100,
+        next_item_key = NULL, items_done = items_total WHERE slot_started_at = 2000`).run();
+      if (boundary !== "operator-without-slot") sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
+        VALUES ('fourHourlyReserveSync', 2000, 'finished', 'producer', 1, 2000, 2100, 2100)`).run();
+      if (boundary === "wrong-hash") sqlite.prepare("UPDATE worker_scheduled_checkpoints SET queue_hash = 'other-obsolete' WHERE slot_started_at = 2000").run();
+      if (boundary === "incomplete") sqlite.prepare("UPDATE worker_scheduled_checkpoints SET items_done = items_total - 1 WHERE slot_started_at = 2000").run();
+      if (boundary === "active-heartbeat") sqlite.prepare(`INSERT INTO cron_slot_executions
+        (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
+        VALUES ('fourHourlyReserveSync', 1000, 'running', 'still-live', 1, 1000, 3000)`).run();
+      expect(await retireSupersededLiveReserveCheckpoints(db, 3000)).toBe(boundary === "different-pending-attempt" ? 1 : 0);
+      expect(sqlite.prepare("SELECT pending_attempt_id FROM reserve_sync_state").get()).toEqual({ pending_attempt_id: "new-attempt" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_attempt_history").get()).toEqual({ count: 0 });
+    },
+  );
 
   it("fences an abandoned attempt, clears only its pending domain attempt, and creates attempt two", async () => {
     const { sqlite, db } = harness();
@@ -240,6 +343,7 @@ describe("scheduled recovery checkpoint", () => {
         created_at: 1_001,
         updated_at: 1_100,
         completed_at: 1_100,
+        superseded_by_json: null,
       },
       {
         schedule_key: "fourHourlyReserveSync",
@@ -266,6 +370,7 @@ describe("scheduled recovery checkpoint", () => {
         created_at: 1_100,
         updated_at: 1_100,
         completed_at: null,
+        superseded_by_json: null,
       },
     ]);
     expect(sqlite.prepare("SELECT pending_attempt_id, last_error FROM reserve_sync_state WHERE stablecoin_id = 'coin-b'").get())
@@ -280,7 +385,7 @@ describe("scheduled recovery checkpoint", () => {
       owner: "recovery-owner-after-isolate-restart",
       leaseSec: 60,
       nowSec: 1_101,
-    })).resolves.toMatchObject({ attemptNo: 2, state: "recovering" });
+    })).resolves.toMatchObject({ disposition: "claimed", checkpoint: { attemptNo: 2, state: "recovering" } });
     expect(sqlite.prepare(
       "SELECT COUNT(*) AS count FROM reserve_sync_attempt_history WHERE attempt_id = 'domain-attempt-1'",
     ).get()).toEqual({ count: 1 });
@@ -471,8 +576,9 @@ describe("scheduled recovery checkpoint", () => {
       }),
     ]);
 
-    expect(claims.filter((claim) => claim != null)).toHaveLength(1);
-    expect(claims.find((claim) => claim != null)?.state).toBe("recovering");
+    const winner = claims.find((claim) => claim.disposition === "claimed");
+    expect(claims.filter((claim) => claim.disposition === "claimed")).toHaveLength(1);
+    expect(winner).toMatchObject({ checkpoint: { state: "recovering" } });
   });
 
   it("prepares and claims the exact suffix after a budget-truncated degraded slot", async () => {
@@ -526,7 +632,7 @@ describe("scheduled recovery checkpoint", () => {
       leaseSec: 60,
       nowSec: 1_821,
     });
-    expect(claimed).toMatchObject({
+    expect(claimed).toMatchObject({ disposition: "claimed", checkpoint: {
       attemptNo: 2,
       state: "recovering",
       nextItemKey: "coin-z",
@@ -534,7 +640,7 @@ describe("scheduled recovery checkpoint", () => {
       childDispositions: expect.objectContaining({
         "sync-live-reserves": "not_started",
       }),
-    });
+    } });
   });
 
   it("does not let a late duplicate producer invocation adopt an existing checkpoint", async () => {
@@ -574,8 +680,9 @@ describe("scheduled recovery checkpoint", () => {
       leaseSec: 60,
       nowSec: 2_101,
     });
-    expect(second).toMatchObject({ attemptNo: 2, state: "recovering" });
-    await markLiveReserveCheckpointItemStarted(db, second!, {
+    expect(second).toMatchObject({ disposition: "claimed", checkpoint: { attemptNo: 2, state: "recovering" } });
+    if (second.disposition !== "claimed") throw new Error("expected recovery claim");
+    await markLiveReserveCheckpointItemStarted(db, second.checkpoint, {
       itemKey: "coin-c",
       domainAttemptId: "domain-attempt-3",
       itemsDone: 200,
@@ -597,14 +704,14 @@ describe("scheduled recovery checkpoint", () => {
       nowSec: 2_200,
     });
 
-    expect(third).toMatchObject({
+    expect(third).toMatchObject({ disposition: "claimed", checkpoint: {
       attemptNo: 3,
       executionGeneration: 3,
       sourceAttemptNo: 2,
       state: "recovering",
       nextItemKey: "coin-c",
       currentDomainAttemptId: "domain-attempt-3",
-    });
+    } });
     expect(sqlite.prepare("SELECT state FROM worker_scheduled_checkpoints WHERE attempt_no = 2").get()).toEqual({
       state: "platform_abandoned",
     });
@@ -750,12 +857,12 @@ describe("scheduled recovery checkpoint", () => {
       nowSec: 8_101,
     });
 
-    expect(claimed).toMatchObject({
+    expect(claimed).toMatchObject({ disposition: "claimed", checkpoint: {
       slotStartedAt: 8_000,
       attemptNo: 2,
       queueHash: LIVE_RESERVE_QUEUE_HASH,
       state: "recovering",
-    });
+    } });
   });
 
 });

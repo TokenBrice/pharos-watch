@@ -108,6 +108,80 @@ async function observeDewsPublication(sqlite: DatabaseSync, db: D1Database, nowS
 }
 
 describe("persistDewsResults", () => {
+  it("quarantines latest rows without erasing history or accepted buffers, then heals", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ids = ["usdt-tether", "usdc-circle"];
+    const baseline = nowSec - 180;
+    const quarantined = nowSec - 120;
+    const held = nowSec - 60;
+    const persist = (computedAt: number, admittedIds: string[], rejectedIds: string[]) =>
+      persistDewsResults({
+        db,
+        results: admittedIds.map((id) => buildDewsRow(id)),
+        eligibleIds: new Set(ids),
+        quarantinedStablecoinIds: rejectedIds,
+        degradedSources: [],
+        nowSec: computedAt,
+      });
+    try {
+      await persist(baseline, ids, []);
+      const sparseBefore = readDewsRows(sqlite, "stress_signals");
+      const dailyBefore = sqlite.prepare("SELECT * FROM stress_signal_history ORDER BY stablecoin_id").all();
+      await expect(persist(quarantined, ["usdc-circle"], ["usdt-tether"])).resolves.toMatchObject({
+        currentGenerationRows: 1, latestGenerationRows: 1, publicationPointerWritten: true,
+      });
+      expect(await readDewsPublishedGenerationResult(db, nowSec)).toMatchObject({
+        status: "ok", computedAt: quarantined, expectedRowCount: 1,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle"]),
+      });
+      expect(readDewsRows(sqlite, "stress_signals_latest")).toEqual([
+        { stablecoinId: "usdc-circle", computedAt: quarantined, score: 12 },
+      ]);
+      expect(readDewsRows(sqlite, "stress_signals")).toEqual(sparseBefore);
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history ORDER BY stablecoin_id").all()).toEqual(dailyBefore);
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id",
+      ).all(baseline)).toEqual(ids.slice().sort().map((stablecoin_id) => ({ stablecoin_id })));
+
+      await expect(persist(held, [], ids)).resolves.toMatchObject({
+        publicationPointerWritten: false, publishedGeneration: null,
+      });
+      expect(readDewsRows(sqlite, "stress_signals_latest")).toEqual([]);
+      const published = await loadPublishedStressSignalGeneration(db, nowSec);
+      expect(published).toMatchObject({ status: "ok", computedAt: quarantined });
+      if (published.status === "ok") expect(published.rows.map((row) => row.stablecoin_id)).toEqual(["usdc-circle"]);
+      expect(sqlite.prepare("SELECT * FROM stress_signal_history ORDER BY stablecoin_id").all()).toEqual(dailyBefore);
+
+      await persist(nowSec, ids, []);
+      expect(await readDewsPublishedGenerationResult(db, nowSec)).toMatchObject({
+        status: "ok", computedAt: nowSec, expectedRowCount: 2,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(ids),
+      });
+      expect(readDewsRows(sqlite, "stress_signals_latest").map((row) => row.stablecoinId)).toEqual(ids.slice().sort());
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("preserves quarantined daily rows when the admitted daily identity set changes", async () => {
+    const { sqlite, db } = openDailyHistoryDb();
+    const snapshotDate = 1_800_000_000;
+    try {
+      insertDailyHistoryRow(sqlite, "usdt-tether", snapshotDate);
+      insertDailyHistoryRow(sqlite, "removed", snapshotDate);
+      await reconcileDailyDewsHistorySnapshot(
+        db, [buildDewsRow("usdc-circle")], snapshotDate, undefined, new Set(["usdt-tether"]),
+      );
+      expect(readDailyHistoryIds(sqlite, snapshotDate)).toEqual(["usdc-circle", "usdt-tether"]);
+      expect(sqlite.prepare(
+        "SELECT score, signals_json FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date = ?",
+      ).get("usdt-tether", snapshotDate)).toEqual({ score: 1, signals_json: "{}" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("surfaces a missing mandatory latest-signal table", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

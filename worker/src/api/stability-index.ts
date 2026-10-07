@@ -21,7 +21,7 @@ import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 import { isRecord } from "@shared/lib/type-guards";
-import { StabilityIndexDailyProvenanceSchema } from "@shared/types/stability";
+import { StabilityIndexDailyProvenanceSchema, type StabilityIndexInputDegradation } from "@shared/types/stability";
 
 function readDailyProvenance(value: unknown) {
   const parsed = StabilityIndexDailyProvenanceSchema.safeParse(value);
@@ -39,16 +39,8 @@ function componentAvailability(
 
 type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
-interface PsiInputDegradation {
-  dewsUnavailable: boolean;
-  dewsFailureReason: string | null;
-  depegEventsUnavailable: boolean;
-  depegEventsFailureReason: string | null;
-  openDepegNoPrice: boolean;
-  openDepegsWithoutPrice: number | null;
-}
 
-function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDegradation | undefined {
+function readPsiInputDegradation(snapshot: Record<string, unknown>): StabilityIndexInputDegradation | undefined {
   // R1: an open depeg without any usable price is missing severity input, not zero
   // severity input — the producer counts it instead of letting it vanish from the
   // contributors list, and the count is what makes the omission visible here.
@@ -56,7 +48,13 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDeg
     Number.isFinite(snapshot.openDepegsWithoutPrice) && snapshot.openDepegsWithoutPrice > 0
     ? snapshot.openDepegsWithoutPrice
     : 0;
-  const degradation: PsiInputDegradation = {
+  const supplyUnavailableIds = Array.isArray(snapshot.supplyUnavailableIds)
+    ? snapshot.supplyUnavailableIds.filter((id): id is string => typeof id === "string")
+    : undefined;
+  const trendUnavailableIds = Array.isArray(snapshot.trendUnavailableIds)
+    ? snapshot.trendUnavailableIds.filter((id): id is string => typeof id === "string")
+    : undefined;
+  const degradation: StabilityIndexInputDegradation = {
     dewsUnavailable: snapshot.dewsUnavailable === true,
     dewsFailureReason: typeof snapshot.dewsFailureReason === "string" ? snapshot.dewsFailureReason : null,
     depegEventsUnavailable: snapshot.depegEventsUnavailable === true,
@@ -64,6 +62,8 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDeg
       typeof snapshot.depegEventsFailureReason === "string" ? snapshot.depegEventsFailureReason : null,
     openDepegNoPrice: unpricedOpenDepegs > 0,
     openDepegsWithoutPrice: unpricedOpenDepegs > 0 ? unpricedOpenDepegs : null,
+    ...(supplyUnavailableIds ? { supplyUnavailableIds } : {}),
+    ...(trendUnavailableIds ? { trendUnavailableIds } : {}),
   };
 
   return (
@@ -72,6 +72,8 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDeg
     || degradation.depegEventsUnavailable
     || degradation.depegEventsFailureReason != null
     || degradation.openDepegNoPrice
+    || (supplyUnavailableIds?.length ?? 0) > 0
+    || (trendUnavailableIds?.length ?? 0) > 0
   )
     ? degradation
     : undefined;

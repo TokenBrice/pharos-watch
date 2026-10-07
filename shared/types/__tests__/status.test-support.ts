@@ -62,6 +62,11 @@ export function makeReserveComposition(
     status: "healthy",
     freshCoverageRatio: 0,
     authoritativeFreshCoverageRatio: 0,
+    healthConfiguredCoins: overrides.configuredCoins ?? 0,
+    healthFreshCoins: overrides.freshCoins ?? 0,
+    healthAuthoritativeFreshCoins: (overrides.independentFreshEligible ?? 0)
+      + (overrides.independentFreshUnverified ?? 0) + (overrides.staticValidatedFresh ?? 0),
+    unacknowledgedPersistentlyStaleIndependentCoins: overrides.persistentlyStaleIndependentCoins ?? [],
     ...overrides,
   };
 }

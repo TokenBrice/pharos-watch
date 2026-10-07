@@ -10,6 +10,12 @@ Shared recovery procedure for two operator actions that several symptom runbooks
 
 Never clear a lease while `/api/status` shows a fresh matching `crons[*].inFlight` progress row for the same job: the run is still live and the lease is doing its job. Confirm the lease is stale first — repeated `skipped_locked` runs with no fresh progress heartbeat. Never clear a breaker before the upstream has actually recovered; the delete forces the next call to re-probe closed and a still-failing source simply re-opens it.
 
+For reserve-family locks, inspect `blockedBy` rather than treating the lease key as the holder job: config repair and checkpoint replay intentionally share `sync-live-reserves`. The requester `leaseOwner` is separate. Versioned holder envelopes name the actual path/invocation/slot; legacy owners are attributed only through exact-owner-matched progress, and unknown fields remain null. The natural producer waits only within its fixed admission budget (approximately 145 seconds for a fresh head); a renewed/long rollout lease can exceed that budget. Do not evict it to force admission.
+
+`producer-slot-priority` and `heavy-slot-co-tenancy` are neutral recovery deferrals, not a stuck lease or evidence of publication. Check the protected slot identity and its finished clock, and the shared heavy-slot policy in `shared/lib/scheduled-runner-registry.ts`. Missing producer delivery remains protected; diagnose delivery rather than manufacture a slot row.
+
+Incompatible checkpoint debt requires supersession, not a checkpoint/lease reset: a real newer finished slot must contain a completed current-hash full cohort. Recovery prioritizes active debt within its bounded 25-row drain, records exact `superseded_by_json`, and atomically fences only a matching pending attempt. A successful operator-only cohort without a real slot cannot qualify. Historical debt alone leaves a successful idle poll `ok` with debt telemetry. Never resurrect retired checkpoints, clear live claims or refresh rejected issuer evidence clocks.
+
 ## Clear A Stuck Cron Lease
 
 Lease rows are keyed by `cron_leases.job`, using the status-tracked job id (`sync-stablecoins`, `sync-yield-data`, `fetch-tbill-rate`, and so on):

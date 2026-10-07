@@ -76,6 +76,22 @@ const MintBurnHealthQueryErrorsSchema = z.object({
   rowCount: z.string().nullable(),
 });
 
+export const SchedulerLivenessSchema = z.object({
+  status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+  observedAt: z.number().finite(),
+  lastAnyStartedAt: z.number().finite().nullable(),
+  lastFiveMinuteStartedAt: z.number().finite().nullable(),
+  ageSeconds: z.number().finite().nonnegative().nullable(),
+  warningAfterSec: z.number().positive(),
+  staleAfterSec: z.number().positive(),
+  lanes: z.array(z.object({
+    scheduleKey: z.string(),
+    lastStartedAt: z.number().finite().nullable(),
+  })),
+  unavailableReason: z.string().nullable(),
+});
+export type SchedulerLiveness = z.output<typeof SchedulerLivenessSchema>;
+
 export const HealthResponseSchema = z.object({
   status: StatusHealthValueSchema,
   timestamp: z.number(),
@@ -107,6 +123,7 @@ export const HealthResponseSchema = z.object({
   stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
   activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
   alertBroker: AlertBrokerHealthSummarySchema.optional(),
+  schedulerLiveness: SchedulerLivenessSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });
 export type HealthResponse = z.output<typeof HealthResponseSchema>;

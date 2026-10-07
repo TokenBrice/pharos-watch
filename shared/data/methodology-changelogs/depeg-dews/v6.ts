@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.32",
+    title: "Quarantine malformed asset inputs without withholding healthy DEWS peers",
+    date: "2026-10-07",
+    effectiveAt: 1791331200,
+    summary:
+      "Malformed core persisted inputs reject only their eligible asset before scoring and contagion; healthy peers publish an exact admitted generation.",
+    impact: [
+      "Per-asset decode diagnostics retain source, context, identity and reason; scoped rejections do not enter global degradedSources",
+      "Quarantined latest rows are removed without rewriting sparse history, daily evidence or retained accepted publication buffers; healed assets rejoin normally",
+      "Whole-source failures and unscopable cohort-invalidating inputs still withhold publication; an empty admitted cohort preserves the previous pointer",
+      "Optional unreadable pool detail retains component-only unavailability; formula weights, trust floors and freshness budgets are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.31",
     title: "Trusted-price coverage bounds depeg time; thin-supply deviations are observed",
     date: "2026-10-03",

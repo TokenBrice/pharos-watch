@@ -559,6 +559,8 @@ describe("computeAndStoreDEWS", () => {
     const result = await computeAndStoreDEWS(db);
 
     expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("dews-no-publishable-assets");
     expect(writeFreshnessSentinel).not.toHaveBeenCalled();
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rowsWritten: number;
@@ -735,9 +737,14 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it("marks run degraded when previous stress_signals JSON is malformed", async () => {
+  it("quarantines malformed previous stress signals while publishing a healthy peer", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) =>
+      key === "dews:bootstrap-complete" || key === "dews:published-generation" ? null : dewsCache([
+        dewsCoin(), dewsCoin({ id: "pyusd-paypal", symbol: "PYUSD" }),
+      ]) as never,
+    );
     const db = makeDb(sqlSeen, {
       prevSignalRows: [
         {
@@ -751,25 +758,40 @@ describe("computeAndStoreDEWS", () => {
 
     const result = await computeAndStoreDEWS(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+    expect(computeDEWS).toHaveBeenCalledTimes(1);
+    expect(writeFreshnessSentinel).toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      quarantinedStablecoinIds: ["usdt-tether"],
+      publicationPointerWritten: true,
+      quality: { reasons: ["dews-asset-inputs-quarantined"] },
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode: string | null;
       malformedCoreInputRows: number;
       malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string }>;
     };
-    expect(metadata.fallbackMode).toBe("malformed-persisted-inputs");
+    expect(metadata.fallbackMode).toBeNull();
     expect(metadata.malformedCoreInputRows).toBe(1);
     expect(metadata.malformedPersistedInputs).toContainEqual(
       expect.objectContaining({
         source: "stress_signals",
         stablecoinId: "usdt-tether",
         context: "stress_signals.signals_json",
+        reason: "json-parse-failed",
+        degradesRun: false,
       }),
     );
   });
 
-  it("marks run degraded when yield warning JSON is malformed", async () => {
+  it("quarantines malformed yield warnings while publishing a healthy peer", async () => {
     const sqlSeen: string[] = [];
+    vi.mocked(getCache).mockImplementation(async (_db, key) =>
+      key === "dews:bootstrap-complete" || key === "dews:published-generation" ? null : dewsCache([
+        dewsCoin(), dewsCoin({ id: "pyusd-paypal", symbol: "PYUSD" }),
+      ]) as never,
+    );
     const db = makeDb(sqlSeen, {
       yieldWarningRows: [
         {
@@ -781,7 +803,14 @@ describe("computeAndStoreDEWS", () => {
 
     const result = await computeAndStoreDEWS(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+    expect(computeDEWS).toHaveBeenCalledTimes(1);
+    expect(writeFreshnessSentinel).toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      quarantinedStablecoinIds: ["usdt-tether"],
+      publicationPointerWritten: true,
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       malformedCoreInputRows: number;
       malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string }>;
@@ -792,8 +821,44 @@ describe("computeAndStoreDEWS", () => {
         source: "yield_data",
         stablecoinId: "usdt-tether",
         context: "yield_data.warning_signals",
+        reason: "invalid-shape",
+        degradesRun: false,
       }),
     );
+  });
+
+  it("holds the accepted generation when every asset is quarantined", async () => {
+    const result = await computeAndStoreDEWS(makeDb([], {
+      yieldWarningRows: [{ stablecoin_id: "usdt-tether", warning_signals: "{bad-json" }],
+    }));
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(computeDEWS).not.toHaveBeenCalled();
+    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "dews-no-publishable-assets",
+      quarantinedStablecoinIds: ["usdt-tether"],
+      publicationPointerWritten: false,
+    });
+  });
+
+  it("withholds for an unscopable core input but ignores an out-of-cohort asset rejection", async () => {
+    const held = await computeAndStoreDEWS(makeDb([], {
+      yieldWarningRows: [{ stablecoin_id: "aggregate", warning_signals: "{bad-json" }],
+    }));
+    expect(held.status).toBe("degraded");
+    expect(JSON.parse(held.metadata ?? "{}")).toMatchObject({
+      reason: "dews-cohort-dependency-unavailable",
+      degradedSources: ["malformed-persisted-inputs"],
+      publicationPointerWritten: false,
+    });
+    const published = await computeAndStoreDEWS(makeDb([], {
+      yieldWarningRows: [{ stablecoin_id: "out-of-cohort", warning_signals: "{bad-json" }],
+    }));
+    expect(published.status).toBeUndefined();
+    expect(JSON.parse(published.metadata ?? "{}")).toMatchObject({
+      degradedSources: [], quarantinedStablecoinIds: [], publicationPointerWritten: true,
+    });
   });
 
   it("degrades only the asset's worst-pool component for unreadable top-pool detail, without a cohort hold", async () => {

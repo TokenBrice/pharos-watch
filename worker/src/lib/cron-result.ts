@@ -12,7 +12,7 @@ export type CronMetadataRecord = Record<string, CronMetadataValue>;
 export type StructuredCronResult<TMetadata extends CronMetadataRecord = CronMetadataRecord> =
   Omit<CronResult, "metadata" | "status"> & (
     | { status?: "ok"; metadata?: TMetadata }
-    | { status?: NonNullable<CronResult["status"]>; metadata: TMetadata & { reason: string } }
+    | { status: Exclude<NonNullable<CronResult["status"]>, "ok">; metadata: TMetadata & { reason: string } }
   );
 
 export function serializeCronMetadata<TMetadata extends CronMetadataRecord>(

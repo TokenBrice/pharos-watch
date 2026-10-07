@@ -10,6 +10,13 @@ import {
 import { isDexLiquidityPublicationSlot } from "./cron-cadences";
 
 export type ScheduledRunnerKey = CronScheduleKey;
+
+/** Recovery must not load producer graphs beside a live heavy scheduled slot. */
+export const RESERVE_RECOVERY_HEAVY_SLOT_KEYS = [
+  "fourHourlyReserveSync",
+  "halfHourlyChartsOffset",
+  "v9PublicationOffset",
+] as const satisfies readonly CronScheduleKey[];
 export type ScheduledSlotJobChain = readonly string[];
 
 interface ScheduledSlotPlanInput {

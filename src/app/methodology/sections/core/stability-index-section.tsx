@@ -142,17 +142,17 @@ export function StabilityIndexMethodologySection() {
             {
               label: "Minimum data",
               value:
-                "Scorer accepts empty depeg and zero warning-band DEWS stress rows, but the cron requires total market cap > 0 plus readable active-depeg inputs and a fresh non-empty published DEWS generation",
+                "Scorer accepts empty depeg and zero warning-band DEWS stress rows, but the cron requires finite positive aggregate market cap and paired previous-week denominator, readable active-depeg inputs, and a fresh non-empty published DEWS generation",
             },
             {
               label: "Required sources",
               value:
-                "Market-cap totals, active depeg inputs (observed USD prices or recent replay-safe price_cache; native events use directly observed per-event CoinGecko quotes retained in D1 or timestamped start/recovery evidence strictly younger than six hours), and exact fresh DEWS stress-signal rows",
+                "Observed finite nonnegative current market caps (explicit zero is valid), paired usable previous-week supply, active depeg inputs (observed USD prices or recent replay-safe price_cache; native events use directly observed per-event CoinGecko quotes retained in D1 or timestamped start/recovery evidence strictly younger than six hours), and exact fresh DEWS rows within 3600 seconds",
             },
             {
               label: "Failure behavior",
               value:
-                "Returns null when market-cap input is missing/<=0; the cron preserves the last sample when active-depeg reads or DEWS inputs are unavailable. An unpriced open event is omitted with open-depeg-no-price, never assigned synthetic calm. Native quotes are not inferred from USD prices or FX; PSI adds no network requests",
+                "The cron preserves the last sample when aggregate market cap, paired trend denominator, active-depeg reads or DEWS inputs are unavailable. Assets without usable supply leave denominators, stressed weights and contributors; unpriced open events are omitted, never assigned synthetic calm. Successful partial publication is ok with quality and disclosed supply/trend omission IDs. Native quotes are not inferred from USD prices or FX; PSI adds no network requests",
             },
             {
               label: "Historical replay",

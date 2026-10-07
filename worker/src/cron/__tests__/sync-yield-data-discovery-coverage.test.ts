@@ -19,7 +19,7 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 import { syncYieldData } from "../sync-yield-data";
 import * as publicationModule from "../yield-sync/publication";
 import { batchExecute } from "../../lib/db";
-import { getCache, getCaches, writeFreshnessSentinel } from "../../lib/db-cache";
+import { getCache, getCaches } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import * as safetyScoresModule from "../../lib/safety-scores";
@@ -1230,6 +1230,7 @@ describe("syncYieldData", () => {
     ]);
     await syncYieldData(db);
     const previousCache = sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get();
+    const previousSentinel = sqlite.prepare("SELECT * FROM cache WHERE key = 'freshness:yield-data'").get();
     const previousData = sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all();
     const previousHistory = sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all();
     expect(previousCache).toBeDefined();
@@ -1238,7 +1239,6 @@ describe("syncYieldData", () => {
     sqlite.exec(`CREATE TRIGGER fail_rankings BEFORE UPDATE ON cache WHEN NEW.key = 'yield-rankings'
       BEGIN SELECT RAISE(ABORT, 'cache unavailable'); END`);
     vi.advanceTimersByTime(60_000);
-    vi.mocked(writeFreshnessSentinel).mockClear();
 
     const result = await syncYieldData(db);
 
@@ -1249,7 +1249,7 @@ describe("syncYieldData", () => {
     };
     expect(metadata.reason).toBe("yield-publication-transaction-failed");
     expect(metadata.publishFailure ?? "").toContain("cache unavailable");
-    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM cache WHERE key = 'freshness:yield-data'").get()).toEqual(previousSentinel);
     expect(sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get()).toEqual(previousCache);
     expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all()).toEqual(previousData);
     expect(sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all()).toEqual(previousHistory);

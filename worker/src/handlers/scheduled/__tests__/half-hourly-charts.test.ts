@@ -115,11 +115,12 @@ describe("half-hourly charts scheduling", () => {
       { scheduledAtSec: scheduledRuntime.slotStartedAt },
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
-      ["sync-dex-liquidity", "error", undefined],
+      ["sync-dex-liquidity", "error", "Error"],
       ["cron-sentinel", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
+    expect(summary.jobs[0]?.error).toBe("stale DEX stage");
     expect(summary.jobs[1]?.neutral).toBe(true);
     expect(summary.jobs[2]?.neutral).toBe(true);
   });
@@ -129,6 +130,7 @@ describe("half-hourly charts scheduling", () => {
       status: "degraded",
       itemCount: 1,
       metadata: JSON.stringify({
+        reason: "defillama-yields-unavailable",
         persistence: {
           generationId: null,
           skipped: true,
@@ -143,7 +145,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
-      ["sync-dex-liquidity", "degraded", undefined],
+      ["sync-dex-liquidity", "degraded", "defillama-yields-unavailable"],
       ["cron-sentinel", "skipped", "upstream-dex-publication-unavailable"],
       ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],

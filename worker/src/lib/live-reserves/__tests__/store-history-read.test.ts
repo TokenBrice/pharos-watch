@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
+  loadLatestNonSkippedReserveAttempt,
   loadReserveSyncAttemptTimeline,
   loadReserveSyncReliabilityRollup,
 } from "../store-history-read";
@@ -130,6 +131,49 @@ describe("store-history-read", () => {
       expect(timeline[0].failureCategory).toBeNull();
       expect(timeline[0].warningCodes).toEqual([]);
       expect(timeline[0].durationMs).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("returns the newest non-skipped attempt so circuit skips cannot inherit an older failure", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertAttempt(sqlite, {
+        stablecoinId: "stbt-matrixdock", attemptedAt: 1000, adapterKey: "matrixdock-stbt", status: "error",
+        warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
+        lastError: "HTTP 403", metadata: JSON.stringify({ failureCategory: "http" }),
+      });
+      insertAttempt(sqlite, {
+        stablecoinId: "stbt-matrixdock", attemptedAt: 1001, adapterKey: "matrixdock-stbt", status: "ok",
+        metadata: JSON.stringify({ diag: { durationMs: 3 } }),
+      });
+      insertAttempt(sqlite, {
+        stablecoinId: "stbt-matrixdock", attemptedAt: 1002, adapterKey: "matrixdock-stbt", status: "skipped",
+        metadata: JSON.stringify({ failureCategory: "circuit-open" }),
+      });
+
+      const latest = await loadLatestNonSkippedReserveAttempt(db, "stbt-matrixdock");
+
+      expect(latest).toMatchObject({ attemptedAt: 1001, status: "ok", failureCategory: null, warningCodes: [] });
+      expect(await loadLatestNonSkippedReserveAttempt(db, "unknown-coin")).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    ["metadata", { metadata: "{not-json" }],
+    ["warnings", { warnings: "{not-json" }],
+    ["warning entries", { warnings: JSON.stringify([{ message: "no code" }]) }],
+  ])("refuses a latest attempt whose %s is malformed", async (_label, overrides) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertAttempt(sqlite, {
+        stablecoinId: "usdc-circle", attemptedAt: 1000, adapterKey: "circle", status: "error", ...overrides,
+      });
+
+      expect(await loadLatestNonSkippedReserveAttempt(db, "usdc-circle")).toBeNull();
     } finally {
       sqlite.close();
     }

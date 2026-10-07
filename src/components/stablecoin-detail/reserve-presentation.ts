@@ -453,6 +453,13 @@ export function buildReserveFeedStatus(
   fetchError: unknown | null,
 ): ReserveFeedStatusModel | null {
   const sync = reserves ? buildSyncFeedStatus(reserves) : null;
+  const review = reserves?.sync?.acknowledgedFeed;
+  if (sync && review) sync.rows.push(
+    `Reviewed health exclusion (${review.owner}): ${review.reason}`,
+    `Reviewed: ${new Date(review.reviewedAt * 1000).toISOString().slice(0, 10)}; expires: ${new Date(review.expiresAt * 1000).toISOString()}`,
+    ...review.sources.map((source) => `Evidence (${source.evidenceDate}): ${source.url}`),
+    "This acknowledgement does not change stale/error evidence or scoring admission.",
+  );
   if (!fetchError) return sync;
 
   const notice = buildReserveFetchNotice(fetchError, reserves);

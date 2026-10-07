@@ -19,7 +19,7 @@ import { syncYieldData } from "../sync-yield-data";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import { batchExecute } from "../../lib/db";
-import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
+import { getCache } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
@@ -27,6 +27,7 @@ import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
+import type { YieldRankingsResponse } from "@shared/types/yield";
 
 function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
   return mockD1WithYieldPruneTables(yieldFallbackTableMatches(
@@ -60,12 +61,11 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
-    expect(writeFreshnessSentinel).toHaveBeenCalledWith(
-      db,
-      "yield-data",
-      Math.floor(Date.now() / 1000),
-      undefined,
-    );
+    const sentinel = db.getHistory().find((entry) => entry.binds[0] === "freshness:yield-data");
+    expect(JSON.parse(String(sentinel?.binds[1]))).toMatchObject({
+      generationId: (getYieldRankingsCachePayload(db) as YieldRankingsResponse).publication?.generationId,
+      updatedAt: Math.floor(Date.now() / 1000),
+    });
   });
 
   it("loads stablecoin supply once and requests the published safety generation", async () => {
@@ -142,7 +142,7 @@ describe("syncYieldData", () => {
       provenance?: { safetySnapshot?: { safetyScoreIdentity?: { evaluationBuildDigest?: string } } };
     } | undefined;
     expect(cachePayload?.provenance?.safetySnapshot?.safetyScoreIdentity?.evaluationBuildDigest).toBe("b".repeat(64));
-    expect(writeFreshnessSentinel).toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(true);
   });
 
   it("reports writer-pause progress metadata before returning", async () => {

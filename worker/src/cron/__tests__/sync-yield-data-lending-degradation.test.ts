@@ -247,7 +247,7 @@ describe("syncYieldData", () => {
     expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 
-  it("publishes from the accepted generation while the newest V9 attempt is held inside the budget", async () => {
+  it.each([0.25, 0.75])("publishes held accepted evidence at the 24h boundary with coverage %s", async (coverageRatio) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const nativePoolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
@@ -291,23 +291,30 @@ describe("syncYieldData", () => {
         kind: "degraded",
         reason: "v9-publication-held",
         trackedCount: 4,
-        scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
+        scores: new Map([
+          ["lusd-liquity", { score: 86, grade: "A-" }],
+          ...(coverageRatio >= 0.75 ? [
+            ["100", { score: 80, grade: "B+" }] as const,
+            ["usdc-circle", { score: 78, grade: "B+" }] as const,
+          ] : []),
+        ]),
         safetyScoreIdentity: testSafetyScoreIdentity({
           publicationGenerationId: acceptedPublicationGenerationId,
         }),
-        publishedAt: nowSec - 2 * 3600,
+        publishedAt: nowSec - 24 * 3600,
       }),
     );
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { degraded: boolean; reasons: string[] } };
+    const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { degraded: boolean; reasons: string[]; advisoryReasons: string[] } };
     const payload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ id: string; safetyScore: number | null; safetyGrade: string }>;
       provenance: { safetySnapshot: { safetyScoreIdentity: { publicationGenerationId: string } | null } };
     } | undefined;
 
     expect(result.status).toBe("ok");
-    expect(metadata.quality.reasons).toContain("safety-snapshot:v9-publication-held");
+    expect(metadata.quality.advisoryReasons).toContain("safety-snapshot-held");
+    expect(metadata.quality.reasons.includes("safety-snapshot-coverage")).toBe(coverageRatio < 0.75);
     expect(payload).toBeDefined();
     expect(payload?.provenance.safetySnapshot.safetyScoreIdentity?.publicationGenerationId)
       .toBe(acceptedPublicationGenerationId);
@@ -315,11 +322,11 @@ describe("syncYieldData", () => {
     // all-NR collapse that withheld the publication.
     expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
       .toMatchObject({ safety_score: 86, safety_grade: "A" });
-    // The hold is recorded, never laundered into a clean run.
+    // The hold stays observable without misclassifying adequate coverage.
     expect(result.itemCount).toBeGreaterThan(0);
   });
 
-  it("defers when the held accepted publication is past the stale-coherent budget", async () => {
+  it.each(["expired", "missing", "future", "nonfinite"] as const)("defers held evidence with %s publication clock", async (clock) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(getCache), {});
@@ -334,7 +341,8 @@ describe("syncYieldData", () => {
         safetyScoreIdentity: testSafetyScoreIdentity({
           publicationGenerationId: "report-cards:v9:stale-accepted",
         }),
-        publishedAt: nowSec - 25 * 3600,
+        publishedAt: clock === "expired" ? nowSec - 24 * 3600 - 1
+          : clock === "missing" ? null : clock === "future" ? nowSec + 1 : Number.NaN,
       }),
     );
 
@@ -348,7 +356,7 @@ describe("syncYieldData", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("safety-snapshot-unavailable:v9-publication-held");
     expect(metadata.safetySnapshotHeld).toBe(true);
-    expect(metadata.acceptedPublicationAgeSeconds).toBeGreaterThan(24 * 3600);
+    if (clock === "expired") expect(metadata.acceptedPublicationAgeSeconds).toBe(24 * 3600 + 1);
     expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 

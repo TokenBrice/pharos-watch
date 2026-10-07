@@ -44,6 +44,9 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", async () => {
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
+vi.mock("../../../lib/reserve-producer-priority", () => ({
+  getReserveProducerPriority: vi.fn(),
+}));
 
 import { syncLiveReserves } from "../../../cron/sync-live-reserves";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
@@ -57,6 +60,7 @@ import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-reco
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
+import { getReserveProducerPriority } from "../../../lib/reserve-producer-priority";
 import {
   finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
@@ -70,6 +74,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
   beforeEach(() => {
     sentinelSourceStates.clear();
+    vi.mocked(getReserveProducerPriority).mockResolvedValue(null);
     vi.mocked(syncLiveReserves).mockResolvedValue(undefined as never);
     vi.mocked(syncRedemptionBackstops).mockResolvedValue(undefined as never);
     vi.mocked(syncKinesisSupply).mockResolvedValue(undefined as never);
@@ -133,6 +138,22 @@ describe("runFourHourlyReserveSyncSlot", () => {
     runtime.dwellirNative = capability;
     await runFourHourlyReserveSyncSlot(runtime);
     expect(vi.mocked(syncLiveReserves).mock.calls[0]?.[2]?.dwellirNative).toBe(capability);
+  });
+
+  it("defers a direct checkpoint replay without running producer or consumers beside a heavy slot", async () => {
+    vi.mocked(getReserveProducerPriority).mockResolvedValue({
+      reason: "heavy-slot-co-tenancy", scheduleKey: "v9PublicationOffset",
+      slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+    });
+    const result = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+    expect(result).toMatchObject({ jobsErrored: 0, jobsDegraded: 0, jobsNeutralSkipped: 4 });
+    expect(syncLiveReserves).not.toHaveBeenCalled();
+    expect(syncRedemptionBackstops).not.toHaveBeenCalled();
+    expect(syncKinesisSupply).not.toHaveBeenCalled();
+    expect(finishLiveReserveCheckpoint).not.toHaveBeenCalled();
+    expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      status: "skipped_neutral", reason: "heavy-slot-co-tenancy",
+    }));
   });
 
   it("keeps recovery's two-connection head separate from independent Kinesis I/O", async () => {

@@ -15,6 +15,7 @@ import {
 import {
   publishDexMeasuredQuoteGeneration, publishDexMeasuredTargetInventory, pruneDexMeasuredExecutionGenerations,
   loadLatestPublishedDexMeasuredTargets,
+  loadPositiveEmptyPoolQuarantines, readPositiveEmptyPoolProof, DEX_MEASURED_EMPTY_POOL_REPROBE_SEC,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { makeV3Target } from "./measured-execution.test-support";
@@ -110,6 +111,33 @@ describe("measured execution publication", () => {
 });
 
 describe("measured execution durable publication", () => {
+  it("retains the original empty-read clock and clears quarantine on the latest non-empty outcome", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const inventory = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    const targetGeneration = { ...inventory, targets: [target], publishedAt: 1_000 };
+    const proof = { adapterProfileId: target.adapterProfileId, targetId: target.targetId,
+      emptyPoolObservation: { observedAtSec: 1_060, sourceQuoteGenerationId: "empty-first", blockNumber: 123,
+        poolId: `0x${"11".repeat(32)}`, liquidity: "0", sqrtPriceX96: "10" },
+      reprobeEligibleAtSec: 1_060 + DEX_MEASURED_EMPTY_POOL_REPROBE_SEC, reused: false };
+    await publishDexMeasuredQuoteGeneration({ db, targetGeneration, generationId: "empty-first", quotedAt: 1_060,
+      outcomes: [{ target, status: "failed", failureReason: "pool-uninitialized-or-empty", rawPayload: proof }] });
+    const first = await loadPositiveEmptyPoolQuarantines(db, "active", [target.targetId]);
+    expect(first.get(target.targetId)).toEqual(proof);
+    expect(await loadPositiveEmptyPoolQuarantines(db, "shadow", [target.targetId])).toEqual(new Map());
+    expect(await loadPositiveEmptyPoolQuarantines(db, "active", ["not-current"])).toEqual(new Map());
+    await publishDexMeasuredQuoteGeneration({ db, targetGeneration, generationId: "empty-reused", quotedAt: 1_800,
+      outcomes: [{ target, status: "failed", failureReason: "pool-uninitialized-or-empty", rawPayload: { ...proof, reused: true }, observedThisRun: false }] });
+    expect((await loadPositiveEmptyPoolQuarantines(db, "active", [target.targetId])).get(target.targetId)?.emptyPoolObservation.observedAtSec).toBe(1_060);
+    expect(sqlite.prepare("SELECT quoted_at FROM dex_measured_execution_quotes WHERE generation_id = ?").get("empty-reused")).toEqual({ quoted_at: null });
+    await publishDexMeasuredQuoteGeneration({ db, targetGeneration, generationId: "refilled", quotedAt: 2_000,
+      outcomes: [{ target, status: "measured", profile: fixtureProfile(target, {
+        targetGenerationId: inventory.generationId, quoteGenerationId: "refilled", quotedAt: 2_000,
+      }) }] });
+    expect(await loadPositiveEmptyPoolQuarantines(db, "active", [target.targetId])).toEqual(new Map());
+    expect(readPositiveEmptyPoolProof({ ...proof, reprobeEligibleAtSec: proof.reprobeEligibleAtSec + 1 })).toBeNull();
+    expect(readPositiveEmptyPoolProof({ ...proof, emptyPoolObservation: { ...proof.emptyPoolObservation, liquidity: "malformed" } })).toBeNull();
+  });
   it("persists profiles only for measured outcomes and raw payloads only for failures", async () => {
     const { db, sqlite } = databases.open();
     const measuredTarget = fixtureTarget("ethereum");

@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 
-import { logCronRun } from "../cron-logger";
+import { CronTerminalAccountingError, logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease-primitives";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -226,13 +226,15 @@ describe("logCronRun", () => {
       await vi.advanceTimersByTimeAsync(5 * 60_000 + CRON_ABANDONED_JOB_GRACE_MS + 500);
       await abandonedExpectation;
 
-      const row = sqlite.prepare("SELECT status, error, metadata FROM cron_runs").get()!;
+      const row = sqlite.prepare("SELECT status, error, metadata, degraded_reason FROM cron_runs").get()!;
       expect(row.status).toBe("error");
       expect(row.error).toContain("abandoned");
+      expect(row.degraded_reason).toBe("abandoned");
       expect(JSON.parse(String(row.metadata))).toMatchObject({
         reason: "abandoned",
         job: "test-job",
         stopReason: "timeout",
+        errorDescriptor: { name: "CronJobAbandonedError", message: expect.stringContaining("abandoned") },
       });
     } finally {
       vi.useRealTimers();
@@ -309,15 +311,16 @@ describe("logCronRun", () => {
           invocationId: "invocation-1",
         },
       });
-      const expectation = expect(completion).resolves.toEqual(result);
+      const expectation = expect(completion).rejects.toMatchObject({
+        name: "CronTerminalAccountingError", code: "cron-terminal-accounting-failed",
+        stage: "cron-run", completedResult: result,
+      });
       await vi.runAllTimersAsync();
       await expectation;
 
       const writes = overloadedDb.getHistory().filter(({ sql }) => sql.includes("INSERT INTO cron_runs"));
       expect(writes.map(({ binds }) => binds[3])).toEqual(["ok", "ok", "ok", "ok"]);
-      expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
-      );
+      expect(overloadedDb.getHistory().filter(({ sql }) => sql.includes("INSERT INTO worker_producer_history"))).toHaveLength(0);
     } finally {
       consoleError.mockRestore();
       vi.useRealTimers();
@@ -343,16 +346,56 @@ describe("logCronRun", () => {
             invocationId: "invocation-2",
           },
         }),
-      ).resolves.toEqual(result);
+      ).rejects.toMatchObject({
+        name: "CronTerminalAccountingError", stage: "producer-history", completedResult: result,
+      });
 
       const cronRunWrites = historyFailureDb.getHistory().filter(({ sql }) => sql.includes("INSERT INTO cron_runs"));
       expect(cronRunWrites).toHaveLength(1);
       expect(cronRunWrites[0].binds[3]).toBe("ok");
-      expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
-      );
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it("retains confirmed publication when completed accounting fails", async () => {
+    const db = mockD1([{ match: "INSERT INTO cron_runs", rows: [], throwError: new Error("disk unavailable") }]);
+    const result = {
+      status: "degraded" as const,
+      itemCount: 1,
+      metadata: JSON.stringify({ reason: "partial-publication", outputPublishedAt: 123 }),
+      productivity: { productive: true, reason: "published" },
+    };
+    const producer = vi.fn(async () => result);
+    const error = await logCronRun(db, "test-job", producer).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(CronTerminalAccountingError);
+    expect(error).toMatchObject({ completedResult: result, outputPublishedAt: 123, productive: true, stage: "cron-run" });
+    expect(producer).toHaveBeenCalledTimes(1);
+    expect(db.getHistory().filter(({ sql }) => sql.includes("INSERT INTO cron_runs"))).toHaveLength(1);
+  });
+
+  it("keeps the original producer diagnostic and persistence cause when error accounting fails", async () => {
+    const persistence = new Error("disk unavailable");
+    const original = new Error("producer failed");
+    const db = mockD1([{ match: "INSERT INTO cron_runs", rows: [], throwError: persistence }]);
+    await expect(logCronRun(db, "test-job", async () => { throw original; })).rejects.toMatchObject({
+      code: "cron-terminal-accounting-failed", cause: persistence,
+      originalError: { message: "producer failed", name: "Error" },
+      productive: false, outputPublishedAt: null,
+    });
+  });
+
+  it("redacts cause diagnostics and gives non-error throws a named terminal reason", async () => {
+    const { db, sqlite } = fixtures.open();
+    const failure = { message: "failed Bearer credential", cause: { message: "owner@example.com https://provider.test/token" } };
+    await expect(logCronRun(db, "test-job", async () => { throw failure; })).rejects.toBe(failure);
+    const row = sqlite.prepare("SELECT error, metadata, degraded_reason FROM cron_runs").get()!;
+    expect(row.degraded_reason).toBe("non-error-throw");
+    expect(row.error).toContain("Bearer [redacted]");
+    expect(row.error).toContain("[email] [url]");
+    expect(JSON.parse(String(row.metadata))).toMatchObject({
+      reason: "non-error-throw",
+      errorDescriptor: { name: "NonError", cause: { message: "[email] [url]" } },
+    });
   });
 });

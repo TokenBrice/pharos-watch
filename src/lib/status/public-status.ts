@@ -85,6 +85,14 @@ export function getPublicHealthWarningPresentation(
   warning: string,
   healthData: HealthResponse,
 ): PublicHealthWarningPresentation {
+  if (warning === "scheduled_delivery_stalled") return {
+    title: "Scheduled delivery stalled",
+    detail: `No five-minute lane has started within the delivery budget${healthData.schedulerLiveness?.ageSeconds != null ? ` (${healthData.schedulerLiveness.ageSeconds}s since delivery)` : ""}. Cached data may remain reachable while new updates stop.`,
+  };
+  if (warning === "scheduler_liveness_unavailable") return {
+    title: "Scheduled delivery evidence unavailable",
+    detail: "The live slot-start observation is missing, invalid, or unreadable. Delivery cannot be claimed healthy.",
+  };
   if (warning.startsWith(ACTIVE_PRICE_INCOMPLETE_PREFIX)) {
     const fallbackIds = warning
       .slice(ACTIVE_PRICE_INCOMPLETE_PREFIX.length)

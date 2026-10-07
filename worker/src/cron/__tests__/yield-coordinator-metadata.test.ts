@@ -4,6 +4,7 @@ import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import {
   buildComparisonAnchorFreshnessMeta,
   buildYieldDegradationReasons,
+  buildYieldSafetySnapshotMeta,
   buildYieldSyncMetadata,
 } from "../yield-sync/coordinator-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
@@ -78,8 +79,7 @@ describe("buildComparisonAnchorFreshnessMeta", () => {
 
 describe("buildYieldDegradationReasons", () => {
   const baseParams = {
-    safetySnapshotDegraded: false,
-    safetySnapshotReason: null,
+    safetyCoverageRatio: 1,
     defaultBenchmarkMeta: {
       ...buildHardcodedUsdBenchmark("test"),
       ageSeconds: 0,
@@ -109,6 +109,11 @@ describe("buildYieldDegradationReasons", () => {
     onChainAlternativeCoverageMissingIds: [] as string[],
     previousTvlRowsTruncated: false,
   };
+
+  it.each([0.7499, 0.75, 0.7501])("uses raw coverage %s against the shared floor", (safetyCoverageRatio) => {
+    expect(buildYieldDegradationReasons({ ...baseParams, safetyCoverageRatio }).includes("safety-snapshot-coverage"))
+      .toBe(safetyCoverageRatio < 0.75);
+  });
 
   it("retains default benchmark fallback health when no source row is selected", () => {
     expect(buildYieldDegradationReasons({
@@ -280,23 +285,24 @@ describe("buildYieldSyncMetadata", () => {
     const metadata = JSON.parse(
       buildYieldSyncMetadata({
         rowsRead: 1,
+        safetySnapshotHeld: true,
         rowsWritten: 1,
         rowsRejected: 0,
         divergenceFlags: 0,
         sourceSwitches: 0,
         defaultSafetyCoinCount: 0,
-        safetySnapshot: {
-          kind: "ok",
-          coverageRatio: 1,
-          coveredCount: 1,
-          trackedCount: 1,
-          reason: null,
+        safetySnapshot: buildYieldSafetySnapshotMeta({
+          kind: "degraded",
+          coverageRatio: 374 / 396,
+          coveredCount: 374,
+          trackedCount: 396,
+          reason: "v9-publication-held",
           source: "safety-score-v9-publication",
           safetyScoreIdentity: null,
-          publicationGenerationId: "report-cards:v8.299:1800000000",
-          methodologyVersion: "v8.299",
-          publishedAt: START_SEC,
-        },
+          publicationGenerationId: "report-cards:v9:accepted",
+          methodologyVersion: "9.28",
+          publishedAt: START_SEC - 3600,
+        }),
         resolvedYieldBearingCount: 1,
         expectedYieldBearingCount: 1,
         publishedYieldBearingCount: 1,
@@ -390,7 +396,7 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.quality).toEqual({
       degraded: family !== "pendle",
       reasons: family === "pendle" ? [] : [reason],
-      advisoryReasons: family === "pendle" ? [reason] : [],
+      advisoryReasons: family === "pendle" ? ["safety-snapshot-held", reason] : ["safety-snapshot-held"],
     });
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
     expect(metadata.sourceCoverage.dlApyEnvelopeRejectedCount).toBe(3);
@@ -419,9 +425,13 @@ describe("buildYieldSyncMetadata", () => {
     });
     expect(metadata.sourceCoverage.safetySnapshot).toMatchObject({
       source: "safety-score-v9-publication",
-      publicationGenerationId: "report-cards:v8.299:1800000000",
-      methodologyVersion: "v8.299",
-      publishedAt: START_SEC,
+      publicationGenerationId: "report-cards:v9:accepted",
+      methodologyVersion: "9.28",
+      publishedAt: START_SEC - 3600,
+      maxAgeSeconds: 86400,
+      coverageRatio: 0.9444,
+      coveredCount: 374,
+      trackedCount: 396,
     });
   });
 });

@@ -255,7 +255,7 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
       };
     }),
     finishLiveReserveCheckpoint: vi.fn(async () => undefined),
-    claimNextLiveReserveCheckpointRecovery: vi.fn(async () => null),
+    claimNextLiveReserveCheckpointRecovery: vi.fn(async () => ({ disposition: "none" })),
   };
 });
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));

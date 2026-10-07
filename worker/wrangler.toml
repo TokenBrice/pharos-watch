@@ -38,7 +38,9 @@ cpu_ms = 300000
 
 [observability]
 enabled = true
-head_sampling_rate = 0.1
+# Retain every invocation while hardening shared heavy lanes; sampled logs hid cron deaths.
+# Revisit cost after heavy lanes are isolated, not during incident diagnosis.
+head_sampling_rate = 1
 
 [observability.logs]
 enabled = true

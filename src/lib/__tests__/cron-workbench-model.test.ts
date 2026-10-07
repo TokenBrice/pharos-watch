@@ -93,6 +93,28 @@ describe("cron workbench model", () => {
     ]);
   });
 
+  it("keeps successful findings in attention without counting them as degraded", () => {
+    const groups = makeGroups();
+    groups[0]!.entries = [["status-self-check", makeCron({
+      lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "ok", metadata: { quality: { reason: "probe-plane-degraded" } } },
+    })]];
+    const model = buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, 1_700_000_100);
+    expect(model.rows[0]).toMatchObject({ state: "healthy", statusLabel: "Succeeded with findings", qualityReasons: ["probe-plane-degraded"] });
+    expect(model.groups[0]?.summary).toMatchObject({ healthy: 1, degraded: 0, visible: 1 });
+    expect(formatCronRunStatus("ok", { quality: { reason: "producer-output-stale" } })).toBe("Succeeded with findings");
+  });
+
+  it("inherits findings behind neutral skips only while the required observation is fresh", () => {
+    const run = { startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const, metadata: { quality: { reasons: ["producer-output-stale"] } } };
+    const skip = { startedAt: 1_700_000_100, durationMs: 0, status: "skipped_neutral" as const };
+    const groups = makeGroups();
+    groups[0]!.entries = [["cron-sentinel", makeCron({ lastRun: skip, recentRuns: [skip, run] })]];
+    const fresh = buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_800);
+    expect(fresh.rows[0]).toMatchObject({ state: "skipped", statusLabel: "Succeeded with findings" });
+    expect(fresh.groups[0]?.summary.degraded).toBe(0);
+    expect(buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_801).rows).toHaveLength(0);
+  });
+
   it("sorts severity within a group and uses canonical registry order for ties", () => {
     const group = makeGroups()[0]!;
     group.entries = [

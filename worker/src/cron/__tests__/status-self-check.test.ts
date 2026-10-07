@@ -46,13 +46,14 @@ let fetchMock: ReturnType<typeof mockFetch>;
 const routeMock = vi.fn();
 const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
+const loadStatusSupplementsMock = vi.fn(async () => ({ sectionErrors: {} }));
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2,
   consecutiveProbeFailures: 0,
   persistenceSucceeded: true,
 }));
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
-  return { rawOverallStatus, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
+  return { rawOverallStatus, dbHealthy: true, sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
 const computeRawStatusMock = vi.fn(async () => buildRawStatus());
 const reconcileStatusStateMock = vi.fn(async () => ({
@@ -74,6 +75,9 @@ vi.mock("../../lib/status-evaluation", () => ({
 }));
 vi.mock("../../lib/status/raw-snapshot", () => ({
   writeStatusRawSnapshot: writeStatusRawSnapshotMock,
+}));
+vi.mock("../../lib/status/supplements", () => ({
+  loadStatusSupplements: loadStatusSupplementsMock,
 }));
 vi.mock("../../router", () => ({
   route: routeMock,
@@ -110,6 +114,9 @@ describe("runStatusSelfCheck", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    writeStatusProbeRunMock.mockResolvedValue(true);
+    writeStatusRawSnapshotMock.mockResolvedValue(true);
+    loadStatusSupplementsMock.mockResolvedValue({ sectionErrors: {} });
     fetchMock = mockFetch([], { requireMatch: true });
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "healthy", init),
@@ -288,12 +295,38 @@ describe("runStatusSelfCheck", () => {
     };
 
     // "reported-degraded" is excluded from connectivity failCount but still flows through semanticProbeStatus
-    expect(result.status).toBe("degraded"); // a degraded probe plane is a degraded monitoring run
-    expect(metadata.reason).toBe("probe-plane-degraded");
+    expect(result.status).toBe("ok");
+    expect(metadata.reason).toBeUndefined();
+    expect(metadata.quality).toEqual({ reason: "probe-plane-degraded" });
+    expect(metadata.transportStatus).toBe("healthy");
+    expect(metadata.semanticStatus).toBe("degraded");
     expect(metadata.probeStatus).toBe("degraded");
     expect(metadata.failCount).toBe(0); // reported-* errors are excluded from connectivity fail counts
     expect(latestProbeWrite.status).toBe("degraded");
     expect(latestProbeWrite.failCount).toBe(0);
+  });
+
+  it.each(["status_probe_runs", "status_state", "status:raw-snapshot:v1", "status_discrepancy_state"])(
+    "requires the %s output before marking self-check publication successful", async (output) => {
+      if (output === "status_probe_runs") writeStatusProbeRunMock.mockResolvedValueOnce(false);
+      if (output === "status_state") reconcileStatusStateMock.mockResolvedValueOnce({ effectiveStatus: "healthy", persistenceSucceeded: false });
+      if (output === "status:raw-snapshot:v1") writeStatusRawSnapshotMock.mockResolvedValueOnce(false);
+      if (output === "status_discrepancy_state") updateDiscrepancyObservationMock.mockResolvedValueOnce({
+        consecutiveDivergent: 0, consecutiveProbeFailures: 0, persistenceSucceeded: false,
+      });
+      const result = await runStatusSelfCheck({} as D1Database);
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        reason: "status-self-check-persistence-failed", failedOutputs: [output], outputPublishedAt: null,
+      });
+    },
+  );
+
+  it("fails closed on a current evidence read rather than the observed service verdict", async () => {
+    computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), dbHealthy: false });
+    const result = await runStatusSelfCheck({} as D1Database);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("status-self-check-evidence-read-failed");
   });
 
   it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {

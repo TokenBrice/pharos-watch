@@ -311,12 +311,32 @@ describe("syncDexDiscovery", () => {
     dateNowSpy.mockRestore();
   });
 
+  it("reports budget exhaustion as findings after a completed crawl publishes and advances discovery meta", async () => {
+    let nowMs = 1_700_000_000_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    vi.mocked(crawlCoin).mockImplementation(async () => {
+      return { pools: [makeStagedPool("ethereum:0xpool1")], unresolvedChains: [], deploymentOutcomes: [], checkedDeploymentKeys: [] };
+    });
+    vi.mocked(updateDiscoveryMeta).mockImplementationOnce(async () => {
+      nowMs += DEX_DISCOVERY_RUN_BUDGET_MS + 1_000;
+    });
+    const result = await syncDexDiscovery(db, null);
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(1);
+    expect(updateDiscoveryMeta).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      budgetExhausted: true, quality: { reasons: ["dex-discovery-budget-exhausted"] },
+    });
+    clock.mockRestore();
+  });
+
   it("fences prior deployment outcomes before recording a failed crawl", async () => {
     vi.mocked(crawlCoin).mockRejectedValueOnce(new Error("provider unavailable"));
 
     const result = await syncDexDiscovery(db, null);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("dex-discovery-coins-failed");
     expect(buildFailedCrawlDeploymentOutcomes).toHaveBeenCalledWith({
       stablecoinId: "coin-a",
       deployments: [
@@ -376,6 +396,8 @@ describe("syncDexDiscovery", () => {
     expect(updateDiscoveryMeta).not.toHaveBeenCalled();
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       failedCoins: ["coin-a"],
+      persistenceFailedCoins: ["coin-a"],
+      reason: "dex-discovery-persistence-failed",
       deploymentOutcomesWritten: 0,
     });
   });

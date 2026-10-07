@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
+import { STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
   computeSafetyScoresSnapshot,
@@ -40,7 +41,6 @@ import {
 } from "./supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "./types";
 
-const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
 const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
 
@@ -385,15 +385,13 @@ export async function loadYieldSyncState(params: {
   const safetySnapshotHeld = safetySnapshot.kind === "degraded" && safetySnapshotIdentityPresent;
   const safetySnapshotWithinHeldBudget =
     safetySnapshotHeld &&
-    acceptedSafetyPublicationAgeSeconds != null &&
-    acceptedSafetyPublicationAgeSeconds <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
+    isYieldSafetyFallbackWithinWindow(params.startSec, safetySnapshot.publishedAt, params.startSec);
   const safetySnapshotAvailable =
     safetySnapshotIdentityPresent &&
     (safetySnapshot.kind === "ok" || safetySnapshotWithinHeldBudget);
-  // A held publication never counts as a clean safety input: the run stays
-  // degraded (and skips destructive cleanup) while it publishes.
+  // Held accepted evidence is advisory, but still suppresses destructive cleanup.
   const safetySnapshotDegraded =
-    !safetySnapshotAvailable || safetySnapshotHeld || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+    !safetySnapshotAvailable || safetyCoverageRatio < STATUS_YIELD_HEALTH_THRESHOLDS.safetyCoverageRatio;
 
   return {
     dlPools,

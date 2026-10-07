@@ -200,6 +200,13 @@ export async function loadSafetyScoreV9PublicationHealth(
 ): Promise<V9PublicationHealth | null> {
   const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, signal);
   if (!row) return null;
+  return parseSafetyScoreV9PublicationHealthCache(row);
+}
+
+/** Strict health decoding kept separate from I/O for provenance-aware readers. */
+export function parseSafetyScoreV9PublicationHealthCache(
+  row: { value: string; updatedAt: number },
+): V9PublicationHealth {
   const parsed = parseJson(row.value);
   if (!parsed.ok) throw new Error(`Malformed Safety Score v9 publication health JSON: ${parsed.message}`);
   if (parsed.value !== null && typeof parsed.value === "object" &&

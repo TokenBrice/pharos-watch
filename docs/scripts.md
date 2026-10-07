@@ -149,6 +149,8 @@ For `check:focused` selection and preview behavior, use the [smallest adequate c
 
 Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
+`ops:cron-delivery` reads Cloudflare scheduled-invocation ground truth; see [cron delivery stall](./runbooks/cron-delivery-stall.md).
+
 ### Curation Audits
 
 Use `package.json`'s `audit:*`, `candidates:*`, and `calibrate:*` commands; reports are advisory unless owner docs or CI enforce them. [Stablecoin Data](./stablecoin-data.md) owns curation; feature docs own interpretation. Keep research/queues in `agents/`, durable changes in owner docs. Refresh contracts: [protocol APIs](./process/protocol-api-mechanism-refresh.md) and [CDP shocks](./process/shock-coverage-refresh.md).

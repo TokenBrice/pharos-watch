@@ -247,10 +247,13 @@ describe("cron staleness watchdog", () => {
     mockCacheStatus({ stablecoins: 2_000 });
 
     const first = await runCronStalenessWatchdog(db, undefined, options);
+    expect(first.status).toBe("degraded");
+    expect(JSON.parse(first.metadata ?? "{}").reason).toBe("operator-alert-delivery-failed");
     expect(JSON.parse(first.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-stablecoins"], sent: false,
     });
     const retry = await runCronStalenessWatchdog(db, undefined, options);
+    expect(retry.status).toBe("ok");
     expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-stablecoins"], sent: true,
     });
@@ -261,7 +264,8 @@ describe("cron staleness watchdog", () => {
     mockCacheStatus({ stablecoins: 0 });
     const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), updated_at: Math.floor(Date.now() / 1000) - 60 }]));
     const metadata = JSON.parse(result.metadata ?? "{}") as { detailWriteFailures: Array<{ stablecoinId: string }> };
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("detail-cache-write-failed");
     expect(metadata.detailWriteFailures.map((failure) => failure.stablecoinId)).toEqual(["usdt-tether"]);
   });
 
@@ -280,7 +284,7 @@ describe("cron staleness watchdog", () => {
     detailUpdatedAtStore.set("detail:usdt-tether", nowSec - 600);
     const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "write-error", bytes: 500 }), updated_at: nowSec - 60 }]));
     const metadata = JSON.parse(result.metadata ?? "{}") as { detailWriteFailures: Array<{ stablecoinId: string }> };
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(metadata.detailWriteFailures.map((failure) => failure.stablecoinId)).toEqual(["usdt-tether"]);
     expect(deletedCacheKeys).not.toContain("detail-write-failure:usdt-tether");
   });

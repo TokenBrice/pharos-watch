@@ -79,6 +79,7 @@ describe("publishYieldCoordinatorResults", () => {
     evaluatedSources?: EvaluatedYieldSource[];
     bestSourceKeyByCoin?: Map<string, string>;
     degradationReasons?: string[];
+    safetySnapshotHeld?: boolean;
     previousYieldPublicationSnapshot?: PreviousYieldPublicationSnapshot;
   }) {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
@@ -96,6 +97,7 @@ describe("publishYieldCoordinatorResults", () => {
       ),
       startSec,
       degradationReasons: overrides.degradationReasons ?? [],
+      safetySnapshotHeld: overrides.safetySnapshotHeld ?? false,
       resolvedCount: 1,
       rowsRejected: 0,
       divergenceFlags: 0,
@@ -107,6 +109,49 @@ describe("publishYieldCoordinatorResults", () => {
       },
     };
   }
+
+  it("rolls back rankings, rows, and generation state when the atomic sentinel fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.exec(`CREATE TRIGGER reject_sentinel BEFORE INSERT ON cache
+        WHEN NEW.key = 'freshness:yield-data' BEGIN SELECT RAISE(ABORT, 'sentinel constraint'); END`);
+      const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+      expect(result.ok).toBe(false);
+      expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT * FROM yield_data").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT * FROM yield_source_decisions").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "failed" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("commits imperfect publication and sentinel together even if aborted after the batch", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const controller = new AbortController();
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      const results = await batch(statements);
+      controller.abort(new Error("aborted after commit"));
+      return results;
+    });
+    try {
+      await expect(publishYieldCoordinatorResults(makePublishParams({
+        db, signal: controller.signal, degradationReasons: ["safety-snapshot-coverage"],
+      }))).rejects.toThrow("aborted after commit");
+      const rankings = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'yield-rankings'").get() as { value: string; updated_at: number };
+      const sentinel = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'freshness:yield-data'").get() as { value: string; updated_at: number };
+      expect(sentinel.updated_at).toBe(rankings.updated_at);
+      expect(JSON.parse(sentinel.value)).toMatchObject({
+        generationId: JSON.parse(rankings.value).publication.generationId,
+        updatedAt: rankings.updated_at,
+      });
+      expect(sqlite.prepare("SELECT state FROM yield_publication_generations").all()).toEqual([{ state: "published" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
 
   it("quarantines a NaN source before every publication artifact", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -256,6 +301,7 @@ describe("publishYieldCoordinatorResults", () => {
         publicationViews,
         startSec,
         degradationReasons: [],
+        safetySnapshotHeld: false,
         resolvedCount: sources.length,
         rowsRejected: 0,
         divergenceFlags: 0,
@@ -421,7 +467,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?"))).toBe(false);
   });
 
-  it("does not publish the freshness sentinel when the cron signal aborts after row publication", async () => {
+  it("retains the matching freshness sentinel when the cron signal aborts after row publication", async () => {
     const db = makePublicationDb();
     const controller = new AbortController();
     const entered = deferred<void>();
@@ -455,11 +501,11 @@ describe("publishYieldCoordinatorResults", () => {
     }
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
-    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(false);
+    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(true);
     expect(history.some((entry) => entry.sql.includes("pharos:yield-sync:history-retention-delete"))).toBe(false);
   });
 
-  it("publishes expired-source rankings as degraded without advancing their freshness sentinel", async () => {
+  it("advances the matching freshness sentinel for expired-source rankings", async () => {
     const db = makePublicationDb();
     const degradationReasons = ["yield-source:expired-selected:defillama:test-source"];
 
@@ -470,7 +516,20 @@ describe("publishYieldCoordinatorResults", () => {
     expect(result).toMatchObject({ ok: true, degradationReasons });
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
-    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(false);
+    const sentinel = history.find((entry) => entry.binds[0] === "freshness:yield-data");
+    const rankings = history.find((entry) => entry.binds[0] === "yield-rankings" && entry.binds.length === 3);
+    expect(JSON.parse(String(sentinel?.binds[1]))).toMatchObject({
+      generationId: JSON.parse(String(rankings?.binds[1])).publication.generationId,
+      updatedAt: Math.floor(FIXED_NOW.getTime() / 1000),
+    });
+  });
+
+  it("keeps held publication cleanup suppressed without a quality degradation", async () => {
+    const db = makePublicationDb();
+    expect(await publishYieldCoordinatorResults(makePublishParams({ db, safetySnapshotHeld: true })))
+      .toMatchObject({ ok: true, degradationReasons: [] });
+    expect(db.getHistory().some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("pharos:yield-sync:ownership-handoff-delete"))).toBe(false);
   });
 
   it("runs ownership handoff cleanup only after successful non-degraded publication cleanup", async () => {

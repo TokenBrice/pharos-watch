@@ -12,6 +12,7 @@ import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoin
 import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { evaluateStablecoinActivePriceCoverage } from "../../lib/stablecoin-publication-coverage";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
@@ -302,6 +303,7 @@ describe("handleHealth", () => {
   });
 
   it("serves a fresh public-health projection from one snapshot read", async () => {
+    // A healthy cached aggregate still reads delivery evidence on this request.
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value) as Record<string, unknown>;
@@ -316,6 +318,7 @@ describe("handleHealth", () => {
       stablecoinPublication: null,
       activePriceCoverage: null,
     };
+    (snapshot.publicHealth as Record<string, unknown>).schedulerLiveness = (snapshot.raw as Record<string, unknown>).schedulerLiveness;
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({
       sections: [],
@@ -330,9 +333,9 @@ describe("handleHealth", () => {
     const response = await handleHealth(db);
     const body = await response.json() as { status: string; timestamp: number };
 
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       status: "healthy",
-      timestamp: now - 60,
+      timestamp: now,
       warnings: [],
       caches: {},
       blacklist: {},
@@ -341,8 +344,38 @@ describe("handleHealth", () => {
       stablecoinPublication: null,
       activePriceCoverage: null,
     });
-    expect(db.getHistory()).toHaveLength(1);
+    expect(db.getHistory()).toHaveLength(2);
     db.assertAllMatchesUsed();
+  });
+  it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    row.value = JSON.stringify(snapshot);
+    const db = buildStatusD1Scenario({ sections: [], overrides: [
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201 } },
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe("stale");
+    expect(body.warnings).toContain("scheduled_delivery_stalled");
+    expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
+  });
+  it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    snapshot.publicHealth.status = "stale";
+    snapshot.publicHealth.warnings = ["scheduled_delivery_stalled"];
+    snapshot.publicHealth.schedulerLiveness.status = "stale";
+    row.value = JSON.stringify(snapshot);
+    const db = makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.warnings).not.toContain("scheduled_delivery_stalled");
+    expect(body.status).toBe("stale");
   });
   const telegramCapacityRow = {
     total: 3,
@@ -682,10 +715,58 @@ describe("handleHealth", () => {
     });
   }
 
+  function yieldHealthEntry(now: number, held = false, generationId = `report-cards:v9:v1:${"f".repeat(64)}`): MockTableConfig {
+    const row = {
+      updated_at: now,
+      value: stableJsonStringifyV1({
+        schemaVersion: 2, status: held ? "held" : "current",
+        acceptedPublicationGenerationId: generationId, acceptedAtSec: now - 3600,
+        attemptedAtSec: now, heldSinceSec: held ? now - 60 : null,
+        reasons: held ? [{ code: "redemption-stale" }] : [],
+      }),
+    };
+    return { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["report-cards:v9:publication-health"], rows: [row], first: row };
+  }
+
+  it.each([
+    [3600, 3600, "healthy"], [86400, 86400, "healthy"],
+    [86401, 3600, "degraded"], [3600, 86401, "degraded"],
+  ] as const)("assesses same-identity held clocks %s/%s as %s", async (yieldAge, safetyAge, status) => {
+    const now = Math.floor(Date.now() / 1000);
+    const identity = JSON.parse(stampedYieldIdentityJson("a".repeat(64)));
+    const envelope = JSON.parse(publicationEnvelopeIdentityJson("a".repeat(64)));
+    envelope.publicationGenerationId = identity.publicationGenerationId;
+    const db = makeHealthyHealthDb(now, { extras: [
+      { match: "stamped_identity", rows: [], first: { updated_at: now - yieldAge, stamped_identity: JSON.stringify(identity), safety_published_at: now - safetyAge } },
+      { match: "publication_identity", rows: [], first: { publication_identity: JSON.stringify(envelope) } },
+      yieldHealthEntry(now, true, identity.publicationGenerationId),
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe(status);
+    expect(body.warnings).toContain(status === "healthy"
+      ? "yield-safety-publish-time-fallback:safety-snapshot-held"
+      : "yield-safety-unrated-serving:safety-snapshot-held");
+  });
+
+  it.each(["missing", "malformed", "mismatch"] as const)("fails closed for %s publication health", async (kind) => {
+    const now = Math.floor(Date.now() / 1000);
+    const entry = yieldHealthEntry(now, false, "wrong-generation");
+    if (kind === "malformed") entry.first = { updated_at: now, value: "{}" };
+    const db = makeHealthyHealthDb(now, { extras: [
+      { match: "stamped_identity", rows: [], first: { updated_at: now - 60, stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 60 } },
+      { match: "publication_identity", rows: [], first: { publication_identity: publicationEnvelopeIdentityJson("a".repeat(64)) } },
+      ...(kind === "missing" ? [] : [entry]),
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe("degraded");
+    expect(body.warnings).toContain("yield-safety-availability-unknown");
+  });
+
   it("keeps health green with a fallback warning while yield serves its publish-time safety snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeHealthyHealthDb(now, {
       extras: [
+        yieldHealthEntry(now),
         {
           match: "stamped_identity",
           rows: [],
@@ -709,7 +790,7 @@ describe("handleHealth", () => {
   it.each([25 * 3600, null, -60])("fails closed for unavailable stamped safety age %s despite a recent yield cache", async (safetyAge) => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeHealthyHealthDb(now, {
-      extras: [{
+      extras: [yieldHealthEntry(now), {
         match: "stamped_identity", rows: [],
         first: {
           updated_at: now - 2 * 3600,
@@ -746,6 +827,7 @@ describe("handleHealth", () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeHealthyHealthDb(now, {
       extras: [
+        yieldHealthEntry(now),
         {
           match: "stamped_identity",
           rows: [],

@@ -107,6 +107,13 @@ function buildCronSentinelResult(
       ruleIds: Object.fromEntries(
         sourceResults.map(({ source }) => [source, CRON_SENTINEL_RULE_IDS[source]]),
       ),
+      firedRuleIds: Object.fromEntries(currentSources.map(({ source, result }) => {
+        const metadata = parseMetadata(result.metadata);
+        const fired = metadata && typeof metadata === "object" && "firedRuleIds" in metadata
+          && Array.isArray(metadata.firedRuleIds) ? metadata.firedRuleIds : [];
+        return [source, fired.filter((rule): rule is string =>
+          typeof rule === "string" && CRON_SENTINEL_RULE_IDS[source].includes(rule))];
+      })),
       sources: Object.fromEntries(sourceResults.map(({ source, result, observedAt, state, maxAgeSec }) => [source, {
         observedAt: observedAt ?? null,
         intervalSec: SOURCE_INTERVAL_SEC[source],

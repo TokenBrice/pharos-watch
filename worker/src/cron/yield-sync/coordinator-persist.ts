@@ -13,7 +13,6 @@ import {
   finalizeYieldPublicationGeneration,
   persistEvaluatedYieldSources,
   pruneYieldTables,
-  repairPublishedYieldGenerationFromCache,
   stageYieldPublicationGeneration,
   validateYieldRankingsPayloadForPublish,
   type PreviousYieldPublicationSnapshot,
@@ -24,7 +23,6 @@ import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
 import type { YieldEvaluatedSourcesWriteResult } from "./publication-decision-persistence";
-import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
 function getD1FailureReason(prefix: string, error: unknown): string {
@@ -97,6 +95,7 @@ export async function publishYieldCoordinatorResults(params: {
   publicationViews: Map<string, YieldCoinPublicationView>;
   startSec: number;
   degradationReasons: string[];
+  safetySnapshotHeld: boolean;
   resolvedCount: number;
   rowsRejected: number;
   divergenceFlags: number;
@@ -241,22 +240,8 @@ export async function publishYieldCoordinatorResults(params: {
       params.degradationReasons.push("yield-publication:payload-oversize");
     }
     throwIfAborted(params.signal);
-    if (params.degradationReasons.length === 0) {
-      try {
-        await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
-      } catch (error) {
-        rethrowIfAborted(error, params.signal);
-        const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
-        params.degradationReasons.push(reason);
-        await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
-          logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
-        });
-      }
-    }
-
-    throwIfAborted(params.signal);
     await pruneYieldTables(params.db, params.startSec, {
-      allowDestructiveCleanup: params.degradationReasons.length === 0,
+      allowDestructiveCleanup: params.degradationReasons.length === 0 && !params.safetySnapshotHeld,
       signal: params.signal,
     });
 

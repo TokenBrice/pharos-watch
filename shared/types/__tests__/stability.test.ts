@@ -114,6 +114,24 @@ describe("PSI condition band contract", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts additive omission identities but rejects non-string identities", () => {
+    const response = psiResponse("TREMOR");
+    const inputDegradation = {
+      dewsUnavailable: false, dewsFailureReason: null,
+      depegEventsUnavailable: false, depegEventsFailureReason: null,
+      supplyUnavailableIds: ["usdc-circle"], trendUnavailableIds: ["usdt-tether"],
+    };
+    const parsed = StabilityIndexResponseSchema.parse({
+      ...response, current: { ...response.current, inputDegradation },
+    });
+    expect(parsed.current?.inputDegradation).toEqual(inputDegradation);
+    expect(StabilityIndexResponseSchema.safeParse({
+      ...response, current: {
+        ...response.current, inputDegradation: { ...inputDegradation, supplyUnavailableIds: [1] },
+      },
+    }).success).toBe(false);
+  });
 });
 
 describe("USDS status served shape", () => {

@@ -430,6 +430,7 @@ export interface UniswapV4PoolBindingOutcome {
   targetId: string;
   proof?: DexMeasuredExecutionUniswapV4PoolProof;
   failureReason?: string;
+  emptyPoolState?: { blockNumber: number; poolId: string; liquidity: string; sqrtPriceX96: string };
 }
 
 export async function resolveUniswapV4PoolBindings(input: {
@@ -543,6 +544,10 @@ export async function resolveUniswapV4PoolBindings(input: {
       outcomes[index] = {
         targetId: request.target.targetId,
         failureReason: "pool-uninitialized-or-empty",
+        emptyPoolState: {
+          blockNumber: input.blockNumber, poolId: request.poolId,
+          liquidity: liquidity.toString(), sqrtPriceX96: slot0.sqrtPriceX96.toString(),
+        },
       };
     } else if (slot0.lpFee !== request.target.feePips) {
       outcomes[index] = {

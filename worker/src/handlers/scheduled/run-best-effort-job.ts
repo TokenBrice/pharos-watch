@@ -1,4 +1,4 @@
-import type { CronResult } from "../../lib/cron-logger";
+import { CronTerminalAccountingError, type CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import {
   summarizeCronResult,
@@ -35,7 +35,7 @@ export async function runBestEffortScheduledJobWithOutcome(
     logWorkerEvent({ scope: "handler", level: "error", event: "scheduled_best_effort_job_failed", message: options.errorMessage ?? `${job} failed in ${slotLabel}`, job, metadata: { slotLabel }, error: err });
     return {
       job,
-      result: null,
+      result: err instanceof CronTerminalAccountingError ? err.completedResult ?? null : null,
       summary: summarizeThrownScheduledJob(job, err),
     };
   }
