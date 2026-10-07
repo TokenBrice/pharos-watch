@@ -7,6 +7,9 @@ import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-fa
 import {
   V9ReviewedIncidentRegistryEnvelopeSchema,
   V9ReviewedIncidentSchema,
+  V9NegativeIncidentReviewSchema,
+  v9NegativeIncidentReviewTimeSec,
+  type V9NegativeIncidentReview,
   type V9ControlIncident,
   type V9OperationalIncident,
   type V9ReviewedIncident,
@@ -34,6 +37,9 @@ const INCIDENT_REVIEW_REGISTRY = canonicalizeReviewedRegistryDigest(incidentEnve
   "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
   "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
   "incidents.*.posture.controlKinds": (value) => typeof value === "string" ? value : "",
+  negativeReviews: reviewedRegistryDigestKey("reviewId"),
+  "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
+  "negativeReviews.*.scope.controlKinds": (value) => typeof value === "string" ? value : "",
 });
 
 export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = sha256Hex(
@@ -50,6 +56,74 @@ const INCIDENTS_BY_ASSET_ID = createReviewedAssetRegistry({
   keyOf: (row) => typeof row.incidentId === "string" ? row.incidentId : undefined,
   keyPath: "incidentId",
 });
+
+const NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID = createReviewedAssetRegistry({
+  rows: incidentEnvelope.negativeReviews ?? [],
+  schema: V9NegativeIncidentReviewSchema,
+  path: "incidentReviews.negativeReviews",
+  keyOf: (row) => typeof row.reviewId === "string" ? row.reviewId : undefined,
+  keyPath: "reviewId",
+});
+
+function negativeIncidentReviewIsCurrent(review: V9NegativeIncidentReview, clockSec: number): boolean {
+  const reviewedSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
+  return Number.isFinite(clockSec) && clockSec >= reviewedSec && clockSec >= review.windowEndSec &&
+    clockSec - reviewedSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC &&
+    clockSec - review.windowEndSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
+}
+
+export function getSafetyScoreV9NegativeIncidentReviews(
+  assetId: string,
+  clockSec: number,
+): readonly V9NegativeIncidentReview[] {
+  if (!Number.isFinite(clockSec) || clockSec < 0) {
+    throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
+  }
+  return NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(assetId).filter((review) =>
+    negativeIncidentReviewIsCurrent(review, clockSec));
+}
+
+export function addSafetyScoreV9NegativeIncidentEvidence(
+  evidence: ReviewEvidenceBuilder,
+  reviews: readonly V9NegativeIncidentReview[],
+): void {
+  for (const review of reviews) {
+    evidence.add({
+      componentKeys: ["control"],
+      sourceId: `safety-score-v9.negative-incident-review.${review.reviewId}`,
+      reviewedAtSec: v9NegativeIncidentReviewTimeSec(review.reviewedAt),
+      observedAtSec: review.windowEndSec,
+      confidence: "manual-review",
+      sources: review.sources,
+      payload: review,
+      maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+    });
+  }
+}
+
+/** Independent negative research never erases real history or grants knowledge to another scope. */
+export function routeSafetyScoreV9NegativeIncidentReviews(
+  controls: ControlOverlay[],
+  assetId: string,
+  clockSec: number,
+  reviews: readonly V9NegativeIncidentReview[],
+  incidents: readonly V9ReviewedIncident[],
+): ControlOverlay[] {
+  if (reviews.length === 0) return controls;
+  return controls.map((control) => {
+    if (control.incidentState !== "unknown") return control;
+    // Existing incident routing is conservative at control-kind granularity.
+    // Retain that precedence, including on a bridge row not passed to the mint router.
+    if (incidents.some((incident) => incident.assetId === assetId && incident.domain === "control" &&
+        incident.posture.controlKinds.includes(control.controlKind))) return control;
+    const reviewed = reviews.some((review) => review.assetId === assetId &&
+      negativeIncidentReviewIsCurrent(review, clockSec) &&
+      (review.scope.kind === "control"
+        ? review.scope.controlKey === control.controlKey
+        : review.scope.deploymentKey === control.deploymentKey && review.scope.controlKinds.includes(control.controlKind)));
+    return reviewed ? { ...control, incidentState: "none" as const } : control;
+  });
+}
 
 function isoDateSec(value: string): number {
   return Math.floor(Date.parse(`${value}T00:00:00.000Z`) / 1_000);

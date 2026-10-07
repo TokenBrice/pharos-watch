@@ -15,6 +15,64 @@ import {
   StrictIsoDateSchema,
 } from "./safety-schema-primitives";
 
+import { DeploymentIdSchema } from "./stablecoin-meta-schemas";
+
+const IncidentReviewDateSchema = z.union([StrictIsoDateSchema, z.string().datetime({ offset: true })]);
+
+/** Date-only research is admitted after its UTC day ends; timestamps retain their actual instant. */
+export function v9NegativeIncidentReviewTimeSec(reviewedAt: string): number {
+  return Math.ceil(Date.parse(reviewedAt) / 1_000) + (reviewedAt.includes("T") ? 0 : 86_400);
+}
+
+export const V9NegativeIncidentReviewSchema = z.object({
+  reviewId: CanonicalKeySchema,
+  assetId: CanonicalKeySchema,
+  scope: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("control"), controlKey: CanonicalKeySchema }).strict(),
+    z.object({
+      kind: z.literal("deployment"),
+      deploymentKey: DeploymentIdSchema,
+      controlKinds: canonicalArrayBy(V9ControlKindSchema, (kind) => kind).refine((kinds) => kinds.length > 0, "Negative review requires a control kind"),
+    }).strict(),
+  ]),
+  reviewedAt: IncidentReviewDateSchema,
+  reviewer: CanonicalTextSchema,
+  windowStartSec: z.number().int().nonnegative().safe(),
+  windowEndSec: z.number().int().nonnegative().safe(),
+  conclusion: z.literal("no-known-incident"),
+  searchedSurfaces: z.array(z.object({
+    kind: z.enum(["issuer-status", "issuer-announcements", "explorer-events", "incident-tracker", "governance", "social"]),
+    url: z.string().url(),
+    finding: CanonicalTextSchema,
+  }).strict()).min(1),
+  sources: canonicalArrayBy(z.object({
+    label: CanonicalTextSchema,
+    url: z.string().url(),
+    observedAt: z.string().datetime({ offset: true }),
+    location: CanonicalTextSchema,
+    excerpt: CanonicalTextSchema,
+  }).strict(), (source) => source.url).refine((sources) => sources.length > 0, "Negative review requires source evidence"),
+}).strict().superRefine((review, ctx) => {
+  const reviewedSec = Date.parse(review.reviewedAt) / 1_000 + (review.reviewedAt.includes("T") ? 0 : 86_400);
+  if (review.windowStartSec > review.windowEndSec || review.windowEndSec > reviewedSec) {
+    ctx.addIssue({ code: "custom", path: ["windowEndSec"], message: "Incident search window must end after its start and no later than the review" });
+  }
+  for (const [index, source] of review.sources.entries()) {
+    if (Date.parse(source.observedAt) / 1_000 > reviewedSec) {
+      ctx.addIssue({ code: "custom", path: ["sources", index, "observedAt"], message: "Incident source observation cannot postdate the review" });
+    }
+  }
+  const kinds = new Set(review.searchedSurfaces.map((surface) => surface.kind));
+  if (!(kinds.has("issuer-status") || kinds.has("issuer-announcements")) || !kinds.has("explorer-events") || !kinds.has("incident-tracker")) {
+    ctx.addIssue({ code: "custom", path: ["searchedSurfaces"], message: "Negative incident research requires issuer, exact-deployment event history, and incident-tracker searches" });
+  }
+  if (review.scope.kind === "control" &&
+      !review.scope.controlKey.startsWith(`mint-meta:${review.assetId}:`) &&
+      !review.scope.controlKey.startsWith(`bridge-meta:${review.assetId}:`)) {
+    ctx.addIssue({ code: "custom", path: ["scope", "controlKey"], message: "Negative review must name this asset's exact mint or bridge control key" });
+  }
+});
+export type V9NegativeIncidentReview = z.output<typeof V9NegativeIncidentReviewSchema>;
 // The domain vocabulary is validated by the `z.literal("…")` discriminants
 // on the incident union below, so a parallel enum would be a second source of
 // truth for the same list. Derive the exported type from the union instead.
@@ -274,10 +332,12 @@ export const V9ReviewedIncidentRegistrySchema = z
   .object({
     schemaVersion: z.literal(1),
     incidents: canonicalArrayBy(V9ReviewedIncidentSchema, (incident) => incident.incidentId),
+    negativeReviews: canonicalArrayBy(V9NegativeIncidentReviewSchema, (review) => review.reviewId).optional(),
   })
   .strict();
 
 export const V9ReviewedIncidentRegistryEnvelopeSchema = z.object({
   schemaVersion: z.literal(1),
   incidents: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
+  negativeReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 }).strict();
