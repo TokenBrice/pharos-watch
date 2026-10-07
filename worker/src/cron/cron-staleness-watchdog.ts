@@ -3,7 +3,7 @@ import {
   type CacheFreshnessLaneKey,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
-import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
+import { CRON_JOB_DEFINITIONS, isCronJobExpected, type CronJobMeta } from "@shared/lib/cron-jobs";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
@@ -40,6 +40,7 @@ export interface ProducerFreshnessLane {
 
 export function deriveCronFreshnessProducers(
   definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
+  v9WorkflowMode?: string,
 ): ProducerFreshnessLane[] {
   const cacheLaneByProducer = new Map(
     (Object.entries(CACHE_FRESHNESS_LANES) as Array<[CacheFreshnessLaneKey, CacheFreshnessLaneConfig]>).map(
@@ -48,7 +49,7 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    if (definition.freshnessSurface === "none") return [];
+    if (!isCronJobExpected(definition.job, v9WorkflowMode) || definition.freshnessSurface === "none") return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
       return [{
@@ -374,6 +375,7 @@ function parseProducerFreshnessState(value: string | null | undefined): Producer
 }
 
 export interface CronStalenessWatchdogOptions {
+  v9WorkflowMode?: string;
   /**
    * Private operator chat credentials. Freshness transitions are ops signal,
    * not audience content: they must never be sent with the public digest
@@ -441,7 +443,7 @@ export async function runCronStalenessWatchdog(
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const status = await buildCacheStatuses(db, nowSec);
-  const producers = deriveCronFreshnessProducers();
+  const producers = deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS, options.v9WorkflowMode);
   const cronOnlyProducers = producers.filter((producer) => producer.laneKey == null);
   const producerFacts = await loadProducerFreshnessFacts(
     db,

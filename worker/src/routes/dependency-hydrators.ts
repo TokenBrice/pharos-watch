@@ -55,6 +55,7 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
   },
   workerStatusConfig(routeCtx, env) {
     routeCtx.workerCanaryMode = normalizeWorkerCanaryMode(env.WORKER_CANARY_MODE);
+    routeCtx.v9WorkflowMode = env.WORKER_V9_WORKFLOW_MODE ?? "off";
   },
   workerVersion(routeCtx, env) {
     routeCtx.workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;

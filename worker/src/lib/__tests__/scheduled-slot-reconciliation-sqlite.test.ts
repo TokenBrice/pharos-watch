@@ -209,6 +209,107 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     expect(sqlite.prepare("SELECT * FROM cron_runs ORDER BY job").all()).toEqual(runsAfterRetry);
   });
 
+  it.each([
+    { leaseState: "expired", sourceSlotOffset: 0 },
+    { leaseState: "missing", sourceSlotOffset: 0 },
+    { leaseState: "unowned", sourceSlotOffset: 0 },
+    { leaseState: "expired", sourceSlotOffset: -1_800 },
+    { leaseState: "missing", sourceSlotOffset: -1_800 },
+    { leaseState: "unowned", sourceSlotOffset: -1_800 },
+  ] as const)("reconciles distinct attempts sharing progress (lease: $leaseState, source offset: $sourceSlotOffset)", async ({
+    leaseState, sourceSlotOffset,
+  }) => {
+    const { sqlite, db } = createMigratedDb();
+    const slotStartedAt = 1_000;
+    const childStartedAt = 1_001;
+    const nowSec = 5_000;
+    const leaseOwner = leaseState === "unowned" ? null : "dead-child";
+    const identity: ScheduledChildIdentity = {
+      scheduleKey: "dewsPsiOffset", slotStartedAt: slotStartedAt + sourceSlotOffset,
+      job: "project-tape", producerPath: "dewsPsiOffset", producerKind: "scheduled-job",
+      invocationId: "original-producer", attemptNo: 1, workerVersion: "worker-old",
+      executionFence: {
+        scheduleKey: "dewsPsiOffset", slotStartedAt, invocationId: "original-execution",
+        owner: "original-owner", generation: 1, workerRole: "public",
+      },
+    };
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, execution_owner, execution_generation,
+         invocation_id, worker_version, started_at, updated_at, child_marker_version
+       ) VALUES ('dewsPsiOffset', ?, 'running', 'original-owner', 1,
+                 'original-execution', 'worker-old', ?, ?, 1)`,
+    ).run(slotStartedAt, slotStartedAt, childStartedAt);
+    const attemptKeys = [
+      await markScheduledChildStarted(db, identity, childStartedAt, leaseOwner),
+      await markScheduledChildStarted(db, { ...identity, attemptNo: 2 }, childStartedAt, leaseOwner),
+    ];
+    expect(new Set(attemptKeys).size).toBe(2);
+    sqlite.prepare(
+      `INSERT INTO cron_run_progress (
+         job, started_at, updated_at, stage, lease_owner, slot_started_at, items_done, items_total, metadata
+       ) VALUES ('project-tape', ?, ?, 'running', ?, ?, 3, 10, ?)`,
+    ).run(childStartedAt, childStartedAt + 30, leaseOwner, identity.slotStartedAt, JSON.stringify({ synced: 3 }));
+    if (leaseState === "expired") {
+      sqlite.prepare(
+        `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+         VALUES ('project-tape', 'dead-child', ?, ?, ?)`,
+      ).run(nowSec - 60, childStartedAt + 30, childStartedAt + 30);
+    }
+    for (const job of ["compute-dews", "stability-index"]) {
+      const completedIdentity = { ...identity, job, slotStartedAt };
+      await markScheduledChildStarted(db, completedIdentity, childStartedAt);
+      expect((await writeScheduledChildTerminal(db, {
+        identity: completedIdentity, source: "real", token: `completed:${job}`,
+        startedAt: childStartedAt, completedAt: childStartedAt + 1, durationMs: 1_000,
+        status: "ok", degradedReason: null, disposition: "completed", producerOutcome: "ok",
+        productivity: { productive: true },
+      })).accepted).toBe(true);
+    }
+    const prepareSpy = vi.spyOn(db, "prepare");
+    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec, slotKey: "dewsPsiOffset" });
+    expect(summary).toMatchObject({
+      candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 2,
+      notStartedCronRuns: 0, progressRowsCleared: 1, leasesCleared: leaseState === "expired" ? 1 : 0,
+    });
+    expect(prepareSpy.mock.calls.filter(([sql]) => /^\s*DELETE FROM cron_run_progress\b/.test(sql))).toHaveLength(1);
+    expect(prepareSpy.mock.calls.filter(([sql]) => /^\s*DELETE FROM cron_leases\b/.test(sql)))
+      .toHaveLength(leaseState === "expired" ? 1 : 0);
+    expect(summary.abandonedSlots[0].abandonedJobs).toEqual(Array.from({ length: 2 }, () => ({
+      job: identity.job, progressStage: "running", progressUpdatedAt: childStartedAt + 30,
+      progressSnapshot: { schemaVersion: 1, itemsDone: 3, itemsTotal: 10, metadataStatus: "parsed", synced: 3 },
+      leaseOwner, leaseUntil: leaseState === "expired" ? nowSec - 60 : null,
+    })));
+    for (const attemptKey of attemptKeys) {
+      const attempt = sqlite.prepare(
+        "SELECT terminal_token, terminal_source FROM scheduled_child_attempts WHERE attempt_key = ?",
+      ).get(attemptKey);
+      expect(attempt).toEqual({ terminal_token: expect.any(String), terminal_source: "synthetic" });
+      const run = sqlite.prepare(
+        "SELECT idempotency_key, started_at, status, metadata FROM cron_runs WHERE idempotency_key = ?",
+      ).get(attemptKey) as { idempotency_key: string; started_at: number; status: string; metadata: string };
+      expect(run).toMatchObject({ idempotency_key: attemptKey, started_at: childStartedAt, status: "error" });
+      expect(JSON.parse(run.metadata)).toMatchObject({
+        schedulerAttemptKey: attemptKey, schedulerTerminalToken: attempt?.terminal_token,
+        schedulerTerminalSource: "synthetic", progressStage: "running",
+        progressSnapshot: { itemsDone: 3, itemsTotal: 10, synced: 3 },
+      });
+    }
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare(
+      "SELECT state FROM cron_slot_executions WHERE slot_key = 'dewsPsiOffset' AND slot_started_at = ?",
+    ).get(slotStartedAt)).toEqual({ state: "finished" });
+    const attemptsAfterSweep = sqlite.prepare("SELECT * FROM scheduled_child_attempts ORDER BY attempt_key").all();
+    const runsAfterSweep = sqlite.prepare("SELECT * FROM cron_runs ORDER BY idempotency_key").all();
+    await expect(sweepStaleScheduledSlotExecutions(db, {
+      nowSec: nowSec + 600, slotKey: "dewsPsiOffset",
+    })).resolves.toMatchObject({
+      candidateSlots: 0, slotsReconciled: 0, syntheticCronRuns: 0, progressRowsCleared: 0, leasesCleared: 0,
+    });
+    expect(sqlite.prepare("SELECT * FROM scheduled_child_attempts ORDER BY attempt_key").all()).toEqual(attemptsAfterSweep);
+    expect(sqlite.prepare("SELECT * FROM cron_runs ORDER BY idempotency_key").all()).toEqual(runsAfterSweep);
+  });
+
   it("leaves existing producer history intact when a stale slot already has a terminal cron run", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;

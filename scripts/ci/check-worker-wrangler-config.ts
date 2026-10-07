@@ -104,11 +104,11 @@ export function evaluateWorkerWranglerConfig(
   expectValue("observability", "enabled", "true");
   expectValue("observability.logs", "enabled", "true");
   expectValue("observability.logs", "invocation_logs", "true");
+  expectValue("vars", "WORKER_V9_WORKFLOW_MODE", '"off"');
   const workflows = assignments.filter(({ section }) => section === "workflows");
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
     expectValue("root", "preview_urls", "false");
-    expectValue("vars", "WORKER_V9_WORKFLOW_MODE", '"shadow"');
     expectValue("workflows", "name", '"safety-score-v9-publication"');
     expectValue("workflows", "binding", '"SAFETY_SCORE_V9_WORKFLOW"');
     expectValue("workflows", "class_name", '"SafetyScoreV9PublicationWorkflow"');

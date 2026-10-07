@@ -33,7 +33,7 @@ interface FakeFailureRow {
   updated_at: number;
 }
 
-function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
+function fakeDb(failureRows: FakeFailureRow[] = [], omitWorkflow = false): D1Database {
   const cacheRows = new Map<string, { value: string; updated_at: number }>();
   return {
     prepare: (sql: string) => ({
@@ -60,7 +60,8 @@ function fakeDb(failureRows: FakeFailureRow[] = []): D1Database {
         all: async () => {
           if (sql.includes("ROW_NUMBER() OVER")) {
             const started_at = Math.floor(Date.now() / 1000);
-            return { results: (args as string[]).map((job) => ({
+            return { results: (args as string[])
+              .filter((job) => !omitWorkflow || job !== "compute-safety-score-v9-workflow").map((job) => ({
               job,
               last_success_at: started_at,
               last_run_at: started_at,
@@ -103,6 +104,30 @@ describe("cron staleness watchdog", () => {
     deletedCacheKeys.length = 0;
     sendToChatMock.mockClear();
     sendToChatMock.mockResolvedValue({ ok: true });
+  });
+
+  it.each([undefined, "off", "invalid"])("excludes Workflow freshness obligations with mode %s", (mode) => {
+    const producers = deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS, mode);
+    expect(producers.map((producer) => producer.producerJob)).not.toContain("compute-safety-score-v9-workflow");
+    expect(producers.map((producer) => producer.producerJob)).toContain("compute-safety-score-v9");
+  });
+
+  it("keeps the unchanged Workflow freshness budget when shadow is enabled", () => {
+    expect(deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS, "shadow")).toContainEqual({
+      producerJob: "compute-safety-score-v9-workflow", laneKey: null, cacheKey: null,
+      producerIntervalSec: 30 * 60, thresholdSec: 90 * 60,
+    });
+  });
+
+  it.each(["off", "shadow"])("handles missing Workflow evidence with mode %s", async (v9WorkflowMode) => {
+    mockCacheStatus({});
+    const result = await runCronStalenessWatchdog(fakeDb([], true), undefined, { v9WorkflowMode });
+    const metadata = JSON.parse(result.metadata!);
+    const job = "compute-safety-score-v9-workflow";
+    expect(metadata.checkedProducers.includes(job)).toBe(v9WorkflowMode === "shadow");
+    expect(metadata.stale.some((observation: { producerJob: string }) => observation.producerJob === job))
+      .toBe(v9WorkflowMode === "shadow");
+    expect(metadata.checkedProducers).toContain("compute-safety-score-v9");
   });
 
   it("derives consumer freshness coverage from the canonical producer registry", () => {

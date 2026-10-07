@@ -4,6 +4,7 @@ import { RESERVE_FEED_REVIEWS, matchReserveFeedReview, resolveReserveFeedReviews
 import type { ReserveSyncStateRecord } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
+import { RESERVE_FEED_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
 
 const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
 const now = review.reviewedAt + 1;
@@ -25,6 +26,47 @@ describe("reserve feed review policy", () => {
     expect(resolved.activeById.has("bnusd-balanced")).toBe(false);
     expect(resolved.activeById.has("yzusd-yuzu")).toBe(false);
   });
+  it("renews the nine still-matching feeds through October 21 without invalid or expired reviews", () => {
+    expect(RESERVE_FEED_REVIEWS.map((item) => item.stablecoinId).sort()).toEqual([
+      "gusd-gemini", "mtbill-midas", "usdu-universal", "wars-argentine-peso", "wbrl-ripio",
+      "wcop-ripio", "wmxn-ripio", "zarp-zarp", "zarsc-supercoin",
+    ]);
+    for (const item of RESERVE_FEED_REVIEWS) {
+      expect(item.reviewedAt).toBe(Date.UTC(2026, 9, 7, 14, 19, 23) / 1000);
+      expect(item.expiresAt - item.reviewedAt).toBe(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
+    }
+    const resolved = resolveReserveFeedReviews(Date.UTC(2026, 9, 13) / 1000);
+    expect(resolved.activeById.size).toBe(9);
+    expect(resolved.expiredIds).toEqual([]);
+    expect(resolved.invalidIds).toEqual([]);
+  });
+  it.each(RESERVE_FEED_REVIEWS)("matches only the observed October 7 failure for $stablecoinId", async (item) => {
+    const validation = !["gusd-gemini", "mtbill-midas"].includes(item.stablecoinId);
+    const failureCategory = validation ? "validation" : "unknown";
+    const errorPrefix = validation ? "Validation failed: Redemption source timestamp"
+      : item.stablecoinId === "gusd-gemini"
+        ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"
+        : "primary:http-json: midas-mtbill:stale-portfolio-timestamp";
+    const observed = state({
+      stablecoinId: item.stablecoinId, adapterKey: item.adapterKey,
+      lastStatus: validation ? "degraded" : "error", lastError: `${errorPrefix} observed failure`,
+      warnings: validation ? [{
+        code: "stale-redemption-source-timestamp", message: "Source remains stale", severity: "warning", effect: "fatal",
+      }] : [],
+      metadata: { failureCategory },
+    });
+    expect(await matchReserveFeedReview(mockD1(), observed, now)).toEqual(item);
+    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastStatus: "ok", lastSuccessAt: now }, now)).toBeNull();
+    expect(await matchReserveFeedReview(mockD1(), {
+      ...observed, metadata: { failureCategory: validation ? "unknown" : "validation" },
+    }, now)).toBeNull();
+    expect(await matchReserveFeedReview(mockD1(), {
+      ...observed, warnings: [...observed.warnings, {
+        code: "new-failure", message: "New failure", severity: "warning", effect: "degraded",
+      }],
+    }, now)).toBeNull();
+    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastError: "Different failure" }, now)).toBeNull();
+  });
   it.each([-1, 0, 1])("expires at equality %+is", (offset) => {
     const resolved = resolveReserveFeedReviews(review.expiresAt + offset, [review]);
     expect(resolved.activeById.has(review.stablecoinId)).toBe(offset < 0);
@@ -37,6 +79,7 @@ describe("reserve feed review policy", () => {
   it.each([
     { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-10-06" }] },
     { sources: [{ url: "https://example.com", evidenceDate: "2026-02-30" }] },
+    { sources: [{ url: "https://example.com", evidenceDate: "2026-10-08" }] },
     { expiresAt: review.reviewedAt }, { failureCategory: "" },
   ])("rejects malformed/future review %j", (overrides) => {
     expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides }]).invalidIds).toEqual([review.stablecoinId]);

@@ -2,6 +2,7 @@ import {
   CRON_INTERVALS,
   getCronJobMeta,
   getCronStatusImpact,
+  isCronJobExpected,
   isProvenSatisfiedNeutralSkipReason,
   PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS,
 } from "@shared/lib/cron-jobs";
@@ -501,8 +502,9 @@ function summarizeRunningCronSlots(
 export async function loadCronHealth(
   db: D1Database,
   now: number,
+  v9WorkflowMode?: string,
 ): Promise<CronHealthSnapshot> {
-  const cronJobs = Object.keys(CRON_INTERVALS);
+  const cronJobs = Object.keys(CRON_INTERVALS).filter((job) => isCronJobExpected(job, v9WorkflowMode));
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
   const slotEventKeys = scheduleKeys.map(staleSlotEventCacheKey);
@@ -691,6 +693,7 @@ export async function loadCronHealth(
   let orphanedCronProgressRows = 0;
 
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
+    if (!isCronJobExpected(job, v9WorkflowMode)) continue;
     const runs = cronByJob.get(job) ?? [];
     const lastRun = runs.length > 0 ? runs[0] : null;
     const inFlight = cronProgressByJob.get(job);

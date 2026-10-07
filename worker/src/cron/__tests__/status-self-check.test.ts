@@ -220,6 +220,7 @@ describe("runStatusSelfCheck", () => {
   it("persists a raw status snapshot after status evaluation", async () => {
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "secret",
+      v9WorkflowMode: "shadow",
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rawSnapshotPersistenceSucceeded?: boolean;
@@ -238,7 +239,7 @@ describe("runStatusSelfCheck", () => {
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
-    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
+    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number), undefined, "shadow");
     expect(firstSnapshotWrite[3]?.publicHealth?.status).toBeTypeOf("string");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);

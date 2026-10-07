@@ -44,7 +44,7 @@ describe("handleStatus", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("includes cron health data in the response", async () => {
+  it.each(["off", "shadow"])("includes only expected cron health data with Workflow mode %s", async (v9WorkflowMode) => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
       {
@@ -56,7 +56,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await handleStatus({ db, trustedAdmin: true, request, v9WorkflowMode });
     const body = (await res.json()) as {
       crons: Record<string, { lastRun: unknown; healthy: boolean; expectedIntervalSec: number }>;
     };
@@ -72,7 +72,11 @@ describe("handleStatus", () => {
     expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
-    expect(body.crons["compute-safety-score-v9-workflow"]?.expectedIntervalSec).toBe(30 * 60);
+    if (v9WorkflowMode === "shadow") {
+      expect(body.crons["compute-safety-score-v9-workflow"]?.expectedIntervalSec).toBe(30 * 60);
+    } else {
+      expect(body.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
+    }
   });
 
   it("includes budget-only scheduled surface telemetry in status", async () => {

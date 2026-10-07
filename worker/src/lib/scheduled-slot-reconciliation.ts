@@ -49,6 +49,9 @@ type StaleSlotProgressRow = {
   items_done?: number | null;
   items_total?: number | null;
   metadata?: string | null;
+};
+
+type StaleSlotReconciliationItem = StaleSlotProgressRow & {
   attempt?: ScheduledChildAttemptRow;
 };
 
@@ -297,7 +300,7 @@ async function insertSyntheticCronRun(
 async function insertSyntheticStaleCronRun(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
-  progress: StaleSlotProgressRow,
+  progress: StaleSlotReconciliationItem,
   lease: StaleSlotLeaseRow | null,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
@@ -509,20 +512,45 @@ async function reconcileStaleSlotArtifacts(
     .all<ScheduledChildAttemptRow>());
   const attempts = attemptsResult.results ?? [];
   const progressRows = await listProgressRowsForStaleSlot(db, slot.slot_started_at, expectedJobs);
+  // Progress is cleanup evidence, not ledger identity: multiple attempts may
+  // share it, but each keeps a separate terminal item under its attempt key.
+  const reconciliationItemsByProgress = new Map<StaleSlotProgressRow, StaleSlotReconciliationItem[]>();
   for (const attempt of attempts) {
-    const existingProgress = progressRows.find((row) => row.job === attempt.job && row.started_at === attempt.started_at
+    let progress = progressRows.find((row) => row.job === attempt.job && row.started_at === attempt.started_at
       && row.slot_started_at === attempt.slot_started_at);
-    if (existingProgress) { existingProgress.attempt = attempt; continue; }
-    const progress = await runWithOverloadRetry(() => db.prepare(
-      `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at, items_done, items_total, metadata
-       FROM cron_run_progress WHERE job = ? AND slot_started_at = ? AND started_at = ?`,
-    ).bind(attempt.job, attempt.slot_started_at, attempt.started_at).first<StaleSlotProgressRow>());
-    progressRows.push({
-      ...(progress ?? { job: attempt.job, started_at: attempt.started_at ?? slot.started_at,
+    if (!progress) {
+      const persistedProgress = await runWithOverloadRetry(() => db.prepare(
+        `SELECT job, started_at, updated_at, stage, lease_owner, slot_started_at, items_done, items_total, metadata
+         FROM cron_run_progress WHERE job = ? AND slot_started_at = ? AND started_at = ?`,
+      ).bind(attempt.job, attempt.slot_started_at, attempt.started_at).first<StaleSlotProgressRow>());
+      progress = persistedProgress ?? {
+        job: attempt.job, started_at: attempt.started_at ?? slot.started_at,
         updated_at: attempt.started_at ?? slot.updated_at, stage: null, lease_owner: attempt.lease_owner,
-        slot_started_at: attempt.slot_started_at }), attempt,
-    });
+        slot_started_at: attempt.slot_started_at,
+      };
+      progressRows.push(progress);
+    }
+    const item = { ...progress, attempt };
+    const items = reconciliationItemsByProgress.get(progress);
+    if (items) items.push(item);
+    else reconciliationItemsByProgress.set(progress, [item]);
   }
+  const recordAbandonedProgress = async (progress: StaleSlotProgressRow, lease: StaleSlotLeaseRow | null) => {
+    const items = reconciliationItemsByProgress.get(progress) ?? [progress];
+    for (const item of items) {
+      if (await insertSyntheticStaleCronRun(db, slot, item, lease, nowSec, fence, reconcilerWorkerVersion)) {
+        summary.syntheticCronRuns++;
+      }
+      summary.abandonedJobs.push({
+        job: item.job,
+        progressStage: item.stage,
+        progressUpdatedAt: item.updated_at,
+        progressSnapshot: snapshotAbandonedProgress(item),
+        leaseOwner: item.lease_owner || null,
+        leaseUntil: lease?.lease_until ?? null,
+      });
+    }
+  };
   const progressRowsWithOwner = progressRows.filter(
     (progress): progress is StaleSlotProgressRow & { lease_owner: string } =>
       typeof progress.lease_owner === "string" && progress.lease_owner.length > 0,
@@ -586,18 +614,8 @@ async function reconcileStaleSlotArtifacts(
     );
     const cleared = progressDelete.meta.changes ?? 0;
     summary.progressRowsCleared += cleared;
-    if (cleared === 0 && !progress.attempt) continue;
-    if (await insertSyntheticStaleCronRun(db, slot, progress, null, nowSec, fence, reconcilerWorkerVersion)) {
-      summary.syntheticCronRuns++;
-    }
-    summary.abandonedJobs.push({
-      job: progress.job,
-      progressStage: progress.stage,
-      progressUpdatedAt: progress.updated_at,
-      progressSnapshot: snapshotAbandonedProgress(progress),
-      leaseOwner: null,
-      leaseUntil: null,
-    });
+    if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
+    await recordAbandonedProgress(progress, null);
   }
 
   for (const progress of progressRowsWithOwner) {
@@ -624,19 +642,8 @@ async function reconcileStaleSlotArtifacts(
       );
       const cleared = progressDelete.meta.changes ?? 0;
       summary.progressRowsCleared += cleared;
-      if (cleared === 0 && !progress.attempt) continue;
-
-      if (await insertSyntheticStaleCronRun(db, slot, progress, null, nowSec, fence, reconcilerWorkerVersion)) {
-        summary.syntheticCronRuns++;
-      }
-      summary.abandonedJobs.push({
-        job: progress.job,
-        progressStage: progress.stage,
-        progressUpdatedAt: progress.updated_at,
-        progressSnapshot: snapshotAbandonedProgress(progress),
-        leaseOwner: progress.lease_owner,
-        leaseUntil: null,
-      });
+      if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
+      await recordAbandonedProgress(progress, null);
       continue;
     }
     // A lease is dead when its TTL expired OR its heartbeat went silent past
@@ -680,19 +687,8 @@ async function reconcileStaleSlotArtifacts(
     );
     const cleared = progressDelete.meta.changes ?? 0;
     summary.progressRowsCleared += cleared;
-    if (cleared === 0 && !progress.attempt) continue;
-
-    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec, fence, reconcilerWorkerVersion)) {
-      summary.syntheticCronRuns++;
-    }
-    summary.abandonedJobs.push({
-      job: progress.job,
-      progressStage: progress.stage,
-      progressUpdatedAt: progress.updated_at,
-      progressSnapshot: snapshotAbandonedProgress(progress),
-      leaseOwner: progress.lease_owner,
-      leaseUntil: lease.lease_until,
-    });
+    if (cleared === 0 && !reconciliationItemsByProgress.has(progress)) continue;
+    await recordAbandonedProgress(progress, lease);
     const leaseDelete = await runWithOverloadRetry(() =>
       db
         .prepare(
