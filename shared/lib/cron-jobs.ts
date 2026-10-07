@@ -191,8 +191,12 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
   maxPhysicalTriggersBeforeRebalance: 41,
   // The digest publication watchdog is a one-connection serial sidecar on the
   // existing status lane; admit that reviewed entry without changing trigger
-  // topology or the per-trigger peak.
-  maxFetchCapableEntriesBeforeRebalance: 33,
+  // topology or the per-trigger peak (33). The 2026-10-07 redemption review
+  // corrected `sync-redemption-backstops` from a declared weight of 0 to its
+  // measured serial RPC peak of 1 (earnUSD queue observation); that is an
+  // accounting correction of existing work, not new fetch surface, so the
+  // reviewed count moves to 34 with per-trigger peaks unchanged (3/6, 2/6).
+  maxFetchCapableEntriesBeforeRebalance: 34,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
