@@ -326,27 +326,50 @@ const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
   }
 });
 
-const SafetyScoreV9EvidenceResponsibilityTraceSchema = z.object({
-  semantics: z.literal("limiting-fact-cause-v2"),
-  totalFactCount: z.number().int().nonnegative(),
-  facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
-  factPathPrefixes: canonicalTextArray().optional().describe("No interned fact prefixes when omitted"),
-  summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
-}).strict().superRefine((evidence, ctx) => {
-  if (!refineEvidenceFactPathPrefixes(evidence, ctx)) return;
-  if (JSON.stringify(evidence.summaries.map((summary) => summary.responsibility)) !== JSON.stringify(RESPONSIBILITIES)) {
-    ctx.addIssue({ code: "custom", path: ["summaries"], message: "V9 evidence responsibility summaries must preserve a supported canonical owner order" });
-  }
-  const summariesAgree = evidence.summaries.every((summary) => {
+function buildEvidenceResponsibilityTraceSchema(allowLegacyWitnessAccounting: boolean) {
+  return z.object({
+    semantics: z.literal("limiting-fact-cause-v2"),
+    totalFactCount: z.number().int().nonnegative(),
+    facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
+    factPathPrefixes: canonicalTextArray().optional().describe("No interned fact prefixes when omitted"),
+    summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
+  }).strict().superRefine((evidence, ctx) => {
+    if (!refineEvidenceFactPathPrefixes(evidence, ctx)) return;
+    if (JSON.stringify(evidence.summaries.map((summary) => summary.responsibility)) !== JSON.stringify(RESPONSIBILITIES)) {
+      ctx.addIssue({ code: "custom", path: ["summaries"], message: "V9 evidence responsibility summaries must preserve a supported canonical owner order" });
+    }
+    const accounting = classifyV9EvidenceAccounting(evidence);
+    const summariesAgree = accounting === "distinct-obligation-accounting" ||
+      (allowLegacyWitnessAccounting && accounting === "legacy-witness-accounting");
+    if (evidence.facts.length !== evidence.totalFactCount || !summariesAgree) {
+      ctx.addIssue({ code: "custom", path: ["facts"], message: "Cause witnesses and distinct obligation counts must reconcile; A/B never directly withholds" });
+    }
+  });
+}
+
+/** Classification is exact: every owner must reconcile under the same accounting. */
+export function classifyV9EvidenceAccounting(evidence: {
+  facts: readonly z.infer<typeof SafetyScoreV9EvidenceResponsibilityFactSchema>[];
+  summaries: readonly z.infer<typeof SafetyScoreV9EvidenceResponsibilityItemSchema>[];
+}): "distinct-obligation-accounting" | "legacy-witness-accounting" | "invalid-accounting" {
+  let obligationsAgree = true;
+  let witnessesAgree = true;
+  for (const summary of evidence.summaries) {
     const facts = evidence.facts.filter((fact) => fact[3] === summary.responsibility);
     const counts = countV9EvidenceObligations(facts, (fact) => fact[2], (fact) => fact[6], (fact) => fact[4]);
-    return (summary.factCount ?? 0) === counts.factCount &&
+    let criticalWitnessCount = 0;
+    for (const fact of facts) if (fact[4]) criticalWitnessCount++;
+    obligationsAgree &&= (summary.factCount ?? 0) === counts.factCount &&
       (summary.criticalFactCount ?? 0) === counts.criticalFactCount;
-  });
-  if (evidence.facts.length !== evidence.totalFactCount || !summariesAgree) {
-    ctx.addIssue({ code: "custom", path: ["facts"], message: "Cause witnesses and distinct obligation counts must reconcile; A/B never directly withholds" });
+    witnessesAgree &&= (summary.factCount ?? 0) === facts.length &&
+      (summary.criticalFactCount ?? 0) === criticalWitnessCount;
   }
-});
+  return obligationsAgree ? "distinct-obligation-accounting" :
+    witnessesAgree ? "legacy-witness-accounting" : "invalid-accounting";
+}
+
+const SafetyScoreV9EvidenceResponsibilityTraceSchema = buildEvidenceResponsibilityTraceSchema(false);
+const SafetyScoreV9ReadableEvidenceResponsibilityTraceSchema = buildEvidenceResponsibilityTraceSchema(true);
 
 const SafetyScoreV9WrapperMissingFactClassSchema = z.union([
   V9WrapperLocalFactKeySchema,
@@ -696,10 +719,13 @@ function refineBoundedUncertaintyTrace(
 }
 
 /** Current trace4 carries explicit causal coverage and effective scoring weights. */
-export const SafetyScoreV9ScoreTraceSchema =
-  SafetyScoreV9AdjustedScoreTraceCommonSchema
+function buildScoreTraceSchema(allowLegacyWitnessAccounting: boolean) {
+  return SafetyScoreV9AdjustedScoreTraceCommonSchema
     .extend({
       schemaVersion: z.literal(4),
+      evidenceResponsibility: allowLegacyWitnessAccounting
+        ? SafetyScoreV9ReadableEvidenceResponsibilityTraceSchema
+        : SafetyScoreV9EvidenceResponsibilityTraceSchema,
       boundedUncertaintyAttribution:
         SafetyScoreV9BoundedUncertaintyAttributionTraceSchema,
       providerRowExclusions: z.array(AdmittedProviderRowExclusionSchema).min(1).optional(),
@@ -709,3 +735,8 @@ export const SafetyScoreV9ScoreTraceSchema =
       refineAdjustedScoreTrace(trace, ctx);
       refineBoundedUncertaintyTrace(trace, ctx);
     });
+}
+
+export const SafetyScoreV9ScoreTraceSchema = buildScoreTraceSchema(false);
+/** Persisted/served trace4 keeps validated witness counts intact until republished. */
+export const SafetyScoreV9ReadableScoreTraceSchema = buildScoreTraceSchema(true);

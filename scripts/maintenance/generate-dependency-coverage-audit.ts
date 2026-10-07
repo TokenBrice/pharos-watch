@@ -28,7 +28,7 @@ import type {
   StablecoinMeta,
 } from "@shared/types";
 import {
-  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
 import {
@@ -381,7 +381,7 @@ function reportCardsEnvelope(payload: unknown): unknown {
 }
 
 function parseReportCardInput(payload: unknown): ParsedReportCardInput {
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(reportCardsEnvelope(payload));
+  const parsed = ReportCardsV9ReadableResponseSchema.safeParse(reportCardsEnvelope(payload));
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     malformedReportCard(issue?.path.join(".") || "root", issue?.message ?? "expected the current V9 report contract");

@@ -372,6 +372,16 @@ export function boundedResponse() {
   return bounded;
 }
 
+/** Accepted trace4 before v10.10: two witnesses for one exact gap obligation. */
+export function legacyWitnessAccountingResponse(): CurrentResponse {
+  const accepted = boundedResponse();
+  const evidence = accepted.cards[0]!.scoreTrace.evidenceResponsibility;
+  evidence.facts.push(["bounded-mechanism-review", "backing:second-witness", 0, "unresearched", false, "U", [0]]);
+  evidence.totalFactCount = 2;
+  evidence.summaries[7]!.factCount = 2;
+  return accepted;
+}
+
 export function deploymentResponse() {
   const result = currentResponse();
   const card = result.cards[0]!;

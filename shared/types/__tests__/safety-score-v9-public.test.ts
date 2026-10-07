@@ -4,6 +4,8 @@ import {
   SafetyScoreV9CurrentCardBaseSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9ResponseSchema,
+  SafetyScoreV9ReadableResponseSchema,
+  parseReadableSafetyScoreV9Publication,
   type SafetyScoreV9CurrentCard,
 } from "../safety-score-v9-public";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
@@ -11,7 +13,7 @@ import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-fact
 import { evaluateV9AccessLookthrough } from "../../lib/safety-score-v9/access-lookthrough";
 import { makeAccessGraph } from "../../lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 
-import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse, partialResponse } from "./safety-score-v9-public.test-support";
+import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse, legacyWitnessAccountingResponse, partialResponse } from "./safety-score-v9-public.test-support";
 import { SafetyGradesResponseSchema } from "../report-cards-v9";
 import { projectV9CompactPartialEvidence } from "../safety-score-v9-causes";
 import { resolveCauseGapId } from "../safety-score-v9-public-cause-gaps";
@@ -20,6 +22,18 @@ import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-cause
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("Compact public cause contracts", () => {
+  it("dispatches retained witness accounting without weakening producer validation", () => {
+    const legacy = legacyWitnessAccountingResponse();
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(legacy).success).toBe(false);
+    const parsed = parseReadableSafetyScoreV9Publication(legacy);
+    expect(parsed.accounting).toBe("legacy-witness-accounting");
+    expect(parsed.publication).toEqual(legacy);
+    const corrupt = structuredClone(legacy);
+    corrupt.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount = 3;
+    expect(SafetyScoreV9ReadableResponseSchema.safeParse(corrupt).success).toBe(false);
+    const current = boundedResponse();
+    expect(parseReadableSafetyScoreV9Publication(current).accounting).toBe("distinct-obligation-accounting");
+  });
   it("validates distinct obligation summaries independently of the retained witness count", () => {
     const response = boundedResponse();
     const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;

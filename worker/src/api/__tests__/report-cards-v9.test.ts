@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { legacyWitnessAccountingResponse } from "@shared/types/__tests__/safety-score-v9-public.test-support";
+import { ReportCardsV9ReadableResponseSchema } from "@shared/types/report-cards-v9";
+import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
+import { currentInput, legacyPublicationStorageValue } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
+import type * as ActiveSource from "../../lib/safety-score-active-source";
 
 const mockLoadActiveSafetyScoreSource = vi.fn();
 
@@ -34,6 +40,28 @@ describe("handleReportCardsV9", () => {
       "report-cards-v9",
     );
     expect(getRouteMatch("/api/report-cards/v9-preview")).toBeNull();
+  });
+
+  it("serves the persisted legacy witness-count publication before fresh accounting is published", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const legacy = legacyWitnessAccountingResponse();
+    const current = structuredClone(legacy);
+    current.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount = 1;
+    const source = await vi.importActual<typeof ActiveSource>("../../lib/safety-score-active-source");
+    try {
+      await persistSafetyScoreV9Publication(db, currentInput(current));
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        await legacyPublicationStorageValue(legacy, current), SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      );
+      mockLoadActiveSafetyScoreSource.mockImplementation(source.loadActiveSafetyScoreSource);
+      const response = await handleReportCardsV9(db);
+      expect(response.status).toBe(200);
+      const body = ReportCardsV9ReadableResponseSchema.parse(await response.json());
+      expect(body.cards).toEqual(legacy.cards);
+      expect(body.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount).toBe(2);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("serves held ratings without caching assessment details", async () => {

@@ -2,6 +2,7 @@ import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9CurrentResponseSchema,
+  parseReadableSafetyScoreV9Publication,
   type SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -142,7 +143,7 @@ function parsePublicationPayload(
       ? value.schemaVersion : "missing";
     throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 6 and never infers evidence causes from legacy gaps`);
   }
-  return SafetyScoreV9CurrentResponseSchema.parse(value);
+  return parseReadableSafetyScoreV9Publication(value).publication;
 }
 
 

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9ReadableResponseSchema } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import {
   assertCliUsage,
@@ -42,7 +42,7 @@ const ReplayArtifactInputSchema = z
 /** Projects a replay artifact's V9 cards joined with compiled-fact archetypes. */
 export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateCard[] {
   const artifact = ReplayArtifactInputSchema.parse(input);
-  const candidate = SafetyScoreV9ResponseSchema.parse(artifact.pipeline.candidate);
+  const candidate = SafetyScoreV9ReadableResponseSchema.parse(artifact.pipeline.candidate);
   const archetypeById = new Map(
     artifact.pipeline.compiledFacts.assets.map((asset) => [asset.assetId, asset.archetype]),
   );
@@ -62,7 +62,7 @@ export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateC
  */
 export function parseSafetyScoreV9AnchorGateAsOfSec(input: unknown): number {
   const artifact = ReplayArtifactInputSchema.parse(input);
-  return SafetyScoreV9ResponseSchema.parse(artifact.pipeline.candidate).publishedAtSec;
+  return SafetyScoreV9ReadableResponseSchema.parse(artifact.pipeline.candidate).publishedAtSec;
 }
 
 export interface SafetyScoreV9AnchorGateIo {

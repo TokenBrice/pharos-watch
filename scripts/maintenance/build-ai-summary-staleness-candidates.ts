@@ -34,7 +34,7 @@ import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import currentMethodologyVersion from "@shared/lib/methodology-versions/current-version.json";
 import {
-  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   type ReportCardsV9CurrentResponse,
 } from "@shared/types/report-cards-v9";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
@@ -270,7 +270,7 @@ export async function loadCurrent(): Promise<Map<string, Current>> {
 
   const cards = parseLiveContract(
     "report-cards/v9",
-    ReportCardsV9CurrentResponseSchema,
+    ReportCardsV9ReadableResponseSchema,
     cardsRaw,
   );
   const stress = parseLiveContract("stress-signals", StressSignalsAllResponseSchema, stressRaw);

@@ -26,7 +26,7 @@ import {
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReadableResponseSchema } from "@shared/types/report-cards-v9";
 import {
   PublicSnapshotEnvelopeSchema,
   type PublicSnapshotEnvelope,
@@ -200,7 +200,7 @@ function validateV9ReportCards(
     }
     validationInput = { ...reportCards, cards };
   }
-  const parsed = ReportCardsV9ResponseSchema.safeParse(validationInput);
+  const parsed = ReportCardsV9ReadableResponseSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";
   }

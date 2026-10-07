@@ -54,7 +54,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
 import { SAFETY_GRADE_VALUES } from "@shared/types/report-card-grade";
 import {
-  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   type ReportCardsV9CurrentResponse,
 } from "@shared/types/report-cards-v9";
 import { StabilityIndexResponseSchema, type StabilityIndexCurrent } from "@shared/types/stability";
@@ -295,7 +295,7 @@ export function parseMapReportCards(payload: unknown): {
   updatedAt: number;
   publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
 } {
-  const response = parseCanonicalPayload("Report-card", ReportCardsV9CurrentResponseSchema, payload);
+  const response = parseCanonicalPayload("Report-card", ReportCardsV9ReadableResponseSchema, payload);
   const ids = new Set<string>();
   const cards = response.cards.map((card) => {
     if (ids.has(card.id)) throw new Error(`Duplicate report-card id "${card.id}" — refusing to build an ambiguous map`);

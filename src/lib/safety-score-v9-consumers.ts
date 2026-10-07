@@ -1,5 +1,5 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReadableResponseSchema } from "@shared/types/report-cards-v9";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,
@@ -55,7 +55,7 @@ export function resolveV9ConsumerResponse(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
 ): V9ConsumerResult<V9ConsumerResponse> {
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(input);
+  const parsed = ReportCardsV9ReadableResponseSchema.safeParse(input);
   if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };

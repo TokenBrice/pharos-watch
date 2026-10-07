@@ -58,7 +58,7 @@ import {
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import {
   ReportCardsV9DependencyGraphSchema,
-  ReportCardsV9ResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   SafetyGradesResponseSchema,
   V9PublicationHealthSchema,
 } from "@shared/types/report-cards-v9";
@@ -225,7 +225,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   TapeEventsResponse: TapeEventsResponseSchema,
   UsdsStatusResponse: UsdsStatusResponseOutputSchema,
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
-  ReportCardsV9Response: ReportCardsV9ResponseSchema,
+  ReportCardsV9Response: ReportCardsV9ReadableResponseSchema,
   SafetyGradesResponse: SafetyGradesResponseSchema,
   DependencyGraphResponse: DependencyGraphResponseSchema,
   DependencyScenariosResponse: DependencyScenariosResponseSchema,

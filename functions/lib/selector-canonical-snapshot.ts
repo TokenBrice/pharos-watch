@@ -17,7 +17,7 @@ import {
   type StressSignalsAllResponse,
 } from "@shared/types/market";
 import {
-  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   type ReportCardsV9CurrentResponse,
 } from "@shared/types/report-cards-v9";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
@@ -83,7 +83,7 @@ async function loadCanonicalSelectorSources(request: Request, env: SelectorCanon
       request,
       env,
       API_PATHS.reportCardsV9(),
-      ReportCardsV9CurrentResponseSchema,
+      ReportCardsV9ReadableResponseSchema,
     ),
     fetchCanonicalSource<StressSignalsAllResponse>(
       request,

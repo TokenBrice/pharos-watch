@@ -16,7 +16,18 @@ import {
 } from "@/test/fixtures/safety-score-v9";
 
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { legacyWitnessAccountingResponse } from "@shared/types/__tests__/safety-score-v9-public.test-support";
 describe("V9 safety consumer projections", () => {
+  it("renders retained witness-count cards without changing their scores or counts", () => {
+    const legacy = legacyWitnessAccountingResponse();
+    const response = makeReportCardsV9Response({ cards: legacy.cards });
+    const resolved = resolveV9ConsumerResponse(response, response.safetyScoreIdentity);
+    expect(resolved.status).toBe("available");
+    expect(buildV9SafetyTableRows(response, response.safetyScoreIdentity)).toMatchObject({
+      status: "available", value: [{ score: legacy.cards[0]!.score, grade: legacy.cards[0]!.grade }],
+    });
+    expect(response.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount).toBe(2);
+  });
   it("preserves technical gap nulls and excludes them from grade risk buckets", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A");
     const response = makeReportCardsV9Response({ cards: [gap] });

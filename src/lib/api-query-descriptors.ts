@@ -366,7 +366,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
-      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
+      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9ReadableResponseSchema,
     ),
   ),
   // Free no-key grade projection of the same V9 publication; `/api/` reads it

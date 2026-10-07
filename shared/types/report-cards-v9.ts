@@ -3,6 +3,7 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9ReadableCardSchema,
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
@@ -376,6 +377,16 @@ export const ReportCardsV9CurrentResponseSchema = z
   .strict()
   .superRefine(refineReportCardsV9Response);
 export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
+
+/** Served retained publications may still use validated witness accounting. */
+export const ReportCardsV9ReadableResponseSchema = z.object({
+  ...ReportCardsV9ResponseShape,
+  lifecycle: z.literal("active"),
+  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+  publicationHealth: V9PublicationHealthSchema,
+  cards: z.array(SafetyScoreV9ReadableCardSchema),
+  foreignCauseGaps: canonicalTextArray(),
+}).strict().superRefine(refineReportCardsV9Response);
 
 /**
  * Live V9 producers and consumers use only the current report contract.

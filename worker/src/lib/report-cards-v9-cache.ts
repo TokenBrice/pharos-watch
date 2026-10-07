@@ -2,7 +2,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
-  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9ReadableResponseSchema,
   type ReportCardsV9CurrentResponse,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
@@ -89,7 +89,7 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
     publication,
     publicationHealth,
   );
-  return ReportCardsV9CurrentResponseSchema.parse({
+  return ReportCardsV9ReadableResponseSchema.parse({
     model: "v9",
     schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
     lifecycle: "active",

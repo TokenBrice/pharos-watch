@@ -5,7 +5,7 @@ import {
   StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
 } from "./market";
-import { ReportCardsV9CurrentResponseSchema } from "./report-cards-v9";
+import { ReportCardsV9ReadableResponseSchema } from "./report-cards-v9";
 import { StabilityIndexResponseSchema } from "./stability";
 
 export const PHAROSVILLE_API_CONTRACT_VERSION = 1;
@@ -27,7 +27,7 @@ export const PharosVilleApiPayloadsSchema = z.object({
   stability: StabilityIndexResponseSchema,
   pegSummary: PegSummaryResponseSchema,
   stress: StressSignalsAllResponseSchema,
-  reportCards: ReportCardsV9CurrentResponseSchema,
+  reportCards: ReportCardsV9ReadableResponseSchema,
 });
 
 export type PharosVilleApiPayloads = z.infer<typeof PharosVilleApiPayloadsSchema>;

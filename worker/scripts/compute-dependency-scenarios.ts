@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
 import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, type DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
-import { ReportCardsV9CurrentResponseSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReadableResponseSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     if (!apiKey) throw new Error("PHAROS_API_KEY is required for accepted-publication capture");
     const response = await fetch("https://api.pharos.watch/api/report-cards/v9", { headers: { "X-API-Key": apiKey } });
     if (!response.ok) throw new Error(`Publication capture failed: ${response.status}`);
-    const source = ReportCardsV9CurrentResponseSchema.parse(await response.json());
+    const source = ReportCardsV9ReadableResponseSchema.parse(await response.json());
     writeFileSync(sourcePath, JSON.stringify(source));
     const raw = JSON.parse(remote("--command", `SELECT key, value FROM cache WHERE key IN ('${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}')`));
     const rows: Array<{ key: string; value: string }> = raw[0]?.results ?? [];
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   if (values.mode === "publish") {
     const bytes = readFileSync(artifactPath, "utf8");
     const artifact = DependencyScenarioArtifactSchema.parse(JSON.parse(bytes));
-    const source = ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
+    const source = ReportCardsV9ReadableResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
     if (source.safetyScoreIdentity.publicationGenerationId !== artifact.sourcePublicationGenerationId) throw new Error("Publish source generation mismatch");
     if (source.safetyScoreIdentity.baseInputGenerationId !== artifact.sourceBaseInputGenerationId ||
         source.safetyScoreIdentity.evaluationBuildDigest !== artifact.evaluationBuildDigest ||
@@ -115,7 +115,7 @@ async function main(): Promise<void> {
   const start = performance.now(), cpu = process.cpuUsage();
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
   const fixedInput = await parseSafetyScoreV9ReplayFixedInput(capture.fixedInput ?? capture, capture.registrySnapshot);
-  const source = values.publication ? ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
+  const source = values.publication ? ReportCardsV9ReadableResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
   const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
   let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;

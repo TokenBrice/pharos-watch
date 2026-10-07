@@ -9,7 +9,7 @@ import {
   V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapQueueEntryV2,
 } from "@shared/types/safety-score-v9-evidence-queue";
-import { SafetyScoreV9ResponseSchema, type SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9ReadableResponseSchema, type SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
 import {
   parseStrictCliArgs,
@@ -42,7 +42,7 @@ const ReplayArtifactSchema = z
   .object({
     pipeline: z
       .object({
-        candidate: SafetyScoreV9ResponseSchema,
+        candidate: SafetyScoreV9ReadableResponseSchema,
         compiledFacts: z.unknown(),
       })
       .passthrough(),

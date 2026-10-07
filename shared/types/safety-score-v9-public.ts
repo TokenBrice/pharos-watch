@@ -25,7 +25,7 @@ import {
 import { refineCard } from "./safety-score-v9-public-internal";
 import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
 import { SafetyScoreV9BreakdownsSchema } from "./safety-score-v9-public-breakdowns";
-import { SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
+import { classifyV9EvidenceAccounting, SafetyScoreV9ReadableScoreTraceSchema, SafetyScoreV9ScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
@@ -381,8 +381,7 @@ export const SafetyScoreV9CurrentCardBaseSchema = z
   })
   .strict();
 
-export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
-  .superRefine((card, ctx) => {
+function refineCurrentCard(card: z.infer<typeof SafetyScoreV9CurrentCardBaseSchema>, ctx: z.RefinementCtx): void {
     refineCardBase(card, ctx);
     refineCard(card, ctx);
     if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||
@@ -414,7 +413,13 @@ export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema
         }
       }
     }
-  });
+}
+
+export const SafetyScoreV9CurrentCardSchema = SafetyScoreV9CurrentCardBaseSchema.superRefine(refineCurrentCard);
+/** Reader-only contract; legacy summary counts are preserved, not rewritten. */
+export const SafetyScoreV9ReadableCardSchema = SafetyScoreV9CurrentCardBaseSchema
+  .extend({ scoreTrace: SafetyScoreV9ReadableScoreTraceSchema })
+  .superRefine(refineCurrentCard);
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;
@@ -509,5 +514,29 @@ export const SafetyScoreV9CurrentResponseSchema = z
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
 export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentResponseSchema>;
+
+export const SafetyScoreV9ReadableResponseSchema = z.object({
+  ...SafetyScoreV9ResponseShape,
+  schemaVersion: z.literal(6),
+  cards: z.array(SafetyScoreV9ReadableCardSchema),
+}).strict().superRefine(refineResponse);
+
+export type SafetyScoreV9PublicationAccounting = "distinct-obligation-accounting" | "legacy-witness-accounting";
+/** Use only after readable-schema validation; ambiguous equal counts are current-compatible. */
+export function safetyScoreV9PublicationAccounting(
+  publication: { cards: readonly SafetyScoreV9CurrentCard[] },
+): SafetyScoreV9PublicationAccounting {
+  return publication.cards.some((card) =>
+    classifyV9EvidenceAccounting(card.scoreTrace.evidenceResponsibility) === "legacy-witness-accounting")
+    ? "legacy-witness-accounting" : "distinct-obligation-accounting";
+}
+
+export function parseReadableSafetyScoreV9Publication(value: unknown): {
+  accounting: SafetyScoreV9PublicationAccounting;
+  publication: SafetyScoreV9CurrentResponse;
+} {
+  const publication = SafetyScoreV9ReadableResponseSchema.parse(value);
+  return { accounting: safetyScoreV9PublicationAccounting(publication), publication };
+}
 
 export const SafetyScoreV9ResponseSchema = SafetyScoreV9CurrentResponseSchema;

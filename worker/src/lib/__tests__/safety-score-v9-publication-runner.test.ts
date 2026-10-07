@@ -7,12 +7,16 @@ import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { currentInput } from "./safety-score-v9-publication-store.test-support";
+import { currentInput, legacyPublicationStorageValue } from "./safety-score-v9-publication-store.test-support";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { loadPublishedReportCardsV9Snapshot } from "../report-cards-v9-cache";
+import { legacyWitnessAccountingResponse } from "@shared/types/__tests__/safety-score-v9-public.test-support";
+import { SafetyScoreV9CurrentResponseSchema } from "@shared/types/safety-score-v9-public";
+import { ReportCardsV9ReadableResponseSchema } from "@shared/types/report-cards-v9";
+import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -131,6 +135,42 @@ describe("Safety Score V9 publication runner", () => {
       await expect(store.loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject({ schemaVersion: 2 });
       await expect(loadPublishedReportCardsV9Snapshot(db)).resolves.toMatchObject({ schemaVersion: 7 });
       await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({ kind: "v9" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("serves retained witness accounting and replaces it without using it as an accepted baseline", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const prior = makeWorkerSafetyScoreV9Publication({
+      ...legacyWitnessAccountingResponse(),
+      publishedAtSec: fixedInput.clockSec - 100,
+      publicationGenerationId: "report-cards:v9:legacy-witness",
+    });
+    const strictPrior = structuredClone(prior);
+    strictPrior.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount = 1;
+    try {
+      await store.persistSafetyScoreV9Publication(db, currentInput(strictPrior));
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        await legacyPublicationStorageValue(prior, strictPrior), store.SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      );
+      mocks.loadPublication.mockImplementation(store.loadSafetyScoreV9Publication);
+      mocks.loadHealth.mockImplementation(store.loadSafetyScoreV9PublicationHealth);
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      await expect(store.loadSafetyScoreV9Publication(db)).resolves.toEqual(prior);
+      const served = await loadPublishedReportCardsV9Snapshot(db);
+      expect(ReportCardsV9ReadableResponseSchema.parse(served).cards).toEqual(prior.cards);
+      await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({ kind: "v9" });
+      await expect(store.loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject({ schemaVersion: 2, status: "current" });
+      expect(SafetyScoreV9CurrentResponseSchema.safeParse(prior).success).toBe(false);
+      await expect(serializeSafetyScoreV9Publication(prior)).rejects.toThrow();
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
+      expect(result).toMatchObject({ status: "published", schemaCutoverReason: "accounting-cutover-witness-to-obligation" });
+      expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ acceptedPublication: null }));
+      const fresh = await store.loadSafetyScoreV9Publication(db);
+      expect(SafetyScoreV9CurrentResponseSchema.safeParse(fresh).success).toBe(true);
+      expect(fresh?.publicationGenerationId).not.toBe(prior.publicationGenerationId);
     } finally {
       sqlite.close();
     }

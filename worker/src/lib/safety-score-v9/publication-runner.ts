@@ -5,7 +5,7 @@ import type {
   V9PublicationHealth,
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
-import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { safetyScoreV9PublicationAccounting, type SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import {
   normalizeSafetyScoreV9CompilerInput,
   withNormalizedV9JournalProjections,
@@ -37,6 +37,7 @@ import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-mate
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
 import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
 
+type PublicationCutoverReason = "schema-cutover-5-to-6" | "accounting-cutover-witness-to-obligation";
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
   "safety-score-v9-publication";
@@ -86,7 +87,7 @@ export type SafetyScoreV9PublicationRunResult =
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
-      schemaCutoverReason?: "schema-cutover-5-to-6";
+      schemaCutoverReason?: PublicationCutoverReason;
     }
   | {
       status: "held";
@@ -226,9 +227,9 @@ async function loadAcceptedPublicationState(
 ): Promise<{
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   previousHealth: V9PublicationHealth | null;
-  schemaCutoverReason?: "schema-cutover-5-to-6";
+  schemaCutoverReason?: PublicationCutoverReason;
 }> {
-  let schemaCutoverReason: "schema-cutover-5-to-6" | undefined;
+  let schemaCutoverReason: PublicationCutoverReason | undefined;
   const [publication, previousHealth] = await Promise.all([
     loadSafetyScoreV9Publication(db, signal).catch((error: unknown) => {
       if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
@@ -240,8 +241,11 @@ async function loadAcceptedPublicationState(
       return null;
     }),
   ]);
+  const legacyAccounting = publication !== null &&
+    safetyScoreV9PublicationAccounting(publication) === "legacy-witness-accounting";
+  if (legacyAccounting) schemaCutoverReason = "accounting-cutover-witness-to-obligation";
   return {
-    acceptedPublication: publication === null ? null : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
+    acceptedPublication: publication === null || legacyAccounting ? null : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
     previousHealth,
     ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
   };
