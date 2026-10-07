@@ -3,8 +3,21 @@ import {
   compactCronMetadataForPersistence,
   MAX_PERSISTED_CRON_METADATA_BYTES,
 } from "../cron-metadata-persistence";
+import { buildResourcePressure } from "../cron-resource-pressure";
 
 describe("compactCronMetadataForPersistence", () => {
+  it("preserves the complete resource block outside diagnostics through oversized compaction", () => {
+    const resourcePressure = buildResourcePressure({
+      phase: "decode", observedAt: 123, intakeBytes: 42, cacheBytes: 336,
+      bodyCapBytes: 256, inputCapBytes: 1024, inputBytes: 512, catalogMaxAssets: 488, catalogAssets: 397,
+      rejectedBodies: 0, cacheBasis: "intake-estimate",
+    });
+    const result = compactCronMetadataForPersistence(JSON.stringify({ resourcePressure, payload: "x".repeat(100_000) }));
+    expect(result.compacted).toBe(true);
+    expect(JSON.parse(result.metadata!).resourcePressure).toEqual(resourcePressure);
+    expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
+  });
+
   it("keeps metadata unchanged when it is below the global ceiling", () => {
     const metadata = JSON.stringify({ reason: "published", rowsWritten: 12 });
     expect(compactCronMetadataForPersistence(metadata)).toEqual({

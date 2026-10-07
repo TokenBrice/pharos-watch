@@ -14,6 +14,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { bluechipResponse } from "./sync-bluechip.test-support";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC, isBluechipRatingCurrent } from "@shared/lib/bluechip-freshness";
 import { handleBluechipRatings } from "../../api/cache-handlers";
+import type * as FetchRetry from "../../lib/fetch-retry";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -24,7 +25,10 @@ vi.mock("@shared/lib/bluechip-slugs", () => ({
   },
 }));
 
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
+vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof FetchRetry>(),
+  ...mockFetchRetry(),
+}));
 
 vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
@@ -61,6 +65,17 @@ describe("syncBluechip", () => {
     delete BLUECHIP_SLUG_MAP.usds;
   });
 
+  it("records typed body overflow per slug without publishing partial data as current", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    })));
+    const result = await syncBluechip(mockD1());
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!).failedSlugs).toEqual([
+      { slug: "tether", reason: "resource-budget-exceeded" },
+      { slug: "usdc", reason: "resource-budget-exceeded" },
+    ]);
+  });
   it("records malformed cached ratings JSON through the shared parse-failure counter", () => {
     expect(parseBluechipRatingsCache("{bad-json", "sync-bluechip:existing-cache")).toEqual({});
     expect(getCacheJsonParseFailureCountersForTests()["sync-bluechip:existing-cache"]?.count).toBe(1);

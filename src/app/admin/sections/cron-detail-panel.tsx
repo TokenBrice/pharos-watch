@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { ResourcePressureSchema } from "@shared/types/status/cron";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
 import { formatInterval } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
@@ -17,6 +18,46 @@ import {
   getStateBadgeClass,
 } from "./cron-lane-format";
 import { CronRunHistoryPanel, StaleArtifactEvidence } from "./cron-run-history";
+
+function ResourcePressureEvidence({ metadata, label }: { metadata: Record<string, unknown> | undefined; label: string }) {
+  const parsed = ResourcePressureSchema.safeParse(metadata?.resourcePressure);
+  if (!parsed.success) {
+    return (
+      <section aria-label={label} className="mt-4 text-xs text-muted-foreground">
+        <h4 className="font-medium text-foreground">{label}</h4>
+        <p className="mt-1">Resource evidence unavailable (legacy or unmeasured attempt).</p>
+      </section>
+    );
+  }
+  const pressure = parsed.data;
+  const bytes = (value: number | null) => value == null ? "Unavailable" : `${value.toLocaleString()} bytes`;
+  const evidence = [
+    ["Phase / observed", `${pressure.phase} · ${formatTimestamp(pressure.observedAt)}`],
+    ["Body / cache / entry caps", `${bytes(pressure.bodyCapBytes)} / ${bytes(pressure.cacheCapBytes)} / ${bytes(pressure.cacheEntryCapBytes)}`],
+    ["Concurrent decodes", pressure.maxConcurrentDecodes ?? "Unavailable"],
+    ["Input / catalog admission", `${bytes(pressure.inputCapBytes)} / ${pressure.catalogMaxAssets ?? "Unavailable"} assets`],
+    ["Intake", `${bytes(pressure.intakeBytes)} · ${pressure.intakeBasis}`],
+    ["Estimated cache retention", `${bytes(pressure.cacheBytes)} · ${pressure.cacheBasis}`],
+    ["Input / catalog measured", `${bytes(pressure.inputBytes)} / ${pressure.catalogAssets ?? "Unavailable"} assets`],
+    ["Rejected bodies", pressure.rejectedBodies ?? "Unavailable"],
+    ["Guard", pressure.guard],
+    ["Platform evidence", pressure.platformOutcome == null ? "Unavailable (not inferred)" : `${pressure.platformOutcome} · ${pressure.platformOutcomeSource}`],
+    ["Heap unavailable", pressure.heapUnavailableReason],
+  ] as const;
+  return (
+    <section aria-label={label} className="mt-4 border-t border-border/55 pt-3 text-xs">
+      <h4 className="font-medium text-foreground">{label}</h4>
+      <dl className="mt-2 space-y-2">
+        {evidence.map(([term, value]) => (
+          <div key={term} className="min-w-0">
+            <dt className="text-muted-foreground">{term}</dt>
+            <dd className="mt-0.5 break-words font-mono tabular-nums text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
 export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSeconds: number }) {
   const lastRun = row.cron.lastRun;
@@ -148,6 +189,11 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           ) : null}
         </section>
       ) : null}
+      {row.cron.inFlight ? (
+        <ResourcePressureEvidence metadata={row.cron.inFlight.metadata} label="Current progress resource evidence" />
+      ) : null}
+      <ResourcePressureEvidence metadata={lastRun?.metadata} label="Last terminal resource evidence" />
+
 
       <StaleArtifactEvidence artifacts={row.cron.staleArtifacts ?? []} />
 

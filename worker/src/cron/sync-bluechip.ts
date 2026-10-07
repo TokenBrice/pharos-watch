@@ -7,8 +7,8 @@ import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchWithRetry } from "../lib/fetch-retry";
+import { cancelResponseBodyQuietly, isResponseBodyTooLargeError, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
 import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -93,10 +93,12 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
 async function parseBluechipResponseJson(
   res: Response,
   slug: string,
+  signal?: AbortSignal,
 ): Promise<unknown | null> {
   try {
-    return await res.json();
+    return await readResponseJsonWithinLimitWithSignal(res, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, signal);
   } catch (error) {
+    if (isResponseBodyTooLargeError(error) || signal?.aborted) throw error;
     logWorkerEventArgs("handler", "warn", `[bluechip] Failed to parse JSON for ${slug}:`, error);
     return null;
   }
@@ -146,7 +148,15 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
           await cancelResponseBodyQuietly(res);
           return null;
         }
-        const payload = await parseBluechipResponseJson(res, slug);
+        let payload: unknown;
+        try {
+          payload = await parseBluechipResponseJson(res, slug, signal);
+        } catch (error) {
+          if (!isResponseBodyTooLargeError(error)) throw error;
+          invalidPayloads++;
+          failedSlugs.push({ slug, reason: error.code });
+          return null;
+        }
         if (payload == null) {
           invalidPayloads++;
           failedSlugs.push({ slug, reason: "json-parse-failed" });

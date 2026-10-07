@@ -8,7 +8,7 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome, type ProducerOutcome } from "./producer-history";
 import { cronEventCacheKey, logCronEvent, resolveCronDegradedReason } from "./cron-logger";
-import type { CronResultStatus } from "@shared/types/status/cron";
+import { ResourcePressureSchema, type CronResultStatus } from "@shared/types/status/cron";
 import { parseJsonObject } from "./json-parse";
 import { stripSensitive } from "./safe-error-message";
 import {
@@ -16,6 +16,8 @@ import {
   getWorkerVersionFirstSeenAt,
 } from "./worker-version-first-seen";
 import { SLOT_EXECUTION_HEARTBEAT_SEC } from "./scheduled-slot-fence";
+import { buildResourcePressure } from "./cron-resource-pressure";
+import { MAX_PERSISTED_CRON_METADATA_BYTES } from "./cron-metadata-persistence";
 
 
 export interface StaleSlotExecutionArtifact {
@@ -53,7 +55,7 @@ function snapshotAbandonedProgress(progress: StaleSlotProgressRow) {
   };
   copyCounts({ itemsDone: progress.items_done, itemsTotal: progress.items_total }, snapshot, ["itemsDone", "itemsTotal"]);
   if (!progress.metadata) return { ...snapshot, metadataStatus: "missing" };
-  if (progress.metadata.length > 16_384) return { ...snapshot, metadataStatus: "oversized" };
+  if (progress.metadata.length > MAX_PERSISTED_CRON_METADATA_BYTES) return { ...snapshot, metadataStatus: "oversized" };
   let metadata: Record<string, unknown>;
   try {
     const parsed: unknown = JSON.parse(progress.metadata);
@@ -63,6 +65,8 @@ function snapshotAbandonedProgress(progress: StaleSlotProgressRow) {
     return { ...snapshot, metadataStatus: "malformed" };
   }
   snapshot.metadataStatus = "parsed";
+  const pressure = ResourcePressureSchema.safeParse(metadata.resourcePressure);
+  if (pressure.success) snapshot.resourcePressure = pressure.data;
   copyCounts(metadata, snapshot, ["synced", "failed", "skipped"]);
   for (const key of ["currentCoinId", "currentAdapter", "currentBreakerKey"]) {
     const value = metadata[key];
@@ -489,6 +493,13 @@ async function insertSyntheticStaleCronRun(
     && latestLifeAt <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
     && reconcilerWorkerVersionActivatedAt <= nowSec;
   const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && deathWithinActivationWindow;
+  const progressSnapshot = snapshotAbandonedProgress(progress);
+  const pressure = ResourcePressureSchema.safeParse(progressSnapshot.resourcePressure);
+  const resourcePressure = buildResourcePressure({
+    ...(pressure.success ? pressure.data : { phase: progress.stage ?? "not-measured", observedAt: progress.updated_at }),
+    platformOutcome: interruptedByWorkerDeploy ? "platform-interrupted" : "platform-abandoned",
+    platformOutcomeSource: "slot-reconciliation",
+  });
   return insertSyntheticCronRun(
     db,
     slot,
@@ -512,7 +523,8 @@ async function insertSyntheticStaleCronRun(
         slotOwner: slot.execution_owner,
         progressStage: progress.stage,
         progressUpdatedAt: progress.updated_at,
-        progressSnapshot: snapshotAbandonedProgress(progress),
+        progressSnapshot,
+        resourcePressure,
         leaseOwner: progress.lease_owner,
         leaseUntil: lease?.lease_until ?? null,
         reconciledAt: nowSec,
@@ -520,9 +532,8 @@ async function insertSyntheticStaleCronRun(
         reconciliationDelayMs,
         // Dead isolate's version: the slot row when present, otherwise the
         // dying invocation's own progress-metadata copy (the worker_version
-        // column keeps the raw slot value). Recording the reconciler's version
-        // alongside makes deploy-eviction (versions differ at time of death)
-        // vs in-place kill (e.g. OOM) decidable from this row.
+        // column keeps the raw slot value). Version drift can support deploy
+        // interruption; an in-place abandonment does not prove OOM or CPU exhaustion.
         slotWorkerVersion: slotWorkerVersion,
         reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
         reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,
@@ -561,6 +572,10 @@ async function insertSyntheticNotStartedCronRun(
       metadata: JSON.stringify({
         reason: "stale-slot-reconciled",
         failureCategory: "platform-abandoned",
+        resourcePressure: buildResourcePressure({
+          phase: "not-started", observedAt: slot.updated_at,
+          platformOutcome: "platform-abandoned", platformOutcomeSource: "slot-reconciliation",
+        }),
         childDisposition: "not_started",
         slotKey: slot.slot_key,
         slotStartedAt: slot.slot_started_at,

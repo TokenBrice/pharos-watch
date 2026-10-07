@@ -157,6 +157,20 @@ describe("twitter helpers", () => {
     )).resolves.toEqual({ tweetId: "1", mediaAttached: true });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
+  it("rejects streamed image overflow and never attempts a tweet from partial bytes", async () => {
+    const fetchSpy = vi.fn(async () => new Response(new Uint8Array(5 * 1024 * 1024 + 1), {
+      headers: { "Content-Type": "image/png", "Content-Length": "1" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(postDigestTweet("Daily Digest", "USDT steady", creds, null,
+      "https://pharos.watch/safety-scores/map.png", "See the map.",
+    )).rejects.toMatchObject({
+      name: "TwitterPostError", twitterDeliveryFailureKind: "definitive_failure",
+      message: expect.stringContaining("Response body exceeded 5242880 bytes"),
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
 
   it("retries the map upload once, then aborts the tweet instead of degrading to text-only", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

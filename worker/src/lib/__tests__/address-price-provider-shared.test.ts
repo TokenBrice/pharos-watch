@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchWithRetry } from "../fetch-retry";
+import type * as FetchRetry from "../fetch-retry";
 import {
   chunk,
   createAddressProviderRunner,
@@ -13,7 +14,8 @@ import {
 } from "../address-price-providers/shared";
 import { makeTarget } from "./address-price-providers.test-support";
 
-vi.mock("../fetch-retry", () => ({
+vi.mock("../fetch-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof FetchRetry>(),
   fetchWithRetry: vi.fn(),
 }));
 
@@ -21,6 +23,17 @@ vi.mock("../fetch-retry", () => ({
 describe("address-price provider shared contracts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("rejects an over-cap data body into the existing provider diagnostics", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    const result = await fetchProviderJson({
+      provider: "coingecko-onchain-address", url: "https://example.test/overflow", candidateCount: 1,
+    });
+    expect(result.json).toBeNull();
+    expect(result.diagnostic.errorClass).toBe("ResponseBodyTooLargeError");
   });
 
   it("normalizes live-provider scalar inputs and batches", () => {

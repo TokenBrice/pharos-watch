@@ -56,18 +56,23 @@ describe("syncLiveReserves adapter latency telemetry", () => {
           exercised = true;
           const requests = [];
           for (let index = 0; index < 20; index++) {
-            const promise = getCachedRequest(`payload-${index}`, async () => new Uint8Array(1024 * 1024), ctx);
+            const promise = getCachedRequest(`payload-${index}`, async () => ({
+              value: new Uint8Array(1024 * 1024), cacheBytes: 1024 * 1024, basis: "declared-estimate",
+            }), ctx);
             requests.push(promise);
             await promise;
           }
-          const oversized = getCachedRequest("oversized", async () => new Uint8Array(5 * 1024 * 1024), ctx);
+          const oversized = getCachedRequest("oversized", async () => ({
+            value: new Uint8Array(5 * 1024 * 1024), cacheBytes: 5 * 1024 * 1024, basis: "declared-estimate",
+          }), ctx);
           await oversized;
           expect(ctx!.requestCache!.size).toBe(16);
           expect(ctx!.requestCache!.has("oversized")).toBe(false);
           for (const promise of [...requests.slice(0, 4), oversized]) expect(stronglyOwns(ctx!.requestCache, promise)).toBe(false);
           await getCachedRequest("payload-19", async () => { throw new Error("cached request must not refetch"); }, ctx);
-          ctx!.requestCache!.delete("payload-19");
-          ctx!.requestCache!.set("payload-19", Promise.resolve(true));
+          await getCachedRequest("replacement", async () => ({
+            value: true, cacheBytes: 128, basis: "declared-estimate",
+          }), ctx);
         }
         return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }], metadata: { freshnessMode: "not-applicable" as const } };
       },
@@ -176,9 +181,11 @@ describe("syncLiveReserves adapter latency telemetry", () => {
               ctx!.ioLimiter!.run("first", async () => undefined),
               ctx!.ioLimiter!.run("second", async () => undefined),
             ]);
-            return true;
+            return { value: true, cacheBytes: 128, basis: "declared-estimate" };
           }, ctx);
-          await getCachedRequest(requestKey, async () => false, ctx);
+          await getCachedRequest(requestKey, async () => ({
+            value: false, cacheBytes: 128, basis: "declared-estimate",
+          }), ctx);
           return {
             slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
             metadata: { freshnessMode: "not-applicable" as const },

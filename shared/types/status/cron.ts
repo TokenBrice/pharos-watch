@@ -13,6 +13,41 @@ export const CronRunStatusSchema = z.enum(CRON_RUN_STATUS_VALUES);
 export type CronRunStatus = z.infer<typeof CronRunStatusSchema>;
 export type CronResultStatus = Exclude<CronRunStatus, "skipped_duplicate" | "skipped_running">;
 
+const ResourceCountSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable();
+
+/** Byte-policy evidence, not a heap measurement or inferred platform failure. */
+export const ResourcePressureSchema = z.object({
+  phase: z.string().min(1).max(80),
+  observedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  bodyCapBytes: ResourceCountSchema,
+  cacheCapBytes: ResourceCountSchema,
+  cacheEntryCapBytes: ResourceCountSchema,
+  maxConcurrentDecodes: ResourceCountSchema,
+  inputCapBytes: ResourceCountSchema,
+  catalogMaxAssets: ResourceCountSchema,
+  intakeBytes: ResourceCountSchema,
+  cacheBytes: ResourceCountSchema,
+  rejectedBodies: ResourceCountSchema,
+  inputBytes: ResourceCountSchema,
+  catalogAssets: ResourceCountSchema,
+  intakeBasis: z.enum(["actual-stream", "unavailable"]),
+  cacheBasis: z.enum(["intake-estimate", "declared-estimate", "mixed", "unavailable"]),
+  guard: z.enum(["not-measured", "within-policy", "cache-bypassed", "resource-budget-exceeded"]),
+  platformOutcome: z.enum(["platform-abandoned", "platform-interrupted"]).nullable(),
+  platformOutcomeSource: z.literal("slot-reconciliation").nullable(),
+  heapUsedBytes: z.null(),
+  heapUnavailableReason: z.literal("workers-runtime-no-heap-api"),
+}).strict().refine(
+  (value) => (value.platformOutcome === null) === (value.platformOutcomeSource === null),
+  { message: "Platform outcome must name its reconciliation source" },
+);
+export type ResourcePressure = z.output<typeof ResourcePressureSchema>;
+
+export const CronMetadataSchema = z.object({
+  resourcePressure: ResourcePressureSchema.optional(),
+}).catchall(z.unknown());
+export type CronMetadata = z.output<typeof CronMetadataSchema>;
+
 export const CronRunSchema = z.object({
   startedAt: z.number(),
   durationMs: z.number(),
@@ -20,7 +55,7 @@ export const CronRunSchema = z.object({
   error: z.string().optional(),
   degradedReason: z.string().optional(),
   itemCount: z.number().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: CronMetadataSchema.optional(),
 });
 export type CronRun = z.output<typeof CronRunSchema>;
 
@@ -32,7 +67,7 @@ export const CronInFlightSchema = z.object({
   itemsTotal: z.number().optional(),
   message: z.string().optional(),
   leaseOwner: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: CronMetadataSchema.optional(),
   stale: z.boolean(),
 });
 export type CronInFlight = z.output<typeof CronInFlightSchema>;

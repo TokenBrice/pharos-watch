@@ -3,7 +3,8 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
@@ -345,7 +346,7 @@ async function evaluateProbeResponse(
   }
 
   try {
-    const payload = (await response.json()) as { status?: unknown };
+    const payload = await readResponseJsonWithinLimitWithSignal<{ status?: unknown }>(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
     if (payload.status === "healthy") {
       return {
         ok: true,

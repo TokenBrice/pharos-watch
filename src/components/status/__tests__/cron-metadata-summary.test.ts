@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { summarizeCronMetadata } from "../cron-metadata-summary";
 
 describe("summarizeCronMetadata", () => {
+  it("summarizes unknown-job resource evidence without inventing heap or platform outcomes", () => {
+    const resourcePressure = {
+      phase: "read", observedAt: 100, bodyCapBytes: 4, cacheCapBytes: null,
+      cacheEntryCapBytes: null, maxConcurrentDecodes: null, inputCapBytes: null, catalogMaxAssets: null,
+      intakeBytes: 0, cacheBytes: null, rejectedBodies: 0, inputBytes: null, catalogAssets: null,
+      intakeBasis: "actual-stream", cacheBasis: "unavailable", guard: "within-policy",
+      platformOutcome: null, platformOutcomeSource: null,
+      heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
+    };
+    expect(summarizeCronMetadata("unknown", { resourcePressure })).toEqual([
+      "resource read @100: within-policy",
+      "intake 0 bytes (actual-stream); estimated cache unavailable (unavailable)",
+      "rejected bodies 0; platform unavailable; heap unavailable",
+    ]);
+    expect(summarizeCronMetadata("unknown", { resourcePressure: { heapUsedBytes: 0 } }))
+      .toEqual(["resource evidence unavailable"]);
+  });
+
   it("uses column reasons for unknown and metadata-free jobs", () => {
     expect(summarizeCronMetadata("unknown", undefined, "column-only")).toEqual(["reason column-only"]);
     expect(summarizeCronMetadata("unknown", { reason: "legacy" }, "canonical")).toEqual(["reason canonical"]);
