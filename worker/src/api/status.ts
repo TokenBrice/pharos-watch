@@ -23,6 +23,7 @@ import {
 import { loadStatusSupplements, type StatusSupplements } from "../lib/status/supplements";
 import { buildDependencyHealth } from "../lib/dependency-health";
 import type { StatusResponse, StatusSectionError } from "@shared/types/status";
+import { isCronJobExpected } from "@shared/lib/cron-jobs";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import { runAdminRoute } from "../lib/route-wrappers";
 import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registry";
@@ -157,15 +158,19 @@ async function resolveRawStatusForResponse(
   now: number,
   request?: Request,
   schedulerLiveness?: SchedulerLiveness,
+  v9WorkflowMode?: string,
 ): Promise<ResolvedRawStatus> {
   if (shouldBypassStatusSnapshot(request)) {
     return {
-      raw: await computeRawStatus(db, now, schedulerLiveness),
+      raw: await computeRawStatus(db, now, schedulerLiveness, v9WorkflowMode),
       snapshotFallbackReason: "bypassed",
     };
   }
 
   const snapshot = await loadStatusRawSnapshot(db, now);
+  const workflowExpectationChanged = snapshot.kind === "fresh"
+    && ("compute-safety-score-v9-workflow" in snapshot.raw.crons)
+      !== isCronJobExpected("compute-safety-score-v9-workflow", v9WorkflowMode);
   const currentReserve = snapshot.kind === "fresh"
     ? await computeReserveCompositionOverview(db, now).catch(() => null) : null;
   const cachedReserve = snapshot.kind === "fresh" ? snapshot.raw.reserveComposition : null;
@@ -177,9 +182,10 @@ async function resolveRawStatusForResponse(
       || snapshot.raw.causes.availability.some((cause) =>
       cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"
       || cause.code === "heavy_scheduled_delivery_stalled" || cause.code === "heavy_scheduler_liveness_unavailable"));
-  if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged && schedulerLiveness) {
+  if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged
+    && !workflowExpectationChanged && schedulerLiveness) {
     // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
-    const cronHealth = await loadCronHealth(db, now);
+    const cronHealth = await loadCronHealth(db, now, v9WorkflowMode);
     // Informational cron causes (degraded_cron_warning and friends) must be
     // re-derived from the same live cron-health read that replaces `crons`
     // and rebuilds `summary` below; otherwise one response can show a cached
@@ -235,7 +241,7 @@ async function resolveRawStatusForResponse(
   }
 
   return {
-    raw: await computeRawStatus(db, now, schedulerLiveness),
+    raw: await computeRawStatus(db, now, schedulerLiveness, v9WorkflowMode),
     snapshotFallbackReason: snapshot.kind === "fresh" ? "bypassed" : snapshot.kind,
     snapshotError: snapshot.kind === "fresh" ? undefined : snapshot.error,
   };
@@ -248,6 +254,7 @@ export interface StatusRouteContext {
   coingeckoApiKey?: string | null;
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
   workerCanaryMode?: WorkerCanaryMode;
+  v9WorkflowMode?: string;
 }
 
 export function handleStatus({
@@ -257,6 +264,7 @@ export function handleStatus({
   coingeckoApiKey,
   cloudflareD1StatusBindings,
   workerCanaryMode = "off",
+  v9WorkflowMode = "off",
 }: StatusRouteContext): Promise<Response> {
   return runAdminRoute(
     {
@@ -272,7 +280,7 @@ export function handleStatus({
         supplements: snapshotSupplements,
         snapshotFallbackReason,
         snapshotError,
-      } = await resolveRawStatusForResponse(db, now, request, schedulerLiveness);
+      } = await resolveRawStatusForResponse(db, now, request, schedulerLiveness, v9WorkflowMode);
       const persistenceIssues: StatusPersistenceIssue[] = [];
       const collectPersistenceIssue = (issue: StatusPersistenceIssue) => {
         persistenceIssues.push(issue);

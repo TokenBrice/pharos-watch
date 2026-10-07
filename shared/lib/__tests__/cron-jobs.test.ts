@@ -9,6 +9,7 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
+  isCronJobExpected,
 } from "../cron-jobs";
 
 function isHourlyCpuTrigger(schedule: string): boolean {
@@ -16,6 +17,13 @@ function isHourlyCpuTrigger(schedule: string): boolean {
 }
 
 describe("cron job schedule metadata", () => {
+  it.each([undefined, "off", "shadow", "invalid"])("gates only the off-slot Workflow in mode %s", (mode) => {
+    for (const definition of CRON_JOB_DEFINITIONS) {
+      expect(isCronJobExpected(definition.job, mode)).toBe(
+        definition.job !== "compute-safety-score-v9-workflow" || mode === "shadow",
+      );
+    }
+  });
   it("accounts for redemption's serial RPC observers", () => {
     expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({ maxConnections: 1 });
   });

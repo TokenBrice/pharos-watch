@@ -109,7 +109,12 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
   }
 }
 
-export async function computeRawStatus(db: D1Database, now: number, schedulerLiveness?: SchedulerLiveness) {
+export async function computeRawStatus(
+  db: D1Database,
+  now: number,
+  schedulerLiveness?: SchedulerLiveness,
+  v9WorkflowMode?: string,
+) {
   const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status", schedulerLiveness });
   if (!publicHealth.dbHealthy) {
     return { ...buildDbUnavailableRawStatus(), schedulerLiveness: publicHealth.schedulerLiveness };
@@ -119,7 +124,7 @@ export async function computeRawStatus(db: D1Database, now: number, schedulerLiv
   // budget applies to fetch phases, not these D1 reads; none is scheduled via
   // waitUntil.
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
-    loadCronHealth(db, now),
+    loadCronHealth(db, now, v9WorkflowMode),
     loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, {
       blacklistMetrics: publicHealth.blacklistMetrics,

@@ -105,6 +105,23 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+  it.each(["off", "shadow"])("bypasses snapshots from the opposite Workflow mode (%s)", async (v9WorkflowMode) => {
+    const now = Math.floor(Date.now() / 1000);
+    const job = "compute-safety-score-v9-workflow";
+    const priorCrons = v9WorkflowMode === "off" ? {
+      [job]: { lastRun: null, recentRuns: [], expectedIntervalSec: 1800, healthy: false },
+    } : {};
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60, { crons: priorCrons })] },
+      ...makeMinimalLiveStatusRows(now, null, true),
+    ]);
+    const response = await handleStatus({ db, trustedAdmin: true, v9WorkflowMode });
+    const body = await readJsonResponse<{ crons: Record<string, unknown> }>(response, 200);
+    expect(job in body.crons).toBe(v9WorkflowMode === "shadow");
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
+  });
+
   it.each([false, true])("reads both role markers outside cached status (heavy query failure: %s)", async (heavyFails) => {
     const now = Math.floor(Date.now() / 1000);
     const publicMarker = { worker: "public", scriptName: "stablecoin-api", workerVersion: "11111111-1111-1111-1111-111111111111", activatedAt: now - 100 };

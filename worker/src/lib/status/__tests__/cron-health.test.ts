@@ -57,6 +57,40 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
 
+  it.each([undefined, "off", "invalid"])("excludes paused Workflow history with mode %s", async (mode) => {
+    const job = "compute-safety-score-v9-workflow";
+    const rows = seedWithOverrides(NOW, [
+      { job, status: "error", ageSec: 30 },
+      { job, status: "degraded", ageSec: 60 },
+      { job, status: "ok", ageSec: CRON_INTERVALS[job] * 3 },
+    ]);
+    const db = makeDb(NOW, rows);
+    const snapshot = await loadCronHealth(db, NOW, mode);
+    expect(snapshot.crons).not.toHaveProperty(job);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+    expect(snapshot.cronErrorCount).toBe(0);
+    expect(snapshot.degradedCronRuns).toBe(0);
+    expect(db.getHistory().some((entry) => entry.binds.includes(job))).toBe(false);
+  });
+
+  it.each(["error", "degraded", "ok"] as const)("retains Workflow %s health impact in shadow mode", async (status) => {
+    const job = "compute-safety-score-v9-workflow";
+    const ageSec = status === "ok" ? CRON_INTERVALS[job] * 2 + 1 : 30;
+    const rows = seedWithOverrides(NOW, [{ job, status, ageSec }]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW, "shadow");
+    expect(snapshot.crons[job].expectedIntervalSec).toBe(30 * 60);
+    expect(snapshot.watchUnhealthyCrons).toBe(1);
+    expect(snapshot.cronErrorCount).toBe(status === "error" ? 1 : 0);
+    expect(snapshot.degradedCronRuns).toBe(status === "degraded" ? 1 : 0);
+  });
+
+  it("does not expect absent Workflow runs while off", async () => {
+    const rows = seedWithOverrides(NOW, []).filter((row) => row.job !== "compute-safety-score-v9-workflow");
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW, "off");
+    expect(snapshot.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+  });
+
   it("projects reasons for all retained rows and ignores ok quality-only findings", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "status-self-check", status: "ok", ageSec: 30 },

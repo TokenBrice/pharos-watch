@@ -32,6 +32,7 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
           d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
           coingeckoApiKey: runtime.coingeckoApiKey,
           workerCanaryMode: normalizeWorkerCanaryMode(runtime.env.WORKER_CANARY_MODE),
+          v9WorkflowMode: runtime.env.WORKER_V9_WORKFLOW_MODE,
         }),
       "data-invariant-canary": (signal) =>
         runDataInvariantCanary(runtime.db, {
@@ -49,6 +50,7 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
         mode: "status",
         nowSec: Math.floor(Date.now() / 1_000),
         operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
+        v9WorkflowMode: runtime.env.WORKER_V9_WORKFLOW_MODE,
         signal,
       }),
     },

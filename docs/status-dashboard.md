@@ -273,6 +273,12 @@ summaries. `degradedCrons` counts fresh degraded execution statuses only (includ
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
 
+The off-slot `compute-safety-score-v9-workflow` producer is expected only in `shadow` mode, under
+`isCronJobExpected()` in `shared/lib/cron-jobs.ts`. Public mirrors heavy's `WORKER_V9_WORKFLOW_MODE`
+for `/api/status`, scheduled status assessments and the freshness watchdog. Mode `off` excludes
+the Workflow from cron-health queries/counters and watchdog obligations without weakening cadence
+budgets; historical failures remain in D1. A cached raw assessment from the opposite mode is bypassed.
+
 Scheduled attempt evidence is independent of detailed in-flight progress: every protocol-v1 child has a
 durable `scheduled_child_attempts` start marker before work, including progress-suppressed jobs. Real and
 synthetic terminals arbitrate one deterministic full attempt identity under the executing slot fence.
