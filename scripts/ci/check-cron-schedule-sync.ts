@@ -127,7 +127,8 @@ export function evaluateCronScheduleSync(input: {
           )
         : CRON_TRIGGER_SCHEDULES
     );
-  const scheduledSlotPlans = input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
+  const scheduledSlotPlans: Readonly<Record<string, ScheduledSlotPlanForCheck>> =
+    input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
   const cronJobDefinitions = input.cronJobDefinitions ?? CRON_JOB_DEFINITIONS;
   const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
   const growthPolicy = input.growthPolicy ?? CRON_GROWTH_HEADROOM_POLICY;
