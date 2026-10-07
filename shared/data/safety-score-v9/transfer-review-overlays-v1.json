@@ -6039,15 +6039,40 @@
     },
     {
       "assetId": "usdx-kava",
-      "reviewedAt": "2026-09-04",
-      "reviewer": "OpenAI Codex C06 access review",
+      "reviewedAt": "2026-10-07",
+      "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_1)",
       "deployments": [
+        {
+          "chainId": "kava",
+          "contractOrTokenId": "usdx",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Research reviewed October 7, 2026. The authoritative catalogue now identifies native-denom kava:usdx, so the earlier schema identity blocker is no longer applicable. Kava's public node-info reports network kava_2222-10, application 0.28.2 and exact git_commit 686d591443a1de7c5566bc7d92faf5b56743f25f. At that immutable source commit, app/app.go bankkeeper.NewBaseKeeper receives govAuthAddrStr as its authority. The same commit's go.mod replaces Cosmos SDK with the Kava fork v0.47.15-iavl-v1-kava.1. In that version's x/bank/keeper/msg_server.go, Send and MultiSend call IsSendEnabledCoins; SetSendEnabled rejects any msg.Authority not equal to k.GetAuthority() and then calls SetAllSendEnabled for the supplied denoms. This directly identifies a governance-authorized usdx-denom transfer restriction path, independently of whether it is currently exercised. No claim about current pause state or absence of censorship is inferred from an unpinned latest-state API. This is an adverse restrictable transfer-capability finding for native USDX, not a token-contract identity invented for the Cosmos denom.",
+          "sources": [
+            {
+              "label": "Kava application identity and exact source commit, observed October 7 2026",
+              "url": "https://api.data.kava.io/cosmos/base/tendermint/v1beta1/node_info"
+            },
+            {
+              "label": "Immutable Kava application bank governance authority wiring",
+              "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L475"
+            },
+            {
+              "label": "Immutable Kava dependency version and Cosmos SDK fork selection",
+              "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/go.mod"
+            },
+            {
+              "label": "Kava selected Cosmos SDK fork: Send, MultiSend and authority-gated SetSendEnabled",
+              "url": "https://github.com/Kava-Labs/cosmos-sdk/blob/v0.47.15-iavl-v1-kava.1/x/bank/keeper/msg_server.go"
+            }
+          ]
+        },
         {
           "chainId": "osmosis",
           "contractOrTokenId": "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
-          "scope": "canonical",
+          "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "The tracked off-chain USDX representation is the ibc-go transfer voucher identified by the official Osmosis denom trace; Cosmos bank vouchers have no issuer freeze, denylist, pause, or transfer-hook authority in this route.",
+          "evidence": "Retains the September 4, 2026 route-specific review: the tracked off-chain USDX representation is the ibc-go transfer voucher identified by the official Osmosis denom trace transfer/channel-143, base_denom usdx; no USDX issuer freeze, denylist, pause, or transfer-hook authority was identified in this voucher route. This is the Osmosis representation, not the canonical native Kava liability. Native Kava governance transfer restriction is separately reviewed and determines the conservative asset transfer posture; this retained route observation does not assert immunity to Cosmos consensus/governance software changes.",
           "sources": [
             {
               "label": "Mintscan Osmosis IBC USDX denom",
@@ -6058,7 +6083,7 @@
               "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
             },
             {
-              "label": "Osmosis transfer module account at height 69885664",
+              "label": "Osmosis transfer module account at height 69885664 (September 4 review)",
               "url": "https://lcd.osmosis.zone/cosmos/auth/v1beta1/module_accounts"
             }
           ]

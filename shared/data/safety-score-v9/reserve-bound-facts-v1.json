@@ -1,6 +1,357 @@
 {
   "schemaVersion": 1,
   "assets": {
+    "frnt-wyoming": [
+      {
+        "factKey": "frnt-wyoming:2026-10-07:observed-treasury-bill-roster",
+        "kind": "observed-portfolio-maturity",
+        "scope": { "kind": "exposure", "exposureKey": "ledgerlens:frnt:treasury-bills" },
+        "asOfSec": 1791374444,
+        "publisher": "FRNT LedgerLens supplemental dashboard",
+        "sourceUrls": ["https://dashboard.ledgerlens.io/c/wystc"],
+        "assertion": "LedgerLens FRNT snapshot 6ac6346c75d8eb627b88b6a1 at 2026-10-07T12:00:44.746Z lists nine positive Treasury-bill positions in FBO_TRUST with USD FMV totaling 356091.65, exactly the complete Treasury-bill category denominator. Latest observed maturity is November 24, 2026, 48 calendar days after the snapshot. This is a supplemental non-assured current portfolio observation, not a legally binding maximum or stressed liquidity promise; zero positions excluded from the covered positive inventory and matured instruments are not presumed paid.",
+        "contentDigest": "0fb1a685110bf3a2dddb14c4c8c5c60ea72b2fd9fe70e4c12508c2b4ac14db65",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_3)",
+          "confidence": "high"
+        },
+        "coveredGrossValue": 356091.65,
+        "totalGrossValue": 356091.65,
+        "coverageAsOfSec": 1791374444,
+        "denomination": "USD",
+        "observedMaximumDays": 48,
+        "instruments": [
+          { "instrumentId": "912797VN4", "maturityAtSec": 1793059200, "grossMarkedValue": 36921.56, "denomination": "USD" },
+          { "instrumentId": "912797VX2", "maturityAtSec": 1794873600, "grossMarkedValue": 43803.76, "denomination": "USD" },
+          { "instrumentId": "912797VM6", "maturityAtSec": 1792454400, "grossMarkedValue": 37947.94, "denomination": "USD" },
+          { "instrumentId": "912797VW4", "maturityAtSec": 1794268800, "grossMarkedValue": 37860.92, "denomination": "USD" },
+          { "instrumentId": "912797UL9", "maturityAtSec": 1792627200, "grossMarkedValue": 44928.45, "denomination": "USD" },
+          { "instrumentId": "912797VL8", "maturityAtSec": 1791849600, "grossMarkedValue": 38975.43, "denomination": "USD" },
+          { "instrumentId": "912797VY0", "maturityAtSec": 1795478400, "grossMarkedValue": 38794.86, "denomination": "USD" },
+          { "instrumentId": "912797VP9", "maturityAtSec": 1793664000, "grossMarkedValue": 36892.33, "denomination": "USD" },
+          { "instrumentId": "912797UK1", "maturityAtSec": 1792022400, "grossMarkedValue": 39966.4, "denomination": "USD" }
+        ]
+      }
+    ],
+    "eur0-usual": [
+      {
+        "factKey": "eur0-usual:eutbl-fr001400odl1:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:c038a877ef5eef9f6f893919" },
+        "asOfSec": 1788220800,
+        "publisher": "Spiko SICAV",
+        "sourceUrls": ["https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"],
+        "assertion": "Spiko SICAV Prospectus and Articles of Association published September 1, 2026, cover p.1: Open-Ended Investment Company with Sub-Funds, including Spiko EU T-Bills Money Market Fund (EUTBL). Fund section 3.2.2 p.25 identifies ISIN FR001400ODL1 and Ethereum share token 0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80, matching the entire captured EUR0 collateral exposure. Article 5 p.71 gives the company a 99-year term subject to early dissolution or extension; Article 28 p.79 permits discretionary extension, dissolution or liquidation. These are company-life/termination provisions, not a scheduled fixed maturity of the open-ended EUTBL shares. Underlying Treasury bill tenor and redemption gating are not share maturity. This exact whole-share claim remains maturity required/open-ended with no finite maximum; no composition, liquidity or assurance claim is refreshed.",
+        "contentDigest": "1e44d38afd0e2194c432fc278d87816d3453ccbded1021a7f3f37d5e226d3a04",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_3)",
+          "confidence": "high"
+        },
+        "claimId": "Spiko EUTBL shares / ISIN FR001400ODL1 / Ethereum 0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "conclusion": "open-ended",
+        "governingInstrument": "Spiko SICAV Prospectus September 1, 2026, p.1 and section 3.2.2 p.25; Articles 5 and 28",
+        "allInScope": true
+      }
+    ],
+    "usdpt-western-union": [
+      {
+        "factKey": "usdpt-western-union:two-cusip-mmf-shares:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:d13fcab416f093397ce8fabd" },
+        "asOfSec": 1788220799,
+        "publisher": "Anchorage Digital Bank, Deloitte, BlackRock Liquidity Funds and JPMorgan Trust IV",
+        "sourceUrls": [
+          "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "https://www.sec.gov/Archives/edgar/data/97098/000119312526330700/d51165d497.htm",
+          "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm",
+          "https://www.blackrock.com/cash/en-us/products/351793/blackrock-select-treasury-based-liquidity-fund-onchain-shares",
+          "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
+        ],
+        "assertion": "Deloitte USDPT Reserve Report as of August 31, 2026 23:59:59 UTC, signed September 28, Schedule II page5: the entire money-market-fund reserve slice comprises CUSIP09250C572 NAV USD7,440,000 and CUSIP46655R119 NAV USD1,942,429, both with Maturity Date N/A. The BlackRock July31 2026 SAI General Information pageI-3 states The Trust is an open-end management investment company and identifies BlackRock Select Treasury Based Liquidity Fund among its series; exact CUSIP09250C572 is DOLXX OnChain Shares. JPMorgan May13 2026 SAI General/The Trust and the Fund/JPMT IV Historical Information states JPMT IV is an open-end, management investment company formed as a statutory trust under the laws of the State of Delaware and identifies the OnChain Liquidity-Token Money Market Fund series; CUSIP46655R119 is JLTXX Token Class. These whole held share claims have open-ended maturity, not a finite contractual term; underlying portfolio maturity and normal redemption targets are not share maturity maxima.",
+        "contentDigest": "d874ea21f4c4892cd3b2e026ba78ac9d170505bc3bf1ae21b6d6e95df9924c77",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_1)",
+          "confidence": "high"
+        },
+        "claimId": "USDPT examined MMF share claims: DOLXX OnChain CUSIP09250C572 and JLTXX TokenClass CUSIP46655R119",
+        "conclusion": "open-ended",
+        "governingInstrument": "BlackRock Liquidity Funds SAI July31 2026 GeneralInformation I-3; JPMorgan Trust IV SAI May13 2026 General/TheTrustandtheFund/JPMTIV HistoricalInformation; examined USDPT ScheduleII August31 2026",
+        "allInScope": true
+      }
+    ],
+    "usdg-paxos": [
+      {
+        "factKey": "usdg-paxos:government-mmf-shares:2026-08-31:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:2d2565e9f4348101e886b6e2" },
+        "asOfSec": 1788210000,
+        "publisher": "Paxos Digital Singapore / Paxos Issuance Europe; KPMG-examined USDG Redemption Assets Report",
+        "sourceUrls": [
+          "https://framerusercontent.com/assets/Xn1UQwAte85FnsDveIMX0n1qtVM.pdf",
+          "https://www.sec.gov/Archives/edgar/data/740766/000003014626000246/c485bpos.htm",
+          "https://www.blackrock.com/es/profesionales/literature/prospectus/institutional-cash-series-prospectus-en.pdf"
+        ],
+        "assertion": "KPMG USDG Redemption Assets Report signed September 25, 2026, Exhibit B page 10, reports Maturity Date N/A for every fund-share position at August 31, 2026 17:00 EDT: PDS CUSIP 262006208 USD 1,713,363,362; PIE IE00B14RXK43 USD 2,645,071; PIE IE0004WWOG99 USD 3,115,100. These amounts reconcile exactly to the whole captured government-money-market-fund exposure USD 1,719,123,533. Dreyfus June 1, 2026 SAI Part II p.39 states each fund is an open-end management investment company; BlackRock ICS prospectus September 18, 2026 p.36 states the Company is open-ended. This fact establishes no scheduled maturity for the held shares, retaining required open-ended duration and null finite maximum. It does not apply portfolio WAM, WAL or security maturities to the shares and asserts no liquidity deadline. The BNY Advantage current legal PDF could not be retrieved; its exact current no-maturity evidence here is the independently examined N/A share row, not a renewed old prospectus.",
+        "contentDigest": "4a5652875cce9ca8a593da15658b724e5d8bc60926b1d768fe28a074644d008e",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_3)",
+          "confidence": "high"
+        },
+        "claimId": "USDG government MMF shares: PDS CUSIP 262006208; PIE ISIN IE00B14RXK43; PIE ISIN IE0004WWOG99",
+        "conclusion": "open-ended",
+        "governingInstrument": "USDG Redemption Assets Report Exhibit B exact share Maturity Date column at August 31, 2026; Dreyfus June 1, 2026 SAI Part II p.39; Institutional Cash Series plc September 18, 2026 prospectus p.36",
+        "allInScope": true
+      }
+    ],
+    "apxusd-apyx": [
+      {
+        "factKey": "apxusd-apyx:reserve:1ae4141d8ddcfe4093c38bd0:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:1ae4141d8ddcfe4093c38bd0"
+        },
+        "asOfSec": 1778198400,
+        "publisher": "Backed Assets (JE) Limited",
+        "sourceUrls": [
+          "https://sppdownloaddocumentservice.l-p-a.com/api/DownloadDocument/UPI/CH1500008482/BF%20Final%20Terms%20AND%20Summary%20%28PDF%29",
+          "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2F133oAatMzJ47DEJ8gAoT%2FAugust%202026%20Attestation%20Opinion%20(Final).pdf?alt=media"
+        ],
+        "assertion": "Backed STRCx Product134 Final Terms dated May 8, 2026 identify the underlying as Strategy Variable Rate Perpetual Stretch Preferred Shares Series A, ISIN US5949728530 / STRC (cover and section1.2). The exact tokenized product is ISIN CH1500008482, Ethereum ledger 0x1aad217b8f78dba5e6693460e8470f8b1a3977f3; Contractual Terms Maturity date states the Product is open-ended and has no predetermined fixed maturity date. Thus both direct perpetual STRC and its open-ended STRCx representation lack a finite contractual maturity. Wolf's August31 securities report, signed September11, identifies both forms held by Preference Foundation and values STRCx against underlying STRC. This fact covers the complete captured combined STRC/STRCx category without inventing its direct/tokenized split. Optional issuer call or investor put rights are not maturity maxima; no liquidity, portfolio weights or reserve-to-liability coverage is asserted.",
+        "contentDigest": "9fe61e4ccf180e7aef8293d9e61e2eefa6a732d84ce64b730714a8cb2b0e1588",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_6)",
+          "confidence": "high"
+        },
+        "claimId": "STRC perpetual preferred shares / ISIN US5949728530 and STRCx open-ended Product134 / ISIN CH1500008482 / Ethereum 0x1aad217b8f78dba5e6693460e8470f8b1a3977f3",
+        "conclusion": "open-ended",
+        "governingInstrument": "Backed Assets (JE) Limited May 8, 2026 STRCx Product134 Final Terms, cover, Contractual Terms Maturity date, sections1.2 and2.I",
+        "allInScope": true
+      }
+    ],
+    "usdgo-osl": [
+      {
+        "factKey": "usdgo:38151N205:governing-share-open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:982888a963b7e7f1156c100c" },
+        "asOfSec": 1788220799,
+        "publisher": "Goldman Sachs Stablecoin Reserves Fund",
+        "sourceUrls": ["https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf", "https://www.sec.gov/Archives/edgar/data/822977/000119312525255744/d29492d485bpos.htm"],
+        "assertion": "USDGO August 31, 2026 Reserve Report, Schedule II section 3 page 6, identifies STBXX CUSIP 38151N205 at NAV. Goldman Sachs Trust Form N-1A prospectus filed October 29, 2025 identifies the Stablecoin Reserves Fund as an open-end management investment company and STBXX institutional shares as redeemable at NAV on business days. The exact held claim is an open-ended fund share without a finite contractual repayment maturity; the underlying Treasury eligibility and WAM are not share maturity. No liquidity or stressed final-cash guarantee is asserted.",
+        "contentDigest": "33dd5268815faf939ab4ee12b9512e4e463f9bd41b0e626b1594cf90cdfb77df",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_5)", "confidence": "high" },
+        "claimId": "USDGO Schedule II money market fund CUSIP 38151N205",
+        "conclusion": "open-ended",
+        "governingInstrument": "Goldman Sachs Trust October 29, 2025 Form N-1A prospectus, Stablecoin Reserves Fund / Institutional Shares STBXX CUSIP 38151N205",
+        "allInScope": true
+      },
+      {
+        "factKey": "usdgo:46655R119:governing-share-open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:574770005a05f4f65f9db412" },
+        "asOfSec": 1788220799,
+        "publisher": "JPMorgan Trust IV",
+        "sourceUrls": ["https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf", "https://www.sec.gov/Archives/edgar/data/1659326/000119312526353379/d127628d497.htm"],
+        "assertion": "USDGO August 31, 2026 Reserve Report, Schedule II section 3 page 6, identifies JLTXX CUSIP 46655R119 at NAV. JPMorgan OnChain Liquidity-Token Money Market Fund prospectus dated May 13, 2026 and supplemented August 17, 2026 identifies the Token Class fund shares and continuing redemption through Morgan Money or the designated on-chain burn-address process. The exact held claim is an open-ended redeemable fund share without a finite contractual repayment maturity; underlying debt maturity and ordinary redemption mechanics are not share maturity or stressed final-cash guarantees.",
+        "contentDigest": "2d8fbaf6c62651d82620ae1a413c31590592a21e9bf0baa4d209a6fc99bff10e",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_5)", "confidence": "high" },
+        "claimId": "USDGO Schedule II money market fund CUSIP 46655R119",
+        "conclusion": "open-ended",
+        "governingInstrument": "JPMorgan OnChain Liquidity-Token Money Market Fund Token Class prospectus dated May 13, 2026, supplemented August 17, 2026, JLTXX CUSIP 46655R119",
+        "allInScope": true
+      }
+    ],
+    "zarsc-supercoin": [
+      {
+        "factKey": "zarsc-supercoin:absa-current-account:maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:44c84df45350c23e37c8746c" },
+        "asOfSec": 1788184800,
+        "publisher": "Moore Blockchain and Digital Assets JHB (Pty) Ltd",
+        "sourceUrls": ["https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"],
+        "assertion": "Moore ZARsc agreed-upon procedures report dated September 16, 2026, snapshot August 31, 2026 14:00 UTC: Procedure 1(d) identifies the complete reserve as ZAR liquid cash in an Absa current account; Procedure 3 independently obtains the Absa bank statement and records ZAR 8,412,465.96 in a current account belonging to Super Money SA (Pty) Ltd. This transactional current-account balance is not a dated term-deposit instrument; maturity is not applicable to the exact whole cash exposure. The engagement is not assurance. No bank solvency, legal segregation or stressed full-position cash-settlement guarantee is asserted.",
+        "contentDigest": "99a0da83ed65205107515fad5bd04f280de97a84c9460d70be7a5c02d8d1bbd8",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_5)", "confidence": "high" },
+        "claimId": "ZARsc Solana mint 5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ / Super Money SA Absa current-account reserve",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Moore ZARsc AUP dated September 16, 2026, snapshot August 31, 2026 14:00 UTC, Procedures 1(d) and 3: bank statement identifies the whole reserve current account",
+        "allInScope": true
+      }
+    ],
+    "safo-spiko-usd": [
+      {
+        "factKey": "safo-spiko-usd:SAFO:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:3203d2a63ab76248c7ea0645" },
+        "asOfSec": 1788220800,
+        "publisher": "SPIKO SICAV",
+        "sourceUrls": ["https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"],
+        "assertion": "SPIKO SICAV prospectus published September 1, 2026, title page: \"Open-Ended Investment Company with Sub-Funds\". Articles 5 and 28 make the 99-year company term extendable and permit an extraordinary general meeting to extend or dissolve the SICAV/sub-funds. Section 3.2.4 identifies USD shares FR0014015LE1 and Ethereum register 0xcbade7d9bdee88411cb6cbcbb29952b742036992. The entire immediate reserve is this open-ended SAFO share claim, not dated debt; company term, overnight swap tenor and optional redemption are not a finite contractual maximum. No liquidity assertion.",
+        "contentDigest": "b0b1fcb927429e5e6670c53c62ba5172abec9eb7af7bbfca23368c6a4401794c",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_8)", "confidence": "high" },
+        "claimId": "Spiko Amundi Overnight Swap Fund USD shares / FR0014015LE1 / Ethereum 0xcbade7d9bdee88411cb6cbcbb29952b742036992",
+        "conclusion": "open-ended",
+        "governingInstrument": "SPIKO SICAV prospectus published September 1, 2026, title page, section 3.2.4 and Articles 5 and 28",
+        "allInScope": true
+      }
+    ],
+    "gbpsafo-spiko": [
+      {
+        "factKey": "gbpsafo-spiko:SAFO:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:50bcd115a5fef0083dafcaee" },
+        "asOfSec": 1788220800,
+        "publisher": "SPIKO SICAV",
+        "sourceUrls": ["https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"],
+        "assertion": "SPIKO SICAV prospectus published September 1, 2026, title page: \"Open-Ended Investment Company with Sub-Funds\". Articles 5 and 28 make the 99-year company term extendable and permit an extraordinary general meeting to extend or dissolve the SICAV/sub-funds. Section 3.2.4 identifies GBP shares FR0014015LF8 and Ethereum register 0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0. The entire immediate reserve is this open-ended SAFO share claim, not dated debt; company term, overnight swap tenor and optional redemption are not a finite contractual maximum. No liquidity assertion.",
+        "contentDigest": "ae6868ef05af3f194a6776feee833c8aa4d78ed916613c1e1c64e22cabccd7bb",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_8)", "confidence": "high" },
+        "claimId": "Spiko Amundi Overnight Swap Fund GBP shares / FR0014015LF8 / Ethereum 0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
+        "conclusion": "open-ended",
+        "governingInstrument": "SPIKO SICAV prospectus published September 1, 2026, title page, section 3.2.4 and Articles 5 and 28",
+        "allInScope": true
+      }
+    ],
+    "myrc-blox": [
+      {
+        "factKey": "myrc-blox:halogen-fund-unit:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:159bb5cd984bd7b0423ab087" },
+        "asOfSec": 1756080000,
+        "publisher": "Blox Blockchain Sdn Bhd / Halogen Capital Sdn Bhd",
+        "sourceUrls": [
+          "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+          "https://media.halogen.my/fund/hsmlf/info-memorandum.pdf"
+        ],
+        "assertion": "MYRC Reserve Report dated September 29, 2026, observation August 31, 2026 23:59 GMT+8, Reserve Breakdown identifies MYR 600,000 in Halogen Shariah MYR Liquid Fund. The governing Replacement Information Memorandum dated August 25, 2025, Chapter 3 Redemption of Units, permits requests on any Business Day; Chapter 11.3 provides termination by special resolution or manager discretion when continued management is uneconomical, without a scheduled maturity. The held claim is an open-ended fund unit with no finite contractual maturity. Chapter 4.2 average investment duration of at most one year is not a maximum maturity of any holding or of the fund unit.",
+        "contentDigest": "9aa3d09cff162077cb6f5baad90bfdd40dfce6dd2ca97badcd671accbb823f94",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7)", "confidence": "high" },
+        "claimId": "Halogen Shariah MYR Liquid Fund units; MYRC August 2026 Reserve Breakdown",
+        "conclusion": "open-ended",
+        "governingInstrument": "Halogen Shariah MYR Liquid Fund Replacement Information Memorandum August 25, 2025, Chapters 3 and 11.3; fund held in MYRC August 31, 2026 reserve report",
+        "allInScope": true
+      }
+    ],
+    "zarp-zarp": [
+      {
+        "factKey": "zarp-zarp:call-current-accounts:maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:9b04ed783059e37aa998ae3f" },
+        "asOfSec": 1788220800,
+        "publisher": "Kempen Audit Incorporated / ZARP Stablecoin (Pty) Ltd",
+        "sourceUrls": [
+          "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf"
+        ],
+        "assertion": "Kempen agreed-upon-procedures report dated September 1, 2026, page 1 defines the whole ZARP collateral as South African Rand in Call Deposit and Current accounts of ZARP Stablecoin (Pty) Ltd and Old Mutual Wealth Trust Company JHB (Pty) Ltd. Page 2 procedure 2 verifies R89,062,624 trust-account cash and R2,923,773 Standard Bank balances from August 31 bank statements. These are call/current account balances without a scheduled repayment maturity, not dated term-deposit instruments; no counterparty solvency or stressed liquidity claim is made.",
+        "contentDigest": "05c4ef1ea3efeb78f0a45cae84f919806686efd70cf4a5fba82fde41cd00b6c4",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7)", "confidence": "high" },
+        "claimId": "ZARP September 1, 2026 AUP: whole Call Deposit and Current account collateral",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Kempen ZARP AUP September 1, 2026, purpose and procedures 1-2: call/current account collateral with August 31 bank statements",
+        "allInScope": true
+      }
+    ],
+    "ousg-ondo-finance": [
+      {
+        "factKey": "ousg:franklin-fund-shares:open-ended:2026-08-01",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:c62634e1bcfe66eb06c82a34" },
+        "asOfSec": 1785542400,
+        "publisher": "Franklin Templeton Trust",
+        "sourceUrls": ["https://www.franklintempleton.com/forms-literature/download-preview/9001-SAI"],
+        "assertion": "Franklin Templeton Trust SAI dated August 1, 2026, Organization, Voting Rights and Principal Holders, printed p.34: \"The Fund is a diversified, open-end management investment company, commonly called a mutual fund.\" The same passage says the Fund currently offers one class of shares; ONDO I LP is listed as a principal shareholder on p.35. The exact held Franklin OnChain U.S. Government Money Fund share claim is open-ended, without a finite contractual maturity maximum. The 397-day underlying security eligibility ceiling and 60-day WAM are not the maturity of fund shares; this fact makes no liquidity assertion.",
+        "contentDigest": "1af90c5f5dd3add43bbb7ceb3ded02016b808818796eb7ce40c47820ebdfdd82",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_4)",
+          "confidence": "high"
+        },
+        "claimId": "Franklin OnChain U.S. Government Money Fund shares held by ONDO I LP",
+        "conclusion": "open-ended",
+        "governingInstrument": "Franklin Templeton Trust SAI August 1, 2026, Organization, Voting Rights and Principal Holders pp.34-35",
+        "allInScope": true
+      }
+    ],
+    "pyusd-paypal": [
+      {
+        "factKey": "pyusd-paypal:cash-demand-deposits:maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:78d2dcff04be18da849b2698" },
+        "asOfSec": 1788210000,
+        "publisher": "Paxos Trust Company, National Association / KPMG LLP",
+        "sourceUrls": [
+          "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf",
+          "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf"
+        ],
+        "assertion": "KPMG-examined PYUSD Redemption Assets Report dated September 24, 2026, Management Assertion page 3 applies GENIUS Act section 4(a)(1)(A) to all Exhibit B redemption assets; Exhibit B page 8 identifies USD 111,173,415 cash held in bank accounts for token holders as of August 31, 2026, with USD 110,919,918 uninsured demand deposits. Public Law 119-27, section 4(a)(1)(A)(ii), page 7 permits funds held as demand deposits or other deposits withdrawable upon request at any time. The whole cash claim is an on-demand deposit, not an instrument with a fixed contractual repayment maturity. No bank solvency, stressed settlement or portfolio allocation claim is added.",
+        "contentDigest": "46d62c90b7d151c6ef09c647d9d23b2754965a3b2b64fb99da1c7f37ff6acf39",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7)",
+          "confidence": "high"
+        },
+        "claimId": "paxos-independent-assurance:pyusd:cash",
+        "conclusion": "not-applicable",
+        "governingInstrument": "PYUSD Redemption Assets Report August 31, 2026, Management Assertion and Exhibit B cash; expressly applied Public Law 119-27 section 4(a)(1)(A)(ii)",
+        "allInScope": true
+      }
+    ],
+    "jtrsy-anemoy": [
+      {
+        "factKey": "jtrsy-anemoy:reserve:8f16ec7e8f9604cfcc5b5e9c:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:8f16ec7e8f9604cfcc5b5e9c"
+        },
+        "asOfSec": 1782777600,
+        "publisher": "Anemoy Capital SPC Limited / Janus Henderson Anemoy Treasury Fund",
+        "sourceUrls": [
+          "https://centrifuge-files.mypinata.cloud/ipfs/bafybeicdzle2bgqekmvnfqcxjhimnzlfrg7mkfvngxtmfvjzldmtoubneq"
+        ],
+        "assertion": "June 2026 JTRSY factsheet, page 1 Key Facts Token and Type: the token represents Shares of the Janus Henderson Anemoy Treasury Fund Segregated Portfolio and the Type is Open-ended BVI professional fund. The same page explicitly describes an Open ended BVI licensed fund. The source reports performance as of June 30, 2026. This whole captured exposure is those fund shares, with no finite contractual share maturity. The 0-to-6-month Treasury strategy and weighted-average maturity are underlying portfolio terms, not a maturity maximum of the held shares; no liquidity guarantee is asserted.",
+        "contentDigest": "da17068a44203d9dbd43e5387e4f0d2bf154069d6283ffe0454e285e84bc38d7",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_6)",
+          "confidence": "high"
+        },
+        "claimId": "Janus Henderson Anemoy Treasury Fund Segregated Portfolio shares / chainlink-nav:token:0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "conclusion": "open-ended",
+        "governingInstrument": "JTRSY June 2026 factsheet, page 1 Key Facts Token and Type and Overview",
+        "allInScope": true
+      }
+    ],
+    "eursafo-spiko": [
+      {
+        "factKey": "eursafo-spiko:eurSAFO:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:602e299779e194c1e9d4c440" },
+        "asOfSec": 1788220800,
+        "publisher": "SPIKO SICAV",
+        "sourceUrls": ["https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"],
+        "assertion": "SPIKO SICAV prospectus published September 1, 2026, title page and Articles 5 and 28: \"Open-Ended Investment Company with Sub-Funds\"; \"The Company's term is ninety-nine (99) years ... except in the event of early dissolution or extension\"; the Board may propose \"extension or early dissolution or liquidation\" of the SICAV or sub-funds. Section 3.2.4 identifies EUR shares FR0014015LD3 and Ethereum register 0x0990b149e915cb08e2143a5c6f669c907eddc8b0. The entire immediate EURSAFO reserve is this open-ended share claim, not dated debt. Extendable company life and underlying overnight swap tenor are not a finite contractual maximum. No liquidity assertion.",
+        "contentDigest": "5a1edbc97ca47a94a2db6de94a726534e584fd67fd0c75e62681f26ded5cb205",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_8)", "confidence": "high" },
+        "claimId": "Spiko Amundi Overnight Swap Fund EUR shares / FR0014015LD3 / Ethereum 0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "conclusion": "open-ended",
+        "governingInstrument": "SPIKO SICAV prospectus published September 1, 2026, title page, section 3.2.4 and Articles 5 and 28",
+        "allInScope": true
+      }
+    ],
     "pathusd-bridge": [
       {
         "factKey": "pathusd:treasury:conditional-business-day-liquidity",
@@ -541,6 +892,36 @@
     ],
     "zchf-frankencoin": [
       {
+        "factKey": "zchf-frankencoin:xaut:allocated-gold-maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:335532902cd57c0d26304c33" },
+        "asOfSec": 1782863940,
+        "publisher": "TG Commodities S.A. de C.V. / BDO Advisory Services S.r.l.",
+        "sourceUrls": ["https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"],
+        "assertion": "BDO-examined Tether Gold-Reserves Report as of June 30, 2026 at 23:59 UTC, pages 5-7 states Gold Reserves are owned by XAUt token holders, not by the Company, and tokens represent undivided ownership rights to gold on specified bars. Exact Frankencoin held claim: Ethereum XAUt 0x68749665ff8d2d112fa859aa293f07a622782f38, collateral-positions-api:xaut. This is ownership of allocated physical gold, not a debt security with a scheduled contractual repayment maturity. Borrower-position expiry, sale/redemption timing and liquidity are not asserted.",
+        "contentDigest": "6a298b9668bcdbcb948856be0ee17734296c5007667d3bc289861c614f68d495",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7)", "confidence": "high" },
+        "claimId": "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Tether Gold-Reserves Report June 30, 2026, pages 5-7: token-holder physical-gold ownership and issuing mechanism",
+        "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:paxg:allocated-gold-maturity-applicability",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:104ccc28dbe0c6b0efe0386f" },
+        "asOfSec": 1765497600,
+        "publisher": "Paxos Trust Company, N.A.",
+        "sourceUrls": ["https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"],
+        "assertion": "PAX Gold Terms and Conditions last modified December 12, 2025, sections 1.1, 4.2-4.3 and 5.1-5.3 define allocated bars and fractional beneficial ownership: PAXG tokens are akin to a warehouse receipt representing ownership of a pro rata portion of Allocated Gold. Section 4.8 identifies the Ethereum ERC20 claim. Exact Frankencoin held claim: Ethereum PAXG 0x45804880de22913dafe09f4980848ece6ecbaf78, collateral-positions-api:paxg. The whole holding is an allocated physical-gold ownership claim, not debt with a scheduled contractual repayment maturity. No redemption, auction duration or liquidity guarantee is added.",
+        "contentDigest": "f72ca130d67ba658825fad4dd9fefbfa94e4a341487f062e6057320b047008ed",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_7)", "confidence": "high" },
+        "claimId": "ethereum:0x45804880de22913dafe09f4980848ece6ecbaf78",
+        "conclusion": "not-applicable",
+        "governingInstrument": "PAX Gold Terms and Conditions last modified December 12, 2025, sections 1.1, 4.2-4.3, 4.8-4.9 and 5.1-5.3",
+        "allInScope": true
+      },
+      {
         "factKey": "zchf-boss-equity-maturity-applicability",
         "scope": {
           "kind": "exposure",
@@ -805,6 +1186,24 @@
       }
     ],
     "fusd-finchain": [
+      {
+        "factKey": "fusd-finchain:tkusd-class-t:2026-08:open-ended-maturity",
+        "kind": "maturity-applicability",
+        "scope": { "kind": "exposure", "exposureKey": "reserve:8060242d32eaf62dc30f226b" },
+        "asOfSec": 1785542400,
+        "publisher": "Taikang Asset Management (Hong Kong) Company Limited",
+        "sourceUrls": [
+          "https://hk.taikangasset.cn/productinformation/7ac3dc4f-394d-4003-9b8b-83cd1c492e63.9).pdf",
+          "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/reserve-assets"
+        ],
+        "assertion": "Taikang Kaitai Funds explanatory memorandum dated August 2026, Important Information p.I and Introduction p.9, identifies the umbrella as an open-ended unit trust (開放式單位信託基金). Termination p.69 states the Fund continues until terminated under the listed discretionary/event conditions (本基金將持續有效直至按以下任何一種方式終止為止), not a scheduled share maturity. Appendix 5 pp.142-145 covers the USD Money Market Fund and its tokenized Class T; its termination terms are identical to non-tokenized units. Appendix D p.266 states each token represents one Class T unit. FinChain's exact reserve-asset table identifies TKUSD as Taikang Kaitai US Dollar Money Mkt T USD, a digital twin. This covers the whole exact TKUSD Class T exposure as open-ended; portfolio WAM/WAL, underlying security maturity, and optional redemption or termination are not a share maturity maximum. No liquidity guarantee is asserted.",
+        "contentDigest": "d1925f0d5affb0ddaa65e540f507ec3d9b7d459eead4cca28870c6b1006ff84e",
+        "provenance": { "kind": "reviewed-research", "reviewedAt": "2026-10-07", "reviewer": "Sol unknown-resolver wave 2026-10-07 (FUND_SHARE_MATURITY)", "confidence": "high" },
+        "claimId": "Taikang Kaitai US Dollar Money Market Fund tokenized Class T USD units / TKUSD digital twin",
+        "conclusion": "open-ended",
+        "governingInstrument": "Taikang Kaitai Funds August 2026 explanatory memorandum, Important Information p.I, Introduction p.9, Termination p.69, Appendix 5 pp.142-145 and Appendix D p.266",
+        "allInScope": true
+      },
       {
         "factKey": "fusd-finchain:reserve:70a7a641bec3d68477f9f8e4:open-ended-maturity",
         "kind": "maturity-applicability",

@@ -13415,49 +13415,6 @@
       "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
     },
     {
-      "id": "uw-syzusd-yuzu-b45e0adc37ed058e",
-      "assetId": "syzusd-yuzu",
-      "scope": {
-        "componentKey": "economic-control:mint",
-        "exposureId": null,
-        "factorKey": "supervision",
-        "pillar": "control",
-        "requiredDatum": "supervision",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:03:54Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R60)",
-      "sources": [
-        {
-          "url": "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-          "observedAt": "2026-10-03T23:03:10Z",
-          "datumAsOf": "2026-04-15",
-          "location": "Introduction 1.1",
-          "excerpt": "operated by YUZU FINTECH LLC, a Virtual Asset Service Provider licensed under the Kutaisi Free Industrial Zone",
-          "assertion": "Issuer names a Georgian FEZ VASP status, not a named prudential supervisor for native syzUSD issuance."
-        },
-        {
-          "url": "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
-          "observedAt": "2026-10-03T23:03:11Z",
-          "datumAsOf": null,
-          "location": "REGISTER and stablecoin issuance rule",
-          "excerpt": "For additional requirements related to the Stablecoin Initial Coin Offering (incl. issuance)",
-          "assertion": "NBG publishes a distinct stablecoin issuance rule and VASP register; the 16 September 2026 register has no Yuzu Fintech entry."
-        }
-      ],
-      "searchedSurfaces": [
-        "https://yuzu.money/",
-        "https://yuzu-money.gitbook.io/yuzu-money/terms-and-conditions.md",
-        "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable.md",
-        "https://nbg.gov.ge/en/page/virtual-asset-service-providers-vasps",
-        "https://nbg.gov.ge/fm/%E1%83%A1%E1%83%90%E1%83%92%E1%83%90%E1%83%93%E1%83%90%E1%83%AE%E1%83%93%E1%83%9D/vasps/%E1%83%A0%E1%83%94%E1%83%94%E1%83%A1%E1%83%A2%E1%83%A0%E1%83%98/vasps-eng-16-09-2026.xlsx",
-        "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/key-addresses.md"
-      ],
-      "rationale": "The exact syzUSD native mint supervision datum is not disclosed. Issuer FEZ VASP language neither establishes prudential token issuance supervision nor identifies the applicable supervisor; the current NBG register does not identify Yuzu Fintech. Do not infer supervision:none or an authorization breach from this mismatch."
-    },
-    {
       "id": "uw-syzusd-yuzu-9fa8402715c41797",
       "assetId": "syzusd-yuzu",
       "scope": {

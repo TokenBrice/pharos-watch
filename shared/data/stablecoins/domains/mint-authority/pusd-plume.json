@@ -87,11 +87,11 @@
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc08)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_4)",
+          "confidence": "verified",
           "sources": [
             {
               "label": "pUSD BoringVault on Etherscan",
@@ -100,41 +100,61 @@
             {
               "label": "pUSD Safe on Etherscan",
               "url": "https://etherscan.io/address/0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+            },
+            {
+              "label": "Pinned block 26096009, 2026-10-01T07:35:11Z: Safe proxy/singleton runtime, owners, threshold, module pagination end, zero guard and fallback runtime",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Exact runtime-matched GnosisSafeL2: GnosisSafe.execTransaction/checkSignatures and Executor.execute arbitrary CALL/DELEGATECALL; ModuleManager and FallbackManager self-authorized configuration",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+            },
+            {
+              "label": "Exact runtime-matched CompatibilityFallbackHandler: signature validation and reverting simulate; no persistent unsigned execution bypass",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x017062a1de2fe6b99be3d9d37841fed19f573804"
             }
           ],
           "pin": {
             "position": "26096009",
-            "hash": null,
-            "runtimeIdentity": "GnosisSafeL2 singleton ethereum:0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+            "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           },
           "observedState": {
             "position": "26096009",
-            "hash": null,
-            "runtimeIdentity": "GnosisSafeL2 singleton ethereum:0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+            "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+            "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
-              "id": "ethereum-owner-arbitrary-enter",
-              "targetDeployment": "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+              "id": "ethereum-safe-maximal-execution",
+              "targetDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
               "entrypointKind": "evm-selector",
               "entrypoints": [
-                "0x39d6ba32"
+                "0x6a761202"
               ],
               "callMode": "call",
               "capabilities": [
-                "mint"
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
               ],
               "capSemantics": {
                 "kind": "unbounded",
@@ -147,19 +167,55 @@
               "affectedLiabilityIds": [
                 "pusd-plume"
               ],
-              "affectedDeployments": [
-                "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
-              ],
+              "affectedDeployments": [],
               "reach": "root",
               "controlRefs": [],
               "reactivationRefs": [],
               "permissionChangeRefs": [],
               "upgradeRefs": [],
-              "bypassRefs": []
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+                "executorDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+                "sourceDeployment": "ethereum:0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26096009",
+                  "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+                  "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
+                  "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+                },
+                "sourceRuntimeIdentity": "sha256:382183ad763afbcc7f7728a6dbd6fd51b46843b0e1ebdc33a0def6e7939f4aa2",
+                "observedSourceRuntimeIdentity": "sha256:382183ad763afbcc7f7728a6dbd6fd51b46843b0e1ebdc33a0def6e7939f4aa2",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+                  "location": "contracts/GnosisSafe.sol execTransaction/checkSignatures; contracts/base/Executor.sol execute: threshold-authorized arbitrary target/value/calldata CALL or DELEGATECALL, zero executor delay. Conservative adverse upper envelope, not a downstream target allowlist or a claim that every target implements every capability."
+                }
+              }
             }
-          ]
+          ],
+          "extensions": {
+            "exhaustive": true,
+            "paginationEnd": "0x0000000000000000000000000000000000000001",
+            "sourceRuntimeCorrespondence": true,
+            "entries": [
+              {
+                "deployment": "ethereum:0x017062a1de2fe6b99be3d9d37841fed19f573804",
+                "runtimeIdentity": "sha256:eec6894136b0ea9a5dabd2d1873e5bf079569176f0f540b5543484877b0f90f4",
+                "kind": "fallback-handler",
+                "pathRefs": ["ethereum-safe-maximal-execution"],
+                "mutableReachClosed": true
+              }
+            ]
+          }
         },
-        "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody or fallback-handler safety claim is made.",
+        "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody claim is made. Independent October 7 review re-read Ethereum block 26096009/hash 0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29 (2026-10-01T07:35:11Z) through the keyless Dwellir endpoint: all six owners and threshold 3 match; empty module pagination terminates at sentinel 0x1; guard is zero; the singleton and CompatibilityFallbackHandler bytecodes exactly match verified explorer source. GnosisSafe.execTransaction and Executor.execute admit arbitrary target/value/calldata CALL and DELEGATECALL with no executor delay. The handler's signature validation retains Safe authorization and simulate uses simulateAndRevert, so it grants no persistent unsigned bypass. This certificate closes the conservative adverse maximal execution envelope, including self-authorized mutation of modules/guard/handler and delegated storage; it does not claim a downstream target allowlist, custody independence, or that all reachable contracts implement every capability. Plume and the remaining native deposit controller scopes are not promoted by this Ethereum-only certificate.",
         "sources": [
           {
             "label": "pUSD BoringVault on Etherscan",
