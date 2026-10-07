@@ -10,6 +10,7 @@ import {
 import { isDexLiquidityPublicationSlot } from "./cron-cadences";
 
 export type ScheduledRunnerKey = CronScheduleKey;
+export type ScheduledWorkerRole = "public" | "heavy";
 
 /** Recovery must not load producer graphs beside a live heavy scheduled slot. */
 export const RESERVE_RECOVERY_HEAVY_SLOT_KEYS = [
@@ -20,6 +21,7 @@ export const RESERVE_RECOVERY_HEAVY_SLOT_KEYS = [
 export type ScheduledSlotJobChain = readonly string[];
 
 interface ScheduledSlotPlanInput {
+  worker: ScheduledWorkerRole;
   jobChains: readonly ScheduledSlotJobChain[];
   budgetOnlyJobs?: readonly string[];
 }
@@ -33,6 +35,7 @@ export interface ScheduledSlotPlan extends ScheduledSlotPlanInput {
 
 const SCHEDULED_SLOT_PLAN_INPUTS = {
   quarterHourly: {
+    worker: "public",
     jobChains: [[
       "sync-fx-rates",
       "sync-stablecoins",
@@ -43,15 +46,19 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   v9SupplyAttributionOffset: {
+    worker: "heavy",
     jobChains: [["sync-v9-supply-attribution"]],
   },
   depegResolverOffset: {
+    worker: "public",
     jobChains: [["compute-depeg-resolver"]],
   },
   v9PublicationOffset: {
+    worker: "heavy",
     jobChains: [["compute-safety-score-v9"]],
   },
   statusSelfCheckOffset: {
+    worker: "public",
     jobChains: [[
       "status-self-check",
       "data-invariant-canary",
@@ -60,24 +67,31 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     budgetOnlyJobs: ["price-corroboration"],
   },
   sixHourlyBlacklist: {
+    worker: "public",
     jobChains: [["sync-blacklist"]],
   },
   halfHourlyMintBurnCritical: {
+    worker: "public",
     jobChains: [["sync-mint-burn"]],
   },
   twoHourlyDexDiscovery: {
+    worker: "public",
     jobChains: [["sync-dex-discovery"]],
   },
   halfHourlyMintBurnExtended: {
+    worker: "public",
     jobChains: [["sync-mint-burn-extended"]],
   },
   halfHourlyMeasuredExecution: {
+    worker: "public",
     jobChains: [["sync-cl-exit-depth"]],
   },
   halfHourlyOffset: {
+    worker: "public",
     jobChains: [["sync-dex-liquidity-stage"]],
   },
   halfHourlyChartsOffset: {
+    worker: "heavy",
     jobChains: [[
       "sync-dex-liquidity",
       "cron-sentinel",
@@ -86,9 +100,11 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   dewsPsiOffset: {
+    worker: "public",
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
+    worker: "public",
     // Two chains, not one queue. sync-live-reserves is the slot's measured
     // head (p95 458s), and both consumers of the generation it writes stay
     // ordered behind it: the backstop computation and the reserve watchdog.
@@ -108,6 +124,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ],
   },
   hourlyYieldSync: {
+    worker: "public",
     // Serially ordered on purpose: the opportunistic supplemental catch-up and
     // the benchmark-registry retry both publish evidence that sync-yield-data
     // reads in the same slot, so they must land first. One serial chain keeps
@@ -125,9 +142,11 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ],
   },
   fourHourlyYieldSupplemental: {
+    worker: "public",
     jobChains: [["sync-yield-supplemental"]],
   },
   fiveMinuteTelegramAlerts: {
+    worker: "public",
     jobChains: [[
       "dispatch-telegram-alerts",
       "telegram-personalized-recap-planner",
@@ -138,13 +157,16 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     budgetOnlyJobs: ["telegram-registration-reconciliation"],
   },
   fiveMinuteReserveRecovery: {
+    worker: "public",
     jobChains: [["reserve-recovery"]],
   },
   digestTriggerPoll: {
+    worker: "public",
     jobChains: [["daily-digest", "weekly-recap"]],
     budgetOnlyJobs: ["telegram-digest-outbox-drain", "safety-map-producer-kick", "digest-trigger-poll"],
   },
   daily0300Utc: {
+    worker: "public",
     jobChains: [[
       "cron-sentinel",
       "prune-status-probe-runs",
@@ -155,6 +177,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ]],
   },
   daily0800Utc: {
+    worker: "public",
     jobChains: [
       ["snapshot-supply"],
       ["snapshot-safety-grade-history", "snapshot-psi", "snapshot-public-dataset"],
@@ -162,15 +185,18 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ],
   },
   daily0805Utc: {
+    worker: "public",
     jobChains: [
       ["sync-bluechip"],
       ["daily-digest"],
     ],
   },
   daily0810Utc: {
+    worker: "public",
     jobChains: [["weekly-recap"], ["sync-cl-exit-depth"]],
   },
   monthlyYieldAudit: {
+    worker: "public",
     jobChains: [["yield-coverage-audit"]],
   },
 } as const satisfies Record<CronScheduleKey, ScheduledSlotPlanInput>;
@@ -182,6 +208,7 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
       return [
         scheduleKey,
         {
+          worker: planInput.worker,
           scheduleKey: scheduleKey as CronScheduleKey,
           runnerKey: scheduleKey as ScheduledRunnerKey,
           schedule: CRON_SCHEDULES[scheduleKey as CronScheduleKey],
@@ -220,6 +247,18 @@ function indexScheduledSlotPlansByTriggerSchedule(
 export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, ScheduledSlotPlan>> = Object.freeze(
   indexScheduledSlotPlansByTriggerSchedule(SCHEDULED_SLOT_PLANS),
 );
+
+export function getScheduledWorkerRoleForExpression(expression: string): ScheduledWorkerRole {
+  const plan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[expression];
+  if (!plan) throw new Error(`Unknown scheduled cron expression: ${expression}`);
+  return plan.worker;
+}
+
+export function listScheduledExpressionsForWorker(role: ScheduledWorkerRole): string[] {
+  return Object.values(SCHEDULED_SLOT_PLANS)
+    .filter((plan) => plan.worker === role)
+    .flatMap((plan) => [...plan.triggerSchedules]);
+}
 
 /**
  * Producers that carry a cron identity and cadence but are not members of a

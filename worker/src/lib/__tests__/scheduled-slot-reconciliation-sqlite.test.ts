@@ -531,6 +531,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -572,6 +573,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -624,6 +626,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
     const run = sqlite.prepare(
       "SELECT status, error, duration_ms, metadata, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
@@ -684,6 +687,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "hourlyYieldSync",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
 
     // Three planned members had written progress; the Dwellir parity chain
@@ -734,6 +738,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -803,6 +808,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
       reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -821,6 +827,38 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconciledByWorkerVersionActivatedAt: activationRecorded ? progressUpdatedAt - 30 : null,
     });
   });
+  it.each(["missing", "wrong-script", "late", "verified"] as const)(
+    "resolves a public slot owner independently of the heavy caller: %s marker",
+    async (evidence) => {
+      const { sqlite, db } = createMigratedDb();
+      const nowSec = 1_772_004_000;
+      const slotStartedAt = seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+      const publicVersion = "12345678-1234-1234-1234-123456789abc";
+      const heavyVersion = "abcdefab-1234-1234-1234-123456789abc";
+      const activation = evidence === "late" ? nowSec + 1 : slotStartedAt - 60;
+      for (const version of [publicVersion, heavyVersion]) {
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+          .run(`worker-version-activated:${version}`, JSON.stringify({ workerVersion: version, activatedAt: activation }), activation);
+      }
+      if (evidence !== "missing") {
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+          .run("worker-active-version:public", JSON.stringify({
+            worker: "public",
+            scriptName: evidence === "wrong-script" ? "stablecoin-heavy" : "stablecoin-api",
+            workerVersion: publicVersion,
+            activatedAt: activation,
+          }), activation);
+      }
+      await sweepStaleScheduledSlotExecutions(db, {
+        nowSec, staleAfterSec: 1_200, slotKey: "halfHourlyMeasuredExecution",
+        reconcilerWorkerVersion: heavyVersion, reconcilerWorkerRole: "heavy",
+      });
+      const row = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()!;
+      expect(row.status).toBe(evidence === "verified" ? "skipped_neutral" : "error");
+      expect(JSON.parse(String(row.metadata)).reconciledByWorkerVersion)
+        .toBe(evidence === "verified" ? publicVersion : null);
+    },
+  );
 });
 
 

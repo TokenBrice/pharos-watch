@@ -79,6 +79,26 @@ export interface Env {
   WORKER_V9_WORKFLOW_MODE?: string;
 }
 
+/** Scheduled execution has no HTTP CORS or rate-limit bindings. */
+export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
+  Partial<Omit<Env,
+    | "DB"
+    | "CF_VERSION_METADATA"
+    | "CORS_ORIGIN"
+    | "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT"
+    | "TELEGRAM_WEBHOOK_SOURCE_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_SESSION_SOURCE_RATE_LIMIT"
+    | "TELEGRAM_MINI_APP_MUTATION_SOURCE_RATE_LIMIT"
+    | "DONOR_KEY_CLAIM_RATE_LIMIT"
+    | "SAFETY_GRADES_RATE_LIMIT"
+  >> & { SAFETY_SCORE_V9_WORKFLOW?: Workflow };
+
+export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY" | "GRAPH_API_KEY" | "SAFETY_SCORE_V9_WORKFLOW"> & {
+  SAFETY_SCORE_V9_WORKFLOW: Workflow;
+};
+
 export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"

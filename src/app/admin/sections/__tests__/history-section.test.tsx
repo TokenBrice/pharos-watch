@@ -45,12 +45,9 @@ function baseProps() {
         createdAtSec: 1_700_000_100,
       },
     },
-    workerVersionEvidence: {
-      status: "observed" as const,
-      version: "worker-v2",
-      observedAt: 1_700_000_200,
-      sourceCount: 2,
-      sources: ["producer:prices", "attempt:digest"],
+    workerVersions: {
+      public: { scriptName: "stablecoin-api", workerVersion: "public-v2", activatedAt: 1_700_000_100 },
+      heavy: { scriptName: "stablecoin-heavy", workerVersion: "heavy-v3", activatedAt: 1_700_000_200 },
     },
     adminActionLog: {
       entries: [],
@@ -83,7 +80,7 @@ function baseProps() {
 }
 
 describe("HistorySection", () => {
-  it("separates Pages release correlation from Worker runtime observations", () => {
+  it("renders both verified Worker activations separately from Pages correlation", () => {
     render(<HistorySection {...baseProps()} />);
 
     const pageHeading = screen.getByRole("heading", { level: 1, name: "Incident History" });
@@ -91,32 +88,25 @@ describe("HistorySection", () => {
     expect(pageHeading.className).not.toContain("pharos-display");
     expect(screen.getByRole("heading", { name: "Pages deployment" })).toBeTruthy();
     expect(screen.getByText(/First degradation after release/i)).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Worker deployment" })).toBeTruthy();
-    expect(screen.getByText("worker-v2")).toBeTruthy();
-    expect(screen.getAllByText(/runtime observation/i).length).toBeGreaterThan(0);
-    expect(screen.getByText("Deployment correlation Unknown")).toBeTruthy();
-    expect(screen.getByText(/No transition is attributed to this version/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Worker deployments" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Public Worker" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Heavy Worker" })).toBeTruthy();
+    expect(screen.getByText("stablecoin-api")).toBeTruthy();
+    expect(screen.getByText("stablecoin-heavy")).toBeTruthy();
+    expect(screen.getByText("public-v2")).toBeTruthy();
+    expect(screen.getByText("heavy-v3")).toBeTruthy();
+    expect(screen.getAllByText("Activated at")).toHaveLength(2);
+    expect(screen.getByText(/Activation does not attribute a transition/i)).toBeTruthy();
     expect(screen.getByText("Flapping")).toBeTruthy();
     expect(screen.getAllByText("4").length).toBeGreaterThan(0);
   });
 
-  it("renders Worker deployment and observation fields as unavailable instead of synthesizing them", () => {
+  it.each(["public", "heavy"] as const)("keeps missing %s evidence unavailable without hiding the other role", (role) => {
     const props = baseProps();
-    render(
-      <HistorySection
-        {...props}
-        workerVersionEvidence={{
-          status: "unavailable",
-          version: null,
-          observedAt: null,
-          sourceCount: 0,
-          sources: [],
-        }}
-      />,
-    );
-
-    expect(screen.getByText("Runtime observation unavailable")).toBeTruthy();
-    expect(screen.getByText(/Deploy time, deployment ID, and deploy commit are Unknown/i)).toBeTruthy();
+    render(<HistorySection {...props} workerVersions={{ ...props.workerVersions, [role]: null }} />);
+    expect(screen.getByText(/Verified activation unavailable/i)).toBeTruthy();
+    expect(screen.getByText(role === "public" ? "heavy-v3" : "public-v2")).toBeTruthy();
+    expect(screen.queryByText(role === "public" ? "public-v2" : "heavy-v3")).toBeNull();
   });
 
   it("keeps Pages correlation Unknown when its release timestamp is unavailable", () => {

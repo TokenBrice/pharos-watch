@@ -30,13 +30,14 @@ describe("check-cron-schedule-sync", () => {
       },
       scheduledSlotPlans: {
         configuredSlot: {
+          worker: "public",
           jobChains: [["runtime-job"]],
           budgetOnlyJobs: ["budget-only-sidecar"],
         },
       },
       cronJobDefinitions: [{ job: "runtime-job" }],
       cronConnectionBudgetEntries: [{ job: "runtime-job" }, { job: "budget-only-sidecar" }],
-      wranglerCronTriggers: ["1 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *"], heavy: [] },
     });
 
     expect(report.failed).toBe(false);
@@ -56,6 +57,7 @@ describe("check-cron-schedule-sync", () => {
       },
       scheduledSlotPlans: {
         v9PublicationOffset: {
+          worker: "heavy",
           schedule: "22,52 * * * *",
           triggerSchedules: ["22 * * * *", "52 * * * *"],
           jobChains: [["compute-safety-score-v9"]],
@@ -63,7 +65,7 @@ describe("check-cron-schedule-sync", () => {
       },
       cronJobDefinitions: [{ job: "compute-safety-score-v9" }],
       cronConnectionBudgetEntries: [{ job: "compute-safety-score-v9" }],
-      wranglerCronTriggers: ["22 * * * *", "52 * * * *"],
+      wranglerCronTriggers: { public: [], heavy: ["22 * * * *", "52 * * * *"] },
     });
 
     expect(report.failed).toBe(false);
@@ -83,10 +85,10 @@ describe("check-cron-schedule-sync", () => {
       cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "job-b" }],
       growthPolicy: { maxPhysicalTriggersBeforeRebalance: 1 },
       scheduledSlotPlans: {
-        slotA: { jobChains: [["job-a"]] },
-        slotB: { jobChains: [["job-b"]] },
+        slotA: { worker: "public", jobChains: [["job-a"]] },
+        slotB: { worker: "heavy", jobChains: [["job-b"]] },
       },
-      wranglerCronTriggers: ["1 * * * *", "2 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *"], heavy: ["2 * * * *"] },
     });
 
     expect(report.physicalTriggerLimitExceeded).toBe(true);
@@ -100,12 +102,12 @@ describe("check-cron-schedule-sync", () => {
         slotB: "2 * * * *",
       },
       scheduledSlotPlans: {
-        slotA: { jobChains: [["job-a"]] },
-        slotB: { jobChains: [["job-b"]] },
+        slotA: { worker: "public", jobChains: [["job-a"]] },
+        slotB: { worker: "public", jobChains: [["job-b"]] },
       },
       cronJobDefinitions: [{ job: "job-a" }, { job: "job-b" }],
       cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "job-b" }],
-      wranglerCronTriggers: ["1 * * * *", "9 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *", "9 * * * *"], heavy: [] },
     });
 
     expect(report.failed).toBe(true);
@@ -116,10 +118,10 @@ describe("check-cron-schedule-sync", () => {
   it("rejects a duplicate raw Wrangler cron expression before set comparison", () => {
     const report = evaluateCronScheduleSync({
       cronSchedules: { slotA: "1 * * * *" },
-      scheduledSlotPlans: { slotA: { jobChains: [["job-a"]] } },
+      scheduledSlotPlans: { slotA: { worker: "public", jobChains: [["job-a"]] } },
       cronJobDefinitions: [{ job: "job-a" }],
       cronConnectionBudgetEntries: [{ job: "job-a" }],
-      wranglerCronTriggers: ["1 * * * *", "1 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *"], heavy: ["1 * * * *"] },
     });
 
     expect(report.duplicateWranglerSchedules).toEqual(["1 * * * *"]);
@@ -135,13 +137,14 @@ describe("check-cron-schedule-sync", () => {
       cronTriggerSchedules: { slotA: ["1 * * * *"] },
       scheduledSlotPlans: {
         slotA: {
+          worker: "public",
           triggerSchedules: ["1 * * * *", "1 * * * *"],
           jobChains: [["job-a"]],
         },
       },
       cronJobDefinitions: [{ job: "job-a" }],
       cronConnectionBudgetEntries: [{ job: "job-a" }],
-      wranglerCronTriggers: ["1 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *"], heavy: [] },
     });
 
     expect(report.duplicateSlotPlanSchedules).toEqual(["1 * * * *"]);
@@ -154,8 +157,8 @@ describe("check-cron-schedule-sync", () => {
   it.each([
     ["missingPlanKeys", { cronSchedules: { slotA: "1 * * * *", missing: "1 * * * *" } }, "missing"],
     ["extraPlanKeys", { scheduledSlotPlans: {
-      slotA: { jobChains: [["job-a"]] },
-      extra: { jobChains: [] },
+      slotA: { worker: "public", jobChains: [["job-a"]] },
+      extra: { worker: "public", jobChains: [] },
     } }, "extra"],
     ["missingRuntimeJobs", { cronJobDefinitions: [{ job: "job-a" }, { job: "missing" }] }, "missing"],
     ["unknownRuntimeJobs", { cronJobDefinitions: [] }, "job-a"],
@@ -164,10 +167,10 @@ describe("check-cron-schedule-sync", () => {
   ] as const)("fails independently for %s", (field, mutation, offender) => {
     const valid = {
       cronSchedules: { slotA: "1 * * * *" },
-      scheduledSlotPlans: { slotA: { jobChains: [["job-a"]] } },
+      scheduledSlotPlans: { slotA: { worker: "public" as const, jobChains: [["job-a"]] } },
       cronJobDefinitions: [{ job: "job-a" }],
       cronConnectionBudgetEntries: [{ job: "job-a" }],
-      wranglerCronTriggers: ["1 * * * *"],
+      wranglerCronTriggers: { public: ["1 * * * *"], heavy: [] },
       growthPolicy: { maxPhysicalTriggersBeforeRebalance: 1 },
     };
     expect(evaluateCronScheduleSync(valid).failed).toBe(false);
@@ -194,8 +197,23 @@ describe("check-cron-schedule-sync", () => {
       scheduledSlotPlans: {},
       cronJobDefinitions: [{ job: "missing-runtime-sentinel" }],
       cronConnectionBudgetEntries: [],
-      wranglerCronTriggers: [],
+      wranglerCronTriggers: { public: [], heavy: [] },
     }));
     expect(errors.join("\n")).toContain("missing-runtime-sentinel");
+  });
+  it.each([
+    [{ public: [], heavy: [] }, ["1 * * * *"], []],
+    [{ public: [], heavy: ["1 * * * *"] }, [], ["heavy:1 * * * *"]],
+  ])("rejects omitted and wrong-owner triggers", (triggers, missing, misowned) => {
+    const report = evaluateCronScheduleSync({
+      cronSchedules: { slot: "1 * * * *" },
+      scheduledSlotPlans: { slot: { worker: "public", jobChains: [] } },
+      cronJobDefinitions: [],
+      cronConnectionBudgetEntries: [],
+      wranglerCronTriggers: triggers,
+    });
+    expect(report.failed).toBe(true);
+    expect(report.onlyInSharedSchedules).toEqual(missing);
+    expect(report.misownedWranglerSchedules).toEqual(misowned);
   });
 });

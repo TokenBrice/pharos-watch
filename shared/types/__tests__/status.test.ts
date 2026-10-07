@@ -5,6 +5,19 @@ import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../st
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("preserves both verified Worker markers and defaults pre-upgrade payloads to unavailable", () => {
+    const workerVersions = {
+      public: { scriptName: "stablecoin-api", workerVersion: "public-v1", activatedAt: 100 },
+      heavy: { scriptName: "stablecoin-heavy", workerVersion: "heavy-v2", activatedAt: 200 },
+    };
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions }).workerVersions).toEqual(workerVersions);
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions: undefined }).workerVersions)
+      .toEqual({ public: null, heavy: null });
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions: { public: workerVersions.public, heavy: null } }).workerVersions.heavy).toBeNull();
+    for (const heavy of [{}, { ...workerVersions.heavy, activatedAt: -1 }, { ...workerVersions.heavy, workerVersion: "" }]) {
+      expect(StatusResponseSchema.safeParse({ ...statusResponse(), workerVersions: { public: null, heavy } }).success).toBe(false);
+    }
+  });
   it("validates one resource block for terminal and progress metadata while retaining job keys", () => {
     const resourcePressure = {
       phase: "intake", observedAt: 100,
@@ -87,6 +100,7 @@ describe("StatusResponseSchema reserve composition contract", () => {
     ["canaries", {}],
     ["telegramSummary", {}],
     ["producerHeads", [{}]],
+    ["workerVersions", {}],
     ["priceSourceHealth", {}],
     ["coingeckoPriceDiff", {}],
     ["d1Usage", {}],

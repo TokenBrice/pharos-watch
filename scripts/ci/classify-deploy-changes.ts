@@ -52,6 +52,7 @@ interface DeployClassification {
   playwrightFirefoxRequired: boolean;
   reason: string;
   workerChanged: boolean;
+  /** One selected Worker release always deploys the public/heavy pair. */
   workerDeployRequired: boolean;
 }
 

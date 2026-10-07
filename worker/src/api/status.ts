@@ -33,6 +33,29 @@ import { loadSchedulerLiveness } from "../lib/status/scheduler-liveness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { maxStatus } from "../lib/status/evaluation-state";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
+import { getActiveWorkerVersionMarker } from "../lib/worker-version-first-seen";
+
+async function loadWorkerVersions(db: D1Database): Promise<{
+  versions: StatusResponse["workerVersions"];
+  error: StatusSectionError | null;
+}> {
+  const versions: StatusResponse["workerVersions"] = { public: null, heavy: null };
+  const failedRoles: string[] = [];
+  await Promise.all((["public", "heavy"] as const).map(async (role) => {
+    try {
+      versions[role] = await getActiveWorkerVersionMarker(db, role);
+    } catch {
+      failedRoles.push(role);
+    }
+  }));
+  return {
+    versions,
+    error: failedRoles.length > 0 ? {
+      code: "worker_versions_query_failed",
+      message: `Verified Worker versions unavailable for: ${failedRoles.sort().join(", ")}.`,
+    } : null,
+  };
+}
 
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
@@ -279,6 +302,7 @@ export function handleStatus({
         timeline,
         supplements,
         producerHistory,
+        workerVersions,
       ] = await Promise.all([
         getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
         getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
@@ -292,6 +316,7 @@ export function handleStatus({
           workerCanaryMode,
         ),
         loadProducerHeadStatuses(db),
+        loadWorkerVersions(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
@@ -327,6 +352,7 @@ export function handleStatus({
         timestamp: now,
         dbHealthy: raw.dbHealthy,
         schedulerLiveness,
+        workerVersions: workerVersions.versions,
         availabilityStatus: raw.availabilityStatus,
         dataQualityStatus: raw.dataQualityStatus,
         rawOverallStatus: raw.rawOverallStatus,
@@ -350,6 +376,7 @@ export function handleStatus({
           ...(snapshotErrorSection ? { statusSnapshot: snapshotErrorSection } : {}),
           ...(dependencyHealthError ? { dependencyHealth: dependencyHealthError } : {}),
           ...(producerHistory.error ? { producerHistory: producerHistory.error } : {}),
+          ...(workerVersions.error ? { workerVersions: workerVersions.error } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
         summary: {

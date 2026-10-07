@@ -52,6 +52,7 @@ async function runReserveRecovery(
     limit: 10,
     signal,
     reconcilerWorkerVersion: runtime.workerVersion ?? null,
+    reconcilerWorkerRole: runtime.workerRole,
   });
   if (mode === "off") {
     return createCronResult({
@@ -98,6 +99,7 @@ async function runReserveRecovery(
     limit: 1,
     signal,
     reconcilerWorkerVersion: runtime.workerVersion ?? null,
+    reconcilerWorkerRole: runtime.workerRole,
   });
   const retiredCheckpoints = await retireSupersededLiveReserveCheckpoints(runtime.db);
   const preparation = await prepareEligibleLiveReserveCheckpointRecoveries(runtime.db, {

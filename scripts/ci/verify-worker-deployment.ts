@@ -2,7 +2,7 @@
 
 import { appendFileSync, readFileSync } from "node:fs";
 
-import { runDirectCli } from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, requireCliString, runDirectCli } from "../lib/cli-args.mjs";
 
 export interface WorkerDeploymentVersion {
   percentage?: number;
@@ -125,10 +125,10 @@ export function readWorkerScriptName(): string {
 export async function fetchWorkerDeployments(
   env: NodeJS.ProcessEnv,
   fetchApi: typeof fetch = fetch,
+  scriptName: string = readWorkerScriptName(),
 ): Promise<(ActiveWorkerDeployment & ListedWorkerDeployment)[]> {
   const accountId = requireEnv(env, "CLOUDFLARE_ACCOUNT_ID");
   const token = requireEnv(env, "CLOUDFLARE_API_TOKEN");
-  const scriptName = readWorkerScriptName();
   const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`
     + `/workers/scripts/${encodeURIComponent(scriptName)}/deployments`;
   const response = await fetchApi(url, {
@@ -156,9 +156,10 @@ function appendGithubOutput(env: NodeJS.ProcessEnv, line: string): void {
 export async function runWorkerDeploymentVerification(
   env: NodeJS.ProcessEnv = process.env,
   fetchApi: typeof fetch = fetch,
+  scriptName: string = readWorkerScriptName(),
 ): Promise<void> {
   const expectedMessage = workerDeployMessage(requireEnv(env, "GITHUB_SHA"));
-  const deployments = await fetchWorkerDeployments(env, fetchApi);
+  const deployments = await fetchWorkerDeployments(env, fetchApi, scriptName);
   const deployment = deployments[0];
   if (!deployment) throw new Error("Cloudflare Worker deployment history is empty; active identity is unavailable.");
   const verified = verifyActiveWorkerDeployment(deployment, expectedMessage);
@@ -169,7 +170,7 @@ export async function runWorkerDeploymentVerification(
   });
 
   console.log(
-    `[worker-deployment] OK deployment=${verified.deploymentId} version=${verified.workerVersion} traffic=100%`,
+    `[worker-deployment] OK script=${scriptName} deployment=${verified.deploymentId} version=${verified.workerVersion} traffic=100%`,
   );
   appendGithubOutput(env, `worker_version=${verified.workerVersion}\n`);
   if (activation.activationAtSec === null) {
@@ -186,4 +187,12 @@ export async function runWorkerDeploymentVerification(
   );
 }
 
-runDirectCli(import.meta.url, () => runWorkerDeploymentVerification());
+runDirectCli(import.meta.url, () => {
+  const { values } = parseStrictCliArgs(process.argv.slice(2), {
+    options: { "script-name": { type: "string" } },
+  });
+  const scriptName = values["script-name"] === undefined
+    ? readWorkerScriptName()
+    : requireCliString(values["script-name"], "script-name");
+  return runWorkerDeploymentVerification(process.env, fetch, scriptName);
+});

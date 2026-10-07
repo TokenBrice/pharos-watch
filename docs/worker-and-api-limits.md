@@ -17,6 +17,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 ## Primary Sources
 
 - `worker/wrangler.toml`
+- `worker/wrangler.heavy.toml`
 - `shared/lib/cron-jobs.ts`
 - `worker/src/lib/cron-timeouts.ts`
 - `worker/src/lib/rate-limit.ts`
@@ -50,6 +51,8 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 ---
 
 ## Worker Runtime
+
+Both public and heavy scripts retain the same `300000` ms CPU cap, runtime compatibility and shared D1 binding. `stablecoin-heavy` isolates publication, charts/preparation, supply attribution and the shadow Workflow from public traffic; reserve sync/recovery remain public pending `M0_API_KEY`. Heavy has no HTTP routes, custom domains, workers.dev, previews or rate-limit bindings. The physical-trigger, fetch-capable-entry and headroom-full growth gates apply to the duplicate-free union of both Wrangler configs, not separately per script; redistribution adds zero expressions and does not relax per-invocation fetch budgets or heavy admission controls.
 
 | Constraint | Current repo value | Source | Notes |
 | --- | --- | --- | --- |

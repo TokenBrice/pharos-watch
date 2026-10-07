@@ -1,7 +1,7 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
-import type { Env } from "../lib/env";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+import type { ScheduledEnv } from "../lib/env";
 import {
   getScheduledSlotControlledDeadlineMs,
 } from "../lib/cron-timeouts";
@@ -107,8 +107,9 @@ export class ScheduledSlotAggregateError extends Error {
 
 export async function handleScheduledEvent(
   event: ScheduledEvent,
-  env: Env,
+  env: ScheduledEnv,
   ctx: ExecutionContext,
+  workerRole: ScheduledWorkerRole,
 ): Promise<void> {
   const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
@@ -118,6 +119,17 @@ export async function handleScheduledEvent(
     logWorkerEventArgs("handler", "error", error.message);
     throw error;
   }
+  if (slotPlan.worker !== workerRole) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "info",
+      event: "scheduled-worker-not-owner",
+      message: "Skipping scheduled trigger owned by another Worker",
+      status: "skipped_neutral",
+      metadata: { status: "skipped_neutral", reason: "scheduled-worker-not-owner", workerRole, owner: slotPlan.worker, cron: event.cron },
+    });
+    return;
+  }
 
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
   const scheduleKey = slotPlan.scheduleKey;
@@ -125,6 +137,7 @@ export async function handleScheduledEvent(
   const runtime = createScheduledRuntimeContext(env, ctx, {
     cron: event.cron,
     scheduleKey,
+    workerRole,
     scheduledTimeMs,
     slotStartedAt,
     slotBudgetStartedAtMs,
@@ -147,6 +160,7 @@ export async function handleScheduledEvent(
       async (slotSignal) => {
         runtime.slotSignal = slotSignal;
         if (
+          workerRole === "heavy" &&
           slotPlan.runnerKey !== "v9SupplyAttributionOffset" &&
           slotPlan.runnerKey !== "v9PublicationOffset"
         ) {
@@ -166,6 +180,7 @@ export async function handleScheduledEvent(
         slotStartedAt,
         invocationId: runtime.invocationId ?? null,
         workerVersion: runtime.workerVersion ?? null,
+        workerRole,
         deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
         ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
       },

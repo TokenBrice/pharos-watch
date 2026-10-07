@@ -1,3 +1,4 @@
+import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import { logWorkerEventArgs } from "./structured-log";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -23,6 +24,7 @@ export interface ScheduledSlotExecutionOptions {
   deadlineMs?: number;
   invocationId?: string | null;
   workerVersion?: string | null;
+  workerRole?: ScheduledWorkerRole;
 }
 
 export interface ScheduledSlotExecutionResult {
@@ -112,6 +114,7 @@ export interface ScheduledSlotSweepOptions {
    * (versions match) is decidable from D1 alone.
    */
   reconcilerWorkerVersion?: string | null;
+  reconcilerWorkerRole?: ScheduledWorkerRole;
 }
 
 export interface ScheduledSlotSweepSummary {
@@ -346,6 +349,7 @@ export async function sweepStaleScheduledSlotExecutions(
         state: "reconciling",
       },
       options.reconcilerWorkerVersion ?? null,
+      options.reconcilerWorkerRole,
     );
     const finished = await finishStaleScheduledSlotExecution(
       db,
@@ -384,6 +388,7 @@ async function claimScheduledSlotExecution(
   staleAfterSec: number,
   invocationId: string | null,
   workerVersion: string | null,
+  workerRole?: ScheduledWorkerRole,
 ): Promise<ScheduledSlotClaimResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const staleBefore = nowSec - staleAfterSec;
@@ -483,6 +488,7 @@ async function claimScheduledSlotExecution(
           state: "running",
         },
         workerVersion,
+        workerRole,
       );
       staleSlotTakeover.reconciliation = reconciliation;
       await runWithOverloadRetry(() =>
@@ -620,6 +626,7 @@ export async function runScheduledSlotWithFence(
         staleAfterSec,
         limit: opts.preSweepLimit ?? 5,
         reconcilerWorkerVersion: opts.workerVersion ?? null,
+        reconcilerWorkerRole: opts.workerRole,
       });
       if (summary.candidateSlots > 0 || summary.slotsReconciled > 0) {
         staleSlotPreSweep = summary;
@@ -638,6 +645,7 @@ export async function runScheduledSlotWithFence(
     staleAfterSec,
     opts.invocationId ?? null,
     opts.workerVersion ?? null,
+    opts.workerRole,
   );
 
   if (claimResult.status === "duplicate") {

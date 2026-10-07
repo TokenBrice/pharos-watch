@@ -13,7 +13,7 @@ import { getCache } from "../lib/db-cache";
 import { resolveCronDegradedReason, type CronResult } from "../lib/cron-logger";
 import { stripSensitive } from "../lib/safe-error-message";
 import { parseJsonObject } from "../lib/json-parse";
-import type { Env } from "../lib/env";
+import type { ScheduledEnv } from "../lib/env";
 import { NATIVE_V9_INPUT_CACHE_KEY } from "../lib/safety-score-v9/native-input";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-store";
 
@@ -450,6 +450,7 @@ export async function writeSafetyScoreV9ShadowPublication(
   slotStartedAt: number,
   startedAtMs: number,
   gated: GatedShadowPublication,
+  workerVersion: string | null,
 ): Promise<void> {
   await db.batch([
     db.prepare(
@@ -494,8 +495,8 @@ export async function writeSafetyScoreV9ShadowPublication(
     db.prepare(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
-          slot_started_at, error, idempotency_key, degraded_reason)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         WHERE EXISTS (
           SELECT 1
             FROM cache
@@ -515,6 +516,7 @@ export async function writeSafetyScoreV9ShadowPublication(
       gated.error,
       terminalIdempotencyKey(instanceId),
       resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, gated.cronStatus, undefined, parseJsonObject(gated.cronMetadata)),
+      workerVersion,
       gated.shadowKey,
       gated.shadowValue,
       gated.updatedAt,
@@ -539,6 +541,7 @@ async function writeTerminalFailure(
   startedAtMs: number,
   error: unknown,
   capturedReason: string | null,
+  workerVersion: string | null,
 ): Promise<void> {
   const descriptor = describeError(error, stripSensitive);
   const reason = capturedReason || descriptor.code || "workflow-execution-failed";
@@ -546,6 +549,7 @@ async function writeTerminalFailure(
     workflow: "safety-score-v9-publication",
     instanceId,
     slotStartedAt,
+    workerVersion,
     stage: "workflow",
     reason,
     errorDescriptor: descriptor,
@@ -554,8 +558,8 @@ async function writeTerminalFailure(
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key, degraded_reason)
-     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?, ?)
+        slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -566,6 +570,7 @@ async function writeTerminalFailure(
     message,
     terminalIdempotencyKey(instanceId),
     resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "error", undefined, metadata),
+    workerVersion,
   ).run();
 }
 
@@ -588,12 +593,13 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
     reason: string | null;
     stage: string | null;
   },
+  workerVersion: string | null,
 ): Promise<void> {
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key, degraded_reason)
-     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?, ?)
+        slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -603,6 +609,7 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
       workflow: "safety-score-v9-publication",
       instanceId,
       slotStartedAt,
+      workerVersion,
       reason: "upstream-compute-publication-absent",
       upstreamJob: "compute-safety-score-v9",
       upstreamStatus: upstream.status,
@@ -613,6 +620,7 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
     `${terminalIdempotencyKey(instanceId)}:upstream-absent`,
     resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "skipped_neutral", undefined,
       { reason: "upstream-compute-publication-absent" }),
+    workerVersion,
   ).run();
 }
 
@@ -655,7 +663,7 @@ export function resolveSafetyScoreV9WorkflowSlot(
 }
 
 export async function runSafetyScoreV9PublicationWorkflow(
-  env: Pick<Env, "DB">,
+  env: Pick<ScheduledEnv, "DB" | "CF_VERSION_METADATA">,
   event: Readonly<WorkflowEvent<unknown>>,
   step: WorkflowStep,
 ): Promise<SafetyScoreV9WorkflowResult> {
@@ -666,6 +674,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
   const instanceId = safetyScoreV9WorkflowInstanceId(slotStartedAt);
   const startedAtMs = event.timestamp.getTime();
   let capturedReason: string | null = null;
+  const workerVersion = env.CF_VERSION_METADATA?.id || null;
 
   try {
     const fixedInput = await step.do(
@@ -706,6 +715,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
           slotStartedAt,
           startedAtMs,
           gated,
+          workerVersion,
         );
         return { shadowKey: gated.shadowKey };
       },
@@ -728,6 +738,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
           startedAtMs,
           error,
           capturedReason,
+          workerVersion,
         );
         return { recorded: true };
       },

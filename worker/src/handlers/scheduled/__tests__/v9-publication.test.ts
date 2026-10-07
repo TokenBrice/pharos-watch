@@ -228,6 +228,8 @@ describe("V9 publication scheduling", () => {
       upstreamReason: "v9-core-slot-not-ready",
     });
     expect(insert.bindings[4]).toBe(1_800);
+    expect(insert.sql).toContain("worker_version");
+    expect(insert.bindings[insert.bindings.length - 1]).toBe("worker-v1");
     expect(insert.bindings[5]).toBe(
       "workflow:compute-safety-score-v9-workflow:v9-publication-1800:upstream-absent",
     );

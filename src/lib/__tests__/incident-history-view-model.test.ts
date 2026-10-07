@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { StatusResponse, StatusTransition } from "@shared/types";
+import type { StatusTransition } from "@shared/types";
 import {
   DEFAULT_INCIDENT_HISTORY_QUERY,
   buildIncidentHistoryUrl,
   buildIncidentHistoryView,
-  deriveWorkerVersionEvidence,
   findFirstDegradationAfter,
   parseIncidentHistoryQuery,
 } from "@/lib/incident-history-view-model";
@@ -195,73 +194,5 @@ describe("incident history view model", () => {
     expect(findFirstDegradationAfter(transitions(), 1_500)?.id).toBe(2);
     expect(findFirstDegradationAfter(transitions(), 3_100)).toBeNull();
     expect(findFirstDegradationAfter(transitions(), null)).toBeNull();
-  });
-
-  it("uses observed Worker version fields but does not synthesize deployment time", () => {
-    const input = {
-      producerHeads: [
-        {
-          scheduleKey: "hourly",
-          job: "prices",
-          producerPath: "prices",
-          producerKind: "cron",
-          observed: true,
-          lastInvocationId: "inv-1",
-          lastWorkerVersion: "worker-v2",
-          lastInvokedAt: 3_500,
-          lastCompletedAt: 3_510,
-          lastOutcome: "ok",
-          lastError: null,
-          lastProductiveInvocationId: "inv-1",
-          lastProductiveAt: 3_510,
-          lastProductiveItemCount: 10,
-          lastPublicationAt: 3_520,
-          invocationCount: 2,
-          productiveCount: 2,
-        },
-      ],
-    } satisfies Pick<StatusResponse, "producerHeads">;
-
-    expect(deriveWorkerVersionEvidence(input)).toEqual({
-      status: "observed",
-      version: "worker-v2",
-      observedAt: 3_500,
-      sourceCount: 1,
-      sources: ["producer:prices"],
-    });
-    const base = input.producerHeads[0];
-    const competing = [
-      { ...base, job: "old", lastWorkerVersion: "worker-v1", lastInvokedAt: 3_000 },
-      { ...base, job: "unknown-time", lastWorkerVersion: "worker-v3", lastInvokedAt: null },
-      { ...base, job: "zeta", lastWorkerVersion: "worker-v2", lastInvokedAt: 3_600 },
-      { ...base, job: "blank", lastWorkerVersion: "  ", lastInvokedAt: 3_900 },
-      { ...base, job: "alpha", lastWorkerVersion: "worker-v2", lastInvokedAt: 3_600 },
-    ];
-    expect(deriveWorkerVersionEvidence({ producerHeads: competing })).toEqual({
-      status: "observed",
-      version: "worker-v2",
-      observedAt: 3_600,
-      sourceCount: 2,
-      sources: ["producer:alpha", "producer:zeta"],
-    });
-    expect(deriveWorkerVersionEvidence({
-      producerHeads: [
-        { ...base, job: "zeta", lastWorkerVersion: "worker-v3" },
-        { ...base, job: "alpha", lastWorkerVersion: "worker-v2" },
-      ],
-    })).toEqual({
-      status: "observed",
-      version: "worker-v2",
-      observedAt: 3_500,
-      sourceCount: 1,
-      sources: ["producer:alpha"],
-    });
-    expect(deriveWorkerVersionEvidence({ producerHeads: [] })).toEqual({
-      status: "unavailable",
-      version: null,
-      observedAt: null,
-      sourceCount: 0,
-      sources: [],
-    });
   });
 });

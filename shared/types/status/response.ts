@@ -39,6 +39,7 @@ export type StatusSectionKey =
   | "telegramBot"
   | "reserveComposition"
   | "schedulerLiveness"
+  | "workerVersions"
   | "d1Usage"
   | "liquidityHealth"
   | "yieldHealth"
@@ -140,11 +141,23 @@ const StatusReserveCompositionSchema = z.union([
   }),
 ]);
 
+export const ActiveWorkerVersionMarkerSchema = z.object({
+  scriptName: z.string().min(1),
+  workerVersion: z.string().min(1),
+  activatedAt: z.number().int().positive(),
+});
+
+const WorkerVersionsSchema = z.object({
+  public: ActiveWorkerVersionMarkerSchema.nullable(),
+  heavy: ActiveWorkerVersionMarkerSchema.nullable(),
+});
+
 const StatusResponseObjectSchema = z
   .object({
     timestamp: z.number(),
     dbHealthy: z.boolean(),
     schedulerLiveness: SchedulerLivenessSchema.optional(),
+    workerVersions: WorkerVersionsSchema.default({ public: null, heavy: null }),
     availabilityStatus: StatusHealthValueSchema,
     dataQualityStatus: StatusHealthValueSchema,
     rawOverallStatus: StatusHealthValueSchema,

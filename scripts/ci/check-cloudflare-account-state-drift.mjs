@@ -133,6 +133,19 @@ export function compareCloudflareAccountState(manifest, liveState) {
     }
     addValueDrift(drift, `workerCustomDomains.${hostname}.service`, manifest.workerCustomDomains.service, actual.service);
   }
+  const heavy = isRecord(liveState?.heavyWorker) ? liveState.heavyWorker : {};
+  for (const field of ["exists", "sharedDatabase", "workflowBinding"]) {
+    addValueDrift(drift, `heavyWorker.${field}`, true, heavy[field]);
+  }
+  for (const field of ["workersDev", "previewUrls"]) {
+    addValueDrift(drift, `heavyWorker.${field}`, false, heavy[field]);
+  }
+  addValueDrift(drift, "heavyWorker.workflowOwner", manifest.heavyWorker.scriptName, heavy.workflowOwner);
+  addValueDrift(drift, "heavyWorker.workflowClass", manifest.heavyWorker.workflowClass, heavy.workflowClass);
+  if (asArray(heavy.routes).length > 0) drift.push("heavyWorker.routes: expected none");
+  if (workerDomains.some((domain) => domain?.service === manifest.heavyWorker.scriptName)) {
+    drift.push("heavyWorker.customDomains: expected none");
+  }
 
   const rateLimitRules = asArray(liveState?.rateLimitRules);
   for (const expected of manifest.rateLimitRules) {
@@ -351,6 +364,20 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
   ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
   const unified = normalizeUnifiedPagesBindings(production);
+  const heavyConfig = manifest.heavyWorker;
+  const scriptBase = `/accounts/${encodeURIComponent(accountId)}/workers/scripts`;
+  const [heavySettings, publicSettings, heavySubdomain, workflow, routes] = await Promise.all([
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.scriptName)}/settings`, "Cloudflare heavy Worker settings lookup", { allowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.publicScriptName)}/settings`, "Cloudflare public Worker settings lookup"),
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.scriptName)}/subdomain`, "Cloudflare heavy Worker subdomain lookup", { allowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `/accounts/${encodeURIComponent(accountId)}/workflows/${encodeURIComponent(heavyConfig.workflowName)}`, "Cloudflare Workflow lookup", { allowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `/zones/${encodeURIComponent(zoneId)}/workers/routes`, "Cloudflare Worker route lookup"),
+  ]);
+  if (!Array.isArray(routes)) throw new Error("Cloudflare Worker route lookup returned a malformed route list.");
+  const heavyBindings = asArray(heavySettings?.bindings);
+  const publicBindings = asArray(publicSettings?.bindings);
+  const heavyDb = heavyBindings.filter((binding) => binding?.type === "d1" && binding.name === "DB");
+  const publicDb = publicBindings.filter((binding) => binding?.type === "d1" && binding.name === "DB");
 
   return {
     zone: {
@@ -377,6 +404,20 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
     },
     accessApplications: normalizeAccessApplications(accessApplications),
     workerDomains: normalizeWorkerDomains(workerDomains),
+    heavyWorker: {
+      exists: isRecord(heavySettings),
+      sharedDatabase: heavyDb.length === 1 && publicDb.length === 1
+        && heavyDb[0].id === heavyConfig.databaseId && publicDb[0].id === heavyConfig.databaseId,
+      workflowBinding: heavyBindings.some((binding) => binding?.type === "workflow"
+        && binding.name === heavyConfig.workflowBinding && binding.workflow_name === heavyConfig.workflowName)
+        && !publicBindings.some((binding) => binding?.type === "workflow" && binding.name === heavyConfig.workflowBinding),
+      workersDev: heavySubdomain?.enabled ?? null,
+      previewUrls: heavySubdomain?.previews_enabled ?? null,
+      workflowOwner: normalizeString(workflow?.script_name),
+      workflowClass: normalizeString(workflow?.class_name),
+      routes: asArray(routes).filter((route) => route?.script === heavyConfig.scriptName)
+        .map((route) => normalizeString(route.pattern)),
+    },
     rateLimitRules: normalizeRateLimitRules(rateLimitRuleset?.rules),
   };
 }

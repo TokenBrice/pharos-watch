@@ -15,21 +15,18 @@ async function triggerSafetyScoreV9ShadowWorkflow(
   runtime: ScheduledRuntimeContext,
 ): Promise<void> {
   const id = safetyScoreV9WorkflowInstanceId(runtime.slotStartedAt);
-  const workflow = (
-    runtime.env as typeof runtime.env & {
-      SAFETY_SCORE_V9_WORKFLOW: Workflow;
-    }
-  ).SAFETY_SCORE_V9_WORKFLOW;
+  const workflow = runtime.env.SAFETY_SCORE_V9_WORKFLOW;
   try {
+    if (!workflow) throw new Error("safety-score-v9-workflow-binding-unavailable");
     // `params` is the documented input channel. The instance id carries the
     // same slot for human/idempotency use, but the Workflow must not depend on
     // reading its own id back out of the runtime event.
     await workflow.create({ id, params: { slotStartedAt: runtime.slotStartedAt } });
   } catch (error) {
     try {
-      const existing = await workflow.get(id);
-      const status = await existing.status();
-      if (status.status !== "unknown") return;
+      const existing = await workflow?.get(id);
+      const status = await existing?.status();
+      if (status && status.status !== "unknown") return;
     } catch {
       // The structured warning below owns non-authoritative trigger failures.
     }
@@ -124,6 +121,7 @@ async function recordUpstreamAbsentWorkflowRun(
         stage:
           typeof metadata?.stage === "string" ? metadata.stage : null,
       },
+      runtime.workerVersion ?? null,
     );
   } catch (error) {
     logWorkerEvent({

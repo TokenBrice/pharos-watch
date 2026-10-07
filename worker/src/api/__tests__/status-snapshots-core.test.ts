@@ -105,6 +105,41 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+  it.each([false, true])("reads both role markers outside cached status (heavy query failure: %s)", async (heavyFails) => {
+    const now = Math.floor(Date.now() / 1000);
+    const publicMarker = { worker: "public", scriptName: "stablecoin-api", workerVersion: "11111111-1111-1111-1111-111111111111", activatedAt: now - 100 };
+    const heavyMarker = { worker: "heavy", scriptName: "stablecoin-heavy", workerVersion: "22222222-2222-2222-2222-222222222222", activatedAt: now - 50 };
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:public"],
+        rows: [], first: { value: JSON.stringify(publicMarker), updated_at: publicMarker.activatedAt } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:heavy"],
+        rows: [], first: { value: JSON.stringify(heavyMarker), updated_at: heavyMarker.activatedAt },
+        ...(heavyFails ? { throwError: "heavy marker unavailable" } : {}) },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.workerVersions.public).toEqual({
+      scriptName: publicMarker.scriptName, workerVersion: publicMarker.workerVersion, activatedAt: publicMarker.activatedAt,
+    });
+    expect(body.workerVersions.heavy).toEqual(heavyFails ? null : {
+      scriptName: heavyMarker.scriptName, workerVersion: heavyMarker.workerVersion, activatedAt: heavyMarker.activatedAt,
+    });
+    expect(body.sectionErrors.workerVersions?.code).toBe(heavyFails ? "worker_versions_query_failed" : undefined);
+    expect(body.schedulerLiveness?.lanes).toHaveLength(3);
+  });
+
+  it("keeps missing and malformed role markers unavailable without producer inference", async () => {
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:public"],
+        rows: [], first: { value: "not-json", updated_at: 100 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:heavy"], rows: [], first: null },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.workerVersions).toEqual({ public: null, heavy: null });
+    expect(body.sectionErrors.workerVersions).toBeUndefined();
+  });
   it.each([false, true])("refreshes cron evidence independently of cached assessment (read failure: %s)", async (readFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "reserve-recovery";

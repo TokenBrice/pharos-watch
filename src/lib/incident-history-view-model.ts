@@ -1,5 +1,5 @@
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import type { StatusCause, StatusResponse, StatusTransition } from "@shared/types";
+import type { StatusCause, StatusTransition } from "@shared/types";
 import type { StatusHistoryWindow } from "@/lib/admin-api-query-descriptors";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 
@@ -44,14 +44,6 @@ export interface IncidentHistoryView {
   causeCodeOptions: string[];
   transitionsLast24h: number;
   isFlapping: boolean;
-}
-
-export interface WorkerVersionEvidence {
-  status: "observed" | "unavailable";
-  version: string | null;
-  observedAt: number | null;
-  sourceCount: number;
-  sources: string[];
 }
 
 export const DEFAULT_INCIDENT_HISTORY_QUERY: IncidentHistoryQuery = {
@@ -214,43 +206,4 @@ export function findFirstDegradationAfter(
       .filter((transition) => transition.transitionType === "degrade" && transition.at >= timestamp)
       .sort((left, right) => left.at - right.at || left.id - right.id)[0] ?? null
   );
-}
-
-export function deriveWorkerVersionEvidence(
-  input: Pick<StatusResponse, "producerHeads">,
-): WorkerVersionEvidence {
-  const candidates: Array<{ version: string; observedAt: number | null; source: string }> = [];
-
-  for (const producer of input.producerHeads ?? []) {
-    const version = producer.lastWorkerVersion?.trim();
-    if (version) {
-      candidates.push({
-        version,
-        observedAt: producer.lastInvokedAt,
-        source: `producer:${producer.job}`,
-      });
-    }
-  }
-
-  candidates.sort(
-    (left, right) =>
-      (right.observedAt ?? Number.NEGATIVE_INFINITY) - (left.observedAt ?? Number.NEGATIVE_INFINITY) ||
-      left.source.localeCompare(right.source),
-  );
-  const latest = candidates[0];
-  if (!latest) {
-    return { status: "unavailable", version: null, observedAt: null, sourceCount: 0, sources: [] };
-  }
-
-  const matchingSources = candidates
-    .filter((candidate) => candidate.version === latest.version)
-    .map((candidate) => candidate.source)
-    .sort((left, right) => left.localeCompare(right));
-  return {
-    status: "observed",
-    version: latest.version,
-    observedAt: latest.observedAt,
-    sourceCount: matchingSources.length,
-    sources: matchingSources,
-  };
 }

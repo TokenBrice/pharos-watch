@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   CRON_CONNECTION_BUDGET,
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_GROWTH_HEADROOM_POLICY,
   CRON_SCHEDULES,
 } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { evaluateCronScheduleSync, parseWranglerCronTriggers, printCronScheduleSyncReport } from "./check-cron-schedule-sync";
 import type {
   CronConnectionBudgetConfigForCheck,
   CronConnectionBudgetEntryForCheck,
@@ -32,6 +35,7 @@ export interface CronConnectionTriggerReport {
   jobs: CronConnectionBudgetEntryForCheck[];
   parallelConnections: number;
   scheduleKey: string;
+  worker: ScheduledWorkerRole;
   totalConnections: number;
 }
 
@@ -48,6 +52,7 @@ export interface CronConnectionBudgetReport {
   missingBudgetJobs: string[];
   missingBudgetScheduleKeys: string[];
   triggerReports: CronConnectionTriggerReport[];
+  workerReports: Record<ScheduledWorkerRole, { slotCount: number; fetchCapableEntryCount: number }>;
 }
 
 
@@ -158,6 +163,7 @@ export function evaluateCronConnectionBudget(input: {
       jobs,
       parallelConnections,
       scheduleKey,
+      worker: plan.worker,
       totalConnections,
     };
     triggerReports.push(triggerReport);
@@ -189,12 +195,25 @@ export function evaluateCronConnectionBudget(input: {
     missingBudgetJobs,
     mismatchedBudgetJobs,
     missingBudgetScheduleKeys,
+    workerReports: Object.fromEntries((["public", "heavy"] as const).map((worker) => [
+      worker,
+      {
+        slotCount: triggerReports.filter((report) => report.worker === worker).length,
+        fetchCapableEntryCount: new Set(entries.filter((entry) =>
+          entry.maxConnections > 0 && slotPlans[entry.scheduleKey]?.worker === worker,
+        ).map((entry) => entry.job)).size,
+      },
+    ])) as CronConnectionBudgetReport["workerReports"],
     triggerReports,
   };
 }
 
 export function printReport(report: CronConnectionBudgetReport): void {
   const { budget, growthPolicy } = report;
+  for (const worker of ["public", "heavy"] as const) {
+    const summary = report.workerReports[worker];
+    console.log(`${worker === "public" ? "worker/wrangler.toml" : "worker/wrangler.heavy.toml"}: ${summary.slotCount} logical slots, ${summary.fetchCapableEntryCount} fetch-capable entries`);
+  }
   if (report.missingBudgetScheduleKeys.length > 0) {
     console.error(
       `FAIL: ${pluralize(report.missingBudgetScheduleKeys.length, "cron schedule")} missing from SCHEDULED_SLOT_PLANS: ${report.missingBudgetScheduleKeys.join(", ")}`,
@@ -286,6 +305,14 @@ function isMainModule(): boolean {
 }
 
 if (isMainModule()) {
+  const topology = evaluateCronScheduleSync({
+    wranglerCronTriggers: {
+      public: parseWranglerCronTriggers(readFileSync(resolve("worker/wrangler.toml"), "utf8")),
+      heavy: parseWranglerCronTriggers(readFileSync(resolve("worker/wrangler.heavy.toml"), "utf8")),
+    },
+  });
+  printCronScheduleSyncReport(topology);
+  if (topology.failed) process.exit(1);
   const report = evaluateCronConnectionBudget();
   printReport(report);
   if (report.failed) {
