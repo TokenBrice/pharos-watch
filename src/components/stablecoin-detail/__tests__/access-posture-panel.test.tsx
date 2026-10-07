@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { AccessPosturePanel } from "../access-posture-panel";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewView } from "@/lib/transfer-review";
@@ -10,6 +10,19 @@ const rows: StablecoinSafetyScoreV9AccessRow[] = [
   { key: "transferRestriction", label: "Transfer restriction", value: "Restrictable" },
   { key: "freezeAuthority", label: "Freeze authority", value: "Issuer" },
 ];
+
+/** The four scored enums plus one reserve-access look-through diagnostic. */
+const scoredRows: StablecoinSafetyScoreV9AccessRow[] = [
+  { key: "transfer", label: "Transfer", value: "Restrictable" },
+  { key: "freezeExposure", label: "Freeze exposure", value: "Direct" },
+  { key: "primaryExit", label: "Primary exit", value: "Issuer redemption" },
+  { key: "governance", label: "Governance", value: "Multisig" },
+];
+const diagnosticRow: StablecoinSafetyScoreV9AccessRow = {
+  key: "reserve-access-unknown",
+  label: "Unknown reserve-access remainder",
+  value: "12.5%",
+};
 
 const review: TransferReviewView = {
   reviewedAt: "2026-07-15",
@@ -42,6 +55,14 @@ const review: TransferReviewView = {
   ],
 };
 
+function openSourcesFold(): HTMLDetailsElement {
+  const summary = screen.getByText(/Sources/).closest("summary");
+  const fold = summary?.parentElement;
+  if (!summary || !(fold instanceof HTMLDetailsElement)) throw new Error("no Sources fold");
+  expect(fold.open).toBe(false);
+  fireEvent.click(summary);
+  return fold;
+}
 
 describe("AccessPosturePanel", () => {
   it("renders the scored rows and nothing else when no transfer review exists", () => {
@@ -49,34 +70,86 @@ describe("AccessPosturePanel", () => {
 
     expect(screen.getByText("Transfer restriction")).toBeTruthy();
     expect(screen.getByText("Restrictable")).toBeTruthy();
-    expect(screen.queryByText(/How this was verified/)).toBeNull();
+    expect(document.querySelector("details")).toBeNull();
   });
 
-  it("renders nothing without scored rows", () => {
-    const { container } = render(<AccessPosturePanel rows={[]} review={review} compact />);
-    expect(container.firstChild).toBeNull();
+  it("renders nothing without scored rows, in either variant", () => {
+    expect(render(<AccessPosturePanel rows={[]} review={review} compact />).container.firstChild).toBeNull();
+    expect(render(<AccessPosturePanel rows={[]} review={review} variant="strip" />).container.firstChild).toBeNull();
   });
 
-  it("folds the per-deployment citations behind the standard Sources disclosure", () => {
-    render(<AccessPosturePanel rows={rows} review={review} compact />);
+  it("folds the rail's per-deployment citations behind a Sources fold that opens", () => {
+    render(<AccessPosturePanel rows={rows} review={review} variant="rail" />);
 
-    expect(screen.getByText(/How this was verified · 2 deployments/).closest("details")?.hasAttribute("open")).toBe(false);
-    expect(screen.getByText(/blocklist guarded by the issuer multisig/)).toBeTruthy();
-    // Reviewed date now lives in the shared evidence footer, not a hand-rolled
-    // mono micro-line (WS8.13).
-    expect(screen.getByText("Reviewed 2026-07-15")).toBeTruthy();
+    const verification = screen.getByText(/2 deployments/).closest("details");
+    expect(verification?.open).toBe(false);
+    expect(verification?.contains(screen.getByText(/blocklist guarded by the issuer multisig/))).toBe(true);
+    expect(screen.getByText(/2026-07-15/)).toBeTruthy();
 
-    const sourcesToggle = screen.getByRole("button", { name: /Sources/ });
-    expect(sourcesToggle.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(sourcesToggle);
+    const fold = openSourcesFold();
+    expect(fold.open).toBe(true);
 
     // Chain attribution is preserved in the label because `EvidenceFooter` has
-    // no per-item form.
-    const links = screen.getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Ethereum · Contract source",
-      "Base · Contract source",
-    ]);
+    // no per-item form, so two deployments citing one page stay two rows.
+    const links = within(fold).getAllByRole("link", { hidden: true });
+    expect(links).toHaveLength(2);
+    expect(links[0]?.textContent).toContain("Ethereum");
+    expect(links[1]?.textContent).toContain("Base");
     expect(links[0]?.getAttribute("href")).toBe("https://example.com/etherscan");
+  });
+
+  it("keeps the legacy compact flag on the rail form", () => {
+    const { container } = render(<AccessPosturePanel rows={rows} compact />);
+
+    expect(container.querySelector("[data-evidence-module]")).toBeNull();
+  });
+
+  it("draws the strip as one evidence module with all four scored enums as labelled cells", () => {
+    const { container } = render(
+      <AccessPosturePanel rows={[...scoredRows, diagnosticRow]} review={review} variant="strip" />,
+    );
+
+    const strip = container.querySelector("section[data-evidence-module='strip']");
+    expect(strip).not.toBeNull();
+    expect(strip?.querySelector("h3")).not.toBeNull();
+
+    const cells = screen.getByRole("group", { name: /access/i });
+    for (const row of scoredRows) {
+      expect(within(cells).getByText(row.label)).toBeTruthy();
+      expect(within(cells).getByText(row.value)).toBeTruthy();
+    }
+
+    // Look-through diagnostics are not scored enums: they fold, off the row.
+    const diagnostic = screen.getByText(diagnosticRow.label);
+    expect(cells.contains(diagnostic)).toBe(false);
+    expect(diagnostic.closest("details")?.open).toBe(false);
+  });
+
+  it("orders the strip's folds diagnostics → verification → sources, with the review date outside them", () => {
+    render(<AccessPosturePanel rows={[...scoredRows, diagnosticRow]} review={review} variant="strip" />);
+
+    const summaries = Array.from(document.querySelectorAll("summary")).map((summary) => summary.textContent ?? "");
+    expect(summaries).toHaveLength(3);
+    expect(summaries[0]).toMatch(/diagnostic/i);
+    expect(summaries[1]).toMatch(/2 deployments/);
+    expect(summaries[2]).toMatch(/Sources/);
+
+    expect(screen.getByText(/2026-07-15/).closest("details")).toBeNull();
+  });
+
+  it("opens the strip's Sources fold onto the deduplicated per-chain citations", () => {
+    render(<AccessPosturePanel rows={scoredRows} review={review} variant="strip" />);
+
+    const fold = openSourcesFold();
+    expect(fold.open).toBe(true);
+    expect(within(fold).getAllByRole("link", { hidden: true })).toHaveLength(2);
+  });
+
+  it("flags mixed per-chain posture on the strip", () => {
+    const { rerender } = render(<AccessPosturePanel rows={scoredRows} review={review} variant="strip" />);
+    const chipsWithout = document.querySelectorAll("section [data-slot='badge']").length;
+
+    rerender(<AccessPosturePanel rows={scoredRows} review={{ ...review, mixedPosture: true }} variant="strip" />);
+    expect(document.querySelectorAll("section [data-slot='badge']").length).toBe(chipsWithout + 1);
   });
 });

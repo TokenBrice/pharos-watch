@@ -20,25 +20,34 @@ import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
+import { BackingMetricsCard, type BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
+import { ControlRoleTag } from "@/components/stablecoin-detail/control-role-tag";
+import { EvidenceStateStrip } from "@/components/stablecoin-detail/evidence-module";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { Badge } from "@/components/ui/badge";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
-import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
-import { alignAnchorAfterHydration } from "@/lib/anchor-reveal";
+import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import type { AiSummaryClaimValues } from "@shared/types";
-import { buildDetailSharedModules, type DetailSharedModules, type StructuralModuleEntry } from "./detail-shared-modules";
+import {
+  buildDetailSharedModules,
+  type DetailSharedModules,
+  type EvidenceIndexGroup,
+  type EvidenceIndexRow,
+} from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
 import { FeedbackModal } from "./detail-lazy-sections";
@@ -66,6 +75,10 @@ interface DetailContentProps {
   mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
+  /** The variant parent's `deriveLiquidationEngine` result, computed server-side. */
+  parentLiquidationEngine: boolean | null;
+  /** A pure or savings pass-through wrapper's parent, built server-side, for the Backing KPI look-through. */
+  backingParent: NonNullable<BackingMetricsInput["parent"]> | null;
   transferReview: TransferReviewView | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
@@ -110,21 +123,52 @@ function DetailIdentity({
   );
 }
 
+/**
+ * Mirrors `ContagionSnapshot`'s empty rule from the same report-cards
+ * response: a variant relationship card, a published dependency edge touching
+ * the coin between two published cards, or a published dependency disclosure.
+ * Without any of them the Context zone holds only the below-xl reference cards.
+ */
+function hasContextZoneContent(viewModel: ReadyDetailViewModel, hasVariantCard: boolean): boolean {
+  if (hasVariantCard) return true;
+  const response = viewModel.reportCardsResponse;
+  if (!response) return false;
+  const cardIds = new Set(response.cards.map((card) => card.id));
+  const hasEdge = response.dependencyGraph.edges.some(
+    (edge) => (edge.from === viewModel.id || edge.to === viewModel.id) && cardIds.has(edge.from) && cardIds.has(edge.to),
+  );
+  const focusCard = response.cards.find((card) => card.id === viewModel.id);
+  return hasEdge
+    || (focusCard?.dependencies.roles?.length ?? 0) > 0
+    || (focusCard?.dependencyCoverage?.length ?? 0) > 0;
+}
+
 function DetailNavigation({
+  contextHasContent,
   onActiveChange,
   viewModel,
 }: {
+  contextHasContent: boolean;
   onActiveChange: (id: string) => void;
   viewModel: ReadyDetailViewModel;
 }) {
   return (
     <LongformScrollspyNav
-      sections={DETAIL_SECTIONS.filter((section) => section.id !== "activity" || viewModel.hasYieldSection || viewModel.hasBlacklist)}
+      sections={DETAIL_SECTIONS.filter((section) =>
+        section.id === "activity"
+          ? viewModel.hasYieldSection || viewModel.hasBlacklist
+          : section.id !== "context" || contextHasContent)}
       railLabel="Jump to"
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}
-      className="mt-4 lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+      // A band of page background behind the pills, so scrolled content never
+      // shows through beside them: the spread shadow paints the band and the
+      // clip keeps it to the bar's height (a shadow never adds scroll
+      // overflow, unlike a wider pseudo-element). Full bleed below xl; at xl
+      // the clip stops at the column's right edge so the band never paints
+      // over the summary rail beside it.
+      className="mt-2 bg-background py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none xl:[clip-path:inset(0_0_0_-100vmax)]"
       rightSlot={(
         <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
           <Link
@@ -147,25 +191,23 @@ function DetailNavigation({
 }
 
 /**
- * One rail row per structural evidence card: title + the card's own verdict
- * chip, linking to the single in-flow mount inside its pillar group. The
- * bounded re-alignment absorbs lazy sections settling above the target.
+ * The completed Evidence index (plan §5, decision S9): one row per main-column
+ * evidence module, in pillar order, with its published score or verdict chip
+ * and the Control limiting-input flag. Each row links to the module's single
+ * in-flow mount; the bounded re-alignment absorbs lazy sections settling above
+ * the target, and focus moves to the module heading.
  */
-function RailEvidenceIndex({ sharedModules }: { sharedModules: DetailSharedModules }) {
-  const groups = [
-    { label: "Backing", entries: sharedModules.backing },
-    { label: "Control", entries: sharedModules.control },
-  ].filter((group) => group.entries.length > 0);
+function RailEvidenceIndex({ groups }: { groups: readonly EvidenceIndexGroup[] }) {
   if (groups.length === 0) return null;
   return (
     <RailCard title="Evidence index" ariaLabel="Evidence index">
       <div className="space-y-3 px-4 pb-4">
         {groups.map((group) => (
-          <div key={group.label}>
+          <div key={group.pillar}>
             <p className="pharos-kicker pb-1">{group.label}</p>
             <ul className="divide-y divide-border/40">
-              {group.entries.map((entry) => (
-                <RailEvidenceIndexRow key={entry.key} entry={entry} />
+              {group.rows.map((row) => (
+                <RailEvidenceIndexRow key={row.key} row={row} />
               ))}
             </ul>
           </div>
@@ -175,26 +217,50 @@ function RailEvidenceIndex({ sharedModules }: { sharedModules: DetailSharedModul
   );
 }
 
-function RailEvidenceIndexRow({ entry }: { entry: StructuralModuleEntry }) {
+/**
+ * Title left, never truncated; the score or chip and the limiting tag right.
+ * When both cannot share the 22rem line, the meta group wraps under the
+ * title, right-aligned, instead of clipping the module name.
+ */
+function RailEvidenceIndexRow({ row }: { row: EvidenceIndexRow }) {
   return (
     <li>
       <a
-        href={`#${entry.anchorId}`}
+        href={`#${row.anchorId}`}
         onClick={(event) => {
           event.preventDefault();
-          window.history.pushState(null, "", `#${entry.anchorId}`);
-          alignAnchorAfterHydration(entry.anchorId);
+          window.history.pushState(null, "", `#${row.anchorId}`);
+          alignAnchorAfterHydration(row.anchorId);
+          // Keyboard and screen-reader users continue from the module, not the rail.
+          const target = revealAnchorId(row.anchorId);
+          const headingId = target?.getAttribute("aria-labelledby");
+          const focusTarget = (headingId ? document.getElementById(headingId) : null) ?? target;
+          if (!focusTarget) return;
+          if (!focusTarget.hasAttribute("tabindex")) focusTarget.tabIndex = -1;
+          focusTarget.focus({ preventScroll: true });
         }}
-        className="pharos-focus-ring group flex min-h-9 items-center justify-between gap-3 rounded-sm py-1.5 text-sm"
+        className="pharos-focus-ring group flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 rounded-sm py-1.5 text-sm"
       >
-        <span className="min-w-0 truncate text-foreground/90 underline-offset-2 group-hover:underline">
-          {entry.title}
+        <span className="text-foreground/90 underline-offset-2 group-hover:underline">{row.title}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {row.chip ? (
+            <Badge variant="outline" className={cn("text-[11px] font-medium", row.chip.toneClass)}>
+              {row.chip.label}
+            </Badge>
+          ) : null}
+          {row.score !== null ? (
+            <span className="inline-flex items-baseline gap-1">
+              <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                {row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0)}
+              </span>
+              {row.scoreNote ? (
+                <span className="text-[11px] text-muted-foreground">· {row.scoreNote}</span>
+              ) : null}
+            </span>
+          ) : null}
+          {/* One limiting grammar across the dossier; its text joins the link name. */}
+          {row.limiting ? <ControlRoleTag role="limiting" size="compact" /> : null}
         </span>
-        {entry.chip ? (
-          <Badge variant="outline" className={cn("shrink-0 text-[11px] font-medium", entry.chip.toneClass)}>
-            {entry.chip.label}
-          </Badge>
-        ) : null}
       </a>
     </li>
   );
@@ -212,21 +278,28 @@ function DetailSummaryRail({
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
-  // An index, not a second page: Safety + Access posture + one row per
-  // structural card, then the compact reference cards. Full evidence cards
-  // live once, in flow, in their pillar group.
+  // A compact companion in normal flow, never sticky (decision S1): pillar
+  // metrics first (Safety → Backing KPI → Access posture → Evidence index),
+  // then the reference cards. The metric cards are anchor twins of their
+  // in-flow `xl:hidden` copies; evidence modules live once, in their board.
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
-        <RailSafetySummary items={heroModel.signalRailItems} />
-        {viewModel.reportCard ? (
-          <AccessPosturePanel
-            rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)}
-            review={transferReview}
-            compact
-          />
+        <RailSafetySummary
+          items={heroModel.signalRailItems}
+          navToken={viewModel.isNavToken}
+          frozen={viewModel.coin.status === "frozen"}
+        />
+        {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : null}
+        <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
+        <RailEvidenceIndex groups={sharedModules.evidenceIndex} />
+        {sharedModules.regulatoryStanding ? (
+          <RegulatoryStandingCard view={sharedModules.regulatoryStanding} anchorTwin />
+        ) : sharedModules.regulatoryNotReviewed ? (
+          <div data-anchor-twin="jurisdiction" className={SECTION_SCROLL_MT}>
+            <EvidenceStateStrip title="Regulatory standing" state="not-reviewed" density="rail" />
+          </div>
         ) : null}
-        <RailEvidenceIndex sharedModules={sharedModules} />
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
@@ -257,6 +330,8 @@ export function DetailContent({
   mechanismBacking,
   mechanismCollateralization,
   mechanismReview,
+  parentLiquidationEngine,
+  backingParent,
   transferReview,
   onActiveBannerChange,
   onFeedbackOpenChange,
@@ -289,14 +364,16 @@ export function DetailContent({
   ) : viewModel.childVariants.length > 0 ? (
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
-  // Structural evidence cards: built once, mounted once in flow, indexed by
-  // the xl rail.
+  // Board headings, control roles, the Backing KPI and the Evidence index:
+  // built once, read by the pillar boards and the xl rail alike.
   const sharedModules = buildDetailSharedModules({
     mechanismBacking,
+    backingParent,
     mechanismCollateralization,
     mechanismReview,
     viewModel,
   });
+  const contextHasContent = hasContextZoneContent(viewModel, variantRelationshipCard !== null);
   // Registered AI-summary claim tokens resolve against the same live values the
   // hero and report card render; pillar grades use the breakdown's scoreToGrade.
   const card = viewModel.reportCard;
@@ -344,11 +421,18 @@ export function DetailContent({
           ) : null}
           {/* A direct child of the main column, so `position: sticky` holds
               for the whole dossier rather than ending with a wrapper. */}
-          <DetailNavigation onActiveChange={onActiveBannerChange} viewModel={viewModel} />
+          <DetailNavigation
+            contextHasContent={contextHasContent}
+            onActiveChange={onActiveBannerChange}
+            viewModel={viewModel}
+          />
           <div className="mt-4 min-w-0 space-y-6">
             <DetailRiskContextSections
               activeBannerId={activeBannerId}
+              contextHasContent={contextHasContent}
               frozenNote={frozenNote}
+              mechanismBacking={mechanismBacking}
+              parentLiquidationEngine={parentLiquidationEngine}
               sharedModules={sharedModules}
               transferReview={transferReview}
               overviewGateRef={overviewGateRef}

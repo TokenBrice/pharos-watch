@@ -8,13 +8,14 @@
 import type { CoinOverride } from "./types";
 
 const COIN_OVERRIDES: Record<string, CoinOverride> = {
-  // DAI: CDP with PSM coupling to USDC
+  // DAI: CDP with PSM coupling to USDC; the Mar 2020 cascade is its own incident
   "dai-makerdao": {
     steps: [
       {},
       { label: "Vault + PSM", subtitle: "USDC PSM tightens peg" },
       {},
     ],
+    stressFootnote: "stress: collateral cascade (DAI, Mar 2020)",
   },
 
   // USDS (Sky): CDP with both USDC and DAI PSMs
@@ -82,13 +83,14 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
     ],
   },
 
-  // USDC (Circle): fiat-cash, BNY Mellon custodian
+  // USDC (Circle): fiat-cash, BNY Mellon custodian; the Mar 2023 freeze is its own incident
   "usdc-circle": {
     steps: [
       {},
       { subtitle: "Circle Reserve Fund @ BNY Mellon" },
       {},
     ],
+    stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",
   },
 };
 

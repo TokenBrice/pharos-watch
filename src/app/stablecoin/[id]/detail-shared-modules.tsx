@@ -1,176 +1,344 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
-import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
+import {
+  buildBackingMetricsView,
+  resolveLiveRatioBasis,
+  type BackingMetricsInput,
+  type BackingMetricsView,
+} from "@/components/stablecoin-detail/backing-metrics-card";
+import {
+  buildBridgingDeploymentsIndexChip,
+  resolveBridgingDeploymentsForm,
+  type BridgingDeploymentsForm,
+} from "@/components/stablecoin-detail/bridging-card";
+import type { EvidenceState } from "@/components/stablecoin-detail/evidence-module";
+import { hasMintAuthorityModuleData } from "@/components/stablecoin-detail/mint-authority-section";
+import { hasRedemptionRouteModule, isEntryRouteKey } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { formatReserveSnapshotLabel } from "@/components/stablecoin-detail/reserve-presentation";
-import { buildCollateralizationChip, CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
-import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
-import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
-import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
-import { FreezeSeizureCard } from "@/components/stablecoin-detail/freeze-seizure-card";
-import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
-import type { RailCopyFoldChip } from "@/components/stablecoin-detail/rail-copy-fold";
-import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
-import { buildControlPostureView } from "@/lib/control-posture";
-import { buildFailureDomainsView } from "@/lib/failure-domains";
+import { buildControlPostureView, type ControlPostureView } from "@/lib/control-posture";
+import { buildFailureDomainsView, type FailureDomainsView } from "@/lib/failure-domains";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
-import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
+import { resolveControlComponentRoles, type ControlComponentRoles } from "@/lib/pillar-evidence-strips";
+import { buildRegulatoryStandingView, type RegulatoryStandingView } from "@/lib/regulatory-standing";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { shouldDisplayCustodyModule, type CustodyClientSummary } from "@/lib/stablecoin-detail-custody-client";
+import {
+  buildSafetyScoreV9AccessRows,
+  type StablecoinSafetyScoreV9AccessRow,
+} from "@/lib/stablecoin-safety-score-v9-presentation";
+import { BRIDGE_TIER_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
-/**
- * One structural evidence card (custody, bridging, freeze & seizure, …).
- *
- * Each card mounts exactly once, in flow, inside its Safety Score pillar group
- * (`#backing-evidence` / `#control-evidence`), as a `RailCopyFold` band that
- * owns the shell, `title`, `chip` and `anchorId`; `body` is the card's
- * frameless (body-only) render. The `xl+` summary rail only indexes it: one
- * row of `title` + `chip` linking to `anchorId`.
- */
-export interface StructuralModuleEntry {
-  key: string;
-  title: string;
-  anchorId: string;
-  /** Scan-level verdict chip mirrored from the card's own header badge. */
-  chip: RailCopyFoldChip | null;
-  body: ReactNode;
+export interface EvidenceIndexChip {
+  label: string;
+  toneClass: string;
 }
 
 /**
- * The structural cards grouped by the pillar whose evidence they carry, in
- * reading order. Absent modules (no review published) are omitted, so an
- * empty list means the group has no structural cards to show.
+ * One rail Evidence index row (plan §5, decision S9): a main-column evidence
+ * module, its published score or verdict chip, and whether it is the Control
+ * pillar's limiting input. It links to the module's single in-flow mount.
+ */
+export interface EvidenceIndexRow {
+  key: string;
+  title: string;
+  anchorId: string;
+  /** Published score the module's header pill carries; null when it carries a chip instead. */
+  score: number | null;
+  /**
+   * How the score enters its pillar when it does not set it directly, e.g. a
+   * redemption route the Exit pillar does not count ("79 · not counted").
+   */
+  scoreNote: string | null;
+  chip: EvidenceIndexChip | null;
+  /** Eligible Control component at the minimum (plan §6), ties included. */
+  limiting: boolean;
+}
+
+export interface EvidenceIndexGroup {
+  pillar: "backing" | "exit" | "control";
+  label: string;
+  rows: EvidenceIndexRow[];
+}
+
+/**
+ * The explicit one-line state (decision S14) a module renders in its usual
+ * slot when the coin lacks it: "Not reviewed", or "Not applicable" with a
+ * reason. Frozen coins keep their reduced dossier and get none of these.
+ */
+export interface EvidencePlaceholder {
+  state: EvidenceState;
+  reason?: string;
+}
+
+/**
+ * Everything the Risk zone and the `xl+` summary rail both read, built once
+ * per render so the pillar boards and the rail index can never disagree about
+ * which modules exist.
+ *
+ * Every evidence module mounts exactly once, in flow, inside its Safety Score
+ * pillar board (`#backing-evidence` / `#exit-evidence` / `#control-evidence`).
+ * The rail carries metric cards (Backing KPI, Access posture, Regulatory
+ * standing) whose in-flow `xl:hidden` twins own the anchors, and an Evidence
+ * index row per module.
  */
 export interface DetailSharedModules {
-  backing: StructuralModuleEntry[];
-  control: StructuralModuleEntry[];
+  /** `resolveControlComponentRoles(card)`, shared by Mint, Price feed and Bridging. */
+  controlRoles: ControlComponentRoles | null;
+  /** Passed to the Mechanism card, whose provenance fold owns `#mechanism-review`. */
+  mechanismReview: MechanismReviewView | null;
+  /** The Backing KPI (plan §7); null mounts no card. */
+  backingMetrics: BackingMetricsView | null;
+  custody: CustodyClientSummary | null;
+  /** The archetype custodies assets but no custody review is published (decision S14). */
+  custodyNotReviewed: boolean;
+  hasRedemption: boolean;
+  /** No redemption route module and no reviewed no-holder disposition (decision S14). */
+  redemptionNotReviewed: boolean;
+  accessRows: StablecoinSafetyScoreV9AccessRow[];
+  hasMintAuthority: boolean;
+  /** Null when neither a bridge review nor shared failure domains exist. */
+  bridgingForm: BridgingDeploymentsForm | null;
+  /** The Bridging slot's S14 line when `bridgingForm` is null; null renders nothing. */
+  bridgingPlaceholder: EvidencePlaceholder | null;
+  failureDomains: FailureDomainsView | null;
+  controlPosture: ControlPostureView | null;
+  regulatoryStanding: RegulatoryStandingView | null;
+  /** No regulatory review is published for a live coin (decision S14). */
+  regulatoryNotReviewed: boolean;
+  /** The DEWS slot's S14 line (frozen archive, NAV token); null mounts the live module. */
+  dewsPlaceholder: EvidencePlaceholder | null;
+  evidenceIndex: EvidenceIndexGroup[];
+}
+
+const NOT_REVIEWED_CHIP: EvidenceIndexChip = { label: "Not reviewed", toneClass: SEVERITY_TONE_CLASS.neutral.pill };
+
+const SINGLE_CHAIN_LABEL = BRIDGE_TIER_LABELS["single-chain-or-native"];
+
+/**
+ * Bridging without a review: a coin on one chain (or native to a chain Pharos
+ * does not track, so no contract is stored) has nothing to bridge, which is
+ * "not applicable", not a missing review. Spec §5: single-chain coins read
+ * "Single-chain / native".
+ */
+function resolveBridgingPlaceholder(viewModel: ReadyDetailViewModel): EvidencePlaceholder {
+  const contractChains = new Set((viewModel.coin.contracts ?? []).map((contract) => contract.chain));
+  const trackedChains = viewModel.coinData.chains?.length ?? 0;
+  return contractChains.size <= 1 && trackedChains <= 1
+    ? { state: "not-applicable", reason: SINGLE_CHAIN_LABEL }
+    : { state: "not-reviewed" };
+}
+
+/**
+ * The custody "Not reviewed" line is for mechanisms that centrally custody
+ * assets. `shouldDisplayCustodyModule` lets a curated `custodyModel` override
+ * the archetype so a published custody review always shows; a placeholder
+ * claims a review is missing, so it also needs a custodial archetype (a CDP
+ * such as ZCHF holds collateral on-chain, whatever its collateral tokens).
+ */
+function needsCustodyReview(coin: ReadyDetailViewModel["coin"]): boolean {
+  const archetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
+  return shouldDisplayCustodyModule(coin, archetype) && archetype !== "cdp" && archetype !== "algorithmic";
+}
+
+/**
+ * How the reviewed redemption route enters the Exit pillar (plan §6, §10 #8),
+ * read from the same `primaryRoute` join as the Redemption module's
+ * reconciliation sentence: null when Exit scores this rated route, "counted as
+ * N" when Exit scores this route but its standalone score is not rated,
+ * "backup" when it earns the diversification credit, "not selected" when Exit
+ * uses a better route, "not counted" when no route qualifies at the requested
+ * notional.
+ */
+function resolveRedemptionExitNote(
+  card: ReadyDetailViewModel["reportCard"] | null,
+  entry: NonNullable<ReadyDetailViewModel["redemptionBackstop"]>,
+): string | null {
+  const exit = card?.breakdowns?.exit ?? null;
+  if (!exit) return null;
+  const primary = exit.primaryRoute;
+  if (primary === null || primary.score === null) return "not counted";
+  if (isEntryRouteKey(primary.key, entry)) return entry.score == null ? `counted as ${Math.round(primary.score)}` : null;
+  const backup = exit.diversification;
+  if (backup && backup.bonus > 0 && isEntryRouteKey(backup.routeKey, entry)) return "backup";
+  return "not selected";
 }
 
 export function buildDetailSharedModules({
   mechanismBacking,
+  backingParent,
   mechanismCollateralization,
   mechanismReview,
   viewModel,
 }: {
   mechanismBacking: MechanismBackingView | null;
+  /** A pure or savings pass-through wrapper's parent: the Backing KPI reads "via <parent>". */
+  backingParent: NonNullable<BackingMetricsInput["parent"]> | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
   viewModel: ReadyDetailViewModel;
 }): DetailSharedModules {
-  const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
-  const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
+  const { coin, reportCard } = viewModel;
+  const card = reportCard ?? null;
+  const frozen = coin.status === "frozen";
+  const controlRoles = card ? resolveControlComponentRoles(card) : null;
   const liveScopeMetadata = viewModel.reserves?.mode === "live" || viewModel.reserves?.mode === "live-stale"
     ? viewModel.reserves.metadata
     : undefined;
-  const failureDomainsView = buildFailureDomainsView(viewModel.reportCard);
-  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
-  const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
-  const custodySummary = viewModel.coin.custodyProfileSummary ?? null;
-  const bridgeSummary = viewModel.coin.bridgeRouteRiskSummary ?? null;
-  const blacklistabilitySummary = viewModel.coin.blacklistabilitySummary ?? null;
-  const hasCollateralization =
-    mechanismCollateralization != null || liveCollateralizationRatio != null || liveLiquidationCapacityRatio != null;
+  const backingMetrics = buildBackingMetricsView({
+    collateralization: mechanismCollateralization,
+    backing: mechanismBacking,
+    liveRatio: viewModel.reserves?.metadata?.collateralizationRatio ?? null,
+    liveLiquidationCapacityRatio: viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null,
+    liveAtSec: viewModel.reserves?.liveAt ?? null,
+    liveFreshnessLabel: viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined,
+    liveBalanceSheetScope: liveScopeMetadata?.balanceSheetScope,
+    liveSharedBookAssetIds: liveScopeMetadata?.sharedBookAssetIds,
+    liveRatioBasis: resolveLiveRatioBasis(viewModel.reserves?.metadata),
+    liveStale: viewModel.reserves?.mode === "live-stale",
+    oracle: coin.oracleRiskSummary ?? null,
+    parent: backingParent,
+  });
+  const custody = coin.custodyProfileSummary ?? null;
+  const custodyNotReviewed = custody === null && !frozen && needsCustodyReview(coin);
+  const hasRedemption = hasRedemptionRouteModule(viewModel.redemptionBackstop, coin.id);
+  const redemptionNotReviewed = !hasRedemption && !frozen;
+  const hasMintAuthority = hasMintAuthorityModuleData(viewModel.mintAuthority);
+  const failureDomains = buildFailureDomainsView(card);
+  const bridgeSummary = coin.bridgeRouteRiskSummary ?? null;
+  const bridgingForm = resolveBridgingDeploymentsForm(bridgeSummary, failureDomains);
+  const bridgingPlaceholder = bridgingForm === null && !frozen ? resolveBridgingPlaceholder(viewModel) : null;
+  const regulatoryStanding = buildRegulatoryStandingView(coin);
+  const dewsPlaceholder: EvidencePlaceholder | null = frozen
+    ? { state: "not-applicable", reason: "frozen archive" }
+    : viewModel.isNavToken
+      ? { state: "not-applicable", reason: "NAV tokens are priced by NAV, not peg" }
+      : null;
+  const oracleSummary = coin.oracleRiskSummary ?? null;
+  const blacklistabilitySummary = coin.blacklistabilitySummary ?? null;
+  const roleComponents = controlRoles?.components ?? [];
+  const mintComponent = roleComponents.find((component) => component.kind === "mint") ?? null;
+  const oracleComponent = roleComponents.find((component) => component.kind === "oracle") ?? null;
 
-  const backing: StructuralModuleEntry[] = [];
-  if (hasCollateralization) {
-    backing.push({
-      key: "collateralization",
-      title: "Collateralization",
-      anchorId: "collateralization",
-      chip: buildCollateralizationChip(mechanismCollateralization, liveCollateralizationRatio),
-      body: (
-        <CollateralizationCard
-          reviewed={mechanismCollateralization}
-          liveRatio={liveCollateralizationRatio}
-          liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
-          liveAtSec={viewModel.reserves?.liveAt ?? null}
-          liveFreshnessLabel={viewModel.reserves ? formatReserveSnapshotLabel(viewModel.reserves) : undefined}
-          liveBalanceSheetScope={liveScopeMetadata?.balanceSheetScope}
-          liveSharedBookAssetIds={liveScopeMetadata?.sharedBookAssetIds}
-          frameless
-        />
-      ),
-    });
-  }
-  if (mechanismBacking) {
-    backing.push({
-      key: "backingMechanics",
-      title: "Backing mechanics",
-      anchorId: "backing-mechanics",
-      chip: null,
-      body: <BackingMechanicsCard view={mechanismBacking} frameless />,
-    });
-  }
-  if (mechanismReview) {
-    backing.push({
-      key: "mechanismReview",
-      title: "Mechanism review",
-      anchorId: "mechanism-review",
-      chip: null,
-      body: <MechanismReviewPanel review={mechanismReview} />,
-    });
-  }
-  if (custodySummary) {
-    backing.push({
+  const backingRows: EvidenceIndexRow[] = [];
+  if (custody || custodyNotReviewed) {
+    backingRows.push({
       key: "custody",
       title: "Custody",
       anchorId: "custody",
-      chip: { label: custodySummary.postureLabel, toneClass: custodySummary.postureToneClass },
-      body: <CustodyCard summary={custodySummary} frameless />,
+      score: null,
+      scoreNote: null,
+      chip: custody ? { label: custody.postureLabel, toneClass: custody.postureToneClass } : NOT_REVIEWED_CHIP,
+      limiting: false,
     });
   }
 
-  const control: StructuralModuleEntry[] = [];
-  if (controlPosture) {
-    control.push({
-      key: "controlPosture",
-      title: "Control posture",
-      anchorId: "control-posture",
-      chip: { label: controlPosture.label, toneClass: controlPosture.badgeClassName },
-      body: <ControlPostureCard view={controlPosture} frameless />,
+  const exitRows: EvidenceIndexRow[] = [];
+  if (hasRedemption || redemptionNotReviewed) {
+    const entry = viewModel.redemptionBackstop ?? null;
+    const score = entry?.score ?? null;
+    const exitNote = entry ? resolveRedemptionExitNote(card, entry) : null;
+    exitRows.push({
+      key: "redemption",
+      title: "Redemption route",
+      anchorId: "redemption",
+      score,
+      scoreNote: score !== null ? exitNote : null,
+      // An unrated route reads "NR", with how Exit treats it, never a blank row.
+      chip: entry
+        ? score === null
+          ? { label: exitNote ? `NR · ${exitNote}` : "NR", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
+          : null
+        : hasRedemption
+          ? { label: "No holder route", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
+          : NOT_REVIEWED_CHIP,
+      limiting: false,
+    });
+  }
+
+  const controlRows: EvidenceIndexRow[] = [
+    {
+      key: "mintAuthority",
+      title: "Mint Authority",
+      anchorId: "mint-authority",
+      score: null,
+      scoreNote: null,
+      chip: !hasMintAuthority
+        ? NOT_REVIEWED_CHIP
+        : viewModel.mintAuthority.score
+          ? { label: viewModel.mintAuthority.score.compactLabel, toneClass: viewModel.mintAuthority.score.badgeClassName }
+          : null,
+      limiting: hasMintAuthority && mintComponent?.role === "limiting",
+    },
+  ];
+  if (oracleSummary) {
+    const oracleScore = oracleComponent?.score ?? null;
+    controlRows.push({
+      key: "oracle",
+      title: oracleSummary.title,
+      anchorId: "oracle",
+      score: oracleScore,
+      scoreNote: null,
+      chip: oracleScore === null ? { label: oracleSummary.tierLabel, toneClass: oracleSummary.tierToneClass } : null,
+      limiting: oracleComponent?.role === "limiting",
+    });
+  }
+  if (bridgingForm !== null || bridgingPlaceholder !== null) {
+    controlRows.push({
+      key: "bridging",
+      title: "Bridging & deployments",
+      anchorId: "bridging",
+      score: null,
+      scoreNote: null,
+      chip: bridgingForm !== null
+        ? buildBridgingDeploymentsIndexChip(bridgeSummary, failureDomains, controlRoles)
+        : bridgingPlaceholder?.state === "not-applicable"
+          ? { label: SINGLE_CHAIN_LABEL, toneClass: SEVERITY_TONE_CLASS.neutral.pill }
+          : NOT_REVIEWED_CHIP,
+      limiting: bridgingForm !== null
+        && roleComponents.some((component) => component.kind === "bridge" && component.role === "limiting"),
     });
   }
   if (blacklistabilitySummary) {
-    control.push({
+    controlRows.push({
       key: "freezeSeizure",
       title: "Freeze & seizure",
       anchorId: "freeze-seizure",
+      score: null,
+      scoreNote: null,
       chip: { label: blacklistabilitySummary.statusLabel, toneClass: blacklistabilitySummary.statusToneClass },
-      body: <FreezeSeizureCard summary={blacklistabilitySummary} frameless />,
-    });
-  }
-  if (bridgeSummary) {
-    control.push({
-      key: "bridging",
-      title: "Bridging",
-      anchorId: "bridging",
-      chip: { label: bridgeSummary.tierLabel, toneClass: bridgeSummary.tierToneClass },
-      body: <BridgingCard summary={bridgeSummary} frameless />,
-    });
-  }
-  if (failureDomainsView) {
-    control.push({
-      key: "failureDomains",
-      title: "Shared failure domains",
-      anchorId: "failure-domains",
-      chip: null,
-      body: <FailureDomainsCard view={failureDomainsView} frameless />,
-    });
-  }
-  if (regulatoryStanding) {
-    control.push({
-      key: "regulatoryStanding",
-      title: "Regulatory standing",
-      // The passport's Jurisdiction and MiCA cells link here.
-      anchorId: "jurisdiction",
-      chip: { label: regulatoryStanding.badgeLabel, toneClass: regulatoryStanding.badgeToneClass },
-      body: <RegulatoryStandingCard view={regulatoryStanding} frameless />,
+      limiting: false,
     });
   }
 
-  return { backing, control };
+  const evidenceIndex: EvidenceIndexGroup[] = [
+    { pillar: "backing" as const, label: "Backing", rows: backingRows },
+    { pillar: "exit" as const, label: "Exit", rows: exitRows },
+    { pillar: "control" as const, label: "Control", rows: controlRows },
+  ].filter((group) => group.rows.length > 0);
+
+  return {
+    controlRoles,
+    mechanismReview,
+    backingMetrics,
+    custody,
+    custodyNotReviewed,
+    hasRedemption,
+    redemptionNotReviewed,
+    accessRows: card ? buildSafetyScoreV9AccessRows(card) : [],
+    hasMintAuthority,
+    bridgingForm,
+    bridgingPlaceholder,
+    failureDomains,
+    controlPosture: buildControlPostureView(coin, viewModel.variantParent),
+    regulatoryStanding,
+    regulatoryNotReviewed: regulatoryStanding === null && !frozen,
+    dewsPlaceholder,
+    evidenceIndex,
+  };
 }

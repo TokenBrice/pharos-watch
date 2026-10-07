@@ -1,4 +1,4 @@
-import type { CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { BridgeRouteRiskTier, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
 import type { ContagionShock } from "../types/contagion";
@@ -202,6 +202,156 @@ export const BACKING_CHART_FILL_CLASSES = {
   algorithmic: "bg-orange-500",
   other: "bg-zinc-400",
 } as const satisfies Record<keyof typeof BACKING_BADGE_STYLES | "other", string>;
+
+/**
+ * Bridge route tiers in the published `bridgeTierQuality` policy order
+ * (`control.bridgeTierQuality` in the V9 methodology policy), best first.
+ * Tied policy scores keep the enum order and share one cell fill, so the
+ * strip never implies a distinction the policy does not make; the one
+ * exception is `opaque-or-unknown`, which is hatched as unknown.
+ */
+export const BRIDGE_TIER_POLICY_ORDER = [
+  "single-chain-or-native",
+  "issuer-native-burn-mint",
+  "canonical-rollup-bridge",
+  "issuer-native-lock-mint",
+  "external-validated-network",
+  "liquidity-or-intent-route",
+  "external-lock-mint",
+  "opaque-or-unknown",
+] as const satisfies readonly BridgeRouteRiskTier[];
+
+/** Reader labels per bridge route tier, listed in `BRIDGE_TIER_POLICY_ORDER`. */
+export const BRIDGE_TIER_LABELS = {
+  "single-chain-or-native": "Single-chain / native",
+  "issuer-native-burn-mint": "Issuer burn & mint",
+  "canonical-rollup-bridge": "Canonical rollup bridge",
+  "issuer-native-lock-mint": "Issuer lock & mint",
+  "external-validated-network": "External validator network",
+  "liquidity-or-intent-route": "Liquidity / intent routes",
+  "external-lock-mint": "External lock & mint",
+  "opaque-or-unknown": "Opaque / unknown",
+} as const satisfies Record<BridgeRouteRiskTier, string>;
+
+/**
+ * Chip-length tier names for the bridging header and rail index chips
+ * ("Mostly lock & mint", "All burn & mint"). The unqualified "Lock & mint" is
+ * the external tier; the issuer one keeps its qualifier.
+ */
+export const BRIDGE_TIER_SHORT_LABELS = {
+  "single-chain-or-native": "Native",
+  "issuer-native-burn-mint": "Burn & mint",
+  "canonical-rollup-bridge": "Rollup bridge",
+  "issuer-native-lock-mint": "Issuer lock & mint",
+  "external-validated-network": "Validator network",
+  "liquidity-or-intent-route": "Liquidity / intent",
+  "external-lock-mint": "Lock & mint",
+  "opaque-or-unknown": "Opaque / unknown",
+} as const satisfies Record<BridgeRouteRiskTier, string>;
+
+/**
+ * The tier label for an inventory spanning `chainCount` chains. "Single-chain"
+ * would misdescribe a native route on a multi-chain asset, so the best tier
+ * reads "Native" there.
+ */
+export function getBridgeTierLabel(tier: BridgeRouteRiskTier, chainCount: number): string {
+  return tier === "single-chain-or-native" && chainCount > 1 ? "Native" : BRIDGE_TIER_LABELS[tier];
+}
+
+/** Tiers whose route crosses a bridge run by neither the issuer nor the chain: the "third-party" routes. */
+export const BRIDGE_THIRD_PARTY_TIERS = {
+  "single-chain-or-native": false,
+  "issuer-native-burn-mint": false,
+  "canonical-rollup-bridge": false,
+  "issuer-native-lock-mint": false,
+  "external-validated-network": true,
+  "liquidity-or-intent-route": true,
+  "external-lock-mint": true,
+  "opaque-or-unknown": false,
+} as const satisfies Record<BridgeRouteRiskTier, boolean>;
+
+/** Hatched neutral fill for an opaque tier or a deployment whose tier is not established. */
+export const BRIDGE_TIER_UNKNOWN_CELL_CLASS =
+  "bg-muted-foreground/45 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_1.5px,transparent_1.5px_4px)]";
+
+/**
+ * Deployment-strip cell fills per bridge tier. Hue families run emerald →
+ * blue → amber → orange; inside a family the better tier takes the darker
+ * step, far enough apart to read as two tiers (native emerald-700 against
+ * burn & mint emerald-400). An opaque tier is hatched, never red.
+ */
+export const BRIDGE_TIER_CELL_CLASSES = {
+  "single-chain-or-native": "bg-emerald-700",
+  "issuer-native-burn-mint": "bg-emerald-400",
+  "canonical-rollup-bridge": "bg-blue-600",
+  "issuer-native-lock-mint": "bg-blue-400",
+  "external-validated-network": "bg-amber-500",
+  "liquidity-or-intent-route": "bg-amber-500",
+  "external-lock-mint": "bg-orange-500",
+  "opaque-or-unknown": BRIDGE_TIER_UNKNOWN_CELL_CLASS,
+} as const satisfies Record<BridgeRouteRiskTier, string>;
+
+/**
+ * A diagnostic route (its bridge component sits outside the eligible set): a
+ * dashed outline in the tier's hue over a light tint of it, the dashed
+ * grammar the Control strip and `ControlRoleTag` use for diagnostics. The
+ * outline keeps the hue legible on the dark card, where a faded fill sinks.
+ * The legend's diagnostic swatch uses these same classes.
+ */
+export const BRIDGE_TIER_DIAGNOSTIC_CELL_CLASSES = {
+  "single-chain-or-native":
+    "border border-dashed border-emerald-700 bg-emerald-700/15 dark:border-emerald-500 dark:bg-emerald-500/20",
+  "issuer-native-burn-mint": "border border-dashed border-emerald-500 bg-emerald-400/25",
+  "canonical-rollup-bridge":
+    "border border-dashed border-blue-600 bg-blue-600/15 dark:border-blue-500 dark:bg-blue-500/20",
+  "issuer-native-lock-mint": "border border-dashed border-blue-500 bg-blue-400/25",
+  "external-validated-network": "border border-dashed border-amber-500 bg-amber-500/25",
+  "liquidity-or-intent-route": "border border-dashed border-amber-500 bg-amber-500/25",
+  "external-lock-mint": "border border-dashed border-orange-500 bg-orange-500/25",
+  "opaque-or-unknown":
+    "border border-dashed border-muted-foreground bg-muted-foreground/20 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_1.5px,transparent_1.5px_4px)]",
+} as const satisfies Record<BridgeRouteRiskTier, string>;
+
+/**
+ * How a published Control component relates to the evaluated minimum:
+ * `limiting` sits at the eligible minimum (ties included), `eligible` is in
+ * the eligible set (`binding: true`) above it, `diagnostic` is outside the
+ * eligible set, and `excluded` carries no score.
+ */
+export type ControlComponentRole = "limiting" | "eligible" | "diagnostic" | "excluded";
+
+export const CONTROL_COMPONENT_ROLE_LABELS = {
+  limiting: "Limiting input · before adjustments",
+  eligible: "Eligible input",
+  diagnostic: "Diagnostic · not in the eligible set",
+  excluded: "Not scored · excluded from the minimum",
+} as const satisfies Record<ControlComponentRole, string>;
+
+/**
+ * Coverage band of a collateral ratio against par (cutoffs in
+ * `getCollateralCoverageTone`, `threshold-gauge.tsx`): within ±0.5 pp of
+ * 100 % reads as par.
+ */
+export type CollateralCoverageBand = "over" | "par" | "under";
+
+export const COLLATERAL_COVERAGE_LABELS = {
+  over: "Overcollateralized",
+  par: "Fully collateralized",
+  under: "Undercollateralized",
+} as const satisfies Record<CollateralCoverageBand, string>;
+
+/**
+ * Coverage chip tones, spelled exactly as the shared severity pills
+ * (`SEVERITY_TONE_CLASS[tone].pill` in `src/lib/severity-tone.ts`): over and
+ * par take `ok`; under takes `rose`, not the red `alert` step, so the rail
+ * keeps "structurally short" apart from active failure.
+ */
+export const COLLATERAL_COVERAGE_PILL_CLASSES = {
+  over: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  par: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  under: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
+} as const satisfies Record<CollateralCoverageBand, string>;
+
 /**
  * Peg-deviation chart bands share the live USD depeg trigger rather than
  * maintaining a second literal for the outer stress boundary.

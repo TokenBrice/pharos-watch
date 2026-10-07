@@ -12,6 +12,7 @@ import {
 import { buildStablecoinDetailClientCoin, type StablecoinDetailCoinMeta } from "../stablecoin-detail-client-coin";
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import type { V1005ProcessDiagnostic } from "@shared/types/safety-score-v9-facts";
+import { SafetyScoreV9IssuanceSummarySchema } from "@shared/types/safety-score-v9-public-breakdowns";
 
 import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";
 function makeMintAuthorityCoin(
@@ -428,5 +429,44 @@ describe("published operational-governance detail", () => {
       issuanceSummary: makePublishedIssuanceSummary({ minKeeperRecurringIntervalSec: null }) });
     expect(funded.processMetrics).toContainEqual({ label: "Minimum recurring keeper interval", value: "Unproved" });
     expect(funded.score?.score).toBeNull();
+  });
+
+  it("keeps the grouped diagnostics as the only reason ledger beside the governance measurements", () => {
+    // GHO's live shape: governance reason counts tally distinct reason strings
+    // (economic reach 24, voting control 6) on a different basis from the
+    // diagnostic findings (28 and 13), so they must not print beside them.
+    const governance = {
+      coverage: "incomplete", governorAuthorityKey: `ethereum:0x${"5".repeat(40)}`, decisionRule: "affirmative-vote",
+      minUnavoidableDelaySec: null, votingPower: "past-block-checkpoint", vetoQuorumBps: null, vetoOverride: null,
+      enumerable: true,
+      votingControl: {
+        observationState: "unknown", qualified: false, largestSingleControllerShareBps: null,
+        affiliatedAggregateShareBps: null, affiliatedUnilateralRouteCount: 0,
+        unknownAboveThresholdVoteOwnershipControllerCount: 0, otherHolderVoteOperatorControllerCount: 0,
+        privilegedVoteCreation: "unknown", forcedDelegation: "unknown", censusReconciliationCount: 5,
+        unreconciledCensusCount: 5,
+      },
+      incompleteReasonCount: 40, nonGovernorUnboundedPathCount: 0, diagnosticCount: 41,
+      incompleteReasonCounts: [
+        { code: "economic-reach-unclosed", count: 24 },
+        { code: "execution-inventory-incomplete", count: 10 },
+        { code: "voting-control-unproved", count: 6 },
+      ],
+    };
+    const reach: V1005ProcessDiagnostic = { code: "economic-reach-unclosed", gate: "shared", controlRef: null,
+      pathId: null, classId: null, memberRef: null, field: "executionScope", evidenceRefIds: [] };
+    const summary = SafetyScoreV9IssuanceSummarySchema.parse({
+      governance,
+      diagnostics: [makePublishedProcessDiagnostic(reach, { count: 28 })],
+    });
+    const coin = makeMintAuthorityCoin({ mintPath: "facilitator-bucket-mint", authorityPosture: "unbounded-adverse",
+      confidence: "verified", summary: "Facilitators mint within bucket caps." });
+    const view = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [], issuanceSummary: summary });
+
+    expect(view.processDiagnostics.reduce((sum, row) => sum + row.count, 0)).toBe(28);
+    expect(view.processMetrics.some((metric) => /finding/i.test(metric.value))).toBe(false);
+    expect(view.processMetrics.some((metric) => /\b(24|6|10)\b/.test(metric.value))).toBe(false);
+    // The governance measurements themselves stay, unproved rather than zero.
+    expect(view.processMetrics).toContainEqual({ label: "Actual governed-path delay", value: "Unproved" });
   });
 });

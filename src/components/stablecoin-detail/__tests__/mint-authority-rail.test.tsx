@@ -98,11 +98,48 @@ describe("MintAuthorityRail", () => {
   });
 
   it("keeps the authoritative count when the detail census is bounded", () => {
-    const controls = [0, 1, 2, 3].map((index) => makeControl({ key: `control-${index}` }));
+    const controls = [0, 1, 2, 3].map((index) => makeControl({ key: `control-${index}`, roleLabel: `Ctl-${index}` }));
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} totalControlCount={149} />);
     expect(html).toContain("through 149 controls");
     expect(html).toContain("+146 more in Primary controls");
     expect(html).not.toContain("through 4 controls");
+  });
+
+  it("merges controls that would draw identical chips into one counted node", () => {
+    const minter = {
+      roleKey: "direct-minter",
+      roleLabel: "Direct minter",
+      authorityTypeKey: "contract",
+      authorityTypeLabel: "Contract",
+      threshold: null,
+      signerCount: null,
+    };
+    const controls = [
+      makeControl({ ...minter, key: "psm", label: "LitePSM" }),
+      makeControl({ ...minter, key: "flash", label: "DssFlash" }),
+      makeControl({ ...minter, key: "vat", label: "Vat join" }),
+      makeControl({ key: "admin", label: "Ward Safe" }),
+    ];
+    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
+
+    expect(html.split(">Direct minter<")).toHaveLength(2);
+    expect(html).toContain("×3");
+    // Every merged control stays named in the node's hover text.
+    expect(html).toContain("LitePSM, DssFlash, Vat join");
+    expect(html).toContain(">Minter admin multisig<");
+    // All four controls are drawn, so nothing is left to point to.
+    expect(html).not.toContain("more in Primary controls");
+    expect(html).toContain("through 4 controls");
+  });
+
+  it("keeps controls apart when their signer thresholds differ", () => {
+    const controls = [
+      makeControl({ key: "a", threshold: 2, signerCount: 4 }),
+      makeControl({ key: "b", threshold: 3, signerCount: 6 }),
+    ];
+    const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={controls} />);
+    expect(html.split(">Minter admin multisig<")).toHaveLength(3);
+    expect(html).not.toContain("×");
   });
 
   it("renders every control with no overflow notice at exactly the cap", () => {

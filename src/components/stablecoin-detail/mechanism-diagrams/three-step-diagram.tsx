@@ -11,11 +11,6 @@ export interface MechanismStepText {
   subtitle?: string;
 }
 
-export interface MechanismStepOverride {
-  label?: string;
-  subtitle?: string;
-}
-
 export interface ThreeStepReturnArrow {
   fromX: number;
   toX: number;
@@ -32,7 +27,6 @@ export interface ThreeStepMechanismDiagramProps {
   description: string;
   accentColor: string;
   defaultSteps: readonly [MechanismStepText, MechanismStepText, MechanismStepText];
-  overrideSteps?: ReadonlyArray<MechanismStepOverride>;
   stressFootnote?: string;
   returnArrow?: ThreeStepReturnArrow;
   stepTone?: DiagramTone;
@@ -41,13 +35,12 @@ export interface ThreeStepMechanismDiagramProps {
 
 function buildSteps(
   defaults: readonly [MechanismStepText, MechanismStepText, MechanismStepText],
-  overrides: ReadonlyArray<MechanismStepOverride> | undefined,
   accentColor: string,
   dashed: boolean,
 ): MechanismDiagramStep[] {
   return defaults.map((step, index) => ({
-    label: overrides?.[index]?.label ?? step.label,
-    subtitle: overrides?.[index]?.subtitle ?? step.subtitle,
+    label: step.label,
+    subtitle: step.subtitle,
     accentColor,
     stepNumber: index + 1,
     dashedBorder: dashed ? true : undefined,
@@ -59,13 +52,12 @@ export function ThreeStepMechanismDiagram({
   description,
   accentColor,
   defaultSteps,
-  overrideSteps,
   stressFootnote,
   returnArrow,
   stepTone = "default",
   dashed = false,
 }: ThreeStepMechanismDiagramProps) {
-  const steps = buildSteps(defaultSteps, overrideSteps, accentColor, dashed);
+  const steps = buildSteps(defaultSteps, accentColor, dashed);
 
   return (
     <MechanismDiagramShell

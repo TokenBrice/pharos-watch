@@ -87,12 +87,14 @@ describe("projectBlacklistabilityClientSummary", () => {
     expect(summary!.statusNote).toContain("USD Coin");
   });
 
-  it("falls back to the upstream id when no registry entry is available", () => {
+  it("names no upstream when the parent is untracked, rather than printing its coin id", () => {
     const summary = projectBlacklistabilityClientSummary(
       coinWith({ blacklistabilityReview: { ...FREEZABLE_REVIEW, reviewedStatus: "inherited" }, variantOf: "usdc-circle" }),
+      new Map(),
     );
-    expect(summary!.upstreamLabel).toBe("usdc-circle");
-    expect(summary!.statusNote).toContain("usdc-circle");
+    expect(summary!.status).toBe("inherited");
+    expect(summary!.upstreamLabel).toBeNull();
+    expect(summary!.statusNote).not.toContain("usdc-circle");
   });
 
   it("reads the upstream from the mint-authority review when there is no variant edge", () => {

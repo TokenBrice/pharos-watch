@@ -25,10 +25,13 @@ interface ReserveTreemapProps {
 
 /**
  * A basket whose largest slice holds at least this share is drawn as a single
- * labelled bar: a treemap of one tile (LUSD 100% ETH) or a 92% tile plus
- * crumbs is a giant rectangle that encodes nothing a bar does not.
+ * labelled bar: a treemap of a 92% tile plus crumbs is a giant rectangle that
+ * encodes nothing a bar does not. A one-slice basket gets `SingleSliceBar`.
  */
 const DOMINANT_SLICE_MIN_PCT = 90;
+
+/** Below this share a lone reviewed slice leaves a visible, dashed unreviewed remainder. */
+const FULL_COMPOSITION_MIN_PCT = 99.5;
 
 /* Break a cell label on word boundaries instead of mid-word ("Deposits at
  * Sy…"). Lines hold whole words up to maxChars; running out of lines appends
@@ -69,11 +72,12 @@ interface TreemapCellProps {
 
 /* Label geometry. Text is inset from the tile edge rather than run to it, and a
  * tile too small to hold a legible line drops its label entirely — the slice
- * stays reachable by tooltip, which beats a word cut in half. `CHAR_WIDTH_EM`
- * is the mono advance (0.6em) plus the 0.06em tracking below, rounded up so the
- * estimate errs toward wrapping instead of overflowing the tile. */
+ * stays reachable by tooltip, which beats a word cut in half. Names are set in
+ * the sans face as written (mono caps is for figures only); `CHAR_WIDTH_EM`
+ * is a generous mixed-case semibold advance, so the estimate errs toward
+ * wrapping instead of overflowing the tile. */
 const LABEL_INSET = 6;
-const CHAR_WIDTH_EM = 0.68;
+const CHAR_WIDTH_EM = 0.6;
 const MIN_LABEL_WIDTH = 68;
 const MIN_LABEL_HEIGHT = 32;
 const MIN_LABEL_AREA = 3400;
@@ -96,7 +100,8 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCe
 
   const fill = RISK_COLORS[risk];
   const labelFill = labelInk(risk);
-  const fontSize = Math.min(11, Math.max(9, width / 9));
+  // 11 px floor: smaller tiles wrap or drop the label (tooltip) rather than shrink it.
+  const fontSize = 11;
   const maxChars = Math.floor((width - LABEL_INSET * 2) / (fontSize * CHAR_WIDTH_EM));
   const showLabel =
     width >= MIN_LABEL_WIDTH &&
@@ -113,7 +118,7 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCe
     const bareLines = wrapTreemapLabel(label.replace(/\s*\(.*\)\s*$/, ""), maxChars, maxLines);
     if (!bareLines.at(-1)?.endsWith("…")) lines = bareLines;
   }
-  const rowHeight = 13;
+  const rowHeight = 14;
   const totalRows = lines.length + (showPct ? 1 : 0);
   const topY = y + height / 2 - ((totalRows - 1) * rowHeight) / 2;
 
@@ -142,12 +147,11 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCe
           fill={labelFill}
           fontSize={fontSize}
           fontWeight={600}
-          fontFamily="var(--font-mono, monospace)"
-          letterSpacing="0.06em"
+          fontFamily="var(--font-sans, sans-serif)"
         >
           {lines.map((line, i) => (
             <tspan key={i} x={x + width / 2} y={topY + i * rowHeight}>
-              {line.toUpperCase()}
+              {line}
             </tspan>
           ))}
         </text>
@@ -159,8 +163,7 @@ function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCe
           textAnchor="middle"
           dominantBaseline="central"
           fill={labelFill}
-          fillOpacity={0.8}
-          fontSize={10}
+          fontSize={11}
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
         >
@@ -190,13 +193,19 @@ function ReserveTooltip({
 }
 
 /** A risk-tier swatch is the tile itself in miniature: same fill, same accent border. */
-function RiskSwatch({ risk }: { risk: ReserveRisk }) {
+export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
   return (
     <span
+      aria-hidden="true"
       className="size-2.5 shrink-0 rounded-[2px] border"
       style={{ backgroundColor: RISK_COLORS[risk], borderColor: RISK_ACCENT_COLORS[risk] }}
     />
   );
+}
+
+/** Sentence-case tier phrase for visible text ("Very low risk"); never mono caps, it is a phrase. */
+export function formatReserveRiskTier(risk: ReserveRisk): string {
+  return `${RESERVE_RISK_PRESENTATION[risk].shortLabel} risk`;
 }
 
 /** Only the tiers actually drawn are keyed; every tile tone has a swatch. */
@@ -205,10 +214,8 @@ function RiskLegend({ risks }: { risks: readonly ReserveRisk[] }) {
     <ul aria-label="Reserve risk tiers" className="mt-3 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
       {risks.map((risk) => (
         <li key={risk} className="flex min-w-0 items-center gap-1.5">
-          <RiskSwatch risk={risk} />
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {RESERVE_RISK_PRESENTATION[risk].longLabel}
-          </span>
+          <ReserveRiskSwatch risk={risk} />
+          <span className="text-[11px] font-medium text-muted-foreground">{formatReserveRiskTier(risk)}</span>
         </li>
       ))}
     </ul>
@@ -238,11 +245,9 @@ function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice
             }}
           >
             {index === 0 ? (
-              <span
-                className="min-w-0 font-mono text-[11px] font-semibold uppercase leading-snug tracking-[0.06em]"
-                style={{ color: labelInk(slice.risk) }}
-              >
-                {slice.label} · {formatReserveSharePct(slice.pct)}
+              <span className="min-w-0 text-xs font-semibold leading-snug" style={{ color: labelInk(slice.risk) }}>
+                {slice.label}
+                <span className="font-mono tabular-nums"> · {formatReserveSharePct(slice.pct)}</span>
               </span>
             ) : null}
           </div>
@@ -252,7 +257,7 @@ function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice
         <ul aria-label="Other reserve slices" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {rest.map((slice) => (
             <li key={slice.key} className="flex items-center gap-1.5">
-              <RiskSwatch risk={slice.risk} />
+              <ReserveRiskSwatch risk={slice.risk} />
               {slice.label}
               <span className="font-mono tabular-nums text-foreground">{formatReserveSharePct(slice.pct)}</span>
             </li>
@@ -264,8 +269,69 @@ function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice
 }
 
 /**
+ * A basket that is one reviewed slice. A treemap of one tile, or a bare 100%
+ * bar, encodes nothing, so the slice reads as one compact composition bar that
+ * carries its name and share, with its risk tier and reviewed asset class on
+ * the line beneath. A share short of the whole leaves a dashed remainder:
+ * unreviewed, never drawn as filled.
+ */
+function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
+  const ink = labelInk(slice.risk);
+  const isWhole = slice.pct >= FULL_COMPOSITION_MIN_PCT;
+  return (
+    <div className="min-w-0">
+      <div className="flex min-h-9 w-full gap-0.5 overflow-hidden rounded-md">
+        <div
+          className="flex min-w-0 items-center justify-between gap-3 px-3 py-1.5"
+          style={{
+            width: isWhole ? "100%" : `${slice.pct}%`,
+            backgroundColor: RISK_COLORS[slice.risk],
+            boxShadow: `inset 0 0 0 1px ${RISK_ACCENT_COLORS[slice.risk]}80`,
+          }}
+        >
+          <span className="min-w-0 text-xs font-semibold leading-snug" style={{ color: ink }}>
+            {slice.label}
+          </span>
+          <span className="shrink-0 font-mono text-[11px] font-semibold tabular-nums" style={{ color: ink }}>
+            {formatReserveSharePct(slice.pct)}
+          </span>
+        </div>
+        {isWhole ? null : (
+          <div
+            title="Not covered by the reviewed composition"
+            className="min-w-[3px] flex-1 rounded-md border border-dashed border-muted-foreground/50"
+          />
+        )}
+      </div>
+      <dl className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <div className="flex items-center">
+          <dt className="sr-only">Risk tier</dt>
+          <dd className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            <ReserveRiskSwatch risk={slice.risk} />
+            {formatReserveRiskTier(slice.risk)}
+          </dd>
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <dt className="text-muted-foreground">Asset class</dt>
+          <dd className="min-w-0 text-foreground" title={slice.role ? undefined : "Asset class not classified by the review"}>
+            {slice.role ?? "–"}
+          </dd>
+        </div>
+        {isWhole ? null : (
+          <div className="flex items-center gap-1.5">
+            <dt className="text-muted-foreground">Unreviewed remainder</dt>
+            <dd className="font-mono tabular-nums text-foreground">{formatReserveSharePct(100 - slice.pct)}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  );
+}
+
+/**
  * The module's one reserve visual, toned by risk tier. Renders flat (no card
- * chrome; the Reserves module owns the shell). Dominated baskets draw as a bar
+ * chrome; the Reserves module owns the shell). A one-slice basket is a compact
+ * composition bar, a dominated basket a labelled bar
  * (`DOMINANT_SLICE_MIN_PCT`); everything else is a treemap.
  */
 export function ReserveTreemap({ slices, subject }: ReserveTreemapProps) {
@@ -279,10 +345,24 @@ export function ReserveTreemap({ slices, subject }: ReserveTreemapProps) {
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
-  if (data.length === 0) return null;
+  const [top] = data;
+  if (!top) return null;
+
+  if (data.length === 1) {
+    const role = top.role ? `, ${top.role}` : "";
+    return (
+      <div
+        role="figure"
+        aria-label={`${subject}: ${top.label} ${formatReserveSharePct(top.pct)}, ${RESERVE_RISK_PRESENTATION[top.risk].longLabel}${role}`}
+        className="min-w-0"
+      >
+        <SingleSliceBar slice={top} />
+      </div>
+    );
+  }
 
   const ariaLabel = `${subject}: ${data.map((slice) => `${slice.label} ${formatReserveSharePct(slice.pct)}`).join(", ")}`;
-  const isDominated = data[0]!.pct >= DOMINANT_SLICE_MIN_PCT;
+  const isDominated = top.pct >= DOMINANT_SLICE_MIN_PCT;
 
   return (
     <div className="min-w-0">

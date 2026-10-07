@@ -191,18 +191,32 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegData.pegReferenceUnavailable !== true &&
       dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
     ) {
-      const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency) || null;
-      const dexBps = deriveDexDeviationBps(
-        dexRow.dex_price_usd,
-        pegType,
-        pegRates,
-        meta.commodityOunces,
-        currentBps,
-        dexRow.deviation_from_primary_bps,
-      );
+      // NAV / yield-bearing tokens accrue above their peg unit by design
+      // (sUSDe trades near $1.25), so DEX-vs-peg would report thousands of bps
+      // for a correctly priced token. Their DEX print is checked against the
+      // token's own observed reference price instead. Without a usable
+      // reference there is no deviation and therefore no verdict; the check
+      // never falls back to the peg unit.
+      let dexBps: number | null;
+      if (isNavToken) {
+        const referencePrice = primaryTrust !== "unusable" ? asset?.price ?? null : null;
+        dexBps = referencePrice == null ? null : deriveDepegSignal(dexRow.dex_price_usd, referencePrice)?.bps ?? null;
+      } else {
+        const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency) || null;
+        dexBps = deriveDexDeviationBps(
+          dexRow.dex_price_usd,
+          pegType,
+          pegRates,
+          meta.commodityOunces,
+          currentBps,
+          dexRow.deviation_from_primary_bps,
+        );
+      }
       if (dexBps != null) {
         // "agrees" = both sources within 50bps of each other (signed comparison
-        // catches opposite-direction disagreements, e.g. +200bps vs -200bps)
+        // catches opposite-direction disagreements, e.g. +200bps vs -200bps).
+        // NAV tokens carry no currentBps; their dexBps is already measured
+        // against the reference price.
         const agrees = currentBps != null
           ? Math.abs(currentBps - dexBps) < 50
           : Math.abs(dexBps) < 50;

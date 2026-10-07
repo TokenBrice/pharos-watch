@@ -14,6 +14,18 @@ type BreakdownRow = NonNullable<
 >["groups"][number]["rows"][number];
 
 /**
+ * Where a pillar's evidence board renders on the detail page: at every width,
+ * only below `xl` (its only content is an in-flow twin of a rail card), or not
+ * at all. A pillar row links to its board only where the board exists.
+ */
+export type PillarEvidenceBoardVisibility = "all" | "below-xl" | "none";
+
+export type PillarEvidenceAnchors = Record<
+  StablecoinSafetyScoreV9Presentation["pillars"][number]["key"],
+  PillarEvidenceBoardVisibility
+>;
+
+/**
  * Restrained tinting: a bar leaves neutral only when the input is the problem,
  * so a long list stays calm and the eye lands on the weak rows.
  */
@@ -28,6 +40,11 @@ const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
   warn: "text-amber-700 dark:text-amber-400",
   critical: "text-rose-700 dark:text-rose-400",
 };
+
+const TRACK_CLASS =
+  "overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]";
+/** Unavailable: an empty dashed outline (as in the pillar strips), never an empty solid track that reads as zero. */
+const UNAVAILABLE_TRACK_CLASS = "rounded-[3px] border border-dashed border-muted-foreground/50";
 
 function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -45,7 +62,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
         {row.label}
       </span>
       <span
-        className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
+        className={cn("h-2.5", boundedScore === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
         role="img"
         aria-label={`${row.label}: ${row.score === null ? row.status ?? "Not scored" : `${displayedScore} out of 100`}${weightLabel === null ? "" : `, ${weightLabel} effective weight`}`}
       >
@@ -92,7 +109,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
         className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[10px] leading-snug text-muted-foreground"
       >
         {row.detail}
-        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
+        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
       </button>
       {open ? (
         <div className="mt-2 space-y-2.5 border-l border-border/40 pl-1">
@@ -139,7 +156,7 @@ function BreakdownGroupSection({
           >
             <span>{group.tail.label}</span>
             <ChevronDown
-              className={cn("h-3.5 w-3.5 shrink-0 transition-transform", tailOpen && "rotate-180")}
+              className={cn("h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none", tailOpen && "rotate-180")}
               aria-hidden="true"
             />
           </button>
@@ -214,7 +231,7 @@ function PillarBreakdownDetails({
           <details className="group/measure mt-2 border-y border-border/30 py-1.5">
             <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
               <span>Measurement detail ({contextRowCount})</span>
-              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/measure:rotate-180" aria-hidden="true" />
+              <ChevronDown className="h-3.5 w-3.5 transition-transform motion-reduce:transition-none group-open/measure:rotate-180" aria-hidden="true" />
             </summary>
             <div className="pt-2">{contextList}</div>
           </details>
@@ -232,7 +249,7 @@ function PillarBreakdownDetails({
           <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
             <span>Other evaluated routes ({breakdown.alternatives.length})</span>
             <ChevronDown
-              className="h-3.5 w-3.5 transition-transform group-open/routes:rotate-180"
+              className="h-3.5 w-3.5 transition-transform motion-reduce:transition-none group-open/routes:rotate-180"
               aria-hidden="true"
             />
           </summary>
@@ -309,9 +326,12 @@ function PillarInputFallback({
 export function SafetyScoreV9PillarRow({
   cardId,
   pillar,
+  evidenceVisibility = "all",
 }: {
   cardId: string;
   pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
+  /** Defaults to `"all"`: a caller that does not know the page's boards keeps the link. */
+  evidenceVisibility?: PillarEvidenceBoardVisibility;
 }) {
   // All pillars start folded on every viewport (owner decision 2026-08-11).
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
@@ -357,35 +377,44 @@ export function SafetyScoreV9PillarRow({
           />
           <ChevronDown
             className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
               open && "rotate-180",
               !hasDetails && "invisible",
             )}
             aria-hidden="true"
           />
         </span>
-        <span
-          className="mt-2 block h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
-          aria-hidden="true"
-        >
-          {/* A score bar carries its band color so bar and grade pill state the
-              same thing (owner ruling 2026-08-11); both read `gradeMetadata`,
-              so they cannot drift apart. Composition bars stay neutral. */}
-          <span
-            className={cn("block h-full rounded-[2px]", pillar.score === null ? "bg-muted-foreground/25" : gradeMetadata.barClassName)}
-            style={{ width: `${pillar.score ?? 0}%` }}
-          />
-        </span>
       </button>
-      <div className="-mt-1 flex justify-end">
-        <a
-          href={`#${pillar.key}-evidence`}
-          className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
-          aria-label={`${pillar.label} evidence`}
-        >
-          Evidence ↓
-        </a>
-      </div>
+      {/* Outside the button so its label does not pad the button's name. A
+          score bar carries its band color so bar and grade pill state the
+          same thing (owner ruling 2026-08-11); both read `gradeMetadata`, so
+          they cannot drift apart. A pillar without a score draws the dashed
+          unavailable track, never an empty bar that reads as zero. */}
+      <span
+        role="img"
+        aria-label={pillar.score === null
+          ? `${pillar.label}: score unavailable`
+          : `${pillar.label}: ${pillar.score.toFixed(0)} out of 100`}
+        className={cn("mt-0.5 block h-2.5", pillar.score === null ? UNAVAILABLE_TRACK_CLASS : TRACK_CLASS)}
+      >
+        {pillar.score === null ? null : (
+          <span
+            className={cn("block h-full rounded-[2px]", gradeMetadata.barClassName)}
+            style={{ width: `${Math.max(0, Math.min(100, pillar.score))}%` }}
+          />
+        )}
+      </span>
+      {evidenceVisibility === "none" ? null : (
+        <div className={cn("mt-0.5 flex justify-end", evidenceVisibility === "below-xl" && "xl:hidden")}>
+          <a
+            href={`#${pillar.key}-evidence`}
+            className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+            aria-label={`${pillar.label} evidence`}
+          >
+            Evidence ↓
+          </a>
+        </div>
+      )}
       {hasDetails && open ? (
         <div
           id={detailsId}

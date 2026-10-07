@@ -531,13 +531,16 @@ export function PriceTransparencyCard({
         </div>
         {nominalReferenceNote}
 
-        {/* DEX Price Check - Elevated */}
+        {/* DEX Price Check - Elevated. The container stays neutral: the verdict
+            pill alone carries tone (and glyph), so a disagreement never sits in
+            a green box. */}
         {observed && dexPriceCheck ? (
-          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={cn("text-xs font-medium", SEVERITY_TONE_CLASS.ok.text)}>DEX Check</span>
-                <Badge variant="outline" className={cn("text-[11px]", dexAgreementTone)}>
+                <span className="text-xs font-medium text-muted-foreground">DEX Check</span>
+                <Badge variant="outline" className={cn("gap-1 text-[11px]", dexAgreementTone)}>
+                  <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
                   {dexAgreementLabel}
                 </Badge>
               </div>

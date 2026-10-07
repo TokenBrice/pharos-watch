@@ -53,7 +53,7 @@ describe("buildMechanismBackingView", () => {
 
   it("leaves the CDP cohort's metrics to the collateralization rail", () => {
     // A CDP asset with reviewed gaps still renders, but carries no metrics of
-    // its own — `CollateralizationCard` owns the ratio and the backstop row.
+    // its own — `BackingMetricsCard` (`backing-metrics-card.tsx`) owns the ratio and the backstop row.
     expect(buildMechanismBackingView("lusd-liquity")?.metrics).toEqual([]);
     // A CDP asset with no gaps has nothing this card can add, so it stays away.
     expect(buildMechanismBackingView("bold-liquity")).toBeNull();
@@ -72,7 +72,9 @@ describe("buildMechanismBackingView", () => {
     const view = buildMechanismBackingView("nbasis-nest");
     const note = view?.notes.find((entry) => entry.key === "metric:marginBufferPct");
     expect(note?.state).toBe("unavailable");
-    expect(note?.label).toBe("Margin buffer");
+    // A gap reads under the same name the measured metric carries elsewhere.
+    const measured = buildMechanismBackingView("usde-ethena")?.metrics.find((metric) => metric.key === "marginBufferPct");
+    expect(note?.label).toBe(measured?.label);
   });
 
   it("omits internal quality fields while preserving legitimate rationale words", () => {
@@ -151,6 +153,16 @@ describe("protocol facts", () => {
       { key: "collateralCoverageRatio", label: "Collateral coverage ratio", value: "150.0%" },
       { key: "exchangeRateRatio", label: "Exchange rate ratio", value: "1.25" },
     ]);
+  });
+
+  it("reads capacity-over-supply ratios as percentages", () => {
+    useOverlay({
+      analogousMetrics: {
+        facilitatorUnusedCapacityRatio: 0.447412,
+        directSwappableGsmCapacityRatio: 0.09975,
+      },
+    });
+    expect(buildMechanismBackingView("controlled")?.protocolFacts.map((fact) => fact.value)).toEqual(["44.7%", "10.0%"]);
   });
 
   it("retains exactly the first six finite protocol facts", () => {

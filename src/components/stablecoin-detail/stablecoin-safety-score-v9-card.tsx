@@ -6,7 +6,6 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { OpsStatusChip, PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
@@ -21,7 +20,10 @@ import { MethodologyHint } from "@/components/methodology-hint";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
-import { SafetyScoreV9PillarRow } from "@/components/stablecoin-detail/safety-score-v9-breakdown";
+import {
+  SafetyScoreV9PillarRow,
+  type PillarEvidenceAnchors,
+} from "@/components/stablecoin-detail/safety-score-v9-breakdown";
 import { CapSection, ScoreAdjustment } from "@/components/stablecoin-detail/safety-score-v9-adjustments";
 import { describeDataCoverageHoldCauses } from "@/lib/safety-score-data-coverage";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
@@ -135,6 +137,8 @@ export interface StablecoinSafetyScoreV9CardProps {
    *  surface, so it names its subject instead of relying on page context. */
   stablecoinSymbol?: string;
   logoSrc?: string;
+  /** Which pillar evidence boards the page renders; omitted, every pillar row links to its board. */
+  evidenceAnchors?: PillarEvidenceAnchors;
 }
 
 export function StablecoinSafetyScoreV9Card({
@@ -145,6 +149,7 @@ export function StablecoinSafetyScoreV9Card({
   stablecoinName,
   stablecoinSymbol,
   logoSrc,
+  evidenceAnchors,
 }: StablecoinSafetyScoreV9CardProps) {
   const presentation = buildStablecoinSafetyScoreV9Presentation(card);
 
@@ -190,7 +195,12 @@ export function StablecoinSafetyScoreV9Card({
 
           <div className="divide-y divide-border/40 border-y border-border/40">
             {presentation.pillars.map((pillar) => (
-              <SafetyScoreV9PillarRow key={pillar.key} cardId={card.id} pillar={pillar} />
+              <SafetyScoreV9PillarRow
+                key={pillar.key}
+                cardId={card.id}
+                pillar={pillar}
+                evidenceVisibility={evidenceAnchors?.[pillar.key]}
+              />
             ))}
           </div>
 
@@ -204,7 +214,6 @@ export function StablecoinSafetyScoreV9Card({
               </ModuleDisclosure>
             </section>
           ) : null}
-          <EvidenceFooter topic="safetyScore" />
         </div>
         <div className="mx-4 mb-5 sm:mx-5">
           <ShowYourWorkPanel
