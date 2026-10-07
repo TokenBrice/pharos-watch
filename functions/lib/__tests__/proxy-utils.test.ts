@@ -13,14 +13,14 @@ describe("summarizeFetchError", () => {
     });
   });
 
-  it("stringifies non-Error values", () => {
+  it("describes non-Error values using error-shaped fields when available", () => {
     expect(summarizeFetchError("network down")).toEqual({ kind: "string", message: "network down" });
     expect(summarizeFetchError(null)).toEqual({ kind: "object", message: "null" });
     expect(summarizeFetchError({ message: "network down" })).toEqual({
       kind: "object",
-      message: "[object Object]",
+      message: "network down",
     });
-    expect(summarizeFetchError({})).toEqual({ kind: "object", message: "[object Object]" });
+    expect(summarizeFetchError({})).toEqual({ kind: "object", message: "Non-error value thrown" });
   });
 });
 

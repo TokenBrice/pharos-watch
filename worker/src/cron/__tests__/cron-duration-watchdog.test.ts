@@ -121,7 +121,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
   });
 
   it("degrades when the 7d average crosses 80% of the ceiling", async () => {
@@ -131,7 +131,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       breaching: ["sync-stablecoins"],
     });
@@ -150,7 +150,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
   });
 
@@ -167,7 +167,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: ["sync-stablecoins"],
       breaching: ["sync-stablecoins"],
@@ -189,7 +189,7 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
     const metadata = JSON.parse(String(result.metadata));
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(metadata.runtimeBreaching).toEqual([]);
     expect(metadata.stats).toEqual(
       expect.arrayContaining([
@@ -216,7 +216,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: ["sync-stablecoins"],
       breaching: ["sync-stablecoins"],
@@ -238,7 +238,7 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(db);
     const metadata = JSON.parse(String(result.metadata));
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(metadata.runtimeCapRecentWindowSec).toBe(86400);
     expect(metadata.runtimeBreaching).toEqual([]);
     expect(metadata.stats).toEqual(
@@ -297,7 +297,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       durationDiagnostics: [
         {
@@ -339,7 +339,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
   });
 
   it("excludes reconciled child errors and stale-reason rows from runtime statistics", async () => {
@@ -349,7 +349,7 @@ describe("runCronDurationWatchdog", () => {
     insert.run(NOW_SEC - 10, SYNC_TIMEOUT_MS * 100, "error", STALE_SLOT_CHILD_ERROR, null);
     insert.run(NOW_SEC - 20, SYNC_TIMEOUT_MS * 100, "error", null, JSON.stringify({ reason: STALE_SLOT_METADATA_REASON }));
     const result = await runCronDurationWatchdog(db);
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       stats: expect.arrayContaining([expect.objectContaining({
         job: "sync-stablecoins", runs: 20, avgMs: 1000, maxMs: 1000, capHits: 0,
@@ -372,7 +372,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: ["sync-live-reserves"],
       slotAbandonmentBreaching: [],
@@ -393,7 +393,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: [],
       slotAbandonmentBreaching: ["hourlyYieldSync"],
@@ -415,7 +415,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       slotStats: expect.arrayContaining([
         expect.objectContaining({
@@ -467,7 +467,7 @@ describe("runCronDurationWatchdog", () => {
     const result = await runCronDurationWatchdog(createSqliteD1(sqlite));
     const metadata = JSON.parse(String(result.metadata));
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(metadata.slotStats).toEqual(expect.arrayContaining([
       expect.objectContaining({
         scheduleKey: "halfHourlyOffset",
@@ -490,7 +490,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       slotAbandonmentRecentWindowSec: 86400,
       slotAbandonmentBreaching: [],
@@ -517,7 +517,7 @@ describe("runCronDurationWatchdog", () => {
 
     const result = await runCronDurationWatchdog(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("ok");
     const metadata = JSON.parse(String(result.metadata));
     expect(metadata.slotStats).toEqual(
       expect.arrayContaining([

@@ -12,7 +12,7 @@ import { parseJsonObject } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import type { DexMeasuredQuoteOutcome } from "./persistence";
+import { readPositiveEmptyPoolProof, type DexMeasuredQuoteOutcome } from "./persistence";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
 import {
   getDexMeasuredExecutionDeployment,
@@ -225,9 +225,12 @@ export function summarizeMeasuredExecutionQuoteFailures(
   scoreEligibleDiagnosticFailureCount: number;
   scoreEligibleBlockingFailureCount: number;
   diagnosticAttemptedFailureCount: number;
+  positiveEmptyPoolCount: number;
+  scoreEligiblePositiveEmptyPoolCount: number;
 } {
   const attemptedFailures = outcomes.filter(
     (outcome) =>
+      outcome.observedThisRun !== false &&
       outcome.status === "failed" &&
       outcome.failureReason !== "budget-deferred" &&
       outcome.failureReason !== "score-bearing-route-unavailable",
@@ -238,11 +241,19 @@ export function summarizeMeasuredExecutionQuoteFailures(
       isDexMeasuredExecutionTargetScoreEligible(outcome.target),
   );
   const scoreEligibleDiagnosticFailureCount = scoreEligibleFailures.filter(isDiagnosticDexMeasuredQuoteFailure).length;
-  const scoreEligibleBlockingFailureCount = scoreEligibleFailures.length - scoreEligibleDiagnosticFailureCount;
+  const positiveEmpty = outcomes.filter((outcome) => outcome.status === "failed"
+    && outcome.failureReason === "pool-uninitialized-or-empty"
+    && readPositiveEmptyPoolProof(outcome.rawPayload) != null);
+  const scoreEligiblePositiveEmptyPoolCount = positiveEmpty.filter((outcome) =>
+    isDexMeasuredExecutionTargetScoreEligible(outcome.target)).length;
+  const attemptedPositiveEmptyCount = scoreEligibleFailures.filter((outcome) => positiveEmpty.includes(outcome)).length;
+  const scoreEligibleBlockingFailureCount = scoreEligibleFailures.length - scoreEligibleDiagnosticFailureCount - attemptedPositiveEmptyCount;
   return {
     attemptedFailureCount: attemptedFailures.length,
     scoreEligibleAttemptedFailureCount: scoreEligibleFailures.length,
     scoreEligibleDiagnosticFailureCount,
+    positiveEmptyPoolCount: positiveEmpty.length,
+    scoreEligiblePositiveEmptyPoolCount,
     scoreEligibleBlockingFailureCount,
     diagnosticAttemptedFailureCount: Math.max(
       0,

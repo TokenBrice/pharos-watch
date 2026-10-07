@@ -36,6 +36,7 @@ import {
   type ScheduledRecoveryCheckpoint,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
+import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";
 
 const SLOT_LABEL = "four-hourly reserve sync slot";
 
@@ -72,6 +73,7 @@ function checkpointTask(
           throw new Error("live reserve checkpoint missing after queue execution");
         }
         const childDisposition =
+          result?.status === "skipped_neutral" ||
           result?.status === "skipped_locked" ||
           (checkpointAfterTask != null && !isReserveQueueExhausted(checkpointAfterTask))
             ? "not_started"
@@ -209,7 +211,29 @@ async function recordBlockedReserveTasks(
   return buildScheduledSlotSummary(tasks.map((task) => summarizeSkippedScheduledJob(task.job, reason)));
 }
 
+async function recordPriorityDeferredReserveTasks(
+  runtime: ScheduledRuntimeContext,
+  jobs: readonly string[],
+  reason: string,
+  metadata: Record<string, unknown>,
+): Promise<ScheduledSlotSummary> {
+  for (const job of jobs) await logSkippedCronRun(runtime, {
+    job, status: "skipped_neutral", reason, message: "Reserve replay deferred for a protected scheduled slot", metadata,
+  });
+  return buildScheduledSlotSummary(jobs.map((job) => ({
+    job, outcome: "skipped", status: "skipped_neutral", reason, neutral: true,
+  })));
+}
+
 export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext) {
+  if (runtime.recoveryCheckpoint) {
+    const priority = await getReserveProducerPriority(runtime.db);
+    if (priority) {
+      const jobs = buildReserveSyncSlotGroups(runtime, runtime.recoveryCheckpoint)
+        .flatMap((group) => group.tasks.map((task) => task.job));
+      return recordPriorityDeferredReserveTasks(runtime, jobs, priority.reason, { producerPriority: priority });
+    }
+  }
   const checkpoint =
     runtime.recoveryCheckpoint ??
     (await beginLiveReserveCheckpoint(runtime.db, {
@@ -250,6 +274,13 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   }
   const mainFailedAfterQueueExhaustion = mainSummary.jobsErrored > 0 && isReserveQueueExhausted(checkpointAfterMain);
   const summaries: ScheduledSlotSummary[] = [mainSummary, kinesisSummary];
+  const admissionSkip = [...mainSummary.jobs, ...kinesisSummary.jobs].find((job) =>
+    job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
+  if (runtime.recoveryCheckpoint && admissionSkip) {
+    summaries.push(await recordPriorityDeferredReserveTasks(runtime,
+      [...redemptionTasks, ...postSyncTasks].map((task) => task.job), admissionSkip.reason!, {}));
+    return mergeScheduledSlotSummaries(summaries);
+  }
   const reserveStageCompleted =
     isReserveQueueExhausted(checkpointAfterMain)
     && mainSummary.jobsErrored === 0
@@ -277,6 +308,13 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   } else {
     if (redemptionTasks.length > 0 && redemptionGroup) {
       summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
+      const redemptionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
+        job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
+      if (runtime.recoveryCheckpoint && redemptionSkip) {
+        summaries.push(await recordPriorityDeferredReserveTasks(runtime,
+          postSyncTasks.map((task) => task.job), redemptionSkip.reason!, {}));
+        return mergeScheduledSlotSummaries(summaries);
+      }
     }
     if (postSyncTasks.length > 0 && postSyncGroup) {
       summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));

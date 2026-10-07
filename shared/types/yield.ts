@@ -126,6 +126,7 @@ const YieldSafetySnapshotMetaSchema = z.object({
   publicationGenerationId: z.string().nullable().optional(),
   methodologyVersion: z.string().nullable().optional(),
   publishedAt: z.number().nullable().optional(),
+  maxAgeSeconds: z.number().int().positive().optional(),
 });
 
 const YieldLiveSafetyHydrationMetaSchema = z.object({

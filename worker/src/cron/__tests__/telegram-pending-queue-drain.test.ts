@@ -3,6 +3,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils
 import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../lib/telegram/pending-provenance";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { PENDING_DELETE_CHUNK_SIZE } from "../telegram-pending/dead-letter";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
   createClaimContentionD1,
@@ -56,6 +57,7 @@ const {
   TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
   reconcileStalePendingSending,
+  reconcilePendingQueueMaintenance,
 } = await import("../telegram-pending");
 const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram/pending-queue");
 await import("../../lib/telegram/alerts");
@@ -400,11 +402,85 @@ describe("drainPendingQueue contract cases", () => {
     insertSourceEventSqlite(sqlite, { sourceEventId: "stale-source", planGeneration: 1 });
     insertAlertJobFixture(sqlite, { jobId: "stale-job", alertType: "dews", sourceEventId: "stale-source", severity: "warning" }, 1_000);
     insertAlertJobTargetFixture(sqlite, { jobId: "stale-job", targetKey: "stale-target", chatId: "stale", alertType: "dews", pendingDedupeKey: "stale-key", sourceEventId: "stale-source", status: "queued", effectState: "complete" }, 1_000);
+    sqlite.prepare("UPDATE telegram_alert_job_targets SET plan_generation = 1 WHERE target_key = 'stale-target'").run();
     sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sending', delivery_owner = 'lost', delivery_generation = 3, delivery_started_at = ?, delivery_claim_expires_at = ?, processing_owner = 'lost', processing_expires_at = ? WHERE id = 704").run(1_000, 1_000, 1_000);
     expect(await reconcileStalePendingSending(db, 2_000)).toBe(1);
     expect(await reconcileStalePendingSending(db, 2_000)).toBe(0);
     expect(sqlite.prepare("SELECT delivery_state, last_error_class FROM telegram_pending_alerts WHERE id = 704").get()).toEqual({ delivery_state: "execution_unknown", last_error_class: "pending_effect_owner_lost" });
+    expect(sqlite.prepare("SELECT final_delivery_state FROM telegram_alert_job_targets WHERE target_key = 'stale-target'").get()).toEqual({ final_delivery_state: null });
+    expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ staleSendingReconciled: 0, targetOutcomesProjected: 1 });
+    expect(sqlite.prepare("SELECT final_delivery_state FROM telegram_alert_job_targets WHERE target_key = 'stale-target'").get()).toEqual({ final_delivery_state: "execution_unknown" });
     sqlite.close();
+  });
+
+  it("bounds stale-claim maintenance, retains fresh claims, and is idempotent", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      for (let id = 1; id <= PENDING_DELETE_CHUNK_SIZE + 2; id++) {
+        insertPendingSqlite(sqlite, { id, chatId: `orphan-${id}`, html: "orphan", deliveryState: "sending", deliveryOwner: "lost", deliveryGeneration: 3, deliveryClaimExpiresAt: id === PENDING_DELETE_CHUNK_SIZE + 2 ? 2_001 : 2_000 }, 1_000);
+      }
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: PENDING_DELETE_CHUNK_SIZE, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ staleSendingReconciled: 1 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
+      expect(sqlite.prepare("SELECT delivery_state, delivery_generation FROM telegram_pending_alerts WHERE id = ?").get(PENDING_DELETE_CHUNK_SIZE + 2)).toEqual({ delivery_state: "sending", delivery_generation: 3 });
+      expect(mockSendToChat).not.toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["owner", "generation", "claim-renewal"] as const)("rejects a racing stale-claim $0 change", async (race) => {
+    const { sqlite } = createLatestSchemaSqlite();
+    try {
+      insertPendingSqlite(sqlite, { id: 1, chatId: "race", html: "race", deliveryState: "sending", deliveryOwner: "lost", deliveryGeneration: 3, deliveryClaimExpiresAt: 2_000 }, 1_000);
+      const db = createSqliteD1(sqlite, { onAll: (sql) => {
+        if (!sql.includes("SELECT id, delivery_owner")) return;
+        sqlite.prepare(race === "owner"
+          ? "UPDATE telegram_pending_alerts SET delivery_owner = 'new' WHERE id = 1"
+          : race === "generation"
+            ? "UPDATE telegram_pending_alerts SET delivery_generation = 4 WHERE id = 1"
+            : "UPDATE telegram_pending_alerts SET delivery_claim_expires_at = 2001 WHERE id = 1").run();
+      } });
+      expect(await reconcileStalePendingSending(db, 2_000)).toBe(0);
+      expect(sqlite.prepare("SELECT delivery_state FROM telegram_pending_alerts WHERE id = 1").get()).toEqual({ delivery_state: "sending" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("bounds terminal target and recap projection backlogs across passes", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertSourceEventSqlite(sqlite, { sourceEventId: "terminal-source" });
+      insertAlertJobFixture(sqlite, { jobId: "terminal-job", alertType: "dews", sourceEventId: "terminal-source", severity: "warning" }, 1_000);
+      for (let id = 1; id <= PENDING_DELETE_CHUNK_SIZE + 1; id++) {
+        insertPendingSqlite(sqlite, { id, chatId: `terminal-${id}`, html: "terminal", dedupeKey: `terminal-${id}` }, 1_000);
+        insertAlertJobTargetFixture(sqlite, { jobId: "terminal-job", targetKey: `terminal-${id}`, chatId: `terminal-${id}`, alertType: "dews", sourceEventId: "terminal-source", pendingDedupeKey: `terminal-${id}`, status: "sent" }, 1_000);
+        insertRecapDeliveryFixture(sqlite, 1_000, { chatId: `recap-${id}` });
+        sqlite.prepare("UPDATE telegram_pending_alerts SET id = ?, delivery_state = 'execution_unknown' WHERE id = 8501").run(1_000 + id);
+      }
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: PENDING_DELETE_CHUNK_SIZE, recapOutcomesProjected: PENDING_DELETE_CHUNK_SIZE });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toMatchObject({ terminalPendingReconciled: 1, recapOutcomesProjected: 1 });
+      expect(await reconcilePendingQueueMaintenance(db, 2_000)).toEqual({ staleSendingReconciled: 0, targetOutcomesProjected: 0, terminalPendingReconciled: 0, recapOutcomesProjected: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'execution_unknown'").get()).toEqual({ count: PENDING_DELETE_CHUNK_SIZE + 1 });
+      expect(mockSendToChat).not.toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("aborts transport when maintenance fails instead of claiming send eligibility", async () => {
+    const { sqlite } = createLatestSchemaSqlite();
+    try {
+      const db = createSqliteD1(sqlite, { onAll: (sql) => {
+        if (sql.includes("SELECT id, delivery_owner")) throw new Error("maintenance read failed");
+      } });
+      await expect(drainPendingQueue(db, "bot-token", 10)).rejects.toThrow("maintenance read failed");
+      expect(transportMocks.claim).not.toHaveBeenCalled();
+      expect(mockSendToChat).not.toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("allows only one racing owner and does not finalize after an ownership change", async () => {

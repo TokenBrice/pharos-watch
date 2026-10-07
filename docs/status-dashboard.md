@@ -208,6 +208,7 @@ Related extracted loaders:
 - Requires a valid admin credential (`requireAdmin`)
 - Response cache policy: `Cache-Control: no-store`
 - Even when the 15-minute assessment snapshot is fresh, `/api/status` reads current cron history, progress, leases, and scheduled slots through `loadCronHealth()`. Per-job availability, cron/slot summary counts, and the informational cron availability causes (`degraded_cron_warning`, `watch_cron_error_runs`, `watch_unhealthy_crons_present`, and the `cron_*_query_failed` notices) all describe that one live read at the response `timestamp`, so a cause count never disagrees with its `summary` counterpart in the same response; the aggregate assessment, caches, and expensive supplements retain the persisted assessment generation. A failed live cron read remains unknown rather than replaying a cached success.
+- Every health/status request live-reads `schedulerLiveness` from actual D1 slot starts, including fresh-snapshot paths. Cached unhealthy scheduler floors force live recomputation to clear only obsolete scheduler causes; independent blockers remain. Admin snapshots are bypassed when reserve review applicability changes, and pre-feature reserve projections are rejected.
 
 `StatusResponseSchema` validates required fields for each retained nested section; malformed section payloads fail closed at the admin query boundary instead of being treated as typed-but-unchecked objects. Optional additive top-level fields remain passthrough-compatible, while the four retired projections listed above are not emitted.
 
@@ -219,7 +220,9 @@ freshness verdict names the budget it used and the generation it describes, with
 fields — and **R4** (ADR-31) — a non-`ok` terminal status carries a machine-readable reason, and terminal
 status separates "did the work happen" from "were the inputs perfect". Their additive publication fields live
 in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMaxRatio` and `healthyMaxAge` for
-the band, `degraded` / `degradedReason` / `streakDegradedRuns` for the generation's input quality. The
+the band, yield `generationId` / `publishedAt` for the served generation and Unix publication time,
+and `degraded` / `degradedReason` / `streakDegradedRuns` for input quality. Legacy generationless
+sentinels and table/cron fallbacks expose null yield identity/time rather than inventing them. The
 per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
 
 ### Timestamp admission
@@ -260,6 +263,14 @@ fallbacks and lost CAS writes cannot advance that clock. A deliberately publishe
 Direct `CronResult` producers retain the logger's runtime defense: unresolved degraded/error reasons become
 `unspecified-<status>` and warn in the Worker log. `cron_runs.degraded_reason` remains the terminal reason;
 successful-run quality reasons remain visible in status diagnostics and operator night-watch findings.
+Every retained cron run projects a nonblank `cron_runs.degraded_reason` as optional `degradedReason`.
+The admin detail summary prefers that column over legacy metadata and appends a generic reason for
+unknown jobs or column-only rows; canonical quality findings append without replacing specialized
+summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
+behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
+warnings. Errors and freshness remain independently evaluated.
+
+Successful observers report `ok` plus `metadata.quality` for semantic service degradation, stale producer output, detail-write markers, missing digest editions, duration/abandonment trends, and sustained DEX turnover. These findings do not increment `degradedCrons`; fresh operational `degraded` attempts still inherit behind neutral skips. The workbench includes findings in Attention and labels successful observations “Succeeded with findings” without changing execution state or group degraded totals. Observation success never renews a producer's output clock.
 
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in
 `worker/src/lib/status/freshness-oracle.ts` preserves latest attempt/status separately from the latest
@@ -333,6 +344,8 @@ For the split DEX pipeline:
 ### Availability status
 
 Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.
+
+Scheduler delivery is an independent availability axis: the newest actual start across `fiveMinuteReserveRecovery`, `fiveMinuteTelegramAlerts`, and `digestTriggerPoll` must be within the shared 600-second warning / 1200-second stale budgets (strictly greater than the boundary escalates). `scheduled_delivery_stalled` is warning/critical; missing, future, or unreadable starts yield `scheduler_liveness_unavailable` and a degraded floor, never healthy. Overall MAX is diagnostic only: an hourly slot cannot mask five-minute delivery loss. Partial lane loss stays diagnostic while another canonical lane starts. See [delivery stall runbook](./runbooks/cron-delivery-stall.md).
 
 - `stale` if any of:
   - any shared cache impact is `stale`
@@ -440,6 +453,8 @@ Ratio-based on-chain stale/degraded thresholds are also gated until the active m
 
 `overallStatus` is the **effective** status after hysteresis state-machine reconciliation:
 
+At request time the admin advertises the worse of persisted `state.currentStatus` and live scheduler impact, without writing state. The hysteresis state below remains cron-owned; a stall can therefore become visible before the next status cron.
+
 - `healthy -> degraded`: requires 2 consecutive raw degraded checks
 - `healthy -> stale`: immediate on raw stale
 - `degraded -> stale`: requires 2 consecutive raw stale checks
@@ -515,7 +530,7 @@ When one of those best-effort subqueries fails, `/api/status` keeps unaffected s
 
 Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers producer-owned `cache` sentinels (`freshness:*`) instead of live `MAX(...)` scans over the hot publish tables. If the sentinel is missing during rollout, `/api/status` falls back to the legacy table query; if the lookup itself fails, it can still fall back to the latest successful producer cron timestamp and adds a `cache_freshness_query_failed` info cause instead of auto-promoting the lane to public `stale`.
 
-`sync-yield-data` writes its sentinel only when the published generation carries no `yield-source:*` degradation reason. An expired selected source still publishes rankings by design, but it does not advance the lane's freshness claim; until cron-history quality is split from freshness, a missing sentinel can still use the table fallback and a recent last-good sentinel remains valid for its normal age window.
+`sync-yield-data` writes its sentinel inside every applied rankings publication batch, regardless of input quality. The sentinel's `generationId` and `updatedAt` match the winning rankings generation; CAS losers and failed batches cannot advance it. Coverage below 0.75 still gates quality via `safety-snapshot-coverage`; a held safety snapshot uses the nongating `safety-snapshot-held` advisory without renewing the safety clock or permitting destructive cleanup.
 
 **Per-cache availability overrides.** Availability ratio bands are the global `>8x` degraded / `>12x` stale by default, except where `STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts` tightens a specific cache. `yield-data` overrides to `>2x` degraded / `>4x` stale against its post-V9 `sync-yield-data` budget: two missed publishes flip the cache entry to `healthy:false` and degrade both public cache impact and the availability `statusFloor`, while a single missed publish stays healthy. This closes the honesty gap where the global bands let multi-hour-stale yield rankings still read publicly `healthy` even though the admin endpoint-budget lane already flags the lane at 1x. The override is threaded through `getCacheFreshnessStatus`/`getCacheImpactStatus` (public rollup in `shared/lib/public-health.ts`), the worker `buildCacheStatuses` `healthy` and `statusFloor` computation, and the status-page recompute in `src/lib/status/public-status.ts`; all other caches keep the global bands. See `docs/architecture.md` ADR-9.
 The public Cache Freshness table preserves each cache key through classification and labels overridden rows with their resolved degraded/stale ratios, so `yield-data` shows `>2x` / `>4x` rather than the global bands.
@@ -534,18 +549,18 @@ The public `/api/health` companion endpoint now returns a `warnings` array for t
 
 Behavior:
 
-- bootstrap is suppressed until the first successful live reserve sync exists
+- bootstrap health suppression remains until the first successful live reserve sync; thereafter a nonempty evaluable cohort with no fresh feed is stale
 - only matched `reserve_composition` + `reserve_sync_state.last_success_at` pairs count as live snapshots; orphaned or split-write rows are treated as missing
 - coins currently failing before their first successful snapshot count as `errorCoins`, not `missingCoins`
-- after bootstrap, reserve health is coverage-based:
-  - `status: "stale"` when `freshCoins === 0`
-  - `status: "degraded"` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, any independent feed is persistently stale, any write is uncertain, the cursor tail is incomplete, the deferred tail is high-share, or run-budget truncation repeats
-  - `status: "healthy"` otherwise
+- reserve health uses the matched-review-adjusted cohort, retaining the unchanged floors:
+  - `status: "stale"` when a nonempty health cohort has zero fresh feeds
+  - `status: "degraded"` when health-cohort fresh coverage is below 0.75, authoritative coverage below 0.5, an unacknowledged independent feed is persistently stale, any write is uncertain, or the run-budget-truncated deferred share is at least 0.25
+  - an empty all-acknowledged cohort is explicitly healthy unless unchanged capacity-pressure gates apply
 - low raw counts of degraded/missing reserve feeds no longer degrade `dataQualityStatus` on their own if coverage remains above those thresholds
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
 - an unavailable reserve overview renders **Unavailable / Unknown** in Live Reserve Sync, Score impact, triage and pipeline readiness; it never renders 0% coverage or a clear recovery queue
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
-- `persistentlyStaleIndependentCoins` lists independent feeds older than the persistent-stale threshold and keeps the reserve sync card/action cause degraded until the source recovers
+- `persistentlyStaleIndependentCoins` retains the complete raw list; `unacknowledgedPersistentlyStaleIndependentCoins` owns its health gate. `healthConfiguredCoins`, `healthFreshCoins`, and `healthAuthoritativeFreshCoins` exclude each matched review's actual contribution. `acknowledgedFeeds` carries reason, evidence, owner, review date, and expiry; expired/invalid IDs re-arm gates and emit info causes even on otherwise healthy observations.
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
 - `adapterReliability` is a 30-day per-adapter rollup computed with one grouped scan over `reserve_sync_attempt_history` (`attempts`, `ok`/`degraded`/`error`/`skipped` counts, and `successRate` = `ok / attempts`). It is cached with the hourly status snapshot and rendered as a compact table on the `Live Reserve Sync` card; rows are ordered by attempt count descending.
@@ -605,6 +620,8 @@ The isolated `9,24,39,54 * * * *` status lane runs `status-self-check`, `data-in
 
 Every sentinel run publishes `metadata.mode`, a first-class `metadata.sourceStatuses` map, and — for a non-`ok` run — `metadata.reason` as `<mode>:<source>:<status>`, so a permanently degraded lane is attributable to the watchdog that raised it without reading nested JSON paths. `metadata.ruleIds` lists the rule ids per active source; the rule conditions are documented in `worker/src/cron/cron-sentinel-rules.ts` rather than re-serialized into every run. The daily invocation is reached only through `runDailyCronSentinel`; `runCronSentinel` dispatches the status, turnover, and reserve-post-sync modes.
 
+`metadata.firedRuleIds` records only predicates that fired (per source in the sentinel), unlike the configured `ruleIds` inventory. The sentinel preserves the worst operational child status; thrown evidence reads/writes and malformed retained source state remain failures. An attempted failed operator alert is `operator-alert-delivery-failed`; cooldown and absent credentials leave transitions pending without failing execution.
+
 Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced scheduled invocation pre-sweeps stale prior rows for its own schedule key, and a same-slot takeover reconciles the displaced owner's artifacts before work resumes. The five-minute reserve-recovery lane retains the unscoped sweep so a killed lane is still discovered promptly. Reconciliation preserves real terminal child rows, classifies incomplete children from durable progress, lease, cron-history, and producer-publication evidence, and writes `scheduled-slot-abandoned` event markers without deleting a renewed or newer owner.
 
 `status-self-check` then:
@@ -614,12 +631,14 @@ Stale-slot cleanup no longer has a status-tracked sweeper job. Every fenced sche
    - external production probes always use real HTTPS `fetch()` calls through the production custom domains with a 10s timeout per endpoint: `https://api.pharos.watch/api/health`, `https://site-api.pharos.watch/api/health` when `SITE_API_SHARED_SECRET` is configured, a `site-api.pharos.watch` access-gate probe expecting `401` or `403` when that shared secret is absent, and `https://ops-api.pharos.watch/api/status-history?limit=1`.
    - the ops API canary expects Cloudflare Access/admin gating to block the unauthenticated request (`302` or `403`); a successful open response is treated as `ops-api-access-gate-open-or-unreachable`.
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency. External timings reflect the production edge path.
-   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport. `/api/status` is not probed by this synthetic endpoint loop; it is evaluated separately through `evaluateStatusAndPersist()`.
+   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the persisted synthetic probe/discrepancy but becomes a successful observation with quality findings. Separate `transportStatus` and `semanticStatus` accompany combined `probeStatus`. Invalid payloads, failed/access-gate probes and exceeded transport bands remain `probe-execution-failed`. `/api/status` is evaluated separately through `computeRawStatus()` and `reconcileStatusState()`.
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
 5. Exposes the sustained-divergence and sustained-probe-failure streaks as `discrepancyStreak` / `probeFailureStreak` in the cron metadata, alongside the internal/external comparison so operators can separate app/router regressions from custom-domain, Access, routing, cache, and edge-path regressions. There is no outbound alert transport; escalation is operator-driven from the status surfaces.
+
+All four required stores (`status_probe_runs`, `status_state`, `status:raw-snapshot:v1`, `status_discrepancy_state`) must succeed, including their required-read callbacks. A failed store returns `status-self-check-persistence-failed`, lists `failedOutputs`, and sets `outputPublishedAt: null`; this reason takes precedence. Current DB/section evidence failures return `status-self-check-evidence-read-failed`, not a semantic service finding. Existing status hysteresis and probe thresholds remain unchanged.
 
 The cron metadata now includes:
 
@@ -691,6 +710,8 @@ Response includes:
 6. `hasMore` completeness evidence (`true` when another matching row exists, `false` for a complete matching window, and `null` when completeness could not be determined)
 
 The incident-history workspace only makes negative deployment-correlation statements for a fresh response with `hasMore === false`. Row-limited, retained, fallback, and indeterminate results remain visibly partial and keep correlation Unknown.
+
+Delivery status is request-time evidence, but transition history is cron-sampled. A stall and recovery entirely between status observations cannot create invented historical transitions; the external monitor's issue/run is separate incident evidence.
 
 ---
 

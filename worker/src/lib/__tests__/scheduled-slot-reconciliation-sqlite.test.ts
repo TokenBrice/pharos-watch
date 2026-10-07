@@ -513,8 +513,8 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       `SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'weekly-recap'`,
     ).get()).toEqual({ count: 0 });
     expect(sqlite.prepare(
-      `SELECT status, error FROM cron_runs WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ status: "error", error: "scheduled slot abandoned before child job started" });
+      `SELECT status, error, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'`,
+    ).get()).toEqual({ status: "error", error: "scheduled slot abandoned before child job started [stale-slot-reconciled]", degraded_reason: "stale-slot-reconciled" });
   });
 
   it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
@@ -534,10 +534,10 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
     expect(sqlite.prepare(
-      `SELECT status, error
+      `SELECT status, error, degraded_reason
          FROM cron_runs
         WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ status: "skipped_neutral", error: null });
+    ).get()).toEqual({ status: "skipped_neutral", error: null, degraded_reason: "stale-slot-reconciled" });
     const runRow = sqlite.prepare(
       `SELECT metadata
          FROM cron_runs
@@ -580,7 +580,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         WHERE job = 'sync-cl-exit-depth'`,
     ).get()).toEqual({
       status: "error",
-      error: "scheduled slot heartbeat stale; child job progress abandoned",
+      error: "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]",
     });
     const runRow = sqlite.prepare(
       `SELECT metadata
@@ -625,11 +625,12 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconcilerWorkerVersion: "worker-new",
     });
     const run = sqlite.prepare(
-      "SELECT status, error, duration_ms, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
-    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string };
+      "SELECT status, error, duration_ms, metadata, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
+    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string; degraded_reason: string };
     const interrupted = expectedStatus === "skipped_neutral";
     expect(run.status).toBe(expectedStatus);
-    expect(run.error).toBe(interrupted ? null : "scheduled slot heartbeat stale; child job progress abandoned");
+    expect(run.error).toBe(interrupted ? null : "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]");
+    expect(run.degraded_reason).toBe(JSON.parse(run.metadata).reason);
     expect(run.duration_ms).toBe((progressOffset - 11) * 1_000);
     expect(JSON.parse(run.metadata)).toMatchObject({
       failureCategory: interrupted ? "platform-interrupted" : "platform-abandoned",
@@ -741,7 +742,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         WHERE job = 'sync-cl-exit-depth'`,
     ).get() as { status: string; error: string | null; metadata: string };
     expect(runRow.status).toBe("error");
-    expect(runRow.error).toBe("scheduled slot heartbeat stale; child job progress abandoned");
+    expect(runRow.error).toBe("scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]");
     // Drift exists, so the marker evidence is recorded even though the death
     // falls outside the activation window and stays abandoned.
     expect(JSON.parse(runRow.metadata)).toMatchObject({
@@ -811,7 +812,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ).get() as { status: string; error: string | null; metadata: string };
     expect(runRow.status).toBe(expectedStatus);
     expect(runRow.error).toBe(
-      expectedStatus === "error" ? "scheduled slot heartbeat stale; child job progress abandoned" : null,
+      expectedStatus === "error" ? "scheduled slot heartbeat stale; child job progress abandoned [stale-slot-reconciled]" : null,
     );
     expect(JSON.parse(runRow.metadata)).toMatchObject({
       interruptedByWorkerVersionChange: expectedStatus === "skipped_neutral",

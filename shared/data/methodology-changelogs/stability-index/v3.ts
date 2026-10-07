@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.66",
+    title: "Observed supply admission and explicit partial-input quality",
+    date: "2026-10-07",
+    effectiveAt: 1791331200,
+    summary:
+      "Live PSI excludes unavailable current supply from market-cap denominators and contributors, pairs only usable historical supply, and reports successful partial publication as ok with input-quality findings.",
+    impact: [
+      "Absent, empty, wholly invalid, nonfinite or negative current totals are omitted; explicit observed zero remains admissible",
+      "Unavailable previous-week totals are omitted from both trend sides; a nonpositive or nonfinite paired denominator holds the prior sample with trend-inputs-unavailable instead of inventing zero trend",
+      "Stored snapshots and the API disclose supplyUnavailableIds and trendUnavailableIds alongside existing unpriced-open-event diagnostics",
+      "A successful sample and prune returns psi-sample-published with ok plus quality for omissions; failed dependencies still hold publication",
+      "Six-hour USD/native price-evidence and 3600-second accepted-DEWS budgets, pure formula and historical rows are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.65",
     title: "Persisted current native-peg event quotes",
     date: "2026-10-06",

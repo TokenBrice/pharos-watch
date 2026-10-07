@@ -65,6 +65,13 @@ type WatchdogResult = {
   };
   safetySource: WatchdogOutcome & {
     state: string | null;
+    failureReason: string | null;
+    ageSeconds: number | null;
+    generation: string | null;
+    sourcePublicationGenerationId: string | null;
+    acceptedPublicationGenerationId: string | null;
+    freshnessMaxAgeSec: number;
+    assessedAtSec: number;
     heldSinceSec?: number | null;
     holdAgeSec?: number | null;
     holdReasonCodes?: string[];
@@ -312,6 +319,13 @@ async function evaluateSafetySource(
   const outcome: WatchdogResult["safetySource"] = {
     ...emptyOutcome(),
     state: assessment.state,
+    failureReason: assessment.failureReason ?? null,
+    ageSeconds: assessment.ageSeconds,
+    generation: assessment.generation,
+    sourcePublicationGenerationId: assessment.sourcePublicationGenerationId,
+    acceptedPublicationGenerationId: assessment.acceptedPublicationGenerationId,
+    freshnessMaxAgeSec: assessment.freshnessMaxAgeSec,
+    assessedAtSec: assessment.assessedAtSec,
     ...(carriesHeldDiagnostics
       ? { heldSinceSec, holdAgeSec, holdReasonCodes }
       : {}),

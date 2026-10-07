@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -49,21 +49,47 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const mcapById = new Map<string, number>();
   const symbolById = new Map<string, string>();
 
+  const supplyUnavailableIds: string[] = [];
+  const trendUnavailableIds: string[] = [];
   for (const coin of tracked) {
-    const mcap = getCirculatingRaw(coin);
+    const mcap = getCirculatingRawOrNull(coin);
+    if (mcap == null || !Number.isFinite(mcap) || mcap < 0) {
+      supplyUnavailableIds.push(coin.id);
+      continue;
+    }
     totalMcapUsd += mcap;
     const prevWeek = getPrevWeekRawOrNull(coin);
-    if (prevWeek != null) {
+    if (prevWeek != null && Number.isFinite(prevWeek) && prevWeek >= 0) {
       pairedMcapUsd += mcap;
       pairedPrevWeek += prevWeek;
+    } else {
+      trendUnavailableIds.push(coin.id);
     }
     mcapById.set(coin.id, mcap);
     symbolById.set(coin.id, coin.symbol);
   }
 
-  const mcap7dChangePct = pairedPrevWeek > 0
+  const mcap7dChangePct = Number.isFinite(pairedPrevWeek) && pairedPrevWeek > 0 && Number.isFinite(pairedMcapUsd)
     ? ((pairedMcapUsd - pairedPrevWeek) / pairedPrevWeek) * 100
-    : 0;
+    : null;
+  if (!Number.isFinite(totalMcapUsd) || totalMcapUsd <= 0 || mcap7dChangePct == null || !Number.isFinite(mcap7dChangePct)) {
+    const reason = !Number.isFinite(totalMcapUsd) || totalMcapUsd <= 0
+      ? "insufficient-market-cap"
+      : "trend-inputs-unavailable";
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason,
+        fallbackMode: reason,
+        totalMcapUsd,
+        mcap7dChangePct: mcap7dChangePct != null && Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : null,
+        supplyUnavailableIds,
+        trendUnavailableIds,
+        preservedCurrentSample: true,
+      },
+    });
+  }
 
   throwIfAborted(signal);
 
@@ -161,7 +187,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       // Count stressed coins weighted by mcap after dependency freshness is proven.
       for (const row of rows) {
         if (!DEWS_STRESS_BANDS.has(row.band)) continue;
-        const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
+        const coinMcap = mcapById.get(row.stablecoin_id);
+        if (coinMcap == null) continue;
         dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;
       }
     }
@@ -210,6 +237,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   let openDepegsWithoutPrice = 0;
 
   for (const [coinId, events] of grouped) {
+    const mcapUsd = mcapById.get(coinId);
+    if (mcapUsd == null) continue;
     const currentPrice = priceById.get(coinId);
     const replayPrice = replayPriceById.get(coinId);
     const usdPrice = currentPrice ?? replayPrice;
@@ -235,7 +264,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     if (missingPrice) openDepegsWithoutPrice++;
 
     if (earliestStart === Infinity) continue;
-    const mcapUsd = mcapById.get(coinId) ?? 0;
     const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
 
     depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
@@ -251,9 +279,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   throwIfAborted(signal);
-  const degradedComponents: string[] = openDepegsWithoutPrice > 0
-    ? ["open-depeg-no-price"]
-    : [];
+  const degradedComponents: string[] = [
+    ...(openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : []),
+    ...(supplyUnavailableIds.length > 0 ? ["supply-unavailable"] : []),
+    ...(trendUnavailableIds.length > 0 ? ["trend-inputs-unavailable"] : []),
+  ];
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {
@@ -302,6 +332,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         replayPriceFallbackCount,
         openDepegsWithoutPrice,
         degradedComponents,
+        supplyUnavailableIds,
+        trendUnavailableIds,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -317,11 +349,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   logWorkerEventArgs("handler", "info", `[stability-index] score=${result.score} band=${result.band}`);
   return createCronResult({
-    // R1: an unpriced open depeg is missing severity input, not zero severity input.
-    // The sample still publishes (the remaining components are computable), but the run
-    // is degraded with a machine-readable reason so cron summaries cannot normalize a
-    // partially-scored window to "ok" while the API carries inputDegradation.
-    ...(openDepegsWithoutPrice > 0 ? { status: "degraded" as const } : {}),
+    status: "ok",
     itemCount: 1,
     productivity: {
       productive: true,
@@ -339,7 +367,14 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       ],
     },
     metadata: {
-      reason: openDepegsWithoutPrice > 0 ? "open-depeg-no-price" : "psi-sample-published",
+      reason: "psi-sample-published",
+      ...(degradedComponents.length > 0 ? {
+        quality: { reason: degradedComponents[0], reasons: degradedComponents },
+      } : {}),
+      supplyUnavailableIds,
+      trendUnavailableIds,
+      supplyUnavailableCount: supplyUnavailableIds.length,
+      trendUnavailableCount: trendUnavailableIds.length,
       aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,

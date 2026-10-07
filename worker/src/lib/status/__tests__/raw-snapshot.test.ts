@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -28,7 +29,7 @@ function minimalRawStatus() {
     sectionErrors: {},
     datasetFreshness: {},
     summary: {},
-    reserveComposition: {},
+    reserveComposition: makeReserveComposition(),
     freshnessDiagnostics: [],
   };
 }
@@ -62,7 +63,7 @@ describe("writeStatusRawSnapshot", () => {
     await expect(loadStatusRawSnapshot(db, NOW + 1)).resolves.toMatchObject({ kind: "fresh", updatedAt: NOW + 1, raw: { confidence: 0.9 } });
   });
 
-  it("serves a cached payload that is within the freshness budget", async () => {
+  it("serves a cached payload within the freshness budget without cached scheduler liveness", async () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache",
       rows: [],
@@ -78,6 +79,26 @@ describe("writeStatusRawSnapshot", () => {
       kind: "fresh",
       updatedAt: NOW,
       ageSec: 30,
+    });
+  });
+
+  it("rejects cached reserve composition without the health cohort needed for current gates", async () => {
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache",
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          version: 1,
+          producedAt: NOW,
+          raw: { ...minimalRawStatus(), reserveComposition: {} },
+        }),
+        updated_at: NOW,
+      },
+    }], { requireMatch: true });
+
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "unreadable",
+      error: "invalid status raw snapshot payload",
     });
   });
 

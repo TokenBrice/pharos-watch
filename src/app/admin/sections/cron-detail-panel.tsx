@@ -21,7 +21,7 @@ import { CronRunHistoryPanel, StaleArtifactEvidence } from "./cron-run-history";
 export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSeconds: number }) {
   const lastRun = row.cron.lastRun;
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
-  const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata);
+  const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata, lastRun?.degradedReason);
 
   return (
     <aside

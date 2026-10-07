@@ -38,12 +38,14 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationHealth, loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
+import type { SchedulerLiveness } from "@shared/types/status/public-health";
+import { loadSchedulerLiveness, schedulerLivenessWarnings } from "./status/scheduler-liveness";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -127,6 +129,8 @@ export interface PublicHealthAssessment {
   stablecoinPublicationImpactStatus: HealthResponse["status"];
   activePriceCoverage: ActivePriceCoverageHealth;
   activePriceCoverageImpactStatus: HealthResponse["status"];
+  schedulerLiveness: SchedulerLiveness;
+  schedulerLivenessImpactStatus: HealthResponse["status"];
 }
 
 export function buildPublicHealthResponse(
@@ -143,6 +147,7 @@ export function buildPublicHealthResponse(
     circuits: assessment.circuits,
     stablecoinPublication: assessment.stablecoinPublication,
     activePriceCoverage: assessment.activePriceCoverage,
+    schedulerLiveness: assessment.schedulerLiveness,
   };
 }
 
@@ -448,11 +453,18 @@ async function assessYieldSafetyAvailability(
     if (stamped == null) {
       return { impactStatus: "degraded", warning: "yield-safety-unrated-serving:safety-identity-missing" };
     }
-    const live = await loadSafetyScoreV9PublicationIdentityEnvelope(db);
-    if (live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
+    const [live, health] = await Promise.all([
+      loadSafetyScoreV9PublicationIdentityEnvelope(db),
+      loadSafetyScoreV9PublicationHealth(db),
+    ]);
+    if (!health || (live && health.acceptedPublicationGenerationId !== live.publicationGenerationId)) {
+      return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
+    }
+    const held = health.status === "held";
+    if (!held && live && safetyScorePublicationIdentitiesAreComparable(stamped, live)) {
       return { impactStatus: "healthy", warning: null };
     }
-    const reason = live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
+    const reason = held ? "safety-snapshot-held" : live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
     const withinWindow = isYieldSafetyFallbackWithinWindow(row.updated_at, row.safety_published_at, now);
     return withinWindow
       ? { impactStatus: "healthy", warning: `yield-safety-publish-time-fallback:${reason}` }
@@ -476,10 +488,14 @@ export async function assessPublicHealth(
   now: number,
   options?: {
     logPrefix?: string;
+    schedulerLiveness?: SchedulerLiveness;
   },
 ): Promise<PublicHealthAssessment> {
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
+  const schedulerLiveness = options?.schedulerLiveness ?? await loadSchedulerLiveness(db, now);
+  const schedulerLivenessImpactStatus = schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status;
+  warnings.push(...schedulerLivenessWarnings(schedulerLiveness));
 
   const { dbHealthy, warning: dbWarning } = await checkDbHealth(db, logPrefix);
   if (!dbHealthy) {
@@ -523,6 +539,8 @@ export async function assessPublicHealth(
       stablecoinPublicationImpactStatus: "healthy",
       activePriceCoverage: unknownActivePriceCoverageHealth(null, "coverage-read-failed"),
       activePriceCoverageImpactStatus: "healthy",
+      schedulerLiveness,
+      schedulerLivenessImpactStatus,
     };
   }
 
@@ -746,6 +764,7 @@ export async function assessPublicHealth(
     stablecoinPublicationImpactStatus,
     activePriceCoverageImpactStatus,
     yieldSafetyAvailability.impactStatus,
+    schedulerLivenessImpactStatus,
   );
 
   return {
@@ -781,5 +800,7 @@ export async function assessPublicHealth(
     stablecoinPublicationImpactStatus,
     activePriceCoverage,
     activePriceCoverageImpactStatus,
+    schedulerLiveness,
+    schedulerLivenessImpactStatus,
   };
 }

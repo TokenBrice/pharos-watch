@@ -123,9 +123,14 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
           </div>
           <div>
-            Coverage: {formatRatioPct(health.freshCoverageRatio)} fresh,{" "}
-            {formatRatioPct(health.authoritativeFreshCoverageRatio)} score-grade
+            Health-cohort coverage: {formatRatioPct(health.freshCoverageRatio)} fresh,{" "}
+            {formatRatioPct(health.authoritativeFreshCoverageRatio)} authoritative
           </div>
+          <div>Raw evidence coverage: {formatRatioPct(health.configuredCoins > 0 ? health.freshCoins / health.configuredCoins : 0)} fresh across {health.configuredCoins} configured feeds.</div>
+          <div>Health cohort: {health.healthConfiguredCoins ?? health.configuredCoins} feeds; {health.acknowledgedFeedIds?.length ?? 0} reviewed exclusions. Exclusions do not admit evidence for scoring.</div>
+          {health.acknowledgedFeeds?.map((review) => <div key={review.stablecoinId}>{review.stablecoinId}: {review.reason} Review expires {new Date(review.expiresAt * 1000).toISOString()}.</div>)}
+          {health.expiredFeedReviewIds?.length ? <div>Expired reviews (gates re-armed): {health.expiredFeedReviewIds.join(", ")}</div> : null}
+          {health.invalidFeedReviewIds?.length ? <div>Invalid reviews (gates re-armed): {health.invalidFeedReviewIds.join(", ")}</div> : null}
           {health.nextCursorStablecoinId && <div>Next deferred cursor: {health.nextCursorStablecoinId}</div>}
           <div>
             Queue pressure:{" "}

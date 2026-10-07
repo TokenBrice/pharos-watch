@@ -13,6 +13,7 @@ The admin Pipeline lane shows stale or degraded Yield Health. Public impact is l
 - `public-critical`: stale or missing `yield-rankings` can make `/yield/`, stablecoin yield panels, and `GET /api/yield-rankings` stale or unavailable.
 - `admin-watch`: sparse safety coverage, stale supplemental coverage, benchmark fallback, low source-risk evidence coverage, stale comparison anchors, and old coverage-audit data reduce operator confidence but do not by themselves change public status.
 - Yield Health is read-only. It does not change scoring, source arbitration, publication eligibility, or methodology.
+- Yield served-generation freshness is separate from safety evidence age and input quality. Every applied publication advances its atomic sentinel; held safety is advisory inside both 24-hour clocks, while expired held evidence, unknown publication health, and below-floor safety coverage still degrade public health.
 
 ## First checks
 
@@ -153,6 +154,7 @@ After `200`, repeat the read-only status request above. Require `coverageAudit.u
 - The admin Pipeline Yield Health card shows the expected field status and status-impact label.
 - If rankings were stale, `GET /api/yield-rankings` returns `200`, non-empty `rankings`, and a fresh `updatedAt` after recovery.
 - If the latest generation failed, `yield_publication_generations.failure_reason` explains the failure while the previous public cache remains valid.
+- Yield cache `generationId` / `publishedAt` match rankings and `freshness:yield-data` after an applied publication, including imperfect inputs. Safety provenance retains its original clock and `maxAgeSeconds: 86400`; same-identity held evidence is healthy only inside both 24-hour budgets.
 - Supplemental, benchmark, ranking-delta, and coverage-audit fields move back to `healthy` or an understood `degraded` state after their owning cron/cache recovers.
 - Source-risk coverage shows the expected ratios for `sourceRiskPenalty`, `rewardShare`, `sourceAgeSeconds`, `sourceDepthRatio`, `venueRiskTier`, and `sourceRiskScore`.
 - Comparison-anchor freshness shows the expected anchored row count, stale anchor count, oldest stale anchor age/source, and bounded stale examples from the latest sync metadata.

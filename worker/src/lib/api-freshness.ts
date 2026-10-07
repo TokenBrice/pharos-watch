@@ -96,6 +96,8 @@ interface ProducerCronHistoryRead {
 
 interface SentinelBackedFreshnessResult {
   ageSeconds: number | null;
+  generationId: string | null;
+  publishedAt: number | null;
   freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
   sentinelValidationReason?: FreshnessSentinelValidationReason;
   quality: CacheQualityVerdict;
@@ -302,6 +304,9 @@ async function resolveSentinelBackedFreshness(params: {
   ): SentinelBackedFreshnessResult => ({
     ageSeconds,
     freshnessSource,
+    generationId: freshnessSource === "freshness-sentinel" ? sentinelValidation?.payload?.generationId ?? null : null,
+    publishedAt: freshnessSource === "freshness-sentinel" && sentinelValidation?.payload?.generationId
+      ? sentinelValidation.payload.updatedAt : null,
     ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     quality: buildCacheQuality({
       freshnessSource,
@@ -474,6 +479,8 @@ export async function buildCacheStatuses(
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
     let ageSeconds: number | null;
+    let generationId: string | null = null;
+    let publishedAt: number | null = null;
 
     if (key === "fx-rates") {
       const fx = buildFxCacheStatus(fxState, maxAge, now);
@@ -495,6 +502,8 @@ export async function buildCacheStatuses(
         cronHistory,
       });
       ageSeconds = freshness.ageSeconds;
+      generationId = freshness.generationId;
+      publishedAt = freshness.publishedAt;
       if (freshness.freshnessSource) {
         freshnessSourceByKey.set(key, freshness.freshnessSource);
       }
@@ -532,6 +541,7 @@ export async function buildCacheStatuses(
         maxAge,
         healthyMaxRatio,
         healthyMaxAge: maxAge * healthyMaxRatio,
+        ...(key === "yield-data" ? { generationId, publishedAt } : {}),
         // Unknown quality (degraded === null) fails closed: a lane is healthy
         // only when its quality verdict is explicitly clean (rule R2).
         healthy: ratio <= healthyMaxRatio && (quality == null || quality.degraded === false),

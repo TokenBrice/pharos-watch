@@ -10,6 +10,7 @@ const FreshnessSentinelPayloadSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   source: z.string().min(1),
   publishStatus: z.literal("ok"),
+  generationId: z.string().min(1).optional(),
   rowsWritten: z.number().int().nonnegative().optional(),
   coverageRatio: z.number().min(0).max(1).optional(),
 });

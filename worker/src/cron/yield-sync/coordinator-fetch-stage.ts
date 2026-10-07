@@ -160,7 +160,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
     // A hold rejects the newest V9 attempt, not the accepted ratings the public
     // report-card route keeps serving, so the run publishes against the accepted
     // generation inside the read path's stale-coherent budget and reports the
-    // hold as a degradation reason instead of deferring.
+    // hold as an advisory instead of deferring.
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -177,7 +177,8 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
         trackedCount: loadedState.safetySnapshot.trackedCount,
       },
     });
-  } else if (loadedState.safetySnapshotDegraded) {
+  }
+  if (loadedState.safetySnapshotAvailable && loadedState.safetySnapshotDegraded) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",

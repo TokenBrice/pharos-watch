@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { summarizeCronMetadata } from "../cron-metadata-summary";
 
 describe("summarizeCronMetadata", () => {
+  it("uses column reasons for unknown and metadata-free jobs", () => {
+    expect(summarizeCronMetadata("unknown", undefined, "column-only")).toEqual(["reason column-only"]);
+    expect(summarizeCronMetadata("unknown", { reason: "legacy" }, "canonical")).toEqual(["reason canonical"]);
+    expect(summarizeCronMetadata("unknown", { reason: "legacy" })).toEqual(["reason legacy"]);
+    expect(summarizeCronMetadata("snapshot-supply", { reason: "legacy" }, "canonical"))
+      .toEqual(["reason canonical"]);
+    expect(summarizeCronMetadata("unknown", undefined)).toEqual([]);
+  });
+
+  it("appends canonical findings without replacing specialized summaries or duplicating reasons", () => {
+    const quality = { reason: "partial-input", reasons: ["partial-input", "coverage-gap"], sources: { reserves: { reason: "stale" } } };
+    expect(summarizeCronMetadata("unknown", { quality, reason: "execution-failed" })).toEqual([
+      "finding partial-input", "finding coverage-gap", "finding reserves:stale", "reason execution-failed",
+    ]);
+    const known = summarizeCronMetadata("snapshot-supply", { reason: "partial_snapshot_blocked", quality });
+    expect(known.filter((line) => line === "reason partial_snapshot_blocked")).toHaveLength(1);
+    expect(known).toContain("finding reserves:stale");
+  });
   it("surfaces when the redemption missing-capacity tail is within tolerance", () => {
     const summary = summarizeCronMetadata("sync-redemption-backstops", {
       synced: 146,

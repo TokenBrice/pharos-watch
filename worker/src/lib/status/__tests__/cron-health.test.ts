@@ -20,6 +20,7 @@ function makeCronRow(job: string, status: string, ageSec: number, now: number): 
     item_count: 1,
     metadata: null,
     schedule_key: null,
+    degraded_reason: null,
   };
 }
 
@@ -56,6 +57,21 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
 
+  it("projects reasons for all retained rows and ignores ok quality-only findings", async () => {
+    const rows = seedWithOverrides(NOW, [
+      { job: "status-self-check", status: "ok", ageSec: 30 },
+      { job: "status-self-check", status: "degraded", ageSec: 900 },
+    ]);
+    const runs = rows.filter((row) => row.job === "status-self-check");
+    runs[0].metadata = JSON.stringify({ quality: { reason: "probe-finding" }, reason: "legacy" });
+    runs[0].degraded_reason = " observation-reason ";
+    runs[1].degraded_reason = "required-stage-failed";
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.degradedCronRuns).toBe(0);
+    expect(snapshot.crons["status-self-check"].lastRun?.degradedReason).toBe("observation-reason");
+    expect(snapshot.crons["status-self-check"].recentRuns[1].degradedReason).toBe("required-stage-failed");
+    expect(snapshot.crons["sync-stablecoins"].lastRun?.degradedReason).toBeUndefined();
+  });
   it("returns 0 when a critical cron has only one error run followed by ok", async () => {
     // After the base ok row is cleared (because sync-stablecoins appears in
     // overrides), we explicitly seed an earlier ok run so the streak check

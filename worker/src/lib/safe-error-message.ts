@@ -1,4 +1,4 @@
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { describeError } from "@shared/lib/error-utils";
 
 /**
  * Returns a sanitized error message safe to emit in Workers logs.
@@ -9,10 +9,10 @@ import { toErrorMessage } from "@shared/lib/error-utils";
  */
 export function safeErrorMessage(error: unknown, maxLength: number = 200): string {
   if (error instanceof Error) {
-    return `${error.name}: ${sanitize(toErrorMessage(error), maxLength)}`;
+    return `${error.name}: ${sanitize(describeError(error, stripSensitive).message, maxLength)}`;
   }
   if (typeof error === "string") {
-    return sanitize(toErrorMessage(error), maxLength);
+    return sanitize(error, maxLength);
   }
   return "Unknown error";
 }

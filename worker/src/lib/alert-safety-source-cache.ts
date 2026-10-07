@@ -15,7 +15,10 @@ import {
 } from "@shared/types/safety-score-publication";
 import { getCache, setCache } from "./db-cache";
 import type { ActiveSafetyScoreSource } from "./safety-score-active-source";
-import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9/publication-store";
+import {
+  SAFETY_SCORE_V9_CACHE_KEYS,
+  parseSafetyScoreV9PublicationHealthCache,
+} from "./safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 
 const ALERT_SAFETY_V9_SOURCE_GENERATION = "safety-v9-alert-source-v2";
@@ -85,6 +88,28 @@ export interface AlertSafetySourceAssessment {
   failureReason?: string;
   heldSinceSec?: number | null;
   holdReasonCodes?: string[];
+  sourcePublicationGenerationId: string | null;
+  acceptedPublicationGenerationId: string | null;
+  freshnessMaxAgeSec: number;
+  assessedAtSec: number;
+}
+
+function sourceDiagnostics(
+  nowSec: number,
+  envelope: Pick<AlertSafetySourceEnvelope, "publishedAt" | "generation" | "publicationGenerationId"> | null = null,
+  acceptedPublicationGenerationId: string | null = null,
+): Pick<AlertSafetySourceAssessment,
+  "ageSeconds" | "generation" | "sourcePublicationGenerationId" |
+  "acceptedPublicationGenerationId" | "freshnessMaxAgeSec" | "assessedAtSec"
+> {
+  return {
+    ageSeconds: envelope == null ? null : Math.max(0, nowSec - envelope.publishedAt),
+    generation: envelope?.generation ?? null,
+    sourcePublicationGenerationId: envelope?.publicationGenerationId ?? null,
+    acceptedPublicationGenerationId,
+    freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    assessedAtSec: nowSec,
+  };
 }
 
 function heldPublicationDiagnostics(
@@ -303,6 +328,7 @@ export function assessActiveAlertSafetySource(
 ): AlertSafetySourceAssessment {
   if (activeSource.kind === "error") {
     return {
+      ...sourceDiagnostics(options.nowSec),
       state:
         activeSource.reason === "v9-snapshot-unavailable"
           ? "missing"
@@ -314,24 +340,24 @@ export function assessActiveAlertSafetySource(
     };
   }
 
-  const envelope = buildActiveAlertSafetyV9SourceEnvelope(
-    activeSource.snapshot,
-  );
-  if (!envelope) {
+  if (activeSource.kind === "held") {
     return {
+      ...sourceDiagnostics(options.nowSec, {
+        generation: ALERT_SAFETY_V9_SOURCE_GENERATION,
+        publicationGenerationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+        publishedAt: activeSource.snapshot.updatedAt,
+      }, activeSource.snapshot.publicationHealth.acceptedPublicationGenerationId),
       state: "corrupt",
-      ageSeconds: null,
-      generation: null,
       envelope: null,
-      failureReason:
-        activeSource.kind === "held"
-          ? activeSource.reason
-          : "v9-snapshot-invalid",
-      ...(activeSource.kind === "held"
-        ? heldPublicationDiagnostics(activeSource.snapshot.publicationHealth)
-        : {}),
+      failureReason: activeSource.reason,
+      ...heldPublicationDiagnostics(activeSource.snapshot.publicationHealth),
     };
   }
+  const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({
+    cards: activeSource.snapshot.cards,
+    safetyScoreIdentity: activeSource.snapshot.safetyScoreIdentity,
+    publishedAt: activeSource.snapshot.updatedAt,
+  });
   return assessAlertSafetyEnvelope(envelope, options.nowSec);
 }
 
@@ -339,20 +365,18 @@ export function assessAlertSafetyEnvelope(
   envelope: AlertSafetySourceEnvelope,
   nowSec: number,
 ): AlertSafetySourceAssessment {
-  const ageSeconds = Math.max(0, nowSec - envelope.publishedAt);
-  if (ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+  const diagnostics = sourceDiagnostics(nowSec, envelope, envelope.publicationGenerationId);
+  if (diagnostics.ageSeconds != null && diagnostics.ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
     return {
       state: "stale",
-      ageSeconds,
-      generation: envelope.generation,
+      ...diagnostics,
       envelope,
       failureReason: "v9-snapshot-stale",
     };
   }
   return {
     state: "ok",
-    ageSeconds,
-    generation: envelope.generation,
+    ...diagnostics,
     envelope,
   };
 }
@@ -412,37 +436,49 @@ export async function loadActiveAlertSafetySourceAssessment(
 ): Promise<AlertSafetySourceAssessment> {
   // Alert reads stay on the compact accepted projection. A missing, old or
   // invalid envelope suppresses alerts; it never inflates the full publication.
+  const [healthRead, sourceRead] = await Promise.allSettled([
+    getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, signal),
+    getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
+  ]);
+  const cachedRaw = sourceRead.status === "fulfilled" ? sourceRead.value : null;
+  const cached = parsePersistedAlertSafetyV9SourceEnvelope(cachedRaw);
+  let health: ReportCardsV9CurrentResponse["publicationHealth"] | null = null;
+  let invalidHealth = false;
+  if (healthRead.status === "fulfilled" && healthRead.value != null) {
+    try {
+      health = parseSafetyScoreV9PublicationHealthCache(healthRead.value);
+    } catch {
+      invalidHealth = true;
+    }
+  }
   const unavailable = (
     state: "missing" | "corrupt",
     failureReason: string,
   ): AlertSafetySourceAssessment => ({
-    state, failureReason, ageSeconds: null, generation: null, envelope: null,
+    ...sourceDiagnostics(nowSec, cached, health?.acceptedPublicationGenerationId ?? null),
+    state, failureReason, envelope: null,
+    ...(health?.status === "held" ? heldPublicationDiagnostics(health) : {}),
   });
-  try {
-    const [health, cachedRaw] = await Promise.all([
-      loadSafetyScoreV9PublicationHealth(db, signal),
-      getCache(db, ALERT_SAFETY_V9_SOURCE_CACHE_KEY, signal),
-    ]);
-    if (health?.status === "held") {
-      return {
-        ...unavailable("corrupt", "v9-publication-held"),
-        ...heldPublicationDiagnostics(health),
-      };
-    }
-    if (cachedRaw === null) return unavailable("missing", "v9-snapshot-unavailable");
-    const cached = parsePersistedAlertSafetyV9SourceEnvelope(cachedRaw);
-    if (cached === null) {
-      const raw: unknown = JSON.parse(cachedRaw.value);
-      return unavailable("corrupt", isRecord(raw) && raw.generation === "safety-v9-alert-source-v1"
-        ? "publication-schema-cutover-pending" : "v9-snapshot-invalid");
-    }
-    if (health === null || cached.publicationGenerationId !== health.acceptedPublicationGenerationId) {
+  if (healthRead.status === "rejected" || sourceRead.status === "rejected") {
+    return unavailable("corrupt", "v9-snapshot-read-failed");
+  }
+  if (invalidHealth) return unavailable("corrupt", "v9-snapshot-invalid");
+  if (health?.status === "held") return unavailable("corrupt", "v9-publication-held");
+  if (cachedRaw === null) return unavailable("missing", "v9-snapshot-unavailable");
+  if (cached === null) {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(cachedRaw.value);
+    } catch {
       return unavailable("corrupt", "v9-snapshot-invalid");
     }
-    return assessAlertSafetyEnvelope(cached, nowSec);
-  } catch {
+    return unavailable("corrupt", isRecord(raw) && raw.generation === "safety-v9-alert-source-v1"
+      ? "publication-schema-cutover-pending" : "v9-snapshot-invalid");
+  }
+  if (health === null || cached.publicationGenerationId !== health.acceptedPublicationGenerationId) {
     return unavailable("corrupt", "v9-snapshot-invalid");
   }
+  return assessAlertSafetyEnvelope(cached, nowSec);
 }
 
 export function buildAlertSafetySnapshotEnvelope(

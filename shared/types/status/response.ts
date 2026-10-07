@@ -22,7 +22,7 @@ import {
   PublicationHealthSchema,
 } from "./operational";
 import { TelegramBotStatsSchema } from "./telegram";
-import { HealthResponseSchema } from "./public-health";
+import { HealthResponseSchema, SchedulerLivenessSchema } from "./public-health";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
   ClassificationWarningSchema,
@@ -38,6 +38,7 @@ export type StatusSectionKey =
   | "statusSnapshot"
   | "telegramBot"
   | "reserveComposition"
+  | "schedulerLiveness"
   | "d1Usage"
   | "liquidityHealth"
   | "yieldHealth"
@@ -126,6 +127,14 @@ const StatusReserveCompositionSchema = z.union([
     lastSuccessAt: z.null(),
     oldestFreshAgeSec: z.null(),
     adapterReliability: z.null(),
+    healthConfiguredCoins: z.null().optional(),
+    healthFreshCoins: z.null().optional(),
+    healthAuthoritativeFreshCoins: z.null().optional(),
+    acknowledgedFeedIds: z.null().optional(),
+    acknowledgedFeeds: z.null().optional(),
+    expiredFeedReviewIds: z.null().optional(),
+    invalidFeedReviewIds: z.null().optional(),
+    unacknowledgedPersistentlyStaleIndependentCoins: z.null().optional(),
     freshCoverageRatio: z.null(),
     authoritativeFreshCoverageRatio: z.null(),
   }),
@@ -135,6 +144,7 @@ const StatusResponseObjectSchema = z
   .object({
     timestamp: z.number(),
     dbHealthy: z.boolean(),
+    schedulerLiveness: SchedulerLivenessSchema.optional(),
     availabilityStatus: StatusHealthValueSchema,
     dataQualityStatus: StatusHealthValueSchema,
     rawOverallStatus: StatusHealthValueSchema,

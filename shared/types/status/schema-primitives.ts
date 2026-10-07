@@ -5,6 +5,8 @@ export const CacheStatusSchema = z.object({
   maxAge: z.number(),
   healthyMaxRatio: z.number().optional(),
   healthyMaxAge: z.number().optional(),
+  generationId: z.string().min(1).nullable().optional(),
+  publishedAt: z.number().int().nonnegative().nullable().optional(),
   healthy: z.boolean(),
   freshnessSource: z.enum(["freshness-sentinel", "table-fallback", "cron-fallback"]).optional(),
   sentinelValidationReason: z.string().nullable().optional(),

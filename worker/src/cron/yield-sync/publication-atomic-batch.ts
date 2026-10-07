@@ -1,6 +1,7 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CacheWriteResult } from "../../lib/db-cache";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { getFreshnessSentinelCacheKey, getFreshnessSentinelProducerJob } from "../../lib/freshness-sentinels";
 
 /**
  * D1 rejects a statement whose bound value exceeds 2,000,000 bytes, and the
@@ -44,6 +45,12 @@ export async function publishYieldRowsAtomically(
   const historyRowsJson = JSON.stringify(input.historyRows);
   const decisionRowsJson = JSON.stringify(input.decisionRows);
   const decisionAlternativeRowsJson = JSON.stringify(input.decisionAlternativeRows);
+  const sentinelValue = JSON.stringify({
+    updatedAt: input.startSec,
+    source: getFreshnessSentinelProducerJob("yield-data"),
+    publishStatus: "ok",
+    generationId: input.generationId,
+  });
   const largestPayloadChars = Math.max(
     cacheValue.length,
     yieldDataRowsJson.length,
@@ -221,6 +228,14 @@ export async function publishYieldRowsAtomically(
              AND ${cacheFreshGuard}`,
       )
       .bind(input.startSec, input.generationId, input.generationId),
+    db
+      .prepare(
+        `INSERT INTO cache (key, value, updated_at)
+           SELECT ?, ?, ? WHERE ${cacheFreshGuard}
+           ON CONFLICT(key) DO UPDATE
+           SET value = excluded.value, updated_at = excluded.updated_at`,
+      )
+      .bind(getFreshnessSentinelCacheKey("yield-data"), sentinelValue, input.startSec, input.generationId),
   ];
 
   const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);

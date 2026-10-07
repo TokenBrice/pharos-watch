@@ -14,6 +14,7 @@ import {
   loadSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
 } from "../lib/safety-score-v9/publication-store";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { logTelegramEvent } from "../lib/telegram/log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
@@ -233,6 +234,10 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
       generation: null,
       envelope: null,
       failureReason: "v9-snapshot-unavailable",
+      sourcePublicationGenerationId: null,
+      acceptedPublicationGenerationId: null,
+      freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      assessedAtSec: nowSec,
     };
   const affectedAssetIds = new Set(
     sourceData.publicationAttempt?.outcome ===

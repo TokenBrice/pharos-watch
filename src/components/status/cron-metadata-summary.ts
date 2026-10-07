@@ -1,3 +1,4 @@
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import {
   readMetadataArray as readArray,
   readMetadataBoolean as readBoolean,
@@ -441,7 +442,17 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "cron-duration-watchdog": summarizeCronDurationWatchdog,
 };
 
-export function summarizeCronMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {
-  if (!metadata) return [];
-  return SUMMARIZER_BY_JOB[job]?.(metadata) ?? [];
+export function summarizeCronMetadata(
+  job: string,
+  metadata: Record<string, unknown> | undefined,
+  degradedReason?: string,
+): string[] {
+  const reason = degradedReason?.trim() || readString(metadata?.reason)?.trim();
+  const summaryMetadata = metadata && reason && reason !== metadata.reason ? { ...metadata, reason } : metadata;
+  const lines = [
+    ...(summaryMetadata ? SUMMARIZER_BY_JOB[job]?.(summaryMetadata) ?? [] : []),
+    ...getCronQualityReasons(metadata).map((reason) => `finding ${reason}`),
+  ];
+  if (reason && !lines.some((line) => line.includes(reason))) lines.push(`reason ${reason}`);
+  return lines;
 }

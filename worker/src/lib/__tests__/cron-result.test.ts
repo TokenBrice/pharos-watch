@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { serializeCronMetadata, type StructuredCronResult } from "../cron-result";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import type { CronResultStatus, CronRunStatus } from "@shared/types/status/cron";
 
 describe("serializeCronMetadata", () => {
   it("serializes structured metadata as a CronResult-compatible string", () => {
@@ -31,6 +32,10 @@ describe("cron result boundaries", () => {
     expectTypeOf<{ status: "degraded"; metadata: { reason: null } }>().not.toExtend<StructuredCronResult>();
     expectTypeOf<{ status: "degraded" | "error" | "skipped_neutral" | "skipped_locked"; metadata: { reason: string } }>().toExtend<StructuredCronResult>();
     expectTypeOf<{ status: "ok" }>().toExtend<StructuredCronResult>();
+    expectTypeOf<{ status: "ok"; metadata: { rows: number } }>().toExtend<StructuredCronResult>();
+    expectTypeOf<{ status: "skipped_duplicate"; metadata: { reason: string } }>().not.toExtend<StructuredCronResult>();
+    expectTypeOf<{ status: "skipped_running"; metadata: { reason: string } }>().not.toExtend<StructuredCronResult>();
+    expectTypeOf<CronResultStatus>().toEqualTypeOf<Exclude<CronRunStatus, "skipped_duplicate" | "skipped_running">>();
   });
 
   it("reads current quality findings without reviving expired sentinel diagnostics", () => {
