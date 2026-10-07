@@ -307,7 +307,7 @@ export function EvidenceModule({
   const { summary, domainFolds, provenance } = partitionBodyChildren(children);
   const hasVisual = visual != null && visual !== false;
   const verdictNode = verdict ? (
-    <p className="max-w-prose text-sm leading-relaxed text-pretty text-foreground">{verdict}</p>
+    <p className="text-sm leading-relaxed text-pretty text-foreground">{verdict}</p>
   ) : null;
   const chipRowNode = chipRow ? <div className="flex flex-wrap items-center gap-1.5">{chipRow}</div> : null;
   const hasBesideVisual = verdictNode !== null || chipRowNode !== null || summary.length > 0;

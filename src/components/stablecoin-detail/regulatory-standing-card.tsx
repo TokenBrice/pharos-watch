@@ -254,7 +254,7 @@ export function RegulatoryStandingCard({
               <div className="min-w-0 max-w-xl">
                 <Standing view={view} />
               </div>
-              <p className="max-w-prose text-sm leading-relaxed text-pretty text-foreground">{view.summary}</p>
+              <p className="text-sm leading-relaxed text-pretty text-foreground">{view.summary}</p>
             </div>
           </div>
         }

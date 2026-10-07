@@ -162,11 +162,13 @@ function DetailNavigation({
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
       onActiveChange={onActiveChange}
-      // A full-bleed band of page background behind the pills, so scrolled
-      // content never shows through beside them: the spread shadow paints
-      // the band edge to edge and the clip keeps it to the bar's height
-      // (a shadow never adds scroll overflow, unlike a wider pseudo-element).
-      className="mt-2 bg-background py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none"
+      // A band of page background behind the pills, so scrolled content never
+      // shows through beside them: the spread shadow paints the band and the
+      // clip keeps it to the bar's height (a shadow never adds scroll
+      // overflow, unlike a wider pseudo-element). Full bleed below xl; at xl
+      // the clip stops at the column's right edge so the band never paints
+      // over the summary rail beside it.
+      className="mt-2 bg-background py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none xl:[clip-path:inset(0_0_0_-100vmax)]"
       rightSlot={(
         <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
           <Link
@@ -362,7 +364,7 @@ export function DetailContent({
   ) : viewModel.childVariants.length > 0 ? (
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
-  // Pillar strips, control roles, the Backing KPI and the Evidence index:
+  // Board headings, control roles, the Backing KPI and the Evidence index:
   // built once, read by the pillar boards and the xl rail alike.
   const sharedModules = buildDetailSharedModules({
     mechanismBacking,
