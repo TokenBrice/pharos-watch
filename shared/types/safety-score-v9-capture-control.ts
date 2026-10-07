@@ -2,7 +2,7 @@ import { z } from "zod";
 import { SafetyScoreV9InputIdentitySchema } from "./safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "./safety-schema-primitives";
 
-export const SafetyScoreV9CaptureTupleSchema = z.strictObject({
+const SafetyScoreV9CaptureTupleSchema = z.strictObject({
   safetyScoreIdentity: SafetyScoreV9InputIdentitySchema,
   baseInputGenerationId: BaseInputGenerationIdSchema,
   sourceGeneration: z.string().min(1),

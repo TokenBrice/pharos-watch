@@ -4,8 +4,8 @@ import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards
 
 // Reviewed full catalog and active publication cardinalities. Never truncate a
 // catalog or card inventory to satisfy these admission limits.
-export const SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = 488;
-export const SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = 397;
+const SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = 488;
+const SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = 397;
 
 export function assessSafetyScoreV9ResourceBudget(input: {
   catalogAssets: number;

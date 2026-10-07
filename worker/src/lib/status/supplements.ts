@@ -154,7 +154,7 @@ function coverageClasses(raw: unknown): CoverageClassCounts {
 }
 
 // 250 IDs × a 1 KiB source envelope; overflow fails the supplement, never partial prices.
-export const STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 * 1024;
+const STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 * 1024;
 
 async function fetchCoinGeckoUsdPrices(
   geckoIds: string[],

@@ -37,5 +37,5 @@ export const AcceptedReserveGenerationSchema = z.object({
 });
 export type AcceptedReserveGeneration = z.output<typeof AcceptedReserveGenerationSchema>;
 
-export { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "./reserve-input";
-export type { ConsumedReserveInput, RedemptionReserveRunMetadata } from "./reserve-input";
+export { RedemptionReserveRunMetadataSchema } from "./reserve-input";
+export type { ConsumedReserveInput } from "./reserve-input";
