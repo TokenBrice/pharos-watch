@@ -137,7 +137,14 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("reconciles child evidence after winning same-slot stale takeover", async () => {
+  it.each([
+    { caller: "unidentified", workerRole: undefined, reconciledByWorkerVersion: null },
+    { caller: "same-role public", workerRole: "public", reconciledByWorkerVersion: "worker-v2" },
+    { caller: "cross-role heavy", workerRole: "heavy", reconciledByWorkerVersion: null },
+  ] as const)("reconciles child evidence after winning same-slot stale takeover ($caller caller)", async ({
+    workerRole,
+    reconciledByWorkerVersion,
+  }) => {
     const now = Math.floor(Date.now() / 1000);
     const slotStartedAt = now - 3600;
     const db = makeLeaseDb({
@@ -169,6 +176,7 @@ describe("runScheduledSlotWithFence", () => {
       owner: "slot-owner-b",
       staleAfterSec: 1200,
       workerVersion: "worker-v2",
+      workerRole,
     });
 
     expect(result.status).toBe("ok");
@@ -217,7 +225,9 @@ describe("runScheduledSlotWithFence", () => {
     const abandonedRun = db.getRuns().find((run) => run.job === "sync-yield-data");
     expect(JSON.parse(abandonedRun?.metadata ?? "{}")).toMatchObject({
       slotWorkerVersion: "worker-v1",
-      reconciledByWorkerVersion: "worker-v2",
+      // Without a matching caller role or verified owner marker, the caller's
+      // version is not evidence of the public slot owner's deployment.
+      reconciledByWorkerVersion,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getLease("sync-yield-data")).toBeUndefined();
