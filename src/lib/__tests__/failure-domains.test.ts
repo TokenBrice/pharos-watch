@@ -73,6 +73,11 @@ describe("describeFailureDomain", () => {
       expect(describeFailureDomain(key).label).not.toMatch(/0x[a-f0-9]{6}|[A-Za-z0-9]{20,}/);
     }
   });
+
+  it("cases protocol slugs by their brand, not by title case", () => {
+    expect(describeFailureDomain("bridge-route:protocol:layerzero-oft").label).toBe("LayerZero OFT");
+    expect(describeFailureDomain("bridge-route:protocol:layerzero-oft-v2").label).toBe("LayerZero OFT V2");
+  });
 });
 
 describe("buildFailureDomainsView", () => {
@@ -137,5 +142,78 @@ describe("buildFailureDomainsView", () => {
     );
     expect(view?.rows.at(-1)?.resolved).toBe(false);
     expect(view?.rows.at(-1)?.exposureShare).toBeNull();
+  });
+
+  // USDe shape from the live card: two LayerZero deployment slices plus the
+  // protocol-wide common-mode slice, which the engine could not quantify.
+  const plasmaSlice = adjustment({
+    exposureKey: "deployment-slice:plasma:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+    failureDomainKey:
+      "bridge-route:contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34+bridge-route:contract:plasma:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34+bridge-route:protocol:layerzero-v2",
+    nominalExposureShare: 0.108,
+    exposureShare: 0.108,
+    reason: "Bridge control topology is external-lock-mint.",
+  });
+  const solanaSlice = adjustment({
+    exposureKey: "deployment-slice:solana:DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+    failureDomainKey:
+      "bridge-route:contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34+bridge-route:contract:solana:4x3oQtX4MhjTKGBeXDZbtTSLZ9cUWo5waN2UChAuthtS+bridge-route:protocol:layerzero-v2",
+    nominalExposureShare: 0.103,
+    exposureShare: 0.103,
+    reason: "Bridge control topology is external-lock-mint.",
+  });
+  const protocolWide = {
+    signalKey: "signal:lz",
+    exposureKey: "common-mode-slice:usde-ethena:bridge-route:protocol:layerzero-v2",
+    riskEventKey: "deployment-event:common-mode:bridge-route:protocol:layerzero-v2",
+    failureDomainKeys: ["bridge-route:protocol:layerzero-v2"],
+    economicLossScope: "deployment",
+    exposedScore: 64,
+    exposureShare: null,
+    reason: "214 reviewed paths across 32 assets share bridge-route:protocol:layerzero-v2; unknown/unattributed bridge exposure.",
+  };
+
+  it("merges entries that resolve to one label into a counted, unquantified row", () => {
+    const view = buildFailureDomainsView(cardWithDeploymentRisk({
+      adjustments: [plasmaSlice, solanaSlice],
+      unresolvedExposures: [protocolWide],
+    }));
+    expect(view?.rows).toHaveLength(1);
+    expect(view?.rows[0]).toMatchObject({ label: "LayerZero V2", memberCount: 3, exposureShare: null, resolved: false });
+    expect(view?.rows[0]?.span).toEqual({
+      chainIds: [],
+      routeKeys: [
+        "plasma:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "solana:DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+      ],
+      protocolKeys: ["layerzero-v2"],
+    });
+  });
+
+  it("adds distinct deployment slices but never double counts overlapping supply", () => {
+    const disjoint = buildFailureDomainsView(cardWithDeploymentRisk({ adjustments: [plasmaSlice, solanaSlice] }));
+    expect(disjoint?.rows[0]?.exposureShare).toBeCloseTo(0.211, 6);
+
+    // A protocol common-mode slice already covers the deployment routed through it.
+    const overlapping = buildFailureDomainsView(cardWithDeploymentRisk({
+      adjustments: [
+        adjustment({ exposureKey: "common-mode-slice:a:bridge-route:protocol:layerzero-v2", nominalExposureShare: 0.15, exposureShare: 0.12 }),
+        adjustment({ ...plasmaSlice, nominalExposureShare: 0.15, exposureShare: 0.12 }),
+      ],
+    }));
+    expect(overlapping?.rows[0]?.memberCount).toBe(2);
+    expect(overlapping?.rows[0]?.exposureShare).toBeCloseTo(0.15, 6);
+    expect(overlapping?.rows[0]?.modeledExposureShare).toBeCloseTo(0.12, 6);
+  });
+
+  it("keeps evaluator keys and tier slugs out of reader notes", () => {
+    const view = buildFailureDomainsView(cardWithDeploymentRisk({
+      adjustments: [adjustment(), plasmaSlice, solanaSlice],
+      unresolvedExposures: [protocolWide],
+    }));
+    for (const row of view!.rows) {
+      expect(row.reason).not.toMatch(/bridge-route:|chain:|external-lock-mint/);
+      expect(row.reason.length).toBeGreaterThan(0);
+    }
   });
 });

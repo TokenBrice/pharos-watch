@@ -12,9 +12,20 @@ describe("reserve-access diagnostic presentation", () => {
     card.accessPosture.freezeLookthrough = evaluateV9AccessLookthrough(graph);
     const rows = buildSafetyScoreV9AccessRows(card);
     expect(rows.find((r) => r.key === "reserve-access-unknown")!.value).toBe("Unknown / unquantified");
-    expect(rows.find((r) => r.key === "reserve-access:origin:freeze")!.value).toContain("Unquantified");
+    expect(rows.find((r) => r.key === "reserve-access:origin:freeze")!.value).toContain("unquantified");
     expect(rows.find((r) => r.key === "reserve-access-coverage")!.label).toContain("diagnostic");
     expect(rows.find((r) => r.key === "freezeExposure")!.value).toBe("Upstream");
+  });
+  it("names the acting chain in reader text and never prints the internal authority key", () => {
+    const card = makeV9Card();
+    card.accessPosture.freezeLookthrough = evaluateV9AccessLookthrough(makeAccessGraph());
+    const rows = buildSafetyScoreV9AccessRows(card);
+    const authorityRow = rows.find((r) => r.key === "reserve-access:origin:freeze")!;
+    expect(authorityRow.value).toContain("Ethereum");
+    for (const row of rows) {
+      expect(row.label).not.toContain("origin:freeze");
+      expect(row.value).not.toContain("origin:freeze");
+    }
   });
   it("shows a measured zero remainder separately from absent historical look-through", () => {
     const card = makeV9Card();

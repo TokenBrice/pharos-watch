@@ -23,6 +23,10 @@ import {
   projectReserveQualityClientSummary,
   type ReserveQualityClientSummary,
 } from "@/lib/stablecoin-detail-reserve-quality-client";
+import {
+  projectReserveLookThroughClientSummary,
+  type ReserveLookThroughClientSummary,
+} from "@/lib/stablecoin-detail-reserve-look-through-client";
 
 type StablecoinDetailServerOnlyField =
   | "blacklistabilityReview"
@@ -41,6 +45,7 @@ export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServ
   custodyProfileSummary?: CustodyClientSummary | null;
   oracleRiskSummary?: OracleRiskClientSummary | null;
   reserveQualitySummary?: ReserveQualityClientSummary | null;
+  reserveLookThrough?: ReserveLookThroughClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -99,6 +104,7 @@ export function buildStablecoinDetailClientCoin(
     : null;
   const oracleRiskSummary = projectOracleRiskClientSummary(coin);
   const reserveQualitySummary = projectReserveQualityClientSummary(coin);
+  const reserveLookThrough = projectReserveLookThroughClientSummary(coin, options.parentById);
   const blacklistabilitySummary = projectBlacklistabilityClientSummary(coin, options.parentById);
   return {
     ...clientCoin,
@@ -107,6 +113,7 @@ export function buildStablecoinDetailClientCoin(
     ...(custodyProfileSummary ? { custodyProfileSummary } : {}),
     ...(oracleRiskSummary ? { oracleRiskSummary } : {}),
     ...(reserveQualitySummary ? { reserveQualitySummary } : {}),
+    ...(reserveLookThrough ? { reserveLookThrough } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
     ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };

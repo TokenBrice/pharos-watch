@@ -81,10 +81,10 @@ const METRIC_SPECS: Partial<Record<MechanismArchetype, readonly MetricSpec[]>> =
     },
     {
       key: "marginBufferPct",
-      label: "Margin buffer",
+      label: "Excess backing",
       unit: "percent",
       alreadyPercent: true,
-      hint: "Margin held above the maintenance requirement on the hedging venues.",
+      hint: "Backing held above circulating supply, as a share of supply.",
     },
     {
       key: "lossAbsorptionShare",
@@ -191,11 +191,11 @@ function formatFactValue(key: string, value: number): string {
     const pct = /Pct$/.test(key) ? value : value * 100;
     return `${pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%`;
   }
-  // Coverage and collateralization ratios read as percentages, matching the
-  // rail Collateralization card. Other ratios (exchange rates, health factors,
-  // per-share conversions) keep their raw magnitude — a percentage would
-  // misdescribe them.
-  if (/(coverage|collateraliz)/i.test(key)) {
+  // Coverage, collateralization and capacity-over-supply ratios read as
+  // percentages, matching the rail Collateralization card. Other ratios
+  // (exchange rates, health factors, per-share conversions) keep their raw
+  // magnitude — a percentage would misdescribe them.
+  if (/(coverage|collateraliz)/i.test(key) || /CapacityRatio$/.test(key)) {
     const pct = value * 100;
     return `${pct >= 1000 ? Math.round(pct).toLocaleString("en-US") : pct.toFixed(1)}%`;
   }
