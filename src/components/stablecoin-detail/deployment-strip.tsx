@@ -38,8 +38,10 @@ export interface DeploymentStripBracket {
   /** Shared failure domain, already deduped by the caller ("LayerZero V2 ×3"). */
   label: string;
   cellKeys: readonly string[];
-  /** Quantified share ("10.8%"); absent reads "share unquantified", never a percent. */
+  /** Quantified share ("10.8%", or a lower bound "≥21%"); absent reads "share unquantified", never a percent. */
   shareLabel?: string;
+  /** Qualifies `shareLabel` ("1 unquantified" when part of the domain has no share); ignored without it. */
+  shareNote?: string;
 }
 
 export interface DeploymentStripProps {
@@ -274,8 +276,9 @@ export function DeploymentStrip({
                   <span className="whitespace-nowrap text-[11px] leading-[14px] text-muted-foreground">
                     {bracket.label}{" "}
                     {bracket.shareLabel ? (
-                      <span data-bracket-share="" className="font-mono tabular-nums text-foreground">
-                        {bracket.shareLabel}
+                      <span data-bracket-share="">
+                        <span className="font-mono tabular-nums text-foreground">{bracket.shareLabel}</span>
+                        {bracket.shareNote ? ` · ${bracket.shareNote}` : null}
                       </span>
                     ) : (
                       <span data-bracket-share="">share unquantified</span>
@@ -398,7 +401,7 @@ export function DeploymentStrip({
           {resolvedBrackets.map(({ bracket, memberCount }) => (
             <li key={bracket.key}>
               {`${bracket.label}: spans ${memberCount === 1 ? "1 deployment" : `${memberCount} deployments`}, ${
-                bracket.shareLabel ? `share ${bracket.shareLabel}` : "share unquantified"
+                bracket.shareLabel ? `share ${bracket.shareLabel}${bracket.shareNote ? `, ${bracket.shareNote}` : ""}` : "share unquantified"
               }`}
             </li>
           ))}

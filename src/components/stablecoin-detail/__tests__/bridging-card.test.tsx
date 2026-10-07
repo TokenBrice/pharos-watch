@@ -17,7 +17,7 @@ import {
   buildBridgingDeploymentsVerdict,
   resolveBridgingDeploymentsForm,
 } from "../bridging-card";
-import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
+import type { FailureDomainMember, FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
 import type { ControlComponentRoles, ControlStripComponent } from "@/lib/pillar-evidence-strips";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import type { BridgeRouteClientRow, BridgeRouteRiskClientSummary } from "@/lib/stablecoin-detail-bridge-client";
@@ -95,15 +95,28 @@ function rolesOf(components: ControlStripComponent[], minimum: number | null): C
   return { minimum, evaluatedScore: minimum, adjusted: false, components };
 }
 
+function domainMember(overrides: Partial<FailureDomainMember> & Pick<FailureDomainMember, "key" | "label">): FailureDomainMember {
+  return {
+    exposureShare: null,
+    modeledExposureShare: null,
+    adjustmentPoints: null,
+    resolved: false,
+    reason: "Shared messaging layer.",
+    ...overrides,
+  };
+}
+
+function quantifiedMember(key: string, label: string, share: number, reason: string): FailureDomainMember {
+  return domainMember({ key, label, exposureShare: share, modeledExposureShare: share, adjustmentPoints: 0, resolved: true, reason });
+}
+
+/** Defaults to one unquantified member; quantified rows pass their members and share summary. */
 function domainRow(overrides: Partial<FailureDomainRow> & Pick<FailureDomainRow, "key" | "label">): FailureDomainRow {
   return {
     kind: "bridge",
-    memberCount: 1,
-    exposureShare: null,
-    modeledExposureShare: null,
+    members: [domainMember({ key: `${overrides.key}:member`, label: "Domain-wide" })],
+    share: { status: "unquantified", unquantifiedMemberCount: 1 },
     adjustmentPoints: 0,
-    resolved: false,
-    reason: "Shared messaging layer.",
     span: { chainIds: [], routeKeys: [], protocolKeys: [] },
     ...overrides,
   };
@@ -357,14 +370,33 @@ describe("BridgingDeploymentsModule", () => {
     expect(buildBridgingDeploymentsVerdict(summary, null)).not.toMatch(/weakest|third-party/i);
   });
 
-  it("brackets the cells a failure domain spans, with 'share unquantified' and never '?'", () => {
+  it("brackets the cells a failure domain spans, keeping a partly known share and never '?'", () => {
     const plasma = route("plasma:0xp", "plasma", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
     const solana = route("solana:0xs", "solana", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
     const summary = summaryOf([NATIVE, plasma, solana]);
     const failureDomains: FailureDomainsView = {
       rows: [
-        domainRow({ key: "chain:Plasma", label: "Plasma", kind: "chain", exposureShare: 0.108, resolved: true, span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] } }),
-        domainRow({ key: "bridge:LayerZero V2", label: "LayerZero V2", memberCount: 3, span: { chainIds: [], routeKeys: [], protocolKeys: ["layerzero-v2"] } }),
+        domainRow({
+          key: "bridge:LayerZero V2",
+          label: "LayerZero V2",
+          // USDe: two quantified LayerZero paths plus the unquantified protocol-wide slice.
+          members: [
+            quantifiedMember("lz:plasma", "Plasma", 0.108, "Bridge control topology is external lock & mint."),
+            quantifiedMember("lz:solana", "Solana", 0.103, "Bridge control topology is external lock & mint."),
+            domainMember({ key: "lz:wide", label: "Domain-wide", reason: "214 reviewed paths across 32 assets share LayerZero V2." }),
+          ],
+          share: { status: "partial", knownShareLowerBound: 0.211, unquantifiedMemberCount: 1 },
+          span: { chainIds: [], routeKeys: [], protocolKeys: ["layerzero-v2"] },
+        }),
+        domainRow({
+          key: "chain:Plasma",
+          label: "Plasma",
+          kind: "chain",
+          members: [quantifiedMember("plasma", "Plasma", 0.108, "Deployed on Plasma.")],
+          share: { status: "quantified", exposureShare: 0.108, modeledExposureShare: 0.108 },
+          span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] },
+        }),
+        domainRow({ key: "chain:Solana", label: "Solana", kind: "chain", span: { chainIds: ["solana"], routeKeys: [], protocolKeys: [] } }),
       ],
       totalAdjustmentPoints: 0,
     };
@@ -373,12 +405,27 @@ describe("BridgingDeploymentsModule", () => {
       <BridgingDeploymentsModule summary={summary} failureDomains={failureDomains} variant="tile" />,
     );
 
-    const unquantified = container.querySelector('[data-bracket="bridge:LayerZero V2"]');
-    expect(unquantified?.querySelector("[data-bracket-share]")?.textContent).toBe("share unquantified");
-    expect(unquantified?.textContent).toContain("×3");
+    const partial = container.querySelector('[data-bracket="bridge:LayerZero V2"]');
+    const partialShare = partial?.querySelector("[data-bracket-share]")?.textContent ?? "";
+    expect(partialShare).toContain("≥21%");
+    expect(partialShare).toContain("1 unquantified");
+    expect(partial?.textContent).toContain("×3");
     const quantified = container.querySelector('[data-bracket="chain:Plasma"] [data-bracket-share]')?.textContent;
     expect(quantified).toMatch(/%$/);
+    const unquantified = container.querySelector('[data-bracket="chain:Solana"] [data-bracket-share]')?.textContent;
+    expect(unquantified).toBe("share unquantified");
     expect(container.querySelector("section#bridging")?.textContent).not.toContain("?");
+
+    // The fold lists every member of a grouped domain with its own share and reason.
+    const members = [...container.querySelectorAll('#failure-domains ul[aria-label="LayerZero V2 members"] > li')];
+    expect(members.map((member) => member.textContent ?? "")).toEqual([
+      expect.stringMatching(/Plasma.*10\.8%.*external lock & mint/),
+      expect.stringMatching(/Solana.*10\.3%.*external lock & mint/),
+      expect.stringMatching(/Domain-wide.*share unquantified.*214 reviewed paths/),
+    ]);
+    // A single-member domain carries its reason on the row, without a member list.
+    expect(container.querySelector('#failure-domains ul[aria-label="Plasma members"]')).toBeNull();
+    expect(container.querySelector("#failure-domains")?.textContent).toContain("Deployed on Plasma.");
   });
 
   it("puts the #failure-domains anchor on the fold itself, so the section scroll margin applies to it", () => {

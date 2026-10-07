@@ -214,6 +214,23 @@ describe("DeploymentStrip", () => {
     expect(container.querySelector('[data-bracket="ghost"]')).toBeNull();
   });
 
+  it("qualifies a partly known share with what is left out, visually and for screen readers", () => {
+    const { container } = render(
+      <DeploymentStrip
+        ariaLabel="Deployments"
+        cells={[cell("eth", { home: true }), cell("plasma"), cell("solana")]}
+        brackets={[{ key: "lz", label: "LayerZero V2 ×3", cellKeys: ["plasma", "solana"], shareLabel: "≥21%", shareNote: "1 unquantified" }]}
+      />,
+    );
+
+    const caption = container.querySelector('[data-bracket="lz"] [data-bracket-share]')!.textContent;
+    expect(caption).toContain("≥21%");
+    expect(caption).toContain("1 unquantified");
+    const announced = container.querySelector('ul[aria-label="Shared failure domains"] > li')!.textContent;
+    expect(announced).toContain("≥21%");
+    expect(announced).toContain("1 unquantified");
+  });
+
   it("names only the home chain once the strip is too dense for inline names", () => {
     const cells = Array.from({ length: 31 }, (_, index) => cell(`${index}`, { home: index === 0 }));
     const { container } = render(<DeploymentStrip ariaLabel="Deployments" cells={cells} />);

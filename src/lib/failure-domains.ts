@@ -1,7 +1,7 @@
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import { groupSafetyScoreReasons } from "@/lib/safety-score-reason-labels";
+import { humanizeSafetyScoreReason } from "@/lib/safety-score-reason-labels";
 import { bridgeRouteTierLabel } from "@/lib/stablecoin-detail-bridge-client";
 import { titleCaseSlug } from "@/lib/title-case-slug";
 
@@ -12,9 +12,9 @@ import { titleCaseSlug } from "@/lib/title-case-slug";
  * The engine writes one trace entry per exposure slice and failure domain, so
  * one reader-facing domain ("LayerZero V2") can arrive as several entries: a
  * protocol-wide common-mode slice plus per-deployment slices whose compound
- * keys embed the same protocol. Rows merge every entry that resolves to one
- * label, keep the member count for `×N`, and combine shares without counting
- * the same supply twice (see `mergedShare`).
+ * keys embed the same protocol. Rows group every entry that resolves to one
+ * label but keep each entry as a member with its own share and reason; the
+ * row's share is only a display summary of those members (see `shareSummary`).
  */
 
 export type FailureDomainKind = "chain" | "bridge" | "other";
@@ -32,25 +32,43 @@ export interface FailureDomainSpan {
   protocolKeys: string[];
 }
 
+/** One trace entry inside a row, as published: never merged away. */
+export interface FailureDomainMember {
+  /** Unique per trace entry: its source, exposure, risk-event, domain and signal keys. */
+  key: string;
+  /** What sets the member apart inside its row: the deployment's chain ("Plasma"), or "Domain-wide". */
+  label: string;
+  /** Nominal share of reviewed supply; null when the engine could not quantify the exposure. */
+  exposureShare: number | null;
+  /** Modeled scoring share, including any methodology cap; null when unquantified. */
+  modeledExposureShare: number | null;
+  /** Points this entry cost the score; null for an unquantified exposure, which is never priced. */
+  adjustmentPoints: number | null;
+  resolved: boolean;
+  /** Humanized reason, free of evaluator keys and tier slugs; null when the engine gave none. */
+  reason: string | null;
+}
+
+/**
+ * Conservative display summary of a row's members, never a replacement for
+ * them. `quantified`: every member has a share, merged without double
+ * counting. `partial`: some members are unquantified, so the merged share of
+ * the known members is only a lower bound. `unquantified`: no member has a share.
+ */
+export type FailureDomainShareSummary =
+  | { status: "quantified"; exposureShare: number; modeledExposureShare: number }
+  | { status: "partial"; knownShareLowerBound: number; unquantifiedMemberCount: number }
+  | { status: "unquantified"; unquantifiedMemberCount: number };
+
 export interface FailureDomainRow {
   key: string;
   label: string;
   kind: FailureDomainKind;
-  /** Trace entries merged under this label; the `×N` when above 1. */
-  memberCount: number;
-  /**
-   * Share of reviewed supply behind this domain, merged across members without
-   * double counting; null when any member is unquantified.
-   */
-  exposureShare: number | null;
-  /** Modeled scoring share, including any methodology cap; never the exposure statistic. Merged like `exposureShare`. */
-  modeledExposureShare: number | null;
-  /** Points the merged entries actually cost the score. Zero is common and meaningful. */
+  /** Every trace entry grouped under this label, in published order; the `×N` when above 1. */
+  members: FailureDomainMember[];
+  share: FailureDomainShareSummary;
+  /** Points the members actually cost the score. Zero is common and meaningful. */
   adjustmentPoints: number;
-  /** True only when every member is a resolved, quantified exposure. */
-  resolved: boolean;
-  /** Reader-facing notes: humanized, deduplicated member reasons, free of evaluator keys. */
-  reason: string;
   span: FailureDomainSpan;
 }
 
@@ -140,30 +158,31 @@ export function describeFailureDomain(key: string): { label: string; kind: Failu
 }
 
 interface DomainMember {
+  key: string;
   exposureKey: string;
   failureDomainKey: string;
   exposureShare: number | null;
   modeledExposureShare: number | null;
-  adjustmentPoints: number;
+  adjustmentPoints: number | null;
   resolved: boolean;
   reason: string;
 }
 
 /**
- * Union share of the members, never a double count. Deployment slices are
- * distinct deployments, so they add (one slice counted once even when several
- * domains reach it). Any other slice (a common-mode slice of a protocol, chain
- * or bridge contract) can cover the same supply as its siblings and as those
- * deployment slices, so it never adds: the merged share is the larger of the
- * biggest such slice and the deployment-slice sum. One unquantified member
- * leaves the whole row unquantified.
+ * Union share of the quantified members, never a double count. Deployment
+ * slices are distinct deployments, so they add (one slice counted once even
+ * when several domains reach it). Any other slice (a common-mode slice of a
+ * protocol, chain or bridge contract) can cover the same supply as its
+ * siblings and as those deployment slices, so it never adds: the merged share
+ * is the larger of the biggest such slice and the deployment-slice sum.
+ * Unquantified members are skipped; callers say what is left out.
  */
-function mergedShare(members: readonly DomainMember[], pick: (member: DomainMember) => number | null): number | null {
+function mergedShare(members: readonly DomainMember[], pick: (member: DomainMember) => number | null): number {
   const deploymentSlices = new Map<string, number>();
   let widestSlice = 0;
   for (const member of members) {
     const share = pick(member);
-    if (share === null) return null;
+    if (share === null) continue;
     if (member.exposureKey.startsWith(DEPLOYMENT_SLICE_PREFIX)) {
       deploymentSlices.set(member.exposureKey, Math.max(deploymentSlices.get(member.exposureKey) ?? 0, share));
     } else {
@@ -173,6 +192,52 @@ function mergedShare(members: readonly DomainMember[], pick: (member: DomainMemb
   let deploymentSum = 0;
   for (const share of deploymentSlices.values()) deploymentSum += share;
   return Math.min(1, Math.max(widestSlice, deploymentSum));
+}
+
+function shareSummary(members: readonly DomainMember[]): FailureDomainShareSummary {
+  const unquantifiedMemberCount = members.filter((member) => member.exposureShare === null).length;
+  if (unquantifiedMemberCount === members.length) return { status: "unquantified", unquantifiedMemberCount };
+  const exposureShare = mergedShare(members, (member) => member.exposureShare);
+  if (unquantifiedMemberCount > 0) {
+    return { status: "partial", knownShareLowerBound: exposureShare, unquantifiedMemberCount };
+  }
+  return {
+    status: "quantified",
+    exposureShare,
+    modeledExposureShare: mergedShare(members, (member) => member.modeledExposureShare),
+  };
+}
+
+/** Share the row sorts by: the merged share, or the known lower bound; nothing known sorts last. */
+function sortShare(share: FailureDomainShareSummary): number {
+  if (share.status === "quantified") return share.exposureShare;
+  return share.status === "partial" ? share.knownShareLowerBound : -1;
+}
+
+/** The deployment's chain(s) for a deployment slice; any other slice covers the domain as a whole. */
+function memberBaseLabel(member: DomainMember): string {
+  if (!member.exposureKey.startsWith(DEPLOYMENT_SLICE_PREFIX)) return "Domain-wide";
+  const chainNames = member.exposureKey
+    .slice(DEPLOYMENT_SLICE_PREFIX.length)
+    .split("+")
+    .map((deploymentKey) => normalizeChainId(deploymentKey.split(":")[0] ?? ""))
+    .filter((chainId): chainId is string => Boolean(chainId))
+    .map((chainId) => CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId));
+  return [...new Set(chainNames)].join(", ") || "Deployment";
+}
+
+/** Member labels, numbered where two members of one row would otherwise read the same. */
+function memberLabels(members: readonly DomainMember[]): string[] {
+  const base = members.map(memberBaseLabel);
+  const totals = new Map<string, number>();
+  for (const label of base) totals.set(label, (totals.get(label) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  return base.map((label) => {
+    if ((totals.get(label) ?? 0) < 2) return label;
+    const ordinal = (seen.get(label) ?? 0) + 1;
+    seen.set(label, ordinal);
+    return `${label} (${ordinal})`;
+  });
 }
 
 function memberSpan(member: DomainMember, span: { chainIds: Set<string>; routeKeys: Set<string>; protocolKeys: Set<string> }) {
@@ -196,12 +261,12 @@ function memberSpan(member: DomainMember, span: { chainIds: Set<string>; routeKe
   }
 }
 
-/** Evaluator keys and bridge-tier slugs become reader words; repeats fold into one counted note. */
-function memberNotes(members: readonly DomainMember[]): string {
-  return groupSafetyScoreReasons(members.map((member) => member.reason))
-    .map((group) => group.text.replace(BRIDGE_TIER_SLUG_PATTERN, (tier) => bridgeRouteTierLabel(tier).toLowerCase()))
-    .map((text) => (/[.!?]$/.test(text) ? text : `${text}.`))
-    .join(" ");
+/** Evaluator keys and bridge-tier slugs become reader words, as one closed sentence. */
+function memberNote(reason: string): string | null {
+  if (reason.trim().length === 0) return null;
+  const text = humanizeSafetyScoreReason(reason.trim())
+    .replace(BRIDGE_TIER_SLUG_PATTERN, (tier) => bridgeRouteTierLabel(tier).toLowerCase());
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 export function buildFailureDomainsView(
@@ -221,6 +286,7 @@ export function buildFailureDomainsView(
 
   for (const adjustment of trace.adjustments) {
     add(adjustment.failureDomainKey, {
+      key: ["adjustment", adjustment.exposureKey, adjustment.riskEventKey, adjustment.failureDomainKey, adjustment.signalKey].join("|"),
       exposureKey: adjustment.exposureKey,
       failureDomainKey: adjustment.failureDomainKey,
       exposureShare: adjustment.nominalExposureShare,
@@ -235,11 +301,12 @@ export function buildFailureDomainsView(
     // through; label the joined set the way a compound key is labelled.
     const domainKey = exposure.failureDomainKeys.join("+");
     add(domainKey, {
+      key: ["unresolved", exposure.exposureKey, exposure.riskEventKey, domainKey, exposure.signalKey].join("|"),
       exposureKey: exposure.exposureKey,
       failureDomainKey: domainKey,
       exposureShare: null,
       modeledExposureShare: null,
-      adjustmentPoints: 0,
+      adjustmentPoints: null,
       resolved: false,
       reason: exposure.reason,
     });
@@ -250,17 +317,23 @@ export function buildFailureDomainsView(
   const rows: FailureDomainRow[] = [...groups.entries()].map(([groupKey, { label, kind, members }]) => {
     const span = { chainIds: new Set<string>(), routeKeys: new Set<string>(), protocolKeys: new Set<string>() };
     for (const member of members) memberSpan(member, span);
+    const labels = memberLabels(members);
     return {
       key: groupKey,
       label,
       kind,
-      memberCount: members.length,
-      exposureShare: mergedShare(members, (member) => member.exposureShare),
-      modeledExposureShare: mergedShare(members, (member) => member.modeledExposureShare),
+      members: members.map((member, index) => ({
+        key: member.key,
+        label: labels[index]!,
+        exposureShare: member.exposureShare,
+        modeledExposureShare: member.modeledExposureShare,
+        adjustmentPoints: member.adjustmentPoints,
+        resolved: member.resolved,
+        reason: memberNote(member.reason),
+      })),
+      share: shareSummary(members),
       // Rounded so summed floats never print as 0.9324000000000001.
-      adjustmentPoints: Math.round(members.reduce((total, member) => total + member.adjustmentPoints, 0) * 10_000) / 10_000,
-      resolved: members.every((member) => member.resolved),
-      reason: memberNotes(members),
+      adjustmentPoints: Math.round(members.reduce((total, member) => total + (member.adjustmentPoints ?? 0), 0) * 10_000) / 10_000,
       span: {
         chainIds: [...span.chainIds].sort(),
         routeKeys: [...span.routeKeys].sort(),
@@ -269,10 +342,10 @@ export function buildFailureDomainsView(
     };
   });
 
-  // Costly domains first, then largest exposure; unquantified exposures last.
+  // Costly domains first, then largest (known) exposure; wholly unquantified exposures last.
   rows.sort((left, right) =>
     right.adjustmentPoints - left.adjustmentPoints
-    || (right.exposureShare ?? -1) - (left.exposureShare ?? -1)
+    || sortShare(right.share) - sortShare(left.share)
     || left.label.localeCompare(right.label),
   );
 

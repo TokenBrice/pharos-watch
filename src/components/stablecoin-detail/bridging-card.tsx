@@ -13,7 +13,7 @@ import { EvidenceModule, type EvidenceModuleVariant } from "@/components/stablec
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
-import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
+import type { FailureDomainRow, FailureDomainShareSummary, FailureDomainsView } from "@/lib/failure-domains";
 import type { ControlComponentRoles, ControlStripComponent, PillarStripTone } from "@/lib/pillar-evidence-strips";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
@@ -77,6 +77,51 @@ function formatShare(share: number): string {
   const pct = share * 100;
   if (pct > 0 && pct < 0.1) return "<0.1%";
   return `${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
+}
+
+/** One decimal at every size, for the fold's member detail, where rounding would lose the published share. */
+function formatPreciseShare(share: number): string {
+  const pct = share * 100;
+  if (pct > 0 && pct < 0.1) return "<0.1%";
+  return `${pct.toFixed(1)}%`;
+}
+
+/**
+ * A domain's share as a caption: the merged share, or, when part of the
+ * domain is unquantified, the known members' share as a lower bound plus how
+ * many members it leaves out. Null when no member is quantified. Bracket
+ * captions pass the compact `formatShare`; the fold passes `formatPreciseShare`.
+ */
+function describeDomainShare(
+  share: FailureDomainShareSummary,
+  format: (value: number) => string,
+): { label: string; note: string | null } | null {
+  if (share.status === "quantified") return { label: format(share.exposureShare), note: null };
+  if (share.status === "unquantified") return null;
+  const known = format(share.knownShareLowerBound);
+  return {
+    // "≥<0.1%" reads as nonsense; a positive sliver is simply more than nothing.
+    label: known.startsWith("<") ? ">0%" : `≥${known}`,
+    note: `${share.unquantifiedMemberCount} unquantified`,
+  };
+}
+
+function DomainShare({ share }: { share: FailureDomainShareSummary }) {
+  const caption = describeDomainShare(share, formatPreciseShare);
+  if (caption === null) return <span className="text-muted-foreground">Share unquantified</span>;
+  return (
+    <span className="text-muted-foreground">
+      <span className="font-mono tabular-nums">{caption.label}</span>
+      {caption.note ? ` · ${caption.note}` : null}
+    </span>
+  );
+}
+
+/** " Modeled contribution (capped): 12.0%." when the scoring share differs from the exposure. */
+function modeledNote(exposureShare: number | null, modeledExposureShare: number | null): string {
+  return modeledExposureShare !== null && exposureShare !== null && modeledExposureShare !== exposureShare
+    ? ` Modeled contribution (capped): ${formatPreciseShare(modeledExposureShare)}.`
+    : "";
 }
 
 /**
@@ -443,11 +488,13 @@ function buildBrackets(
     if (cellKeys.length === 0) continue;
     spanningCount += 1;
     if (brackets.length >= BRACKET_LIMIT) continue;
+    const share = describeDomainShare(row.share, formatShare);
     brackets.push({
       key: row.key,
-      label: row.memberCount > 1 ? `${row.label} ×${row.memberCount}` : row.label,
+      label: row.members.length > 1 ? `${row.label} ×${row.members.length}` : row.label,
       cellKeys,
-      shareLabel: row.exposureShare === null ? undefined : formatShare(row.exposureShare),
+      shareLabel: share?.label,
+      shareNote: share?.note ?? undefined,
     });
   }
   return { brackets, spanningCount };
@@ -520,40 +567,73 @@ function ScoringBreakdown({
   );
 }
 
+function DomainMemberList({ row }: { row: FailureDomainRow }) {
+  return (
+    <ul aria-label={`${row.label} members`} className="mt-1 space-y-1.5 border-l border-border/60 pl-3">
+      {row.members.map((member) => {
+        const note = `${member.reason ?? ""}${modeledNote(member.exposureShare, member.modeledExposureShare)}`.trim();
+        return (
+          <li key={member.key} data-domain-member="" className="space-y-0.5 text-[11px]">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 text-foreground">
+                {member.label}
+                <span className="sr-only">: </span>
+              </span>
+              <span className="flex shrink-0 items-baseline gap-2 text-muted-foreground">
+                {member.adjustmentPoints !== null && member.adjustmentPoints > 0 ? (
+                  <span className="font-mono tabular-nums text-foreground">−{member.adjustmentPoints.toFixed(1)} pts</span>
+                ) : null}
+                {member.exposureShare === null ? (
+                  <span>share unquantified</span>
+                ) : (
+                  <span className="font-mono tabular-nums">{formatPreciseShare(member.exposureShare)}</span>
+                )}
+                <span className="sr-only">. </span>
+              </span>
+            </div>
+            {note ? <p className="leading-snug text-muted-foreground">{note}</p> : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * One entry per domain. A domain the engine traced through several entries
+ * lists every member with its own share and reason, so a partly quantified
+ * domain never hides the shares that are known.
+ */
 function DomainList({ view }: { view: FailureDomainsView }) {
   return (
     <div className="space-y-3">
       <ul aria-label="Shared failure domains" className="space-y-2.5">
         {view.rows.map((row) => {
-          const modeled = row.modeledExposureShare != null && row.modeledExposureShare !== row.exposureShare
-            ? ` Modeled contribution (capped): ${formatShare(row.modeledExposureShare)}.`
+          const lone = row.members.length === 1 ? row.members[0] : undefined;
+          const rowModeled = row.share.status === "quantified"
+            ? modeledNote(row.share.exposureShare, row.share.modeledExposureShare)
             : "";
+          const rowNote = `${lone?.reason ?? ""}${rowModeled}`.trim();
           return (
             <li key={row.key} className="space-y-0.5">
               <div className="flex items-baseline justify-between gap-3 text-xs">
                 <span className="min-w-0 font-medium text-foreground">
                   {row.label}
-                  {row.memberCount > 1 ? (
-                    <span className="ml-1 font-mono tabular-nums text-muted-foreground">×{row.memberCount}</span>
+                  {row.members.length > 1 ? (
+                    <span className="ml-1 font-mono tabular-nums text-muted-foreground">×{row.members.length}</span>
                   ) : null}
+                  <span className="sr-only">: </span>
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2">
                   {row.adjustmentPoints > 0 ? (
                     <span className="font-mono tabular-nums text-foreground">−{row.adjustmentPoints.toFixed(1)} pts</span>
                   ) : null}
-                  {row.exposureShare === null ? (
-                    <span className="text-muted-foreground">Share unquantified</span>
-                  ) : (
-                    <span className="font-mono tabular-nums text-muted-foreground">{formatShare(row.exposureShare)}</span>
-                  )}
+                  <DomainShare share={row.share} />
+                  <span className="sr-only">. </span>
                 </span>
               </div>
-              {row.reason || modeled ? (
-                <p className="text-[11px] leading-snug text-muted-foreground">
-                  {row.reason}
-                  {modeled}
-                </p>
-              ) : null}
+              {rowNote ? <p className="text-[11px] leading-snug text-muted-foreground">{rowNote}</p> : null}
+              {lone ? null : <DomainMemberList row={row} />}
             </li>
           );
         })}
@@ -588,7 +668,8 @@ function DomainList({ view }: { view: FailureDomainsView }) {
  *   no route carries (unverified bridge controls) outlines the whole band
  *   with a caption. The legend counts the whole inventory. Failure domains
  *   bracket the cells they span; an unquantified share reads "share
- *   unquantified", never a percent.
+ *   unquantified", never a percent, and a partly quantified one reads as a
+ *   lower bound with its unquantified member count ("≥21% · 1 unquantified").
  * - A single-chain / native coin, a lone route, or failure domains without a
  *   bridge review degrade to strip form: no one-cell strip.
  * - Disclosures in fixed order: Scoring breakdown → Shared failure domains
