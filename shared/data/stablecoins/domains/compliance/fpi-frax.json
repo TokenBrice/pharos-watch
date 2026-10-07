@@ -1,0 +1,54 @@
+{
+  "id": "fpi-frax",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "FPI references CPI purchasing power and redeems through a protocol controller into a variable quantity of legacy FRAX. The opened sources establish neither a fixed national-currency redemption obligation nor bank-dollar redemption, even though FPI was designed as a transaction unit of account.",
+      "references": [
+        {
+          "label": "Frax FPI CPI reference and controller redemption",
+          "url": "https://docs.frax.com/protocol/assets/fpi/overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Scope assessed from CPI reference and FRAX redemption rather than the algorithmic label. FIP-448 proposes freezing the reference price and retiring minting; completed execution was not established, and redemption into legacy FRAX alone does not establish the statutory fixed monetary-value obligation. No legal issuer authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "FIP-448 proposed FPI wind-down",
+        "url": "https://gov.frax.finance/t/fip-448-wind-down-the-frax-price-index-fpi-system/3861",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-17"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking: scope and effective-date discussion",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

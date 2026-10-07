@@ -1,0 +1,66 @@
+{
+  "id": "senpathusd-sentora",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho: Sentora pathUSD vault",
+        "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
+      },
+      {
+        "label": "Morpho: Vault V2 lending, share accounting, and liquidity",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "senpathUSD represents a Morpho Vault V2 lending position denominated in pathUSD. The Morpho vault page opened on 2026-10-07 identifies Sentora pathUSD on Tempo at 0x9a044AE05E5e6290DcF56afd69548565e957a626, version 2.0, pathUSD as the vault asset and Sentora as curator of the lending strategy. Vault V2 accounts for current assets per share, interest, losses, and fees; redeeming shares returns the current underlying-asset amount subject to available liquidity. This supports a value-accruing investment position rather than a token designed for payments with an issuer obligation to redeem each unit for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: Sentora pathUSD vault",
+          "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho: Vault V2 lending, share accounting, and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment covers senpathUSD vault shares separately from the underlying pathUSD payment stablecoin. No underlying issuer authorization, reserves, attestations, or redemption obligation is attributed to these shares. Sentora Digital Holdings (BVI) Ltd is named in Sentora website terms as the contracting entity; the reviewed documents do not establish it as the legal vault-share issuer or a fixed-fiat redemption obligor, so issuerEntity is omitted. The scope conclusion is a Pharos assessment of documented instrument mechanics, not a regulator determination or an exemption from securities or other investment-product rules.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed implementing regulations",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: section 2(22) payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC proposed rule: payment stablecoin scope, official Federal Register PDF",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

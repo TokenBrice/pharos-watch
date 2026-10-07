@@ -9,13 +9,13 @@
           "label": "GENIUS Act Public Law 119-27 payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Cointree AUDF Product Disclosure Statement",
           "url": "https://www.cointree.com/company/pds/audf-pds/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -29,74 +29,192 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.forteaud.com/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "AUDF is an Australian AUD-backed non-cash payment product with a contractual 1:1 AUD redemption path for eligible Forte Account wholesale clients. Pharos found no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception. The regime remains in proposed-rules phase as of 2026-08-14; Australian ASIC/AFSL and the Australian stablecoin distribution exemption are not GENIUS authorization.",
+    "notes": "Reviewed on 2026-10-07. AUDF is an AUD payment token with a conditional contractual right for eligible Forte account holders to redeem 1 AUDF for 1 AUD. The issuer is Forte Securities Australia Pty Limited, confirmed by the AUDF terms, issuer footer and ASIC named-stablecoin instrument; Forte Tech Solutions is the separate account and conversion provider. ASIC AFSL 492490 is Australian licensing context, not GENIUS authorization. No qualifying public U.S. GENIUS approval, official application, issuer-announced GENIUS plan or registered foreign exception was located in the named public sources. Pathway and foreign-exception status remain unknown. The PDS describes monthly independent audits of reserve balances but expressly excludes verification of AUDF tokens in circulation. The August 2026 report, signed on 2026-09-07, audits a reserve bank-account balance only. MonthlyAttestationPresent is omitted rather than treating that assets-only audit as a GENIUS monthly reserve attestation. Reserve and redemption disclosure indicators describe publicly present documents, not compliance with GENIUS reserve requirements. DASP restrictions are prospective under Treasury's opened August proposal. The ABN record corroborates entity identity; its extraction date is 2026-10-08 and it is not used to establish a new authorization on the review date.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC GENIUS Act proposed rule, Federal Register",
+        "label": "Joint GENIUS customer-identification proposed rule, Federal Register",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Cointree AUDF Product Disclosure Statement",
         "url": "https://www.cointree.com/company/pds/audf-pds/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Forte AUDF transparency page",
         "url": "https://www.forteaud.com/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-05"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+        "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-09"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury proposed GENIUS section 3 regulations",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Forte AUDF Terms of Use, December 2024",
+        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-12-05"
+      },
+      {
+        "label": "AUDF August 2026 reserve-bank-account audit",
+        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-07"
+      },
+      {
+        "label": "ASIC Stablecoin Distribution Exemption Instrument",
+        "url": "https://www.legislation.gov.au/F2025L01117/2025-10-08/2025-10-08/text/original/pdf",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Australian ABN Lookup - Forte Securities Australia Pty Limited",
+        "url": "https://abr.business.gov.au/ABN/View?id=22614579734",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and Federal Register materials",
-        "Treasury state-regime comparability NPRM",
-        "GENIUS Act Public Law 119-27, including the foreign-issuer exception",
-        "Federal Register searches for Forte Securities Australia Pty Limited and AUDF",
-        "Forte and Cointree AUDF disclosures, including reserve and redemption materials",
-        "No token-specific U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception located"
+        "OCC Bulletin 2026-3 and current pending digital-assets licensing table, official raw HTML: no Forte Securities or AUDF applicant match; ordinary bank-charter coverage only.",
+        "Federal Register exact token/project/issuer-name document query through 2026-10-07: count 0, including AUDF and Forte Securities.",
+        "NYDFS live regulated-entity roster and issuance-approved Greenlist, plus June 9 proposed stablecoin regulation: no Forte Securities or AUDF approval identified.",
+        "Joint customer-identification NPRM, Federal Reserve September 24 implementation proposals, Treasury August 17 section 3 proposal and September 30 SCRC procedural rule.",
+        "Forte AUDF terms, issuer transparency disclosures, Cointree AUDF PDS and August 2026 independent reserve bank-account audit.",
+        "Named AUDF/Forte Securities regulatory-domain GENIUS, stablecoin and enforcement search through 2026-10-07: no matching qualifying public action or authorization located."
       ],
-      "summary": "Review of federal GENIUS rulemaking materials, Federal Register sources, and Forte/Cointree AUDF disclosures found no token-specific U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception. AUDF's ASIC AFSL and Australian stablecoin distribution treatment do not constitute GENIUS authorization.",
+      "summary": "As of 2026-10-07, the opened federal/state rulemaking materials, OCC pending-applications table, issuer disclosures and issuer-name regulatory searches did not identify a GENIUS PPSI approval, state-qualified status, official pending application, registered foreign exception or issuer-announced GENIUS application plan for Forte Securities Australia Pty Limited / AUDF. Search and table coverage are limited public negative evidence; no authorization or enforcement absence is certified. Australian licensing does not establish a U.S. pathway.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "OCC GENIUS Act proposed rule, Federal Register",
+          "label": "Joint GENIUS customer-identification proposed rule, Federal Register",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Treasury state-regime comparability NPRM",
           "url": "https://public-inspection.federalregister.gov/2026-06489.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-09"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury proposed GENIUS section 3 regulations",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-yet-restricted"
   }
 }

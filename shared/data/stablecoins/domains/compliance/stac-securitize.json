@@ -20,5 +20,65 @@
         "url": "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "STAC represents tokenized shares of Securitize AAA CLO Tokenized Fund, Ltd., an investment fund investing substantially all assets in USD-denominated AAA collateralized-loan-obligation tranches. Eligible investors subscribe for digital fund shares and fractional ownership, with investment risk rather than an issuer obligation to pay a fixed dollar amount. The GENIUS section 2(22)(B)(iii) securities exclusion applies.",
+      "references": [
+        {
+          "label": "Securitize STAC launch disclosure",
+          "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-29",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SEC Form D: Securitize AAA CLO Tokenized Fund, Ltd.",
+          "url": "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm",
+          "sourceKind": "issuer-filing",
+          "sourceDate": "2025-11-05",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Securitize AAA CLO Tokenized Fund, Ltd.",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The SEC Form D index establishes the exact fund filer and a November 5, 2025 exempt-offering notice; it is not SEC approval, GENIUS authorization or a finding about compliance with an exemption. The issuer announcement identifies Ethereum tokenized shares, accreditation/KYC eligibility, AAA CLO investments, BNY services and investment/illiquidity risks. Securitize and BNY service-provider roles do not establish bank deposits or PPSI status. ReserveDisclosurePresent and monthlyAttestationPresent are omitted because fund portfolio assets are not payment-stablecoin reserves. Domicile and specific Rule 506/Investment Company Act exemption claims are deliberately omitted because the available SEC extraction did not expose the definitive offering terms.",
+    "references": [
+      {
+        "label": "Securitize STAC launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-10-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SEC Form D: Securitize AAA CLO Tokenized Fund, Ltd.",
+        "url": "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2025-11-05",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

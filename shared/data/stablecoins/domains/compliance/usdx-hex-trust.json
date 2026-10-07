@@ -1,26 +1,5 @@
 {
   "id": "usdx-hex-trust",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page: no USDX EMT/ART authorization located in the reviewed register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "EUR-Lex MiCA Regulation: Union offer/admission scope and EMT requirements",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
-      },
-      {
-        "label": "Hex Trust USDX product page: Hong Kong-linked issuer product marketed through global venues with approved-party redemption",
-        "url": "https://www.htdigitalassets.com/"
-      },
-      {
-        "label": "Hex Trust company page: licenses and operating hubs are outside the EU MiCA issuer framework",
-        "url": "https://www.hextrust.com/company/about-us"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -29,7 +8,6 @@
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "HTMI Limited",
-    "issuerDomicile": "Hong Kong",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -37,46 +15,90 @@
     "reserveDisclosureUrl": "https://www.htdigitalassets.com/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDX has reserve and redemption disclosures, but no public GENIUS approval or foreign-issuer exception source was found. The htdigitalassets.com homepage references regular attestation reports but no dedicated disclosure URL is publicly linked. No GENIUS Act pathway intent announced by Hex Trust as of 2026-06-18.",
+    "notes": "USDX has reserve and redemption disclosures, but no public GENIUS approval, official application, issuer pathway announcement or foreign-issuer exception source was found in the dated review. The issuer disclaimer expressly identifies HTMI Limited and restricts contractual redemption rights to AML/KYC-onboarded parties under separate agreements; ordinary token holding alone gives no contractual claim. The htdigitalassets.com homepage references regular attestation reports but no dedicated disclosure URL or monthly accountant report was publicly linked in the opened material. Reserves are described as Treasuries, cash and cash equivalents; holders do not receive interest on reserves merely by holding USDX, and Clearpool investment-pool yield is a separate product. Hex Trust group offices/licenses, including an Italy office, are not token-specific EU or GENIUS issuer authorization. Exact HTMI incorporation domicile was not established by the reopened issuer material, so the prior group-derived Hong Kong issuerDomicile is omitted without changing issuerEntity.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Hex Trust Digital Assets USDX",
         "url": "https://www.htdigitalassets.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Hex Trust website",
         "url": "https://www.hextrust.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDX legal disclaimer naming HTMI Limited",
+        "url": "https://www.htdigitalassets.com/disclaimer",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS implementation timetable",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (OCC Bulletin 2026-3)",
-        "Hex Trust Digital Assets and Hex Trust public disclosures (htdigitalassets.com, hextrust.com)",
-        "Web search for Hex Trust USDX GENIUS Act authorization, foreign issuer exception, or US regulatory pathway announcements (June 2026)",
-        "FDIC, FinCEN/OFAC, Treasury GENIUS Act NPRMs: no Hex Trust / USDX filing or application found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and raw public digital-asset pending-applicant table",
+        "Treasury 17 August 2026 implementation timetable",
+        "SCRC 30 September 2026 interim state-certification procedures",
+        "Federal Reserve 24 September 2026 GENIUS proposal",
+        "NYDFS virtual-currency licensee/greenlist page",
+        "HT Digital Assets homepage and legal disclaimer, Hex Trust homepage and group company/licenses page",
+        "Independent exact token/brand searches for GENIUS, MiCA and EU posture; exact issuer/operator-name searches restricted to occ.gov, fdic.gov, ncua.gov, federalreserve.gov, dfs.ny.gov and home.treasury.gov"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, registered or comparable foreign-issuer exception, or issuer-announced intent was located for USDX or Hex Trust Digital Assets across OCC bulletins, Federal Register, issuer websites, and web search as of 2026-06-18. GENIUS rulemaking remains at NPRM stage; no approvals exist for any issuer.",
+      "summary": "No reviewed source identifies this token or its established legal issuer as a GENIUS permitted payment stablecoin issuer, state-qualified issuer, official applicant, or federally registered foreign issuer; no token-specific GENIUS pathway announcement or U.S. enforcement action was located. This is a dated, bounded public-evidence finding, not proof that no private application or regulatory engagement exists. Non-U.S. licenses, bank or trust charters, reserve assurances and proposed rules do not establish GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Treasury GENIUS implementation timetable",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

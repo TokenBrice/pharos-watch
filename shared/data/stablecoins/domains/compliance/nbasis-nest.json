@@ -4,17 +4,103 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA interim MiCA register landing page (last update 12 August 2026)",
+        "label": "ESMA interim MiCA register landing page (last update 7 October 2026)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Nest available vaults: nBASIS is a yield-bearing vault share token",
-        "url": "https://docs.nest.credit/about/available-vaults/"
-      },
-      {
-        "label": "Nest underlying assets: nBASIS exposure to tokenized funds",
-        "url": "https://docs.nest.credit/about/assets/"
+        "label": "Nest vault operations: pro rata NAV share and variable redemption value",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "nBASIS represents a Nest vault share redeemed at underlying net asset value. Share values vary with portfolio performance and liquidity; the opened disclosures do not establish a fixed monetary-value issuer redemption obligation or payment/settlement design under GENIUS section 2(22).",
+      "references": [
+        {
+          "label": "Nest vault operations: pro rata NAV shares",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "nBASIS vault position disclosure",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nest terms and conditions: service provider and vault-token structure",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-20",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "nBASIS vault NAV and share-price disclosure",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/price",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+    "redemptionPolicyPresent": false,
+    "notes": "nBASIS is assessed as a variable-NAV vault share outside the tracked GENIUS payment-stablecoin authorization posture. The public exit mechanics redeem shares at portfolio value, subject to liquidity; redemptionPolicyPresent is false because these are not fixed 1:1 monetary redemptions. The positions API is provider-generated portfolio disclosure and does not establish independent monthly reserve assurance. Monthly attestation status is omitted because the reviewed disclosures and targeted search do not establish the complete current report footprint. The March 20, 2026 terms identify Nest DAO LLC as the Marshall Islands Products/interface provider and permit fund managers and asset issuers to create vaults; they do not name the legal issuer or redemption obligor of this exact share token, so issuerEntity and issuerDomicile are omitted. Geographic restrictions prohibit U.S.-located, organized or ordinarily resident users from platform and direct smart-contract access; this eligibility policy is not GENIUS qualification.",
+    "references": [
+      {
+        "label": "Nest vault operations: pro rata NAV shares",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "nBASIS vault position disclosure",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nest terms and conditions: service provider and vault-token structure",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-20",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act enacted text: Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nest geographic restrictions: platform and smart-contract eligibility",
+        "url": "https://docs.nest.credit/security-and-compliance/geographic-restrictions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "nBASIS vault NAV and share-price disclosure",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/price",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

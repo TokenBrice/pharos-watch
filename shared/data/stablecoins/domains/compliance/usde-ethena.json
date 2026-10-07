@@ -26,23 +26,15 @@
         {
           "label": "GENIUS Act enacted statutory text (Public Law 119-27)",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-          "sourceKind": "statute"
-        },
-        {
-          "label": "Cadwalader: Operation and Structure of the GENIUS Act on Payment Stablecoins",
-          "url": "https://www.cadwalader.com/resources/clients-friends-memos/operation-and-structure-of-the-genius-act-of-2025-on-payment-stablecoins",
-          "sourceKind": "news"
-        },
-        {
-          "label": "CLS Blue Sky: Closing the Stablecoin Yield Loophole in the Post-GENIUS Era",
-          "url": "https://clsbluesky.law.columbia.edu/2026/01/23/closing-the-stablecoin-yield-loophole-in-the-post-genius-era/",
-          "sourceKind": "news"
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Ethena USDe terms and conditions",
           "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -57,63 +49,129 @@
     "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Historical compliance review dated 2026-06-18 recorded unresolved USDe GENIUS applicability, separate USDtb issuance discussions, and no located public USDe approval or action. The issuer terms retrieved 2026-10-01 describe restricted pro-rata redemption in supported digital assets, not an unrestricted fiat redemption right. The monthly custodian report published 2026-09-03 covers the 2026-08-26 snapshot and does not establish GENIUS authorisation. This validation does not establish updated token-specific U.S. approval, final implementing-rule effective dates, or the current legal issuer of USDtb; the historical negative review and authorization/enforcement fields are unchanged.",
+    "notes": "Reviewed 2026-10-07. Ethena BVI Limited remains the USDe issuer; direct minting and redemption are restricted to eligible Mint Users and U.S. persons are excluded from those services. The contractual ambiguity described in applicabilityBasis remains unresolved. The reserve dashboard and the August 2026 report page disclose recurring custodian asset attestations; monthlyAttestationPresent records their public presence, not consolidated assets-and-liabilities assurance or statutory GENIUS compliance. Anchorage's USDtb issuance and announced PPSI intent concern a separate token and legal issuer. No token-specific USDe authorization or active U.S. GENIUS enforcement action was located in the public sources and name searches checked on this date; nonpublic filings and actions cannot be excluded. Treasury describes January 18, 2027 as the expected Act effective date and July 18, 2028 as the general DASP offer-sale restriction date. Its September 30, 2026 SCRC rule establishes interim state-certification procedures and does not establish USDe authorization or general Act effectiveness. Foreign-exception eligibility remains unknown, rather than inferred from the issuer's domicile.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ethena USDe terms and conditions",
         "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ethena transparency dashboard",
         "url": "https://app.ethena.fi/dashboards/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "CoinDesk: Ethena taps Anchorage to issue USDtb in U.S. under GENIUS Act",
-        "url": "https://www.coindesk.com/business/2025/07/24/ethena-taps-anchorage-to-issue-usd1-5b-usdtb-stablecoin-in-u-s-under-genius-act",
-        "sourceKind": "news",
-        "sourceDate": "2025-07-24",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ethena monthly custodian attestation report (August 2026)",
         "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-03",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act enacted statutory text (Public Law 119-27)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury: proposed issuance and offer-sale framework and expected GENIUS effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve: proposed stablecoin standards and application procedures",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule: state certifications are not yet accepted",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
+        "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2026-05-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CoinDesk: Ethena taps Anchorage to issue USDtb in U.S. under GENIUS Act",
+        "url": "https://www.coindesk.com/business/2025/07/24/ethena-taps-anchorage-to-issue-usd1-5b-usdtb-stablecoin-in-u-s-under-genius-act",
+        "sourceKind": "news",
+        "sourceDate": "2025-07-24",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (2026-02-25)",
-        "FDIC GENIUS Act NPRM (2026-04-07)",
-        "Federal Register GENIUS Act implementation (2025-09-19)",
-        "Ethena USDe documentation and transparency dashboard",
-        "Cadwalader law firm memo on GENIUS Act payment stablecoin definition",
-        "CoinDesk reporting on Ethena/Anchorage USDtb GENIUS-compliant issuance",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and GovInfo OCC NPRM 2026-04089, independently recovered by direct HTTP and HTML extraction",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural rule",
+        "Federal Reserve September 24, 2026 standards and application-procedure proposals",
+        "Ethena USDe terms, transparency dashboard and August 2026 custodian-report metadata",
+        "Anchorage May 1, 2026 original comment PDF naming USDtb, USAT and USDGO, but not USDe",
+        "OCC Corporate Applications Search and enforcement-search landing pages; no dynamic database-result claim",
+        "Targeted public-domain query across OCC, Treasury, Federal Reserve, NYDFS, SEC and CFTC for Ethena BVI/USDe GENIUS authorization, PPSI, registration and enforcement"
       ],
-      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for USDe. Ethena's GENIUS-compliant activity is limited to USDtb (a separate product issued via Pallas BVI Ltd / Anchorage Digital Bank). No enforcement actions found. GENIUS Act not yet effective.",
+      "summary": "As of 2026-10-07, no public token-specific GENIUS PPSI approval, state qualification, filed application or registered foreign-issuer exception was located for Ethena BVI Limited or USDe in the sources and public name searches checked. Anchorage documents identify USDtb as its Ethena-branded token; those materials do not authorize USDe. No active U.S. GENIUS action naming USDe was located. This is a dated and limited public-evidence finding, not an exhaustive certification of all filings or regulatory activity.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: proposed issuance and offer-sale framework and expected GENIUS effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve: proposed stablecoin standards and application procedures",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule: state certifications are not yet accepted",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
+          "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf",
+          "sourceKind": "issuer-filing",
+          "sourceDate": "2026-05-01",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

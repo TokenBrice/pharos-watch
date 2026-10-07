@@ -3,53 +3,129 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "EJPY is a pre-launch trust-type yen stablecoin planned for 1:1 JPY redemption under Japan's Payment Services Act framework."
+      "summary": "EJPY is a pre-launch trust-type yen stablecoin planned for 1:1 JPY redemption under Japan's Payment Services Act framework.",
+      "references": [
+        {
+          "label": "Japan Blockchain Foundation EJPY announcement",
+          "url": "https://www.jbfd.org/en/news/joc-ejpy",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-13"
+        },
+        {
+          "label": "Japan Blockchain Foundation EJPY proof-of-concept program",
+          "url": "https://www.jbfd.org/news/stablecoin-poc-partners",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Japan Blockchain Foundation Co., Ltd.",
-    "issuerDomicile": "Japan",
-    "licensingRegulator": "Financial Services Agency",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "EJPY is planned as a Japanese trust-type stablecoin, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+    "notes": "Evidence reviewed 2026-10-07: EJPY remains a planned Japanese trust-type yen token designed for payments, settlement and remittance. The May 13 announcement identifies Japan Blockchain Foundation Co., Ltd. as the prospective settlor, with discussions with prospective trustees ongoing; it does not establish JBFD as the legally obligated token issuer. The September 24 pilot announcement offers EJPY test coins and says trust structure, issuance/redemption processes and legal compliance remain in preparation. Therefore issuerEntity and licensingRegulator have been removed as unsupported current legal-issuer/license claims; The proposed issuance jurisdiction is Japan; issuerDomicile is omitted because the legally obligated issuer is unresolved. Apparent-payment-stablecoin describes the proposed design, not a launched token or finalized redemption obligation. No live reserve disclosure, binding public redemption policy or monthly attestation was found. No token-specific public U.S. GENIUS approval, official application, registered foreign exception or announced GENIUS route was located. Substantive federal rules remain proposed.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Japan Blockchain Foundation EJPY announcement",
         "url": "https://www.jbfd.org/en/news/joc-ejpy",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-05-13",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "U.S. Treasury GENIUS issuance, offer and sale proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposed framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Japan Blockchain Foundation EJPY proof-of-concept program",
+        "url": "https://www.jbfd.org/news/stablecoin-poc-partners",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS NPRM and reporting-form notices",
-        "Treasury foreign-comparability materials",
-        "Japan Blockchain Foundation EJPY announcement and public materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3, reopened 2026-10-07: proposed issuer and foreign-registration framework, not a token approval.",
+        "OCC Digital Assets Licensing Applications, direct HTTPS/HTML table extraction on 2026-10-07: nine pending charter applicants, none matching this token or identified issuer; this table is not an exhaustive GENIUS register.",
+        "Treasury August 17 section 3 proposal (sb0605), reopened 2026-10-07: expected January 18, 2027 effectiveness and separate DASP implementation dates.",
+        "September 30 SCRC procedural interim final rule, reopened 2026-10-07: procedures do not certify a state regime or qualify this issuer.",
+        "Federal Reserve September 24 proposals and Public Law 119-27, reopened 2026-10-07: functional payment-stablecoin definition and proposed implementation.",
+        "Public search on 2026-10-07 for IDRT, IDRX, EJPY and GMO-Z.com Trust with GENIUS, PPSI, enforcement or registration across OCC, Treasury, NYDFS, FDIC, NCUA, Federal Reserve, SEC, CFTC and FinCEN domains. No exact token-specific GENIUS approval, application, registration or enforcement result located; unrelated biotechnology IDRx results excluded.",
+        "https://www.jbfd.org/en/news/joc-ejpy - May 13 trust-type proposal, prospective settlor and ongoing trustee discussions; no offering announced.",
+        "https://www.jbfd.org/news/stablecoin-poc-partners - September 24 test-token proof-of-concept program and continuing issuance/redemption/legal preparation."
       ],
-      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for EJPY or Japan Blockchain Foundation.",
+      "summary": "As of 2026-10-07, no public U.S. GENIUS PPSI approval, state qualification, official application, registered foreign exception or issuer-announced GENIUS route was located for the planned EJPY project in the opened issuer and regulator sources. JBFD is identified as the prospective settlor; the legally obligated trustee/issuer is not publicly identified by the reviewed announcements, so a token issuer cannot be matched to an authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "U.S. Treasury GENIUS issuance, offer and sale proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Japan Blockchain Foundation EJPY proof-of-concept program",
+          "url": "https://www.jbfd.org/news/stablecoin-poc-partners",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

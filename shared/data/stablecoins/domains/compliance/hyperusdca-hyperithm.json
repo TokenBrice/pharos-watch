@@ -1,0 +1,65 @@
+{
+  "id": "hyperusdca-hyperithm",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho API: Hyperithm USDC Apex exact vault accounting",
+        "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Morpho Vault V2 mechanism documentation",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "hyperUSDCa is an ERC-4626 USDC lending-vault share. Its redemption value changes with accrued lending interest and realized strategy losses, and withdrawals depend on available liquidity. It does not establish an issuer obligation to redeem for a fixed amount of national-currency monetary value.",
+      "references": [
+        {
+          "label": "Morpho API: Hyperithm USDC Apex exact vault accounting",
+          "url": "https://api.morpho.org/graphql",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2 mechanism documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2 share accounting and loss realization",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment concerns Hyperithm USDC Apex at Monad:0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371, independently of underlying USDC. Hyperithm branding identifies the vault strategy; the opened protocol API and documentation do not establish a legal issuer entity or corporate redemption obligor. issuerEntity is omitted rather than attributing the share to Circle or assuming a curator is its legal issuer. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

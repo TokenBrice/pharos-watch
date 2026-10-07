@@ -1,21 +1,40 @@
 {
   "id": "dusd-standx",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "DUSD is marketed as a yield-bearing stablecoin, is minted and redeemed by its BVI issuer against USDT/USDC, and functions as a quote, settlement, and margin asset on StandX.",
+      "summary": "StandX markets DUSD as a transferable dollar-stable token with DeFi uses. Its binding issuer terms provide redemption at the value of the token's share in the asset reserve, with a baseline quote of one USDT subject to reserve-loss reductions and charges. Public redemption documentation provides USDT/USDC payouts rather than a fixed amount of national currency or a bank deposit. The fixed-monetary-value issuer obligation required by GENIUS section 2(22) is unresolved.",
       "references": [
         {
           "label": "StandX DUSD solutions",
           "url": "https://docs.standx.com/docs/dusd-solutions",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "StandX DUSD product FAQ",
           "url": "https://docs.standx.com/docs/dusd-overview/product-faq",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "StandX user terms and conditions",
+          "url": "https://docs.standx.com/docs/resources/user-terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "StandX DUSD redemption documentation",
+          "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -26,81 +45,192 @@
     "licensingRegulator": "Issuer terms state that StandX Issuer Ltd and its group are not regulated, supervised, or licensed by a financial-services regulator, including the BVI Financial Services Commission.",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "restricted",
-    "reserveDisclosurePresent": false,
+    "daspOfferSaleStatus": "not-yet-restricted",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "DUSD is treated as an apparent payment stablecoin despite its yield-bearing and derivatives-margin functions because the issuer describes direct minting and redemption against USDT/USDC and a stablecoin role. U.S. users are geo-blocked, and the prior authorization search remains dated 2026-08-14. The issuer terms also qualify redemption: reserve losses reduce the quote pro rata and a 10-basis-point reimbursement charge applies. No MiCA row is authored for DUSD; the former statement that a separate row existed was incorrect.",
+    "notes": "Reviewed on 2026-10-07. StandX Issuer Ltd, BVI company number 2163662, is expressly the DUSD issuer in its binding terms. Applicability is corrected to unclear: payment and settlement use does not establish a fixed-monetary-value redemption obligation, and the terms expressly pass reserve losses through to the redemption quote. The documented seven-day redemption process pays USDT or USDC, subject to fees, with a ten-basis-point reimbursement charge described in the terms. U.S. geo-blocking is an issuer eligibility restriction, not a GENIUS DASP prohibition. DASP posture is corrected to not-yet-restricted while the Act remains pre-effective; Treasury states expected Act effectiveness on January 18, 2027 and the general DASP deadline on July 18, 2028. No qualifying public token-specific authorization, application, foreign registration or GENIUS enforcement action was identified in the reviewed sources. No issuerEntity change is made. No public quantified reserve report or monthly reserve-attestation report was located in the reviewed product, issuer-terms, redemption and audit pages or the StandX-domain disclosure search. The optional negative disclosure booleans are omitted because mechanism descriptions and contract-security audits do not establish a complete current disclosure inventory. The public redemption policy is limited to digital-asset payouts and remains subject to the binding terms.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital-assets licensing applications table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "FDIC GENIUS Act proposed rule materials",
         "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-07",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StandX user terms and conditions",
         "url": "https://docs.standx.com/docs/resources/user-terms-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StandX DUSD solutions",
         "url": "https://docs.standx.com/docs/dusd-solutions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA GENIUS Act implementation FAQ",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StandX DUSD redemption documentation",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+        "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StandX DUSD overview: stablecoin utility and holding rewards",
+        "url": "https://docs.standx.com/docs/dusd-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StandX audits: listed contract-security reports",
+        "url": "https://docs.standx.com/docs/resources/audits",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Federal Register search for GENIUS Act issuer approvals, applications, and foreign-issuer registrations",
-        "OCC GENIUS proposed rule (Bulletin 2026-3) and OCC digital-assets licensing applications table",
-        "FDIC GENIUS Act proposed-rule materials",
-        "Congress.gov GENIUS Act text",
-        "StandX user terms, DUSD solutions, DUSD product FAQ, and official DUSD mint/redeem pages",
-        "Web search for StandX Issuer Ltd, DUSD, GENIUS Act, PPSI, and foreign payment stablecoin registration: none found"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (all nine pending bank applicants inspected in official raw HTML)",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "OCC Bulletin 2026-3; FDIC April 7 prudential proposal; Federal Reserve September 24 proposals; NCUA implementation FAQ; Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedures",
+        "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "https://docs.standx.com/docs/dusd-solutions",
+        "https://docs.standx.com/docs/dusd-overview/product-faq",
+        "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "Exact indexed search: site:occ.gov \"StandX\"",
+        "Official-domain search: (site:occ.gov OR site:federalregister.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov) (\"Sovryn\" OR \"DLLR\" OR \"StandX\" OR \"USSD\" OR \"Frax Inc\") (stablecoin OR GENIUS OR enforcement OR application) before:2026-10-08; no qualifying target record located; search relaxed its domain constraint"
       ],
-      "summary": "No public GENIUS approval, application, or foreign-exception registration naming StandX Issuer Ltd or DUSD was found in the reviewed federal or issuer materials as of 2026-08-14.",
+      "summary": "Review bounded to the October 7, 2026 cutoff: the reopened OCC nine-applicant ordinary bank-licensing table, both pages of the 112-record GENIUS Federal Register inventory, NYDFS entity and issuance tables, implementation materials, indexed named searches and StandX token/issuer pages did not identify public GENIUS approval, state qualification, a named GENIUS application, registered foreign exception or GENIUS enforcement action for StandX Issuer Ltd or DUSD. Proposed frameworks and ordinary bank licensing are not token-specific GENIUS authorizations. Confidential or unindexed filings are not excluded.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC digital-assets licensing applications table",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA GENIUS Act implementation FAQ",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+          "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -7,15 +7,22 @@
       "references": [
         {
           "label": "IDRX official site",
-          "url": "https://home.idrx.co/en/",
+          "url": "https://idrx.co/en/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "IDRX redemption documentation",
           "url": "https://docs.idrx.co/services/redeem-idr",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "IDRX terms and conditions",
+          "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-04"
         }
       ]
     },
@@ -24,67 +31,127 @@
     "issuerEntity": "PT IDRX Indo Inovasi",
     "issuerDomicile": "Indonesia",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://home.idrx.co/en/",
+    "reserveDisclosureUrl": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "IDRX is a non-USD foreign-currency stablecoin with global availability language and an Indonesian issuer. No U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Its U.S. eligibility and the final-rule treatment of a non-USD foreign payment stablecoin should be re-checked.",
+    "notes": "IDRX's May 4, 2026 terms explicitly identify PT IDRX Indo Inovasi, established under Indonesian law, as the token issuer. The website markets fixed-rate IDR redemption and payment/transfer use, and redemption documentation describes burning tokens through the platform followed by IDR bank payment. The website excludes U.S. customer access; that restriction and the IDR denomination do not themselves exclude the token from the statutory functional definition. No qualifying public GENIUS approval, application, state qualification, foreign registration or announced GENIUS route was located in the listed public sources as of 2026-10-07. The issuer's document index contains repeated monthly reserve reports; the reopened August report is an agreed-upon-procedures report. An assurance-type or mandatory monthly-attestation conclusion is not assigned. The S3 report fetch aborted, so reserveDisclosureUrl uses the reopened base-linked Google Storage mirror of the August 28 report. DASP posture concerns the GENIUS implementation timeline only, not permission under other law. Enforcement status is omitted because the bounded search does not support a high-confidence comprehensive action-history conclusion.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-03-02",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register: permitted payment stablecoin issuer CIP proposed rule",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-06-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "U.S. Treasury: state-regime comparability proposed rule",
+        "label": "U.S. Treasury: GENIUS Act AML/CFT proposed rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-08",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital-asset licensing applications tracker",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "IDRX official site",
-        "url": "https://home.idrx.co/en/",
+        "url": "https://idrx.co/en/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "IDRX redemption documentation",
         "url": "https://docs.idrx.co/services/redeem-idr",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "U.S. Treasury GENIUS issuance, offer and sale proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposed framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "IDRX terms and conditions",
+        "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-04"
+      },
+      {
+        "label": "IDRX August 2026 reserve AUP: base-linked mirror",
+        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "IDRX transparency documents",
+        "url": "https://idrx.co/en/docs/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency licensees and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and Federal Register CIP proposed rule",
-        "OCC digital-asset licensing applications tracker",
-        "U.S. Treasury state-regime comparability proposed rule",
-        "IDRX official site and redemption documentation",
-        "Public searches for IDRX, PT IDRX Indo Inovasi, PPSI approval, and GENIUS foreign-issuer registration"
+        "OCC digital-assets licensing tracker: complete nine-applicant HTML table reopened with plain HTTPS extraction; no IDRX or PT IDRX Indo Inovasi match. This is a charter tracker, not an exhaustive GENIUS register.",
+        "Federal Register API exact IDRX query, publication date through 2026-10-07: zero documents.",
+        "NYDFS complete regulated-entity directory and Greenlist: no IDRX or PT IDRX Indo Inovasi match; ordinary state licensing would not establish GENIUS qualification.",
+        "OCC Bulletin 2026-3, Federal Register June 22 CIP proposal, Treasury April 8 AML/CFT proposal, August 17 issuance/offer/sale proposal, September 30 SCRC procedural rule and Federal Reserve September 24 proposals: implementation context, no IDRX authorization.",
+        "IDRX current website, May 4 terms, redemption documentation, transparency document API and August reserve-report mirror: token identity, payment/redemption use and public disclosures; no GENIUS statement.",
+        "Named IDRX/PT IDRX Indo Inovasi searches across OCC, Federal Register, NYDFS, FDIC, Federal Reserve, FinCEN, SEC and CFTC domains: no relevant qualifying token-specific record located; generic unrelated results were excluded."
       ],
-      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for PT IDRX Indo Inovasi or IDRX. Indonesian regulatory context and global availability do not establish U.S. GENIUS authorization.",
+      "summary": "As of 2026-10-07, no qualifying public GENIUS approval, official application, state qualification, registered foreign exception or issuer-announced route for IDRX or PT IDRX Indo Inovasi was found in the opened issuer disclosures, OCC tracker, Federal Register exact-name query, NYDFS directory and scoped official-domain searches. The finding is limited to these public sources and does not rule out a confidential or unpublished filing.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Register exact IDRX search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22IDRX%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

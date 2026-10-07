@@ -1,27 +1,32 @@
 {
   "id": "usdtb-ethena",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Bybit EU Spanish USDtb page",
-        "url": "https://www.bybit.com/es-ES/earn/usdtb-page/"
-      },
-      {
-        "label": "Anchorage Digital comment letter describing USDtb issuance",
-        "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDtb is publicly described as a U.S. dollar-backed stablecoin issued by Anchorage Digital Bank against BUIDL and cash reserves."
+      "summary": "USDtb is publicly described as a U.S. dollar-backed stablecoin issued by Anchorage Digital Bank against BUIDL and cash reserves.",
+      "references": [
+        {
+          "label": "Anchorage Digital Bank covered stablecoin terms: sole issuer, par value and client-only redemption",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-13",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act enacted statutory text (Public Law 119-27)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDtb reserve examination: August 31, 2026 snapshot, signed September 28, 2026",
+          "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-09-28",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
@@ -36,49 +41,180 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: Anchorage Digital Bank N.A. is an OCC-chartered uninsured national trust bank: not a deposit-taking IDI, not a state entity. Under the GENIUS Act's taxonomy, this places it in the federal-qualified nonbank issuer (FQPSI) pathway supervised by the OCC. In its comment letter to the OCC's GENIUS Act NPRM (2026), Anchorage stated it 'expects to become a permitted payment stablecoin issuer (PPSI) pursuant to the GENIUS Act, once effective': forward-looking intent, not a current approval. No PPSI approvals have been granted to any issuer as of 2026-06-18; the PPSI approval framework remains in proposed-rules phase (OCC NPRM issued Feb 2026, final rules not yet published). issuerPathway corrected from unknown to federal-qualified-nonbank based on Anchorage's OCC national trust bank charter. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. Anchorage Digital Bank, N.A. is the sole current USDtb issuer and obligor under its covered-stablecoin terms. The OCC's active national trust-bank list confirms charter 25243; this existing charter does not establish token-specific GENIUS PPSI approval. Anchorage's May 1, 2026 comment letter states that it expects to become a PPSI once the Act is effective, supporting issuer-announced-intent and the announced federal-qualified-nonbank pathway, rather than an official application or approval. Client redemption is at USD 1 par value, net applicable fees, subject to onboarding and other contractual conditions; non-client holders have no enforceable direct contractual redemption right until accepted as clients. The public August 31, 2026 reserve examination, signed September 28, compares USD 530,419,653 of reserve assets with 529,269,213 redeemable USDtb tokens and reports BUIDL plus cash. The examination explicitly excludes a legal or regulatory compliance opinion. Treasury describes January 18, 2027 as the expected Act effective date and July 18, 2028 as the general DASP offer-sale restriction date. Its September 30 SCRC procedural rule does not approve an issuer. No current token-specific GENIUS action was located in this review; Anchorage's 2022 bank-level consent order was terminated August 18, 2025 and its 2021 operating agreement was terminated February 9, 2026. The enforcement field concerns located current token-specific action, not absence of historical bank supervision.",
     "references": [
       {
         "label": "OCC: Anchorage Digital Bank national trust bank charter approval (2021)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2021-01-13"
       },
       {
         "label": "Anchorage USDtb launch announcement: America's first federally regulated stablecoin",
         "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-10-14"
+      },
+      {
+        "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
+        "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2026-05-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anchorage USDtb reserve attestations",
+        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anchorage Digital Bank covered stablecoin terms: sole issuer, par value and client-only redemption",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-10-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDtb reserve examination: August 31, 2026 snapshot, signed September 28, 2026",
+        "url": "https://learn.anchorage.com/08.31.26_USDtb_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC active trust-bank list as of August 31, 2026: Anchorage charter 25243",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-state.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-31",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury: proposed issuance and offer-sale framework and expected GENIUS effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve: proposed stablecoin standards and application procedures",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule: state certifications are not yet accepted",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC: termination of Anchorage 2022 consent order",
+        "url": "https://www.occ.gov/static/enforcement-actions/eaAA-ENF-2025-44.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-08-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC: termination of Anchorage 2021 operating agreement",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/scl2026-01.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
         "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act",
         "sourceKind": "issuer-filing",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "Anchorage USDtb reserve attestations",
-        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-        "sourceKind": "auditor-report"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-01"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletins and public releases (NPRMs through May 2026)",
-        "OCC Anchorage Digital Bank public charter materials (nr-occ-2021-6)",
-        "Anchorage Digital Bank comment letter on OCC GENIUS Act NPRM",
-        "USDtb issuer documentation and reserve attestation pages",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC January 13, 2021 charter release (direct HTTP body) and active trust-bank directory as of August 31, 2026",
+        "OCC Bulletin 2026-3 and GovInfo NPRM 2026-04089 (direct HTTP body)",
+        "Treasury August 17, 2026 section 3 proposal, September 30, 2026 SCRC procedural rule, and Federal Reserve September 24, 2026 proposals",
+        "Anchorage May 1, 2026 original comment PDF and live legacy filing URL, USDtb launch announcement, covered stablecoin terms and reserve-report hub",
+        "August 31, 2026 USDtb examination PDF, signed September 28, 2026, independently reopened with reader PDF extraction",
+        "OCC August 18, 2025 consent-order termination PDF and February 9, 2026 operating-agreement termination PDF",
+        "OCC Corporate Applications Search and enforcement-search landing pages; no dynamic database-result claim",
+        "Targeted OCC/Treasury public-domain query for Anchorage PPSI/GENIUS approval, application, enforcement and registration"
       ],
-      "summary": "No PPSI approval, PPSI application, or official authorization found for USDtb or Anchorage Digital Bank under the GENIUS Act; the PPSI approval framework remains in proposed-rules phase as of 2026-06-18. Anchorage's own comment letter describes anticipated future PPSI status, not current approval.",
+      "summary": "As of 2026-10-07, no public token-specific GENIUS PPSI approval or official pending PPSI application was located for Anchorage Digital Bank, N.A. or USDtb in the sources and name searches checked. Its existing bank charter and reserve reports establish regulated-bank issuance and public reporting, not GENIUS authorization. Its own May 1 filing expressly describes expected future PPSI status. No current token-specific GENIUS enforcement action was located; the separately identified historical bank-level orders were terminated. The finding is limited to reviewed public evidence and does not exclude nonpublic or newly posted filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC active trust-bank list as of August 31, 2026: Anchorage charter 25243",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-state.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-31",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anchorage comment letter on OCC GENIUS Act NPRM: confirms ADB expects to become a PPSI",
+          "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf",
+          "sourceKind": "issuer-filing",
+          "sourceDate": "2026-05-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: proposed issuance and offer-sale framework and expected GENIUS effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve: proposed stablecoin standards and application procedures",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule: state certifications are not yet accepted",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC: termination of Anchorage 2022 consent order",
+          "url": "https://www.occ.gov/static/enforcement-actions/eaAA-ENF-2025-44.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2025-08-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC: termination of Anchorage 2021 operating agreement",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/scl2026-01.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-09",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

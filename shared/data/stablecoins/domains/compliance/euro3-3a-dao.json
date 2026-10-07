@@ -1,21 +1,169 @@
 {
   "id": "euro3-3a-dao",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "EURO3 is expressly described as a euro-pegged payment coin and overcollateralized stablecoin. Its users mint and burn through loans, and redemptions obtain collateral subject to fees rather than a documented contractual fiat-repayment undertaking. 3A DAO LLC is a governing legal entity, but the documents do not establish an issuer obligation to redeem EURO3 for fixed monetary value, leaving GENIUS applicability unclear.",
+      "references": [
+        {
+          "label": "GENIUS Act enacted payment-stablecoin and monetary-value definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "3A protocol docs: EURO3 decentralized euro payment coin with user minting",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "3A DAO governance: legal entity and managing-member governance",
+          "url": "https://docs.3adao.org/3a-protocol/governance/3a-dao.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "EURO3 lending redemptions: collateral and DAO-controlled fees",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "The protocol identifies 3A DAO LLC, a Marshall Islands DAO, as a developer/governance undertaking; this is not evidence of GENIUS issuer approval, U.S. state qualification, OCC foreign registration or a legal fiat-redemption issuer. issuerEntity is intentionally omitted pending that issuer identification. A euro peg does not make EURO3 euro legal tender. No token-specific official approval, application or foreign exception was found in opened public sources. GENIUS is pre-effective; no conclusion of unlawful U.S. offering is made.",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register, EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        "label": "GENIUS Act enacted statutory definitions and effective date",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "3A DAO website: issuer disclosed as 3A DAO LLC, Marshall Islands (Reg. RMI-2022-33), no EU regulatory entity",
-        "url": "https://3adao.org/"
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "3A DAO docs: EURO3 described as decentralized EUR-pegged CDP stablecoin; no MiCA authorization or EMI license mentioned",
-        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        "label": "3A protocol docs: EURO3 decentralized euro payment coin with user minting",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "3A DAO governance: legal entity and managing-member governance",
+        "url": "https://docs.3adao.org/3a-protocol/governance/3a-dao.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "EURO3 lending redemptions: collateral and DAO-controlled fees",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications: public pending-application table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and complete OCC Digital Assets Licensing Applications pending table, reopened 2026-10-07; no EURO3 or 3A DAO applicant",
+        "Federal Register exact token-name query including EURO3, reopened 2026-10-07; count 0",
+        "NYDFS regulated-entity directory and Greenlist, reopened 2026-10-07; no EURO3 or 3A DAO entry",
+        "Federal Reserve September 24, 2026 proposals; FDIC April 7, 2026 proposal; NCUA GENIUS implementation FAQ; September 30, 2026 SCRC procedural rule",
+        "GENIUS Act Public Law 119-27, sections 2, 3, 18 and 20",
+        "Current EURO3 payment-coin, user-minting, collateral-redemption and 3A DAO governance documents",
+        "Public EURO3 GENIUS, PPSI, OCC and authorization search on 2026-10-07; no qualifying match located"
+      ],
+      "summary": "No EURO3 / 3A DAO-specific federal PPSI approval, official application, state-qualified GENIUS authorization or OCC-registered foreign-issuer exception was located in the opened public regulatory sources and protocol disclosures. The search does not rule out a non-public filing. Collateralized protocol mechanics do not establish an issuer obligation to redeem for fixed monetary value, so applicability remains unclear rather than authorized or definitively excluded.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS Act requirements and standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA GENIUS Act implementation and proposed applicant framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register document search for HCHF, HLiquity, ZCHF, Frankencoin, dEURO and EURO3: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frankencoin%22%20OR%20%22ZCHF%22%20OR%20%22dEURO%22%20OR%20%22EURO3%22%20OR%20%22HLiquity%22%20OR%20%22HCHF%22&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "3A protocol docs: EURO3 decentralized euro payment coin with user minting",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "3A DAO governance: legal entity and managing-member governance",
+          "url": "https://docs.3adao.org/3a-protocol/governance/3a-dao.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "EURO3 lending redemptions: collateral and DAO-controlled fees",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications: public pending-application table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

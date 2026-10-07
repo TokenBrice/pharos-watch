@@ -4,13 +4,61 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Falcon terms clause 7.2(f), issuer states no active EU offering",
-        "url": "https://docs.falcon.finance/resources/terms-of-use.md"
-      },
-      {
         "label": "Falcon sUSDf variable-exchange-rate savings product",
         "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDf is an ERC-4626 non-rebasing yield-vault share over USDf. Its exchange rate accrues yield and redemption returns a variable amount of USDf, rather than a fixed dollar or other monetary-value payment obligation. It is classified separately from the underlying token as a non-payment-token savings/strategy position; this is not an inherited GENIUS authorization or a finding that the underlying token is excluded.",
+      "references": [
+        {
+          "label": "Falcon sUSDf variable-exchange-rate savings product",
+          "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Falcon platform terms",
+          "url": "https://docs.falcon.finance/resources/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-11"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "sUSDf is treated as a non-payment token on its own yield-accruing vault rights, not because of crypto collateral or user geographic restrictions. No GENIUS payment-stablecoin authorization or foreign exception is asserted. Parent USDf remains separately assessed as unclear/no-public-authorization-found. Falcon Digital Limited is named in the platform terms for Falcon assets; exact legal issuer spelling is kept consistent with USDf.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Falcon sUSDf variable-exchange-rate savings product",
+        "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Falcon Digital Limited",
+    "issuerDomicile": "British Virgin Islands"
   }
 }

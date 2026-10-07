@@ -2,56 +2,156 @@
   "id": "u-united-stables",
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "United Stables markets U for payments and settlement at approximately USD 1.00 per token. Eligible Mint Users receive issuer-selected equivalent-notional cash or stablecoins on redemption; secondary Holding Users must first become Mint Users. Payment applicability is apparent, not a finding that these discretionary asset-redemption terms satisfy the statutory monetary-value definition.",
+      "references": [
+        {
+          "label": "United Stables website: regulatory disclosure",
+          "url": "https://www.u.tech/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "United Stables current terms: mint-user redemption policy",
+          "url": "https://u.tech/resources/legal-policy/terms/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-27"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "United Stables Limited",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "restricted",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.u.tech/",
+    "reserveDisclosureUrl": "https://u.tech/transparency/audit-report/",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "United Stables states $U has not obtained registration, authorization, or licensing under the GENIUS Act.",
+    "monthlyAttestationPresent": true,
+    "notes": "United Stables states $U has not obtained registration, authorization, or licensing under the GENIUS Act. Its active U.S./EU/Hong Kong geofencing and KYB restrictions are issuer distribution policy, not proof that the GENIUS statutory DASP prohibition is currently operative. The general DASP deadline is distinct from Act effectiveness and foreign lawful-order conditions. The monthly-report hub publishes independent accountant reports: the August 31 2026 reserves report has a Moore CPA Limited ISAE 3000 limited-assurance conclusion signed September 11 2026, not merely an issuer-signed reserve schedule. The conclusion has valuation/custody/credit/liquidity limitations and is not a finding of GENIUS-compliant reserve assets. Current July 27 terms permit issuer-selected cash or stablecoin redemption only for approved Mint Users. No U.S. authorization pathway or foreign exception is inferred from the report.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "United Stables website: regulatory disclosure",
         "url": "https://www.u.tech/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "United Stables terms: regulatory disclosure",
         "url": "https://u.tech/terms/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-18"
+      },
+      {
+        "label": "United Stables current terms: mint-user redemption policy",
+        "url": "https://u.tech/resources/legal-policy/terms/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-27"
+      },
+      {
+        "label": "United Stables monthly independent assurance reports",
+        "url": "https://u.tech/transparency/audit-report/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Moore CPA United Stables August 2026 independent assurance report",
+        "url": "https://u.tech/assets/audit-report/USL%20-%20Assurance%20%26%20Reserves%20Report%20Aug_19082026.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-11"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer standards",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury State Certification Review Committee interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlisted Coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "United Stables website (u.tech) regulatory disclosure: issuer explicitly states no GENIUS Act authorization obtained",
-        "United Stables terms page regulatory disclosure",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "United Stables current website and monthly-report hub regulatory disclosure",
+        "United Stables July 27, 2026 terms and December 18, 2025 legacy terms",
+        "United Stables August 31, 2026 reserves report, including all six scanned Moore assurance pages",
+        "OCC Bulletin 2026-3 proposal body",
+        "Federal Reserve September 24, 2026 proposed framework",
+        "Treasury September 30, 2026 SCRC procedural interim rule",
+        "NYDFS regulated entities and Greenlisted Coins",
+        "Independent October 7 exact-name search for Techteryx/TrueUSD/United Stables with GENIUS, PPSI or enforcement on OCC, FDIC, NCUA, Federal Reserve, Treasury, NYDFS, FinCEN and OFAC domains; no token-specific qualifying permission found"
       ],
-      "summary": "United Stables' own site carries an explicit disclosure that $U has not obtained registration, authorization, or licensing under the GENIUS Act of 2025; no public GENIUS approval, application, or foreign registration source was located on re-verification 2026-06-18.",
+      "summary": "On October 7 2026 the issuer explicitly disclaims GENIUS authorization and the checked public primary federal/state materials and targeted issuer searches yielded no United Stables Limited/U approval, official application, state qualification or foreign registration. This dated, bounded negative-evidence conclusion is not proof that a nonpublic filing cannot exist. SCRC state comparability procedures and ordinary state licensing are not issuer authorization or foreign registration.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer standards",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury State Certification Review Committee interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlisted Coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "United Stables website: regulatory disclosure",
+          "url": "https://www.u.tech/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

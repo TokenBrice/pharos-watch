@@ -20,73 +20,90 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDsui is a Bridge-issued U.S. dollar payment stablecoin for Sui with 1:1 redemption through Bridge Open Issuance."
+      "summary": "USDsui is identified by Bridge and Sui as a U.S. dollar stablecoin for payments and settlement issued through Bridge Open Issuance. The Open Issuance FAQ publishes dollar-value backing and 1:1 minting and redemption terms.",
+      "references": [
+        {
+          "label": "Bridge USDsui reserve dashboard: token identity, payments and U.S. issuance",
+          "url": "https://reserves.bridge.xyz/usd_sui",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Bridge issuance FAQ",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sui Dollar launch",
+          "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-04"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
-    "issuerEntity": "Bridge Building Inc.",
-    "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter, Feb 2026); FinCEN / state money transmitter regulators",
-    "primaryFederalRegulator": "OCC",
-    "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
+    "issuerPathway": "unknown",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "reserveDisclosureUrl": "https://reserves.bridge.xyz/usd_sui",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Bridge received conditional OCC approval (Feb 12, 2026) to organize Bridge National Trust Bank, NA: an uninsured national trust bank, which maps to the 'federal-qualified-nonbank' PPSI pathway under the OCC's GENIUS Act NPRM. Bridge publicly states its compliance framework 'already positions Bridge to be GENIUS ready.' This is a trust-charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act (which remains in proposed-rules phase). No PPSI approvals exist as of 2026-06-18.",
+    "notes": "Bridge explicitly lists USDsui on its Open Issuance product page and markets that platform with GENIUS readiness; Sui describes USDsui as designed to be GENIUS-compliant. These are public preparation claims, not regulator authorization. The OCC decision grants preliminary conditional approval to the separate proposed Bridge National Trust Bank and describes Bridge Building Inc. as the xUSD issuer at that decision date. No USDsui-specific source opened here names its current exact legal issuer, so issuerEntity, issuerDomicile, licensingRegulator and foreignExceptionStatus are omitted rather than inferred from generic Bridge terms. The prior issuerEntity Bridge Building Inc. is removed for that reason. issuerPathway remains unknown and no federal or state regulator is assigned. The issuer dashboard supplies token-specific cash and Treasury reserve data. The FAQ says quarterly audits and reports will be issued; it does not establish current monthly independent attestations, so monthlyAttestationPresent is omitted. enforcementStatus and the optional negativeEvidenceReview are omitted because no sufficiently token-specific enforcement review is established by these product sources. DASP posture records the pre-effective GENIUS timetable, not an exemption from other laws.",
     "references": [
+      {
+        "label": "Bridge Open Issuance: USDsui listing and GENIUS-readiness statement",
+        "url": "https://www.bridge.xyz/product/issuance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
       {
         "label": "Sui Dollar launch",
         "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-04"
       },
       {
         "label": "Bridge issuance overview",
         "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge issuance FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "Bridge OCC conditional approval blog",
-        "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-02-17",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",
+        "label": "Bridge USDsui reserve dashboard",
+        "url": "https://reserves.bridge.xyz/usd_sui",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin terms: generic issuer and redemption terms",
+        "url": "https://withbridge.com/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Corporate Decision 1365: proposed Bridge National Trust Bank conditional charter",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-12",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-12"
+      },
+      {
+        "label": "Treasury proposed issuance and sale framework: effective-date timetable",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC conditional charter approval for Bridge National Trust Bank, NA (Feb 12, 2026)",
-        "Sui Dollar launch materials",
-        "Bridge Open Issuance documentation and legal terms",
-        "Bridge OCC approval blog post",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
-      ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or approved for Bridge or USDsui. Bridge's OCC conditional charter approval is a trust-charter action under existing OCC authority, not a GENIUS Act PPSI authorization.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
-    },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -3,111 +3,199 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "ftUSD targets a dollar value and is described as an on-chain settlement currency, but it is also a DeFi delta-neutral product and Flying Tulip's terms exclude U.S. persons.",
+      "summary": "ftUSD is a non-yielding dollar-targeted base token marketed for payments and onchain settlement. Product documentation describes conversion into supported collateral assets at a quoted prevailing rate, while the interface terms disclaim Company involvement in underlying protocol transactions. The opened sources do not establish a legal issuer obligation to redeem ftUSD for a fixed amount of national-currency monetary value; that statutory element remains unresolved.",
       "references": [
         {
           "label": "GENIUS Act statutory payment-stablecoin framework",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Flying Tulip ftUSD documentation",
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Flying Tulip terms of use",
-          "url": "https://flyingtulip.com/terms-of-use/",
+          "label": "Flying Tulip public English terms disclosure",
+          "url": "https://flyingtulip.com/messages/en-4bf67e43.json",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-12-01",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Flying Tulip Ltd",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "Flying Tulip describes ftUSD as a non-yielding dollar-pegged base token used for trading, settlement, and collateral, with optional sftUSD staking and delta-neutral strategies. The reviewed public materials did not identify a GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception. Applicability remains unclear because the product is payment-like in wording but DeFi-native and U.S.-restricted in the reviewed terms.",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+    "notes": "Reviewed on 2026-10-07. ftUSD is the non-yielding payment and settlement base, distinct from the sftUSD and ssftUSD savings receipts. The product documentation provides conversion into supported collateral at a prevailing rate, not a confirmed contractual 1:1 national-currency redemption obligation. Applicability therefore remains unclear. The official English terms identify Flying Tulip Ltd only as interface provider and disclaim involvement in underlying protocol transactions; issuerEntity is omitted because those terms do not identify the legal ftUSD issuer. The collateral API discloses token supply, collateral balances and withdrawal parameters, so reserveDisclosurePresent records first-party disclosure rather than independent assurance. No fixed-value redemption-policy or monthly-attestation boolean is asserted. No qualifying public GENIUS authorization was found in the named public sources; this does not resolve an unidentified issuer's confidential or unindexed filings. The GENIUS DASP restrictions remain prospective under the opened Treasury proposal.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act statutory payment-stablecoin framework",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-08",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications table",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Flying Tulip ftUSD documentation",
         "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Flying Tulip terms of use",
-        "url": "https://flyingtulip.com/terms-of-use/",
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA GENIUS Act implementation FAQ",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Flying Tulip public English terms disclosure",
+        "url": "https://flyingtulip.com/messages/en-4bf67e43.json",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2025-12-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Flying Tulip ftUSD collateral dashboard API",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA MiCA Interim Register page and linked register categories (reviewed 2026-08-14)",
-        "OCC GENIUS Act proposed rule and foreign payment-stablecoin registration/application provisions (Bulletin 2026-3)",
-        "OCC digital assets licensing applications table (reviewed 2026-08-14)",
-        "Treasury/FinCEN/OFAC GENIUS Act proposed rulemaking and foreign-issuer comparability rulemaking",
-        "FDIC and NCUA GENIUS Act proposal pages",
-        "Flying Tulip ftUSD documentation and terms of use",
-        "Web searches for Flying Tulip, ftUSD, GENIUS Act, PPSI, and permitted issuer"
+        "OCC digital-assets pending licensing table, official raw HTML: nine named bank applicants; no Flying Tulip match. This is not an exhaustive PPSI register.",
+        "Federal Register exact token/project-name document query, restricted to publication through 2026-10-07: count 0, including Flying Tulip and ftUSD.",
+        "NYDFS regulated-entity roster and issuance-approved Greenlist: no Flying Tulip or ftUSD match.",
+        "OCC Bulletin 2026-3, Federal Reserve September 24 proposals, NCUA implementation FAQ, Treasury August 17 section 3 proposal and September 30 SCRC procedural rule.",
+        "Flying Tulip product documentation, official English terms payload and public collateral dashboard API.",
+        "Named Flying Tulip/ftUSD regulatory-domain GENIUS, stablecoin and enforcement search through 2026-10-07; no qualifying token-specific record found."
       ],
-      "summary": "Review found no public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer determination for ftUSD or Flying Tulip Ltd as of 2026-08-14. The token's DeFi structure and U.S.-person restriction leave final applicability unresolved.",
+      "summary": "Review dated 2026-10-07 found no qualifying public GENIUS approval, state qualification, official application, registered foreign exception or token-specific GENIUS enforcement action for ftUSD or Flying Tulip in the named sources. The legal token issuer is not established by interface-provider terms. The finding is limited to public token/project-name evidence and does not establish that an unidentified legal obligor has no licenses or private filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC digital assets licensing applications table",
-          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Flying Tulip ftUSD documentation",
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA GENIUS Act implementation FAQ",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act issuance, offer, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

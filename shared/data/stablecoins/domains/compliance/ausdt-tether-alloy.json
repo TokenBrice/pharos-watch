@@ -7,26 +7,68 @@
     "issuerEntity": "Moon Gold El Salvador, S.A. de C.V. / Moon Gold NA, S.A. de C.V.",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "aUSDT is treated here as outside GENIUS payment-stablecoin tracking because it is a gold-overcollateralized CDP tethered asset (75% max MTV) rather than an issuer-redeemable payment stablecoin. The GENIUS Act definition requires the issuer to be obligated to redeem at a fixed monetary value backed by permitted reserves; gold (XAUT) is not a permitted reserve asset under GENIUS. Issued by Moon Gold El Salvador, S.A. de C.V. and Moon Gold NA, S.A. de C.V. (Tether subsidiaries), registered with El Salvador's CNAD (EME-0001, EME-0002).",
+    "notes": "aUSDt is a fungible dollar-tracking token minted against XAUt collateral positions, rather than the collateral position itself. The official FAQ states that its peg relies on overcollateralization, liquidations and secondary-market liquidity rather than direct redemption rights. Returning minted aUSDt allowed a borrower to withdraw XAUt; no issuer obligation to redeem a token holder for fixed national-currency monetary value is disclosed. Historical everyday-use marketing is acknowledged. The June 17, 2026 notice closed new minting and set September 17, 2026 as the platform collateral-recovery cutoff. That published cutoff has passed; no post-deadline extension is asserted. The non-payment-token assessment is retained for this frozen niche wind-down asset, not inferred from gold reserve ineligibility. The notice names both existing Moon Gold entities, so issuerEntity is unchanged. The CNAD entry independently supports Moon Gold El Salvador DASP registration PSAD-0022, not a U.S. GENIUS authorization.",
     "references": [
       {
-        "label": "Alloy by Tether vault docs",
-        "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "Alloy tethered assets",
-        "url": "https://docs.alloy.tether.to/get-started/tethered-assets",
-        "sourceKind": "issuer-disclosure"
+        "label": "Alloy by Tether FAQ: collateral mint positions and absence of direct redemption rights",
+        "url": "https://alloy.tether.to/faq/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CNAD Moon Gold El Salvador registration",
         "url": "https://cnad.gob.sv/assets-providers/moon-gold-el-salvador-s-a-de-c-v/",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Tether Alloy wind-down announcement",
+        "url": "https://tether.io/news/tether-updates-users-on-strategic-changes-to-its-product-support-offering/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-17"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "aUSDt is a dollar-tracking token minted against XAUt collateral positions. Its official FAQ expressly says the peg operates without direct redemption rights; returning minted tokens releases borrower collateral rather than fixed national-currency monetary value owed to token holders. The published wind-down halted new minting and set a September 17, 2026 platform collateral-recovery cutoff. Non-payment-token is retained for this frozen niche wind-down asset. Historical everyday-use marketing is acknowledged, and gold collateral alone is not a statutory scope exclusion.",
+      "references": [
+        {
+          "label": "Alloy by Tether FAQ: collateral mint positions and absence of direct redemption rights",
+          "url": "https://alloy.tether.to/faq/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Tether Alloy wind-down announcement",
+          "url": "https://tether.io/news/tether-updates-users-on-strategic-changes-to-its-product-support-offering/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-17"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    }
   }
 }

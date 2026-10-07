@@ -1,171 +1,186 @@
 {
   "id": "usx-solstice",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page: ART/EMT register reviewed; no USX match found on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA/EBA/EIOPA crypto-assets factsheet: MiCA scope and authorization framework",
-        "url": "https://www.esma.europa.eu/sites/default/files/2025-10/Updated_Joint_ESAs_Factsheet_on_crypto-assets_MT_EN.pdf"
-      },
-      {
-        "label": "Solstice: USX overcollateralized settlement layer and MiCA-ready framework claim",
-        "url": "https://website.prod.solsticelabs.io/"
-      },
-      {
-        "label": "Solstice whitepaper: Solstice Foundation token issuance and Swiss development entity",
-        "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Solstice markets USX as an overcollateralized dollar settlement asset and payment rail. Current USX documentation restricts direct minting and redemption to KYC'd institutional partners, with USDC, USDG, or USDT deposits and USDG as the primary redemption asset. The current whitepaper identifies USX Ltd as the purpose-built token issuer; the U.S. qualification pathway and any foreign-issuer exception remain unresolved.",
+      "summary": "USX is marketed as a dollar-tracking medium of exchange and the settlement/payment rail of the Solstice protocol. The current protocol whitepaper names USX Ltd as the ring-fenced vehicle that mints and redeems USX, while the platform terms describe issuance and 1:1 redemption through Solstice Foundation accounts. Institutional redemption documentation specifies USDG rather than national currency. Apparent-payment-stablecoin is retained as a product screening classification, not a finding that every element of GENIUS section 2(22) is legally satisfied: redemption solely in another digital asset does not itself establish the required fixed monetary-value obligation.",
       "references": [
         {
-          "label": "GENIUS Act enacted text: payment stablecoin definition",
+          "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Solstice: USX settlement asset, minting, and payment-rail disclosures",
-          "url": "https://website.prod.solsticelabs.io/",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
-        },
-        {
-          "label": "Solstice whitepaper: token issuance and entity disclosures",
-          "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
-        },
-        {
-          "label": "Current USX documentation: institutional minting and USDG redemption",
+          "label": "Solstice USX documentation: overcollateralized settlement asset designed to track the U.S. dollar; institutional mint in USDC/USDG/USDT, redemption in USDG, no issuance spread",
           "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Current Solstice whitepaper: purpose-built USX Ltd issuance vehicle",
+          "label": "Solstice protocol whitepaper: USX Ltd is the purpose-built USX issuance vehicle",
           "url": "https://docs.solstice.finance/assets/Solstice%20Whitepaper%202.1.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Solstice Terms and Conditions: USX is a fully collateral-backed synthetic dollar usable as a store of value, medium of exchange and unit of account; issuance and 1:1 redemption run through Solstice Foundation accounts",
+          "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Solstice Foundation",
+    "issuerEntity": "USX Ltd",
     "foreignExceptionStatus": "unknown",
-    "notes": "The 2026-08-14 negative-authorization review is retained as historical evidence, not a current approval finding. The current whitepaper names USX Ltd as the purpose-built token issuer, unlike the prior whitepaper's Foundation issuance description; platform Terms still name Solstice Foundation as the agreement counterparty. The issuer-field correction is proposed pending resolution of these entity-role disclosures. The institutional website claims a MiCA notification and EU/EEA access, but Terms exclude EEA and UK users. The 2026-10-01 ESMA OTHER register identifies SLX Ltd, and its registered whitepaper expressly covers the SLX token, not USX; notification is not regulatory approval. No USX/USX Ltd/Solstice Foundation entry was found in the fetched EMT or ART register. The OCC pending digital-asset table also had no such entry, but is not an exhaustive GENIUS authorization register.",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://attestation.solstice.finance/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Re-verified 2026-10-07. issuerEntity changes from Solstice Foundation to USX Ltd because the current protocol whitepaper expressly identifies USX Ltd as the USX mint/redeem issuance vehicle; Foundation remains the governance body and platform contracting party. Domicile is unset: the BVI jurisdiction of Equinox Strategies Ltd or SLX Ltd cannot be transferred to USX Ltd. Although the current document URL contains Whitepaper 2.1, the fetched document identifies itself as May 2026/v2.0; the researcher's unsupported 2026-09-01 sourceDate is removed. The institutions page claims EU/EEA passporting and MiCA compliance, while terms restrict EEA/UK-directed services. ESMA OTHER.csv and the cited MiCA whitepaper concern SLX issued by SLX Ltd, not USX, and Title II notification is not token issuer authorization. No U.S. GENIUS authorization or registered foreign exception was located. The Accountable API returned reserve/liability data, supporting disclosure-hub presence; continuous proof-of-solvency data is not an independent monthly reserve attestation. No such monthly report was located.",
     "references": [
       {
-        "label": "GENIUS Act enacted text: payment stablecoin definition",
+        "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "label": "OCC GENIUS Act implementation proposed rule (91 FR 10202)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC digital assets licensing applications: public pending-application table",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "label": "OCC Digital Assets Licensing Applications tracker: nine pending applicants, none naming this issuer",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice USX documentation: institutional minting and USDG redemption, DEX access for everyone else",
+        "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice protocol whitepaper: USX Ltd is the purpose-built USX issuance vehicle",
+        "url": "https://docs.solstice.finance/assets/Solstice%20Whitepaper%202.1.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice Terms and Conditions: Solstice Foundation counterparty, Restricted Person definition covering EEA/UK and retail users, U.S. Person prohibition, 1:1 redemption",
+        "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice institutional page: issuer-stated MiCA white-paper notification to the Central Bank of Ireland, passporting claim, $500K minimum and EU/EEA/UK supported jurisdictions",
+        "url": "https://solstice.finance/institutions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Registered Solstice MiCA white paper: Title II white paper for the SLX token, offeror SLX Ltd (LEI 2549006KZ9NV4EYS4H81), notified 2025-12-29, expressly not approved by any competent authority",
+        "url": "https://assets.solstice.finance/mica/Solstice_MiCA_Whitepaper.xhtml",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ESMA interim register OTHER.csv: Central Bank of Ireland rows for SLX Ltd, last updated 30/07/2026",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ESMA interim register EMTWP.csv reviewed for USX, USX Ltd, SLX Ltd and Solstice names",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ESMA interim register ARTZZ.csv reviewed; file contains a header row only",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice Proof of Solvency hub operated by Accountable",
+        "url": "https://attestation.solstice.finance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act implementation proposed rule (91 FR 61580)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Solstice Accountable dashboard API: public reserves and liabilities data",
+        "url": "https://attestation-api.solstice.finance/dashboard",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Solstice: USX settlement asset, minting, and payment-rail disclosures",
         "url": "https://website.prod.solsticelabs.io/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Solstice whitepaper: token issuance and entity disclosures",
         "url": "https://109607783-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F44900wRUr08Ym1oXIDzr%2Fuploads%2FOqk5A8l99vA7cE70MSNT%2FWhitepaper%20May%202026.pdf?alt=media&token=b41923ad-1f3b-42af-9ef3-625a1a029e21",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "Current Solstice whitepaper: purpose-built USX Ltd issuance vehicle",
-        "url": "https://docs.solstice.finance/assets/Solstice%20Whitepaper%202.1.pdf",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "Current USX documentation: institutional minting and USDG redemption",
-        "url": "https://docs.solstice.finance/solstice-for-users/usx.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "Solstice platform terms: Foundation agreement and jurisdictional restrictions",
-        "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "Solstice institutional page: issuer-stated MiCA notification and EU access",
-        "url": "https://solstice.finance/institutions",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "OCC pending digital-asset application table reviewed on 2026-10-01",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "ESMA OTHER register: Solstice records concern SLX Ltd",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "Registered Solstice MiCA whitepaper: SLX token scope",
-        "url": "https://assets.solstice.finance/mica/Solstice_MiCA_Whitepaper.xhtml",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "ESMA EMT register reviewed for USX and issuer names",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-01"
-      },
-      {
-        "label": "ESMA ART register reviewed for USX and issuer names",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS Act enacted text (Public Law 119-27)",
-        "OCC GENIUS Act proposed rule and public releases",
-        "OCC digital assets licensing applications tracker",
-        "Federal Reserve, FDIC, and NCUA GENIUS implementation proposals",
-        "Solstice public website, compliance links, and whitepaper",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "GENIUS Act enacted text, Public Law 119-27, including sections 2, 3, 18 and 20; reopened 2026-10-07",
+        "OCC GENIUS implementation proposed rule, 91 FR 10202, official PDF; reopened 2026-10-07",
+        "Federal Reserve GENIUS implementation proposed rule, 91 FR 61580, official GPO HTML extracted by direct fetch; reopened 2026-10-07",
+        "OCC pending digital-asset licensing applications table: nine listed applicants, no matching token issuer; reopened 2026-10-07 using a uniquely named browser tab after plain extraction omitted the table",
+        "Targeted indexed search for Solomon/Genesee Holdings/SOLOMON DAO, Piku Finance, USX Ltd/Solstice Foundation and XSY Foundation/YieldPoint across OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; 2026-10-07",
+        "Solstice USX documentation, current protocol whitepaper, platform terms, institutions page, SLX MiCA whitepaper and proof-of-solvency hub; reopened 2026-10-07"
       ],
-      "summary": "As of 2026-08-14, the reviewed federal GENIUS implementation and OCC licensing materials showed proposed frameworks and unrelated applicant names, but no public qualifying approval, official application, or OCC foreign registration naming Solstice Foundation or USX was located.",
+      "summary": "As of 2026-10-07, no public GENIUS permitted-issuer approval, state qualification, official GENIUS application or OCC foreign-issuer registration naming USX Ltd or Solstice Foundation for USX was located in the sources checked. The OCC table covers pending digital-asset licensing applications, not an exhaustive GENIUS issuer register. Indexed searches and issuer silence do not establish that no unindexed or nonpublic filing exists. Foreign-exception status remains unknown; no inference of non-compliance is made.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act implementation proposed rule (91 FR 10202)",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act implementation proposed rule (91 FR 61580)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-29",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications tracker: nine pending applicants, none naming this issuer",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

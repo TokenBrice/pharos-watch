@@ -1,6 +1,85 @@
 {
   "id": "spkcc-spiko",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Spiko Digital Assets Cash and Carry Fund prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+      },
+      {
+        "label": "MiCA Article 2 excludes financial instruments",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "SPKCC (FR0014010OM9) represents the USD accumulating share of SPIKO DIGITAL ASSETS CASH AND CARRY FUND, a French professional specialized collective investment fund and alternative investment fund. Shareholders receive proportional fund investment returns and redeem at NAV, without a fixed monetary-value redemption promise. This supports the GENIUS securities exclusion in section 2(22)(B)(iii).",
+      "references": [
+        {
+          "label": "Spiko Digital Assets Cash and Carry Fund prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Exact share-class key information document",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_SPKCC_EN.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "SPIKO DIGITAL ASSETS CASH AND CARRY FUND",
+    "issuerDomicile": "France",
+    "licensingRegulator": "AMF: Twenty First Capital SAS is an authorized portfolio management company (GP-11000029); the FPS is registered rather than AMF-authorized",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The fund is an unincorporated French FCP co-ownership with no separate legal personality. Twenty First Capital SAS is the management company; Spiko Finance is distributor and DLT technology provider. Fund registration and manager licensing do not constitute GENIUS payment-stablecoin approval. The KID excludes marketing to U.S. Persons. Annual financial statements and fund NAV are distinct from monthly stablecoin reserve attestations. The KID header names USD class FR0014010OM9, but its footer repeats FR001400ODM9. The prospectus share-class table and DLT addresses establish the reviewed fund identity.",
+    "references": [
+      {
+        "label": "Spiko Digital Assets Cash and Carry Fund prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Exact share-class key information document",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_SPKCC_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

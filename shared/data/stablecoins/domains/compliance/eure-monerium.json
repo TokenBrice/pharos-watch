@@ -14,6 +14,14 @@
       {
         "label": "Monerium EURe MiCA white paper (2026)",
         "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
+      },
+      {
+        "label": "ESMA Interim MiCA Register: EURe EMT row naming Monerium ehf and Central Bank of Iceland (retrieved 2026-10-07)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Central Bank of Iceland supervised entities register: Monerium hf",
+        "url": "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type="
       }
     ]
   },
@@ -27,13 +35,13 @@
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Monerium EURe product page",
           "url": "https://monerium.com/eure/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -49,70 +57,131 @@
     "reserveDisclosureUrl": "https://monerium.com/financial-information/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "EURe is a foreign-issued Icelandic MiCA EMT, not a U.S.-formed permitted payment stablecoin issuer. The public review found no token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception. Monerium's U.S. availability language is not treated as a GENIUS authorization, and the foreign-issuer framework remains in proposed-rules phase.",
+    "notes": "EURe is foreign-issued programmable fiat e-money of Monerium hf, an Icelandic EMI; safeguarding and par fiat redemption support apparent payment-stablecoin design, not the U.S. bank-deposit exclusion. On 2026-10-07 the opened U.S. rulemaking/directory materials and targeted official/issuer searches disclosed no Monerium PPSI or state qualification, official application, OCC foreign registration, Treasury foreign comparability determination, announced filing intent, or GENIUS enforcement action. This is a bounded public-evidence finding, not proof about confidential filings. The public OCC table is a pending general digital-assets bank directory, not a complete GENIUS register. Entity-level financial information is annual audited/semiannual safeguarding disclosure, not an independent monthly token reserve attestation. Treasury expects substantive GENIUS effectiveness on 2027-01-18 subject to the statutory trigger; the September SCRC procedural rule is not that trigger. ForeignExceptionStatus and issuerPathway stay unknown, and not-yet-restricted is GENIUS timing only.",
     "references": [
       {
         "label": "GENIUS Act: foreign issuer and permitted issuer framework",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury state-level GENIUS regime NPRM",
         "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-01",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Central Bank of Iceland supervised entities register: Monerium hf",
         "url": "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type=",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Monerium EURe product page",
         "url": "https://monerium.com/eure/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Monerium financial information",
         "url": "https://monerium.com/financial-information/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: enacted payment-stablecoin and foreign-issuer framework",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury August 2026 GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC public digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Monerium current EURe whitepaper: issuer and e-money model",
+        "url": "https://monerium.com/whitepapers/eure-whitepaper.xhtml",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS Act statutory text, including foreign payment stablecoin exception",
-        "OCC GENIUS Act proposed rule and 2026 implementation bulletins",
-        "OCC digital assets licensing applications table",
-        "Treasury state-level GENIUS comparability NPRM",
-        "Federal Register and federal-regulator searches for Monerium/EURe authorization or application",
-        "Central Bank of Iceland supervised entities register",
-        "Monerium EURe, financial information, and public product disclosures",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (independently recovered official HTML main body using HTTPS fetch; displayed pending bank applications only, not a comprehensive GENIUS register)",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html (official HTML main body recovered; February 25, 2026 notice of proposed rulemaking)",
+        "https://public-inspection.federalregister.gov/2026-04089.pdf (foreign-registration proposed rules, not issuer approvals)",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm (enacted payment-stablecoin definition, foreign-issuer requirements and effective-date provision)",
+        "https://home.treasury.gov/news/press-releases/sb0605 (August 17, 2026 proposal and expected January 18, 2027 substantive effectiveness)",
+        "https://home.treasury.gov/news/press-releases/sb0428 (state-regime similarity proposal, not a foreign-regime determination)",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm (SCRC procedural interim final rule, not a named issuer approval)",
+        "Independent search: (Monerium OR SG-FORGE OR CoinVertible) AND (GENIUS OR permitted payment stablecoin issuer) across occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, dfs.ny.gov and ncua.gov; no matching named authorization located.",
+        "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type= (Monerium hf EMI entry; no U.S. authorization)",
+        "https://docs.monerium.com/token-integration/ (fiat e-money model and GBPe identification)",
+        "https://docs.monerium.com/tokens/ (EURe and GBPe token documentation)",
+        "https://monerium.com/financial-information/ (entity-wide safeguarded-assets disclosure)",
+        "https://monerium.com/whitepapers/eure-whitepaper.xhtml (Monerium hf issuer and general e-money model; token-specific notification is EURe only)",
+        "https://monerium.com/events/2025-06-27-stable-subbmit/ (MiCA/GENIUS conference discussion, not filing intention)",
+        "Independent searches: site:monerium.com GENIUS; Monerium GENIUS site:occ.gov; Monerium GENIUS enforcement; no public application intention, U.S. issuer approval or GENIUS action located."
       ],
-      "summary": "The review confirmed Monerium hf as an Icelandic electronic money institution and confirmed EURe's regulated, euro-denominated, 1:1-redeemable design, but found no token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception. The federal foreign-issuer framework remains under proposed rules.",
+      "summary": "Review on 2026-10-07 located the issuer foreign EMI license and payment-token disclosures, but no named public U.S. GENIUS approval, state qualification, official application or registered/comparable foreign exception, and no GENIUS-specific public enforcement action in the opened and searched sources. The pending OCC bank/digital-assets table is limited and no confidential filings are inferred. MiCA/EEA EMI authorization and generic proposed rules do not establish a GENIUS authorization; no foreign pathway is inferred merely from domicile.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC public digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury August 2026 GENIUS implementation proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "OCC proposed issuer and foreign-registration framework",
+          "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

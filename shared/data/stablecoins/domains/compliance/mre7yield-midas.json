@@ -24,5 +24,80 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "mRe7YIELD is an investment-performance certificate issued by Midas Software GmbH. The token-specific KID and final terms make redemption depend on underlying strategy performance, less fees, rather than a fixed monetary amount. The July 17, 2026 successor prospectus continues the series under ISIN CH1423447536. The documented investment and variable-value redemption structure supports non-payment-token without requiring a U.S. securities-law determination.",
+      "references": [
+        {
+          "label": "mRe7YIELD legal investment-product documentation",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Midas mRe7YIELD final terms: debt instrument and strategy exposure",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Midas 2026 base prospectus: continued mRE7YIELD security series",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment follows the documented variable-value investment certificate and does not assert a U.S. federal securities determination. The July 17, 2026 base prospectus names Midas Software GmbH in Berlin, Germany and continues this token series. FMA prospectus approval concerns the prospectus and does not establish GENIUS issuer authorization. Public disclosure and enforcement fields are omitted where this adjudication could not independently substantiate them.",
+    "references": [
+      {
+        "label": "mRe7YIELD legal investment-product documentation",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas mRe7YIELD final terms: debt instrument and strategy exposure",
+        "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas 2026 base prospectus: continued mRE7YIELD security series",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

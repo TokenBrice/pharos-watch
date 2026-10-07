@@ -6,63 +6,176 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Coinbase, Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; OCC conditional national trust charter context for Coinbase custody operations, not a GENIUS PPSI approval",
+    "licensingRegulator": "NYDFS virtual currency and money transmitter licenses",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
-    "redemptionPolicyPresent": false,
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDF is a Coinbase Custom Stablecoin backed 1:1 by USDC; Coinbase is the functional issuer per its User Agreement and manages issuance, reserves, and smart contract deployment. Flipcash holds the branded identity. No token-specific GENIUS PPSI approval or state-qualified approval has been located. Coinbase received conditional OCC approval for a national trust charter (Coinbase National Trust Company) on April 2, 2026: this is a custody/trust charter, not a PPSI approval under the GENIUS Act, and does not alter the authorization status here. GENIUS Act rulemaking remains at NPRM stage as of 2026-06-18; no PPSI approvals exist for any issuer.",
+    "notes": "Coinbase, Inc. remains the issuerEntity, supported by Flipcash terms; the brand partner does not mint or redeem USDF. Coinbase publicly permits 1:1 USDF/USDC conversions, supporting redemptionPolicyPresent, with no independent monthly USDF reserve attestation located. NYDFS lists Coinbase, Inc. with virtual currency and money transmitter licenses separately from Coinbase Custody Trust Company, LLC. OCC Corporate Decision 1370 grants preliminary conditional charter approval to proposed Coinbase National Trust Company and expressly says the proposed bank does not plan to issue stablecoins. That separate entity is not assigned as the USDF issuer or treated as GENIUS approval. Coinbase excludes Custom Stablecoins from its EEA, New York and Canada platform customers. Federal issuer frameworks remain proposed on the reviewed October 7 record; Treasury expects January 18, 2027 effectiveness and a July 18, 2028 general DASP offer-sale deadline.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Coinbase USDF / Custom Stablecoin announcement",
         "url": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-20"
       },
       {
         "label": "NYDFS virtual currency businesses",
         "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Coinbase OCC conditional national trust charter approval (April 2, 2026)",
         "url": "https://www.cryptotimes.io/2026/04/03/coinbase-receives-conditional-approval-for-national-trust-charter/",
         "sourceKind": "news",
         "sourceDate": "2026-04-03",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC GENIUS issuer requirements proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "NCUA GENIUS implementation and proposed application framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Flipcash USDF issuer and reserve terms",
+        "url": "https://flipcash.com/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-30"
+      },
+      {
+        "label": "Coinbase Custom Stablecoins backing and conversion",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Flipcash USDF liquidity layer disclosure",
+        "url": "https://flipcash.com/blog/usdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-20"
+      },
+      {
+        "label": "OCC Corporate Decision 1370: proposed Coinbase National Trust Company custody charter",
+        "url": "https://occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1370.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-02",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases (Bulletin 2026-3)",
-        "Coinbase Custom Stablecoin platform page and blog disclosures",
-        "Coinbase OCC conditional national trust charter (April 2026): custody-only, not PPSI",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "NYDFS virtual currency business registry",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Opened OCC Bulletin 2026-3 and searched OCC public regulator records for the token and issuer names",
+        "Opened Federal Reserve September 24, 2026 GENIUS issuer and application proposals",
+        "Opened FDIC April 7, 2026 GENIUS issuer requirements proposal",
+        "Opened NCUA GENIUS implementation and application FAQ",
+        "Opened Treasury September 30, 2026 SCRC procedural rule and August 17 issuance/offer-sale proposal",
+        "Targeted searches of OCC, Federal Reserve, FDIC, NCUA and NYDFS domains for token/issuer GENIUS approvals, applications and enforcement",
+        "Opened Flipcash terms and USDF announcement; Coinbase Custom Stablecoins conversion and territorial restrictions",
+        "Opened NYDFS business register, which distinguishes Coinbase, Inc. from Coinbase Custody Trust Company, LLC",
+        "Opened Coinbase USDF announcement in an isolated browser after canonical fetch returned HTTP 403; canonical URL verified before extraction",
+        "Opened OCC Corporate Decision 1370; separate proposed custody bank expressly does not propose stablecoin issuance"
       ],
-      "summary": "Coinbase holds NYDFS BitLicense, NYDFS limited-purpose trust charter, and OCC conditional national trust charter (custody), but none of these constitute GENIUS Act PPSI approval. No PPSI approval, state-qualified approval, or official PPSI application has been publicly filed for any issuer; the GENIUS Act framework is still at NPRM stage as of 2026-06-18.",
+      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state qualification or named official pending application was located for Coinbase, Inc. as USDF issuer in the checked regulator materials and targeted searches. The reviewed federal documents describe proposed issuer frameworks; Treasury's September 30 interim final rule concerns state certification procedures and states that certifications await PRA approval. Ordinary licenses and reserve disclosures do not establish PPSI approval. No token-specific GENIUS warning or prohibition was located. This is a bounded public-evidence finding, not proof about nonpublic filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "FDIC GENIUS issuer requirements proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Treasury GENIUS issuance and offer-sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NCUA GENIUS implementation and proposed application framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "USDF is Coinbase-issued, USD-referenced digital cash used for Flipcash payments and settlement. Coinbase discloses 1:1 USDC custody backing and conversion to USDC; Flipcash terms identify Coinbase, Inc. as sole issuer and reserve/redemption operator. The apparent payment-stablecoin classification reflects these payment and stable-value characteristics; public conversion documentation promises USDC rather than an unconditional direct dollar redemption.",
+      "references": [
+        {
+          "label": "Flipcash USDF issuer and reserve terms",
+          "url": "https://flipcash.com/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-30"
+        },
+        {
+          "label": "Coinbase Custom Stablecoins backing and conversion",
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

@@ -1,0 +1,63 @@
+{
+  "id": "cgo-comtech",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "The served Comtech Digital Gold terms identify Comtech FZCO and provide undivided ownership and a specific interest in one gram of physical gold per token, with physical gold redemption. Gold is not monetary value under GENIUS section 2(17), and these terms contain no obligation to redeem CGO for a fixed amount of national currency under section 2(22). CGO therefore falls outside the tracked payment-stablecoin authorization posture.",
+      "references": [
+        {
+          "label": "Comtech Digital Gold terms: issuer, gold ownership and physical redemption",
+          "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2022-08-23",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: sections 2(17) and 2(22)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Comtech FZCO",
+    "issuerDomicile": "United Arab Emirates",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment concerns CGO physical-gold rights, separately from the U.S. payment-stablecoin framework. The currently served issuer terms are dated August 23, 2022. Clause 3.2 states one-gram undivided gold ownership, clause 3.3 describes the unit as neither money nor a monetary instrument, and clause 8 permits direct physical redemption from one kilogram in further one-kilogram denominations, less fees. Clause 9 separately permits authorized-partner gold or jewellery exchange from one gram. The issuer FAQ describes app delivery from 10 grams, so the contractual minimum is not asserted as the current app-delivery schedule. Issuer statements about security status do not establish a regulator determination. Reserve-disclosure and monthly-attestation fields are omitted from this excluded payment-stablecoin assessment; this omission does not assert absence of bullion reports. No DAFZA commercial registration, DMCC bullion endorsement or custody arrangement is treated as GENIUS approval.",
+    "references": [
+      {
+        "label": "Comtech Digital Gold terms: issuer, gold ownership and physical redemption",
+        "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2022-08-23",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: sections 2(17) and 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Comtech Gold FAQ: gold reference and app physical delivery",
+        "url": "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

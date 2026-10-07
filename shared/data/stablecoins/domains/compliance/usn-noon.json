@@ -1,24 +1,7 @@
 {
   "id": "usn-noon",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register and scope",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Noon USN and sUSN product documentation",
-        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
-      },
-      {
-        "label": "Noon terms and geographic restrictions",
-        "url": "https://noon.capital/terms-and-conditions"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Noon YBS Issuer Ltd",
@@ -30,65 +13,183 @@
     "reserveDisclosureUrl": "https://noon.accountable.capital/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Noon documents USN minting, redemption, and reserve transparency, but no GENIUS issuer pathway was located. Issuer confirmed domiciled in Road Town, British Virgin Islands per May 2025 launch press release. No evidence of US regulatory filing, PPSI application, state-qualified pathway, or foreign-exception registration.",
+    "notes": "As of 2026-10-07, the July 31, 2026 USN terms explicitly identify Noon YBS Issuer Ltd, a British Virgin Islands company, as issuer. USN holders have no entitlement to reserve yield or equity; staking sUSN is a separate position with separate terms and operator. Binding USN redemption is into USDC/USDT or permitted substitute digital assets; no fiat-cash redemption obligation was found, leaving GENIUS applicability unclear. The legal terms provide a standard five-business-day processing period, fees, verification, discretionary delays and gates, whereas the operational mint/redeem page advertises T+0 up to 20% TVL; the legal qualifications are not replaced by that operational description. The Accountable dashboard and its live public data endpoint disclose reserves, liabilities and ongoing proofs; continuous verification is not a monthly independent reserve-attestation report. No public GENIUS approval, official application, state qualification or foreign registration for this exact issuer was located in the reviewed materials and name searches. This bounded negative finding is not a determination of illegality. Treasury describes anticipated GENIUS general effectiveness on January 18, 2027 and the general DASP offer/sale restriction on July 18, 2028; not-yet-restricted remains appropriate on this review date.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Noon USN docs",
         "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Noon minting and redemption",
         "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Noon reserve transparency",
         "url": "https://noon.accountable.capital/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Noon Capital launch press release (BVI domicile confirmed)",
+        "label": "Noon Capital issuer-authored launch release (Road Town dateline)",
         "url": "https://www.globenewswire.com/news-release/2025/05/08/3076787/0/en/Noon-Capital-Launches-with-a-Bold-Promise-Smarter-Yields-Fairer-Returns-and-Transparent-Staking-for-All.html",
-        "sourceKind": "news",
+        "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-05-08",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USN terms identify Noon YBS Issuer Ltd as the BVI legal issuer",
         "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-07-31",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC proposed definition: redemption cannot consist solely of dollar-denominated digital assets",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
+      },
+      {
+        "label": "Treasury issuance and offer/sale timing proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS current regulated entities and issuance-approved coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Noon independent collateral verification documentation",
+        "url": "https://docs.noon.capital/5.-the-security-framework/independent-collateral-verification.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Noon Accountable live public reserve data",
+        "url": "https://cache.accountable.capital/dashboard/noon",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and Federal Register (FR 2026-04089)",
-        "FDIC GENIUS Act NPRMs (FR 2025-23510, FR 2026-06974)",
-        "FinCEN/OFAC AML NPRM (FR 2026-06963)",
-        "Issuer documentation at docs.noon.capital",
-        "Noon Capital launch press release (GlobeNewswire, May 2025)",
-        "Web search for Noon Capital USN GENIUS Act registration or filing",
-        "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and March 2 issuer-framework NPRM, independently fetched and extracted from official HTML",
+        "Federal Reserve September 29 issuer-framework NPRM, independently fetched and extracted from official HTML",
+        "Treasury August 17 issuance/offer/sale announcement and September 30 SCRC procedural rule",
+        "NYDFS current regulated-entity directory and issuance-approved Greenlist",
+        "OCC current digital-assets licensing-application inventory (ordinary charter applications, not a PPSI register)",
+        "Noon USN July 31 issuer terms, product docs, mint/redeem documentation and issuer-authored launch release",
+        "2026-10-07 exact-name search: Noon YBS Issuer with GENIUS, OCC, enforcement and registration; Noon USN across OCC, FDIC, Federal Reserve, Treasury, NYDFS and SEC domains"
       ],
-      "summary": "No public GENIUS PPSI approval, state-qualified approval, official application, or foreign registration source was located for USN. Issuer is BVI-domiciled with no detected US regulatory footprint. GENIUS Act rulemaking remains at proposed-rules stage with no approved applicants as of 2026-06-18.",
+      "summary": "Reviewed on 2026-10-07: no source in the opened federal rulemaking materials, NYDFS directory, issuer terms or exact-name regulator searches names Noon YBS Issuer Ltd as a GENIUS-approved issuer, officially pending applicant, state-qualified issuer or registered foreign issuer. The Federal Reserve issuer framework remains a September 29 NPRM; the September 30 SCRC interim final rule is procedural and states submissions await PRA approval and Treasury notice. This is a bounded public-source negative review, not proof that no private or future filing exists, and not a global claim that every regulator or application database was reviewed.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer-framework proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer-framework proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury SCRC forms and procedure, not issuer approval",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated entities and approved issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Noon USN exact legal issuer terms",
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-31"
+        },
+        {
+          "label": "OCC digital-assets licensing application inventory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "USN is marketed as a transferable non-yielding dollar-pegged stored-value token, supporting payment design and stable-value expectation. However, July 31, 2026 binding terms promise verified users redemption into Supported Stablecoins, initially USDC and USDT, at USD 1 worth per USN, not payment in national currency or a bank deposit. GENIUS section 2(22)(A)(ii)(I) expressly excludes a digital asset denominated in fixed monetary value from the required redemption consideration; the OCC proposal repeats that distinction. No separate binding fiat-cash redemption obligation was located, so the payment-stablecoin threshold remains unclear rather than presumed solely from the dollar peg.",
+      "references": [
+        {
+          "label": "USN issuer and Supported Stablecoin redemption terms",
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-31"
+        },
+        {
+          "label": "Noon USN payment-oriented product description",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act section 2(22) definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "OCC proposed definition and fixed monetary value requirement",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        }
+      ]
+    }
   }
 }

@@ -6,7 +6,7 @@
     "references": [
       {
         "label": "Binance EEA MiCA restrictions: FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
-        "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=bcaa1f68d6a6450099056ff694ad6c46"
       },
       {
         "label": "ESMA interim MiCA EMT issuer register: First Digital/FDUSD not listed",
@@ -14,14 +14,30 @@
       },
       {
         "label": "First Digital Labs FDUSD",
-        "url": "https://www.firstdigitallabs.com/fdusd"
+        "url": "https://firstdigitallabs.webflow.io/fdusd"
       }
     ]
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "FDUSD is a BVI-issued U.S. dollar stablecoin with 1:1 redemption, segregated reserves, and monthly reserve attestations."
+      "summary": "FDUSD is a BVI-issued U.S. dollar stablecoin with 1:1 redemption, segregated reserves, and monthly reserve attestations.",
+      "references": [
+        {
+          "label": "First Digital Labs FDD terms",
+          "url": "https://firstdigitallabs.webflow.io/legal/fdd-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-08-01"
+        },
+        {
+          "label": "FDUSD August 2026 reserve assurance report",
+          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf",
+          "sourceKind": "auditor-report",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-11"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -31,63 +47,94 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
+    "reserveDisclosureUrl": "https://firstdigitallabs.webflow.io/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: First Digital publishes reserve and redemption disclosures but no public U.S. GENIUS permitted-issuer approval or foreign-issuer registration was located. The applicable GENIUS Act pathway for FD121 (BVI) Limited is the OCC foreign payment stablecoin issuer (FPSI) registration route; however, the foreign-exception registration framework itself remains in proposed-rulemaking as of 2026-06-18 and no registration has been filed. First Digital has stated general intent to pursue licensing in select markets but has not made a GENIUS-specific public announcement. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. Current terms and the August 2026 assurance report identify FD121 (BVI) Limited as FDUSD issuer, preserving the existing legal-entity string. Account-qualified issuance/redemption targets USD 1, subject to compliance and liquidity restrictions. Terms section 5.2.3 excludes U.S. users and persons acting for U.S. individuals/entities. The issuer publishes monthly reserve reports; the August 31, 2026 report was signed September 11, 2026 by AOGB CPA Limited under limited-assurance ISAE 3000 procedures. General select-market licensing statements and references to GENIUS/MiCA do not establish a named U.S. route, application or registration. ForeignExceptionStatus remains unknown; no registered foreign exception was located. Removed claims that no registration had been filed or that no entity anywhere had an approval. Canonical issuer URLs were HTTP 403; equivalent issuer Webflow mirror pages and the issuer-hosted report were reopened.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Federal Register OCC GENIUS Act NPRM (FR 2026-04089)",
-        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "First Digital Labs transparency",
-        "url": "https://www.firstdigitallabs.com/transparency",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "url": "https://firstdigitallabs.webflow.io/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "First Digital Labs FDD terms",
-        "url": "https://www.firstdigitallabs.com/legal/fdd-terms",
+        "url": "https://firstdigitallabs.webflow.io/legal/fdd-terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-01"
       },
       {
         "label": "First Digital Labs BVI issuance transition",
-        "url": "https://firstdigitallabs.com/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure",
+        "url": "https://firstdigitallabs.webflow.io/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-15"
+      },
+      {
+        "label": "FDUSD August 2026 reserve assurance report",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-11"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM (FR 2026-04089) and public releases: no FDUSD or FD121 foreign-issuer registration found",
-        "Federal Register FDIC GENIUS Act NPRM (FR 2026-06974): no FD121 reference",
-        "First Digital Labs news and transparency pages: licensing intent stated but no GENIUS application announced",
-        "SEC enforcement actions public list: no action against First Digital or FDUSD",
-        "OCC conditional trust-charter approvals list: FD121 not present",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "Independent exact-name searches (FDUSD / FD121) of OCC, FDIC, Federal Reserve, Treasury and NYDFS domains, 2026-10-07",
+        "https://firstdigitallabs.webflow.io/legal/fdd-terms",
+        "https://firstdigitallabs.webflow.io/transparency",
+        "https://firstdigitallabs.webflow.io/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure",
+        "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
       ],
-      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration was located for FDUSD or FD121 (BVI) Limited. The OCC foreign payment stablecoin issuer registration framework remains in proposed-rulemaking; no registrations have been granted to any entity as of 2026-06-18.",
+      "summary": "No exact FDUSD / FD121 (BVI) Limited public GENIUS PPSI approval, state qualification, official GENIUS application, registered foreign exception, or GENIUS enforcement action was located in the sources and government-domain searches listed. The issuer terms exclude U.S. users; no filing or registration is asserted absent public evidence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS proposed rule official GPO mirror",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS standards proposal",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "State certification procedural interim rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

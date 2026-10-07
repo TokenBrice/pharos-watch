@@ -6,7 +6,6 @@ import xsgdReserveSource from "@shared/data/stablecoins/domains/reserves/xsgd-st
 import brlvMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/brlv-crown.json";
 import xsgdMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/xsgd-straitsx.json";
 import ceurComplianceSource from "@shared/data/stablecoins/domains/compliance/ceur-celo.json";
-import chfmComplianceSource from "@shared/data/stablecoins/domains/compliance/chfm-mento.json";
 import cusdComplianceSource from "@shared/data/stablecoins/domains/compliance/cusd-celo.json";
 import gbpmComplianceSource from "@shared/data/stablecoins/domains/compliance/gbpm-mento.json";
 import jpymComplianceSource from "@shared/data/stablecoins/domains/compliance/jpym-mento.json";
@@ -153,7 +152,6 @@ describe("Phase 1 D2 issuer identity adapter", () => {
   it("resolves the reviewed Mento issuer instead of inferring issuer keys from id suffixes", () => {
     const reviewedMentoAssets = [
       ceurComplianceSource,
-      chfmComplianceSource,
       cusdComplianceSource,
       gbpmComplianceSource,
       jpymComplianceSource,
@@ -170,7 +168,7 @@ describe("Phase 1 D2 issuer identity adapter", () => {
       resolveSafetyScoreV9AssetIssuerKey(source.id, byId),
     );
 
-    expect(issuerKeys).toEqual(["mento", "mento", "mento", "mento", "mento"]);
+    expect(issuerKeys).toEqual(["mento", "mento", "mento", "mento"]);
     expect(resolveSafetyScoreV9AssetIssuerKey("ceur-celo", byId)).not.toBe("celo");
     const members = reviewedMentoAssets.map((source) => ({
       assetId: source.id,

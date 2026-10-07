@@ -1,0 +1,69 @@
+{
+  "id": "bbqusdc-steakhouse-v2",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register: EMT and ART issuer files, last update 7 October 2026",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Steakhouse High Yield USDC: exact Ethereum Morpho Vault V2",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757/steakhouse-high-yield-usdc"
+      },
+      {
+        "label": "Morpho Vault V2: share accounting, strategies and liquidity",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "bbqUSDC represents shares in Steakhouse High Yield USDC, a USDC lending vault on Ethereum at 0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 curated by Steakhouse Financial. Morpho Vault V2 aggregates allocated strategy assets, accrues lending returns and recognizes losses in share value. Redemption depends on the current share-to-asset conversion and available liquidity rather than an issuer obligation to redeem each share for a fixed amount of national currency.",
+      "references": [
+        {
+          "label": "Steakhouse High Yield USDC: exact Ethereum Morpho Vault V2",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757/steakhouse-high-yield-usdc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2: share accounting, strategies and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Steakhouse Financial: DeFi Vaults terms of use",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a variable-value strategy-vault share against the GENIUS Act section 2(22) payment-stablecoin definition. The USDC underlying and its Circle issuer are assessed separately; their authorizations and attestations are not attributed to this share. The vault terms opened on 2026-10-07 name Carniceria Tropical SA, Panama, a subsidiary of Steakhouse Financial Ltd, as the curator and services provider, and disclaim custody and fiduciary roles. No fixed-dollar redemption obligor is established, so issuerEntity is omitted. This row does not resolve securities, fund, lending or interface regulation.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "susdat-saturn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "sUSDat ERC-4626 managed credit-vault shares",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md"
+      },
+      {
+        "label": "sUSDat V2 NAV and queued share-price-based withdrawal",
+        "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDat represents proportional ERC-4626 shares in a managed credit vault. Its value and USDat payout per share vary with portfolio NAV and distributions, and exit is through a withdrawal queue. It is not designed as a fixed-monetary-value payment/settlement stablecoin. STRCon exposure does not by itself establish that sUSDat legally qualifies as an excluded security.",
+      "references": [
+        {
+          "label": "sUSDat ERC-4626 credit-vault overview",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "sUSDat V2 STRCon NAV and withdrawal runbook",
+          "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed independently of parent USDat. The underlying USDat/PYUSDx payment-token question does not convert a variable-NAV managed credit-vault share into a payment stablecoin. Current V2 disclosures describe STRCon portfolio exposure and queued share-price-based USDat withdrawals. Operator/custody entities named in the migration runbook are not assigned as legal token issuer without an issuer undertaking.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

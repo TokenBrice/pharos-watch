@@ -10,19 +10,47 @@
       {
         "label": "Ondo OUSG qualified-access product overview",
         "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      },
+      {
+        "label": "Ondo OUSG issuer and limited partnership interest disclosure",
+        "url": "https://ondo.finance/ousg"
+      },
+      {
+        "label": "ESMA MiCA Article 2 financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
   },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "OUSG represents a unitized limited partnership interest in Ondo I LP, a private fund under Section 3(c)(7), offered under Regulation D Rule 506(c) to verified accredited investors who are qualified purchasers, subject to jurisdictional restrictions.",
+      "summary": "OUSG represents tokenized limited partnership interests in Ondo I LP, a Delaware private investment fund with a managed Treasury-fund portfolio and variable net asset value. Issuer disclosures restrict access to accredited investors and qualified purchasers; Connecticut DOB records a Rule 506(c) offering. The fund interest, rather than investor eligibility alone, supports the GENIUS security exclusion.",
       "references": [
         {
           "label": "Ondo OUSG docs: qualified-access product",
           "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Ondo OUSG issuer and fund interest disclosure",
+          "url": "https://ondo.finance/ousg",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Connecticut DOB: Ondo I LP Rule 506(c) offering and cured notice-filing deficiency",
+          "url": "https://web.archive.org/web/20260519100111/https://portal.ct.gov/dob/bulletin/2025/bulletin-3225-december-12-2025",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-12-16"
+        },
+        {
+          "label": "GENIUS Act section 2(22) security exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
@@ -32,35 +60,56 @@
     "issuerDomicile": "United States",
     "licensingRegulator": "SEC Reg D / qualified purchaser context",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
+    "enforcementStatus": "warning-or-notice",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://ondo.finance/ousg",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "OUSG is treated as outside GENIUS payment-stablecoin tracking because Ondo presents it as a qualified-access tokenized Treasury fund product. On December 9, 2025, Ondo announced that its confidential, multi-year SEC investigation had closed without charges; the announcement does not establish the exact closure date.",
+    "notes": "OUSG is treated as outside GENIUS payment-stablecoin tracking because Ondo presents it as a qualified-access tokenized Treasury fund product. On December 9, 2025, Ondo announced that its confidential, multi-year SEC investigation had closed without charges; the announcement does not establish the exact closure date. Connecticut DOB Bulletin 3225 separately records a December 12, 2025 stipulation with Ondo I LP and its adviser over delinquent securities notice filings, now cured, with a $500 fine for the fund and $1,000 for the adviser. The warning-or-notice field records this historical securities action, not GENIUS enforcement or a fund issuance prohibition. The official bulletin was recovered from its May 19, 2026 Wayback snapshot and independently reopened on 2026-10-07. Public subscriptions and redemptions occur at variable NAV; redemptionPolicyPresent remains false for a fixed 1:1 payment-stablecoin policy. Daily NAV reporting and annual fund audit do not establish monthly payment-stablecoin reserve attestations.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Ondo OUSG docs: qualified-access product",
         "url": "https://docs.ondo.finance/qualified-access-products/ousg",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ondo: SEC investigation closed without charges (announcement December 9, 2025)",
         "url": "https://ondo.finance/blog/tokenized-securities-step-forward",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-12-09",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Connecticut DOB: December 12, 2025 Ondo I LP stipulation, archived official bulletin",
+        "url": "https://web.archive.org/web/20260519100111/https://portal.ct.gov/dob/bulletin/2025/bulletin-3225-december-12-2025",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-16"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Ondo OUSG fund transparency and annual audit",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-10-07"
   }
 }

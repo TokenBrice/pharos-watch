@@ -4,23 +4,40 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: ART/EMT issuer files reviewed (12 August 2026)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Streamex Q2 2026 Form 10-Q: GLDY participating equity interests, Note 12",
+        "url": "https://ir.streamex.com/node/12336/html"
       },
       {
-        "label": "Streamex GLDY privacy notice: restricted security and issuer disclosure",
-        "url": "https://www.streamex.com/privacy-policy/"
-      },
-      {
-        "label": "Streamex GLDY launch announcement",
-        "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-gldy-now-live-and-available-purchase"
+        "label": "ESMA: financial-instrument classification guidelines, Guideline 4",
+        "url": "https://www.esma.europa.eu/sites/default/files/2025-03/ESMA75453128700-1323_Guidelines_on_the_conditions_and_criteria_for_the_qualification_of_CAs_as_FIs.pdf"
       }
     ]
   },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "GLDY is described by its issuer as a restricted, gold-backed tokenized security available only to accredited investors, rather than a payment stablecoin."
+      "summary": "Streamex describes GLDY as a gold-backed tokenized security issued by its Cayman Islands fund. Its June 2026 Form 10-Q identifies GLDY tokens as non-voting participating equity interests in Streamex Ltd.; the current product page markets the token to accredited investors. These fund equity interests support the GENIUS section 2(22)(B)(iii) securities exclusion.",
+      "references": [
+        {
+          "label": "Streamex GLDY product: gold exposure and accredited-investor marketing",
+          "url": "https://www.streamex.com/products/gldy/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Streamex GLDY fund structure and private-placement disclosure",
+          "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-announces-official-launch-date-gldy-yield-bearing-gold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-18"
+        },
+        {
+          "label": "Streamex June 2026 Form 10-Q: GLDY participating equity interests, Note 12",
+          "url": "https://ir.streamex.com/node/12336/html",
+          "sourceKind": "issuer-filing",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -28,38 +45,38 @@
     "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "GLDY is outside GENIUS payment-stablecoin tracking because Streamex describes it as a restricted security with gold-price exposure and yield paid in additional gold. This is an applicability exclusion, not evidence of GENIUS authorization.",
+    "notes": "GLDY is outside GENIUS payment-stablecoin tracking because the issuer describes it as a tokenized security and its Form 10-Q identifies the tokens as participating equity interests in a Cayman Islands entity. The gold-price exposure and gold-leasing returns are separately disclosed. This is an applicability exclusion, not GENIUS authorization. issuerEntity remains unchanged as Streamex, Ltd.; the privacy notice explicitly names that legal issuer and its Cayman Islands incorporation.",
     "references": [
       {
         "label": "GENIUS Act, Public Law 119-27: payment stablecoin definition",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
-        "label": "Streamex GLDY privacy notice: issuer and restricted-security terms",
+        "label": "Streamex GLDY privacy notice: issuer disclosure",
         "url": "https://www.streamex.com/privacy-policy/",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-01-26",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-26"
       },
       {
         "label": "Streamex GLDY launch announcement",
         "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-gldy-now-live-and-available-purchase",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

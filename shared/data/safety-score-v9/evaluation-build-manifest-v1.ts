@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "9081fc0fd726e662b0b542132e00ff0fd2acb770fdf50111585685c47f370919"
+      "sha256": "a3ab155ada2f5522726e4638bcb7c3142e217778d3c1eccb1b9fc9afa601f480"
     },
     {
       "path": "shared/lib/business-calendars.ts",
@@ -895,7 +895,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-07-block-26139859-shock-coverage.json.gz"
     }
   ],
-  "digest": "1e1303f4dd2bc532733a823f8e795d4cbdf994676384844b3b55d01b34031a5d"
+  "digest": "16baf18ce7d51a213110db81e861ab54b861cb4cf1a2079ccae5a7ca280b12a9"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

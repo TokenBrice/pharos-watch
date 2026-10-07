@@ -16,5 +16,67 @@
         "url": "https://docs.maple.finance/legal/syrupusdt-product-disclosures-and-disclaimers"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "syrupUSDT represents a proportional, yield-accruing interest in Maple's loan and supporting-strategy pool. Maple denies one-to-one USDT backing and guaranteed redemption of the original deposit; the share value changes with returns and pro-rata losses rather than a fixed amount of monetary value.",
+      "references": [
+        {
+          "label": "Maple syrupUSDT product disclosures and disclaimers",
+          "url": "https://docs.maple.finance/legal/syrupusdt-product-disclosures-and-disclaimers",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Maple Syrup token legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act enacted text: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Maple International Operations SPC issues syrupUSDT for Maple USDT Segregated Portfolio 1. Lender recourse is limited to that portfolio; liquidity-dependent FIFO exits have no guaranteed maximum processing time. This is an informational payment-stablecoin scope finding, not a securities-law opinion or an authorization claim. Tether's USDT and its distinct U.S. product issuer do not issue syrupUSDT and their licensing or GENIUS statements do not transfer to this share.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "references": [
+      {
+        "label": "Maple syrupUSDT product disclosures and disclaimers",
+        "url": "https://docs.maple.finance/legal/syrupusdt-product-disclosures-and-disclaimers",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Maple Syrup token legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act enacted text: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      }
+    ]
   }
 }

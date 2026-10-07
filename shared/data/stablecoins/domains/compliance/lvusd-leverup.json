@@ -1,0 +1,65 @@
+{
+  "id": "lvusd-leverup",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "LVUSD is a protocol-internal synthetic unit for leveraged-perpetual position denomination and settlement. LeverUp mints it when traders post USDC and settles trading profit/loss in LVUSD. Redemption is conditional on depeg triggers, daily quotas and the prevailing reserve/supply ratio, rather than an issuer obligation for fixed monetary value. No general merchant-payment product or legal fiat-redemption obligor is identified. The non-payment-token category describes this niche trading unit within the tracker, not an assertion that every form of settlement lies outside the statutory definition.",
+      "references": [
+        {
+          "label": "LeverUp LVUSD settlement and conditional-redemption mechanics",
+          "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "LeverUp interface eligibility and regulatory disclosures",
+          "url": "https://leverup.gitbook.io/docs/misc/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act payment-stablecoin and monetary-value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "LVUSD is assessed independently from underlying USDC and the separate MON/LVMON trading pool. USDC reserve composition does not confer Circle's authorization on LVUSD. The protocol documentation permits socialized losses, LV auctions, reserve/supply-ratio redemptions and yield deployment of surplus USDC; it does not publish a legal promise to redeem every LVUSD for one dollar. Terms exclude U.S. persons and U.S.-IP perpetual-contract access, state LeverUp is not registered with any financial authority, and do not identify a legal token-issuer entity. No legal issuerEntity, regulator, domicile, independent monthly reserve-attestation claim or authorization pathway is inferred.",
+    "references": [
+      {
+        "label": "LeverUp LVUSD settlement and conditional-redemption mechanics",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "LeverUp interface eligibility and regulatory disclosures",
+        "url": "https://leverup.gitbook.io/docs/misc/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act payment-stablecoin and monetary-value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

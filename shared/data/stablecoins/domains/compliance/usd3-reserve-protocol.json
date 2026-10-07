@@ -1,6 +1,112 @@
 {
   "id": "usd3-reserve-protocol",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USD3 quarterly report: holder yield accrues through NAV appreciation",
+        "url": "https://forum.reserve.org/t/report-usd3-quarterly-report-q1-2026/1520"
+      },
+      {
+        "label": "Reserve yield DTFs: redemption into collateral tokens",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USD3 is a yield-accruing decentralized token folio. Its holder returns are realized through NAV appreciation, and permissionless redemption returns a proportional on-chain collateral basket. Current protocol data identifies a yield DTF at the tracked Ethereum contract with price above $1. No legal obligor promising fixed-dollar monetary-value redemption was identified.",
+      "references": [
+        {
+          "label": "USD3 quarterly report: NAV appreciation",
+          "url": "https://forum.reserve.org/t/report-usd3-quarterly-report-q1-2026/1520",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-21",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reserve yield DTF minting and redemption",
+          "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reserve live DTF discovery data: USD3 yield portfolio",
+          "url": "https://api.reserve.org/discover/dtfs",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reserve protocol terms: DTFs created by unaffiliated third parties",
+          "url": "https://reserve.org/terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-03",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed October 7, 2026. The catalog fiat-cash archetype and USD label do not describe the current value-accruing mechanics. The 2024 RFC describes an initial $1 unit and currency ambitions; the current USD3 report expressly states that holder yield is realized through NAV appreciation. Reserve live data identifies the tracked Ethereum address 0x0d86883FAf4FfD7aEb116390af37746F45b6f378 as a yield DTF with Savings USDS, Aave USDC, Compound USDC and Steakhouse USDC collateral. Redemption returns digital-asset collateral rather than an issuer obligation for a fixed monetary amount. This follows the yield-accruing-share rubric; it does not assert a securities exemption or a regulator classification. Reserve terms identify ABC Labs, LLC as the website provider and disclaim control, issuance and custody of third-party DTFs. No legal issuerEntity is assigned on that website-provider fact. Black Manta offers a separate Luxembourg performance-linked note with ISIN LU3087210947 referencing USD3; its security issuer and licenses must not be attributed to the native USD3 token. eUSD sibling sidecar was read: its stable unit and payment use case differ from USD3 NAV appreciation.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USD3 quarterly report: NAV appreciation",
+        "url": "https://forum.reserve.org/t/report-usd3-quarterly-report-q1-2026/1520",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reserve yield DTF minting and redemption",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reserve live DTF discovery data: USD3 yield portfolio",
+        "url": "https://api.reserve.org/discover/dtfs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reserve protocol terms: DTFs created by unaffiliated third parties",
+        "url": "https://reserve.org/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-03",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USD3 launch RFC: initial unit and permissionless basket structure",
+        "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-04-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Black Manta USD3 performance-linked note: separate securitization",
+        "url": "https://blackmanta.capital/usd3/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

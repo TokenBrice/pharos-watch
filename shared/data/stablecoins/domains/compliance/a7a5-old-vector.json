@@ -1,19 +1,5 @@
 {
   "id": "a7a5-old-vector",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA MiCA interim register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "EUR-Lex: Old Vector LLC / A7A5 restrictive-measures entry",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32025R2035"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -21,15 +7,28 @@
       "references": [
         {
           "label": "GENIUS Act text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "OCC proposed GENIUS implementation rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "A7A5 issuer FAQ: RUB peg and agent redemption",
+          "url": "https://docs-en.a7a5.tech/help/faq.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "A7A5 user agreement: Old Vector issuance and U.S. exclusion",
+          "url": "https://www.a7a5.kg/User%20agreement%20en.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -38,67 +37,107 @@
     "issuerEntity": "Old Vector LLC",
     "issuerDomicile": "Kyrgyzstan",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
+    "enforcementStatus": "prohibited-or-revoked",
     "references": [
       {
         "label": "OCC proposed GENIUS implementation rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC digital-asset licensing applications tracker",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "U.S. Treasury: Old Vector LLC designation",
         "url": "https://home.treasury.gov/news/press-releases/sb0225",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-14"
       },
       {
         "label": "OFAC recent actions: Old Vector LLC",
         "url": "https://ofac.treasury.gov/recent-actions/20250814",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-14"
       },
       {
         "label": "GENIUS Act foreign-issuer exception provisions",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "U.S. Treasury: A7A5 is blocked property",
+        "url": "https://home.treasury.gov/news/press-releases/sb0644/",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-10-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "A7A5 user agreement: Old Vector issuance and U.S. exclusion",
+        "url": "https://www.a7a5.kg/User%20agreement%20en.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "A7A5 issuer FAQ: RUB peg and agent redemption",
+        "url": "https://docs-en.a7a5.tech/help/faq.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 implementation proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "State Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS proposed-rule bulletin and federal-register proposal",
-        "OCC digital-asset licensing applications tracker and CAS search",
-        "Treasury and OFAC public sanctions materials",
-        "GENIUS Act foreign-issuer exception and registration provisions",
-        "issuer-facing A7A5 materials"
+        "OCC Bulletin 2026-3 and official GovInfo 91 FR 10202 proposal, reopened directly",
+        "OCC digital-asset licensing applications tracker, reopened directly; ordinary bank-charter applications are distinct from GENIUS PPSI approvals",
+        "GENIUS Act Public Law 119-27, reopened enacted text",
+        "Treasury August 17, 2026 Section 3 proposal and September 30, 2026 SCRC procedural rule, reopened directly",
+        "Treasury August 14, 2025 and October 1, 2026 Old Vector/A7A5 sanctions releases and OFAC August 14 list update; exact-name federal-regulator-domain searches",
+        "A7A5 issuer FAQ, ecosystem, homepage and user agreement, reopened; agreement identifies Old Vector and U.S. customer exclusion"
       ],
-      "summary": "No public GENIUS approval, state qualification, official application, or foreign-exception registration was found for Old Vector LLC or A7A5. The Treasury/OFAC and EU measures are sanctions actions, not GENIUS authorization.",
+      "summary": "No public GENIUS PPSI approval, state qualification, issuer-specific GENIUS application or registered foreign exception was located for Old Vector LLC or A7A5 in the checked public sources as of 2026-10-07. The OCC charter-application table is not an exhaustive GENIUS register. The issuer agreement identifies Kyrgyz public-offering registration and excludes U.S.-connected users. Treasury explicitly identifies A7A5 as blocked property; this is independent OFAC prohibition, not a GENIUS authorization revocation.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC digital-asset licensing applications tracker",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act foreign-issuer exception provisions",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
-    "notes": "The official sanctions findings are relevant risk evidence but are not a GENIUS enforcement determination. Re-check if Old Vector obtains a U.S. registration or if the issuer's legal identity/pathway changes.",
+    "notes": "Old Vector LLC is preserved as the issuer. Treasury explicitly calls A7A5 a blocked token on October 1, 2026, following the August 14, 2025 issuer designation. enforcementStatus and daspOfferSaleStatus reflect the independent U.S. sanctions prohibition, subject to OFAC authorization or exemption; no GENIUS revocation is claimed. The Act remains pre-effective in the checked implementation materials; the expected January 18, 2027 issuer/foreign-lawful-order timing and July 18, 2028 general DASP licensing restriction do not override sanctions. The issuer FAQ describes daily bank-interest distributions, which are not evidence of GENIUS compliance. Foreign-exception status remains unknown because no registration or qualification evidence was located.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "restricted"
   }
 }

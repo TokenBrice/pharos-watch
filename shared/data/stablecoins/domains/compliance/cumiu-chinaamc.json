@@ -10,6 +10,10 @@
       {
         "label": "ChinaAMC September 2026 prospectus",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf"
+      },
+      {
+        "label": "ChinaAMC USD Digital Money Market Fund tokenized unlisted classes: Class I USD fund-share rights",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf"
       }
     ]
   },
@@ -27,10 +31,49 @@
         "label": "ChinaAMC September 2026 prospectus",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-14"
+      },
+      {
+        "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "ChinaAMC USD Digital Money Market Fund tokenized unlisted classes: Class I USD fund-share rights",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "CUMIU is Class I USD of the ChinaAMC USD Digital Money Market Fund, a sub-fund of ChinaAMC Digital OFC. The issuer's USD fund key facts identify this class and tokenized fund shares: each token represents a share, income accumulates in the fund, NAV is not constant, principal is not guaranteed and redemption is not promised at the offer value. Fund-share security rights, rather than the reserve assets or yield alone, support exclusion under GENIUS Act section 2(22)(B)(iii).",
+      "references": [
+        {
+          "label": "ChinaAMC September 2026 prospectus",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/temp/E-CleanProspectus-ChinaAMCDigitalOFC-CN(September2026)_1789336483417.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-14"
+        },
+        {
+          "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "ChinaAMC USD Digital Money Market Fund tokenized unlisted classes: Class I USD fund-share rights",
+          "url": "https://www.chinaamc.com.hk/jeecg-boot/sys/common/static/chinaamc/resources/E-KFS-ChinaAMCUSDDigitalMMF(UnlistedClass)(April2026).pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

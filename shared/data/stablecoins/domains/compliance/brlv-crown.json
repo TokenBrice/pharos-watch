@@ -9,13 +9,14 @@
           "label": "Crown BRLV product and compliance disclosures",
           "url": "https://www.crown-brlv.com/en/brlv/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act text: payment stablecoin definition",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -30,52 +31,140 @@
     "reserveDisclosureUrl": "https://www.crown-brlv.com/transparencia/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-08-14 review: Crown's Brazilian PSAV licensing context is not a U.S. GENIUS approval, state-qualified status, official application, or foreign-issuer registration. BRLV's international-use language makes U.S. availability worth re-checking, but no token-specific U.S. authorization or foreign-exception registration was located. Brazilian regulatory authorization should not be conflated with GENIUS authorization. Reserve-report date recorded as of 2026-08-14 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Evidence as of 2026-10-07: the 18 September 2026 terms identify Crown Sociedade Prestadora de Serviços de Ativos Virtuais Ltda. as the ordinary issuer; Crown (BVI) Ltd. issues only in specifically agreed cases. KRONA TWO, the Luxembourg reserve guarantor, has a separate role. Crown describes a pending Brazilian Central Bank VASP authorization and grandfathered operations. These issuer disclosures establish no GENIUS approval, state qualification or OCC foreign-issuer registration. No token-specific U.S. authorization or foreign-exception registration was located in the bounded public-source review. GENIUS implementation remains pre-effective. Treasury distinguishes foreign-issuer restrictions at Act effectiveness from the general DASP restriction on 18 July 2028. The live transparency hub publishes a monthly report series through September 2026. The September report, dated 30 September, reports 100.00% coverage and is signed by Rodrigo Molin da Silva with CRC PR-052428/O-CNAI 10106. Its stated procedures are technical proof-of-reserves verification; no recognized accounting assurance standard or GENIUS compliance opinion is stated. monthlyAttestationPresent records the publicly available monthly report series only. Signer credentials, professional assurance classification and statutory attestation adequacy remain independently unverified. Earlier August reports have a different technical signer.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC public digital-assets licensing applications tracker",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS Act Federal Register proposed rule",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
+      },
+      {
+        "label": "Crown issuance, custody and intermediation terms",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_ENG_aa655faffc.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Crown BRLV whitepaper: payment and redemption mechanics",
+        "url": "https://docs.crown-brlv.com/whitepaper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Crown September 2026 technical proof-of-reserves report and signer",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency regulated-entity directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposed rules",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS implementation and DASP timelines",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC state-certification procedural interim rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Crown BRLV product and Brazilian regulatory disclosures",
         "url": "https://www.crown-brlv.com/en/brlv/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Crown BRLV transparency and redemption disclosure",
         "url": "https://www.crown-brlv.com/transparencia/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and Federal Register proposed rule",
-        "OCC public digital-assets licensing applications tracker",
-        "Crown BRLV English product, compliance, and transparency pages",
-        "GENIUS Act statutory foreign-issuer exception and registration provisions",
-        "Search for a BRLV/Crown U.S. PPSI approval, official application, state-qualified approval, or OCC foreign-issuer registration"
+        "OCC GENIUS bulletin and proposed rule text recovered from the official GovInfo Federal Register HTML mirror after the OCC PDF fetch failed",
+        "OCC public digital-assets licensing applications directory: current full HTML and applicant table",
+        "NYDFS live regulated-entity and Greenlist tables",
+        "Federal Reserve 24 September GENIUS proposed-rule announcement",
+        "Treasury 17 August GENIUS implementation and DASP timeline statement",
+        "30 September SCRC procedural interim rule",
+        "Crown 18 September terms, BRLV whitepaper, English product FAQ, live Portuguese transparency hub and August/September report PDFs",
+        "Official-site indexed searches for BRLV, Crown Sociedade and Crown (BVI) on OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
+        "Indexed enforcement searches for BRLV/Crown Sociedade across SEC, CFTC, FinCEN and OFAC; no exact issuer/token action located"
       ],
-      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found for BRLV or Crown in the reviewed U.S. regulator materials and issuer disclosures. Crown's Brazilian PSAV application and temporary regime are not U.S. GENIUS authorization.",
+      "summary": "No public token-specific GENIUS permitted-issuer approval, state qualification, official GENIUS application or OCC foreign-issuer registration was found for BRLV, Crown BR or Crown (BVI) Ltd. in the reviewed directories, current implementation materials, issuer disclosures and bounded official-site searches. The OCC directory is a pending national-bank application list, not a complete GENIUS register; NYDFS licensing and Greenlist entries are not themselves GENIUS qualification. Neither directory names Crown/BRLV. Brazilian authorization under application and a Luxembourg reserve-guarantor structure do not supply U.S. GENIUS status. This is dated negative evidence, not a declaration of illegality or a guarantee that no unpublished or differently named record exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC public digital-assets licensing applications tracker",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Crown legal terms and issuer determination",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_ENG_aa655faffc.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS implementation timeline",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Crown Sociedade Prestadora de Serviços de Ativos Virtuais Ltda."
   }
 }

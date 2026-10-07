@@ -20,25 +20,27 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "The exact native token represents a yield-bearing money-market fund share with NAV-based dealing, rather than a payment-stablecoin promise. GENIUS section 2(22)(B)(iii) excludes securities. The intended eligibility of BRSRV shares as stablecoin reserve assets does not make the shares themselves a payment stablecoin.",
+      "summary": "The named BlackRock Daily Reinvestment Stablecoin Reserve Vehicle OnChain Shares represent yield-bearing money-market fund shares with NAV-based dealing. GENIUS section 2(22)(B)(iii) excludes securities. The intended eligibility of these shares as stablecoin reserve assets does not make the shares themselves a payment stablecoin. Official fund materials use ticker RSVXX; Pharos display symbol BRSRV is not asserted to be an official share-class symbol.",
       "references": [
         {
           "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "BlackRock July 31, 2026 OnChain share prospectus",
           "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
           "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-31"
         },
         {
           "label": "BlackRock BRSRV fund reporting",
           "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
-          "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-02"
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -54,22 +56,24 @@
         "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "BlackRock July 31, 2026 OnChain share prospectus",
         "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf",
         "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-31"
       },
       {
         "label": "BlackRock BRSRV fund reporting",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle",
-        "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-02"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

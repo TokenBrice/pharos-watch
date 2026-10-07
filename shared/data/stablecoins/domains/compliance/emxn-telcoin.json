@@ -1,26 +1,18 @@
 {
   "id": "emxn-telcoin",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA interim MiCA register landing page (last update 12 August 2026)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA Q&A: EMTs offered or admitted to trading in the Union require an authorised EU issuer",
-        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
-      },
-      {
-        "label": "Telcoin Digital Cash: eMXN live globally while eEUR is the stated EEA/MiCA preparation",
-        "url": "https://www.telcoin.co.jp/en/digital-cash"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Telcoin's eXYZ terms identify Telcoin LLC as the issuer of eMXN and describe fiat or currency-equivalent reserves with 1:1 redemption for eligible verified account holders. Telcoin Digital Asset Bank's eUSD is governed by separate bank terms; the bank charter is not evidence of authorization for eMXN."
+      "summary": "Telcoin's eXYZ terms identify Telcoin LLC as the issuer of eMXN and describe fiat or currency-equivalent reserves with 1:1 redemption for eligible verified account holders. Telcoin Digital Asset Bank's eUSD is governed by separate bank terms; the bank charter is not evidence of authorization for eMXN.",
+      "references": [
+        {
+          "label": "Telcoin eXYZ terms: Telcoin LLC issuer, reserves and redemption",
+          "url": "https://www.telco.in/en/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-30"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -33,69 +25,147 @@
     "reserveDisclosureUrl": "https://www.telco.in/en/terms-of-use",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Review note for 2026-10-01: the binding eXYZ terms identify Telcoin LLC as eMXN issuer and describe its U.S. Money Services Business registration. They explicitly exclude eUSD, which is issued by Telcoin Inc. (Telcoin Digital Asset Bank) under separate terms. Nebraska's charter announcement names Telcoin Digital Asset Bank, not Telcoin LLC or eMXN; that affiliate charter is not token-specific GENIUS authorization evidence. The reviewed eXYZ terms and Digital Cash page do not identify an eMXN GENIUS approval or application. This is scoped nondiscovery, not proof that no application exists. The Digital Cash page promises future monthly external attestations but links no eMXN report.",
+    "notes": "Review on 2026-10-07: binding eXYZ terms identify Telcoin LLC as eMXN issuer and describe its U.S. Money Services Business registration, segregated fiat/currency-equivalent reserves and 1:1 redemption for eligible account holders, less fees. They explicitly exclude eUSD, issued by Telcoin Inc. (Telcoin Digital Asset Bank) under separate terms. The affiliate Nebraska DADI charter and eUSD GENIUS-related product plans do not establish an eMXN issuing pathway or approval. No public eMXN/Telcoin LLC GENIUS approval or official application was located in the scoped primary-source review. The Digital Cash page promises future monthly external attestations but no eMXN report was located on the reviewed pages. Expected GENIUS effective date remains January 18, 2027; MSB registration does not confer PPSI approval.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Telcoin Digital Cash",
         "url": "https://www.telco.in/en/digital-cash",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Telcoin Digital Asset Bank",
         "url": "https://bank.telco.in/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Telcoin Digital Asset Bank terms",
         "url": "https://bank.telco.in/terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "Telcoin and the GENIUS Act (Telcoin Magazine)",
-        "url": "https://telcoinmagazine.substack.com/p/genius-act",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-15"
       },
       {
         "label": "Nebraska Governor: First-in-nation Digital Asset Bank Charter",
         "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter",
         "sourceKind": "state-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-11-12"
+      },
+      {
+        "label": "Telcoin eXYZ terms: Telcoin LLC issuer, reserves and redemption",
+        "url": "https://www.telco.in/en/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-30"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "OFAC 2026 civil penalties and enforcement information",
+        "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nebraska NDBF digital asset charter and supervision resources",
+        "url": "https://ndbf.nebraska.gov/digital-assets",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "Federal Register proposed rules (OCC, FDIC, FinCEN/OFAC, Treasury)",
-        "Telcoin Digital Cash page (telco.in/en/digital-cash)",
-        "Telcoin Digital Asset Bank page (bank.telco.in)",
-        "Telcoin Magazine substack article on GENIUS Act alignment",
-        "Nebraska Governor press release on Digital Asset Bank charter",
-        "Nebraska Department of Banking and Finance public records via search",
-        "No Telcoin PPSI filing, OCC application, or state-qualified GENIUS approval found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Independent exact-issuer search for Telcoin LLC, Telcoin Digital Asset Bank and StablR Ltd with GENIUS approval, PPSI, registration and enforcement terms across OCC, Treasury, Nebraska NDBF, FDIC and NYDFS domains, 2026-10-07; indexed results are not a complete agency docket",
+        "OCC Bulletin 2026-3, substantive raw HTML",
+        "OCC digital-assets licensing index, full pending-applicant table in raw HTML",
+        "Treasury August 17, 2026 section 3 proposal",
+        "Treasury September 30, 2026 SCRC procedural IFR",
+        "Federal Reserve September 24, 2026 issuer/application proposals",
+        "OFAC 2026 civil-penalty chart",
+        "Telcoin June 30 eXYZ terms, issuer Digital Cash, bank terms and root",
+        "Nebraska governor November 12, 2025 charter announcement and NDBF digital-assets page",
+        "Telcoin June 23, 2026 bank-account launch announcement; eUSD-specific intent not transferred to eMXN"
       ],
-      "summary": "No GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for eMXN or Telcoin. The Nebraska charter is a state-law instrument and no state has been certified as substantially similar under GENIUS as of June 2026. Telcoin publicly frames its Nebraska charter as GENIUS-aligned but has not filed a formal GENIUS PPSI application; the application framework itself remains in proposed rulemaking.",
+      "summary": "No public GENIUS approval, state-qualified status or official pending application naming Telcoin LLC/eMXN was found in the opened issuer, OCC, Nebraska and Treasury materials or exact-name regulator searches. Nebraska charter and June 23 GENIUS-compliant-yield discussion concern the different eUSD issuer. No U.S. action naming this issuer was located in the recorded enforcement searches or OFAC 2026 chart. This scoped nondiscovery does not prove no confidential application exists or adjudicate Nebraska regime comparability.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "OFAC 2026 civil penalties and enforcement information",
+          "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nebraska NDBF digital assets resources",
+          "url": "https://ndbf.nebraska.gov/digital-assets",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-05"
+    "reviewedAt": "2026-10-07"
   }
 }

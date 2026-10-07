@@ -4,13 +4,62 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Steakhouse Prime Instant: exact Morpho V2 USDT vault deployment",
+        "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"
       },
       {
-        "label": "Steakhouse Prime Instant: USDT Morpho vault product",
-        "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"
+        "label": "Morpho Vault V2: shares, redemption and interest-accruing asset accounting",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults-v2/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "steakUSDT is the Morpho Vault V2 lending-vault share at ethereum:0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9, denominated in USDT. The exact product materials describe variable-rate lending; protocol documentation describes receipt tokens, interest accrual and adapter asset reporting. Share value varies with the strategy position. Withdrawals use available underlying digital assets; the general framework also describes in-kind exits into protocol positions, subject to configuration and gates. The reviewed terms do not identify an obligor promising fixed national-currency redemption for each share. These share rights support non-payment-token under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Steakhouse Prime Instant: USDT Morpho vault product",
+          "url": "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2 lending and receipt-token mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Steakhouse DeFi Vaults governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed on 2026-10-07 as a yield-accruing strategy-vault receipt, separate from underlying USDT. Carniceria Tropical SA, Panama, is disclosed as the service operator and vault curator, wholly owned by Steakhouse Financial Ltd. The terms disclaim being a party to protocol transactions or an obligation to deliver cryptoassets; they do not establish a separate legal issuer or fixed monetary redemption obligor for this share. issuerEntity is omitted. Parent-token licenses, GENIUS intent, reserve reports and enforcement are not transferred to the vault share. This assessment concerns the payment-stablecoin authorization model and does not determine securities classification or exempt every service involving the vault.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -3,19 +3,20 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "VNXAU represents allocated physical gold and is marketed as a commodity or investment token, not as a fiat-redeemable payment stablecoin.",
+      "summary": "VNXAU represents ownership of allocated physical gold at one gram per token. Its documented value reference and holder rights concern gold, rather than a fixed amount of national currency or a national-currency-denominated deposit.",
       "references": [
         {
           "label": "VNX Gold product description",
-          "url": "https://vnx.li/gold/?trk=organization_guest_main-feed-card-text",
+          "url": "https://vnx.li/vnxau",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "FMA Liechtenstein notice on physical precious metals",
           "url": "https://www.fma-li.li/en/warning/hinweis-veranlagungen-in-physische-edelmetalle-1610",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-09"
         }
       ]
     },
@@ -23,32 +24,32 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "VNX Commodities AG",
     "issuerDomicile": "Liechtenstein",
-    "licensingRegulator": "Liechtenstein Financial Market Authority (FMA); TVTG/Blockchain Act registrations",
     "foreignExceptionStatus": "not-applicable",
     "references": [
       {
         "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "VNX Gold product description",
-        "url": "https://vnx.li/gold/?trk=organization_guest_main-feed-card-text",
+        "url": "https://vnx.li/vnxau",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       }
     ],
-    "notes": "Reviewed as a gold-backed commodity/investment token. GENIUS payment-stablecoin authorization does not apply.",
+    "notes": "The current VNXAU case study identifies VNX Commodities AG as the Liechtenstein-incorporated Token Generator and describes holder ownership of allocated gold. Token cancellation and the corresponding gold action are subject to the applicable contractual arrangement. These gold rights do not establish fixed national-currency monetary redemption under GENIUS sections 2(17) and 2(22). Payment-stablecoin authorization and offering restrictions are therefore not applicable. The FMA physical-metals notice is general context, not a token-specific action or authorization. The optional licensingRegulator field is omitted because the live FMA registration details could not be independently recovered in this adjudication.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-applicable"
   }
 }

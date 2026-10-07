@@ -10,25 +10,40 @@
       {
         "label": "ESMA Interim MiCA Register: CHFAU / AllUnity GmbH",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "AllUnity BaFin EMI license announcement (July 2025)",
+        "url": "https://allunity.com/news/allunity-secures-bafin-emi-license-to-launch-its-micar-compliant-euro-stablecoin/"
+      },
+      {
+        "label": "AllUnity CHFAU whitepaper v1.2",
+        "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
       }
     ]
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "CHFAU is marketed as a 1:1 CHF-redeemable EMT for payments, settlement, and treasury use. That functional profile is close to a GENIUS payment stablecoin, although AllUnity is a German foreign issuer and no U.S. GENIUS pathway was found.",
+      "summary": "CHFAU is a CHF-denominated EMT issued by AllUnity GmbH with a statutory 1:1 Swiss-franc redemption obligation and advertised payment/settlement use. Swiss francs qualify as national-currency monetary value under the GENIUS Act. Its current whitepaper separately disclaims a U.S. offer and restricts U.S. and U.S.-person sales subject to specified Securities Act exemptions and additional U.S.-person definitions; those terms do not establish U.S. approval or a registered foreign-issuer pathway.",
       "references": [
         {
           "label": "AllUnity CHFAU product page: 1:1 redemption and payments use",
           "url": "https://allunity.com/chfau",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin definition and foreign issuer framework",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "AllUnity CHFAU whitepaper v1.2",
+          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -44,61 +59,150 @@
     "reserveDisclosureUrl": "https://allunity.com/trust-center/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The ESMA EMT register reviewed on 2026-08-14 contains an official CHFAU entry naming AllUnity GmbH and BaFin, which is MiCA evidence only and not GENIUS approval. No public U.S. permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was located. AllUnity's own site limits direct minting to institutional and professional clients and states that reserve audit reporting is coming soon. The GENIUS rulemaking phase remains proposed-rules.",
+    "notes": "Current issuer whitepaper disclaims a U.S. offer and separately restricts U.S./U.S.-person offers or sales, with specified Securities Act exemptions and additional U.S.-person definitions. These terms do not establish a registered GENIUS foreign exception. The 2026-10-07 public-source review found no AllUnity GmbH CHFAU PPSI approval, state-qualified designation, official GENIUS application or foreign-issuer registration. BaFin EMI authorization and the exact ESMA token entry establish EU context only. Direct mint accounts are institutional/professional; public redemption policy provides par redemption subject to identity, AML and banking requirements. Trust Center contains reserve-model disclosures but labels reserve audit reports coming soon; no monthly independent reserve attestation was found. The opened primary issuer-rule implementing materials remain proposals; Treasury SCRC procedure effective September 30 is separate. Expected statutory fallback is January 18, 2027. not-yet-restricted records the current GENIUS timing only and does not override issuer restrictions or other law.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending-application table",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register 91 FR 10202: OCC GENIUS proposed rules",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "url": "https://occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
       },
       {
         "label": "ESMA Interim MiCA Register: EMTWP.csv entry for CHFAU / AllUnity GmbH",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
         "sourceKind": "foreign-regulator",
-        "sourceDate": "2026-08-12",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2026-10-07",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "AllUnity CHFAU product page",
         "url": "https://allunity.com/chfau",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "AllUnity Trust Center: reserve transparency and regulatory disclosures",
         "url": "https://allunity.com/trust-center/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AllUnity CHFAU whitepaper v1.2",
+        "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AllUnity published EMT redemption policy",
+        "url": "https://framerusercontent.com/assets/keEVPCLx5HJ504alVRJUCVRjBz0.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve: September 2026 GENIUS issuer proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury: proposed issuance, offer and sale rules",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS virtual currency licensed entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "Federal Register 91 FR 10202 OCC GENIUS proposed rules",
-        "OCC Digital Assets Licensing Applications table and Corporate Applications Search",
-        "GENIUS Act Public Law 119-27",
-        "Treasury proposed state-regime comparability rule",
-        "AllUnity CHFAU page, Trust Center, and public regulatory disclosures",
-        "ESMA EMT register and AllUnity/BaFin record"
+        "OCC Bulletin 2026-3 raw HTML main body and 91 FR 10202 proposed-rule PDF scope sections",
+        "OCC Digital Assets Licensing Applications complete pending-applicant table in raw HTML; Corporate Applications Search was not queried",
+        "Federal Reserve September 24 release, updated September 29, on proposed issuer standards and application procedures",
+        "FDIC April 10 and NCUA May 18 official proposed-rule PDF scope and effective-date sections",
+        "Treasury April 8 AML/CFT proposal, August 17 issuance/offer/sale proposal and September 30 SCRC procedural rule opening requirements",
+        "NYDFS current licensed-entity directory and Greenlist",
+        "AllUnity CHFAU current whitepaper, product page, Trust Center and linked EMT redemption policy",
+        "AllUnity public GENIUS commentary on LinkedIn and exact-name AllUnity/GENIUS public searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for AllUnity GmbH or CHFAU. The official MiCA authorization evidence does not establish a U.S. GENIUS authorization.",
+      "summary": "As of 2026-10-07, the opened OCC pending-applicant table, implementing proposal scope sections, Treasury/SCRC materials, NYDFS directory and Greenlist, current AllUnity disclosures, and exact-name public regulator searches did not identify an AllUnity GmbH CHFAU GENIUS PPSI approval, state-qualified designation, official GENIUS application or registered foreign exception. The OCC table concerns general digital-asset bank licensing and is not an exhaustive GENIUS application register. This bounded public-source no-find does not exclude confidential or unindexed filings. AllUnity's public GENIUS commentary welcomes regulatory clarity without announcing a specific U.S. application or registration route.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications: pending applicants",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve: September 2026 GENIUS issuer proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury: proposed issuance, offer and sale rules",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual currency licensed entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "AllUnity CHFAU current whitepaper",
+          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "AllUnity public GENIUS commentary: no specific application route announced",
+          "url": "https://www.linkedin.com/posts/allunity_us-passes-genius-act-first-major-national-activity-7351985056107618305-BJtO",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

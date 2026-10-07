@@ -36,46 +36,140 @@
     "reserveDisclosureUrl": "https://www.gemini.com/dollar",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: GUSD is NYDFS-approved/greenlisted as a New York virtual currency stablecoin, but no GENIUS PPSI approval, state-qualified GENIUS approval, official application, or issuer-announced GENIUS pathway was found. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Review dated 2026-10-07: NYDFS lists Gemini Trust Company, LLC as a limited-purpose trust company and GUSD as approved/greenlisted, but that historical state standing does not establish a GENIUS PPSI or state-qualified approval. No token-specific GENIUS approval, official application or announced application pathway was located. Gemini's August 13, 2026 Form 10-Q describes possible GENIUS-related changes to GUSD operations and compliance costs, without announcing a filed application or selected GENIUS approval route. The opened March 2026 BPM reserve examination has March 23/March 31 measurement dates and an April 30 opinion; the additional May report has May 4/May 29 measurement dates and a June 29 opinion. Monthly public attestation presence is supported, without claiming the May report is the latest. enforcementStatus concerns public GENIUS-specific action: the NYDFS February 28, 2024 Gemini Earn consent order is historical non-GENIUS enforcement, not a GUSD or GENIUS issuance prohibition.",
     "references": [
       {
         "label": "NYDFS virtual currency business activity",
         "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
-        "sourceKind": "regulator-directory"
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Gemini Dollar page",
         "url": "https://www.gemini.com/dollar",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GUSD March 2026 reserve report",
         "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/1JdC9ew8EmQ4012ccmltre/49990b73c12899feaf354ffb29be15e9/Gemini_-_GUSD_Reserves_Report_-_March_2026.pdf",
         "sourceKind": "auditor-report",
         "sourceDate": "2026-03-31",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GUSD May 2026 reserve examination",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-06-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gemini August 13, 2026 Form 10-Q GENIUS risk disclosure",
+        "url": "https://investors.gemini.com/static-files/0d55f6e2-8f88-4f60-9ea1-d0edb64d2e76",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2026-08-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS February 28, 2024 Gemini Earn consent order",
+        "url": "https://www.dfs.ny.gov/industry_guidance/enforcement_discipline/ea20240228_co_gemini",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2024-02-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC state certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS implementation timing",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Federal Register GENIUS notices",
-        "NYDFS Gemini and GUSD materials",
-        "Gemini Dollar disclosures",
-        "Web search for Gemini GENIUS Act issuer intent 2026",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html — reopened pending digital-asset charter table; no matching issuer; this is not a comprehensive PPSI approval register",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — proposed GENIUS framework, not issuer approval",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm — SCRC certification procedure; intake subject to PRA approval and Treasury notice",
+        "https://home.treasury.gov/news/press-releases/sb0605 — separate issuer-effective and DASP timing; foreign-issuer framework",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm — proposed application and prudential framework",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act — proposed FDIC issuer standards",
+        "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards — proposed NCUA issuer standards",
+        "Independent exact-name public search: (Wyoming Stable Token Commission OR Gemini Trust Company OR HeLa OR Berachain) AND (GENIUS OR PPSI) across occ.gov, federalreserve.gov, fdic.gov, ncua.gov and home.treasury.gov; no matching issuer-specific approval/application located",
+        "Independent public search: (FRNT OR GUSD OR HLUSD OR Berachain) AND GENIUS Act AND approval/application; no issuer-specific approval or application located",
+        "NYDFS virtual-currency directory and Gemini Earn consent order: exact Gemini Trust Company, LLC identity; historical state standing, not GENIUS approval",
+        "Gemini Dollar issuer page and March/May 2026 BPM examinations naming Gemini Trust Company, LLC",
+        "Gemini Space Station, Inc. Form 10-Q signed August 13, 2026: official issuer-hosted PDF text-extracted; GUSD GENIUS compliance-risk disclosure, not an application announcement",
+        "Independent Gemini issuer-domain search: GENIUS, GUSD and application; no specific filing or selected application route located"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, official application, or foreign exception source was located for GUSD. Gemini disclosures focus on NYDFS standing and reserve reporting; no formal GENIUS pathway announcement found as of 2026-06-13.",
+      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official application or issuer-announced GENIUS approval route was located for Gemini Trust Company, LLC/GUSD as of 2026-10-07. The NYDFS charter and Greenlist are historical state virtual-currency evidence. The August 2026 Form 10-Q is a compliance-risk disclosure rather than a filed-application or issuer-intent announcement. No public GENIUS-specific enforcement action was located; historical Earn enforcement is separately disclosed.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC state certification forms and procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS implementation timing",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

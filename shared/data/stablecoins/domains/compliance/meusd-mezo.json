@@ -1,8 +1,5 @@
 {
   "id": "meusd-mezo",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
@@ -12,77 +9,159 @@
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Mezo MUSD stablecoin overview",
           "url": "https://mezo.org/docs/users/borrow/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Mezo MUSD issuer-role and interface terms",
+          "url": "https://mezo.org/legal/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-16"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://mezo.org/docs/users/borrow/",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Explicitly assessed because MUSD is a roughly $30.8M tracked stablecoin marketed as spendable. Mezo's public documentation describes a permissionless CDP, Bitcoin collateral, liquidations, and protocol redemption rather than a named GENIUS issuer. No public GENIUS approval, state-qualified approval, official application, or foreign-issuer exception registration was located; rulemaking remains in proposed-rules phase.",
+    "notes": "MUSD is marketed for payments and maintains a USD peg through Bitcoin-collateralized debt positions. Mezo terms section 3.1.1 expressly disclaims a token issuer role for the named interface/network parties. Protocol redemption burns MUSD for dollar-valued BTC less 0.75% and gas and is unavailable below 110% total collateralization. The opened documents do not establish an issuer obligation to redeem for national currency or a national-currency deposit, so the tracker applicability remains unclear. RedemptionPolicyPresent is false under the tracker fixed-value monetary-redemption definition. ReserveDisclosurePresent records the public BTC collateral disclosure and linked onchain ActivePool, not compliance with GENIUS reserve requirements. Issuer identity, domicile, licensing and independent monthly-attestation posture are not asserted. Treasury describes the expected Act effective date as January 18, 2027; the September SCRC rule establishes procedures rather than an issuer approval.",
     "references": [
       {
         "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury state-level GENIUS regime NPRM",
         "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-01",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-01"
       },
       {
         "label": "Mezo MUSD stablecoin overview",
         "url": "https://mezo.org/docs/users/borrow/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Mezo MUSD issuer-role and interface terms",
+        "url": "https://mezo.org/legal/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-16"
+      },
+      {
+        "label": "Mezo MUSD protocol BTC redemption guide",
+        "url": "https://mezo.org/docs/developers/musd/musd-redemptions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entity directory and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS Act statutory text and payment-stablecoin issuer definitions",
-        "OCC GENIUS Act proposed rule and 2026 implementation bulletins",
-        "OCC digital assets licensing applications table",
-        "Treasury state-level GENIUS comparability NPRM",
-        "Federal Register and federal-regulator searches for Mezo/MUSD authorization or application",
-        "Mezo MUSD documentation, borrowing terms, and public collateral disclosures",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "OCC digital-assets licensing applications: all nine pending applicants inspected by direct official HTML fetch",
+        "Federal Register API exact-name queries for Mezo, MUSD and Supernormal OpCo through 2026-10-07; River Delta, Inc. from enactment through 2026-10-07",
+        "NYDFS virtual-currency regulated entities and full Greenlist",
+        "OCC Bulletin 2026-3; Treasury April 1 state-framework proposal and August 17 issuance/offer-sale proposal; Federal Reserve September 24 proposals; September 30 SCRC procedural rule",
+        "Mezo MUSD borrowing overview, March 16 issuer-role terms and developer redemption guide",
+        "Combined exact-name authorization/enforcement domain search for Mezo, MUSD, Supernormal OpCo and River Delta across OCC, Federal Register, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; no matching domain results returned"
       ],
-      "summary": "The review found no token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for MUSD. Mezo's documentation describes a permissionless Bitcoin-backed CDP and protocol redemption model, but does not identify a legal GENIUS payment-stablecoin issuer.",
+      "summary": "As of October 7, 2026, the consulted OCC and NYDFS directories, dated Federal Register name searches, federal implementation materials and Mezo token documents did not identify a public token-specific GENIUS issuer approval, state-qualified designation, pending GENIUS application or foreign-issuer registration. Mezo, Supernormal OpCo and exact River Delta, Inc. register searches returned no documents; MUSD returned only an unrelated 2017 education waiver. The interface parties expressly disclaim issuance/redemption responsibility. These findings are limited to the reviewed public sources and do not exclude confidential or unindexed filings. No token-specific issuer GENIUS intent statement appeared in the opened Mezo documents.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entity directory and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name search: Mezo",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mezo%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name search: MUSD",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MUSD%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name search: Supernormal OpCo",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Supernormal+OpCo%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name search: River Delta, Inc.",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22River+Delta%2C+Inc.%22&conditions%5Bpublication_date%5D%5Bgte%5D=2025-07-18&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "redemptionPolicyPresent": false
   }
 }

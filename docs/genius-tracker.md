@@ -75,7 +75,7 @@ The threshold question: is the asset a GENIUS-scope **payment stablecoin** at al
 | `non-payment-token` | A yield/savings wrapper, CDP/over-collateralized DeFi unit, governance or algorithmic unit not offered as a payment instrument. |
 | `unclear` | Genuinely ambiguous after review. |
 
-**Do not bulk-assess.** Leave `genius` undefined for the long tail of DeFi-native, savings-wrapper, and tokenized-fund assets. Use an explicit non-`apparent-payment-stablecoin` row **sparingly** — only for prominent tokens (e.g. a large tokenized Treasury fund or wrapper) that are likely to be **confused** with a payment stablecoin and where clarifying the exclusion has real value. Missing metadata already means "not assessed".
+**Assess every active coin, publish only at high confidence.** Every active tracked coin is in scope for research, including the long tail of DeFi-native, savings-wrapper, vault, commodity, and tokenized-fund assets. A row ships only when the classification and every asserted field are supported at high confidence; exclusions state their basis with a sourced `applicabilityBasis` (`non-payment-token`, `excluded-security`, `excluded-deposit`, or `excluded-national-currency` paired with `not-applicable`), or `unclear` when the ambiguity itself is well documented. When the legal issuer, redemption obligation, or scope stays unresolved, leave the row absent. Missing metadata means "not assessed" and marks a research gap, not an implicit exclusion.
 
 ---
 
@@ -196,5 +196,5 @@ Ongoing refresh runs through the `compliance-research` skill (`genius` regime fo
 
 - The tracker is **informational and sourced**, explicitly **not legal advice**; the page surfaces this.
 - Never fabricate an approval. Official statuses (`ppsi-approved`, `state-qualified`, `official-application-pending`) require regulator-grade references that name *this* token's issuer.
-- "Not assessed" (no `genius` row) is the default; do not bulk-stamp the long tail. Explicit exclusions are reserved for prominent confusable tokens.
+- "Not assessed" (no `genius` row) is a research gap, never an implicit exclusion. Every active coin is researched, but a row ships only at high confidence; exclusions state their applicability basis.
 - **Non-goals:** no automated regulatory scraping; no per-coin compliance scoring; no implication that the regime is effective while it is in rulemaking.

@@ -1,5 +1,18 @@
 {
   "id": "gldon-ondo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "GLDon Final Terms: security debt instrument",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
+      },
+      {
+        "label": "Ondo prospectus: ledger-based securities",
+        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
@@ -9,13 +22,15 @@
           "label": "GENIUS Act section 2(22) payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Exact token product claim",
           "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-26"
         }
       ]
     },
@@ -29,25 +44,13 @@
         "label": "Exact token product claim",
         "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-26"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "issuerEntity": "Ondo Global Markets (BVI) Limited",
     "issuerDomicile": "British Virgin Islands"
-  },
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "GLDon Final Terms: security debt instrument",
-        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf"
-      },
-      {
-        "label": "Ondo prospectus: ledger-based securities",
-        "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
-      }
-    ]
   }
 }

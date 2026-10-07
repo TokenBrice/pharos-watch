@@ -1,9 +1,46 @@
 {
   "id": "ausd-agora",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Ramp Network EU/EEA MiCA restriction explicitly naming AUSD",
+        "url": "https://support.rampnetwork.com/en/articles/432-what-cryptoassets-does-ramp-network-support"
+      },
+      {
+        "label": "Ramp Network Agora AUSD integration and EU exclusion",
+        "url": "https://rampnetwork.com/blog/ramp-network-integrates-ausd"
+      },
+      {
+        "label": "Ramp Network asset API: AUSD contracts match Agora deployments",
+        "url": "https://api.rampnetwork.com/api/host-api/v3/assets"
+      },
+      {
+        "label": "Agora Terms of Use: AUSD issuer and USD denomination",
+        "url": "https://static.agora.finance/termsofuse.pdf"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "AUSD is a fiat-backed U.S. dollar stablecoin with 1:1 redemption, reserve attestations, and institutional payment and settlement use cases."
+      "summary": "AUSD is a fiat-backed U.S. dollar stablecoin with 1:1 redemption, reserve attestations, and institutional payment and settlement use cases.",
+      "references": [
+        {
+          "label": "Agora AUSD product and payment/settlement use cases",
+          "url": "https://www.agora.finance/product/ausd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Agora Terms of Use: current issuer and redemption rights",
+          "url": "https://static.agora.finance/termsofuse.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-01",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "federal-qualified-nonbank",
@@ -17,62 +54,129 @@
     "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "OCC Corporate Decision 1393 dated September 18, 2026 grants preliminary conditional approval to Agora National Trust Bank, a proposed affiliate of current AUSD issuer Agora Bermuda Limited. The decision explicitly withholds final approval and authorization to commence business until preopening requirements are met. It describes a future cutover of AUSD reserve assets and liabilities from Agora Bermuda to the Bank after establishment. This is not evidence of completed issuer migration or GENIUS PPSI approval, so issuerEntity and authorizationStatus remain unchanged. The negativeEvidenceReview below records the historical June 18 search and is not a current charter-status assertion.",
+    "notes": "OCC Corporate Decision 1393 dated September 18, 2026 grants preliminary conditional approval to Agora National Trust Bank, a proposed affiliate of current AUSD issuer Agora Bermuda Limited. The decision explicitly withholds final approval and authorization to commence business until preopening requirements are met. It describes a future cutover of AUSD reserve assets and liabilities from Agora Bermuda to the Bank after establishment. This is not evidence of completed issuer migration or GENIUS PPSI approval, so issuerEntity and authorizationStatus remain unchanged. The federal-qualified-nonbank pathway describes the announced future uninsured-bank route, not a present authorization of the Bermuda issuer. Agora's September 21 disclosure still says final approval is outstanding. Verified customers can redeem AUSD under the terms; third-party wrappers have no automatic direct Agora redemption entitlement. The monthly attestation flag records the reports publicly listed at Agora's transparency hub, not a finding that all GENIUS reserve requirements are satisfied. No named public GENIUS enforcement action was found in the scoped agency-domain searches.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC digital asset licensing applications: Agora National Trust Bank application received 2026-04-20",
+        "label": "OCC digital asset licensing applications: current pending charter applications",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Agora blog: national trust bank charter filing",
         "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-04-24",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Corporate Decision 1393: Agora preliminary conditional charter approval and proposed AUSD cutover",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-09-18",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Agora transparency",
         "url": "https://docs.agora.finance/developer/transparency",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Agora preliminary conditional charter approval announcement",
+        "url": "https://www.agora.finance/blog/occ-conditional-approval",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BMA current regulated entities: Agora Bermuda Limited Class F",
+        "url": "https://www.bma.bm/regulated-entities",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Agora Terms of Use: current issuer and redemption rights",
+        "url": "https://static.agora.finance/termsofuse.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposal and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC forms and procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC digital asset licensing applications page (confirmed Agora National Trust Bank application received 2026-04-20, status: under review)",
-        "Agora AUSD transparency and OCC charter application disclosures",
-        "Bermuda BMA digital asset licensing context",
-        "PYMNTS and American Banker coverage of Agora OCC application",
-        "ChainCatcher Agora CEO interview on GENIUS Act pathway",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and current digital-assets pending charter application table, independently reopened",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural interim final rule, independently reopened",
+        "Federal Reserve September 24, 2026 issuer standards/application proposal, independently reopened",
+        "NYDFS current virtual-currency regulated-entity directory and Greenlist, independently reopened",
+        "Scoped exact issuer/project-name public web searches across OCC, Treasury, Federal Reserve, FDIC, NCUA and NYDFS domains; no relevant indexed approval or enforcement source established",
+        "OCC Corporate Decision 1393, independently reopened in full: preliminary conditional charter approval and prospective AUSD cutover",
+        "Agora September 1 terms, April 24 charter filing announcement and September 21 conditional charter announcement",
+        "BMA regulated-entities HTML exact Agora Bermuda Limited Class F row: registration 202504895, effective September 5, 2025",
+        "Agora transparency documentation listing monthly independent reserve reports through August 2026"
       ],
-      "summary": "Agora's OCC national trust bank charter application (received 2026-04-20) is under review with no approval granted. No GENIUS Act PPSI approval, state-qualified approval, or registered foreign-issuer exception was found for AUSD. GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals issued to any issuer as of 2026-06-18.",
+      "summary": "The opened OCC decision grants only preliminary conditional bank-charter approval and explicitly defers AUSD issuer cutover. Current Agora terms continue to name Agora Bermuda Limited. No public section 5 GENIUS PPSI approval, state-qualified authorization or registered foreign-issuer exception naming current AUSD issuer Agora Bermuda Limited was located in the specified sources and exact-name searches as of 2026-10-07. This does not negate the September 18 charter milestone or establish that no issuer anywhere has received approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Corporate Decision 1393: Agora preliminary conditional charter approval and proposed AUSD cutover",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1393.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposal and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC forms and procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "New York DFS virtual currency licensing and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "reviewer": "Sol curation pass 2026-10-01 (CurA31YLDS)",
-    "reviewedAt": "2026-10-01"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

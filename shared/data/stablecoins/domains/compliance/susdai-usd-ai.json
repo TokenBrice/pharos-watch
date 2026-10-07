@@ -1,0 +1,73 @@
+{
+  "id": "susdai-usd-ai",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USD.AI terms: variable-NAV sUSDai vault shares",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md"
+      },
+      {
+        "label": "MiCA Article 3 token definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDai is a variable-NAV ERC-4626/7540 share. Lending losses, collections, provisions and liquidity determine its value and redemption timing; redemption is into underlying USDai rather than a fixed monetary amount. It does not satisfy the GENIUS payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
+          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-25"
+        },
+        {
+          "label": "USD.AI technical overview",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The payment-stablecoin authorization assessment for the underlying token is not inherited by this variable-value vault share. This scope conclusion does not determine whether other financial-services or securities laws apply. USD.AI Foundation is the Cayman Islands protocol operator and contracting entity named in the terms. The reviewed terms do not separately identify the legal issuer of the vault share; issuerEntity is omitted rather than inferred from the parent.",
+    "references": [
+      {
+        "label": "USD.AI Terms modified 2026-09-25: PYUSD base backing and separate sUSDai loan exposure",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-25"
+      },
+      {
+        "label": "USD.AI technical overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}
