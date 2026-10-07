@@ -115,11 +115,11 @@ Editorial assignment rules. Each non-`out-of-scope` status should carry at least
 | --- | --- | --- |
 | `authorized` | Issuer holds an in-effect EMI or credit-institution authorization for this token, listed on a competent-authority / ESMA register. **Requires a `references` link.** | ESMA register; EBA EMT/ART issuer registers; national registers (e.g. ACPR REGAFI, BaFin, DNB) |
 | `pending` | Application filed with a competent authority; decision outstanding. | Issuer disclosure + authority filing |
-| `transitional` | Offered/traded on EU venues under a member-state CASP grandfathering window (no issuer authorization yet). | National transitional-regime notices |
-| `non-compliant` | In EU scope but no authorization and no transitional cover; delisted or restricted on EU venues. | Exchange delisting notices, issuer statements |
+| `transitional` | Offered/traded on EU venues under a member-state CASP grandfathering window (no issuer authorization yet). Every EU CASP window ended by 1 Jul 2026 (MiCA Art. 143(3)), so no current row should carry this status. | National transitional-regime notices |
+| `non-compliant` | In EU scope but no authorization and no transitional cover; delisted or restricted on EU venues. Requires an in-force EU-venue notice or EU regulator source naming this exact token; register absence alone never suffices. When any part is doubtful, leave the row unassessed. | Exchange delisting notices, issuer statements |
 | `out-of-scope` | Not offered to the public or admitted to trading in the EU, or reviewed legal/source evidence indicates the token is outside EMT/ART issuer authorization requirements (for example, no identifiable issuer for Titles II-IV). | Default for non-EU-marketed coins; sourced issuer-scope analysis for edge cases |
 
-Leave `mica` **undefined** for coins not yet assessed — the page distinguishes "not assessed" (no row / muted) from `out-of-scope` (explicitly reviewed). This bounds the backfill: only researched coins assert a status.
+Leave `mica` **undefined** for coins not yet assessed — the page distinguishes "not assessed" (no row / muted) from `out-of-scope` (explicitly reviewed). This bounds the backfill: only researched coins assert a status. Assert any status only at high confidence; an unresolved or contradictory evidence record stays unassessed rather than receiving a guessed status.
 
 `out-of-scope` rows are explicit assessments, but they must not carry in-scope MiCA classification fields such as `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`. Use those fields only when the row is asserting an EMT/ART posture inside the MiCA status model.
 
@@ -130,9 +130,9 @@ Leave `mica` **undefined** for coins not yet assessed — the page distinguishes
 
 ### MiCA timeline anchors (for copy / the optional timeline strip)
 
-- **30 Jun 2024** — Titles III (ARTs) & IV (EMTs) apply; issuer rules live with **no grandfathering for issuance**.
+- **30 Jun 2024** — Titles III (ARTs) & IV (EMTs) apply. EMT issuers have no issuance grandfathering. A narrow old-ART continuation exists in Art. 143(4)-(5): a lawful pre-30 Jun 2024 ART issuer that applied (or, for credit institutions, notified) before 30 Jul 2024 may continue until its application is decided; map a verified case to `pending`.
 - **30 Dec 2024** — Title V (crypto-asset service providers) applies.
-- **~1 Jul 2026** — end of the longest national CASP transitional ("grandfathering") windows; the "full application" milestone. Note this window covers **service providers/venues**, not issuers — status copy must not imply issuers are grandfathered.
+- **1 Jul 2026** — end of the longest national CASP transitional ("grandfathering") windows (Art. 143(3) ceiling; ESMA confirmed expiry on 23 Jun 2026); the "full application" milestone. Note this window covers **service providers/venues**, not issuers — status copy must not imply issuers are grandfathered.
 
 Per-coin `significant` follows EBA designation of significant EMTs/ARTs (threshold-based; EBA-supervised).
 
@@ -213,5 +213,5 @@ MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; statu
 ## Legal framing & non-goals
 
 - The tracker is **informational and sourced**, explicitly **not legal advice**; surface this on the page. Require a `references` link before asserting `authorized`.
-- Be precise that the mid-2026 grandfathering window covers **CASPs/venues**, while EMT/ART **issuer** rules have applied since June 2024 with no issuance grandfathering — copy must not overclaim.
+- Be precise that the 1 Jul 2026 grandfathering window covered **CASPs/venues** and has ended, while EMT/ART **issuer** rules have applied since June 2024; the only issuer continuation is the decision-ended old-ART case in Art. 143(4)-(5) — copy must not overclaim.
 - **Non-goals:** no automated regulatory scraping; no per-coin compliance scoring; no extra regulatory regimes beyond the dedicated MiCA and GENIUS profile models already surfaced on `/compliance/`.

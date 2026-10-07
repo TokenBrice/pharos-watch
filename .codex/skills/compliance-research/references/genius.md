@@ -6,4 +6,4 @@ Use sources in descending authority: Federal Register; OCC, Federal Reserve, FDI
 
 Official approval, qualification, application-pending, enforcement, and registered-exception claims must meet the regulator-grade source rules in the tracker. Confirm the source names this token’s issuer, not merely an affiliate or general license.
 
-Assign applicability first. DeFi CDPs, yield wrappers, governance units, and tokenized funds are usually outside the payment-stablecoin scope; leave the field absent unless an explicit review is useful. A `no-public-authorization-found` conclusion requires the tracker’s dated negative-evidence review and sources checked.
+Assign applicability first. DeFi CDPs, yield wrappers, vaults, governance units, commodity tokens, and tokenized funds are usually outside the payment-stablecoin scope; record that explicitly with a sourced `applicabilityBasis` and `not-applicable` status (or `unclear` when genuinely ambiguous) instead of leaving the row absent. A `no-public-authorization-found` conclusion requires the tracker’s dated negative-evidence review and sources checked.
