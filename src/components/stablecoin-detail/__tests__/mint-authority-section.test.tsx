@@ -8,6 +8,7 @@ import type {
   MintAuthorityDetailViewModel,
   MintAuthorityProcessDiagnosticViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { buildControlPostureView } from "@/lib/control-posture";
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@shared/lib/classification";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
@@ -244,6 +245,45 @@ describe("MintAuthoritySection", () => {
   it("draws no role tag without published control roles", () => {
     const container = renderDom(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
     expect(container.querySelector("[data-control-role]")).toBeNull();
+  });
+
+  it("carries the control posture chip on #control-posture and its notes in the review fold", () => {
+    const posture = buildControlPostureView(TRACKED_META_BY_ID.get("usdc-circle")!)!;
+    const container = renderDom(
+      <MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" controlPosture={posture} />,
+    );
+    const section = container.querySelector("section#mint-authority")!;
+    const html = section.innerHTML;
+
+    const chip = section.querySelector("#control-posture");
+    expect(chip?.textContent).toContain(posture.label);
+    expect(chip?.closest("details")).toBeNull();
+    // A chip-row chip, after the verdict: never in the header beside the score.
+    expect(html.indexOf(REVIEWED_PROFILE.verdict!)).toBeLessThan(html.indexOf('id="control-posture"'));
+    // Its explanation joins the one provenance fold under its own subheading.
+    const notes = section.querySelector("#mint-review-notes")!;
+    expect([...notes.querySelectorAll("h4")].map((heading) => heading.textContent)).toContain("Control posture");
+    for (const detail of posture.details) expect(notes.textContent).toContain(detail);
+    // Summary, posture notes and one source.
+    expect(notes.querySelector("summary")?.textContent).toContain("(3)");
+    expect(section.querySelectorAll("details#mint-review-notes")).toHaveLength(1);
+  });
+
+  it("keeps an unreviewed module's posture chip and notes", () => {
+    const posture = buildControlPostureView(TRACKED_META_BY_ID.get("usdc-circle")!)!;
+    const profile = { ...NOT_REVIEWED_PROFILE, processDiagnostics: [diagnostic({
+      code: "process-certificate-unavailable", gate: "H0", field: "issuanceProcess.coverage",
+    }, "Missing evidence")] };
+    const container = renderDom(<MintAuthoritySection profile={profile} symbol="GHO" controlPosture={posture} />);
+
+    expect(container.querySelector("#control-posture")?.textContent).toContain(posture.label);
+    expect(container.querySelector("#mint-review-notes")?.textContent).toContain(posture.details[0]);
+  });
+
+  it("draws no posture chip without an authored posture", () => {
+    const container = renderDom(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
+    expect(container.querySelector("#control-posture")).toBeNull();
+    expect(container.textContent).not.toContain("Control posture");
   });
 
   it("renders the band beside the score and links inherited mint risk to the parent review", () => {

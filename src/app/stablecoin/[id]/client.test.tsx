@@ -41,7 +41,7 @@ const {
   useStablecoinDetailViewModelMock: vi.fn(),
 }));
 
-vi.mock("./detail-lazy-sections", () => createDetailLazySectionsMock());
+vi.mock("./detail-lazy-sections", async () => createDetailLazySectionsMock());
 
 vi.mock("next/link", async () => createNextLinkMock());
 
@@ -128,6 +128,15 @@ function renderDetail(coin = TRACKED_META_BY_ID.get("usds-sky")!) {
 function makeAbsentPriceCoinData() {
   return { ...makeReadyViewModel().coinData, price: null };
 }
+
+/** A live collateralization ratio mounts the Backing KPI twin, so the Backing board renders. */
+const LIVE_COLLATERALIZED_RESERVES = {
+  reserves: [{ name: "Vault collateral", pct: 100, risk: "low" }],
+  estimated: false,
+  mode: "live",
+  liveAt: 1_780_000_000,
+  metadata: { collateralizationRatio: 1.24 },
+};
 
 describe("StablecoinDetailClient", () => {
   beforeEach(() => {
@@ -282,6 +291,8 @@ describe("StablecoinDetailClient", () => {
         reportCard,
         reportCardsResponse,
         reportCardUpdatedAt: reportCardsResponse.updatedAt * 1000,
+        // Every pillar board needs a module to render.
+        reserves: LIVE_COLLATERALIZED_RESERVES,
         featureStates: {
           ...makeReadyViewModel().featureStates,
           reserves: { status: "loading", dataUpdatedAt: 0, error: null },
@@ -423,13 +434,7 @@ describe("StablecoinDetailClient", () => {
   it("mounts every evidence module once in its board, with rail twins and a complete evidence index", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      reserves: {
-        reserves: [{ name: "Vault collateral", pct: 100, risk: "low" }],
-        estimated: false,
-        mode: "live",
-        liveAt: 1_780_000_000,
-        metadata: { collateralizationRatio: 1.24 },
-      },
+      reserves: LIVE_COLLATERALIZED_RESERVES,
     }));
 
     const { container } = render(
@@ -449,9 +454,10 @@ describe("StablecoinDetailClient", () => {
 
     const backingEvidence = container.querySelector("#backing-evidence")!;
     const controlEvidence = container.querySelector("#control-evidence")!;
-    // Mechanism review is the Backing strip's provenance row, mounted once.
+    // Mechanism review is the Mechanism card's provenance fold, mounted once, outside the boards.
     expect(container.querySelectorAll("#mechanism-review")).toHaveLength(1);
-    expect(backingEvidence.contains(container.querySelector("#mechanism-review"))).toBe(true);
+    expect(container.querySelector("#info")?.contains(container.querySelector("#mechanism-review"))).toBe(true);
+    expect(backingEvidence.contains(container.querySelector("#mechanism-review"))).toBe(false);
     // No mint review: the explicit S14 state owns the anchor in its slot.
     const mint = container.querySelector("#mint-authority");
     expect(controlEvidence.contains(mint)).toBe(true);
@@ -471,7 +477,9 @@ describe("StablecoinDetailClient", () => {
     const railLinks = Array.from(rail.querySelectorAll('[aria-label="Evidence index"] a')).map((link) =>
       link.getAttribute("href")!,
     );
-    expect(railLinks).toEqual(expect.arrayContaining(["#mechanism-review", "#mint-authority", "#bridging"]));
+    // The index lists modules only: the mechanism review lives in the Mechanism card.
+    expect(railLinks).toEqual(expect.arrayContaining(["#mint-authority", "#bridging"]));
+    expect(railLinks).not.toContain("#mechanism-review");
     for (const href of railLinks) {
       const targets = container.querySelectorAll(href);
       expect(targets).toHaveLength(1);
@@ -487,6 +495,8 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       reportCard,
       reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+      // The Backing board needs a module to render.
+      reserves: LIVE_COLLATERALIZED_RESERVES,
     }));
 
     const { container } = renderDetail(coin);
@@ -514,8 +524,8 @@ describe("StablecoinDetailClient", () => {
   it("never leaves a board kicker whose only content is hidden at xl", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const reportCard = makeV9Card({ id: coin.id });
-    // Frozen coins keep the bare kicker (no strip), so the Exit board's only
-    // possible child is the below-xl Access posture twin.
+    // Boards carry plain kickers, so the frozen Exit board's only possible
+    // child is the below-xl Access posture twin.
     useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), reportCard });
 
     const { container } = renderDetail(coin);
@@ -710,6 +720,34 @@ describe("StablecoinDetailClient (frozen S14)", () => {
     // Mint Authority's own state is the only "Not reviewed" left.
     const notReviewed = Array.from(container.querySelectorAll('[data-evidence-state="not-reviewed"]'));
     expect(notReviewed.map((node) => node.id)).toEqual(["mint-authority"]);
+  });
+
+  it("links no Exit evidence from the Safety Score when the Exit board has no module", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    // Frozen, with no redemption route and no known access posture: nothing mounts in the Exit board.
+    const { accessPosture } = makeV9Card({ id: coin.id });
+    const reportCard = makeV9Card({
+      id: coin.id,
+      accessPosture: {
+        ...accessPosture,
+        transfer: "unknown",
+        freezeExposure: "unknown",
+        primaryExit: "unknown",
+        governance: "unknown",
+        unknownFields: ["transfer", "freezeExposure", "primaryExit", "governance"],
+      },
+    });
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      ...makeFrozenViewModel(coin),
+      reportCard,
+      reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+    });
+
+    const { container } = renderDetail(coin);
+
+    expect(container.querySelector("#exit-evidence")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Exit evidence" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Economic Control evidence" }).getAttribute("href")).toBe("#control-evidence");
   });
 });
 

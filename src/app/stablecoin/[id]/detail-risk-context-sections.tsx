@@ -17,9 +17,12 @@ import {
   OracleLiquidationSection,
   oracleModuleSize,
 } from "@/components/stablecoin-detail/oracle-liquidation-section";
-import { PillarEvidenceStrip } from "@/components/stablecoin-detail/pillar-evidence-strip";
 import { RedemptionRouteSection } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
+import type {
+  PillarEvidenceAnchors,
+  PillarEvidenceBoardVisibility,
+} from "@/components/stablecoin-detail/safety-score-v9-breakdown";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { LazySection } from "@/components/lazy-section";
@@ -60,27 +63,41 @@ interface DetailRiskContextSectionsProps {
 /**
  * Where a pillar board renders: everywhere, only below `xl` (its only content
  * is an in-flow twin of a rail card), or nowhere. A board never renders a
- * kicker whose children are all hidden at the current breakpoint.
+ * kicker whose modules are all hidden at the current breakpoint.
  */
-type BoardVisibility = "all" | "below-xl" | "none";
-
-function resolveBoardVisibility(header: boolean, allWidths: boolean, belowXl: boolean): BoardVisibility {
-  if (header || allWidths) return "all";
+function resolveBoardVisibility(allWidths: boolean, belowXl: boolean): PillarEvidenceBoardVisibility {
+  if (allWidths) return "all";
   return belowXl ? "below-xl" : "none";
 }
 
 /**
- * One Safety Score pillar's board: the header strip (which owns the group
- * `h2`), then full-width signature modules, then the tile grid. The score
- * card's pillar rows link to `id`.
+ * Each pillar board's visibility, read by the boards and by the Safety Score
+ * card's "Evidence" links, so a link never targets a board that is absent.
+ */
+function resolvePillarEvidenceAnchors(shared: DetailSharedModules): PillarEvidenceAnchors {
+  return {
+    backing: resolveBoardVisibility(shared.custody !== null || shared.custodyNotReviewed, shared.backingMetrics !== null),
+    exit: resolveBoardVisibility(shared.hasRedemption || shared.redemptionNotReviewed, shared.accessRows.length > 0),
+    // Mint Authority or its "Not reviewed" state always renders, so the board does too.
+    control: "all",
+  };
+}
+
+/**
+ * One Safety Score pillar's board: a plain kicker `h2` with a trailing
+ * hairline, then full-width signature modules, then the tile grid. The
+ * pillar's grade and decomposition live on the Safety Score card, whose
+ * pillar rows link to `id`.
  */
 function PillarBoard({
   id,
+  title,
   visibility,
   children,
 }: {
   id: string;
-  visibility: BoardVisibility;
+  title: string;
+  visibility: PillarEvidenceBoardVisibility;
   children: ReactNode;
 }) {
   if (visibility === "none") return null;
@@ -90,6 +107,12 @@ function PillarBoard({
       aria-labelledby={`${id}-heading`}
       className={cn("@container/board space-y-4", SECTION_SCROLL_MT, visibility === "below-xl" && "xl:hidden")}
     >
+      <h2
+        id={`${id}-heading`}
+        className="pharos-kicker flex items-center gap-3 pt-2 after:h-px after:flex-1 after:bg-border/50"
+      >
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -217,7 +240,7 @@ function BoardTileGrid({
   );
 }
 
-function BackingBoard({ shared }: { shared: DetailSharedModules }) {
+function BackingBoard({ shared, visibility }: { shared: DetailSharedModules; visibility: PillarEvidenceBoardVisibility }) {
   const { custody, backingMetrics } = shared;
   const custodyUndisclosed = custody !== null && isCustodyStructureUndisclosed(custody);
   const tiles: BoardTile[] = custody && !custodyUndisclosed
@@ -243,21 +266,9 @@ function BackingBoard({ shared }: { shared: DetailSharedModules }) {
       node: <EvidenceStateStrip id="custody" title="Custody" state="not-reviewed" density="main" />,
     });
   }
-  const visibility = resolveBoardVisibility(
-    shared.strips.backing !== null || shared.mechanismReview !== null,
-    custody !== null || shared.custodyNotReviewed,
-    backingMetrics !== null,
-  );
 
   return (
-    <PillarBoard id="backing-evidence" visibility={visibility}>
-      <PillarEvidenceStrip
-        pillar="backing"
-        headingId="backing-evidence-heading"
-        title="Backing evidence"
-        view={shared.strips.backing}
-        mechanismReview={shared.mechanismReview}
-      />
+    <PillarBoard id="backing-evidence" title="Backing evidence" visibility={visibility}>
       <BoardTileGrid tiles={tiles} twins={twins} rows={rows} />
     </PillarBoard>
   );
@@ -267,20 +278,15 @@ function ExitBoard({
   shared,
   transferReview,
   viewModel,
+  visibility,
 }: {
   shared: DetailSharedModules;
   transferReview: TransferReviewView | null;
   viewModel: ReadyDetailViewModel;
+  visibility: PillarEvidenceBoardVisibility;
 }) {
-  const visibility = resolveBoardVisibility(
-    shared.strips.exit !== null,
-    shared.hasRedemption || shared.redemptionNotReviewed,
-    shared.accessRows.length > 0,
-  );
-
   return (
-    <PillarBoard id="exit-evidence" visibility={visibility}>
-      <PillarEvidenceStrip pillar="exit" headingId="exit-evidence-heading" title="Exit evidence" view={shared.strips.exit} />
+    <PillarBoard id="exit-evidence" title="Exit evidence" visibility={visibility}>
       {shared.hasRedemption ? (
         <RedemptionRouteSection
           entry={viewModel.redemptionBackstop}
@@ -302,10 +308,12 @@ function ControlBoard({
   shared,
   transferReview,
   viewModel,
+  visibility,
 }: {
   shared: DetailSharedModules;
   transferReview: TransferReviewView | null;
   viewModel: ReadyDetailViewModel;
+  visibility: PillarEvidenceBoardVisibility;
 }) {
   const { coin } = viewModel;
   const { controlRoles, failureDomains, bridgingForm, bridgingPlaceholder, regulatoryStanding } = shared;
@@ -399,21 +407,14 @@ function ControlBoard({
     });
   }
 
-  // Mint Authority or its "Not reviewed" state always renders, so the board does too.
   return (
-    <PillarBoard id="control-evidence" visibility="all">
-      <PillarEvidenceStrip
-        pillar="control"
-        headingId="control-evidence-heading"
-        title="Control evidence"
-        view={shared.strips.control}
-        controlPosture={shared.controlPosture}
-      />
+    <PillarBoard id="control-evidence" title="Control evidence" visibility={visibility}>
       {shared.hasMintAuthority ? (
         <MintAuthoritySection
           profile={viewModel.mintAuthority}
           symbol={coin.symbol}
           controlRoles={controlRoles}
+          controlPosture={shared.controlPosture}
           variant="module"
         />
       ) : (
@@ -457,6 +458,7 @@ export function DetailRiskContextSections({
   // Pair side by side only when a reviewed composition fills the Reserves
   // half; a live-feed-only module would leave a mostly empty box beside the score.
   const pairScoreAndReserves = showScoreCard && hasReviewedSlices;
+  const evidenceAnchors = resolvePillarEvidenceAnchors(sharedModules);
 
   return (
     <>
@@ -482,6 +484,7 @@ export function DetailRiskContextSections({
               variantKind={viewModel.coin.variantKind ?? null}
               hasReviewedReserves={hasReviewedSlices}
               mechanismBacking={mechanismBacking}
+              mechanismReview={sharedModules.mechanismReview}
             />
           ) : null}
         </section>
@@ -500,6 +503,7 @@ export function DetailRiskContextSections({
                 stablecoinName={viewModel.coin.name}
                 stablecoinSymbol={viewModel.coin.symbol}
                 logoSrc={viewModel.logoSrc}
+                evidenceAnchors={evidenceAnchors}
               />
             ) : null}
           </section>
@@ -536,9 +540,19 @@ export function DetailRiskContextSections({
           <DEWSDetail stablecoinId={viewModel.id} />
         )}
 
-        <BackingBoard shared={sharedModules} />
-        <ExitBoard shared={sharedModules} transferReview={transferReview} viewModel={viewModel} />
-        <ControlBoard shared={sharedModules} transferReview={transferReview} viewModel={viewModel} />
+        <BackingBoard shared={sharedModules} visibility={evidenceAnchors.backing} />
+        <ExitBoard
+          shared={sharedModules}
+          transferReview={transferReview}
+          viewModel={viewModel}
+          visibility={evidenceAnchors.exit}
+        />
+        <ControlBoard
+          shared={sharedModules}
+          transferReview={transferReview}
+          viewModel={viewModel}
+          visibility={evidenceAnchors.control}
+        />
 
         {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
         {viewModel.hasFlows ? (

@@ -15,13 +15,14 @@ import {
   resolveWrapperLayer,
 } from "@/components/stablecoin-detail/mechanism-diagrams/mechanism-template";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { findSummaryBudgetViolations, SUMMARY_PROSE_MAX_WORDS } from "@shared/lib/summary-budget";
 import { deriveVerdictLine } from "@/components/stablecoin-detail/verdict-line";
 
-const PROSE_CLASS = "max-w-[70ch] text-pretty text-sm leading-relaxed";
+const PROSE_CLASS = "text-pretty text-sm leading-relaxed";
 const SUBHEADING_CLASS = "mb-1.5 text-xs font-semibold text-muted-foreground";
 
 /**
@@ -145,6 +146,12 @@ export interface PegStabilityCardProps {
    * liquidation engine (see `deriveLiquidationEngine`).
    */
   mechanismBacking?: Pick<MechanismBackingView, "notes"> | null;
+  /**
+   * The dated mechanism review behind the Backing pillar's mechanism
+   * components. Its notes and sources join the card's one provenance fold,
+   * which then owns `#mechanism-review`, and its date stamps the footer.
+   */
+  mechanismReview?: MechanismReviewView | null;
 }
 
 /**
@@ -155,8 +162,10 @@ export interface PegStabilityCardProps {
  *
  * It shares the `EvidenceModule` shell: the help glyph sits right after the
  * title, and everything the summary layer cannot carry (over-budget prose,
- * the collateral note Reserves already draws) folds into one Review notes
- * disclosure at the end, in the `EvidenceFooter` grammar.
+ * the collateral note Reserves already draws, the mechanism review's notes
+ * and sources) folds into one `Review notes & sources (N)` disclosure at the
+ * end, in the `EvidenceFooter` grammar. With a mechanism review that fold
+ * owns `#mechanism-review` and the footer reads `Reviewed <date>`.
  */
 export function PegStabilityCard({
   meta,
@@ -169,6 +178,7 @@ export function PegStabilityCard({
   variantKind,
   hasReviewedReserves = false,
   mechanismBacking = null,
+  mechanismReview = null,
 }: PegStabilityCardProps) {
   if (!meta.pegMechanism) return null;
 
@@ -223,6 +233,10 @@ export function PegStabilityCard({
     if (split.folded) notes.push({ label: "Collateral", text: split.folded });
     collateral = <ProseColumn heading="Collateral" line={split.line} folded={split.folded !== null} />;
   }
+
+  // The mechanism review is this card's provenance: its notes join the fold,
+  // its sources follow them, and its date is the card's only review date.
+  if (mechanismReview) notes.push({ label: "Mechanism review", text: mechanismReview.notes });
 
   const visual = template ? (
     <MechanismFlow
@@ -288,6 +302,9 @@ export function PegStabilityCard({
               : undefined
           }
           notesCount={notes.length > 0 ? notes.length : undefined}
+          sources={mechanismReview?.sources}
+          foldId={mechanismReview ? "mechanism-review" : undefined}
+          reviewed={mechanismReview?.reviewedAt}
         />
       }
     >

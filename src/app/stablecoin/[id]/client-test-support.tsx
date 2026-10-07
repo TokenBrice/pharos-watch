@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
+import type { StablecoinSafetyScoreV9CardProps } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 
 export async function createNextLinkMock() {
   const { createNextLinkMock: createLink } = await import("@/test-utils/frontend");
@@ -33,9 +34,12 @@ function DetailSectionPlaceholder() {
   return <div data-testid="dynamic-detail-section" />;
 }
 
-/** Stubs every lazily-loaded detail section by export name, so section wiring is
- *  asserted without coupling to `dynamic()` call order or loader source text. */
-export const createDetailLazySectionsMock = () => {
+/** Stubs every lazily-loaded detail section by export name (the Safety Score card
+ *  renders for real), so section wiring is asserted without coupling to
+ *  `dynamic()` call order or loader source text. The card is imported when the
+ *  factory runs, after this module and the test's other mocks are initialized. */
+export const createDetailLazySectionsMock = async () => {
+  const { StablecoinSafetyScoreV9Card } = await import("@/components/stablecoin-detail/stablecoin-safety-score-v9-card");
   const placeholders = Object.fromEntries(
     [
       "FeedbackModal",
@@ -43,7 +47,6 @@ export const createDetailLazySectionsMock = () => {
       "MarketDataSection",
       "DepegHistory",
       "DdrTrackRecordSection",
-      "PegStabilityCard",
       "YieldDetailSection",
       "DexLiquidityCard",
       "DistributionSection",
@@ -54,6 +57,10 @@ export const createDetailLazySectionsMock = () => {
 
   return {
     ...placeholders,
+    // Wiring probe: the Mechanism card owns `#mechanism-review` when it receives a review.
+    PegStabilityCard: ({ mechanismReview }: { mechanismReview?: unknown }) => (
+      <div data-testid="dynamic-detail-section">{mechanismReview ? <details id="mechanism-review" /> : null}</div>
+    ),
     ReservesSection: ({
       reserves,
       onRetry,
@@ -78,7 +85,12 @@ export const createDetailLazySectionsMock = () => {
         </button>
       </section>
     ),
-    StablecoinSafetyScoreV9Card: () => <div data-testid="report-card" />,
+    // The real card, so its pillar "Evidence" links reflect the boards the page mounts.
+    StablecoinSafetyScoreV9Card: (props: StablecoinSafetyScoreV9CardProps) => (
+      <div data-testid="report-card">
+        <StablecoinSafetyScoreV9Card {...props} />
+      </div>
+    ),
     FlowsSection: () => <div data-testid="flows-section" />,
     FlowHistorySection: () => <div data-testid="flow-history-section" />,
     BlacklistSection: () => <div data-testid="blacklist-section" />,

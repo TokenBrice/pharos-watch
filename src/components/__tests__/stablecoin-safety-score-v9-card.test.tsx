@@ -77,6 +77,31 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(hrefs.filter((href) => href === canonicalPath(methodologyPath)).length).toBeLessThanOrEqual(1);
   });
 
+  it.each([
+    { name: "links every pillar when the page does not say which boards render", anchors: undefined, linked: ["Backing", "Exit", "Economic Control"] },
+    {
+      name: "links only the pillars whose evidence board renders",
+      anchors: { backing: "below-xl" as const, exit: "none" as const, control: "all" as const },
+      linked: ["Backing", "Economic Control"],
+    },
+  ])("$name", ({ anchors, linked }) => {
+    const card = makeV9Card({ score: 84, grade: "A", pillars: EXIT_WEAKEST_PILLARS });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    const { container } = render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+        evidenceAnchors={anchors}
+      />,
+    );
+
+    const evidenceLinks = Array.from(container.querySelectorAll('a[href$="-evidence"]'), (link) => link.getAttribute("aria-label"));
+    expect(evidenceLinks).toEqual(linked.map((label) => `${label} evidence`));
+  });
+
   it("renders rated V9 data in one full-width card without a reserve column", () => {
     const bindingCap = {
       kind: "track-record",

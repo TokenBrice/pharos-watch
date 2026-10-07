@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import { PegStabilityCard } from "../peg-stability-card";
 
@@ -153,6 +154,53 @@ describe("PegStabilityCard", () => {
     // The first clean sentence stays in the summary layer.
     const line = within(card).getByText("Holders redeem directly with the issuer at par.");
     expect(line.closest("details")).toBeNull();
+  });
+
+  it("merges the mechanism review into the one provenance fold, which owns #mechanism-review", () => {
+    const review: MechanismReviewView = {
+      archetype: "cdp",
+      reviewedAt: "2026-07-15",
+      notes: "Vaults liquidate below the minimum ratio.\nThe stability pool absorbs bad debt.",
+      sources: [
+        { label: "Protocol docs", url: "https://example.com/docs" },
+        { label: "Audit report", url: "https://example.com/audit" },
+      ],
+    };
+    const { container } = render(
+      <PegStabilityCard
+        meta={coin({ pegMechanism: LONG_PEG_MECHANISM })}
+        isWrapper={false}
+        mechanismReview={review}
+      />,
+    );
+    const card = mechanismModule(container);
+    const folds = card.querySelectorAll("details");
+    expect(folds).toHaveLength(1);
+    const fold = folds[0]!;
+    expect(fold.id).toBe("mechanism-review");
+    expect(fold.open).toBe(false);
+    expect(within(fold).getByText(/stability pool absorbs bad debt/).textContent).toBe(review.notes);
+    expect(fold.textContent).toContain(LONG_PEG_MECHANISM);
+    for (const source of review.sources) {
+      const link = within(fold).getByRole("link", { name: source.label });
+      expect(link.getAttribute("href")).toBe(source.url);
+      expect(link.getAttribute("target")).toBe("_blank");
+    }
+    // Two notes (peg mechanism, review) and two sources.
+    expect(fold.querySelector("summary")?.textContent).toContain("(4)");
+    // The review date stamps the footer once, outside the fold.
+    expect(card.textContent!.split(review.reviewedAt)).toHaveLength(2);
+    expect(fold.textContent).not.toContain(review.reviewedAt);
+    expect(card.textContent).toContain(`Reviewed ${review.reviewedAt}`);
+  });
+
+  it("leaves #mechanism-review and the review stamp out without a mechanism review", () => {
+    const { container } = render(
+      <PegStabilityCard meta={coin({ pegMechanism: LONG_PEG_MECHANISM })} isWrapper={false} />,
+    );
+    const card = mechanismModule(container);
+    expect(card.querySelector("#mechanism-review")).toBeNull();
+    expect(card.textContent).not.toContain("Reviewed ");
   });
 
   it("puts the help glyph beside the title and opens the archetype primer from it", () => {

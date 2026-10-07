@@ -15,6 +15,8 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import type { ControlPostureView } from "@/lib/control-posture";
 import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityDetailScoreViewModel,
@@ -59,14 +61,55 @@ const DIAGNOSTIC_STATUS_CHIP_CLASS: Record<MintIssuanceDiagnosticStatus, string>
 /** Control names printed per diagnostic row before "+N more". */
 const MAX_DIAGNOSTIC_CONTROL_NAMES = 3;
 
-function DetailBadge({ children, className }: { children: ReactNode; className?: string }) {
+function DetailBadge({
+  children,
+  className,
+  id,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  title?: string;
+}) {
   return (
     <Badge
+      id={id}
+      title={title}
       variant="outline"
       className={cn("border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground", className)}
     >
       {children}
     </Badge>
+  );
+}
+
+/**
+ * The coin's descriptive control posture ("Regulated entity"), owning
+ * `#control-posture`. Neutral like the other chips: posture is a
+ * classification, not a Safety Score input, so it takes no state hue.
+ */
+function ControlPostureChip({ posture }: { posture: ControlPostureView }) {
+  return (
+    <DetailBadge
+      id="control-posture"
+      title="Descriptive classification; not a Safety Score input"
+      className={SECTION_SCROLL_MT}
+    >
+      Control posture: {posture.label}
+    </DetailBadge>
+  );
+}
+
+/** The posture's explanation, appended to the module's Review notes & sources fold. */
+function ControlPostureNotes({ posture }: { posture: ControlPostureView }) {
+  return (
+    <section className="space-y-1">
+      <h4 className="font-semibold text-foreground">Control posture</h4>
+      {posture.details.map((detail) => (
+        <p key={detail} className="max-w-[75ch]">{detail}</p>
+      ))}
+    </section>
   );
 }
 
@@ -326,11 +369,15 @@ export function hasMintAuthorityModuleData(profile: MintAuthorityDetailViewModel
  * the folds sit in one column in their fixed order. The anchor
  * `#mint-authority` sits on the module; `#mint-primary-controls`,
  * `#mint-issuance-diagnostics` and `#mint-review-notes` sit on their folds.
+ * The coin's descriptive control posture rides in the chip row, where its
+ * chip owns `#control-posture`, and its explanation joins the Review notes
+ * & sources fold under a "Control posture" subheading.
  */
 export function MintAuthoritySection({
   profile,
   symbol,
   controlRoles,
+  controlPosture = null,
   variant = "module",
   stripForm = false,
 }: {
@@ -343,6 +390,8 @@ export function MintAuthoritySection({
    * eligible component above it gets no tag, a non-binding one reads as a diagnostic.
    */
   controlRoles?: ControlComponentRoles | null;
+  /** `buildControlPostureView(coin, parent)`: descriptive, not a Safety Score input. */
+  controlPosture?: ControlPostureView | null;
   variant?: EvidenceModuleVariant;
   stripForm?: boolean;
 }) {
@@ -390,6 +439,8 @@ export function MintAuthoritySection({
     </>
   );
   const methodology = <MethodologyHint topic="mintAuthorityScore" />;
+  const postureChip = controlPosture ? <ControlPostureChip posture={controlPosture} /> : null;
+  const postureNotes = controlPosture ? <ControlPostureNotes posture={controlPosture} /> : null;
 
   if (!isReviewed) {
     // Published diagnostics without a review: nothing to draw, so the module
@@ -403,8 +454,16 @@ export function MintAuthoritySection({
         methodology={methodology}
         headerRight={headerRight}
         verdict={profile.summary}
-        chipRow={<DetailBadge>{profile.reviewLabel}</DetailBadge>}
+        chipRow={
+          <>
+            <DetailBadge>{profile.reviewLabel}</DetailBadge>
+            {postureChip}
+          </>
+        }
         folds={issuanceDiagnosticsFold}
+        footer={
+          postureNotes ? <EvidenceFooter notes={postureNotes} notesCount={1} foldId="mint-review-notes" /> : undefined
+        }
       />
     );
   }
@@ -451,8 +510,10 @@ export function MintAuthoritySection({
           </DetailBadge>
         </Link>
       ) : null}
+      {postureChip}
     </>
   );
+  const reviewNoteCount = (profile.summary ? 1 : 0) + (postureNotes ? 1 : 0);
 
   return (
     <EvidenceModule
@@ -544,8 +605,15 @@ export function MintAuthoritySection({
       footer={
         <EvidenceFooter
           sources={profile.sources}
-          notes={profile.summary ? <p>{profile.summary}</p> : undefined}
-          notesCount={profile.summary ? 1 : undefined}
+          notes={
+            reviewNoteCount > 0 ? (
+              <>
+                {profile.summary ? <p>{profile.summary}</p> : null}
+                {postureNotes}
+              </>
+            ) : undefined
+          }
+          notesCount={reviewNoteCount > 0 ? reviewNoteCount : undefined}
           foldId="mint-review-notes"
           reviewed={profile.reviewedAt ?? undefined}
         />

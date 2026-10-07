@@ -14,6 +14,18 @@ type BreakdownRow = NonNullable<
 >["groups"][number]["rows"][number];
 
 /**
+ * Where a pillar's evidence board renders on the detail page: at every width,
+ * only below `xl` (its only content is an in-flow twin of a rail card), or not
+ * at all. A pillar row links to its board only where the board exists.
+ */
+export type PillarEvidenceBoardVisibility = "all" | "below-xl" | "none";
+
+export type PillarEvidenceAnchors = Record<
+  StablecoinSafetyScoreV9Presentation["pillars"][number]["key"],
+  PillarEvidenceBoardVisibility
+>;
+
+/**
  * Restrained tinting: a bar leaves neutral only when the input is the problem,
  * so a long list stays calm and the eye lands on the weak rows.
  */
@@ -314,9 +326,12 @@ function PillarInputFallback({
 export function SafetyScoreV9PillarRow({
   cardId,
   pillar,
+  evidenceVisibility = "all",
 }: {
   cardId: string;
   pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
+  /** Defaults to `"all"`: a caller that does not know the page's boards keeps the link. */
+  evidenceVisibility?: PillarEvidenceBoardVisibility;
 }) {
   // All pillars start folded on every viewport (owner decision 2026-08-11).
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
@@ -389,15 +404,17 @@ export function SafetyScoreV9PillarRow({
           />
         )}
       </span>
-      <div className="mt-0.5 flex justify-end">
-        <a
-          href={`#${pillar.key}-evidence`}
-          className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
-          aria-label={`${pillar.label} evidence`}
-        >
-          Evidence ↓
-        </a>
-      </div>
+      {evidenceVisibility === "none" ? null : (
+        <div className={cn("mt-0.5 flex justify-end", evidenceVisibility === "below-xl" && "xl:hidden")}>
+          <a
+            href={`#${pillar.key}-evidence`}
+            className="pharos-focus-ring rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+            aria-label={`${pillar.label} evidence`}
+          >
+            Evidence ↓
+          </a>
+        </div>
+      )}
       {hasDetails && open ? (
         <div
           id={detailsId}

@@ -21,12 +21,7 @@ import { buildFailureDomainsView, type FailureDomainsView } from "@/lib/failure-
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
-import {
-  buildPillarEvidenceStrips,
-  resolveControlComponentRoles,
-  type ControlComponentRoles,
-  type PillarEvidenceStrips,
-} from "@/lib/pillar-evidence-strips";
+import { resolveControlComponentRoles, type ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { buildRegulatoryStandingView, type RegulatoryStandingView } from "@/lib/regulatory-standing";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { shouldDisplayCustodyModule, type CustodyClientSummary } from "@/lib/stablecoin-detail-custody-client";
@@ -95,7 +90,7 @@ export interface EvidencePlaceholder {
 export interface DetailSharedModules {
   /** `resolveControlComponentRoles(card)`, shared by Mint, Price feed and Bridging. */
   controlRoles: ControlComponentRoles | null;
-  strips: PillarEvidenceStrips;
+  /** Passed to the Mechanism card, whose provenance fold owns `#mechanism-review`. */
   mechanismReview: MechanismReviewView | null;
   /** The Backing KPI (plan §7); null mounts no card. */
   backingMetrics: BackingMetricsView | null;
@@ -122,7 +117,6 @@ export interface DetailSharedModules {
 }
 
 const NOT_REVIEWED_CHIP: EvidenceIndexChip = { label: "Not reviewed", toneClass: SEVERITY_TONE_CLASS.neutral.pill };
-const NOT_SCORED_CHIP: EvidenceIndexChip = { label: "Not scored", toneClass: SEVERITY_TONE_CLASS.neutral.pill };
 
 const SINGLE_CHAIN_LABEL = BRIDGE_TIER_LABELS["single-chain-or-native"];
 
@@ -193,7 +187,6 @@ export function buildDetailSharedModules({
   const card = reportCard ?? null;
   const frozen = coin.status === "frozen";
   const controlRoles = card ? resolveControlComponentRoles(card) : null;
-  const strips = buildPillarEvidenceStrips(card, { frozen, bridging: coin.bridgeRouteRiskSummary ?? null });
   const liveScopeMetadata = viewModel.reserves?.mode === "live" || viewModel.reserves?.mode === "live-stale"
     ? viewModel.reserves.metadata
     : undefined;
@@ -241,20 +234,6 @@ export function buildDetailSharedModules({
       score: null,
       scoreNote: null,
       chip: custody ? { label: custody.postureLabel, toneClass: custody.postureToneClass } : NOT_REVIEWED_CHIP,
-      limiting: false,
-    });
-  }
-  // The provenance row renders under the Backing kicker with or without a card;
-  // without a published mechanism group score it says so rather than going blank.
-  if (mechanismReview) {
-    const mechanismScore = strips.backing?.groups.find((group) => group.key === "mechanism")?.score ?? null;
-    backingRows.push({
-      key: "mechanismReview",
-      title: "Mechanism review",
-      anchorId: "mechanism-review",
-      score: mechanismScore,
-      scoreNote: null,
-      chip: mechanismScore === null ? NOT_SCORED_CHIP : null,
       limiting: false,
     });
   }
@@ -345,7 +324,6 @@ export function buildDetailSharedModules({
 
   return {
     controlRoles,
-    strips,
     mechanismReview,
     backingMetrics,
     custody,

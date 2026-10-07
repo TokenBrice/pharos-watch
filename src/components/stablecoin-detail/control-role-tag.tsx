@@ -4,14 +4,12 @@ import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@share
 /**
  * The one grammar for how a published Control component relates to the
  * pillar minimum (plan §6). Every surface that marks a limiting or a
- * diagnostic component draws it with these two exports, never its own marker:
- * module headers (`ControlRoleTag`), the rail Evidence index
- * (`ControlRoleTag size="compact"`), the deployment-strip legend and the
- * Control strip (bars carry `ControlRoleGlyph` beside their score).
+ * diagnostic component draws it with `ControlRoleTag`, never its own marker:
+ * module headers, the rail Evidence index (`size="compact"`) and the
+ * deployment-strip legend.
  *
  * - `limiting`: a filled diamond inside a solid outline, the outline the
- *   Control strip and the deployment strip draw around the component(s) at
- *   the eligible minimum.
+ *   deployment strip draws around the component(s) at the eligible minimum.
  * - `diagnostic`: a dashed hollow diamond inside a dashed outline, the dashed
  *   track of a component outside the eligible set.
  * - `eligible` / `excluded`: nothing. An eligible component above the minimum
@@ -34,7 +32,7 @@ function isMarkedRole(role: ControlComponentRole | null | undefined): role is Ma
 }
 
 /** The bare glyph, decorative: its owner names the role in text or in an aria-label. */
-export function ControlRoleGlyph({
+function ControlRoleGlyph({
   role,
   className,
 }: {
