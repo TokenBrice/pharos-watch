@@ -102,4 +102,14 @@ describe("compactCronMetadataForPersistence", () => {
     expect(parsed.mxLedger0).toBe(chunk);
     expect(parsed.mxLedger1).toBe(chunk);
   });
+
+  it("preserves the terminal arbitration scalars outside diagnostics", () => {
+    const evidence = { schedulerAttemptKey: `scheduled-child:${"a".repeat(64)}`,
+      schedulerTerminalSource: "synthetic", schedulerTerminalToken: "contender-token",
+      childDisposition: "execution_unknown" };
+    const source = Object.fromEntries(Array.from({ length: 100 }, (_, index) => [`diagnostic${index}`, "x".repeat(1000)]));
+    const result = compactCronMetadataForPersistence(JSON.stringify({ ...source, ...evidence }));
+    expect(result.compacted).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject(evidence);
+  });
 });

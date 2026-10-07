@@ -3,7 +3,7 @@ import { canonicalExitRouteChain, canonicalExitRouteAssetKey } from "@shared/typ
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
-import { getScheduledSlotControlledDeadlineMs } from "../../lib/cron-timeouts";
+import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { buildMeasuredPoolDirectionKey, buildPancakeMeasuredExecutionTargets, buildSlipstreamMeasuredExecutionTargets, buildUniV3DirectMeasuredExecutionTargets } from "../measured-execution/inventory";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "../measured-execution/registry";
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
@@ -19,7 +19,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   capturedAt: number;
-  slotStartedAtSec?: number;
+  deadline?: SlotDeadline;
   pancakeMeasuredTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget>;
 }): Promise<{ exactPoolCount: number; exactCapableAssets: string[] }> {
@@ -52,8 +52,8 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   const assets = new Set<string>();
   let exactPoolCount = 0;
   let remaining = QUOTER_V2_CAPTURE_MAX_POOLS;
-  const slotDeadline = input.slotStartedAtSec == null ? Infinity : getScheduledSlotControlledDeadlineMs(input.slotStartedAtSec * 1_000);
-  const deadline = Math.min(slotDeadline, Date.now() + QUOTER_V2_CAPTURE_MAX_WALL_MS);
+  const nowMs = Date.now();
+  const deadline = nowMs + (input.deadline?.childCeilingMs(QUOTER_V2_CAPTURE_MAX_WALL_MS, nowMs) ?? QUOTER_V2_CAPTURE_MAX_WALL_MS);
   const rpcBudget = createDexMeasuredExecutionRpcBudget({ maxRequests: QUOTER_V2_CAPTURE_MAX_REQUESTS, deadlineMs: deadline });
   for (const group of groups.values()) {
     throwIfAborted(input.signal);

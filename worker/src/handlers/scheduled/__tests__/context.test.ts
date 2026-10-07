@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createScheduledRuntimeContext } from "../context";
+import { createSlotDeadline } from "../../../lib/cron-timeouts";
 import { makeCaptureDb, type DbCall } from "../../../lib/__tests__/cron-progress.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
@@ -9,6 +10,44 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
 
 describe("scheduled runtime context", () => {
+  it("creates one event-entry deadline independent of source identity and later waits", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    const runtime = createScheduledRuntimeContext(
+      { DB: makeCaptureDb([]) } as Parameters<typeof createScheduledRuntimeContext>[0],
+      {} as ExecutionContext,
+      {
+        cron: "10 * * * *",
+        scheduleKey: "halfHourlyOffset",
+        scheduledTimeMs: 600_000,
+        slotStartedAt: 600,
+        slotBudgetStartedAtMs: 900_000,
+      },
+    );
+    expect(runtime.deadline.eventEntryMs).toBe(900_000);
+    const deadline = runtime.deadline;
+    const remainingMs = deadline.remainingMs();
+    vi.setSystemTime(1_030_000);
+    expect(runtime.deadline).toBe(deadline);
+    expect(deadline.remainingMs()).toBe(remainingMs - 30_000);
+  });
+
+  it("inherits the same executing deadline for a reconstructed runtime", () => {
+    const deadline = createSlotDeadline(900_000);
+    const runtime = createScheduledRuntimeContext(
+      { DB: makeCaptureDb([]) } as Parameters<typeof createScheduledRuntimeContext>[0],
+      {} as ExecutionContext,
+      {
+        cron: "11 */4 * * *",
+        scheduleKey: "fourHourlyReserveSync",
+        scheduledTimeMs: 600_000,
+        slotStartedAt: 600,
+        deadline,
+      },
+    );
+    expect(runtime.deadline).toBe(deadline);
+  });
+
   it("writes the started progress row only after acquiring the job lease", async () => {
     const calls: DbCall[] = [];
     const db = makeCaptureDb(calls);

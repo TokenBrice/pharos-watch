@@ -1,3 +1,4 @@
+import type { CronTerminalAccountingStage } from "@shared/types/status/cron";
 import { CronTerminalAccountingError, resolveCronDegradedReason, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { describeError } from "@shared/lib/error-utils";
 import { stripSensitive } from "../../lib/safe-error-message";
@@ -14,7 +15,7 @@ export type ScheduledSlotJobSummary = {
   error?: string;
   neutral?: boolean;
   terminalAccountingError?: {
-    stage: "cron-run" | "producer-history";
+    stage: CronTerminalAccountingStage;
     outputPublishedAt: number | null;
     productive: boolean;
   };

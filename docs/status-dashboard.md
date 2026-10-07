@@ -273,6 +273,19 @@ summaries. `degradedCrons` counts fresh degraded execution statuses only (includ
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
 
+Scheduled attempt evidence is independent of detailed in-flight progress: every protocol-v1 child has a
+durable `scheduled_child_attempts` start marker before work, including progress-suppressed jobs. Real and
+synthetic terminals arbitrate one deterministic full attempt identity under the executing slot fence.
+Replay retains producer source identity while naming its recovery execution fence. Reconciliation proves
+`not_started` only when a due protocol-v1 child has no marker; legacy missing evidence is
+`execution_unknown`, projected as an error/abandoned producer with explicit uncertainty, not success
+or a zero item count. Last durable activity durations are lower bounds, not reconstructed runtimes.
+Producer invocation aggregates and confirmed publication clocks remain separate from attempt terminals.
+`worker/src/lib/cron-outcomes.ts` owns outcome projections/folding: errors outrank degraded/nonneutral
+skips, which outrank `ok`; locked skips are nonneutral and neutral skips stay neutral. Fence admission
+status, child `resultStatus` and productivity remain distinct. Execution deadlines and the centralized
+slot/child silence policy do not change the freshness windows below.
+
 Successful observers report `ok` plus `metadata.quality` for semantic service degradation, stale producer output, detail-write markers, missing digest editions, duration/abandonment trends, and sustained DEX turnover. These findings do not increment `degradedCrons`; fresh operational `degraded` attempts still inherit behind neutral skips. The workbench includes findings in Attention and labels successful observations “Succeeded with findings” without changing execution state or group degraded totals. Observation success never renews a producer's output clock.
 
 `CRON_INTERVALS` owns producer cadence. The staleness watchdog's one-statement fact loader in

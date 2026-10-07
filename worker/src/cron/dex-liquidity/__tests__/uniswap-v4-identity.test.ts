@@ -5,6 +5,7 @@ import { enrichUniswapV4ExecutionTargets, readUniswapV4ExecutionCandidate, resol
 import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_HOOK_FREE_ADDRESS } from "../../measured-execution/uniswap-v4";
 import { isDexMeasuredExecutionTargetScoreEligible } from "../../measured-execution/admission";
 import type { PoolEntry } from "../types";
+import { createSlotDeadline } from "../../../lib/cron-timeouts";
 
 const TOKEN0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const TOKEN1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -118,6 +119,26 @@ describe("on-chain V4 PoolKey resolution", () => {
 });
 
 describe("retained V4 target recovery", () => {
+  it("clips identity recovery to the original executing event after waits", async () => {
+    const deadline = createSlotDeadline(Date.now());
+    const clock = vi.spyOn(Date, "now").mockReturnValue(deadline.platformDeadlineMs - 10_000);
+    try {
+      const f = fixture();
+      await enrichUniswapV4ExecutionTargets({ ...f.input, deadline });
+      expect(f.dependencies.blockNumber).toHaveBeenCalledWith("ethereum", expect.objectContaining({
+        deadlineMs: deadline.platformDeadlineMs,
+      }));
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it("does not start identity recovery after the executing event expires", async () => {
+    const f = fixture();
+    await enrichUniswapV4ExecutionTargets({ ...f.input, deadline: createSlotDeadline(Date.now() - 3_600_000) });
+    expect(f.dependencies.blockNumber).not.toHaveBeenCalled();
+    expect(f.pool.extra?.measuredExecutionTarget).toBeUndefined();
+  });
+
   it.each(["cg_onchain", "dl"] as const)("turns a %s retained physical pool into the exact target without changing provider measurements", async (source) => {
     const f = fixture();
     f.pool.source = source;

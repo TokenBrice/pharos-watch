@@ -10,6 +10,10 @@ import type { LlamaPool } from "../dex-liquidity/types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
 import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
+import { createSlotDeadline } from "../../lib/cron-timeouts";
+import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
+import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
+import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -1567,6 +1571,31 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
       actualScoringStage.markDexLiquidityScoringStageConsumed,
     );
+  });
+
+  it.each(["publication", "reuse"] as const)("passes the %s event deadline through recovery without using the old source slot", async (mode) => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+    if (mode === "reuse") vi.setSystemTime(halfHourSlot * 1_000);
+    const deadline = createSlotDeadline(Date.now() - 120_000);
+    const v2 = vi.spyOn(v2Enrichment, "enrichEvmV2ExecutionModels");
+    const quoter = vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets");
+    const v4 = vi.spyOn(v4Enrichment, "enrichUniswapV4ExecutionTargets");
+    const options = {
+      deadline,
+      stageReadyDeadlineMs: Date.now() + 90_000,
+      stageRecovery: { graphApiKey: "graph-key" },
+    };
+    if (mode === "publication") {
+      await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, options);
+    } else {
+      await reuseCurrentDexLiquidityScoringGeneration(harness.db, undefined, undefined, halfHourSlot, options);
+    }
+    for (const enrichment of [v2, quoter, v4]) {
+      expect(enrichment).toHaveBeenCalledTimes(1);
+      expect(enrichment.mock.calls[0]![0].deadline).toBe(deadline);
+    }
+    expect(deadline.eventEntryMs).not.toBe(sourceSlot * 1_000);
   });
 
   it("re-runs an errored source stage inline and publishes with recovery metadata", async () => {

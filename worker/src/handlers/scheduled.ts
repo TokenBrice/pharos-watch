@@ -3,9 +3,6 @@ import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import type { ScheduledEnv } from "../lib/env";
 import {
-  getScheduledSlotControlledDeadlineMs,
-} from "../lib/cron-timeouts";
-import {
   runScheduledSlotWithFence,
   type ScheduledSlotExecutionOptions,
 } from "../lib/scheduled-slot-fence";
@@ -181,7 +178,7 @@ export async function handleScheduledEvent(
         invocationId: runtime.invocationId ?? null,
         workerVersion: runtime.workerVersion ?? null,
         workerRole,
-        deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
+        deadline: runtime.deadline,
         ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
       },
     );

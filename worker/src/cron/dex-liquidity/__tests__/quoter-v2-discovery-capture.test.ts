@@ -5,6 +5,7 @@ import { enrichQuoterV2ExecutionTargets } from "../enrich-quoter-v2-targets";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool, quoteQuoterV2Requests, resolveQuoterV2PoolBindings } from "../../measured-execution/quoter-v2";
 import type { LiquidityMetrics, PoolEntry } from "../types";
+import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeouts";
 
 const rpc = vi.hoisted(() => ({ fetchEvmBlockNumber: vi.fn(), fetchEvmBlockHeader: vi.fn(), fetchEvmMulticall3Aggregate3AtBlock: vi.fn() }));
 vi.mock("../../../lib/evm-rpc", () => rpc);
@@ -41,11 +42,11 @@ function input(profile = "uniswap-v3-quoter-v2", chain = "ethereum"): Parameters
 function row(project: string, chain: string, poolType: string, poolId = `${chain}:${POOL}`): PoolEntry {
   return { poolId, project, chain, poolType, symbol: "USDC / USDT", tvlUsd: 500_000, source: "cg_onchain", volumeUsd1d: 500, extra: {} } as PoolEntry;
 }
-async function enrich(pools: PoolEntry[]) {
+async function enrich(pools: PoolEntry[], deadline?: SlotDeadline) {
   const options = input("uniswap-v3-quoter-v2", pools[0]!.chain);
   return enrichQuoterV2ExecutionTargets({ metrics: new Map([["usdc-circle", { topPools: pools } as LiquidityMetrics]]),
     chainAddressToId: options.chainAddressToId, stablecoinPriceById: options.trackedStablecoinPrices, capturedAt: 1_791_184_659,
-    pancakeMeasuredTargets: new Map(), slipstreamMeasuredTargets: new Map() });
+    pancakeMeasuredTargets: new Map(), slipstreamMeasuredTargets: new Map(), deadline });
 }
 
 beforeEach(() => {
@@ -102,6 +103,25 @@ describe("address-bound discovered QuoterV2 capture", () => {
 });
 
 describe("retained discovered rows enter actual target production", () => {
+  it("clips capture to the original event deadline after a readiness wait", async () => {
+    const nowMs = Date.now();
+    const deadline = createSlotDeadline(nowMs);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(deadline.platformDeadlineMs - 10_000);
+    try {
+      answers();
+      await enrich([row("uniswap-v3", "ethereum", "cg-concentrated")], deadline);
+      expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![3].deadlineMs).toBe(deadline.platformDeadlineMs);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it("does not issue capture requests after the executing event expires", async () => {
+    const deadline = createSlotDeadline(Date.now() - 3_600_000);
+    expect(await enrich([row("uniswap-v3", "ethereum", "cg-concentrated")], deadline))
+      .toEqual({ exactPoolCount: 0, exactCapableAssets: [] });
+    expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
+  });
+
   it("selects a bounded XDC subset instead of failing an oversized discovery group", async () => {
     answers("xswap-v3-quoter-v2", "xdc");
     const pools = Array.from({ length: 128 }, (_, index) => row("xswap-v3", "xdc", "cg-concentrated",

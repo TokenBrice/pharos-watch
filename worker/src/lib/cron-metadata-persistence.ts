@@ -76,7 +76,9 @@ export function compactCronMetadataForPersistence(
   // and at most a handful of parts, so preserving them cannot re-breach the byte cap.
   const preservedLedgerScalars: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of entries) {
-    if (!key.startsWith("mxLedger") && key !== "outputPublishedAt") continue;
+    if (!key.startsWith("mxLedger") && key !== "outputPublishedAt"
+      && key !== "schedulerAttemptKey" && key !== "schedulerTerminalSource"
+      && key !== "schedulerTerminalToken" && key !== "childDisposition") continue;
     const scalar = boundedScalar(value);
     if (scalar !== undefined) preservedLedgerScalars[key] = scalar;
   }

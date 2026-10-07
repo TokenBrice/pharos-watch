@@ -457,6 +457,7 @@ describe("runCronWithLease", () => {
     });
 
     const abandonedExpectation = expect(runPromise).rejects.toBeInstanceOf(CronJobAbandonedError);
+    await vi.advanceTimersByTimeAsync(0);
     ac.abort(new Error("stop now"));
     await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
     await abandonedExpectation;
@@ -478,6 +479,7 @@ describe("runCronWithLease", () => {
     });
 
     const abandonedExpectation = expect(runPromise).rejects.toBeInstanceOf(CronJobAbandonedError);
+    await vi.advanceTimersByTimeAsync(0);
     ac.abort(new Error("timeout"));
     await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
     await abandonedExpectation;
@@ -590,6 +592,7 @@ describe("runCronWithLease", () => {
     const abandonedExpectation = runPromise.catch((err) => {
       captured = err as CronJobAbandonedError;
     });
+    await vi.advanceTimersByTimeAsync(0);
     ac.abort("timeout");
     await vi.advanceTimersByTimeAsync(CRON_ABANDONED_JOB_GRACE_MS + 1);
     await abandonedExpectation;

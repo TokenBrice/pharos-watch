@@ -6,8 +6,10 @@ import {
   type CronLeaseOptions,
 } from "../../lib/cron-lease-primitives";
 import {
+  createSlotDeadline,
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
+  type SlotDeadline,
 } from "../../lib/cron-timeouts";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
@@ -122,6 +124,7 @@ export interface ScheduledRuntimeContext {
   workerRole?: ScheduledWorkerRole;
   scheduledTimeMs: number | null;
   slotStartedAt: number;
+  deadline: SlotDeadline;
   slotSignal?: AbortSignal;
   slotBudgetStartedAtMs?: number;
   invocationId?: string;
@@ -213,6 +216,7 @@ export interface ScheduledRuntimeInit {
   scheduledTimeMs: number | null;
   slotStartedAt: number;
   slotBudgetStartedAtMs?: number;
+  deadline?: SlotDeadline;
   parentSignal?: AbortSignal;
   jobAttemptNo?: number;
   producerKind?: string;
@@ -248,6 +252,7 @@ export function createScheduledRuntimeContext(
     scheduledTimeMs: scheduled.scheduledTimeMs,
     slotStartedAt: scheduled.slotStartedAt,
     slotBudgetStartedAtMs,
+    deadline: scheduled.deadline ?? createSlotDeadline(slotBudgetStartedAtMs),
     invocationId,
     workerVersion,
     jobAttemptNo,

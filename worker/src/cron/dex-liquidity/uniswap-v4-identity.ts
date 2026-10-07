@@ -4,7 +4,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, fetchEvmStorageAtBlock, type EvmRpcOptions } from "../../lib/evm-rpc";
 import { rethrowIfAborted } from "../../lib/abort";
-import { getScheduledSlotControlledDeadlineMs } from "../../lib/cron-timeouts";
+import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { buildUniswapV4MeasuredExecutionTarget } from "../measured-execution/inventory";
 import { computeUniswapV4PoolId, getUniswapV4Deployment, UNISWAP_V4_ADAPTER_PROFILE_ID, UNISWAP_V4_HOOK_FREE_ADDRESS, verifyUniswapV4Deployment, type UniswapV4Deployment } from "../measured-execution/uniswap-v4";
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
@@ -194,7 +194,7 @@ export async function enrichUniswapV4ExecutionTargets(input: {
   stablecoinPriceById: Map<string, number>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
-  slotStartedAtSec?: number;
+  deadline?: SlotDeadline;
   dependencies?: Dependencies;
 }): Promise<void> {
   const probes = new Map<string, PoolProbe>();
@@ -221,8 +221,8 @@ export async function enrichUniswapV4ExecutionTargets(input: {
   }
   if (!probes.size || !input.chainRpcs) return;
   const deps = input.dependencies ?? DEFAULT_DEPENDENCIES;
-  const deadlineMs = Math.min(Date.now() + MAX_WALL_MS,
-    input.slotStartedAtSec == null ? Infinity : getScheduledSlotControlledDeadlineMs(input.slotStartedAtSec * 1_000));
+  const nowMs = Date.now();
+  const deadlineMs = nowMs + (input.deadline?.childCeilingMs(MAX_WALL_MS, nowMs) ?? MAX_WALL_MS);
   const budget = createDexMeasuredExecutionRpcBudget({ maxRequests: MAX_REQUESTS, deadlineMs });
   const rpcOptions: EvmRpcOptions = {
     chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: 8_000, deadlineMs, maxRetries: 0,
