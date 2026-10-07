@@ -34,6 +34,8 @@ import {
   SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, settleAttribution,
 } from "../lib/safety-score-v9/capture-control";
 import { batchExecute } from "../lib/d1-primitives";
+import { buildSafetyScoreV9ResourcePressure } from "../lib/safety-score-v9/resource-budget";
+import { ECONOMIC_SUPPLY_BODY_CAPS } from "../lib/safety-score-v9/economic-supply-observer";
 
 function diagnosticRejectedAssetIds(
   generation: SafetyScoreV9SupplyAttributionGeneration,
@@ -45,6 +47,21 @@ function diagnosticRejectedAssetIds(
       outcome.rejectionCode === "transparency-stale"
     );
   });
+}
+
+function classifyRejectedAssets(generation: SafetyScoreV9SupplyAttributionGeneration) {
+  const diagnostic = diagnosticRejectedAssetIds(generation);
+  const progress = generation.rejectedAssetIds.filter(assetId => {
+    const outcome = generation.outcomesById[assetId];
+    if (outcome?.status !== "rejected" ||
+      !["deployment-observation-window-insufficient", "deployment-state-unavailable"].includes(outcome.rejectionCode)) return false;
+    const diagnostics = outcome.diagnostics ?? [];
+    return diagnostics.some(attempt => attempt.incompleteBootstrap &&
+      attempt.authenticatedCursorAdvanced && attempt.persisted) &&
+      !diagnostics.some(attempt => attempt.hardEvidenceFailure);
+  });
+  const nonblocking = new Set([...diagnostic, ...progress]);
+  return { diagnostic, progress, blocking: generation.rejectedAssetIds.filter(assetId => !nonblocking.has(assetId)) };
 }
 
 export async function syncSafetyScoreV9SupplyAttribution(
@@ -156,7 +173,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       clockSec: priorGeneration.sourceClockSec,
       registryFingerprint: priorGeneration.registryFingerprint,
     })) {
-      const blocking = priorGeneration.rejectedAssetIds.length - diagnosticRejectedAssetIds(priorGeneration).length;
+      const blocking = classifyRejectedAssets(priorGeneration).blocking.length;
       await settleAttribution(db, control, fixedInput, executionWindow?.slotStartedAtSec,
         blocking > 0 ? "degraded" : "ok", priorGeneration.generationId);
     }
@@ -174,6 +191,9 @@ export async function syncSafetyScoreV9SupplyAttribution(
     });
   }
 
+  const resourcePressure = buildSafetyScoreV9ResourcePressure({
+    phase: "supply-attribution-capture", bodyCapBytes: Math.max(...Object.values(ECONOMIC_SUPPLY_BODY_CAPS)),
+  });
   try {
   const capture = await captureSafetyScoreV9SupplyAttribution(
     fixedInput,
@@ -184,6 +204,15 @@ export async function syncSafetyScoreV9SupplyAttribution(
       notBeforeSec: startedAtSec,
       executionWindow,
       db,
+      onBodyRead: evidence => {
+        resourcePressure.observedAt = Math.floor(Date.now() / 1_000);
+        if (evidence.intakeBytes !== null) {
+          resourcePressure.intakeBytes = (resourcePressure.intakeBytes ?? 0) + evidence.intakeBytes;
+          resourcePressure.intakeBasis = "actual-stream";
+        }
+        resourcePressure.rejectedBodies = (resourcePressure.rejectedBodies ?? 0) + (evidence.outcome === "rejected" ? 1 : 0);
+        resourcePressure.guard = resourcePressure.rejectedBodies > 0 ? "resource-budget-exceeded" : "within-policy";
+      },
     },
   );
   throwIfAborted(signal);
@@ -207,12 +236,12 @@ export async function syncSafetyScoreV9SupplyAttribution(
       signal,
     );
   }
-  const diagnosticRejected = diagnosticRejectedAssetIds(generation);
-  const diagnosticRejectedSet = new Set(diagnosticRejected);
-  const blockingRejectedAssetIds = generation.rejectedAssetIds.filter(
-    (assetId) => !diagnosticRejectedSet.has(assetId),
-  );
+  const { diagnostic: diagnosticRejected, progress, blocking: blockingRejectedAssetIds } = classifyRejectedAssets(generation);
   const complete = blockingRejectedAssetIds.length === 0;
+  const qualityReasons = [
+    ...(progress.length ? ["supply-attribution-bootstrap-in-progress"] : []),
+    ...(diagnosticRejected.length ? ["supply-attribution-diagnostic-rejections"] : []),
+  ];
   const publication = {
     key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
     value: serializeSafetyScoreV9SupplyAttributionGeneration(generation),
@@ -259,11 +288,19 @@ export async function syncSafetyScoreV9SupplyAttribution(
       blockingRejectedCount: blockingRejectedAssetIds.length,
       blockingRejectedAssetIds,
       priorGenerationStatus,
+      bootstrapProgressAssetIds: progress,
+      captureFailureReasonsById: capture.failureReasonById ?? {},
+      resourcePressure,
+      ...(qualityReasons.length ? { quality: {
+        reason: qualityReasons[0], reasons: qualityReasons,
+        sources: { bootstrapProgressAssetIds: progress, diagnosticRejectedAssetIds: diagnosticRejected, blockingRejectedAssetIds },
+      } } : {}),
     },
     productivity: {
       productive: true,
       reason: complete
-        ? generation.rejectedAssetIds.length > 0
+        ? progress.length ? "supply-attribution-generation-published-with-bootstrap-progress"
+          : generation.rejectedAssetIds.length > 0
           ? "supply-attribution-generation-published-with-diagnostic-rejections"
           : "supply-attribution-generation-published"
         : "supply-attribution-generation-published-with-blocking-rejections",

@@ -710,4 +710,30 @@ describe("computeSafetyScoreV9", () => {
       workerMetadata: { id: "new", timestamp: new Date(fixedInput.clockSec * 1_000).toISOString() },
     })).rejects.toThrow("marker write failed");
   });
+  it.each([397, 398])("admits complete active inventory within its reviewed boundary (%s)", async count => {
+    fixedInput = { ...fixedInput, activeAssetIds: Array.from({ length: count }, (_, index) => `asset-${index}`) };
+    mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: captureControlFixture().capture.safetyScoreIdentity });
+    mockPublishedPreparation();
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(result.status).toBe(count === 397 ? "ok" : "degraded");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 488, catalogAssets: 488 });
+    if (count === 398) {
+      expect(metadata.reason).toBe("resource-budget-exceeded");
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+    } else expect(result.itemCount).toBe(397);
+  });
+
+  it("rejects expanded-byte overflow before decompression while retaining accepted publication", async () => {
+    mocks.getCaches.mockResolvedValue(new Map([
+      ["report-cards:fixed-input:exact", { value: '{"uncompressedBytes":8000001,"payload":"unparsed"}' }],
+      ["report-cards:v9-peg-provenance-seed:exact", { value: "seed" }],
+    ]));
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "resource-budget-exceeded", resourcePressure: { inputBytes: 8_000_001, inputCapBytes: 8_000_000 },
+    });
+    expect(mocks.parseFixedInput).not.toHaveBeenCalled();
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
 });

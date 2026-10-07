@@ -10,13 +10,11 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
+import { SupplyAttributionAttemptDiagnosticsSchema, SupplyAttributionCaptureFailureReasonSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import { SafetyScoreV9SupplyAttributionSchema } from "../report-cards-fixed-input";
-import {
-  normalizeSafetyScoreV9CompilerInput,
-  type SafetyScoreV9CompilerInput,
-} from "./native-input";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   deriveReviewedDeploymentUnitPartition,
@@ -62,6 +60,7 @@ const SupplyAttributionGenerationOutcomeSchema = z.discriminatedUnion(
       .object({
         status: z.literal("accepted"),
         journalId: SupplyAttributionJournalIdSchema,
+        diagnostics: SupplyAttributionAttemptDiagnosticsSchema.optional(),
       })
       .strict(),
     z
@@ -70,6 +69,8 @@ const SupplyAttributionGenerationOutcomeSchema = z.discriminatedUnion(
         rejectionCode: SupplyAttributionRejectionCodeSchema,
         failedRouteId: z.string().min(1).nullable(),
         journalId: SupplyAttributionJournalIdSchema,
+        diagnostics: SupplyAttributionAttemptDiagnosticsSchema.optional(),
+        captureFailureReason: SupplyAttributionCaptureFailureReasonSchema.optional(),
       })
       .strict(),
   ],
@@ -398,18 +399,24 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
   const outcomesById = Object.fromEntries(
     observedAssetIds.map((assetId) => {
       const record = recordsByAsset.get(assetId)!;
+      const diagnostics = input.capture.diagnosticsById?.[assetId];
+      const diagnosticFields = diagnostics?.length ? { diagnostics } : {};
+      const captureFailureReason = input.capture.failureReasonById?.[assetId];
       return [
         assetId,
         record.admissionCode === "supply-attribution.admission.accepted"
           ? {
               status: "accepted" as const,
               journalId: record.journalId,
+              ...diagnosticFields,
             }
           : {
               status: "rejected" as const,
               rejectionCode: record.rejectionCode!,
               failedRouteId: record.failedRouteId,
               journalId: record.journalId,
+              ...diagnosticFields,
+              ...(captureFailureReason ? { captureFailureReason } : {}),
             },
       ];
     }),
@@ -478,12 +485,12 @@ type SupplyAttributionGenerationCompatibilityReason =
   | "generation-stale";
 
 function withoutSupplyAttribution(
-  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): SafetyScoreV9CompilerInput {
-  return normalizeSafetyScoreV9CompilerInput({
+  return {
     ...fixedInput,
     safetyScoreV9SupplyAttributionById: {},
-  });
+  };
 }
 
 export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
@@ -656,10 +663,10 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   return {
     status: "applied",
     generationId: generation.generationId,
-    fixedInput: normalizeSafetyScoreV9CompilerInput({
+    fixedInput: {
       ...fixedInput,
       safetyScoreV9SupplyAttributionById: attributionById,
-    }),
+    },
     acceptedAssetIds: appliedAssetIds,
     rejectedAssetIds: [...generation.rejectedAssetIds],
     invalidAssetIds,

@@ -45,6 +45,8 @@ import { sleepWithSignal } from "../abort";
 import { SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import * as wmObserver from "../safety-score-v9/wm-supply-observer";
 import * as xautObserver from "../safety-score-v9/xaut-supply-observer";
+import * as economicObserver from "../safety-score-v9/economic-supply-observer";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 
 const SOURCE_CLOCK_SEC = v9TestClockSec();
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
@@ -618,6 +620,65 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
   });
 
+  it.each([false, true])("retains timed-out prefix diagnostics with bounded hard failure=%s", async hardFailure => {
+    vi.useFakeTimers();
+    vi.setSystemTime(SOURCE_CLOCK_SEC * 1_000);
+    try {
+      const input = {
+        ...makeV9FixedInput({ assetId: "srusd-reservoir", clockSec: SOURCE_CLOCK_SEC }),
+        chainCirculatingById: {},
+      };
+      const diagnostic: SupplyAttributionAttemptDiagnostic = {
+        observer: "layerzero-oft", sourceId: "srusd-ethereum-oft-escrow",
+        laneId: "ethereum:berachain", chainId: "ethereum", providerOrigin: "https://rpc.example",
+        method: "eth_getLogs", phase: "bootstrap-prefix",
+        beforeCursor: "100", afterCursor: "101", targetCursor: "200",
+        pinObservedAtSec: SOURCE_CLOCK_SEC, finalizedLagBlocks: 0,
+        persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true,
+        hardEvidenceFailure: false, failurePredicate: "history-incomplete",
+      };
+      const onBodyRead = vi.fn();
+      vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt")
+        .mockImplementation(async ({ onDiagnostic, onBodyRead: observeBody, signal }) => {
+          onDiagnostic?.(diagnostic);
+          observeBody?.({ intakeBytes: 32, declaredBytes: null, outcome: "accepted" });
+          if (hardFailure) {
+            for (let index = 0; index < 128; index++) {
+              onDiagnostic?.({ ...diagnostic, persisted: false, authenticatedCursorAdvanced: false });
+            }
+            onDiagnostic?.({ ...diagnostic, hardEvidenceFailure: true, failurePredicate: "packet-reconciliation-failed" });
+            onDiagnostic?.({ ...diagnostic, persisted: false, authenticatedCursorAdvanced: false });
+          }
+          await sleepWithSignal(SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs * 2, signal);
+          return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
+        });
+      const pending = captureSafetyScoreV9SupplyAttribution(input, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]), undefined, { clockMode: "source", onBodyRead });
+      await vi.runAllTimersAsync();
+      const capture = await pending;
+      expect(onBodyRead).toHaveBeenCalledExactlyOnceWith({
+        intakeBytes: 32, declaredBytes: null, outcome: "accepted",
+      });
+      expect(capture.journalRecords.find(record => record.assetId === "srusd-reservoir")?.diagnosticLeaf)
+        .toMatchObject({ predicate: hardFailure ? "packet-reconciliation-failed" : "history-incomplete" });
+      const diagnostics = capture.diagnosticsById?.["srusd-reservoir"] ?? [];
+      expect(diagnostics).toContainEqual(diagnostic);
+      expect(diagnostics.length).toBeLessThanOrEqual(128);
+      expect(diagnostics.some(row => row.hardEvidenceFailure)).toBe(hardFailure);
+      expect(capture.failureReasonById?.["srusd-reservoir"]).toBe("asset-timeout");
+      const generation = createSafetyScoreV9SupplyAttributionGeneration({
+        fixedInput: input, capture, capturedAtSec: Math.floor(Date.now() / 1_000),
+      });
+      expect(generation.outcomesById["srusd-reservoir"]).toMatchObject({
+        status: "rejected", captureFailureReason: "asset-timeout", diagnostics,
+      });
+      expect(parseSafetyScoreV9SupplyAttributionGeneration(
+        serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+      )).toEqual(generation);
+    } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
+  });
+
   it("derives capture rotation from the exact source bucket and keeps retry journal order", async () => {
     vi.useFakeTimers();
     try {
@@ -935,6 +996,25 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       applied.fixedInput.safetyScoreV9SupplyAttributionById,
     ).toEqual({});
   });
+  it.each(["applied", "unavailable", "incompatible"] as const)(
+    "shallow-composes %s attribution without copying the authoritative base",
+    status => {
+      const input = status === "incompatible" ? fixtures.staleTarget : fixtures.target;
+      const before = stableJsonStringifyV1(input);
+      const result = applySafetyScoreV9SupplyAttributionGeneration(
+        input, status === "unavailable" ? null : fixtures.acceptedGeneration,
+      );
+      expect(result.status).toBe(status);
+      expect(result.fixedInput).not.toBe(input);
+      for (const key of Object.keys(input) as Array<keyof typeof input>) {
+        if (key !== "safetyScoreV9SupplyAttributionById") {
+          expect(result.fixedInput[key]).toBe(input[key]);
+        }
+      }
+      expect(stableJsonStringifyV1(input)).toBe(before);
+      expect(result.fixedInput.baseInputGenerationId).toBe(input.baseInputGenerationId);
+    },
+  );
 
 
   // The capture fires on a 15-minute grid (5,20,35,50) positioned so :20 and :50

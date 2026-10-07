@@ -6,6 +6,9 @@ import {
   ContentAddressedJournalSafeIdentifierSchema,
   createContentAddressedJournal,
 } from "./content-addressed-journal";
+import type { SupplyAttributionAttemptDiagnostic } from "../types/safety-score-v9-supply-attribution";
+import { sha256Hex } from "./sha256";
+import { stableJsonStringifyV1 } from "./stable-json";
 
 const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
 // One cohort authority for the registry, stored generation, and journal loader.
@@ -55,6 +58,7 @@ export const SupplyAttributionRejectionCodeSchema = z.enum([
   "deployment-observation-skew",
   "deployment-observation-window-insufficient",
   "packet-reconciliation-failed",
+  "observer-body-over-cap",
   "transparency-source-config-unavailable",
   "transparency-source-unavailable",
   "transparency-payload-invalid",
@@ -91,6 +95,8 @@ const SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE = {
     "supply-attribution.admission.rejected-skew",
   "packet-reconciliation-failed":
     "supply-attribution.admission.rejected-reconciliation",
+  "observer-body-over-cap":
+    "supply-attribution.admission.rejected-upstream",
   "transparency-source-config-unavailable":
     "supply-attribution.admission.rejected-identity-drift",
   "transparency-source-unavailable":
@@ -131,6 +137,7 @@ const REVIEWED_DEPLOYMENT_REJECTION_CODES =
     "deployment-observation-skew",
     "deployment-observation-window-insufficient",
     "packet-reconciliation-failed",
+    "observer-body-over-cap",
   ]);
 
 const XAUT_REJECTION_CODES = new Set<SupplyAttributionRejectionCode>([
@@ -195,6 +202,10 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
     sourceObservedAtSec: z.number().int().nonnegative().nullable(),
     failedRouteId: ContentAddressedJournalSafeIdentifierSchema.nullable(),
     contentSha256: Sha256Schema.nullable(),
+    diagnosticLeaf: z.strictObject({
+      predicate: ContentAddressedJournalSafeIdentifierSchema.max(160),
+      evidenceSha256: Sha256Schema.optional(),
+    }).optional(),
   })
   .strict()
   .superRefine((record, ctx) => {
@@ -385,6 +396,22 @@ export function createSupplyAttributionJournalV1(
     );
   }
   return supplyAttributionJournal.create(payload);
+}
+
+/** Complete operands remain in the generation; never enlarge the journal cap. */
+export function withSupplyAttributionJournalDiagnosticV1(
+  payload: SupplyAttributionJournalV1Payload,
+  diagnostic: SupplyAttributionAttemptDiagnostic | undefined,
+): SupplyAttributionJournalV1Payload {
+  if (!diagnostic?.failurePredicate || payload.admissionCode === "supply-attribution.admission.accepted") return payload;
+  const predicate = diagnostic.failurePredicate;
+  const evidenceSha256 = sha256Hex(stableJsonStringifyV1(diagnostic));
+  for (const diagnosticLeaf of [{ predicate, evidenceSha256 }, { predicate }]) {
+    const candidate = { ...payload, diagnosticLeaf };
+    const journalId = computeSupplyAttributionJournalIdV1(candidate);
+    if (SupplyAttributionJournalV1Schema.safeParse({ ...candidate, journalId }).success) return candidate;
+  }
+  return payload;
 }
 
 export const SupplyAttributionJournalByIdV1Schema =

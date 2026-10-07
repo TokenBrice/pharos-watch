@@ -49,6 +49,8 @@ import {
 } from "../lib/safety-score-v9/capture-control";
 import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
 import type { V9ExecutionWindow } from "../lib/v9-slot-window";
+import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
+import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
 
 /**
  * A held attempt is only attributable if the numbers it was decided on reach
@@ -150,9 +152,16 @@ export async function computeSafetyScoreV9(
   options: { retainAcceptedReplay?: boolean; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const catalogAdmission = assessSafetyScoreV9ResourceBudget({
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes: null,
+  });
+  if (!catalogAdmission.admitted) return unavailable("resource-budget-exceeded", {
+    stage: "compile-admission", resourcePressure: catalogAdmission.resourcePressure,
+  });
   await reportProgress?.({
     stage: "input-load",
     message: "Loading publication-exact base and V9 seed inputs",
+    metadata: { resourcePressure: catalogAdmission.resourcePressure },
   });
   const caches = await getCaches(db, [
     NATIVE_V9_INPUT_CACHE_KEY,
@@ -169,6 +178,16 @@ export async function computeSafetyScoreV9(
   if (!caches.has(SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY)) {
     return unavailable("v9-exact-seed-missing");
   }
+  // Read one declared scalar without copying the large base64 transport. Full
+  // envelope, checksum and expanded-byte admission still belong to the codec.
+  const byteHeader = caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value.match(/"uncompressedBytes"\s*:\s*(\d+)/);
+  const inputBytes = byteHeader ? Number(byteHeader[1]) : null;
+  const byteAdmission = assessSafetyScoreV9ResourceBudget({
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: 0, inputBytes,
+  });
+  if (!byteAdmission.admitted) return unavailable("resource-budget-exceeded", {
+    stage: "compile-admission", resourcePressure: byteAdmission.resourcePressure,
+  });
 
   let baseArtifact: NativeV9InputCacheArtifact;
   const fixedInputCacheValue = options.retainAcceptedReplay === false
@@ -196,6 +215,14 @@ export async function computeSafetyScoreV9(
   }
 
   const fixedInput = baseArtifact.input;
+  const resourceAdmission = assessSafetyScoreV9ResourceBudget({
+    catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: fixedInput.activeAssetIds.length, inputBytes,
+  });
+  if (!resourceAdmission.admitted) return unavailable("resource-budget-exceeded", {
+    stage: "compile-admission", activeAssets: fixedInput.activeAssetIds.length,
+    resourcePressure: resourceAdmission.resourcePressure,
+  });
+  await reportProgress?.({ stage: "compile-admission", metadata: { resourcePressure: resourceAdmission.resourcePressure } });
   let latestStablecoinsUpdatedAt: number | null;
   try {
     latestStablecoinsUpdatedAt = await getCacheUpdatedAt(
@@ -502,6 +529,7 @@ export async function computeSafetyScoreV9(
         ).length,
       },
       supplyAttributionGeneration: supplyAttributionGenerationState,
+      resourcePressure: resourceAdmission.resourcePressure,
       publication: publicationDiagnostics,
     }),
     productivity: {

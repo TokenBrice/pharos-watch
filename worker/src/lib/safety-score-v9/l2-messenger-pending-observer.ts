@@ -6,6 +6,8 @@ import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader, type EvmRpcBatchCall } from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
 
 const PAGES_PER_ATTEMPT = 8;
 const LOGS_PER_PAGE = 2048;
@@ -101,11 +103,14 @@ export async function observeL2MessengerPending(input: {
   source: L2MessengerPendingRead; headers: readonly EvmBlockHeader[];
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: L2MessengerPendingCheckpoint;
+  onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: L2MessengerPendingProof; responseSha256: string; checkpoint: L2MessengerPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: L2MessengerPendingCheckpoint }
 > {
   let checkpoint: L2MessengerPendingCheckpoint | undefined;
+  let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
+  const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "l2-messenger", sourceId: input.source.sourceId, ...context, ...detail });
   try {
     const parsed = L2MessengerPendingReadSchema.safeParse(input.source);
     if (!parsed.success) fail("source-invalid");
@@ -116,6 +121,7 @@ export async function observeL2MessengerPending(input: {
     const options = { chainRpcs: input.chainRpcs, signal: input.signal };
     const rpc = async (index: number, calls: EvmRpcBatchCall[]) => {
       throwIfAborted(input.signal);
+      context = { ...context, chainId: chains[index]!, method: calls[0]?.method ?? "unknown", phase: "rpc" };
       const result = await fetchEvmRpcBatch(chains[index]!, calls, options);
       if (!result || result.length !== calls.length) fail("rpc-unavailable");
       return result!;
@@ -127,6 +133,8 @@ export async function observeL2MessengerPending(input: {
       const pin = input.headers[i]!;
       const finalized = await fetchEvmBlockHeader(chains[i]!, "finalized", options);
       const canonical = await fetchEvmBlockHeader(chains[i]!, pin.number, options);
+      context = { chainId: chains[i]!, phase: "pin-authentication", method: "eth_getBlockByNumber", pinObservedAtSec: pin.timestamp, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
+      emit({});
       if (!finalized || finalized.number < pin.number || pin.number < starts[i]! || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
       const contracts = source.contracts.filter(row => row.chainId === chains[i]);
       const identities = source.identityReads.filter(row => row.chainId === chains[i]);
@@ -223,6 +231,32 @@ export async function observeL2MessengerPending(input: {
       checkpoint = { schemaVersion: 2, sourceDigest, cursors, settlementPins: input.headers.map(pin => ({ number: pin.number, hash: pin.hash })) as L2MessengerPendingCheckpoint["settlementPins"], messages: [] };
     }
     const cp = checkpoint;
+    const savedCursors = cp.cursors.map(cursor => ({ nextBlock: cursor.nextBlock, logIndex: cursor.resume?.logIndex ?? -1 }));
+    const savedRedemptionCursors = new Map(cp.messages.filter(message => source.protocol === "arbitrum" && message.direction === "deposit").map(message => [message.id, { nextBlock: message.redeemNextBlock, logIndex: message.redeemResume?.logIndex ?? -1 }] as const));
+    const persistPrefix = async () => {
+      cp.settlementPins = input.headers.map(pin => ({ number: pin.number, hash: pin.hash })) as L2MessengerPendingCheckpoint["settlementPins"];
+      const serialized = stableJsonStringifyV1(cp);
+      if (new TextEncoder().encode(serialized).length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
+      for (let i = 0; i < 2; i++) {
+        const pin = input.headers[i]!, rechecked = await fetchEvmBlockHeader(chains[i]!, pin.number, options);
+        if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
+      }
+      if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
+      for (let i = 0; i < 2; i++) {
+        const cursor = cp.cursors[i]!, before = savedCursors[i]!, index = cursor.resume?.logIndex ?? -1;
+        if (cursor.nextBlock === before.nextBlock && index === before.logIndex) continue;
+        emit({ laneId: i === 0 ? "deposit" : "withdrawal", chainId: chains[i]!, method: "eth_getLogs", phase: "authenticated-prefix-persisted", beforeCursor: `${before.nextBlock}:${before.logIndex}`, afterCursor: `${cursor.nextBlock}:${index}`, targetCursor: String(input.headers[i]!.number + 1), pinObservedAtSec: input.headers[i]!.timestamp, persisted: input.db !== undefined, authenticatedCursorAdvanced: cursor.nextBlock > before.nextBlock || (cursor.nextBlock === before.nextBlock && index > before.logIndex), incompleteBootstrap: cp.cursors.some((row, j) => row.nextBlock <= input.headers[j]!.number) });
+        savedCursors[i] = { nextBlock: cursor.nextBlock, logIndex: index };
+      }
+      if (source.protocol === "arbitrum") for (const message of cp.messages) {
+        if (message.direction !== "deposit") continue;
+        const before = savedRedemptionCursors.get(message.id) ?? { nextBlock: source.l2StartBlock, logIndex: -1 }, index = message.redeemResume?.logIndex ?? -1;
+        if (message.redeemNextBlock === before.nextBlock && index === before.logIndex) continue;
+        emit({ laneId: `redemption:${message.id}`, chainId: source.l2ChainId, method: "eth_getLogs", phase: "authenticated-prefix-persisted", beforeCursor: `${before.nextBlock}:${before.logIndex}`, afterCursor: `${message.redeemNextBlock}:${index}`, targetCursor: String(input.headers[1]!.number + 1), pinObservedAtSec: input.headers[1]!.timestamp, persisted: input.db !== undefined, authenticatedCursorAdvanced: message.redeemNextBlock > before.nextBlock || (message.redeemNextBlock === before.nextBlock && index > before.logIndex), incompleteBootstrap: true });
+        savedRedemptionCursors.set(message.id, { nextBlock: message.redeemNextBlock, logIndex: index });
+      }
+      return serialized;
+    };
     let pages = 0, redemptionEvents = 0, relayHistoryIncomplete = false;
     let reservedSourcePages = cp.cursors.filter((cursor, i) => cursor.nextBlock <= input.headers[i]!.number).length;
     const logs = async (index: number, address: string, topics: unknown[], from: number, to: number) => {
@@ -355,6 +389,7 @@ export async function observeL2MessengerPending(input: {
     };
     for (let i = 0; i < 2; i++) {
       const cursor = cp.cursors[i]!;
+      context = { laneId: i === 0 ? "deposit" : "withdrawal", chainId: chains[i]!, pinObservedAtSec: input.headers[i]!.timestamp };
       // Fair budget: neither stream can starve the other during bootstrap.
       let directionPages = 0;
       const directionStart = classified;
@@ -453,6 +488,7 @@ export async function observeL2MessengerPending(input: {
           cursor.resume = { blockHash: stopped.blockHash, logIndex: Number(BigInt(stopped.logIndex)), nextNonce: String(eventNonce(decode(stopped)) + 1n) };
           cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, prefix: cursor.resume, height }));
           sourceHistoryIncomplete = true;
+          await persistPrefix();
           break;
         }
 
@@ -461,25 +497,23 @@ export async function observeL2MessengerPending(input: {
         if (!canonical || canonical.hash !== end.hash) fail("history-reorg");
         cursor.digest = sha256Hex(stableJsonStringifyV1({ previous: cursor.digest, from, to, hash: end.hash, logs: rows }));
         cursor.nextBlock = to + 1; cursor.anchorHash = end.hash; directionPages++;
+        await persistPrefix();
       }
     }
     const depositAmount = cp.messages.filter(message => message.direction === "deposit").reduce((sum, message) => sum + BigInt(message.amount), 0n);
     const withdrawalAmount = cp.messages.filter(message => message.direction === "withdrawal").reduce((sum, message) => sum + BigInt(message.amount), 0n);
-    cp.settlementPins = input.headers.map(pin => ({ number: pin.number, hash: pin.hash })) as L2MessengerPendingCheckpoint["settlementPins"];
-    const serialized = stableJsonStringifyV1(cp);
-    if (new TextEncoder().encode(serialized).length > CHECKPOINT_MAX_BYTES) fail("checkpoint-capacity");
-    for (let i = 0; i < 2; i++) {
-      const header = await fetchEvmBlockHeader(chains[i]!, input.headers[i]!.number, options);
-      if (!header || header.hash !== input.headers[i]!.hash) fail("pin-reorg");
+    const serialized = await persistPrefix();
+    if (sourceHistoryIncomplete || relayHistoryIncomplete || cp.cursors.some((cursor, i) => cursor.nextBlock !== input.headers[i]!.number + 1)) {
+      emit({ phase: "history-incomplete", incompleteBootstrap: true, failurePredicate: "history-incomplete" });
+      return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
     }
-    if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
-    if (sourceHistoryIncomplete || relayHistoryIncomplete || cp.cursors.some((cursor, i) => cursor.nextBlock !== input.headers[i]!.number + 1)) return { status: "rejected", reason: "history-incomplete", checkpoint: cp };
     const proof: L2MessengerPendingProof = { sourceDigest, checkpointDigest: sha256Hex(serialized), depositAmount: String(depositAmount), withdrawalAmount: String(withdrawalAmount),
       pins: chains.map((chainId, i) => ({ chainId, anchor: input.headers[i]!.number, anchorHash: input.headers[i]!.hash, observedAtSec: input.headers[i]!.timestamp, nextNonce: cp.cursors[i]!.nextNonce })) };
     const amount = String(depositAmount + withdrawalAmount);
     return { status: "accepted", amount, proof, responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })), checkpoint: cp };
   } catch (error) {
     rethrowIfAborted(error, input.signal);
+    emit({ hardEvidenceFailure: true, failurePredicate: error instanceof Error && error.message.startsWith("l2-pending:") ? error.message.slice(11) : "rpc-unavailable" });
     return { status: "rejected", reason: error instanceof Error && error.message.startsWith("l2-pending:") ? error.message.slice(11) : "rpc-unavailable" };
   }
 }

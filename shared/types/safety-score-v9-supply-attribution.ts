@@ -12,6 +12,32 @@ const EconomicSupplyHoldingKindSchema = vocabularySchema(vocabulary.holdingKinds
 const EconomicSupplyAccountingFamilySchema = vocabularySchema(vocabulary.accountingFamilies);
 const EconomicSupplyInFlightTreatmentSchema = vocabularySchema(vocabulary.inFlightTreatments);
 const REVIEWED_ECONOMIC_SUPPLY_MODEL = "reviewed-economic-deployment-partition-v1" as const;
+/** Acquisition provenance only: never relaxes packet admission or arithmetic. */
+export const SupplyAttributionAttemptDiagnosticSchema = z.strictObject({
+  observer: z.enum(["economic-deployment", "ccip", "layerzero-oft", "l2-messenger"]),
+  sourceId: z.string().min(1).max(160),
+  laneId: z.string().max(160).nullable(),
+  chainId: z.string().max(80).nullable(),
+  providerOrigin: z.string().max(240).nullable(),
+  method: z.string().max(80),
+  phase: z.string().max(80),
+  beforeCursor: z.string().max(80).nullable(),
+  afterCursor: z.string().max(80).nullable(),
+  targetCursor: z.string().max(80).nullable(),
+  pinObservedAtSec: z.number().int().nonnegative().nullable(),
+  finalizedLagBlocks: z.number().int().nonnegative().nullable(),
+  persisted: z.boolean(),
+  authenticatedCursorAdvanced: z.boolean(),
+  incompleteBootstrap: z.boolean(),
+  hardEvidenceFailure: z.boolean(),
+  failurePredicate: z.string().max(160).nullable(),
+  operands: z.record(z.string().max(80), z.union([z.string().max(256), z.number().finite(), z.boolean(), z.null()])).refine(value => Object.keys(value).length <= 16).optional(),
+});
+export type SupplyAttributionAttemptDiagnostic = z.infer<typeof SupplyAttributionAttemptDiagnosticSchema>;
+export const SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX = 128;
+export const SupplyAttributionAttemptDiagnosticsSchema = z.array(SupplyAttributionAttemptDiagnosticSchema).max(SUPPLY_ATTRIBUTION_ATTEMPT_DIAGNOSTICS_MAX);
+export const SupplyAttributionCaptureFailureReasonSchema = z.enum(["asset-timeout", "capture-window-exhausted", "observer-failed"]);
+export type SupplyAttributionCaptureFailureReason = z.infer<typeof SupplyAttributionCaptureFailureReasonSchema>;
 export const V9SupplyAttributionPolicySchema = z.strictObject({
   amountBases: z.array(EconomicSupplyAmountBasisSchema).min(1),
   accountingFamilies: z.array(EconomicSupplyAccountingFamilySchema).min(1),

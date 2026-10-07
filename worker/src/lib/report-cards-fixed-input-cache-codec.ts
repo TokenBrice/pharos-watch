@@ -9,7 +9,7 @@ export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exac
 
 const CACHE_MAX_BYTES = 1_900_000;
 const MAX_COMPRESSED_BYTES = 1_350_000;
-const MAX_UNCOMPRESSED_BYTES = 8_000_000;
+export const REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES = 8_000_000;
 
 export const FixedInputCacheEnvelopeFields = {
   kind: z.literal("report-cards-fixed-input-exact"),
@@ -42,7 +42,7 @@ export async function buildFixedInputCacheEntry(
   const compressed = await gzipCanonicalJson(payload, {
     label: options.label,
     maximumCompressedBytes: MAX_COMPRESSED_BYTES,
-    maximumUncompressedBytes: MAX_UNCOMPRESSED_BYTES,
+    maximumUncompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
   });
   const envelope = JSON.stringify({
     schemaVersion: options.schemaVersion,
@@ -94,7 +94,7 @@ export async function parseFixedInputCacheEntry<TEnvelope extends FixedInputCach
   const payloadText = await gunzipTextBounded(base64ToBytes(envelope.payload), {
     label: options.artifactLabel,
     maximumCompressedBytes: MAX_COMPRESSED_BYTES,
-    maximumUncompressedBytes: MAX_UNCOMPRESSED_BYTES,
+    maximumUncompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
     expectedUncompressedBytes: envelope.uncompressedBytes,
   });
   const payloadSha256 = sha256Hex(payloadText);

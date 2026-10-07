@@ -5,10 +5,12 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import type { ChainRpcConfig } from "../chain-registry";
+import { CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { emitSupplyAttributionDiagnostic } from "./supply-attribution-capture-budget";
 
 // ABI authorities: CCIP 1.5 commit 5e7b2096586bc32c6e975fc13f4c411eb687f833
 // and CCIP 1.6 commit 2114b90f39c82c052e05af7c33d42c1ae98f4180, Internal.sol.
@@ -59,9 +61,18 @@ const nextSequenceCall = (lane: Lane) => lane.version === "2.0.0" ? call("getExp
 function fail(reason: string): never { throw new Error(`ccip-pending:${reason}`); }
 function asLog(raw: unknown, envelopeOnly = false): Log {
   const parsed = LogSchema.safeParse(raw);
-  if (!parsed.success || (!envelopeOnly && parsed.data.data.length > MAX_LOG_DATA_LENGTH)) fail("log-invalid");
+  if (!parsed.success) throw new CcipLogInvalidError("asLog-schema", raw);
+  if (!envelopeOnly && parsed.data.data.length > MAX_LOG_DATA_LENGTH) throw new CcipLogInvalidError("asLog-payload-cap", raw);
   const row = parsed.data;
   return row;
+}
+class CcipLogInvalidError extends Error {
+  readonly operands: NonNullable<SupplyAttributionAttemptDiagnostic["operands"]>;
+  constructor(readonly predicate: string, raw: unknown) {
+    super("ccip-pending:log-invalid");
+    const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    this.operands = { address: typeof row.address === "string" ? row.address.slice(0, 256) : null, topicCount: Array.isArray(row.topics) ? row.topics.length : null, topic0: Array.isArray(row.topics) && typeof row.topics[0] === "string" ? row.topics[0].slice(0, 256) : null, dataLength: typeof row.data === "string" ? row.data.length : null, blockNumber: typeof row.blockNumber === "string" ? row.blockNumber.slice(0, 80) : null, transactionHash: typeof row.transactionHash === "string" ? row.transactionHash.slice(0, 80) : null, logIndex: typeof row.logIndex === "string" ? row.logIndex.slice(0, 80) : null, removed: typeof row.removed === "boolean" ? row.removed : null };
+  }
 }
 function decodeSend(log: Log, lane: Lane): { sequence: bigint; messageId: string; amount: bigint } {
   if (log.address !== lane.onRampAddress) fail("send-address-mismatch");
@@ -170,12 +181,16 @@ export async function observeCcipPending(input: {
   source: CcipPendingRead; headers: ReadonlyMap<string, EvmBlockHeader>; clockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; db?: D1Database;
   checkpoint?: CcipPendingCheckpoint;
+  onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
 }): Promise<
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: CcipPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: CcipPendingCheckpoint }
 > {
   const options = { chainRpcs: input.chainRpcs, signal: input.signal, excludeSupplementalRpc: true, maxRetries: 0 };
   let checkpoint: CcipPendingCheckpoint | undefined;
+  let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
+  const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "ccip", sourceId: input.source.sourceId, ...context, ...detail });
+  const savedCursors = new Map<string, number>();
   try {
     if (!CcipPendingReadSchema.safeParse(input.source).success) fail("source-invalid");
     const sourceDigest = sha256Hex(stableJsonStringifyV1(input.source));
@@ -184,9 +199,12 @@ export async function observeCcipPending(input: {
     const chains = [...new Set(input.source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))];
     for (const chain of chains) {
       const pin = input.headers.get(chain);
+      context = { chainId: chain, pinObservedAtSec: pin?.timestamp ?? null, method: "eth_getBlockByNumber", phase: "pin-authentication", operands: { scoringClockSec: input.clockSec, pinNumber: pin?.number ?? null } };
       if (!pin || !Number.isSafeInteger(input.clockSec) || pin.timestamp > input.clockSec || input.clockSec - pin.timestamp > policy.observationMaxAgeSec) fail("pin-stale-or-future");
       const finalized = await fetchEvmBlockHeader(chain, "finalized", options);
       const canonical = await fetchEvmBlockHeader(chain, pin.number, options);
+      context = { ...context, finalizedLagBlocks: finalized ? Math.max(0, pin.number - finalized.number) : null, operands: { scoringClockSec: input.clockSec, pinNumber: pin.number, finalizedNumber: finalized?.number ?? null, finalizedObservedAtSec: finalized?.timestamp ?? null } };
+      emit({});
       if (!finalized || finalized.number < pin.number || !canonical || canonical.hash !== pin.hash || canonical.timestamp !== pin.timestamp) fail("pin-not-finalized");
     }
     if (Math.max(...chains.map(chain => input.headers.get(chain)!.timestamp)) - Math.min(...chains.map(chain => input.headers.get(chain)!.timestamp)) > policy.observationMaxSkewSec) fail("pin-skew");
@@ -221,8 +239,9 @@ export async function observeCcipPending(input: {
         else { missing.push(requests[i]!); positions.push(i); }
       }
       if (missing.length > 0) {
+        context = { ...context, chainId: chain, method: missing[0]?.method ?? "unknown", phase: "rpc", providerOrigin: null };
         const result = await fetchEvmRpcBatch(chain, missing, options);
-        if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail("rpc-unavailable");
+        if (!result || result.length !== missing.length || result.some(value => value === undefined || value === null)) fail(chain === "monad" && missing.some(request => (request.method === "eth_call" || request.method === "eth_getCode") && request.params[1] !== null && typeof request.params[1] === "object" && "blockHash" in request.params[1]) ? CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON : "rpc-unavailable");
         for (let i = 0; i < result.length; i++) {
           const position = positions[i]!, key = keys[position]!;
           values[position] = result[i];
@@ -245,6 +264,7 @@ export async function observeCcipPending(input: {
     const discoveryBodies = new Map<string, unknown>();
     const discover = async (url: string, maxResponseBytes: number) => {
       if (discoveryBodies.has(url)) return discoveryBodies.get(url);
+      context = { ...context, method: "ccip-discovery", phase: "discovery", providerOrigin: new URL(url).origin };
       const response = await fetchJsonWithRetry<unknown>(url, { signal: input.signal }, 0, { maxResponseBytes, timeoutMs: 10000 });
       if (response) discoveryBodies.set(url, response.body);
       return response?.body;
@@ -254,6 +274,15 @@ export async function observeCcipPending(input: {
       const saved = stableJsonStringifyV1(checkpoint);
       if (saved.length > MAX_CHECKPOINT_BYTES) fail("checkpoint-capacity");
       await setCache(input.db, cacheKey, saved, input.signal);
+      for (let i = 0; i < checkpoint!.lanes.length; i++) {
+        const cp = checkpoint!.lanes[i]!, lane = input.source.lanes[i]!;
+        for (const [name, cursor, side, start] of [["sent", cp.sent, lane.source, lane.sourceStartBlock], ["executed", cp.executed, lane.destination, input.headers.get(lane.destination.chainId)!.number + 1]] as const) {
+          const key = `${lane.id}:${name}`, before = savedCursors.get(key) ?? start, target = input.headers.get(side.chainId)!.number + 1;
+          if (cursor.nextBlock === before) continue;
+          emit({ laneId: lane.id, chainId: side.chainId, method: "eth_getLogs", phase: "authenticated-prefix-persisted", beforeCursor: String(before), afterCursor: String(cursor.nextBlock), targetCursor: String(target), pinObservedAtSec: input.headers.get(side.chainId)!.timestamp, persisted: true, authenticatedCursorAdvanced: cursor.nextBlock > before, incompleteBootstrap: checkpoint!.lanes.length < input.source.lanes.length || checkpoint!.lanes.some((row, j) => row.sent.nextBlock < input.headers.get(input.source.lanes[j]!.source.chainId)!.number + 1 || row.executed.nextBlock < input.headers.get(input.source.lanes[j]!.destination.chainId)!.number + 1) });
+          savedCursors.set(key, cursor.nextBlock);
+        }
+      }
     };
     const state = async (lane: Lane, messages: readonly Pick<Message, "sequence" | "messageId">[]) => {
       const pin = input.headers.get(lane.destination.chainId)!;
@@ -275,6 +304,7 @@ export async function observeCcipPending(input: {
     const proofs: Proof["lanes"] = [];
     for (let i = 0; i < input.source.lanes.length; i++) {
       const lane = input.source.lanes[i]!, sourcePin = input.headers.get(lane.source.chainId)!, destPin = input.headers.get(lane.destination.chainId)!;
+      context = { laneId: lane.id, chainId: lane.source.chainId, pinObservedAtSec: sourcePin.timestamp, phase: "lane-authentication" };
       if (sourcePin.number < lane.sourceStartBlock) fail("pin-before-deployment");
       for (const [side, ramp, rampHash] of [[lane.source, lane.onRampAddress, lane.onRampRuntimeCodeSha256], [lane.destination, lane.offRampAddress, lane.offRampRuntimeCodeSha256]] as const) {
         const pin = input.headers.get(side.chainId)!, block = { blockHash: pin.hash, requireCanonical: true };
@@ -372,6 +402,8 @@ export async function observeCcipPending(input: {
           if (!anchor || anchor.hash !== cursor.anchorHash) fail("checkpoint-reorg");
         }
       }
+      savedCursors.set(`${lane.id}:sent`, cp.sent.nextBlock);
+      savedCursors.set(`${lane.id}:executed`, cp.executed.nextBlock);
       const discovery = DiscoverySchema.safeParse(await discover(`${API_BASE}/messages?sourceChainSelector=${lane.source.chainSelector}&destChainSelector=${lane.destination.chainSelector}&sourceTokenAddress=${lane.source.tokenAddress}&limit=${DISCOVERY_LIMIT}`, 128 * 1024));
       if (!discovery.success) fail("indexer-unavailable");
       discoveryDigest = sha256Hex(stableJsonStringifyV1({ previous: discoveryDigest, lane: lane.id, discovery: discovery.data }));
@@ -415,6 +447,7 @@ export async function observeCcipPending(input: {
     while (pages < PAGES_PER_ATTEMPT && idleChains < chains.length) {
       throwIfAborted(input.signal);
       const chainIndex = checkpoint.nextChainIndex, chain = chains[chainIndex]!, pin = input.headers.get(chain)!;
+      context = { chainId: chain, laneId: null, pinObservedAtSec: pin.timestamp, method: "eth_getLogs", phase: "history-page" };
       checkpoint.nextChainIndex = (chainIndex + 1) % chains.length;
       const backlog = scansByChain[chainIndex]!.filter(scan => (scan.sent ? scan.cp.sent : scan.cp.executed).nextBlock <= pin.number);
       if (backlog.length === 0) { idleChains++; continue; }
@@ -458,7 +491,7 @@ export async function observeCcipPending(input: {
         previousPosition = position;
         if (!addresses.includes(log.address) || !topics.includes(log.topics[0] as `0x${string}`)) fail("log-filter-mismatch");
         const topicCount = log.topics[0] === SEND_15 ? 1 : log.topics[0] === EXECUTION_15 || log.topics[0] === SEND_16 ? 3 : 4;
-        if (log.topics.length !== topicCount) fail("log-invalid");
+        if (log.topics.length !== topicCount) throw new CcipLogInvalidError("topic-count", log);
         const previous = blockHashes.get(log.blockNumber);
         if (previous !== undefined && previous !== log.blockHash) fail("event-anchor-mismatch");
         blockHashes.set(log.blockNumber, log.blockHash);
@@ -473,6 +506,7 @@ export async function observeCcipPending(input: {
         })) fail("event-anchor-mismatch");
       }
       for (const { lane, cp, sent, topic } of scans) {
+        context = { ...context, laneId: lane.id, chainId: chain };
         const cursor = sent ? cp.sent : cp.executed, additions: Message[] = [];
         const laneLogs = logs.filter(log => {
           if (Number(BigInt(log.blockNumber)) < cursor.nextBlock ||
@@ -485,7 +519,7 @@ export async function observeCcipPending(input: {
         for (const log of laneLogs) {
           // Bound payloads only after exact directed-lane routing. A valid
           // foreign message on this shared ramp cannot poison our census.
-          if (log.data.length > MAX_LOG_DATA_LENGTH) fail("log-invalid");
+          if (log.data.length > MAX_LOG_DATA_LENGTH) throw new CcipLogInvalidError("matched-payload-cap", log);
           if (sent) {
             const message = decodeSend(log, lane);
             if (message.sequence !== BigInt(cp.lastSequence) + 1n) fail("sequence-gap");
@@ -546,13 +580,18 @@ export async function observeCcipPending(input: {
       if (!rechecked || rechecked.hash !== pin.hash || rechecked.timestamp !== pin.timestamp) fail("pin-reorg");
     }
     if (input.db) await setCache(input.db, cacheKey, serialized, input.signal);
-    if (checkpoint.lanes.length !== input.source.lanes.length || checkpoint.lanes.some((cp, i) => cp.sent.nextBlock !== input.headers.get(input.source.lanes[i]!.source.chainId)!.number + 1 || cp.executed.nextBlock !== input.headers.get(input.source.lanes[i]!.destination.chainId)!.number + 1)) return { status: "rejected", reason: "history-incomplete", checkpoint };
+    if (checkpoint.lanes.length !== input.source.lanes.length || checkpoint.lanes.some((cp, i) => cp.sent.nextBlock !== input.headers.get(input.source.lanes[i]!.source.chainId)!.number + 1 || cp.executed.nextBlock !== input.headers.get(input.source.lanes[i]!.destination.chainId)!.number + 1)) {
+      emit({ phase: "history-incomplete", incompleteBootstrap: true, failurePredicate: "history-incomplete" });
+      return { status: "rejected", reason: "history-incomplete", checkpoint };
+    }
     const amount = proofs.reduce((sum, lane) => sum + BigInt(lane.amount), 0n).toString();
     const proof: Proof = { sourceDigest, checkpointDigest: sha256Hex(serialized), discoveryDigest, lanes: proofs,
       pins: chains.map(chainId => { const pin = input.headers.get(chainId)!; return { chainId, anchor: pin.number, anchorHash: pin.hash, observedAtSec: pin.timestamp }; }) };
     return { status: "accepted", amount, proof, responseSha256: sha256Hex(stableJsonStringifyV1({ proof, amount })), checkpoint };
   } catch (error) {
     rethrowIfAborted(error, input.signal);
+    const reason = error instanceof Error && error.message.startsWith("ccip-pending:") ? error.message.slice(13) : "rpc-unavailable";
+    emit({ hardEvidenceFailure: true, failurePredicate: error instanceof CcipLogInvalidError ? error.predicate : reason, ...(error instanceof CcipLogInvalidError ? { operands: error.operands } : {}) });
     return { status: "rejected", reason: error instanceof Error && error.message.startsWith("ccip-pending:") ? error.message.slice(13) : "rpc-unavailable" };
   }
 }

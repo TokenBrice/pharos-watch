@@ -8,8 +8,10 @@ import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../e
 import { ReviewedEconomicSupplyPlanSchema, type EconomicSupplyObservation, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
+import { getCache, setCache } from "../db-cache";
 
 vi.mock("../evm-rpc", () => ({ fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn() }));
+vi.mock("../db-cache", () => ({ getCache: vi.fn(), setCache: vi.fn() }));
 const address = (n: number) => toHex(n, { size: 20 });
 const hash = (n: number) => toHex(n, { size: 32 });
 const version = 1n << 240n;
@@ -102,6 +104,7 @@ async function observe(checkpoint?: Parameters<typeof observeL2MessengerPending>
   return observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), checkpoint });
 }
 beforeEach(() => {
+  vi.mocked(getCache).mockResolvedValue(null); vi.mocked(setCache).mockClear();
   finalized = false; delivered = false; withdrawalRelayed = false; missing = false; finalityHeight = 100; pinHeight = 2; initialBalance = 0n;
   logs = { ethereum: [], optimism: [] }; receipts = {}; storage = {};
   source = { kind: "evm-l2-messenger-pending", protocol: "op-stack", bridgeFlavor: "sky", sourceId: "test", chainId: "ethereum", l2ChainId: "optimism", finality: "finalized",
@@ -258,6 +261,23 @@ describe("canonical messenger pending liabilities", () => {
 });
 
 describe("bounded dense bridge histories", () => {
+  it("retains authenticated same-block cursor progress before a later child timeout", async () => {
+    for (let nonce = 0; nonce < 33; nonce++) opTransfer(true, 1n, 1, BigInt(nonce));
+    delivered = true;
+    const controller = new AbortController(), onDiagnostic = vi.fn();
+    vi.mocked(setCache).mockImplementationOnce(async () => { controller.abort(new Error("child timeout")); });
+    await expect(observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, signal: controller.signal, onDiagnostic })).rejects.toThrow("child timeout");
+    expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({ observer: "l2-messenger", laneId: "deposit", beforeCursor: "1:-1", persisted: true, authenticatedCursorAdvanced: true, incompleteBootstrap: true, hardEvidenceFailure: false }));
+    expect(onDiagnostic.mock.calls.every(([value]) => !value.hardEvidenceFailure)).toBe(true);
+  });
+  it("does not count timestamp-only rewrites as source cursor progress", async () => {
+    const first = await observe();
+    if (first.status !== "accepted") throw new Error("fixture");
+    const onDiagnostic = vi.fn();
+    await observeL2MessengerPending({ source, headers: [header(source.chainId, pinHeight), header(source.l2ChainId, pinHeight)], chainRpcs: new Map(), db: {} as D1Database, checkpoint: first.checkpoint, onDiagnostic });
+    expect(setCache).toHaveBeenCalled();
+    expect(onDiagnostic.mock.calls.every(([value]) => !value.authenticatedCursorAdvanced)).toBe(true);
+  });
   it.each([true, false])("converges across 257 same-block settled OP transfers (deposit=%s)", async deposit => {
     for (let nonce = 0; nonce < 257; nonce++) opTransfer(deposit, 1n, 1, BigInt(nonce));
     delivered = true; finalized = true; withdrawalRelayed = true;

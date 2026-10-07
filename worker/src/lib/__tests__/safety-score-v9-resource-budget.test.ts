@@ -13,6 +13,61 @@ import {
   expect,
   it,
 } from "vitest";
+import { assessSafetyScoreV9ResourceBudget, buildSafetyScoreV9ResourcePressure } from "../safety-score-v9/resource-budget";
+import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
+
+describe("Safety Score V9 compile admission", () => {
+  it.each([
+    [488, 397, true],
+    [489, 397, false],
+    [488, 398, false],
+  ])("admits catalog %i and active %i without slicing", (catalogAssets, activeAssets, admitted) => {
+    const result = assessSafetyScoreV9ResourceBudget({
+      catalogAssets, activeAssets, inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
+    });
+    expect(result).toEqual({
+      admitted, reason: admitted ? null : "resource-budget-exceeded",
+      resourcePressure: {
+        phase: "compile-admission", observedAt: expect.any(Number),
+        bodyCapBytes: null, cacheCapBytes: null, cacheEntryCapBytes: null, maxConcurrentDecodes: null,
+        inputCapBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES, catalogMaxAssets: 488,
+        intakeBytes: null, cacheBytes: null, rejectedBodies: null,
+        inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES, catalogAssets,
+        intakeBasis: "unavailable", cacheBasis: "unavailable",
+        platformOutcome: null, platformOutcomeSource: null,
+        heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
+        guard: admitted ? "within-policy" : "resource-budget-exceeded",
+      },
+    });
+  });
+
+  it("uses the codec expanded-byte ceiling and preserves unknown measurement", () => {
+    expect(assessSafetyScoreV9ResourceBudget({
+      catalogAssets: 488, activeAssets: 397,
+      inputBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES + 1,
+    })).toMatchObject({ admitted: false, reason: "resource-budget-exceeded" });
+    expect(assessSafetyScoreV9ResourceBudget({
+      catalogAssets: 488, activeAssets: 397, inputBytes: null,
+    })).toMatchObject({ admitted: true, resourcePressure: { inputBytes: null } });
+  });
+
+  it("keeps unmeasured producer fields null and assembles intake evidence", () => {
+    expect(buildSafetyScoreV9ResourcePressure()).toMatchObject({
+      phase: "not-measured", guard: "not-measured", intakeBytes: null,
+      inputBytes: null, catalogAssets: null, inputCapBytes: null, catalogMaxAssets: null,
+      intakeBasis: "unavailable", heapUsedBytes: null,
+      heapUnavailableReason: "workers-runtime-no-heap-api",
+    });
+    expect(buildSafetyScoreV9ResourcePressure({
+      phase: "supply-attribution-capture", bodyCapBytes: 1024 * 1024,
+      intakeBytes: 192, rejectedBodies: 1, guard: "within-policy",
+    })).toMatchObject({
+      phase: "supply-attribution-capture", bodyCapBytes: 1024 * 1024,
+      intakeBytes: 192, rejectedBodies: 1, intakeBasis: "actual-stream", guard: "resource-budget-exceeded",
+      inputCapBytes: null, catalogMaxAssets: null, platformOutcome: null, platformOutcomeSource: null,
+    });
+  });
+});
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
@@ -48,6 +103,9 @@ describe("Safety Score V9 canonical publication resource budget", {
         contents: `
           import { readFileSync } from "node:fs";
           import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
+          import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
+          import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
+          import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
           import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
           import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
           import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
@@ -64,7 +122,7 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { computePegScore } from "@shared/lib/peg-score";
 
           const capturePath = process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE;
-          const input = capturePath
+          let input = capturePath
             ? JSON.parse(readFileSync(capturePath, "utf8")).fixedInput
             : normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
           if (!capturePath) {
@@ -96,6 +154,17 @@ describe("Safety Score V9 canonical publication resource budget", {
               expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], input.clockSec - 180 * 86400, input.clockSec)),
             }),
           ]));
+          }
+          if (!capturePath) {
+            const admission = assessSafetyScoreV9ResourceBudget({
+              catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: input.activeAssetIds.length, inputBytes: null,
+            });
+            if (!admission.admitted) throw new Error(admission.reason);
+            const base = input;
+            input = applySafetyScoreV9SupplyAttributionGeneration(input, null).fixedInput;
+            if (input.baseInputGenerationId !== base.baseInputGenerationId ||
+              input.aggregateCirculatingById !== base.aggregateCirculatingById ||
+              input.dexLiqMap !== base.dexLiqMap) throw new Error("Attribution composition copied or changed the base");
           }
           let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, { allowRegistryMismatch: Boolean(capturePath) });
           if (process.env.CONTAGION_MATRIX === "1") {
