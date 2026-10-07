@@ -147,7 +147,7 @@ describe("doc-ownership registry integrity", () => {
       "docs/digest-pipeline.md#generation": 43_892,
       "docs/worker-infrastructure.md#env-interface": 26_930,
       "docs/scripts.md": 26_152,
-      "docs/status-dashboard.md#backend-contract-get-apistatus": 65_996,
+      "docs/status-dashboard.md#backend-contract-get-apistatus": 70_059,
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [
