@@ -62,6 +62,7 @@ describe("route context typing", () => {
       CLOUDFLARE_D1_STATUS_API_TOKEN: "token",
       CLOUDFLARE_D1_DATABASE_ID: "database",
       WORKER_CANARY_MODE: "shadow",
+      WORKER_V9_WORKFLOW_MODE: "shadow",
       CF_VERSION_METADATA: {
         id: "preview-id",
         tag: "preview-v1",
@@ -88,6 +89,7 @@ describe("route context typing", () => {
       CLOUDFLARE_D1_DATABASE_ID: "database",
     });
     expect(statusCtx.workerCanaryMode).toBe("shadow");
+    expect(statusCtx.v9WorkflowMode).toBe("shadow");
     expect(statusCtx.feedbackEnv).toBeUndefined();
 
     const workerVersionCtx = buildRouteContext({

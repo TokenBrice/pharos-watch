@@ -57,5 +57,5 @@ binding = "SAFETY_SCORE_V9_WORKFLOW"
 class_name = "SafetyScoreV9PublicationWorkflow"
 
 [vars]
-# ADR-26: the relocated Workflow remains a shadow-only pilot.
-WORKER_V9_WORKFLOW_MODE = "shadow"
+# ADR-26 kill switch: pause the shadow pilot after memory-limit failures.
+WORKER_V9_WORKFLOW_MODE = "off"

@@ -13,6 +13,7 @@ export interface CronSentinelOptions {
   mode: CronSentinelDispatchMode;
   nowSec?: number;
   operatorTelegramCreds?: TelegramCreds | null;
+  v9WorkflowMode?: string;
   signal?: AbortSignal;
 }
 
@@ -27,6 +28,7 @@ export async function runCronSentinel(
       source: "freshness",
       run: () => runCronStalenessWatchdog(db, options.signal, {
         operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+        v9WorkflowMode: options.v9WorkflowMode,
       }),
     });
     sources.push({

@@ -929,6 +929,11 @@ export function getCronJobMeta(job: string): CronJobMeta | null {
   return CRON_JOB_META_BY_ID.get(job) ?? null;
 }
 
+/** Disabled off-slot producers are not freshness/status obligations. */
+export function isCronJobExpected(job: string, v9WorkflowMode?: string): boolean {
+  return job !== "compute-safety-score-v9-workflow" || v9WorkflowMode === "shadow";
+}
+
 export function getCronStatusImpact(job: string): CronStatusImpact {
   return getCronJobMeta(job)?.statusImpact ?? "watch";
 }

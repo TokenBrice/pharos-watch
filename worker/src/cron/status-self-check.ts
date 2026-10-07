@@ -92,6 +92,7 @@ export interface StatusSelfCheckOptions {
   coingeckoApiKey?: string | null;
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
   workerCanaryMode?: WorkerCanaryMode;
+  v9WorkflowMode?: string;
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -776,7 +777,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   }, () => failedOutputs.add("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
-  const raw = await computeRawStatus(db, now);
+  const raw = await computeRawStatus(db, now, undefined, options.v9WorkflowMode);
   const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     () => failedOutputs.add("status_state"));
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;

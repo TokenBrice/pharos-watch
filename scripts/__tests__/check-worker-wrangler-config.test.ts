@@ -39,6 +39,7 @@ invocation_logs = true
 
 [vars]
 ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
+WORKER_V9_WORKFLOW_MODE = "off"
 
 [[rules]]
 type = "Data"
@@ -91,9 +92,18 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('[alias]', 'routes = []\n[alias]'),
       `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
       toml.replace('binding = "SAFETY_SCORE_V9_WORKFLOW"', 'binding = "WRONG_WORKFLOW"'),
+      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "shadow"'),
+      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "invalid"'),
+      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', ""),
     ]) {
       expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
     }
+  });
+  it("rejects re-enabling the paused Workflow expectation on public", () => {
+    const report = evaluateWorkerWranglerConfig(
+      VALID_CONFIG.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "shadow"'),
+    );
+    expect(report.issues).toContain('public [vars].WORKER_V9_WORKFLOW_MODE must be "off".');
   });
   it("rejects a missing lossless Worker catalog alias", () => {
     const report = evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
