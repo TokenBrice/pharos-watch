@@ -1,32 +1,9 @@
 import { Banknote, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
+import { RailArrow, RailStationChip, StationLabel } from "@/components/stablecoin-detail/rail-station";
 import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionAccessModel } from "@shared/types/redemption";
-
-function StationLabel({ children }: { children: string }) {
-  return (
-    <span className="text-[9px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
-      {children}
-    </span>
-  );
-}
-
-function RailArrow({ label }: { label?: string }) {
-  return (
-    <div className="flex min-w-8 flex-1 flex-col items-center gap-0.5">
-      {label ? (
-        <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
-          {label}
-        </span>
-      ) : null}
-      <div aria-hidden="true" className="flex w-full items-center">
-        <span className="h-px w-full bg-border" />
-        <span className="border-y-4 border-l-[5px] border-border border-y-transparent" />
-      </div>
-    </div>
-  );
-}
 
 /**
  * The access gate, drawn: restriction is geometry, not adjectives. A
@@ -99,34 +76,37 @@ export function RedemptionRouteRail({
         aria-label={`Redemption route: holders exit through ${accessLabel} access to ${routeFamilyLabel}, settling ${settlementLabel} into ${outputAssetLabel}.`}
         className="hidden items-center gap-3 sm:flex"
       >
-        <div className="flex flex-col gap-0.5">
+        {/* The kicker already names the station, so the chip carries only the
+            glyph; printing "Holder" in both read as a stutter. */}
+        <div className="flex shrink-0 flex-col gap-0.5">
           <StationLabel>Holder</StationLabel>
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1.5">
-            <UserRound aria-hidden="true" className="h-3 w-3 text-muted-foreground" />
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">Holder</span>
+          <span className="inline-flex w-fit items-center rounded-md border border-border/60 px-2.5 py-1.5">
+            <span className="flex h-4 items-center">
+              <UserRound aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
           </span>
         </div>
         <RailArrow />
-        <div className="flex flex-col gap-0.5">
+        <div className="flex shrink-0 flex-col gap-0.5">
           <StationLabel>Access</StationLabel>
           <AccessGate accessModel={accessModel} accessLabel={accessLabel} />
         </div>
         <RailArrow />
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <StationLabel>Venue</StationLabel>
-          <span className="inline-flex w-fit items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">
-            {routeFamilyLabel}
-          </span>
+          <RailStationChip title={routeFamilyLabel}>{routeFamilyLabel}</RailStationChip>
         </div>
-        <RailArrow label={settlementLabel} />
-        <div className="flex flex-col gap-0.5">
+        {/* The settlement leg never narrows below its label ("1-7 days"
+            overran a 45 px gap at 768); the venue and output chips, which
+            truncate with a title, give up the width instead. */}
+        <div className="flex min-w-fit flex-1">
+          <RailArrow label={settlementLabel} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-0.5">
           <StationLabel>Output</StationLabel>
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1.5">
-            <Banknote aria-hidden="true" className="h-3 w-3 text-muted-foreground" />
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">
-              {outputAssetLabel}
-            </span>
-          </span>
+          <RailStationChip icon={Banknote} tone="terminal" title={outputAssetLabel}>
+            {outputAssetLabel}
+          </RailStationChip>
         </div>
       </div>
       <FactGrid

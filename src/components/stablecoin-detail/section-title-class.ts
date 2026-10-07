@@ -19,8 +19,16 @@
  *   reader navigates to (the scrollspy targets).
  * - `DETAIL_MODULE_TITLE_CLASS` — a **module**: one card inside a section.
  *
- * A file should use one or the other, not both. Several still import both;
- * that is the drift, not the two-scale system itself.
+ * A file should use one or the other, not both.
+ *
+ * Users of each tier:
+ * - main column: `EvidenceModule` (`module`, `tile` and `strip` are widths or
+ *   layouts, not densities), including `PegStabilityCard` and the in-flow
+ *   twins of rail cards below `xl` (the Backing KPI and Regulatory standing
+ *   tiles, the Access posture strip), and `EvidenceStateStrip` with
+ *   `density="main"`;
+ * - rail: `RailCard`, `RailMetricCard` (the `xl+` rail copies only), and
+ *   `EvidenceStateStrip` with `density="rail"`.
  */
 export const DETAIL_SECTION_TITLE_CLASS = "text-lg font-semibold tracking-tight";
 export const DETAIL_MODULE_SHELL_CLASS = "pharos-card-shell gap-0 overflow-hidden py-0";

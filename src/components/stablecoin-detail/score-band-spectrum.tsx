@@ -3,9 +3,15 @@ import { cn } from "@/lib/utils";
 export interface SpectrumBand {
   key: string;
   label: string;
+  /**
+   * Optional one-word form printed while the spectrum is narrower than 36rem
+   * (a ~480 px tile). Labels are never ellipsized: without it, a label that
+   * does not fit its segment wraps at its spaces.
+   */
+  shortLabel?: string;
   /** Track fill when this band is active. Static Tailwind string. */
   fillClass: string;
-  /** Label tone when this band is active. Static Tailwind string. */
+  /** Label tone when this band is active. Static Tailwind string; must reach AA on the card. */
   textClass: string;
 }
 
@@ -19,7 +25,10 @@ export interface SpectrumBand {
  * - `range`: segments sized by real score cutoffs with a marker notched at
  *   the score — only for scores whose tones ARE range-derived (redemption).
  *
- * Phone widths cannot fit every label, so below `sm` the inactive labels hide
+ * Labels are 11 px sentence case at full muted contrast, sized to the
+ * spectrum's own container: the full label from 36rem, the band's
+ * `shortLabel` below it, wrapping at spaces when still too long. Phone
+ * widths cannot fit every label, so below `sm` the inactive labels hide
  * (keeping their width) and the active label shows in full, free to run under
  * its empty neighbours and anchored inward at either end of the track.
  */
@@ -56,7 +65,7 @@ export function ScoreBandSpectrum({
     mode === "range" && score != null ? Math.min(Math.max(score, 0), 100) : null;
 
   return (
-    <div role="img" aria-label={ariaLabel} className={cn("min-w-0", className)}>
+    <div role="img" aria-label={ariaLabel} className={cn("@container/spectrum w-full min-w-0", className)}>
       <div className="relative py-1">
         <div className="flex gap-1">
           {bands.map((band, index) => (
@@ -80,24 +89,34 @@ export function ScoreBandSpectrum({
       </div>
       {bands.every((band) => band.label === "") ? null : (
       <div className="mt-1 flex gap-1" aria-hidden="true">
-        {bands.map((band, index) => (
-          <span
-            key={band.key}
-            style={{ flexGrow: widths[index], flexBasis: 0 }}
-            className={cn(
-              "min-w-0 text-[9px] font-medium uppercase leading-tight tracking-[0.08em] sm:text-center",
-              index === activeIndex
-                ? cn(
-                    "whitespace-nowrap sm:truncate",
-                    index === 0 ? "text-left" : index === bands.length - 1 ? "text-right" : "text-center",
-                    band.textClass,
-                  )
-                : "invisible truncate text-center text-muted-foreground/60 sm:visible",
-            )}
-          >
-            {band.label}
-          </span>
-        ))}
+        {bands.map((band, index) => {
+          const active = index === activeIndex;
+          const shortLabel = band.shortLabel && band.shortLabel !== band.label ? band.shortLabel : null;
+          return (
+            <span
+              key={band.key}
+              style={{ flexGrow: widths[index], flexBasis: 0 }}
+              title={shortLabel ? band.label : undefined}
+              className={cn(
+                "min-w-0 hyphens-auto break-words text-[11px] font-medium leading-tight sm:text-center",
+                active
+                  ? cn(
+                      "whitespace-nowrap sm:whitespace-normal",
+                      index === 0 ? "text-left" : index === bands.length - 1 ? "text-right" : "text-center",
+                      band.textClass,
+                    )
+                  : "invisible text-center text-muted-foreground sm:visible",
+              )}
+            >
+              {shortLabel ? (
+                <>
+                  <span className="@xl/spectrum:hidden">{shortLabel}</span>
+                  <span className="hidden @xl/spectrum:inline">{band.label}</span>
+                </>
+              ) : band.label}
+            </span>
+          );
+        })}
       </div>
       )}
     </div>
