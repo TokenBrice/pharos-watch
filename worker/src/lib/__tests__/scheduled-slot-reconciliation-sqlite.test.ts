@@ -525,8 +525,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -567,8 +565,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -620,8 +616,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
     const run = sqlite.prepare(
       "SELECT status, error, duration_ms, metadata, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'",
@@ -684,8 +678,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "hourlyYieldSync",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
 
     // Three children wrote progress; the legacy parity child has unknown execution.
@@ -733,8 +725,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -803,8 +793,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: NEW_WORKER_VERSION,
-      reconcilerWorkerRole: "public",
     });
 
     expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
@@ -847,7 +835,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       }
       await sweepStaleScheduledSlotExecutions(db, {
         nowSec, staleAfterSec: 1_200, slotKey: "halfHourlyMeasuredExecution",
-        reconcilerWorkerVersion: heavyVersion, reconcilerWorkerRole: "heavy",
       });
       const row = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()!;
       expect(row.status).toBe(evidence === "verified" ? "skipped_neutral" : "error");

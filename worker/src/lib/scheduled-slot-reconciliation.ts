@@ -3,7 +3,6 @@ import {
   getScheduledTaskDescriptor,
   isScheduledTaskDueAt,
   SCHEDULED_SLOT_PLANS,
-  type ScheduledWorkerRole,
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -734,8 +733,6 @@ export async function reconcileStaleSlotArtifactsAndRecordEvent(
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
   fence?: StaleSlotReconciliationFence,
-  reconcilerWorkerVersion?: string | null,
-  reconcilerWorkerRole?: ScheduledWorkerRole,
 ): Promise<StaleSlotReconciliationSummary> {
   const owner = SCHEDULED_SLOT_PLANS[slot.slot_key as CronScheduleKey]?.worker;
   let ownerWorkerVersion: string | null = null;

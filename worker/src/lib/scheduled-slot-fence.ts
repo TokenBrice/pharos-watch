@@ -112,14 +112,6 @@ export interface ScheduledSlotSweepOptions {
   slotKey?: string;
   excludeSlotStartedAt?: number;
   signal?: AbortSignal;
-  /**
-   * Worker version of the process performing the sweep. Persisted into each
-   * synthetic abandonment row's metadata next to the dead slot's version, so
-   * "killed by deploy" (versions differ) vs "killed in place, e.g. OOM"
-   * (versions match) is decidable from D1 alone.
-   */
-  reconcilerWorkerVersion?: string | null;
-  reconcilerWorkerRole?: ScheduledWorkerRole;
 }
 
 export interface ScheduledSlotSweepSummary {
@@ -361,8 +353,6 @@ export async function sweepStaleScheduledSlotExecutions(
         generation: reconciliationGeneration,
         state: "reconciling",
       },
-      options.reconcilerWorkerVersion ?? null,
-      options.reconcilerWorkerRole,
     );
     const finished = await finishStaleScheduledSlotExecution(
       db,
@@ -401,7 +391,6 @@ async function claimScheduledSlotExecution(
   staleAfterSec: number,
   invocationId: string | null,
   workerVersion: string | null,
-  workerRole?: ScheduledWorkerRole,
 ): Promise<ScheduledSlotClaimResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const policy = resolveScheduledSlotPolicy(slotKey);
@@ -503,8 +492,6 @@ async function claimScheduledSlotExecution(
           generation: existing.execution_generation + 1,
           state: "running",
         },
-        workerVersion,
-        workerRole,
       );
       staleSlotTakeover.reconciliation = reconciliation;
       await runWithOverloadRetry(() =>
@@ -646,8 +633,6 @@ export async function runScheduledSlotWithFence(
         excludeSlotStartedAt: opts.slotStartedAt,
         staleAfterSec,
         limit: opts.preSweepLimit ?? 5,
-        reconcilerWorkerVersion: opts.workerVersion ?? null,
-        reconcilerWorkerRole: opts.workerRole,
       });
       if (summary.candidateSlots > 0 || summary.slotsReconciled > 0) {
         staleSlotPreSweep = summary;
@@ -666,7 +651,6 @@ export async function runScheduledSlotWithFence(
     staleAfterSec,
     opts.invocationId ?? owner,
     opts.workerVersion ?? null,
-    opts.workerRole,
   );
 
   if (claimResult.status === "duplicate") {
