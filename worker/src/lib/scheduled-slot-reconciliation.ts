@@ -499,17 +499,17 @@ async function reconcileStaleSlotArtifacts(
     abandonedJobs: [],
   };
   const expectedJobs = getExpectedJobsForScheduledSlot(slot.slot_key);
+  // A failed reconciliation has already replaced the slot's owner/generation.
+  // Its immutable execution slot still identifies every unfinished child,
+  // including replay children whose producer source slot is different.
   const attemptsResult = await runWithOverloadRetry(() => db.prepare(
     `SELECT * FROM scheduled_child_attempts WHERE execution_schedule_key = ?
-       AND execution_slot_started_at = ? AND execution_generation = ?
-       AND execution_invocation_id = ? AND execution_owner = ?`,
-  ).bind(slot.slot_key, slot.slot_started_at, slot.execution_generation,
-    slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`, slot.execution_owner)
+       AND execution_slot_started_at = ? AND terminal_token IS NULL`,
+  ).bind(slot.slot_key, slot.slot_started_at)
     .all<ScheduledChildAttemptRow>());
   const attempts = attemptsResult.results ?? [];
   const progressRows = await listProgressRowsForStaleSlot(db, slot.slot_started_at, expectedJobs);
   for (const attempt of attempts) {
-    if (attempt.terminal_token != null) continue;
     const existingProgress = progressRows.find((row) => row.job === attempt.job && row.started_at === attempt.started_at
       && row.slot_started_at === attempt.slot_started_at);
     if (existingProgress) { existingProgress.attempt = attempt; continue; }
@@ -530,6 +530,8 @@ async function reconcileStaleSlotArtifacts(
   const progressRowsWithoutOwner = progressRows.filter((progress) => !progress.lease_owner);
   const progressJobs = new Set([...progressRows.map((progress) => progress.job), ...attempts.map((attempt) => attempt.job)]);
   const noProgressJobs = expectedJobs.filter((job) => !progressJobs.has(job));
+  // Accepted terminals remain start evidence even without progress (or after
+  // cron-run pruning); do not manufacture a new attempt on a retry.
   const stillMissingProgressJobs: string[] = [];
   for (const job of noProgressJobs) {
     const row = await runWithOverloadRetry(() =>
@@ -539,9 +541,15 @@ async function reconcileStaleSlotArtifacts(
              FROM cron_run_progress
             WHERE job = ?
               AND slot_started_at = ?
+            UNION ALL
+           SELECT 1 AS present
+             FROM scheduled_child_attempts
+            WHERE execution_schedule_key = ?
+              AND execution_slot_started_at = ?
+              AND job = ?
             LIMIT 1`,
         )
-        .bind(job, slot.slot_started_at)
+        .bind(job, slot.slot_started_at, slot.slot_key, slot.slot_started_at, job)
         .first<{ present: number }>(),
     );
     if (!row && (await isSlotFenceCurrent(db, slot, fence))) {

@@ -5,6 +5,11 @@ import { logCronRun, cronEventCacheKey } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 import { buildResourcePressure } from "../cron-resource-pressure";
+import {
+  markScheduledChildStarted,
+  writeScheduledChildTerminal,
+  type ScheduledChildIdentity,
+} from "../scheduled-child-terminal";
 
 const NEW_WORKER_VERSION = "12345678-1234-1234-1234-123456789abc";
 const fixtures = createLatestSchemaFixtureTracker();
@@ -84,6 +89,124 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     fixtures.closeAll();
+  });
+
+  it.each([
+    { progressCleared: false, sourceSlotOffset: 0 },
+    { progressCleared: true, sourceSlotOffset: 0 },
+    { progressCleared: false, sourceSlotOffset: -1_800 },
+    { progressCleared: true, sourceSlotOffset: -1_800 },
+  ])("retries a claimed stale slot across generations (progress cleared: $progressCleared, source offset: $sourceSlotOffset)", async ({
+    progressCleared, sourceSlotOffset,
+  }) => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const slotStartedAt = nowSec - 3_600;
+    const childStartedAt = slotStartedAt + 10;
+    const identity: ScheduledChildIdentity = {
+      scheduleKey: "dewsPsiOffset", slotStartedAt: slotStartedAt + sourceSlotOffset,
+      job: "project-tape", producerPath: "dewsPsiOffset", producerKind: "scheduled-job",
+      invocationId: "original-producer", attemptNo: 1, workerVersion: "worker-old",
+      executionFence: {
+        scheduleKey: "dewsPsiOffset", slotStartedAt, invocationId: "original-execution",
+        owner: "owner-a", generation: 1, workerRole: "public",
+      },
+    };
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, execution_owner, execution_generation,
+         invocation_id, worker_version, started_at, updated_at, child_marker_version
+       ) VALUES ('dewsPsiOffset', ?, 'running', 'owner-a', 1,
+                 'original-execution', 'worker-old', ?, ?, 1)`,
+    ).run(slotStartedAt, slotStartedAt, childStartedAt);
+    const attemptKey = await markScheduledChildStarted(db, identity, childStartedAt, "dead-child");
+    sqlite.prepare(
+      `INSERT INTO cron_run_progress (job, started_at, updated_at, stage, lease_owner, slot_started_at)
+       VALUES ('project-tape', ?, ?, 'running', 'dead-child', ?)`,
+    ).run(childStartedAt, childStartedAt + 30, identity.slotStartedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('project-tape', 'dead-child', ?, ?, ?)`,
+    ).run(nowSec - 60, childStartedAt + 30, childStartedAt + 30);
+
+    // Already-terminal children must not be re-created as missing-start attempts
+    // under the failed reconciler's generation, even if they have no progress.
+    for (const job of ["compute-dews", "stability-index"]) {
+      const completedIdentity = { ...identity, job, slotStartedAt };
+      await markScheduledChildStarted(db, completedIdentity, slotStartedAt + 1);
+      expect((await writeScheduledChildTerminal(db, {
+        identity: completedIdentity, source: "real", token: `completed:${job}`,
+        startedAt: slotStartedAt + 1, completedAt: slotStartedAt + 2, durationMs: 1_000,
+        status: "ok", degradedReason: null, disposition: "completed", producerOutcome: "ok",
+        productivity: { productive: true },
+      })).accepted).toBe(true);
+    }
+    const completedAttempts = sqlite.prepare(
+      "SELECT * FROM scheduled_child_attempts WHERE terminal_token IS NOT NULL ORDER BY job",
+    ).all();
+    const completedRuns = sqlite.prepare("SELECT * FROM cron_runs ORDER BY job").all();
+
+    // Model an earlier sweep throwing after its successful CAS, optionally
+    // after deleting progress but before committing the child's terminal.
+    sqlite.prepare(
+      `UPDATE cron_slot_executions
+       SET state = 'reconciling', execution_owner = 'stale-slot:x',
+           execution_generation = 2, updated_at = ?
+       WHERE slot_key = 'dewsPsiOffset' AND slot_started_at = ?`,
+    ).run(nowSec - 600, slotStartedAt);
+    if (progressCleared) sqlite.prepare("DELETE FROM cron_run_progress WHERE job = 'project-tape'").run();
+    const retryOwner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    vi.spyOn(crypto, "randomUUID").mockReturnValueOnce(retryOwner);
+
+    await expect(sweepStaleScheduledSlotExecutions(db, {
+      nowSec, slotKey: "dewsPsiOffset",
+    })).resolves.toMatchObject({
+      candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 1,
+      notStartedCronRuns: 0, progressRowsCleared: progressCleared ? 0 : 1, leasesCleared: 1,
+    });
+    const terminal = sqlite.prepare(
+      `SELECT terminal_token, terminal_source, execution_owner, execution_generation,
+              execution_invocation_id FROM scheduled_child_attempts WHERE attempt_key = ?`,
+    ).get(attemptKey);
+    expect(terminal).toEqual({
+      terminal_token: expect.any(String), terminal_source: "synthetic",
+      execution_owner: "owner-a", execution_generation: 1, execution_invocation_id: "original-execution",
+    });
+    const run = sqlite.prepare(
+      `SELECT idempotency_key, schedule_key, slot_started_at, job, producer_path, producer_kind,
+              invocation_id, worker_version, started_at, status, metadata
+       FROM cron_runs WHERE idempotency_key = ?`,
+    ).get(attemptKey) as Record<string, unknown> & { metadata: string };
+    expect(run).toMatchObject({
+      idempotency_key: attemptKey, schedule_key: identity.scheduleKey,
+      slot_started_at: identity.slotStartedAt, job: identity.job, producer_path: identity.producerPath,
+      producer_kind: identity.producerKind, invocation_id: identity.invocationId,
+      worker_version: "worker-old", started_at: childStartedAt, status: "error",
+    });
+    expect(JSON.parse(run.metadata)).toMatchObject({
+      schedulerAttemptKey: attemptKey, schedulerTerminalToken: terminal?.terminal_token,
+      schedulerTerminalSource: "synthetic", slotWorkerVersion: "worker-old",
+    });
+    expect(sqlite.prepare(
+      `SELECT state, result_status, execution_owner, execution_generation, worker_version, started_at
+       FROM cron_slot_executions WHERE slot_key = 'dewsPsiOffset' AND slot_started_at = ?`,
+    ).get(slotStartedAt)).toEqual({
+      state: "finished", result_status: "error", execution_owner: retryOwner,
+      execution_generation: 3, worker_version: "worker-old", started_at: slotStartedAt,
+    });
+    expect(sqlite.prepare(
+      "SELECT * FROM scheduled_child_attempts WHERE terminal_source = 'real' ORDER BY job",
+    ).all()).toEqual(completedAttempts);
+    expect(sqlite.prepare("SELECT * FROM cron_runs WHERE job <> 'project-tape' ORDER BY job").all()).toEqual(completedRuns);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM scheduled_child_attempts").get()).toEqual({ count: 3 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
+    const attemptsAfterRetry = sqlite.prepare("SELECT * FROM scheduled_child_attempts ORDER BY job").all();
+    const runsAfterRetry = sqlite.prepare("SELECT * FROM cron_runs ORDER BY job").all();
+    await expect(sweepStaleScheduledSlotExecutions(db, {
+      nowSec: nowSec + 600, slotKey: "dewsPsiOffset",
+    })).resolves.toMatchObject({ candidateSlots: 0, slotsReconciled: 0, syntheticCronRuns: 0 });
+    expect(sqlite.prepare("SELECT * FROM scheduled_child_attempts ORDER BY job").all()).toEqual(attemptsAfterRetry);
+    expect(sqlite.prepare("SELECT * FROM cron_runs ORDER BY job").all()).toEqual(runsAfterRetry);
   });
 
   it("leaves existing producer history intact when a stale slot already has a terminal cron run", async () => {
