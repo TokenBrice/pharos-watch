@@ -5,11 +5,40 @@ import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } fro
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "@shared/lib/safety-score-v9/reserve-bound-policy";
+import { BUSINESS_CALENDAR_BOUND_POLICY } from "@shared/lib/business-calendars";
 import { buildSafetyScoreV9ReserveBoundFacts } from "../safety-score-v9/extension-reserve-bounds";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import rawReserveBounds from "@shared/data/safety-score-v9/reserve-bound-facts-v1.json";
+import { V9FactSetCoreV3Schema } from "@shared/types/safety-score-v9-facts";
+
+function factorBound(kind: "contractual-maturity-maximum" | "observed-portfolio-maturity" | "currently-liquid-fraction" | "stressed-realization-bound", overrides: Record<string, unknown> = {}): ReserveBoundedFact {
+  const envelope = research();
+  if (envelope.kind !== "eligibility-envelope") throw new Error("Invalid fixture kind");
+  const { kind: _kind, legallyBinding: _binding, exhaustive: _exhaustive, allocations: _allocations, ...base } = envelope;
+  const payloads = {
+    "contractual-maturity-maximum": { claimId: "fixture-bill", legallyBinding: true, allInScope: true, maximumTerm: { value: 30, unit: "days" } },
+    "observed-portfolio-maturity": { coveredGrossValue: 100, totalGrossValue: 100, coverageAsOfSec: base.asOfSec, denomination: "USD", observedMaximumDays: 30, instruments: [{ instrumentId: "fixture-bill", maturityAtSec: base.asOfSec + 30 * 86400, grossMarkedValue: 100, denomination: "USD" }] },
+    "currently-liquid-fraction": { asOfSec: clock - 100, assetId: "usdc-circle", unit: "USDC", chain: "ethereum", currentlyWithdrawable: 100, totalHeld: 100, snapshotAtSec: clock - 100, availabilityMeaning: "currently-withdrawable-native-asset" },
+    "stressed-realization-bound": { coveredGrossValue: 100, totalGrossValue: 100, coverageAsOfSec: base.asOfSec, collateralId: "fixture", scenario: "documented liquidation", haircutBudgetBps: 100, settlementAsset: "fiat:USD", executionConditions: "Full position binding final-cash settlement", realizationStage: "final-cash-settlement", elapsedTimeSec: 86400 },
+  } as const;
+  return ReserveBoundedFactSchema.parse({ ...base, factKey: `fixture:${kind}`, kind, scope: { kind: "exposure", exposureKey: "fixture:reserve" }, ...payloads[kind], ...overrides });
+}
+
+function compileFactorBounds(bounds: readonly ReserveBoundedFact[]) {
+  const fixed = makeV9FixedInput({
+    clockSec: clock,
+    reserves: [{ sourceKey: "fixture:reserve", name: "Fixture reserve", pct: 100, risk: "medium", assetClass: "other", issuerOrObligor: "Fixture obligor", liquidityHorizon: "unknown" }],
+  });
+  const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+  const { v9FactSetDigest: _digest, ...core } = compileSafetyScoreV9FactSetFromFixedInput(fixed, {
+    ...extension,
+    assets: extension.assets.map(row => row.assetId === "alpha" ? { ...row, reserveBoundFacts: [...bounds] } : row),
+  });
+  return core;
+}
 
 // Authoritative D1 snapshot fetched 2026-10-02 20:15:17Z (Ethereum block 26106961).
 const ousdRows: ReserveSlice[] = [{
@@ -43,6 +72,12 @@ function compile(fact?: ReserveBoundedFact) {
   return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets.find((row) => row.assetId === "alpha")!;
 }
 describe("reserve bound compiler admission", () => {
+  it("keeps dependency-light bound policy identical to the validated candidate", () => {
+    expect(V9_CANDIDATE_RESERVE_BOUND_POLICY.backing).toEqual(V9_CANDIDATE_POLICY_V1.policy.semantic.backing);
+    expect(V9_CANDIDATE_RESERVE_BOUND_POLICY.reviewedResearchMaxAgeSec).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec);
+    expect(BUSINESS_CALENDAR_BOUND_POLICY.reviewedMaxAgeSec).toBe(V9_CANDIDATE_RESERVE_BOUND_POLICY.reviewedResearchMaxAgeSec);
+  });
+
   it("rejects live rows that impersonate reviewed research", () => {
     expect(() => buildSafetyScoreV9ReserveBoundFacts("alpha", [{
       name: "Cash", pct: 100, risk: "very-low", sourceKey: "reserve:cash", boundedFacts: [research()],
@@ -150,5 +185,75 @@ describe("reserve bound compiler admission", () => {
     const beta = facts.assets.find((row) => row.assetId === "beta")!;
     expect(beta.reserveStatus).toEqual(baseline.assets.find((row) => row.assetId === "beta")!.reserveStatus);
     expect(beta.gaps.some((gap) => gap.path.kind === "local-component" && gap.path.componentKey === "asset-compilation")).toBe(false);
+  });
+  it.each([
+    ["contractual-maturity-maximum", "maturity"],
+    ["observed-portfolio-maturity", "maturity"],
+    ["currently-liquid-fraction", "liquidity"],
+    ["stressed-realization-bound", "liquidity"],
+  ] as const)("publishes a fully selected %s bound as known without changing its evaluated score", (kind, factor) => {
+    const fact = factorBound(kind);
+    const compiled = compileFactorBounds([fact]);
+    const asset = compiled.assets.find(row => row.assetId === "alpha")!;
+    const baseline = compileFactorBounds([]).assets.find(row => row.assetId === "alpha")!;
+    const exposure = asset.reserveExposures[0]!;
+    expect(exposure.factorStatuses?.[factor]).toMatchObject({ observationState: "known", gapIds: [] });
+    expect(exposure.factorStatuses?.[factor]?.evidenceRefIds).toContain(`alpha:reserve-bound:${fact.factKey}`);
+    expect(asset.gaps.some(gap => gap.causeScope?.requiredDatum === (factor === "maturity" ? "maturityDaysMax" : "liquidityHorizon"))).toBe(false);
+    expect(V9FactSetCoreV3Schema.safeParse(compiled).error?.issues).toBeUndefined();
+    const before = evaluateV9ReserveExposures({ ...baseline, reserveBoundFacts: asset.reserveBoundFacts, resolvedUpstreamExposures: [], asOfSec: clock }, V9_CANDIDATE_POLICY_V1);
+    const after = evaluateV9ReserveExposures({ ...asset, resolvedUpstreamExposures: [], asOfSec: clock }, V9_CANDIDATE_POLICY_V1);
+    expect(after.score).toBe(before.score);
+    expect(after.contributions.map(row => row.score)).toEqual(before.contributions.map(row => row.score));
+  });
+  it.each([
+    ["non-binding", () => factorBound("contractual-maturity-maximum", { legallyBinding: false }), "maturity"],
+    ["partial-contract", () => factorBound("contractual-maturity-maximum", { allInScope: false }), "maturity"],
+    ["sub-instrument", () => factorBound("contractual-maturity-maximum", { scope: { kind: "sub-instrument", exposureKey: "fixture:reserve", instrumentId: "bill", coveredShare: 0.5, coverageAsOfSec: clock - 86400 } }), "maturity"],
+    ["partial-observed", () => factorBound("observed-portfolio-maturity", { totalGrossValue: 200 }), "maturity"],
+    ["incomplete-roster", () => factorBound("observed-portfolio-maturity", { instruments: [{ instrumentId: "bill", maturityAtSec: null, grossMarkedValue: 100, denomination: "USD" }] }), "maturity"],
+    ["partial-availability", () => factorBound("currently-liquid-fraction", { currentlyWithdrawable: 99 }), "liquidity"],
+    ["partial-realization", () => factorBound("stressed-realization-bound", { totalGrossValue: 200 }), "liquidity"],
+    ["collateral-only", () => factorBound("stressed-realization-bound", { realizationStage: "collateral-transfer" }), "liquidity"],
+    ["wrong-settlement", () => factorBound("stressed-realization-bound", { settlementAsset: "USDC" }), "liquidity"],
+    ["wrong-scope", () => factorBound("contractual-maturity-maximum", { scope: { kind: "exposure", exposureKey: "wrong:reserve" } }), "maturity"],
+    ["future", () => factorBound("contractual-maturity-maximum", { asOfSec: clock + 1 }), "maturity"],
+    ["same-day", () => factorBound("contractual-maturity-maximum", { provenance: { kind: "reviewed-research", reviewedAt: "2026-10-01", reviewer: "fixture", confidence: "high" } }), "maturity"],
+    ["stale", () => factorBound("contractual-maturity-maximum", { asOfSec: clock - 366 * 86400 }), "maturity"],
+  ] as const)("preserves the missing factor for %s evidence", (_label, makeBound, factor) => {
+    const asset = compileFactorBounds([makeBound()]).assets.find(row => row.assetId === "alpha")!;
+    expect(asset.reserveExposures[0]?.factorStatuses?.[factor]?.observationState).toBe("missing");
+    expect(asset.gaps.some(gap => gap.causeScope?.requiredDatum === (factor === "maturity" ? "maturityDaysMax" : "liquidityHorizon"))).toBe(true);
+  });
+  it("does not sum partial bounds or use a weaker full bound instead of the selected partial realization", () => {
+    const full = factorBound("stressed-realization-bound", { elapsedTimeSec: 10000 * 86400 });
+    const partial = factorBound("stressed-realization-bound", {
+      factKey: "partial:realization",
+      scope: { kind: "sub-instrument", exposureKey: "fixture:reserve", instrumentId: "fast-position", coveredShare: 0.5, coverageAsOfSec: clock - 86400 },
+      elapsedTimeSec: 86400,
+    });
+    const asset = compileFactorBounds([full, partial]).assets.find(row => row.assetId === "alpha")!;
+    expect(asset.reserveExposures[0]?.factorStatuses?.liquidity?.observationState).toBe("missing");
+    const second = ReserveBoundedFactSchema.parse({ ...partial, factKey: "second:partial", scope: { kind: "sub-instrument", exposureKey: "fixture:reserve", instrumentId: "second-position", coveredShare: 0.5, coverageAsOfSec: clock - 86400 } });
+    const partialOnly = compileFactorBounds([partial, second]).assets.find(row => row.assetId === "alpha")!;
+    expect(partialOnly.reserveExposures[0]?.factorStatuses?.liquidity?.observationState).toBe("missing");
+  });
+  it("requires the factor's selected evidence reference and current bound in the fact-set contract", () => {
+    const compiled = compileFactorBounds([factorBound("contractual-maturity-maximum")]);
+    const asset = compiled.assets.find(row => row.assetId === "alpha")!;
+    const exposure = asset.reserveExposures[0]!;
+    const status = exposure.factorStatuses!.maturity!;
+    const missingReference = {
+      ...compiled, assets: compiled.assets.map(row => row.assetId === "alpha" ? {
+        ...row, reserveExposures: [{ ...exposure, factorStatuses: { ...exposure.factorStatuses, maturity: { ...status, evidenceRefIds: exposure.status.evidenceRefIds } } }],
+      } : row),
+    };
+    expect(V9FactSetCoreV3Schema.safeParse(missingReference).success).toBe(false);
+    const staleBound = {
+      ...compiled, assets: compiled.assets.map(row => row.assetId === "alpha" ? {
+        ...row, reserveBoundFacts: row.reserveBoundFacts!.map(bound => ({ ...bound, freshnessMaxAgeSec: 1 })),
+      } : row),
+    };
+    expect(V9FactSetCoreV3Schema.safeParse(staleBound).success).toBe(false);
   });
 });

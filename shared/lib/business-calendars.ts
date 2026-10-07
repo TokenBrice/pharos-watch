@@ -2,12 +2,12 @@ import { REVIEWED_BUSINESS_CALENDARS } from "../data/business-calendars/reviewed
 import type { ReviewedBusinessCalendar } from "../types/business-calendars";
 import { RedemptionBusinessDayTermsSchema, type RedemptionBusinessDayTerms } from "../types/redemption";
 import { isValidIsoDateOnly } from "../types/date-primitives";
-import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "./safety-score-v9/evidence";
+import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "./safety-score-v9/reserve-bound-policy";
 
 /** One authority for the admissible submission horizon and reviewed-calendar age. */
 export const BUSINESS_CALENDAR_BOUND_POLICY = {
   submissionHorizonDays: 365,
-  reviewedMaxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+  reviewedMaxAgeSec: V9_CANDIDATE_RESERVE_BOUND_POLICY.reviewedResearchMaxAgeSec,
 } as const;
 export type BusinessCalendarBound =
   | { state: "known"; maximumElapsedSec: number; completionDate: string; worstSubmissionDate: string; calendarId: string; calendarReviewedAt: string; sourceUrls: readonly string[] }

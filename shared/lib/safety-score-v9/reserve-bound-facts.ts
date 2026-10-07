@@ -75,8 +75,8 @@ function observedDays(fact: Extract<ReserveBoundedFact, { kind: "observed-portfo
   if (fact.instruments.length === 0 || fact.instruments.some((row) => row.maturityAtSec === null || row.maturityAtSec <= fact.asOfSec)) return null;
   return Math.max(fact.observedMaximumDays ?? 0, ...fact.instruments.map((row) => Math.ceil((row.maturityAtSec! - fact.asOfSec) / 86400)));
 }
-export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, baseline: { liquidity: number; maturity: number }): { liquidity: number; maturity: number; liquidityCoveredShare: number; maturityCoveredShare: number; liquidityCoveredQuality: number | null; maturityCoveredQuality: number | null; evidenceRefIds: string[]; contradiction: boolean } {
-  if (rows.length === 0) return { ...baseline, liquidityCoveredShare: 0, maturityCoveredShare: 0, liquidityCoveredQuality: null, maturityCoveredQuality: null, evidenceRefIds: [], contradiction: false };
+export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number, baseline: { liquidity: number; maturity: number }): { liquidity: number; maturity: number; liquidityCoveredShare: number; maturityCoveredShare: number; liquidityCoveredQuality: number | null; maturityCoveredQuality: number | null; liquidityEvidenceRefIds: readonly string[]; maturityEvidenceRefIds: readonly string[]; evidenceRefIds: string[]; contradiction: boolean } {
+  if (rows.length === 0) return { ...baseline, liquidityCoveredShare: 0, maturityCoveredShare: 0, liquidityCoveredQuality: null, maturityCoveredQuality: null, liquidityEvidenceRefIds: [], maturityEvidenceRefIds: [], evidenceRefIds: [], contradiction: false };
   const facts = coherentFacts(rows, clockSec).filter((row) => row.fact.scope.kind !== "reserve-envelope" && row.fact.scope.exposureKey === exposure.exposureKey);
   const openEndedScopes = new Set(facts.flatMap((row) => row.fact.kind === "maturity-applicability" &&
     row.fact.conclusion === "open-ended" && row.fact.allInScope ? [reserveBoundScopeKey(row.fact.scope)] : []));
@@ -89,7 +89,7 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     const days = observedDays(observation.fact);
     return days !== null && days > reserveBoundTermDays(contract.fact.maximumTerm);
   }));
-  const liquidity: { quality: number; share: number; coveredQuality: number | null }[] = [], maturity: { quality: number; share: number; coveredQuality: number | null }[] = [], refs: string[] = [];
+  const liquidity: { quality: number; share: number; coveredQuality: number | null; evidenceRefIds: readonly string[] }[] = [], maturity: typeof liquidity = [], refs: string[] = [];
   const classKnown = (exposure.factorStatuses?.assetClass ?? exposure.status).observationState === "known";
   const maturityKnown = (exposure.factorStatuses?.maturity ?? exposure.status).observationState === "known";
   const liquidityKnown = (exposure.factorStatuses?.liquidity ?? exposure.status).observationState === "known";
@@ -135,25 +135,43 @@ export function resolveV9ReserveFactorBounds(exposure: V9ReserveExposureFactV2, 
     if (factor === "maturity" && classKnown && exposure.assetClass !== null && policy.reserve.maturityNotApplicableClasses.includes(exposure.assetClass)) continue;
     if (factor === "maturity" && !missingMaturity && quality > baseline.maturity) continue;
     if (factor === "liquidity" && !missingLiquidity && quality > baseline.liquidity) continue;
-    (factor === "liquidity" ? liquidity : maturity).push({ quality: baseline[factor] + share * (quality - baseline[factor]), share, coveredQuality: quality });
+    (factor === "liquidity" ? liquidity : maturity).push({ quality: baseline[factor] + share * (quality - baseline[factor]), share, coveredQuality: quality, evidenceRefIds: row.status.evidenceRefIds });
     refs.push(...row.status.evidenceRefIds);
   }
   // Independent positive bounds establish at least the strongest lower bound,
   // never the sum of possibly overlapping coverage. Any adverse bound still binds.
-  const selected = (candidates: readonly { quality: number; share: number; coveredQuality: number | null }[], baselineQuality: number) => {
+  const selected = (candidates: readonly { quality: number; share: number; coveredQuality: number | null; evidenceRefIds: readonly string[] }[], baselineQuality: number) => {
     const adverse = candidates.some(row => row.quality < baselineQuality);
     return candidates.reduce((best, row) =>
       (adverse ? row.quality < best.quality : row.quality > best.quality) ||
         (row.quality === best.quality && row.share > best.share) ? row : best,
-    { quality: baselineQuality, share: 0, coveredQuality: null });
+    { quality: baselineQuality, share: 0, coveredQuality: null, evidenceRefIds: [] as readonly string[] });
   };
   const liquid = selected(liquidity, baseline.liquidity), mature = selected(maturity, baseline.maturity);
   return {
     liquidity: liquid.quality, maturity: mature.quality,
     liquidityCoveredShare: liquid.share, maturityCoveredShare: mature.share,
     liquidityCoveredQuality: liquid.coveredQuality, maturityCoveredQuality: mature.coveredQuality,
+    liquidityEvidenceRefIds: liquid.evidenceRefIds, maturityEvidenceRefIds: mature.evidenceRefIds,
     evidenceRefIds: [...new Set(refs)].sort(),
     contradiction,
+  };
+}
+
+/** A factor is known only when the evaluator's selected bound covers the entire exposure. */
+export function v9FullyBoundReserveFactorEvidence(
+  exposure: V9ReserveExposureFactV2, rows: readonly V9ReserveBoundedFact[],
+  policy: V9BackingSemanticPolicy, clockSec: number,
+): { liquidity: readonly string[]; maturity: readonly string[] } {
+  const bounds = resolveV9ReserveFactorBounds(exposure, rows, policy, clockSec, {
+    liquidity: policy.reserve.liquidityQuality.unknown,
+    maturity: policy.reserve.maturityUnknownQuality,
+  });
+  return {
+    liquidity: bounds.liquidityCoveredShare === 1 && bounds.liquidityCoveredQuality !== null
+      ? bounds.liquidityEvidenceRefIds : [],
+    maturity: bounds.maturityCoveredShare === 1 && bounds.maturityCoveredQuality !== null
+      ? bounds.maturityEvidenceRefIds : [],
   };
 }
 export function evaluateV9ReserveEligibilityEnvelope(rows: readonly V9ReserveBoundedFact[], policy: V9BackingSemanticPolicy, clockSec: number): { quality: number; evidenceRefIds: string[] } | null {

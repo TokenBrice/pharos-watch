@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
+import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "../lib/safety-score-v9/reserve-bound-policy";
+import { v9FullyBoundReserveFactorEvidence } from "../lib/safety-score-v9/reserve-bound-facts";
 import { ReserveScopedAdmissionSchema } from "./safety-score-v9-reserve-scope";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import { V9AccessClaimGraphSchema, v9AccessClaimGraphStatuses } from "./safety-score-v9-access-lookthrough";
@@ -1843,8 +1845,34 @@ const V9AssetFactsV3ObjectSchema = z
     gaps: canonicalArrayBy(V9FactGapV3Schema, (gap) => gap.gapId),
   })
   .strict();
+
+function validateReserveFactorStatuses(
+  asset: z.infer<typeof V9AssetFactsV3ObjectSchema>, ctx: z.RefinementCtx,
+  path: (string | number)[], clockSec: number,
+): void {
+  for (const [index, exposure] of asset.reserveExposures.entries()) {
+    const boundEvidence = v9FullyBoundReserveFactorEvidence(exposure, asset.reserveBoundFacts ?? [], V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, clockSec);
+    for (const [key, missing] of [
+      ["assetClass", exposure.assetClass === null],
+      ["liquidity", exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown"],
+      ["maturity", exposure.maturityDaysMax === null],
+      ["obligorConcentration", exposure.issuerOrObligorKey === null],
+    ] as const) {
+      const status = exposure.factorStatuses?.[key];
+      const fullyBound = (key === "liquidity" || key === "maturity") &&
+        boundEvidence[key].length > 0 && boundEvidence[key].every(id => status?.evidenceRefIds.includes(id));
+      if (missing && !fullyBound && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
+        addIssue(ctx, [...path, "reserveExposures", index, "factorStatuses", key], "Unknown reserve subfield requires its own cause-bearing status");
+      }
+    }
+  }
+}
+
 export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) => {
   validateAssetFacts(asset, ctx);
+  // Standalone assets can check bound identity/coverage; the enclosing fact set
+  // repeats this validation with its authoritative clock to enforce freshness.
+  validateReserveFactorStatuses(asset, ctx, [], (asset.reserveBoundFacts ?? []).reduce((latest, row) => Math.max(latest, row.fact.asOfSec), 0));
   if (asset.wrapperLocalFacts.applicability === "wrapper") {
     const wrapper = asset.wrapperLocalFacts;
     if (!["reviewed", "not-applicable"].includes(wrapper.formDisposition) && (!wrapper.formStatus || wrapper.formStatus.gapIds.length === 0)) {
@@ -1863,24 +1891,6 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
   for (const { label, status } of factStatuses(asset)) {
     for (const id of status.gapIds) {
       if (!gapsById.has(id)) ctx.addIssue({ code: "custom", path: [label, "gapIds"], message: `Unknown cause-bearing gap ${id}` });
-    }
-  }
-  for (const [index, exposure] of asset.reserveExposures.entries()) {
-    for (const [key, missing] of [
-      ["assetClass", exposure.assetClass === null],
-      ["liquidity", exposure.liquidityHorizon === null || exposure.liquidityHorizon === "unknown"],
-      ["maturity", exposure.maturityDaysMax === null],
-      ["obligorConcentration", exposure.issuerOrObligorKey === null],
-    ] as const) {
-      const status = exposure.factorStatuses?.[key];
-      const openEndedMaturity = key === "maturity" && asset.reserveBoundFacts?.some((row) =>
-        row.fact.kind === "maturity-applicability" && row.fact.conclusion === "open-ended" && row.fact.allInScope &&
-        row.fact.scope.kind === "exposure" && row.fact.scope.exposureKey === exposure.exposureKey &&
-        row.status.observationState === "known" && row.rejectionReason === null &&
-        row.status.evidenceRefIds.some(id => status?.evidenceRefIds.includes(id)));
-      if (missing && !openEndedMaturity && (!status || (status.observationState === "known" && status.applicability.state !== "not-applicable"))) {
-        ctx.addIssue({ code: "custom", path: ["reserveExposures", index, "factorStatuses", key], message: "Unknown reserve subfield requires its own cause-bearing status" });
-      }
     }
   }
   for (const [index, route] of asset.exitRoutes.entries()) {
@@ -2426,6 +2436,9 @@ function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.Re
     addIssue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
   }
   for (const [assetIndex, asset] of value.assets.entries()) {
+    if (value.schemaVersion === 4 && "reserveResiduals" in asset) {
+      validateReserveFactorStatuses(asset, ctx, ["assets", assetIndex], value.asOfSec);
+    }
     const claimGraph = asset.accessReview.freeze.claimGraph;
     if (claimGraph && (claimGraph.clockSec !== value.asOfSec || claimGraph.generationId !== value.baseInputGenerationId)) {
       addIssue(ctx, ["assets", assetIndex, "accessReview", "freeze", "claimGraph"], "Access graph must match the admitted clock and input generation");
