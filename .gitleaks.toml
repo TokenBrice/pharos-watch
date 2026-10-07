@@ -472,3 +472,25 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH$''']
 paths = ['''(?:^|/)worker/src/lib/__tests__/fixtures/usdv-jupiter-quotes\.json$''']
+
+# Reviewed wave-5 public document links cited in the missing-data ledger:
+# Saturn's Certora/Three Sigma audit PDFs (3131394583-files.gitbook.io), Cap's
+# whitepaper and Matrixdock's STBT terms/gold report. The Matrixdock gold-report
+# token is also matched with the sentence period that follows it in prose.
+[[allowlists]]
+description = "Reviewed wave-5 GitBook public download tokens in missing-data ledger evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:1249bd80-ea7f-4447-a7f3-ba2b5e21fd9d|923bdc63-98c3-49d7-92cc-f9e7c760d575|27dc0f4e-6882-4188-b46b-6f0b65f8ef9c|a2fe3d9b-b81f-4e23-b40d-0b3aa3178646|937d6687-03b4-4c9b-a525-5f180793a6a2|79d5fd49-deae-41b4-a809-9e1afaa02f32|19d915b4-356f-4abd-a4b2-d331515adc22|54e9714e-c65f-4b0c-8bcf-c7869956dd20)\.?$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+
+# Slash-joined prose terms in reviewed ledger rationales ("Token Terms:
+# funding/basis/leverage", "API books, supply/borrow/idle counters") are not keys.
+[[allowlists]]
+description = "Reviewed slash-joined prose terms in missing-data ledger rationales"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:funding/basis/leverage|supply/borrow/idle)$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
