@@ -13,6 +13,18 @@ describe("StatusCause.runbookUrl", () => {
     expect(withRunbook(cause).runbookUrl).toBe("https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/db-connectivity.md");
   });
 
+  it.each([
+    "price_gap_reviews_expiring",
+    "price_gap_reviews_expired",
+    "price_gap_reviews_invalid",
+    "reserve_feed_reviews_expiring",
+    "reserve_feed_reviews_expired",
+    "reserve_feed_reviews_invalid",
+  ])("routes %s to the review renewal procedure", (code) => {
+    const cause: StatusCause = { code, layer: "data-quality", severity: "info", message: "Review needs attention." };
+    expect(withRunbook(cause).runbookUrl).toBe("https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/review-renewal.md");
+  });
+
   it("omits runbookUrl for codes without a documented runbook", () => {
     const cause: StatusCause = {
       code: "unknown_code_that_has_no_runbook",

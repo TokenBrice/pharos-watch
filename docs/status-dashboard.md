@@ -399,6 +399,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `reserveComposition.status === "degraded"`
 - `healthy` with an info `blacklist_gaps_recent` cause when `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-watch-threshold -->5<!-- GENERATED-END: status-blacklist-recent-watch-threshold -->` (last 24h) but the missing share is below 1%: a burst of freezes awaiting amount recovery is a watch signal, not a degraded surface. The public `/api/health` blacklist impact uses the same ratio-only rule.
+- Non-gating info causes `price_gap_reviews_expiring` and `reserve_feed_reviews_expiring` remind operators when a review currently acknowledging a missing price or matched stale/erroring reserve feed has `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, defined in `shared/lib/status-thresholds.ts`); dormant reviews are excluded. Each cause lists IDs by soonest expiry and links to [review renewal](./runbooks/review-renewal.md); reminders do not change public health or status transitions.
 - else `healthy`
 
 #### Missing-price ratio bands (2026-04-13)
@@ -561,6 +562,7 @@ Behavior:
 - an unavailable reserve overview renders **Unavailable / Unknown** in Live Reserve Sync, Score impact, triage and pipeline readiness; it never renders 0% coverage or a clear recovery queue
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
 - `persistentlyStaleIndependentCoins` retains the complete raw list; `unacknowledgedPersistentlyStaleIndependentCoins` owns its health gate. `healthConfiguredCoins`, `healthFreshCoins`, and `healthAuthoritativeFreshCoins` exclude each matched review's actual contribution. `acknowledgedFeeds` carries reason, evidence, owner, review date, and expiry; expired/invalid IDs re-arm gates and emit info causes even on otherwise healthy observations.
+- Matched in-use reserve reviews also emit `reserve_feed_reviews_expiring` during their final 48 hours, without changing reserve status; [review renewal](./runbooks/review-renewal.md) preserves the raw quarantine and automatic gate re-arming at expiry.
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
 - `adapterReliability` is a 30-day per-adapter rollup computed with one grouped scan over `reserve_sync_attempt_history` (`attempts`, `ok`/`degraded`/`error`/`skipped` counts, and `successRate` = `ok / attempts`). It is cached with the hourly status snapshot and rendered as a compact table on the `Live Reserve Sync` card; rows are ordered by attempt count descending.
