@@ -2,7 +2,7 @@ import { STATUS_SCHEDULER_LIVENESS_THRESHOLDS } from "@shared/lib/status-thresho
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 
-export const SCHEDULER_LIVENESS_LANES = [
+const SCHEDULER_LIVENESS_LANES = [
   "fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll",
 ] as const satisfies readonly CronScheduleKey[];
 

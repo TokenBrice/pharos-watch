@@ -34,17 +34,6 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
   },
 ];
 
-// Inactive research candidates have no health-exclusion authority.
-export const RESERVE_FEED_REVIEW_CANDIDATES = [{
-  stablecoinId: "yzusd-yuzu",
-  reason: "2026-10-06 buckets $62,242,674.629 versus reserves $64,288,465.66; establish issuer-side mismatch before activation.",
-  sources: ["https://cache.accountable.capital/dashboard/yuzu", "https://yuzu.accountable.capital/"],
-}, {
-  stablecoinId: "stbt-matrixdock",
-  reason: "2026-10-06 attempt 1791312367 received HTTP 403 on both official JSON hosts. The configured adapter is weak-live-probe, outside review eligibility.",
-  sources: ["https://www.matrixdock.com/bond/anon/website/api/v1/stats", "https://app.matrixdock.com/bond/anon/website/api/v1/stats"],
-}] as const;
-
 export function resolveReserveFeedReviews(
   now: number,
   reviews: readonly ReserveFeedReview[] = RESERVE_FEED_REVIEWS,
