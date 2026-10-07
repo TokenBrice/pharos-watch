@@ -14,6 +14,7 @@ import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import { getSourceFailureMessage } from "./section-errors";
+import { maxStatus } from "./evaluation-state";
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {
   healthy: 0,
@@ -376,16 +377,33 @@ export function rebuildCronDerivedAvailabilityCauses(
 }
 
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
-  if (scheduler.status === "healthy") return { status: "healthy", causes: [] };
-  const unavailable = scheduler.status === "unavailable";
-  const status: StatusLevel = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
-  return { status, causes: [makeCause(
-    "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
-    status === "stale" ? "critical" : "warning",
-    unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}).`
-      : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
-    { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
-  )] };
+  const causes: StatusCause[] = [];
+  let status: StatusLevel = "healthy";
+  if (scheduler.status !== "healthy") {
+    const unavailable = scheduler.status === "unavailable";
+    status = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
+    causes.push(makeCause(
+      "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
+      status === "stale" ? "critical" : "warning",
+      unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}; warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`
+        : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
+      { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
+    ));
+  }
+  const heavy = scheduler.heavy;
+  if (heavy.status !== "healthy") {
+    const unavailable = heavy.status === "unavailable";
+    const heavyStatus: StatusLevel = heavy.status === "unavailable" ? "degraded" : heavy.status;
+    status = maxStatus(status, heavyStatus);
+    causes.push(makeCause(
+      "availability", unavailable ? "heavy_scheduler_liveness_unavailable" : "heavy_scheduled_delivery_stalled",
+      heavyStatus === "stale" ? "critical" : "warning",
+      unavailable ? `Heavy scheduler delivery evidence unavailable (${heavy.unavailableReason}; warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`
+        : `Heavy lane ${heavy.scheduleKey} has not started for ${heavy.ageSeconds}s (warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`,
+      { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
+    ));
+  }
+  return { status, causes };
 }
 
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
@@ -843,6 +861,8 @@ const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/
 const RUNBOOK_BY_CODE: Record<string, string> = {
   scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  heavy_scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  heavy_scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,

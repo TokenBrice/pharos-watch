@@ -129,6 +129,42 @@ describe("handleStatus", () => {
     expect(body.schedulerLiveness?.lanes).toHaveLength(3);
   });
 
+  it.each([
+    [1801, "degraded", "heavy_scheduled_delivery_stalled"],
+    [2701, "stale", "heavy_scheduled_delivery_stalled"],
+    [null, "degraded", "heavy_scheduler_liveness_unavailable"],
+  ] as const)("folds live heavy delivery loss (%s) into admin snapshot status", async (age, status, code) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
+      { match: "AS last_any", rows: [], first: {
+        last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30,
+        heavy: age == null ? null : now - age,
+      } },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.schedulerLiveness?.heavy.ageSeconds).toBe(age);
+    expect(body.availabilityStatus).toBe(status);
+    expect(body.overallStatus).toBe(status);
+    expect(body.causes.availability).toEqual(expect.arrayContaining([expect.objectContaining({ code, threshold: 1800 })]));
+    expect(body.sectionErrors.schedulerLiveness?.code).toBe(age == null ? code : undefined);
+  });
+  it("recomputes a pre-heavy cached scheduler rather than trusting public-only evidence", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 120);
+    const snapshot = JSON.parse(row.value);
+    delete snapshot.raw.schedulerLiveness.heavy;
+    row.value = JSON.stringify(snapshot);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [row] },
+    ]);
+    const body = StatusResponseSchema.parse(await readJsonResponse(await handleStatus({ db, trustedAdmin: true }), 200));
+    expect(body.schedulerLiveness?.heavy.status).toBe("healthy");
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(true);
+  });
+
   it("keeps missing and malformed role markers unavailable without producer inference", async () => {
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:public"],

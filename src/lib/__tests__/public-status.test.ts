@@ -16,6 +16,14 @@ import {
 const BASE_HEALTH: HealthResponse = makeHealthyHealthResponse();
 
 describe("public status helpers", () => {
+  it.each([
+    ["heavy_scheduled_delivery_stalled", "Heavy scheduled delivery stalled", "Public delivery can remain healthy"],
+    ["heavy_scheduler_liveness_unavailable", "Heavy scheduled delivery evidence unavailable", "cannot be claimed healthy"],
+  ])("explains %s independently of public delivery", (warning, title, detail) => {
+    const presentation = getPublicHealthWarningPresentation(warning, BASE_HEALTH);
+    expect(presentation.title).toBe(title);
+    expect(presentation.detail).toContain(detail);
+  });
   it("renders active-price warnings with impacted assets without a public surface incident", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,

@@ -3,7 +3,7 @@ import { parseStrictCliArgs, parseCliInteger, runDirectCli, writeCliHelpIfReques
 const USAGE = `Usage: npm run ops:cron-delivery -- [--minutes 120] [--raw]
 Reads Cloudflare workersInvocationsScheduled delivery ground truth (no mutations).
 Requires CLOUDFLARE_API_TOKEN with Analytics read permission.
-Optional: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_WORKER_NAME.
+Optional: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_WORKER_NAME (default stablecoin-api).
 --minutes: integer 1..1440; --raw: emit JSON rows; -h/--help: show help.`;
 const LIMIT = 10_000;
 
@@ -41,7 +41,7 @@ export async function readCronDelivery({ minutes = 120, token, accountId = "a8e4
       throw new Error("Cloudflare Analytics scheduled row malformed");
     }
   }
-  return { from: from.toISOString(), to: now.toISOString(), rows };
+  return { scriptName, from: from.toISOString(), to: now.toISOString(), rows };
 }
 
 runDirectCli(import.meta.url, async () => {
@@ -53,7 +53,7 @@ runDirectCli(import.meta.url, async () => {
     scriptName: process.env.CLOUDFLARE_WORKER_NAME,
   });
   if (args.raw) { console.log(JSON.stringify(result.rows)); return; }
-  console.log(`rows=${result.rows.length} window=${result.from}..${result.to}`);
+  console.log(`script=${result.scriptName} rows=${result.rows.length} window=${result.from}..${result.to}`);
   if (result.rows.length === 0) console.log("No scheduled invocation evidence in this window; absence is not a success claim.");
   for (const row of result.rows) console.log(row.datetime, row.scheduledDatetime, row.status, `${Math.round(row.cpuTimeUs / 1000)}ms`, row.cron);
 });

@@ -355,12 +355,50 @@ describe("handleHealth", () => {
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
-      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201 } },
+      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("stale");
     expect(body.warnings).toContain("scheduled_delivery_stalled");
     expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
+  });
+  it.each([
+    [1801, "degraded", "heavy_scheduled_delivery_stalled"],
+    [2701, "stale", "heavy_scheduled_delivery_stalled"],
+    [null, "degraded", "heavy_scheduler_liveness_unavailable"],
+  ] as const)("detects heavy delivery loss (%s) through a healthy cached projection", async (age, status, warning) => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    row.value = JSON.stringify(snapshot);
+    const db = buildStatusD1Scenario({ sections: [], overrides: [
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "AS last_any", rows: [], first: {
+        last_any: now - 1, reserve: now - 30, telegram: now - 30, digest: now - 30,
+        heavy: age == null ? null : now - age,
+      } },
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe(status);
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.schedulerLiveness?.heavy.ageSeconds).toBe(age);
+    expect(body.warnings).toContain(warning);
+    expect(body.warnings).not.toContain("scheduled_delivery_stalled");
+  });
+  it("clears a cached heavy scheduler floor by recomputing independent blockers live", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    snapshot.publicHealth.status = "stale";
+    snapshot.publicHealth.warnings = ["heavy_scheduled_delivery_stalled"];
+    snapshot.publicHealth.schedulerLiveness.heavy.status = "stale";
+    row.value = JSON.stringify(snapshot);
+    const body = await (await handleHealth(makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] }))).json() as HealthResponse;
+    expect(body.schedulerLiveness?.heavy.status).toBe("healthy");
+    expect(body.warnings).not.toContain("heavy_scheduled_delivery_stalled");
+    expect(body.status).toBe("stale");
   });
   it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
     const now = Math.floor(Date.now() / 1000);

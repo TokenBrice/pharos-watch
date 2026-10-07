@@ -168,6 +168,10 @@ export async function computeRawStatus(db: D1Database, now: number, schedulerLiv
     code: "scheduler_liveness_unavailable",
     message: `Scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.unavailableReason}).`,
   };
+  else if (publicHealth.schedulerLiveness.heavy.status === "unavailable") sectionErrors.schedulerLiveness = {
+    code: "heavy_scheduler_liveness_unavailable",
+    message: `Heavy scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.heavy.unavailableReason}; warning >${publicHealth.schedulerLiveness.heavy.warningAfterSec}s; stale >${publicHealth.schedulerLiveness.heavy.staleAfterSec}s).`,
+  };
 
   const availabilityEvaluation = evaluateAvailabilityStatus({
     publicHealth,

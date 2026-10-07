@@ -9,6 +9,19 @@ export function makeHealthyHealthResponse(): HealthResponse {
     status: "healthy",
     timestamp: 1_700_000_000,
     warnings: [],
+    schedulerLiveness: {
+      status: "healthy", observedAt: 1_700_000_000,
+      lastAnyStartedAt: 1_699_999_970, lastFiveMinuteStartedAt: 1_699_999_970, ageSeconds: 30,
+      warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: 1_699_999_970,
+      })),
+      unavailableReason: null,
+      heavy: {
+        scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: 1_699_999_970, ageSeconds: 30,
+        warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      },
+    },
     caches: {},
     blacklist: {
       totalEvents: 0,

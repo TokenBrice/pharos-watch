@@ -93,6 +93,14 @@ export function getPublicHealthWarningPresentation(
     title: "Scheduled delivery evidence unavailable",
     detail: "The live slot-start observation is missing, invalid, or unreadable. Delivery cannot be claimed healthy.",
   };
+  if (warning === "heavy_scheduled_delivery_stalled") return {
+    title: "Heavy scheduled delivery stalled",
+    detail: `The heavy Worker lane has not started within its delivery budget${healthData.schedulerLiveness?.heavy.ageSeconds != null ? ` (${healthData.schedulerLiveness.heavy.ageSeconds}s since delivery)` : ""}. Public delivery can remain healthy while heavy updates stop.`,
+  };
+  if (warning === "heavy_scheduler_liveness_unavailable") return {
+    title: "Heavy scheduled delivery evidence unavailable",
+    detail: "The live heavy slot-start observation is missing, invalid, or unreadable. Heavy delivery cannot be claimed healthy.",
+  };
   if (warning.startsWith(ACTIVE_PRICE_INCOMPLETE_PREFIX)) {
     const fallbackIds = warning
       .slice(ACTIVE_PRICE_INCOMPLETE_PREFIX.length)

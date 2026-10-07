@@ -65,6 +65,10 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       lastFiveMinuteStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
       lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({ scheduleKey, lastStartedAt: now - 30 })),
       unavailableReason: null,
+      heavy: {
+        scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30, ageSeconds: 30,
+        warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      },
     },
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
@@ -141,7 +145,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
-    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30 } },
+    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30 } },
     { match: "cache WHERE key IN", rows: healthy
       ? [
           ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
@@ -322,6 +326,7 @@ function fixtureMockD1(
           reserve: Math.floor(Date.now() / 1000) - 30,
           telegram: Math.floor(Date.now() / 1000) - 30,
           digest: Math.floor(Date.now() / 1000) - 30,
+          heavy: Math.floor(Date.now() / 1000) - 30,
         },
       }] : []),
       ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),
