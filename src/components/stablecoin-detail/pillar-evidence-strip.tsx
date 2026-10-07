@@ -561,7 +561,15 @@ function ControlBody({ view, posture }: { view: ControlStripView; posture: Contr
               {ROLE_LEGEND_TEXT[role]}
             </span>
           ))}
-          {noEligible ? <span>No eligible control component · neutral score</span> : null}
+          {noEligible ? (
+            <span>
+              {/* The schema publishes a null evaluated score for an excluded pillar
+                  (excluded-a-b); only a non-null one is the neutral fallback. */}
+              {view.evaluatedScore === null
+                ? "No eligible control component · Control not scored"
+                : <>No eligible control component · neutral score <span className={FIGURE_CLASS}>{formatScore(view.evaluatedScore)}</span></>}
+            </span>
+          ) : null}
           {showAdjustment ? (
             <span className="@2xl/strip:ml-auto">
               {view.minimum === null ? "neutral" : "min"} <span className={FIGURE_CLASS}>{formatScore(baseline)}</span>

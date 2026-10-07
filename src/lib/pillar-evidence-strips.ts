@@ -145,7 +145,7 @@ export interface ControlStripComponent {
 export interface ControlComponentRoles {
   /** Lowest score in the eligible set; null when the set is empty. */
   minimum: number | null;
-  /** The breakdown's pre-adjustment score (the minimum, or the neutral score for an empty set). */
+  /** The breakdown's pre-adjustment score: the minimum, the neutral score for an empty set, or null when the pillar is excluded (excluded-a-b). */
   evaluatedScore: number | null;
   /** The published pillar score differs from the evaluated baseline at display precision. */
   adjusted: boolean;
@@ -459,7 +459,8 @@ function controlComponentTone(component: ControlBreakdownComponent): PillarStrip
  * - other eligible components are `eligible`;
  * - `binding: false` components are `diagnostic`, even at the minimum;
  * - `score: null` components are `excluded`;
- * - an empty eligible set has no limiting component (neutral score).
+ * - an empty eligible set has no limiting component: the neutral score when
+ *   one is published, otherwise (excluded-a-b) the pillar is not scored.
  */
 export function resolveControlComponentRoles(
   card: PillarStripCard,

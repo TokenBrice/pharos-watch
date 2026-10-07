@@ -187,4 +187,30 @@ describe("PillarEvidenceStrip", () => {
     );
     for (const bar of screen.getAllByRole("img")) expect(bar.childElementCount).toBe(0);
   });
+
+  it("never calls an excluded Control pillar's empty eligible set a neutral score", () => {
+    const diagnosticOnly = { type: "component" as const, component: control("bridge", 40, "diagnostic"), scope: null };
+    const { unmount } = render(
+      <PillarEvidenceStrip
+        pillar="control"
+        headingId="h"
+        title="Control evidence"
+        view={{ ...CONTROL_VIEW, score: null, grade: null, excluded: true, minimum: null, evaluatedScore: null, rows: [diagnosticOnly] }}
+      />,
+    );
+    expect(screen.getByText(/Control not scored/)).toBeTruthy();
+    expect(screen.queryByText(/neutral/i)).toBeNull();
+    unmount();
+
+    render(
+      <PillarEvidenceStrip
+        pillar="control"
+        headingId="h"
+        title="Control evidence"
+        view={{ ...CONTROL_VIEW, score: 70, grade: "B-", minimum: null, evaluatedScore: 70, rows: [diagnosticOnly] }}
+      />,
+    );
+    expect(screen.getByText(/neutral score/)).toBeTruthy();
+    expect(screen.queryByText(/Control not scored/)).toBeNull();
+  });
 });
