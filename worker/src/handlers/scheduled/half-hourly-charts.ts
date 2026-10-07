@@ -278,6 +278,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           signal,
           generationId,
           runtime.chainRpcs,
+          runtime.env.CF_VERSION_METADATA,
         );
         if (recovery === null) {
           return result;

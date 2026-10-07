@@ -158,6 +158,8 @@ There is no Pages browser installation, local proxy, GitHub Jobs API polling, de
 
 Workflow success proves activation identity, not every runtime behavior. The read-only `post-deploy-acceptance` job adds narrow runtime-health evidence for each surface that successfully deployed; it records `passed`, `failed`, or explicitly `pending` in the workflow summary without mutating production or rolling anything back. Record deployment proof and operational acceptance separately.
 
+Batch nonurgent Worker changes into fewer releases and, where practical, activate after the :22/:52 V9 publication rather than between :16/:46 preparation and compilation. Urgent fixes are not blocked by this preference. A deployment-only recapture skip is expected provenance, not publication acceptance: observe the next same-build prepare and accepted V9 publication before another nonurgent release. Keep genuine input failures visible; never reset leases/checkpoints or loosen identity, freshness or score gates to obtain a green row.
+
 | Change risk                     | Deployment proof                                       | Operational acceptance                                                                                                   |
 | ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | Pages/static output             | Immutable deployment URL and target-SHA release marker | Narrow affected-route or live SEO smoke when the change warrants it                                                      |

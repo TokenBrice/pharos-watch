@@ -5,7 +5,7 @@ import { throwIfAborted } from "../lib/abort";
 import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import {
   getCaches,
-  setCacheIfNewer,
+  prepareCacheUpsert,
 } from "../lib/db-cache";
 import {
   appendSupplyAttributionJournalV1,
@@ -16,6 +16,7 @@ import {
 import {
   parseSafetyScoreV9SupplyAttributionSource,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
+  SOURCE_FIXED_INPUT_MAX_AGE_SEC,
   type SafetyScoreV9SupplyAttributionSource,
 } from "../lib/safety-score-v9/supply-attribution-source";
 import {
@@ -25,12 +26,17 @@ import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionGeneration,
+  type SafetyScoreV9SupplyAttributionGeneration,
 } from "../lib/safety-score-v9/supply-attribution-generation";
 
-const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
+import {
+  captureTupleMatchesSource, parseSafetyScoreV9CaptureControl, prepareAttributionSettlement,
+  SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, settleAttribution,
+} from "../lib/safety-score-v9/capture-control";
+import { batchExecute } from "../lib/d1-primitives";
 
 function diagnosticRejectedAssetIds(
-  generation: ReturnType<typeof createSafetyScoreV9SupplyAttributionGeneration>,
+  generation: SafetyScoreV9SupplyAttributionGeneration,
 ): string[] {
   return generation.rejectedAssetIds.filter((assetId) => {
     const outcome = generation.outcomesById[assetId];
@@ -52,7 +58,10 @@ export async function syncSafetyScoreV9SupplyAttribution(
   const caches = await getCaches(db, [
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+    SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
   ]);
+  const controlCache = caches.get(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
+  const control = controlCache ? parseSafetyScoreV9CaptureControl(controlCache.value) : null;
   const sourceCache = caches.get(
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   );
@@ -72,6 +81,16 @@ export async function syncSafetyScoreV9SupplyAttribution(
   try {
     fixedInput = parseSafetyScoreV9SupplyAttributionSource(sourceCache.value);
   } catch (error) {
+    // A malformed payload can still identify the exact source whose request failed.
+    let failedSource: unknown;
+    try { failedSource = JSON.parse(sourceCache.value); } catch { failedSource = null; }
+    if (control && failedSource !== null && typeof failedSource === "object" &&
+      "baseInputGenerationId" in failedSource && failedSource.baseInputGenerationId === control.capture.baseInputGenerationId &&
+      "sourceGeneration" in failedSource && failedSource.sourceGeneration === control.capture.sourceGeneration &&
+      "clockSec" in failedSource && failedSource.clockSec === control.capture.clockSec &&
+      "registryFingerprint" in failedSource && failedSource.registryFingerprint === control.capture.registryFingerprint) {
+      await settleAttribution(db, control, control.capture, executionWindow?.slotStartedAtSec, "degraded", null);
+    }
     return createCronResult({
       status: "degraded",
       itemCount: 0,
@@ -93,6 +112,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
     fixedInput.clockSec > startedAtSec ||
     startedAtSec - fixedInput.clockSec > SOURCE_FIXED_INPUT_MAX_AGE_SEC
   ) {
+    await settleAttribution(db, control, fixedInput, executionWindow?.slotStartedAtSec, "degraded", null);
     return createCronResult({
       status: "degraded",
       itemCount: 0,
@@ -117,46 +137,44 @@ export async function syncSafetyScoreV9SupplyAttribution(
   const priorCache = caches.get(
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   );
+  let priorGeneration: SafetyScoreV9SupplyAttributionGeneration | null = null;
   if (priorCache) {
     try {
-      const priorGeneration =
-        parseSafetyScoreV9SupplyAttributionGeneration(priorCache.value);
-      if (
-        isSafetyScoreV9SupplyAttributionGenerationCompatible(
-          fixedInput,
-          priorGeneration,
-          startedAtSec,
-        ) &&
-        startedAtSec <
-          nextSafetyScoreV9SupplyAttributionDueAtSec(priorGeneration)
-      ) {
-        priorGenerationStatus = "fresh";
-        return createCronResult({
-          status: "skipped_neutral",
-          itemCount: priorGeneration.acceptedAssetIds.length,
-          metadata: {
-            reason: "supply-attribution-generation-fresh",
-            stage: "cooldown",
-            generationId: priorGeneration.generationId,
-            acceptedCount: priorGeneration.acceptedAssetIds.length,
-            rejectedCount: priorGeneration.rejectedAssetIds.length,
-            nextDueAtSec:
-              nextSafetyScoreV9SupplyAttributionDueAtSec(
-                priorGeneration,
-              ),
-          },
-          productivity: {
-            productive: false,
-            reason: "supply-attribution-generation-fresh",
-          },
-        });
-      }
+      priorGeneration = parseSafetyScoreV9SupplyAttributionGeneration(priorCache.value);
       priorGenerationStatus = "due";
     } catch {
       priorGenerationStatus = "malformed";
     }
   }
+  if (priorGeneration &&
+    isSafetyScoreV9SupplyAttributionGenerationCompatible(fixedInput, priorGeneration, startedAtSec) &&
+    startedAtSec < nextSafetyScoreV9SupplyAttributionDueAtSec(priorGeneration)) {
+    priorGenerationStatus = "fresh";
+    if (control && captureTupleMatchesSource(control.capture, {
+      baseInputGenerationId: priorGeneration.sourceBaseInputGenerationId,
+      sourceGeneration: priorGeneration.sourceGeneration,
+      clockSec: priorGeneration.sourceClockSec,
+      registryFingerprint: priorGeneration.registryFingerprint,
+    })) {
+      const blocking = priorGeneration.rejectedAssetIds.length - diagnosticRejectedAssetIds(priorGeneration).length;
+      await settleAttribution(db, control, fixedInput, executionWindow?.slotStartedAtSec,
+        blocking > 0 ? "degraded" : "ok", priorGeneration.generationId);
+    }
+    return createCronResult({
+      status: "skipped_neutral",
+      itemCount: priorGeneration.acceptedAssetIds.length,
+      metadata: {
+        reason: "supply-attribution-generation-fresh", stage: "cooldown",
+        generationId: priorGeneration.generationId,
+        acceptedCount: priorGeneration.acceptedAssetIds.length,
+        rejectedCount: priorGeneration.rejectedAssetIds.length,
+        nextDueAtSec: nextSafetyScoreV9SupplyAttributionDueAtSec(priorGeneration),
+      },
+      productivity: { productive: false, reason: "supply-attribution-generation-fresh" },
+    });
+  }
 
+  try {
   const capture = await captureSafetyScoreV9SupplyAttribution(
     fixedInput,
     chainRpcs,
@@ -189,13 +207,24 @@ export async function syncSafetyScoreV9SupplyAttribution(
       signal,
     );
   }
-  const cacheWrite = await setCacheIfNewer(
-    db,
-    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
-    serializeSafetyScoreV9SupplyAttributionGeneration(generation),
-    startedAtSec,
-    signal,
+  const diagnosticRejected = diagnosticRejectedAssetIds(generation);
+  const diagnosticRejectedSet = new Set(diagnosticRejected);
+  const blockingRejectedAssetIds = generation.rejectedAssetIds.filter(
+    (assetId) => !diagnosticRejectedSet.has(assetId),
   );
+  const complete = blockingRejectedAssetIds.length === 0;
+  const publication = {
+    key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+    value: serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+    updatedAt: startedAtSec,
+  };
+  const settlement = control ? prepareAttributionSettlement(db, control, fixedInput,
+    executionWindow?.slotStartedAtSec, complete ? "ok" : "degraded", generation.generationId, publication) : null;
+  const changes = await batchExecute(db, [
+    prepareCacheUpsert(db, publication, "if-newer"),
+    ...(settlement ? [settlement] : []),
+  ], { chunkSize: 2, signal });
+  const cacheWrite = { written: changes > 0 };
   if (!cacheWrite.written) {
     return createCronResult({
       status: "skipped_neutral",
@@ -208,12 +237,6 @@ export async function syncSafetyScoreV9SupplyAttribution(
     });
   }
 
-  const diagnosticRejected = diagnosticRejectedAssetIds(generation);
-  const diagnosticRejectedSet = new Set(diagnosticRejected);
-  const blockingRejectedAssetIds = generation.rejectedAssetIds.filter(
-    (assetId) => !diagnosticRejectedSet.has(assetId),
-  );
-  const complete = blockingRejectedAssetIds.length === 0;
   return createCronResult({
     status: complete ? "ok" : "degraded",
     itemCount: generation.acceptedAssetIds.length,
@@ -246,4 +269,9 @@ export async function syncSafetyScoreV9SupplyAttribution(
         : "supply-attribution-generation-published-with-blocking-rejections",
     },
   });
+  } catch (error) {
+    // Persistence after cancellation revokes provenance; the original run still fails.
+    await settleAttribution(db, control, fixedInput, executionWindow?.slotStartedAtSec, "error", null);
+    throw error;
+  }
 }

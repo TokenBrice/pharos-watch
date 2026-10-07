@@ -27,7 +27,6 @@ import {
   computeSafetyScoreV9SupplyAttributionGenerationId,
   createSafetyScoreV9SupplyAttributionGeneration,
   diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility,
-  isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
   isSafetyScoreV9SupplyAttributionGenerationCompatible,
   nextSafetyScoreV9SupplyAttributionDueAtSec,
   parseSafetyScoreV9SupplyAttributionGeneration,
@@ -937,37 +936,6 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     ).toEqual({});
   });
 
-  it("classifies only same-input complete future generations as cadence deferred", () => {
-    const generation = fixtures.acceptedGeneration;
-
-    expect(
-      applySafetyScoreV9SupplyAttributionGeneration(
-        fixtures.acceptedFixture.fixedInput,
-        generation,
-      ),
-    ).toMatchObject({
-      status: "incompatible",
-      reason: "captured-after-consumer",
-    });
-    expect(
-      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-        fixtures.acceptedFixture.fixedInput,
-        generation,
-      ),
-    ).toBe(true);
-    expect(
-      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-        fixtures.target,
-        generation,
-      ),
-    ).toBe(false);
-    expect(
-      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-        fixtures.staleTarget,
-        generation,
-      ),
-    ).toBe(false);
-  });
 
   // The capture fires on a 15-minute grid (5,20,35,50) positioned so :20 and :50
   // land between the prepare slot and the :22/:52 publication. A cadence at or

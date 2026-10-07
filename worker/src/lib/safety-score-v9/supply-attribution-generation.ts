@@ -49,8 +49,6 @@ const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =
   14 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC =
   45 * 60;
-const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC =
-  30 * 60;
 
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
 const GenerationIdSchema = z
@@ -536,32 +534,6 @@ export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
   ) === null;
 }
 
-export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  generation: SafetyScoreV9SupplyAttributionGeneration,
-): boolean {
-  const expectedAssetIds = uniqueSorted(
-    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
-  );
-  const latestGenerationClockSec = Math.max(
-    generation.captureClockSec,
-    generation.capturedAtSec,
-  );
-  const futureClockSkewSec =
-    latestGenerationClockSec - fixedInput.clockSec;
-  return (
-    generation.registryFingerprint === fixedInput.registryFingerprint &&
-    generation.sourceBaseInputGenerationId ===
-      fixedInput.baseInputGenerationId &&
-    generation.sourceGeneration === fixedInput.sourceGeneration &&
-    generation.sourceClockSec === fixedInput.clockSec &&
-    exactStrings(generation.expectedAssetIds, expectedAssetIds) &&
-    generation.rejectedAssetIds.length === 0 &&
-    futureClockSkewSec > 0 &&
-    futureClockSkewSec <=
-      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC
-  );
-}
 
 function rederiveEconomicSupplyAttribution(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,

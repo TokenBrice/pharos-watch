@@ -1,5 +1,6 @@
 import {
   buildSafetyScoreV9InputIdentity,
+  diagnoseSafetyScoreV9InputIdentityMismatch,
   safetyScoreV9InputIdentitiesMatch,
 } from "@shared/lib/safety-score-v9-input-identity";
 import { throwIfAborted } from "../lib/abort";
@@ -26,7 +27,6 @@ import {
 } from "../lib/safety-score-v9/supply-attribution";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
-  isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   type SafetyScoreV9SupplyAttributionGeneration,
@@ -41,6 +41,14 @@ import {
 } from "../lib/safety-score-v9/transfer-materiality";
 import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
 import type { V9PublicationCoverageFloor } from "../lib/safety-score-v9/publication-assessment";
+import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import {
+  captureTupleMatchesSource, hasPendingAttribution, parseSafetyScoreV9CaptureControl,
+  requestRecapture, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, v9WorkerProvenance, type V9WorkerProvenance,
+} from "../lib/safety-score-v9/capture-control";
+import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
+import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 
 /**
  * A held attempt is only attributable if the numbers it was decided on reach
@@ -139,7 +147,7 @@ export async function computeSafetyScoreV9(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  options: { retainAcceptedReplay?: boolean } = {},
+  options: { retainAcceptedReplay?: boolean; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   await reportProgress?.({
@@ -151,6 +159,7 @@ export async function computeSafetyScoreV9(
     SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
     SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+    SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
   ]);
   throwIfAborted(signal);
 
@@ -228,24 +237,10 @@ export async function computeSafetyScoreV9(
     pegProvenanceById: v9Seed.pegProvenanceById,
   };
   const expectedIdentity = buildSafetyScoreV9InputIdentity({
-    methodologyVersion: fixedInput.methodologyVersion,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     baseInputGenerationId: fixedInput.baseInputGenerationId,
     publicationGenerationId: fixedInput.sourceGeneration,
   });
-  if (
-    !safetyScoreV9InputIdentitiesMatch(
-      baseArtifact.safetyScoreIdentity,
-      expectedIdentity,
-    ) ||
-    !safetyScoreV9InputIdentitiesMatch(
-      v9Seed.safetyScoreIdentity,
-      expectedIdentity,
-    ) ||
-    v9Seed.sourceGeneration !== fixedInput.sourceGeneration ||
-    v9Seed.clockSec !== fixedInput.clockSec
-  ) {
-    return unavailable("base-v9-exact-identity-mismatch");
-  }
   const expectedProvenanceIds = Object.keys(
     fixedInput.pegDataById,
   ).sort();
@@ -262,6 +257,51 @@ export async function computeSafetyScoreV9(
       expectedCount: expectedProvenanceIds.length,
       presentCount: presentProvenanceIds.length,
     });
+  }
+  let control: SafetyScoreV9CaptureControl | null = null;
+  const controlCache = caches.get(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
+  if (controlCache) {
+    try {
+      control = parseSafetyScoreV9CaptureControl(controlCache.value);
+    } catch {
+      return unavailable("v9-capture-control-invalid");
+    }
+  }
+  const registryFingerprint = computeReportCardsRegistryFingerprint();
+  const worker = v9WorkerProvenance(options.workerMetadata);
+  const pairedCaptureValid =
+    fixedInput.schemaVersion === 4 && fixedInput.captureKind === "native-v9-inputs" &&
+    fixedInput.methodologyVersion === SAFETY_SCORE_METHODOLOGY_VERSION &&
+    safetyScoreV9InputIdentitiesMatch(baseArtifact.safetyScoreIdentity, v9Seed.safetyScoreIdentity) &&
+    v9Seed.sourceGeneration === fixedInput.sourceGeneration && v9Seed.clockSec === fixedInput.clockSec &&
+    control !== null && captureTupleMatchesSource(control.capture, fixedInput) &&
+    safetyScoreV9InputIdentitiesMatch(control.capture.safetyScoreIdentity, baseArtifact.safetyScoreIdentity);
+  if (
+    !safetyScoreV9InputIdentitiesMatch(baseArtifact.safetyScoreIdentity, expectedIdentity) ||
+    !safetyScoreV9InputIdentitiesMatch(v9Seed.safetyScoreIdentity, expectedIdentity) ||
+    v9Seed.sourceGeneration !== fixedInput.sourceGeneration || v9Seed.clockSec !== fixedInput.clockSec ||
+    fixedInput.registryFingerprint !== registryFingerprint
+  ) {
+    const identityMismatch = diagnoseSafetyScoreV9InputIdentityMismatch({
+      expected: expectedIdentity, actual: baseArtifact.safetyScoreIdentity,
+      expectedRegistryFingerprint: registryFingerprint, actualRegistryFingerprint: fixedInput.registryFingerprint,
+      expectedWorkerVersion: worker.workerVersion, actualWorkerVersion: control?.capture.workerVersion ?? null,
+      expectedWorkerUploadedAtSec: worker.workerUploadedAtSec, actualWorkerUploadedAtSec: control?.capture.workerUploadedAtSec ?? null,
+      pairedCaptureValid,
+    });
+    if (identityMismatch.deploymentOnly && control && worker.workerVersion !== null && worker.workerUploadedAtSec !== null) {
+      const disposition = await requestRecapture(db, control.capture, {
+        workerVersion: worker.workerVersion, workerUploadedAtSec: worker.workerUploadedAtSec,
+        evaluationBuildDigest: expectedIdentity.evaluationBuildDigest, registryFingerprint,
+      }, signal);
+      const reason = disposition === "advanced" ? "v9-capture-advanced" : "v9-evaluator-changed-recapture-pending";
+      return createCronResult({
+        status: "skipped_neutral", itemCount: 0,
+        metadata: { stage: "input-identity", reason, identityMismatch },
+        productivity: { productive: false, reason },
+      });
+    }
+    return unavailable("base-v9-exact-identity-mismatch", { identityMismatch });
   }
 
   const generationCache = caches.get(
@@ -290,42 +330,6 @@ export async function computeSafetyScoreV9(
     } catch {
       transferMaterialityGeneration = null;
     }
-  }
-  if (
-    parsedSupplyAttributionGeneration &&
-    isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-      v9SeedInput,
-      parsedSupplyAttributionGeneration,
-    )
-  ) {
-    return createCronResult({
-      status: "skipped_neutral",
-      itemCount:
-        parsedSupplyAttributionGeneration.acceptedAssetIds.length,
-      metadata: {
-        stage: "supply-generation",
-        reason: "supply-attribution-generation-cadence-deferred",
-        sourceGenerationId: fixedInput.sourceGeneration,
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        fixedInputClockSec: fixedInput.clockSec,
-        generationId:
-          parsedSupplyAttributionGeneration.generationId,
-        generationSourceClockSec:
-          parsedSupplyAttributionGeneration.sourceClockSec,
-        generationCaptureClockSec:
-          parsedSupplyAttributionGeneration.captureClockSec,
-        generationCapturedAtSec:
-          parsedSupplyAttributionGeneration.capturedAtSec,
-        acceptedCount:
-          parsedSupplyAttributionGeneration.acceptedAssetIds.length,
-        rejectedCount:
-          parsedSupplyAttributionGeneration.rejectedAssetIds.length,
-      },
-      productivity: {
-        productive: false,
-        reason: "supply-attribution-generation-cadence-deferred",
-      },
-    });
   }
 
   let supplyAttributionGenerationState:
@@ -365,6 +369,13 @@ export async function computeSafetyScoreV9(
               generationId: generationApplication.generationId,
               acceptedCount:
                 generationApplication.acceptedAssetIds.length,
+              sourceCaptureTuple: {
+                baseInputGenerationId: parsedSupplyAttributionGeneration!.sourceBaseInputGenerationId,
+                sourceGeneration: parsedSupplyAttributionGeneration!.sourceGeneration,
+                clockSec: parsedSupplyAttributionGeneration!.sourceClockSec,
+                registryFingerprint: parsedSupplyAttributionGeneration!.registryFingerprint,
+              },
+              targetBaseInputGenerationId: seedInput.baseInputGenerationId,
               rejectedCount:
                 generationApplication.rejectedAssetIds.length,
               invalidAssetIds:
@@ -375,6 +386,16 @@ export async function computeSafetyScoreV9(
               generationId: generationApplication.generationId,
               reason: generationApplication.reason,
             };
+      if (!generationParseError && pairedCaptureValid && generationApplication.status !== "applied" &&
+        hasPendingAttribution(control, seedInput, Math.floor(Date.now() / 1_000))) {
+        supplyAttributionGenerationState = {
+          status: "pending", reason: "attribution-pending",
+          pendingUntilSec: control!.attribution.pendingUntilSec,
+          sourceCaptureTuple: control!.capture,
+          targetBaseInputGenerationId: seedInput.baseInputGenerationId,
+          generationId: generationApplication.generationId,
+        };
+      }
       const supplyFixedInput = generationApplication.fixedInput;
 
       await reportProgress?.({

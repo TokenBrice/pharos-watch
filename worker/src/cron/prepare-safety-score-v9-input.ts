@@ -1,4 +1,4 @@
-import { getCacheUpdatedAt, setCacheMany } from "../lib/db-cache";
+import { getCacheUpdatedAt } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
@@ -22,6 +22,9 @@ import {
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
   serializeSafetyScoreV9TransferMaterialityGeneration,
 } from "../lib/safety-score-v9/transfer-materiality";
+import {
+  buildSafetyScoreV9CaptureControl, commitCaptureControl, v9WorkerProvenance, type V9WorkerProvenance,
+} from "../lib/safety-score-v9/capture-control";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -141,6 +144,7 @@ export async function prepareSafetyScoreV9Input(
   signal?: AbortSignal,
   expectedDexGenerationId?: string,
   chainRpcs: Map<string, ChainRpcConfig> = new Map(),
+  workerMetadata?: V9WorkerProvenance,
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
@@ -262,19 +266,21 @@ export async function prepareSafetyScoreV9Input(
           : "Error",
     };
   }
-  await setCacheMany(
-    db,
-    [
-      inputEntry,
-      {
-        key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
-        value: supplyAttributionSourceValue,
-      },
-      ...(v9SeedEntry ? [v9SeedEntry] : []),
-      ...(transferMaterialityEntry ? [transferMaterialityEntry] : []),
-    ],
-    signal,
-  );
+  const committedAtSec = Math.floor(Date.now() / 1_000);
+  const captureControl = buildSafetyScoreV9CaptureControl({
+    safetyScoreIdentity,
+    baseInputGenerationId: input.baseInputGenerationId,
+    sourceGeneration: input.sourceGeneration,
+    clockSec: input.clockSec,
+    registryFingerprint: input.registryFingerprint,
+    ...v9WorkerProvenance(workerMetadata),
+  }, committedAtSec);
+  await commitCaptureControl(db, [
+    inputEntry,
+    { key: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY, value: supplyAttributionSourceValue },
+    ...(v9SeedEntry ? [v9SeedEntry] : []),
+    ...(transferMaterialityEntry ? [transferMaterialityEntry] : []),
+  ], captureControl, v9SeedEntry !== null, committedAtSec, signal);
 
   return {
     ...(transferMaterialityEntry === null
@@ -308,6 +314,7 @@ export async function prepareSafetyScoreV9Input(
         new TextEncoder().encode(supplyAttributionSourceValue).byteLength,
       safetyScoreIdentity,
       v9ExactSeed,
+      captureControl,
       transferMateriality,
       stablecoinsCacheReadiness: {
         waitedMs: stablecoinsReadiness.waitedMs,
