@@ -35,6 +35,7 @@ import {
 } from "../../lib/reserve-producer-priority";
 import { resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
 import type { CronLeaseRunResult } from "../../lib/cron-lease-primitives";
+import type { ScheduledExecutionFence } from "../../lib/scheduled-slot-fence";
 
 /**
  * Per-job overrides for cron lease behavior. Jobs not listed use the default
@@ -126,6 +127,7 @@ export interface ScheduledRuntimeContext {
   slotStartedAt: number;
   deadline: SlotDeadline;
   slotSignal?: AbortSignal;
+  executionFence?: ScheduledExecutionFence;
   slotBudgetStartedAtMs?: number;
   invocationId?: string;
   workerVersion?: string | null;
@@ -218,6 +220,7 @@ export interface ScheduledRuntimeInit {
   slotBudgetStartedAtMs?: number;
   deadline?: SlotDeadline;
   parentSignal?: AbortSignal;
+  executionFence?: ScheduledExecutionFence;
   jobAttemptNo?: number;
   producerKind?: string;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
@@ -234,7 +237,7 @@ export function createScheduledRuntimeContext(
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
-  const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
+  const slotBudgetStartedAtMs = scheduled.deadline?.eventEntryMs ?? scheduled.slotBudgetStartedAtMs ?? Date.now();
   const invocationId = scheduled.recoveryCheckpoint?.invocationId ?? createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
   const workerVersion = env.CF_VERSION_METADATA?.id || null;
   const jobAttemptNo = scheduled.jobAttemptNo ?? 1;
@@ -253,6 +256,7 @@ export function createScheduledRuntimeContext(
     slotStartedAt: scheduled.slotStartedAt,
     slotBudgetStartedAtMs,
     deadline: scheduled.deadline ?? createSlotDeadline(slotBudgetStartedAtMs),
+    executionFence: scheduled.executionFence,
     invocationId,
     workerVersion,
     jobAttemptNo,
@@ -269,7 +273,7 @@ export function createScheduledRuntimeContext(
       if (!descriptor.statusTracked) {
         throw new Error(`${scheduled.scheduleKey}/${job} is budget-only and cannot use runLeasedCron`);
       }
-      const timeoutBudget = resolveCronTimeoutBudget(job, { slotBudgetStartedAtMs });
+      const timeoutBudget = resolveCronTimeoutBudget(job, { deadline: runtime.deadline });
       const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
       const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
@@ -319,6 +323,7 @@ export function createScheduledRuntimeContext(
               owner: leaseOwner,
               abortSignal: signal,
               timeoutBudget,
+              deadline: runtime.deadline,
               ...perJobLeaseOptions,
             };
             if (scheduled.recoveryCheckpoint) leaseOptions.reserveRecoveryAdmission = true;
@@ -329,7 +334,7 @@ export function createScheduledRuntimeContext(
               leaseOptions.acquisitionWait = {
                 deadlineMs: Math.min(nowMs + RESERVE_PRODUCER_WAIT_MAX_MS,
                   nowMs + timeoutBudget.effectiveTimeoutMs - reservationMs,
-                  (timeoutBudget.slotControlledDeadlineMs ?? Infinity) - reservationMs),
+                  runtime.deadline.latestAdmissionMs(0, reservationMs)),
                 onWait: (blockedBy, attempts) => reportProgress({
                   stage: "waiting-for-reserve-lease", message: "Waiting for the existing reserve writer to settle",
                   leaseOwner, metadata: { ...slotMeta, blockedBy, leaseAcquisitionAttempts: attempts },
@@ -400,6 +405,9 @@ export function createScheduledRuntimeContext(
             slotStartedAt: scheduled.slotStartedAt,
             timeoutBudget,
             abortSignal: combinedSlotSignal,
+            executionFence: runtime.executionFence,
+            jobAttemptNo,
+            deadline: runtime.deadline,
             producer: {
               ...getRuntimeProducerIdentity(runtime, job),
             },

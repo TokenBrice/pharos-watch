@@ -6,6 +6,9 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as V9SlotWindow from "../lib/v9-slot-window";
+import type { ScheduledExecutionFence } from "../lib/scheduled-slot-fence";
+import type { SlotDeadline } from "../lib/cron-timeouts";
+import type { CronRunLoggerOptions } from "../lib/cron-logger";
 
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
@@ -112,7 +115,7 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (signal: AbortSignal, reportProgress: (update: Record<string, unknown>) => Promise<void>) => Promise<unknown>,
-    _options?: { slotStartedAt?: number | null },
+    _options?: CronRunLoggerOptions,
   ) => (
     fn(new AbortController().signal, async () => undefined)
   )),
@@ -123,6 +126,7 @@ const cronMocks = vi.hoisted(() => ({
     _opts?: {
       abortSignal?: AbortSignal;
       owner?: string;
+      deadline?: SlotDeadline;
       onLeaseState?: (state: {
         event: "acquired" | "renewed";
         job: string;
@@ -159,10 +163,13 @@ const cronMocks = vi.hoisted(() => ({
   runScheduledSlotWithFence: vi.fn(async (
     _db: D1Database,
     slotKey: string,
-    fn: (signal: AbortSignal) => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
-    opts: { slotStartedAt: number },
+    fn: (signal: AbortSignal, fence: ScheduledExecutionFence) => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
+    opts: { slotStartedAt: number; invocationId?: string | null; workerRole?: "public" | "heavy"; deadline?: SlotDeadline },
   ) => {
-    const metadata = await fn(new AbortController().signal);
+    const metadata = await fn(new AbortController().signal, {
+      scheduleKey: slotKey, slotStartedAt: opts.slotStartedAt, invocationId: opts.invocationId ?? "slot-invocation",
+      owner: "slot-owner", generation: 1, workerRole: opts.workerRole ?? "public",
+    });
     return {
       status: "ok",
       resultStatus:
@@ -375,6 +382,11 @@ vi.mock("../lib/scheduled-slot-fence", async (importOriginal) => {
     runScheduledSlotWithFence: cronMocks.runScheduledSlotWithFence,
   };
 });
+vi.mock("../lib/scheduled-child-terminal", async (importOriginal) => ({
+  ...await importOriginal(),
+  writeScheduledChildTerminal: vi.fn(async () => ({ accepted: true, attemptKey: "scheduled-child:test", token: "test" })),
+}));
+
 
 vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/circuit-breaker")>();
@@ -639,6 +651,17 @@ describe("worker.scheduled", () => {
       expect.any(Function),
       expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
     );
+    const fenceOptions = cronMocks.runScheduledSlotWithFence.mock.calls[0]![3];
+    const loggerOptions = cronMocks.logCronRun.mock.calls.find((call) => call[1] === "sync-stablecoins")![3];
+    expect(loggerOptions).toMatchObject({
+      jobAttemptNo: 1,
+      executionFence: { scheduleKey: "quarterHourly", slotStartedAt: expectedSlotStartedAt,
+        invocationId: fenceOptions.invocationId, owner: "slot-owner", generation: 1 },
+    });
+    expect(loggerOptions?.deadline).toBe(fenceOptions.deadline);
+    expect(cronMocks.runCronWithLease.mock.calls.find((call) => call[1] === "sync-stablecoins")![3]?.deadline)
+      .toBe(fenceOptions.deadline);
+    expect(fenceOptions).not.toHaveProperty("staleAfterSec");
   });
 
   it.each(["skipped_duplicate", "skipped_running"])("does not dispatch children for fence outcome %s", async (status) => {
