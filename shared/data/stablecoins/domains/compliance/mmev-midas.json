@@ -49,7 +49,7 @@
     "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The issuer April 30, 2026 recap announced mMEV discontinuation on May 10 and directed holders to withdraw or reinvest in mROX. The active roster remains the coverage authority for this sweep, so this row covers the documented instrument without asserting a current new offer. That lifecycle notice is not regulatory enforcement. The February 2, 2026 KID provides performance-linked redemption less fees, not a fixed 1:1 USD commitment.",
+    "notes": "GENIUS section 2(22) requires fixed monetary-value redemption and separately excludes securities. This tracker perimeter classification follows the token-specific investment-certificate/debt-security documents and is not a U.S. judicial or regulatory securities determination. FMA prospectus approval is a document review, not issuer licensing or GENIUS approval. No U.S. issuer pathway, federal regulator, state regulator or foreign-issuer registration is asserted. The February 2, 2026 KID specifies performance-linked redemption less fees and identifies Midas Software GmbH as issuer of the bearer debt security. The April 30 issuer recap announced discontinuation on May 10, 2026 and directed holders to withdraw or reinvest in mROX. This assessment covers the documented instrument without asserting a current primary offering; the lifecycle notice is not regulatory enforcement. Current platform eligibility assertions are omitted because the cited eligibility page could not be independently reopened.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
@@ -70,12 +70,6 @@
         "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-02",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas eligibility and compliance: U.S. person restrictions",
-        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
-        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
       {

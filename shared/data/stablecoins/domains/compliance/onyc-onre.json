@@ -23,131 +23,70 @@
       "summary": "ONyc represents a fractional segregated-account claim with variable NAV and eligible-holder redemption quoted in USDG. Variable value, crypto redemption and access restrictions do not independently establish a GENIUS non-payment or securities exclusion; token-specific governing obligations require qualified legal review.",
       "references": [
         {
-          "label": "GENIUS Act Public Law 119-27, section 2 definitions",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/app/details/PLAW-119publ27",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "OnRe FAQ: ONyc is not a stablecoin",
           "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "GENIUS Act Public Law 119-27, section 2 definitions",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
     "issuerEntity": "On Re SAC Ltd.",
     "issuerDomicile": "Bermuda",
     "licensingRegulator": "Bermuda Monetary Authority",
     "foreignExceptionStatus": "unknown",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "Retain the October 1, 2026 scoped withdrawal of the former categorical non-payment exclusion. ONyc is documented as a transferable fractional segregated-account reinsurance exposure with variable NAV and conditional USDG liquidity quotes. Its issuer description alone does not establish a qualified U.S. securities exclusion or conclusively resolve all token governing obligations under section 2(22). On Re SAC Ltd. is identified in platform terms and independently named by the BMA as a graduated Class IIGB insurer also licensed under the Digital Asset Business Act. Those Bermuda licenses are separate from GENIUS approval or an OCC registered foreign exception. Current dated public-record checks resolve authorization unknown to no-public-authorization-found, without resolving applicability or asserting wrongdoing. DASP not-yet-restricted reflects the pre-effective federal regime and future offer/sale restriction, not an exemption or independent U.S. distribution permission. Apex monthly NAV attestations listed in issuer documentation concern investment valuation; no GENIUS monthly reserve assurance is asserted. Independent verification used issuer markdown/PDF sources and isolated Chromium for the OCC pending-bank-application and BMA tables. Indexed enforcement searches located no matching SEC, OCC, NYDFS or FDIC action; these limited searches do not establish the absence of private or non-public proceedings.",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "Historical 2026-08-14 review: applicability non-payment-token; authorization, issuer pathway, foreign exception and DASP posture not-applicable. Prior note: ONyc is a regulated Bermuda reinsurance-pool investment asset with NAV-based returns, not a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted. D17 review on 2026-10-01 withdraws that categorical exclusion pending qualified token-specific legal analysis of holder repayment obligations and any US securities or deposit exclusion. Authorization and pathway are separately unknown; no approval or negative authorization census is asserted. Bermuda licensing identity and the separate MiCA row are unchanged; an EU category cannot establish a US exclusion. Re-review on publication of governing holder terms or qualified regulator/legal analysis, otherwise by 2027-01-01.",
     "references": [
       {
-        "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.govinfo.gov/app/details/FR-2026-03-02/2026-04089",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OnRe FAQ: BMA-regulated ONyc product description",
         "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "GENIUS Act Public Law 119-27, section 2 definitions",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "OnRe redemption and onchain liquidity: USDG quotes and eligibility",
         "url": "https://docs.onre.finance/technical-resources/redemptions-and-onchain-liquidity.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
-        "label": "OnRe ONyc fractional segregated-account claim",
+        "label": "OnRe ONyc fractional segregated-account claim, reviewed 2026-10-01",
         "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OnRe platform terms: legal issuer identity",
-        "url": "https://www.onre.finance/legal/platform-terms-of-use",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2025-04-23",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "BMA insurance sandbox: On Re SAC Ltd. graduated Class IIGB and DABA licensing",
-        "url": "https://www.bma.bm/innovative-insurance-sandbox",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC formal proposed rule, 91 FR 10202, and pending Digital Assets Licensing Applications table, recovered with isolated Chromium after incomplete reader extraction",
-        "Federal Reserve September 24, 2026 GENIUS proposed-rule release, updated September 29",
-        "Treasury SCRC procedural IFR, Federal Register September 30, 2026",
-        "NYDFS regulated virtual-currency entities and stablecoin greenlist",
-        "Combined exact-token/issuer GENIUS and enforcement indexed searches across OCC, Federal Reserve, FDIC, NCUA, NYDFS and SEC domains; no matching authorization found",
-        "Issuer product, legal and redemption disclosures"
-      ],
-      "summary": "On 2026-10-07, no public GENIUS issuer approval, state qualification, official pending application or registered foreign exception naming On Re SAC Ltd. for ONyc was found in the inspected directories, rulemaking materials, issuer disclosures and targeted regulator-domain searches. The OCC table concerns pending bank licensing, and NYDFS listings concern existing state licenses; neither is a complete GENIUS approval census. Rulemaking is pre-effective; absence does not establish illegality, refusal or absence of non-public applications. Token applicability remains independently unresolved.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
-          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-03-02",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "OCC public pending digital-asset licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "regulator-directory",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS regulated virtual-currency entities and stablecoin greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS implementation proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-09-24",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury SCRC procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-09-30",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26)",
+    "reviewedAt": "2026-10-01"
   }
 }

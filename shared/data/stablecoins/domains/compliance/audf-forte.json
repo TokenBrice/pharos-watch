@@ -29,8 +29,7 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.forteaud.com/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Review as of 2026-10-07: AUDF remains an Australian AUD1 contractual-redemption payment product; direct redemption requires an eligible Forte account and is subject to the contractual conditions. IssuerEntity is preserved verbatim as Forte Securities Australia Pty Limited, supported by current issuer footer, terms, ASIC instrument and ABN record. Forte Tech Solutions is a separate platform entity. No issuer-specific U.S. GENIUS approval, application or foreign registration was located. ASIC AFSL492490 and distributor exemptions do not establish GENIUS status. The current public monthly report inventory extends through August 2026, so monthlyAttestationPresent remains true despite the base PoR cadence being ad-hoc; the reopened August report audits only a bank-account asset balance, without token-liability reconciliation. Broad GENIUS DASP restrictions remain prospective.",
+    "notes": "Reviewed on 2026-10-07. AUDF is an AUD payment token with a conditional contractual right for eligible Forte account holders to redeem 1 AUDF for 1 AUD. The issuer is Forte Securities Australia Pty Limited, confirmed by the AUDF terms, issuer footer and ASIC named-stablecoin instrument; Forte Tech Solutions is the separate account and conversion provider. ASIC AFSL 492490 is Australian licensing context, not GENIUS authorization. No qualifying public U.S. GENIUS approval, official application, issuer-announced GENIUS plan or registered foreign exception was located in the named public sources. Pathway and foreign-exception status remain unknown. The PDS describes monthly independent audits of reserve balances but expressly excludes verification of AUDF tokens in circulation. The August 2026 report, signed on 2026-09-07, audits a reserve bank-account balance only. MonthlyAttestationPresent is omitted rather than treating that assets-only audit as a GENIUS monthly reserve attestation. Reserve and redemption disclosure indicators describe publicly present documents, not compliance with GENIUS reserve requirements. DASP restrictions are prospective under Treasury's opened August proposal. The ABN record corroborates entity identity; its extraction date is 2026-10-08 and it is not used to establish a new authorization on the review date.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS Act proposed rule",
@@ -119,21 +118,30 @@
       {
         "label": "Australian ABN Lookup - Forte Securities Australia Pty Limited",
         "url": "https://abr.business.gov.au/ABN/View?id=22614579734",
-        "sourceKind": "foreign-regulator",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
         "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 implementing proposal, reopened 2026-10-07",
-        "Current OCC Digital Assets Licensing Applications pending table, reopened with direct HTTP and HTML extraction; ordinary bank-charter table, not exhaustive PPSI register",
-        "Joint payment-stablecoin customer-identification proposal (91 FR 37234) and Federal Reserve September 24 implementation-proposal release",
-        "Treasury August 17 section 3 proposal and September 30 SCRC procedural interim final rule",
-        "New York DFS June 9 proposed stablecoin regulation",
-        "GENIUS Act Public Law 119-27 enacted statutory text",
-        "Current token issuer terms and reserve disclosures for Forte Securities Australia Pty Limited",
-        "Token and issuer searches for GENIUS approval/application across OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS domains",
-        "Token and issuer enforcement searches across SEC, CFTC, FinCEN, OFAC and NYDFS domains; no matching public action located"
+        "OCC Bulletin 2026-3 and current pending digital-assets licensing table, official raw HTML: no Forte Securities or AUDF applicant match; ordinary bank-charter coverage only.",
+        "Federal Register exact token/project/issuer-name document query through 2026-10-07: count 0, including AUDF and Forte Securities.",
+        "NYDFS live regulated-entity roster and issuance-approved Greenlist, plus June 9 proposed stablecoin regulation: no Forte Securities or AUDF approval identified.",
+        "Joint customer-identification NPRM, Federal Reserve September 24 implementation proposals, Treasury August 17 section 3 proposal and September 30 SCRC procedural rule.",
+        "Forte AUDF terms, issuer transparency disclosures, Cointree AUDF PDS and August 2026 independent reserve bank-account audit.",
+        "Named AUDF/Forte Securities regulatory-domain GENIUS, stablecoin and enforcement search through 2026-10-07: no matching qualifying public action or authorization located."
       ],
       "summary": "As of 2026-10-07, the opened federal/state rulemaking materials, OCC pending-applications table, issuer disclosures and issuer-name regulatory searches did not identify a GENIUS PPSI approval, state-qualified status, official pending application, registered foreign exception or issuer-announced GENIUS application plan for Forte Securities Australia Pty Limited / AUDF. Search and table coverage are limited public negative evidence; no authorization or enforcement absence is certified. Australian licensing does not establish a U.S. pathway.",
       "reviewer": "Pharos compliance research",
@@ -190,6 +198,18 @@
           "sourceKind": "federal-register",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Register named-token and project search through 2026-10-07: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Flying%20Tulip%22%20OR%20%22ftUSD%22%20OR%20%22Forest%20Road%22%20OR%20%22USDfr%22%20OR%20%22AUDF%22%20OR%20%22Forte%20Securities%22%20OR%20%22ZCHF%22%20OR%20%22Frankencoin%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
     },

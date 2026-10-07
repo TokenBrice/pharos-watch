@@ -42,13 +42,6 @@
     "notes": "Issuer terms peg ERC-20 KAG 1:1 to native KAG and make direct redemption discretionary. The existing non-payment-token assessment is a scope interpretation, not a GENIUS authorization finding.",
     "references": [
       {
-        "label": "OCC GENIUS Act proposed rule",
-        "url": "https://www.govinfo.gov/app/details/FR-2026-03-02/2026-04089",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-03-02",
-        "accessedAt": "2026-10-07"
-      },
-      {
         "label": "KMS Labs terms: ERC20 KAG issuer and silver backing",
         "url": "https://kmslabs.money/kms-labs-tcs/",
         "sourceKind": "issuer-disclosure",

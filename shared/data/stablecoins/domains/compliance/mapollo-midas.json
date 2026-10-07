@@ -45,7 +45,7 @@
     "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The token-specific reserve API reopened on October 7, 2026 reports issuer portfolio positions, assets, liabilities and equity, with an October 7 source timestamp. These are issuer disclosures and do not establish independent monthly accountant assurance. Redemption follows NAV rather than a fixed 1:1 USD obligation.",
+    "notes": "GENIUS section 2(22) requires fixed monetary-value redemption and separately excludes securities. This tracker perimeter classification follows the token-specific investment-certificate/debt-security documents and is not a U.S. judicial or regulatory securities determination. FMA prospectus approval is a document review, not issuer licensing or GENIUS approval. No U.S. issuer pathway, federal regulator, state regulator or foreign-issuer registration is asserted. The token-specific issuer portfolio API returned public positions, assets, liabilities and equity with an October 7, 2026 update timestamp. ReserveDisclosurePresent records that self-reported portfolio disclosure, not an independently audited reserve report or a requirement to hold the notional underlying. RedemptionPolicyPresent is false because standard redemption follows NAV less fees and limitations rather than a fixed USD 1 monetary-value entitlement. Monthly independent reserve-attestation posture is omitted because the current methodology page could not be independently reopened.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
@@ -69,18 +69,6 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Midas eligibility and compliance: U.S. person restrictions",
-        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas Attestation Engine: verification coverage caveat",
-        "url": "https://docs.midas.app/transparency/the-midas-attestation-engine",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
         "label": "Midas mAPOLLO issuer portfolio disclosure API",
         "url": "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
         "sourceKind": "issuer-disclosure",
@@ -91,7 +79,6 @@
     "reviewedAt": "2026-10-07",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false
+    "redemptionPolicyPresent": false
   }
 }

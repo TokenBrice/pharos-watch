@@ -30,7 +30,6 @@
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "notes": "Current canonical documentation supersedes the older fund-exposure description for perimeter assessment: one thGOLD tracks one troy ounce of physical gold and does not appreciate with yield. A separate sthGOLD position receives yield. No token-specific securities-law determination was identified. The existing pre-launch lifecycle and historical MG999 description conflict with current documentation stating thGOLD is available on secondary venues, while direct mint/redeem is still forthcoming. Non-payment-token is a GENIUS perimeter assessment and establishes no MiCA authorization or financial-instrument exclusion.",
     "references": [

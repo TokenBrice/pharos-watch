@@ -16,40 +16,19 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "mF-ONE is a performance-linked Midas investment certificate/debt instrument exposing holders to Fasanara F-ONE private-credit and other investment strategies. Midas disclosures describe floating reference values and subordinated debt claims, and its current programme prospectus describes derivative debt instruments. The GENIUS Act excludes digital assets that are securities from the payment-stablecoin definition. This scope classification does not claim that European prospectus approval determines US securities law or establishes a token-specific US regulatory adjudication.",
+      "summary": "mF-ONE is a Midas blockchain-based certificate and tokenized debt instrument, not a payment stablecoin. The GENIUS Act excludes digital assets that are securities from the payment-stablecoin definition.",
       "references": [
         {
           "label": "GENIUS Act text: payment stablecoin definition excludes securities",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Midas Software GmbH base prospectus: blockchain-based certificates/debt instruments",
-          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+          "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
           "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-07-17"
-        },
-        {
-          "label": "Midas issued-token debt and floating-reference-value disclosure",
-          "url": "https://midas-docs.gitbook.io/midas-docs/liquid-yield-token.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Steakhouse mF-ONE counterparty diligence and token issuer mapping",
-          "url": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain",
-          "sourceKind": "news",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-06-27"
-        },
-        {
-          "label": "Midas mF-ONE issuer and securities-offering footer",
-          "url": "https://midas.app/mfone",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -61,58 +40,31 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Midas Software GmbH is retained verbatim. The exact mF-ONE product-page footer identifies this entity and describes the offering as securities; product content is region-restricted. The July 17, 2026 programme prospectus is valid to July 17, 2027, but programme approval is not prudential authorization, MiCA EMT/ART authorization, or GENIUS approval. The 2026 continuation-product table does not list mF-ONE and current mF-ONE final terms were not recovered; no claim of current token-specific programme coverage is made. Issuer-wide floating-reference debt disclosures and exact-token counterparty diligence support retention of excluded-security. redemptionPolicyPresent remains false because the tracked field means a public 1:1 redemption policy, not NAV-linked investment redemption. Current exact-token reserve checkpoint contents were not recovered (archive listing, followed by 429), so an unsupported reserveDisclosurePresent:false is omitted. No independent monthly reserve attestation was located in the opened documents. Exact-name official-domain searches across SEC, OCC, FDIC, CFTC, Treasury and NYDFS located no token/issuer enforcement record; this is a bounded public search finding, not proof no action exists.",
+    "notes": "mF-ONE is a prominent dashboard asset and is explicitly treated as a tokenized debt/security product, so an explicit GENIUS exclusion is useful despite the normal omission for out-of-scope instruments. The EEA offer and Liechtenstein prospectus approval do not constitute MiCA authorization or a U.S. GENIUS approval.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "GENIUS Act text: payment stablecoin definition excludes securities",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Midas Software GmbH base prospectus",
-        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
         "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-07-17"
-      },
-      {
-        "label": "Midas issued-token debt and floating-reference-value disclosure",
-        "url": "https://midas-docs.gitbook.io/midas-docs/liquid-yield-token.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas public issuance and redemption policy",
-        "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Steakhouse mF-ONE counterparty diligence and token issuer mapping",
-        "url": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain",
-        "sourceKind": "news",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-06-27"
-      },
-      {
-        "label": "Midas mF-ONE issuer and securities-offering footer",
-        "url": "https://midas.app/mfone",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
-    "reviewer": "Pharos independent compliance verifier s075",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

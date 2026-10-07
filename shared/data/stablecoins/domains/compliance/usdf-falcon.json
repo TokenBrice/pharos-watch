@@ -9,184 +9,64 @@
           "label": "Falcon Finance Terms of Use",
           "url": "https://docs.falcon.finance/resources/terms-of-use",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-11"
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "GENIUS Act section 2(17) and 2(22): monetary value and payment-stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "Falcon Finance / Anchorage fUSD announcement",
           "url": "https://falcon.finance/news/falcon-finance-and-anchorage-digital-bank-launch-fusd-a-genius-ready-stablecoin-with-rewards-on-ceffu",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-05-27"
+          "sourceDate": "2026-05-27",
+          "accessedAt": "2026-06-07"
         }
       ]
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
     "issuerEntity": "Falcon Digital Limited",
     "issuerDomicile": "British Virgin Islands",
-    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.falcon.finance/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The prior 2026-06-07 editorial non-payment-token classification is withdrawn on 2026-10-01 under D17 pending qualified USDf-specific legal analysis. Current Terms expressly support USDf card payments, while direct redemption returns digital collateral or other stablecoins; neither fact alone resolves the statutory monetary-value obligation. U.S. access restrictions and the distinct Anchorage-issued fUSD product do not establish a USDf exclusion or authorization. Historical reserve-report observations are retained: the quarterly HT Digital report covers 2026-04-30 and is signed 2026-06-19; weekly collateral letters do not establish monthly formal assurance. The public app guide expressly describes 1:1 stablecoin redemption after cooldown, supporting the redemption-policy presence flag but not resolving whether USDf holders have the statutory national-currency/deposit redemption obligation. Falcon's July 2025 roadmap described group-level regulatory discussions and licensing ambitions under GENIUS/CLARITY and MiCA; no current USDf-specific filed application, permitted-issuer approval, foreign registration or committed issuer pathway was found. The May 2026 fUSD launch names Anchorage Digital Bank N.A. as that distinct token's issuer. No authorization is inherited by USDf. Negative research is bounded to opened public materials and exact-name official-domain searches, not a comprehensive regulator certification. The Act remains pre-effective on the reviewed landscape; section 3(b)'s broad DASP restriction has its separate July 18, 2028 start date. No public token-specific enforcement action was found in this review.",
+    "notes": "The prior 2026-06-07 editorial non-payment-token classification is withdrawn on 2026-10-01 under D17 pending qualified USDf-specific legal analysis. Current Terms expressly support USDf card payments, while direct redemption returns digital collateral or other stablecoins; neither fact alone resolves the statutory monetary-value obligation. U.S. access restrictions and the distinct Anchorage-issued fUSD product do not establish a USDf exclusion or authorization. Historical reserve-report observations are retained: the quarterly HT Digital report covers 2026-04-30 and is signed 2026-06-19; weekly collateral letters do not establish monthly formal assurance.",
     "references": [
       {
         "label": "Falcon Finance Terms of Use: US persons restriction",
         "url": "https://docs.falcon.finance/resources/terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-11"
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Falcon Finance / Anchorage Digital fUSD launch announcement",
         "url": "https://falcon.finance/news/falcon-finance-and-anchorage-digital-bank-launch-fusd-a-genius-ready-stablecoin-with-rewards-on-ceffu",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-05-27"
+        "sourceDate": "2026-05-27",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Anchorage Digital: fUSD is Falcon's US federally regulated stablecoin",
         "url": "https://www.anchorage.com/insights/anchorage-digital-issues-fusd-falcon-finances-new-u-s-federally-regulated-stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-05-27"
+        "sourceDate": "2026-05-27",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "News report: Falcon Finance announces its first independent quarterly audit on 2025-10-01",
         "url": "https://x.com/press_newswire/status/1973314120960131348",
         "sourceKind": "news",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-10-01"
-      },
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "GENIUS Act Public Law 119-27",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
-      },
-      {
-        "label": "OCC public digital-assets licensing applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS regulated entities and approved stablecoin greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS framework and application proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Stablecoin Certification Review Committee procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Falcon Finance Quick App Guide: 1:1 stablecoin redemption",
-        "url": "https://docs.falcon.finance/resources/quick-app-guide",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Falcon Finance redemption mechanisms",
-        "url": "https://docs.falcon.finance/mechanism/redemptions",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "HT Digital quarterly Falcon assurance report as of April 30, 2026",
-        "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-06-19"
-      },
-      {
-        "label": "HT Digital September 28 USDf collateral letter",
-        "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2028%20September%202026.pdf?prefix=media",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-28"
-      },
-      {
-        "label": "Falcon roadmap: group-level GENIUS/CLARITY licensing ambitions",
-        "url": "https://falcon.finance/news/falcon-finance-unveils-ambitious-roadmap-and-reaches-1b-in-usdf-circulating-supply",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-29"
+        "sourceDate": "2025-10-01",
+        "accessedAt": "2026-06-07"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC Bulletin 2026-3: substantive body recovered from HTML",
-        "OCC digital-assets licensing application table: all currently displayed applicants",
-        "NYDFS Virtual Currency Business Licensing: regulated-entity and greenlist tables",
-        "Federal Reserve September 24, 2026 GENIUS framework/application proposals",
-        "September 30, 2026 SCRC procedural interim final rule",
-        "2026-10-07 exact-name official-domain query across OCC, Federal Reserve, FDIC, NCUA, NYDFS and Treasury for Falcon Digital Limited, USDf, Preference Capital, Preference Foundation, Apyx and apxUSD with GENIUS, stablecoin approval and enforcement terms",
-        "Falcon Terms of Use, app guide, redemption documentation and public transparency API",
-        "Falcon July 2025 roadmap and May 2026 Falcon/Anchorage fUSD announcements"
-      ],
-      "summary": "No opened public record or exact-name official-domain search established USDf/Falcon Digital Limited GENIUS permitted-issuer approval, state qualification, token-specific filed application or registered foreign exception. The public OCC table is a digital-assets bank application table, not a complete PPSI registry. General Falcon licensing ambitions do not identify a current USDf route; Anchorage issuance evidence relates to fUSD only. No token-specific public enforcement action was found. Absence is not a legal finding of non-compliance.",
-      "references": [
-        {
-          "label": "OCC public digital-assets licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS regulated entities and approved stablecoin greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS framework and application proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Stablecoin Certification Review Committee procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07"
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC04): GENIUS applicability review; other historical observations retain their prior scope",
+    "reviewedAt": "2026-10-01"
   }
 }

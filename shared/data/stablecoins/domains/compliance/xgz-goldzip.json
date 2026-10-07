@@ -30,7 +30,7 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicit scope clarification for a gold-family catalog addition; no GENIUS authorization asserted.",
+    "notes": "XGZ represents one gram of physical gold and provides conditional gold-bar redemption. GoldZip terms identify GoldZip Digital Pte Ltd as the Singapore administrator and redemption counterparty, while the homepage and litepaper describe issuance by a Hong Kong Gold Exchange group member company without unequivocally naming that incorporated issuing company. issuerEntity and issuerDomicile are omitted rather than equating administration with legal issuance. This does not affect the sourced gold-unit scope finding. No GENIUS authorization is asserted.",
     "references": [
       {
         "label": "Exact token product claim",
@@ -53,7 +53,7 @@
         "sourceDate": "2026-02-25"
       },
       {
-        "label": "GoldZip Singapore operator and issuer disclosure",
+        "label": "GoldZip product and Singapore operator disclosure",
         "url": "https://goldzip.info/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
@@ -63,11 +63,15 @@
         "url": "https://goldzip.info/terms-conditions/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GoldZip primary terms component: Singapore administrator and clauses 4.1-4.2 physical redemption",
+        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "issuerEntity": "GoldZip Digital Pte. Ltd.",
-    "issuerDomicile": "Singapore"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -23,13 +23,11 @@
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://freedomdollar.com/",
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "The project-published dashboard publishes ZANO reserves and circulating/minted tokens without independent monthly reserve assurance. The white paper claims no company or central control, but those statements do not establish a legal issuerless exemption or eliminate native asset-owner issuance control. No legal issuer entity or GENIUS pathway was identified. No fixed fiat-redemption policy was found; market swaps and the white paper's $1 redemption language do not establish an enforceable monetary-value obligation. GENIUS remains pre-effective in the reviewed implementation materials.",
+    "notes": "The project dashboard publishes ZANO reserves and circulating/minted token figures, but is self-reported. The white paper markets payment use and describes redemption as swaps into ZANO or supported assets; no legal issuer or fixed monetary-value redemption obligor is identified. Its no-company claim is not treated as a legal issuerless exemption. No fixed fiat-redemption policy was established. GENIUS remains pre-effective in the reopened implementation materials. No enforcement clearance or independent monthly attestation conclusion is asserted.",
     "references": [
       {
         "label": "OCC GENIUS Act regulations NPRM",
@@ -80,50 +78,35 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Freedom Dollar white paper and official reserve/payment-use website",
-        "OCC Bulletin 2026-3 and full digital-assets pending-bank application table",
-        "Federal Reserve September 2026 issuer proposals",
-        "Treasury August 2026 section 3 proposal and September 2026 SCRC procedures",
-        "Exact token-name searches across OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury public domains on 2026-10-07",
-        "Exact token-name searches across SEC, CFTC, FinCEN, OFAC and NYDFS public domains on 2026-10-07"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Freedom%20Dollar%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf",
+        "https://freedomdollar.com/",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "2026-10-07 cutoff exact Freedom Dollar authorization queries on OCC, Federal Register, FDIC, Federal Reserve, NCUA, NYDFS and Treasury domains; returned general rulemaking rather than a token-specific authorization."
       ],
-      "summary": "No token-specific public PPSI approval, GENIUS state qualification, regulator-published pending application, registered foreign exception, or issuer GENIUS intent was located for Freedom Dollar. No public action naming this crypto token was located in the searched U.S. regulator records. Pending bank-charter listings and general implementation proposals do not establish token authorization.",
+      "summary": "The reopened OCC pending digital-asset bank application table and NYDFS entity directory contain no Freedom Dollar entry. The Federal Register exact Freedom Dollar query through 2026-10-07 returned zero documents. The token white paper and website show no GENIUS approval, application or licensing-intent statement and identify no legal issuer. No qualifying token-specific public authorization was located in this bounded review; confidential, unindexed or differently named filings are not excluded.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC GENIUS Act regulations NPRM",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "OCC digital-assets licensing applications",
-          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "label": "OCC pending digital-asset bank applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "regulator-directory",
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "Federal Reserve GENIUS Act proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
+          "label": "NYDFS regulated virtual-currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Treasury GENIUS issuance, offer, and sale proposal",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "Treasury SCRC certification procedures",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "label": "Federal Register exact Freedom Dollar search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Freedom%20Dollar%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
+          "accessedAt": "2026-10-07"
         }
       ]
     },

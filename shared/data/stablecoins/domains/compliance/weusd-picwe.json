@@ -1,37 +1,23 @@
 {
   "id": "weusd-picwe",
   "genius": {
-    "applicability": "unclear",
+    "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "WEUSD is marketed for payments and RWA settlement, but the documented mint/redeem mechanism exchanges WEUSD for USDC, a digital asset, rather than proving a legal issuer obligation to redeem in national currency or a deposit. GENIUS section 2(22) expressly excludes digital-asset-denominated value from that redemption element. The legal issuer and any separate fiat claim are undisclosed, making applicability genuinely unclear rather than a definitive payment-stablecoin finding.",
+      "summary": "PicWe markets WEUSD as an omni-chain USD stablecoin with 1:1 USDC minting and redemption plus RWA settlement and payment uses, so it is treated as payment-stablecoin-shaped despite unresolved issuer and backing details.",
       "references": [
         {
           "label": "PicWe WEUSD documentation",
           "url": "https://docs.picwe.org/what-is-weusd",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "GENIUS Act, Public Law 119-27",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "PicWe WEUSD mint and redeem documentation",
-          "url": "https://docs.picwe.org/mint-and-redeem",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "PicWe FAQ",
-          "url": "https://docs.picwe.org/faq",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -44,182 +30,72 @@
     "reserveDisclosureUrl": "https://docs.picwe.org/what-is-weusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "PicWe's public WEUSD page states 100% USDC backing and future RWA plans; reserveDisclosurePresent records the existence of that issuer composition statement only, not independently verified reserves, segregation or a monthly attestation. A crypto-redemption policy is present: the dedicated Mint & Redeem page specifies 100 WEUSD -> 99 USDC after a 1% fee, while the FAQ says 1:1 redemption and no protocol fees. This internal conflict is unresolved and replaces the former unconditional 1:1 redemption wording. No fiat-redemption obligation or exact legal issuer is identified, so applicability is corrected to unclear; no issuerEntity/domicile/regulator is invented. No public PPSI approval, state qualification, official application, foreign registration or GENIUS enforcement action was located in the opened official sources and exact-name searches. Foreign status stays unknown. Not-yet-restricted is only the pre-effective timing posture. The inaccessible OCC applicant table is not claimed checked. Independent verification on 2026-10-07 reopened every retained reference URL. The statutory applicability analysis is an editorial assessment rather than a regulator ruling. PicWe Wallet terms identify Copariot Labs as wallet-service provider and disclaim transaction counterparty status; these terms do not establish Copariot Labs as WEUSD issuer.",
+    "notes": "PicWe's public documentation describes current 1:1 USDC backing, instant mint/redeem, and future RWA collateral, but does not identify a legal issuer or a GENIUS pathway. No token-specific PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located. The status is conservative because the public backing and market posture remain disputed.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Treasury GENIUS Act AML/CFT proposed rule release",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-08",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "PicWe WEUSD documentation",
         "url": "https://docs.picwe.org/what-is-weusd",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-04-27",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "PicWe WEUSD mint and redeem documentation",
-        "url": "https://docs.picwe.org/mint-and-redeem",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-04-27",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "PicWe FAQ",
-        "url": "https://docs.picwe.org/faq",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-04-27",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act, Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Register: OCC GENIUS Act proposed rule",
-        "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-03-02",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS Act framework and application proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-09-24",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "FDIC GENIUS Act requirements and standards proposal",
-        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-07",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury issuance, offering, and sale proposal",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury state-regime certification procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-09-30",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "PicWe Wallet service terms, distinct from WEUSD issuance",
-        "url": "https://wallet.picwe.org/terms-of-service",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-04-16",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://public-inspection.federalregister.gov/2026-04089.pdf",
-        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
-        "https://home.treasury.gov/news/press-releases/sb0605",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "https://docs.picwe.org/what-is-weusd",
-        "https://docs.picwe.org/mint-and-redeem",
-        "https://docs.picwe.org/faq",
-        "2026-10-07 exact-name searches for weusd-picwe and its issuer/project on OCC, NYDFS, FDIC, Federal Reserve, Treasury, NCUA and SEC domains for GENIUS/PPSI approval, application, registration and enforcement; no qualifying result located.",
-        "https://wallet.picwe.org/terms-of-service"
+        "OCC GENIUS Act proposed rule and related bulletins",
+        "OCC digital assets licensing applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act rulemaking materials",
+        "Public Law 119-27 foreign-issuer exception text",
+        "PicWe WEUSD documentation and public product materials",
+        "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials"
       ],
-      "summary": "As of 2026-10-07 no public token-specific GENIUS approval, state-qualified approval, official application or foreign registration for WEUSD or a legally identified PicWe issuer was located in the opened official materials and bounded exact-name searches. Legal issuer identity and fiat redemption remain unresolved; documented USDC redemption is not itself the statutory monetary-value obligation. No public token-specific GENIUS action was found; this is not a guarantee of legality.",
+      "summary": "No public token-specific GENIUS approval, state-qualified approval, official application, or foreign-issuer registration was located for WEUSD or a legally identified PicWe issuer as of 2026-08-14.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "reviewedAt": "2026-08-14",
       "references": [
         {
-          "label": "Federal Register: OCC GENIUS Act proposed rule",
-          "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-03-02",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS Act framework and application proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "sourceDate": "2026-09-24",
-          "accessedAt": "2026-10-07"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
         },
         {
-          "label": "FDIC GENIUS Act requirements and standards proposal",
-          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-04-07",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury issuance, offering, and sale proposal",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-08-17",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury state-regime certification procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-09-30",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS virtual currency regulated entities and Greenlisted Coins",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "PicWe WEUSD documentation",
           "url": "https://docs.picwe.org/what-is-weusd",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "PicWe WEUSD mint and redeem documentation",
-          "url": "https://docs.picwe.org/mint-and-redeem",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "PicWe FAQ",
-          "url": "https://docs.picwe.org/faq",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-04-27",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-08-14"
   }
 }

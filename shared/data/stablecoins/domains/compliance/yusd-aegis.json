@@ -6,7 +6,7 @@
       "summary": "YUSD is marketed as a 1:1 USD digital dollar and is integrated with wallets, exchanges, and card infrastructure, but it is BTC-backed, yield-bearing, and rewards holders through a delta-neutral funding strategy. Whether that synthetic yield product is a GENIUS payment stablecoin remains unresolved. The reviewed public materials do not establish a token-specific legal issuer obligation to redeem YUSD for a fixed amount of monetary value, as required by Section 2(22).",
       "references": [
         {
-          "label": "Aegis YUSD product and legal disclosures",
+          "label": "Aegis YUSD product presentation",
           "url": "https://aegis.im/",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
@@ -35,13 +35,10 @@
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://aegis.accountable.capital:10443/dashboard/YUSD",
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "Aegis describes YUSD as a BTC-backed, delta-neutral, yield-bearing dollar product. Public mint access is KYC/whitelist-restricted and accepts USDT, USDC and DAI; the opened product pages do not establish a public fixed monetary-value redemption obligation. A public Accountable collateral/liability dashboard is available, but its signed reserve snapshots do not establish a monthly independent reserve attestation. Archived June 13, 2025 service terms identify Aegis Vault Ltd. (British Virgin Islands) and separately Aegis DAO Foundation (Cayman Islands); current legal pages returned HTTP 403, so issuerEntity and issuerDomicile remain omitted pending current token-specific attribution. No public GENIUS PPSI approval, official application, state qualification, foreign exception registration or token-specific enforcement action was located in the sources checked on October 7, 2026. The OCC digital-assets table is a limited pending charter-application list, not a complete GENIUS approval register; NYDFS licenses are not GENIUS approvals. Treasury's August 17 proposal anticipates a January 18, 2027 general effective date and a July 18, 2028 DASP offer/sale restriction; neither future milestone establishes a present prohibition. The prior informational-not-public-offer assertion is removed because it was not re-established on the current homepage.",
+    "notes": "Aegis describes YUSD as a BTC-backed, delta-neutral, yield-bearing dollar product. Public mint access requires KYC and onboarding and accepts USDT, USDC and DAI. The opened current product and mint pages do not establish an issuer obligation to redeem YUSD for fixed monetary value. The working Accountable endpoint discloses collateral, liabilities and cryptographically signed reserve snapshots; those snapshots do not establish a monthly independent reserve attestation. Redemption-policy and monthly-attestation booleans are omitted because a complete current disclosure review could not be established while issuer documentation and legal pages were blocked. Archived service terms last updated December 10, 2024 identify Aegis Vault Ltd. in the British Virgin Islands and distinguish Aegis DAO Foundation in the Cayman Islands; these generic historical terms do not establish current token-specific attribution, so issuerEntity and issuerDomicile remain omitted. No public token-specific GENIUS approval, official application, state qualification or foreign registration was found in the dated, bounded sources checked. The enforcement enum is omitted because unresolved current legal issuer identity limits an entity-wide negative conclusion. The DASP value concerns GENIUS timing, not issuer access restrictions or other applicable law.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
@@ -57,7 +54,7 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Aegis YUSD product and legal disclosures",
+        "label": "Aegis YUSD product presentation",
         "url": "https://aegis.im/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
@@ -106,12 +103,19 @@
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-08-17",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register YUSD and Aegis Vault document search through October 7, 2026: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22YUSD%22%20OR%20%22Aegis%20Vault%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC Bulletin 2026-3 (February 25, 2026 proposed rules; reopened October 7, 2026)",
         "OCC Digital Assets Licensing Applications pending table (opened October 7, 2026; no Aegis, Aegis Vault or YUSD entry)",
+        "Federal Register exact YUSD or Aegis Vault document query through 2026-10-07; count 0",
         "NYDFS regulated virtual-currency entities and approved stablecoin list (opened October 7, 2026; no Aegis or YUSD entry)",
         "GENIUS Act enacted Public Law 119-27",
         "Treasury FinCEN/OFAC April 8, 2026 proposed rule announcement",
@@ -155,6 +159,12 @@
           "url": "https://home.treasury.gov/news/press-releases/sb0605",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register YUSD and Aegis Vault document search through October 7, 2026: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22YUSD%22%20OR%20%22Aegis%20Vault%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

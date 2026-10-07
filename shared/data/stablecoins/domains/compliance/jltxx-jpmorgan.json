@@ -30,9 +30,6 @@
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "JPMorgan OnChain Liquidity-Token Money Market Fund, a series of JPMorgan Trust IV",
-    "issuerDomicile": "United States",
-    "licensingRegulator": "SEC (Investment Company Act registration; not GENIUS payment-stablecoin issuer authorization)",
     "references": [
       {
         "label": "JPMorgan JLTXX Token Class factsheet and investment-company fund-share terms",

@@ -33,7 +33,7 @@
     "foreignExceptionStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://app.axis.to/transparency",
-    "notes": "Coordinate Origin Limited is preserved as the BVI issuance/redemption entity named in current terms, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. USDx is marketed as a dollar-linked settlement asset, but collateral exchange through approved signed orders and disclaimed guaranteed redemption do not settle whether an issuer is obligated to repay fixed monetary value under GENIUS. U.S.-person restrictions do not establish a statutory exclusion. The dated public-source review found no exact GENIUS approval, official application, state qualification or registered foreign exception; issuerPathway and foreignExceptionStatus remain unknown. Current transparency reserves are disclosed, but the live Accountable feed/security audits are not monthly statutory financial attestations or authorization. EU/EEA enhanced-due-diligence applications prevent a territorial MiCA out-of-scope inference; no named NCA/venue non-compliance decision was located, so parent MiCA remains unable to verify rather than importing the Ethena precedent. GENIUS issuance/sale rules remain pre-effective with Treasury expecting January 18, 2027.",
+    "notes": "Coordinate Origin Limited is the BVI issuance/redemption entity named in current terms, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. The public primary-market guide describes USDx exchange for supported digital-asset collateral through approved signed orders, with RFQ pricing, execution fees and eligibility/capacity conditions. Terms disclaim guaranteed value and continuous redemption. These documents do not establish the fixed monetary-value issuer obligation in GENIUS section 2(22), so applicability remains unclear; no payment-stablecoin status or security/deposit exclusion is asserted. The dated public-source review found no exact GENIUS approval, official application, state qualification or registered foreign exception. Issuer pathway and foreign-exception posture remain unknown, with licensing and regulator fields omitted. The current public backing snapshot is present; it is issuer management disclosure and does not itself constitute a monthly independent reserve attestation. A published redemption process is not an unconditional 1:1 monetary-value redemption policy, so redemptionPolicyPresent is omitted. Monthly-attestation and enforcement fields are omitted rather than treating limited source searches as categorical absence. The not-yet-restricted DASP field describes pre-effective GENIUS timing only and does not override issuer U.S.-person restrictions or other laws.",
     "references": [
       {
         "label": "Axis legal issuer and platform operator",
@@ -105,14 +105,17 @@
         "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "sourceKind": "regulator-directory",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact issuer-name records through October 7, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
@@ -124,9 +127,10 @@
         "https://www.axis.to/terms-of-service",
         "https://docs.axis.to/resources-and-legal/compliance.md",
         "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md",
-        "2026-10-07 indexed exact-name authorization/application and enforcement searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Coordinate Origin Limited / Axis USDx"
+        "2026-10-07 indexed exact-name authorization/application and enforcement searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Coordinate Origin Limited / Axis USDx",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest"
       ],
-      "summary": "No public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Coordinate Origin Limited / Axis USDx was located in the listed sources. This is a dated public-evidence finding, not proof that no private or unindexed application exists. Bank-charter and legacy licensing tables are not comprehensive GENIUS registers; proposed rules and SCRC procedural forms do not authorize an issuer.",
+      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Coordinate Origin Limited / Axis USDx was located in the opened OCC licensing tracker, Federal Register exact issuer-name query, NYDFS directory, regulator proposals and issuer documents. The Federal Register query through the review date returned zero documents for Coordinate Origin Limited. Exact-name government-domain authorization searches supplied no qualifying record. This is a bounded public-evidence finding, not proof that no private or unindexed application exists. The ordinary bank-charter tracker and NYDFS licensing directory are not comprehensive GENIUS registers; proposed issuer rules and SCRC procedural forms do not authorize an issuer.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -168,6 +172,12 @@
           "label": "NYDFS regulated virtual-currency businesses and greenlisted tokens",
           "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
           "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact issuer-name records through October 7, 2026",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

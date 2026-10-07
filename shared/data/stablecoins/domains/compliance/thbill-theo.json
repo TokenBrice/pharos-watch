@@ -46,7 +46,6 @@
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "notes": "Theo describes a fixed share of a managed investment pool and NAV-based stablecoin redemption. This review classifies the appreciating investment position as non-payment-token/not-applicable. Underlying fund holdings and pooled returns do not independently establish that thBILL itself is a legally recognized fund unit or security. The legal securities classification remains unconfirmed and is unnecessary to this payment-stablecoin perimeter assessment.",
     "references": [

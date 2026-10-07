@@ -2,30 +2,6 @@
   "id": "aznd-mu-digital",
   "genius": {
     "applicability": "unclear",
-    "applicabilityBasis": {
-      "summary": "AZND is described as a credit-backed USD token used in DeFi and minted 1:1 against USDC, USDT or AUSD. Terms give eligible registered users a conditional right to redeem for USDC and separate loAZND locking rewards. GENIUS section 2(22)(A)(ii)(I) excludes a digital asset denominated in fixed monetary value from the monetary redemption test. The opened materials do not establish fiat/deposit redemption or an actual fund-share security, so payment-stablecoin applicability remains unresolved.",
-      "references": [
-        {
-          "label": "Mu Digital Terms of Use: Bash Bros Inc and token rights",
-          "url": "https://1336347742-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FP8rgZHx0UJleYvgYz8KM%2Fuploads%2Fjde3k38gpAdsepj5Hkyz%2FMu%20Digital_Terms%20of%20Use_Oct%202025.pdf?alt=media&token=a14472d0-79d6-41bf-89e7-82cb699e77ed",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "AZND mint/redeem",
-          "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act Public Law 119-27, section 2(22)",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-          "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Bash Bros Inc",
@@ -36,116 +12,47 @@
     "reserveDisclosureUrl": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "AZND documentation calls it a credit-backed USD yield token and says users stake to earn yield. The October 2025 Terms of Use identify Bash Bros Inc, cover AZND issued pursuant to those terms, and distinguish AZND from loAZND locking receipts. They provide redemption for USDC subject to account eligibility and other conditions, with processing up to ten business days; the mint/redeem documentation instead describes a weekly fund schedule of approximately seven calendar days. A public stablecoin-swap redemption process exists, but a 1:1 fiat/deposit redemption policy was not established, so redemptionPolicyPresent remains false under the tracker definition. Reserve disclosure is an issuer portfolio description, not a current independently reconciled reserve report or monthly attestation. Terms exclude United States, Singapore and Ontario platform users; these exclusions do not establish a GENIUS authorization or a blanket EU exclusion. The base record marks AZND frozen and in wind-down; the cited X wind-down announcement could not be independently opened in fetch/browser. Legacy documentation may not describe the currently operating redemption process. No qualifying authorization, official application, foreign registration, or named regulator enforcement action was found in the specified public sources and exact-name searches. not-yet-restricted describes statutory GENIUS timing only, not current token availability or issuer eligibility.",
+    "notes": "AZND is the non-yield-bearing Asia Dollar base token; yield accrues only after depositing it into the separate loAZND vault. GENIUS treatment remains unresolved.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "sourceKind": "federal-regulator"
       },
       {
         "label": "MU Digital AZND",
         "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "AZND mint/redeem",
-        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem",
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "MU Digital yield mechanics",
-        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Mu Digital Terms of Use: Bash Bros Inc and token rights",
-        "url": "https://1336347742-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FP8rgZHx0UJleYvgYz8KM%2Fuploads%2Fjde3k38gpAdsepj5Hkyz%2FMu%20Digital_Terms%20of%20Use_Oct%202025.pdf?alt=media&token=a14472d0-79d6-41bf-89e7-82cb699e77ed",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act Public Law 119-27, section 2(22)",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC digital asset licensing applications tracker",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS virtual currency entities and issuance Greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury SCRC certification procedure",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-09-30",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury GENIUS section 3 proposal and expected effective date",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-07"
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield",
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC digital assets licensing applications tracker, current table extracted from official HTML",
-        "NYDFS virtual currency entities and issuance Greenlist",
-        "Treasury September 30, 2026 SCRC procedural rule",
-        "Treasury August 17, 2026 section 3 proposal and expected effective-date statement",
-        "GENIUS Act enacted section 2(22), section 3 and section 20 via GovInfo",
-        "Mu Digital token, mint/redeem, yield and complete issuer-linked Terms of Use PDF",
-        "Independent exact-name searches for Mu Digital, AZND and Bash Bros on occ.gov, dfs.ny.gov, sec.gov and home.treasury.gov, including GENIUS and enforcement terms"
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No reviewed public source names Bash Bros Inc or AZND as a GENIUS permitted issuer, state-qualified issuer, official applicant or registered foreign issuer. OCC table contains named banking applications but no Mu Digital/Bash Bros entry; NYDFS directory and issuance Greenlist contain no matching entity/token. Treasury SCRC rule concerns procedure and withholds acceptance pending PRA approval and notice, rather than approving any issuer. An unrelated Mu Digital 4 Ventures SEC search result was not treated as an AZND issuer or approval. Findings are bounded to the actual opened sources and searches and do not establish that no unpublished filing exists.",
+      "summary": "AZND materials describe a non-yield-bearing base token, a separate yield-bearing loAZND vault, and mint/redeem mechanics, but no public GENIUS approval, official application, or foreign registration source was located.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC digital asset licensing applications tracker",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS virtual currency entities and issuance Greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury SCRC certification procedure",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-09-30",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Mu Digital Terms of Use: Bash Bros Inc and token rights",
-          "url": "https://1336347742-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FP8rgZHx0UJleYvgYz8KM%2Fuploads%2Fjde3k38gpAdsepj5Hkyz%2FMu%20Digital_Terms%20of%20Use_Oct%202025.pdf?alt=media&token=a14472d0-79d6-41bf-89e7-82cb699e77ed",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        }
-      ]
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-09-05"
   }
 }

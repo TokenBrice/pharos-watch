@@ -3,7 +3,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "StandX markets DUSD as a transferable dollar-stable settlement and margin asset. Its binding issuer terms provide redemption at the value of the token's share in the asset reserve, with a baseline quote of one USDT subject to reserve-loss reductions and charges. Public redemption documentation provides USDT/USDC payouts rather than a fixed amount of national currency or a bank deposit. The fixed-monetary-value issuer obligation required by GENIUS section 2(22) is unresolved.",
+      "summary": "StandX markets DUSD as a transferable dollar-stable token with DeFi uses. Its binding issuer terms provide redemption at the value of the token's share in the asset reserve, with a baseline quote of one USDT subject to reserve-loss reductions and charges. Public redemption documentation provides USDT/USDC payouts rather than a fixed amount of national currency or a bank deposit. The fixed-monetary-value issuer obligation required by GENIUS section 2(22) is unresolved.",
       "references": [
         {
           "label": "StandX DUSD solutions",
@@ -46,10 +46,8 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Reviewed on 2026-10-07. StandX Issuer Ltd, BVI company number 2163662, is expressly the DUSD issuer in its binding terms. Applicability is corrected to unclear: payment and settlement use does not establish a fixed-monetary-value redemption obligation, and the terms expressly pass reserve losses through to the redemption quote. The documented seven-day redemption process pays USDT or USDC, subject to fees, with a ten-basis-point reimbursement charge described in the terms. U.S. geo-blocking is an issuer eligibility restriction, not a GENIUS DASP prohibition. DASP posture is corrected to not-yet-restricted while the Act remains pre-effective; Treasury states expected Act effectiveness on January 18, 2027 and the general DASP deadline on July 18, 2028. No qualifying public token-specific authorization, application, foreign registration or GENIUS enforcement action was identified in the reviewed sources. No issuerEntity change is made.",
+    "notes": "Reviewed on 2026-10-07. StandX Issuer Ltd, BVI company number 2163662, is expressly the DUSD issuer in its binding terms. Applicability is corrected to unclear: payment and settlement use does not establish a fixed-monetary-value redemption obligation, and the terms expressly pass reserve losses through to the redemption quote. The documented seven-day redemption process pays USDT or USDC, subject to fees, with a ten-basis-point reimbursement charge described in the terms. U.S. geo-blocking is an issuer eligibility restriction, not a GENIUS DASP prohibition. DASP posture is corrected to not-yet-restricted while the Act remains pre-effective; Treasury states expected Act effectiveness on January 18, 2027 and the general DASP deadline on July 18, 2028. No qualifying public token-specific authorization, application, foreign registration or GENIUS enforcement action was identified in the reviewed sources. No issuerEntity change is made. No public quantified reserve report or monthly reserve-attestation report was located in the reviewed product, issuer-terms, redemption and audit pages or the StandX-domain disclosure search. The optional negative disclosure booleans are omitted because mechanism descriptions and contract-security audits do not establish a complete current disclosure inventory. The public redemption policy is limited to digital-asset payouts and remains subject to the binding terms.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
@@ -128,19 +126,47 @@
         "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+        "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StandX DUSD overview: stablecoin utility and holding rewards",
+        "url": "https://docs.standx.com/docs/dusd-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StandX audits: listed contract-security reports",
+        "url": "https://docs.standx.com/docs/resources/audits",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Federal Register GENIUS inventory through 2026-10-07, both pages: 112 records; no StandX, Flying Tulip, Hylo or hyUSD name match",
-        "OCC Bulletin 2026-3 and digital-assets licensing table: main content independently fetched from official raw HTML; nine pending bank applicants, no target issuer",
-        "FDIC April 7 issuer proposal, Federal Reserve September 24 issuer/application proposals and NCUA implementation FAQ",
-        "Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedural interim final rule",
-        "NYDFS live regulated entities and Greenlisted issuance-approved coins",
-        "Independent regulator-domain search for StandX, Flying Tulip, Hylo and hyUSD with GENIUS, PPSI, enforcement and stablecoin terms",
-        "StandX binding user terms, DUSD solutions, product FAQ and redemption documentation"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (all nine pending bank applicants inspected in official raw HTML)",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "OCC Bulletin 2026-3; FDIC April 7 prudential proposal; Federal Reserve September 24 proposals; NCUA implementation FAQ; Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedures",
+        "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "https://docs.standx.com/docs/dusd-solutions",
+        "https://docs.standx.com/docs/dusd-overview/product-faq",
+        "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd",
+        "Exact indexed search: site:occ.gov \"StandX\"",
+        "Official-domain search: (site:occ.gov OR site:federalregister.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov) (\"Sovryn\" OR \"DLLR\" OR \"StandX\" OR \"USSD\" OR \"Frax Inc\") (stablecoin OR GENIUS OR enforcement OR application) before:2026-10-08; no qualifying target record located; search relaxed its domain constraint"
       ],
-      "summary": "As of 2026-10-07, the independently opened regulator implementation materials, Federal Register inventory, NYDFS tables, token disclosures and regulator-domain searches did not identify a qualifying public GENIUS approval, state qualification, named official application, registered foreign exception or GENIUS enforcement action for StandX Issuer Ltd or its DUSD token. This is a bounded negative-evidence finding and does not establish the absence of confidential or unindexed filings. Ordinary licenses and proposed rules do not establish token-specific GENIUS authorization.",
+      "summary": "Review bounded to the October 7, 2026 cutoff: the reopened OCC nine-applicant ordinary bank-licensing table, both pages of the 112-record GENIUS Federal Register inventory, NYDFS entity and issuance tables, implementation materials, indexed named searches and StandX token/issuer pages did not identify public GENIUS approval, state qualification, a named GENIUS application, registered foreign exception or GENIUS enforcement action for StandX Issuer Ltd or DUSD. Proposed frameworks and ordinary bank licensing are not token-specific GENIUS authorizations. Confidential or unindexed filings are not excluded.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -188,6 +214,18 @@
           "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
           "sourceKind": "federal-register",
           "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+          "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

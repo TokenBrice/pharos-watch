@@ -6,15 +6,12 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Financial Reserves and Asset Exploration Inc. (dba FRAX Inc)",
     "issuerDomicile": "United States",
-    "licensingRegulator": "Not established by the cited issuer proposals; OCC references describe the general proposed federal framework.",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.frax.finance/v2/frxusd/balance-sheet/latest",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "FIP-430 and FIP-432 announce payment-stablecoin charter preparation and assign issuer-level compliance and collateral management to FRAX Inc. FIP-441 further proposes exclusive frxUSD issuance rights for regulated operation including GENIUS. These token-specific issuer materials establish intent, not an official application or approval. FIP-432 leaves the appropriate U.S. license to the board; neither a GENIUS issuer pathway nor a licensing regulator was established. The public regulator review is dated 2026-10-07 and cannot exclude confidential, unindexed or differently named filings. The live frxUSD balance-sheet API is an issuer reserve disclosure, not an independent monthly attestation; the transparency web route returned only an application shell. FIP-432 voting success was not independently established and is not asserted. FraxNet account-yield marketing and the separate sfrxUSD strategy product are not evidence of compliance or authorization. MiCA EU offering and authorization were reviewed separately and remain unresolved; no parent or custodian license is transferred.",
+    "notes": "FIP-430 and FIP-432 explicitly announce frxUSD payment-stablecoin licensing intent and assign issuer-level responsibilities to FRAX Inc, formerly FinresPBC. FIP-277 names Financial Reserves and Asset Exploration Inc. and its Delaware incorporation; current frxUSD docs describe Frax Inc compliance and fiat redemption management. FIP-441 proposes exclusive issuance rights including under GENIUS. These are issuer intentions, not a regulator-published application or approval, and do not identify a current GENIUS pathway or licensing regulator. The balance-sheet API is issuer reserve disclosure rather than an independent attestation. No enforcement clearance or independent attestation conclusion is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -105,22 +102,20 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
-        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
         "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
-        "2026-10-07 independent indexed official-domain searches across OCC, FDIC, Federal Reserve, NCUA and NYDFS for Frax, FinresPBC, Financial Reserves and Asset Exploration, FRAX Inc, Frax DAO, USDso and USDSO S.A.; no relevant public GENIUS approval, application or enforcement result located. Searches do not exclude confidential or unindexed filings."
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748"
       ],
-      "summary": "The opened OCC public pending digital-asset licensing table contains no Frax, FRAX Inc, Financial Reserves and Asset Exploration or FinresPBC entry. NYDFS directory and official-domain exact-name searches established no frxUSD PPSI approval, state qualification, official GENIUS pending application, foreign registration or action. FIP-430/432/441 establish issuer intent only. These are public, bounded searches; confidential or differently named filings are not excluded.",
+      "summary": "The reopened OCC pending digital-asset bank application table and NYDFS directory contain no Frax, FRAX Inc or FinresPBC entry. Federal Register exact-name searches for Frax and FinresPBC through 2026-10-07 returned zero documents. Token-specific governance materials establish licensing intent only. This bounded public review cannot exclude confidential, unindexed or differently named filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC public pending digital-asset licensing applications",
+          "label": "OCC pending digital-asset bank applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
+          "sourceKind": "regulator-directory",
           "accessedAt": "2026-10-07"
         },
         {
@@ -130,18 +125,16 @@
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "Federal Reserve GENIUS implementation proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
+          "label": "Federal Register exact Frax search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "SCRC state-regime review interim procedures",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "label": "Federal Register exact FinresPBC search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
+          "accessedAt": "2026-10-07"
         }
       ]
     },

@@ -3,204 +3,89 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "wBRL is marketed as a 1:1 BRL wFIAT token for payments and settlement, and the current product page advertises burn-to-bank redemption. The linked October 2025 wFIAT whitepaper identifies this token's deployment and expressly denies holder claims against the issuer and redemption rights. A binding fixed-value issuer redemption/conversion/repurchase obligation under GENIUS section 2(22) is therefore unresolved; the foreign-currency peg alone is not an exclusion.",
+      "summary": "wBRL is a 1:1 BRL-backed local stablecoin marketed for payments, transfers, and DeFi settlement by Ripio, but issuer materials conflict on whether holders have any redemption right.",
       "references": [
         {
           "label": "Ripio local stablecoins",
           "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
-          "label": "Ripio current wFIAT product page",
+          "label": "Ripio wFIAT product page",
           "url": "https://www.ripio.com/en/wfiat",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Ripio October 2025 wFIAT whitepaper",
-          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act section 2(22)",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "issuerDomicile": "Brazil",
+    "licensingRegulator": "Brazilian local regulatory framework; Ripio U.S. money-transmitter/MSB context",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.ripio.com/en/wfiat",
-    "redemptionPolicyPresent": false,
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "wBRL belongs to Ripio's Latin American wFIAT suite. The family whitepaper names only an unspecified Ripio group affiliate; the exact legal issuer and domicile are unverified and are not inherited from a wallet operator, a sibling token, or the reserve-bank country. The linked October 2025 wFIAT whitepaper identifies this token's deployment and expressly denies holder claims against the issuer and redemption rights. Product redemption marketing is not treated as a verified enforceable holder policy. The U.S. limited-services notice dated April 29, 2026 describes Ripio US money-transmitter/MSB services for BTC, ETH, USDC and USDT, not authorization for this token. No token/issuer-specific GENIUS approval, publicly confirmed application or intent, state qualification, or registered foreign exception was found in the bounded sources reviewed. OCC/Federal Reserve issuer rules and Treasury section 3 rules remain proposals; the September 30 SCRC interim rule is procedural, not an issuer approval. As of October 7, 2026 the statutory DASP deadlines are not yet active; Treasury describes the expected January 18, 2027 effective date and July 18, 2028 general offer/sale restriction. No token/issuer-specific enforcement action was located in bounded public searches; this is not exhaustive legal clearance. The July 28, 2026 certification is a limited accounting certification for wBRL, not an audit/review or proof of monthly reporting.",
+    "notes": "wBRL is a non-USD foreign-currency stablecoin with a Latin American product footprint. No U.S. GENIUS approval, application, state qualification, or foreign-issuer exception was found; the non-USD design and any U.S. B2B availability make the ultimate GENIUS scope and foreign-exception analysis worth re-checking when final rules are issued.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Federal Register: permitted payment stablecoin issuer CIP proposed rule",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-06-22",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "U.S. Treasury: GENIUS illicit-finance proposed rule",
+        "label": "U.S. Treasury: state-regime comparability proposed rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-08",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "OCC digital-assets licensing applications: inspected pending-applications table",
+        "label": "OCC digital-asset licensing applications tracker",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "wBRL token certification / attestation",
         "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
         "sourceKind": "auditor-report",
-        "sourceDate": "2026-05-18",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Ripio wFIAT whitepaper: issuer obligations and holder rights",
-        "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS Act issuer-rule proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "NYDFS virtual currency business licensing directory",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury SCRC interim procedural rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Ripio U.S. limited-services notice",
-        "url": "https://terms.ripio.com/select/notice-of-limited-services-available-in-the-united-states",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-04-29"
-      },
-      {
-        "label": "Ripio wFIAT attestation archive",
-        "url": "https://action.ripio.com/en/wfiat-attestations",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act, Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
-      },
-      {
-        "label": "wBRL collateral certification, June 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-07-28"
-      },
-      {
-        "label": "Ripio wFIAT payment and redemption marketing",
-        "url": "https://www.ripio.com/en/wfiat",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury GENIUS section 3 proposed rule and statutory timing",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
+        "sourceDate": "2026-03-31",
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and current digital-assets licensing applications table, independently recovered via direct HTTPS HTML table extraction, reviewed 2026-10-07",
-        "Federal Reserve September 24, 2026 proposed issuer framework/application press release and June 2026 CIP proposal page, reviewed 2026-10-07",
-        "NYDFS virtual-currency license and trust-company directory, reviewed 2026-10-07; a legacy license is not GENIUS approval",
-        "Treasury August 17, 2026 section 3 proposal release and September 30, 2026 SCRC interim procedural rule, reviewed 2026-10-07",
-        "GENIUS Public Law 119-27 section 2(22), reviewed 2026-10-07",
-        "Ripio local stablecoins/wBRL identity, wFIAT product and October 2025 whitepaper, certification archive and April 29, 2026 U.S. limited-services notice, reviewed 2026-10-07",
-        "Public indexed searches for Ripio and all five assigned token names with GENIUS/PPSI/application/foreign-registration terms on OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS domains, 2026-10-07",
-        "Public indexed Ripio enforcement/warning/sanctions searches on SEC, CFTC, FinCEN, OFAC and NYDFS domains, 2026-10-07"
+        "OCC GENIUS Act proposed rule and Federal Register CIP proposed rule",
+        "OCC digital-asset licensing applications tracker",
+        "U.S. Treasury state-regime comparability proposed rule",
+        "Ripio wBRL/local-stablecoin, wFIAT, and token-certification materials",
+        "Public searches for Ripio, wBRL, PPSI approval, and GENIUS foreign-issuer registration"
       ],
-      "summary": "No public record naming wBRL and its verified legal issuer as a PPSI, officially pending applicant, state-qualified issuer or registered foreign issuer was located in these bounded checks. The exact issuing affiliate is not established, which limits negative name matching. Proposal-stage rulemaking, a generic pending bank-charter table and legacy MSB/money-transmitter/trust licenses do not independently establish GENIUS status; no absence claim is based solely on an empty search.",
+      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for Ripio or wBRL. Ripio's Brazilian and U.S. licensing context does not establish GENIUS authorization, and the proposed foreign-issuer framework has not produced a determination for wBRL.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC digital-assets licensing applications: inspected pending-applications table",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS Act issuer-rule proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "NYDFS virtual currency business licensing directory",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury SCRC interim procedural rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "Treasury GENIUS section 3 proposed rule and statutory timing",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        }
-      ]
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-09-05"
   }
 }

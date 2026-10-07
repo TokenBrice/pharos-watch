@@ -24,20 +24,24 @@
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
           "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USDKG whitepaper: USD, gold and cryptocurrency redemption; payment design",
+          "url": "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "OJSC Virtual Asset Issuer (state-owned, Ministry of Finance of the Kyrgyz Republic); Gold Dollar operates the issuance; LLC Virelint Group previously cited as operator",
+    "issuerEntity": "OJSC Virtual Asset Issuer",
     "issuerDomicile": "Kyrgyz Republic",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf",
-    "monthlyAttestationPresent": false,
-    "notes": "The USD reference and advertised payment/redemption function, not physical gold collateral, support apparent-payment-stablecoin applicability. No automatic commodity-token exclusion is inferred. The current homepage is a wind-down notice citing a Kyrgyz Cabinet order and providing a contact-based fiat/USDT exchange route; it does not prove that every redemption was performed or that an unconditional current 1:1 redemption promise survives. Historical November 2025 issuer disclosures identify the Kyrgyz state-owned OJSC issuer and separate Gold Dollar reserve operations. Current license validity is not established, so the previous licensingRegulator field is removed rather than presented as current authorization. The transparency hub now returns 404; reserveDisclosureUrl is replaced by the live historical November 2025 Kreston agreed-upon-procedures report. That limited-scope historical report is neither a current reserve audit opinion nor evidence of monthly attestation. The May 2026 OSL Hong Kong professional-investor listing was a historical distribution event, not U.S. approval or proof of current global availability. No token-specific GENIUS approval, official GENIUS application or registered foreign-issuer exception was located in the dated public-source review. U.S. no-public-action-found is limited to the reviewed regulator searches and FinCEN action list; the foreign wind-down is not misclassified as U.S. GENIUS prohibition. Not-yet-restricted describes the statutory GENIUS DASP timing, not permission to sell under other laws. The public contact-based wind-down exchange notice does not specify a current unconditional 1:1 redemption policy, so redemptionPolicyPresent is omitted. The issuer-hosted cabinet-order PDF was opened separately; its Russian text directs liquidation of OJSC EVA and Coin Nomad Exchange but the extracted text does not display the cited order number or date. The linkage of that order to USDKG termination remains attributed to the issuer homepage.",
+    "notes": "USDKG was marketed as a 1:1 USD-referenced payment and settlement token redeemable for gold, USD or cryptocurrencies. The current homepage states that operations, including blockchain activities, are ceasing under a Kyrgyz Cabinet order and offers email-based exchange for fiat or USDT. This does not establish an unconditional current par-redemption policy. The November 2025 issuer announcement names OJSC Virtual Asset Issuer as issuer and Gold Dollar as reserve operator; the November 2025 Kreston report identifies LLC Virelint Group as a management/collateral contractor. issuerEntity is corrected from a compound issuer/operator narrative to the issuer name alone. The publicly available November 2025 report is historical agreed-upon-procedures evidence, without an assurance opinion; reserveDisclosurePresent records document availability, not current reserve sufficiency. Current licensing, comprehensive U.S. enforcement clearance and a current monthly attestation series are not established, so those optional assertions are omitted. No GENIUS-specific approval, official application or registered foreign exception was found in the dated public-source review. The pre-effective DASP status concerns GENIUS timing only and does not certify unrestricted distribution or override the issuer wind-down.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -117,21 +121,30 @@
         "url": "https://www.fincen.gov/news/enforcement-actions",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDKG whitepaper: USD, gold and cryptocurrency redemption; payment design",
+        "url": "https://cdn.prod.website-files.com/675ee2248e357f63d8256c8d/6895fd6cc933876e216aa9f9_USDKG%20Whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact-name search: USDKG, Gold Dollar, Virtual Asset Issuer and Virelint",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22USDKG%22%20OR%20%22Gold%20Dollar%22%20OR%20%22Virtual%20Asset%20Issuer%22%20OR%20%22Virelint%22&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Current USDKG termination homepage, February 10, 2026 regulated-markets article, November 25, 2025 launch/legal-issuer article, all independently reopened",
-        "USDKG transparency URL returned HTTP 404; historical November 2025 Kreston agreed-upon-procedures report independently reopened",
-        "OCC Bulletin 2026-3 proposal and digital asset licensing applications table, all nine current pending names inspected; no USDKG, Gold Dollar or Virtual Asset Issuer match",
-        "Federal Reserve September 24, 2026 GENIUS implementing-rule proposal",
-        "Treasury September 30, 2026 SCRC procedural interim final rule",
-        "NYDFS regulated-entity roster and Greenlist, independently inspected; no USDKG or named issuer match",
-        "FinCEN public enforcement-action list independently inspected",
-        "Named-token/issuer searches across OCC, FDIC, NCUA, Federal Reserve, Treasury and NYDFS for GENIUS/stablecoin authorization, plus OFAC, FinCEN, SEC and CFTC for regulatory actions; no qualifying exact-entity public record located",
-        "May 21, 2026 OSL Hong Kong listing release independently reopened; professional-investor OTC distribution, not U.S. authorization"
+        "OCC digital asset licensing applications tracker: full raw HTML pending-applicant table inspected; no USDKG, Gold Dollar, Virtual Asset Issuer or Virelint match",
+        "Federal Register exact-name document query for USDKG, Gold Dollar, Virtual Asset Issuer and Virelint: count 0",
+        "Federal Reserve September 24, 2026 GENIUS proposals and September 30, 2026 SCRC procedural rule: general implementation sources, no named issuer approval",
+        "NYDFS regulated-entities roster and Greenlist: no USDKG or identified issuer/operator match",
+        "USDKG termination homepage, November 25, 2025 issuer launch announcement, February 10, 2026 regulatory-design discussion and issuer whitepaper: no explicit U.S. GENIUS application or token-specific approval identified",
+        "Named-token/entity web query across OCC, NYDFS, Treasury, FinCEN, SEC and CFTC with GENIUS, PPSI, sanctions and enforcement terms: no qualifying exact-entity result located"
       ],
-      "summary": "As of October 7, 2026, no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official GENIUS application or registered foreign-issuer exception was located for USDKG, Gold Dollar or the publicly identified OJSC Virtual Asset Issuer. No token/issuer-specific U.S. action was located in the reviewed public regulator searches and FinCEN action list; this is not a sanctions-clearance opinion or exhaustive enforcement certification. Foreign licensing, government ownership, an old Hong Kong listing and generic regulatory-design marketing do not establish U.S. permission. The current Kyrgyz termination notice materially supersedes the former claim of ongoing worldwide availability.",
+      "summary": "As of October 7, 2026, the reviewed OCC pending-application table, zero-result Federal Register exact-name query, NYDFS roster/Greenlist, general federal implementing proposals and issuer disclosures did not identify a USDKG / OJSC Virtual Asset Issuer-specific GENIUS PPSI approval, state-qualified authorization, official GENIUS application or registered foreign-issuer exception. Gold Dollar and Virelint operator names were included in the public searches without substituting them for the legal issuer. Generic regulatory-design commentary and a historical Hong Kong listing do not establish U.S. permission. This is a bounded public-source negative finding; confidential or unpublished filings are not ruled out.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -171,6 +184,12 @@
           "label": "USDKG website",
           "url": "https://www.usdkg.com/",
           "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name search: USDKG, Gold Dollar, Virtual Asset Issuer and Virelint",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22USDKG%22%20OR%20%22Gold%20Dollar%22%20OR%20%22Virtual%20Asset%20Issuer%22%20OR%20%22Virelint%22&per_page=100",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

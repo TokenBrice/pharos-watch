@@ -4,15 +4,12 @@
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Frax DAO",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.frax.finance/v2/frax/balance-sheet/latest",
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "Frax governance describes legacy FRAX as AMO-driven and not aligned with the newer payment-stablecoin architecture. Frax DAO is preserved as existing protocol attribution, not a verified incorporated issuer. The prior United States domicile was removed because the opened Delaware incorporation evidence names the separate reserve partner, not the DAO. No fixed fiat redemption policy or current independent monthly reserve attestation was established. The public negative search is dated and does not rule out confidential or differently named applications.",
+    "notes": "Legacy FRAX uses an AMO-supported dollar peg; its documentation expressly denies guaranteed redemption for specified assets. No exact legal issuer or domicile was established, so issuerEntity is omitted rather than using Frax DAO as a legal entity. Financial Reserves and Asset Exploration Inc. is a separate reserve partner and frxUSD issuer-level operator. The live balance sheet is a protocol reserve disclosure. No fixed fiat redemption policy was established. The dated negative review is limited to the consulted public sources and does not exclude confidential or differently named filings. No enforcement clearance or independent attestation conclusion is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -82,22 +79,20 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
-        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
         "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
-        "2026-10-07 independent indexed official-domain searches across OCC, FDIC, Federal Reserve, NCUA and NYDFS for Frax, FinresPBC, Financial Reserves and Asset Exploration, FRAX Inc, Frax DAO, USDso and USDSO S.A.; no relevant public GENIUS approval, application or enforcement result located. Searches do not exclude confidential or unindexed filings."
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview",
+        "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
       ],
-      "summary": "The opened OCC public pending digital-asset applications table and NYDFS directory contain no Frax/Frax DAO/FRAX Inc/FinresPBC issuer entry. Official-domain name searches located no token-specific GENIUS permitted-issuer approval, state qualification, public application or action for Legacy Frax Dollar. Implementation proposals and issuer charter preparation for frxUSD do not establish legacy FRAX approval. The search is public and bounded; confidential or differently named filings remain possible.",
+      "summary": "The reopened OCC pending digital-asset bank application table and NYDFS directory contain no Frax, FRAX Inc or FinresPBC entry. Federal Register exact-name searches for Frax and FinresPBC through 2026-10-07 returned zero documents. Legacy FRAX token documents show no token-specific GENIUS authorization or application; the distinct frxUSD charter-intent proposal does not authorize legacy FRAX. This bounded public review cannot exclude confidential, unindexed or differently named filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC public pending digital-asset licensing applications",
+          "label": "OCC pending digital-asset bank applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
+          "sourceKind": "regulator-directory",
           "accessedAt": "2026-10-07"
         },
         {
@@ -107,18 +102,16 @@
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "Federal Reserve GENIUS implementation proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
+          "label": "Federal Register exact Frax search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "SCRC state-regime review interim procedures",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "label": "Federal Register exact FinresPBC search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
+          "accessedAt": "2026-10-07"
         }
       ]
     },

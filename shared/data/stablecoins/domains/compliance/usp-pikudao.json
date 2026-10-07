@@ -16,7 +16,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "Piku's own documentation classifies USP as a yield-vault: it starts at $1.00 of stablecoin backing and its unit value rises as Morini Capital's FX-arbitrage, DeFi and real-world-asset strategies accrue yield. The Terms of Use state that USP is not linked to USD on a 1-to-1 basis, that PikuDAO is not obliged to maintain any value, and that USP may depreciate. There is no issuer obligation to convert or redeem USP for a fixed amount of monetary value, so it is a value-accruing vault position rather than a payment stablecoin.",
+      "summary": "Piku's USP documentation identifies the exact token as a yield-vault whose value can increase above its initial $1.00 backing as strategy yield accrues. Terms of Use clause 4.1 expressly states that USP is not linked to USD on a 1-to-1 basis and may depreciate. Clauses 4.5 and 5.2 provide for issuance and redemption at a variable token price in accepted stablecoins. These primary documents support a value-accruing vault position rather than a fixed-monetary-value payment stablecoin.",
       "references": [
         {
           "label": "Piku USP Yield Vault documentation: USP is 'classified as a yield-vault' and its value increases beyond the initial peg as yield accrues",
@@ -35,12 +35,9 @@
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Piku Finance Limited",
-    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "New active-coin row assessed under the strategy-vault rubric. Piku Terms of Use identify Piku Finance Limited, British Virgin Islands, as the contracting firm for the platform and its token services. This legal counterparty is used for issuerEntity; no sibling Piku asset was located in the catalog. USP redemption is at a variable current token value in accepted stablecoins, rather than an obligation for a fixed amount of monetary value. The terms exclude U.S. Persons, require wallet whitelisting/KYC for minting and redemption, and disclaim a 1:1 USD link. Non-payment-token describes the product evidence; no securities-law exclusion or regulator authorization is asserted.",
+    "notes": "USP is assessed under the strategy-vault rubric. Terms of Use name Piku Finance Limited, a British Virgin Islands contracting firm, but do not expressly identify that firm as the legal USP issuer. issuerEntity and issuerDomicile are omitted to avoid equating the platform counterparty with the token issuer. The unsupported no-public-action-found field is also omitted. USP issuance and redemption use a variable current price in USDC or USDT; the terms disclaim a 1:1 USD link and exclude U.S. persons. No securities-law classification, regulator authorization or enforcement conclusion is asserted.",
     "references": [
       {
         "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
@@ -57,7 +54,7 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Piku Terms of Use: Piku Finance Limited (BVI) as contracting firm; United States listed as a Prohibited Jurisdiction; whitelisted-wallet minting and redemption",
+        "label": "Piku Terms of Use: BVI platform counterparty, variable-price USP redemption and U.S. person exclusions",
         "url": "https://docs.piku.co/piku/terms-of-use.md",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-06-02",

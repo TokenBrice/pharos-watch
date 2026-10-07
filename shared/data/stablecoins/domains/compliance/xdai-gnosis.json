@@ -22,14 +22,13 @@
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Gnosis Chain xDAI bridge and block-rewards infrastructure; no legal payment-stablecoin issuer identified",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "xDAI is native gas and a transactional asset minted and burned by bridge and consensus infrastructure. Current bridge documentation describes USDS deposits, sUSDS backing and release of USDS or DAI, not a legally identified issuer's fixed-fiat redemption obligation. Identifiable bridge governors have upgrade powers, so a categorical issuerless or fully decentralized exemption is not asserted. Public on-chain bridge reserves are disclosed, but these are not a GENIUS-compliant reserve report or monthly attestation; no public 1:1 fiat redemption policy was identified. No issuer-specific GENIUS authorization, application or foreign registration was found. GENIUS issuer rules remain proposed; the SCRC procedural rule does not activate the Act. The not-yet-restricted DASP posture is regime-specific and does not imply every venue may serve U.S. users.",
+    "notes": "xDAI is native gas and a transactional asset minted and burned by bridge and consensus infrastructure. Current bridge documentation describes USDS deposits, sUSDS backing and release of USDS or DAI, not a legally identified issuer's fixed-fiat redemption obligation. Identifiable bridge governors have upgrade powers, so a categorical issuerless or fully decentralized exemption is not asserted. Public on-chain bridge reserves are disclosed, but these are not a GENIUS-compliant reserve report or monthly attestation; no public 1:1 fiat redemption policy was identified. No issuer-specific GENIUS authorization, application or foreign registration was found. GENIUS issuer rules remain proposed; the SCRC procedural rule does not activate the Act. The not-yet-restricted DASP posture is regime-specific and does not imply every venue may serve U.S. users. issuerEntity is omitted because bridge and block-rewards infrastructure is a mechanism description, not a primary-source legal issuer name. No issuer domicile or issuer-specific regulator is inferred from bridge governors.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
@@ -125,7 +124,7 @@
         "https://docs.gnosischain.com/bridges/management/",
         "https://docs.gnosischain.com/about/tokens/xdai",
         "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract",
-        "Independent regulator-domain searches on 2026-10-07 for Gnosis/xDAI and Tori (BVI)/trUSD with GENIUS, PPSI and payment-stablecoin terms across OCC, FDIC, NCUA, Federal Reserve and NYDFS. Separate enforcement/sanctions/consent-order searches across OCC, NYDFS, SEC, CFTC, FinCEN and Treasury found no matching token/issuer action. Search results are bounded negative evidence."
+        "Independent exact-token authorization searches for Gnosis/xDAI with GENIUS, PPSI and payment-stablecoin terms on OCC, Federal Register, FDIC, NCUA, Federal Reserve, Treasury and NYDFS domains; additional exact site:occ.gov xDAI, site:federalregister.gov Gnosis stablecoin and site:dfs.ny.gov Gnosis searches returned no responsive records. Independent Gnosis/xDAI enforcement, sanctions, consent-order and cease-and-desist searches covered OCC, NYDFS, SEC, CFTC, FinCEN and Treasury. Only the stated public-source set is covered."
       ],
       "summary": "As of 2026-10-07, no public token-specific GENIUS PPSI approval, state qualification, official GENIUS application or registered foreign-issuer exception was found for xDAI in the consulted federal, NYDFS and Gnosis materials and regulator-domain searches. The OCC pending national-bank table is not an exhaustive GENIUS register. The documented bridge/consensus mechanism does not identify a legal payment-stablecoin issuer or an issuer-specific U.S. pathway. No public enforcement action was found in the searched sources; these bounded negative results do not establish universal absence.",
       "reviewer": "Pharos compliance research",

@@ -18,7 +18,6 @@
     "issuerEntity": "Tether International, S.A. de C.V.",
     "issuerDomicile": "El Salvador",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
     "redemptionPolicyPresent": true,
@@ -83,9 +82,16 @@
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-01-27"
+      },
+      {
+        "label": "CFTC historical USDT reserve-disclosure settlement naming Tether International Limited",
+        "url": "https://www.cftc.gov/PressRoom/PressReleases/8450-21",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2021-10-15",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "notes": "Reviewed 2026-10-07. Tether International, S.A. de C.V. is the exact current issuer in the February 26, 2026 terms. MXN tokens are redeemable for one Mexican peso per token, less fees, by eligible verified customers. The published June 30, 2026 BDO report is aggregate quarterly reasonable assurance over shared fiat-token reserves; it does not establish dedicated MXNT reserves or monthly attestations. No MXNT-specific GENIUS approval, application, intent or foreign exception was located. Tether statements concerning USDT GENIUS readiness and Anchorage-issued USA₮ do not establish MXNT intent or authorization. Current issuer licensing claims concern Salvadoran CNAD registration. GENIUS remains pre-effective; expected January 18, 2027 effectiveness and separate July 18, 2028 general DASP restriction do not establish current foreign registration.",
+    "notes": "Reviewed 2026-10-07. Tether International, S.A. de C.V. is the exact current issuer in the February 26, 2026 terms. MXN tokens are redeemable for one Mexican peso per token, less fees, by eligible verified customers. The published June 30, 2026 BDO report is aggregate quarterly reasonable assurance over shared fiat-token reserves; it does not establish dedicated MXNT reserves or monthly attestations. No MXNT-specific GENIUS approval, application, intent or foreign exception was located. Tether statements concerning USDT GENIUS readiness and Anchorage-issued USA₮ do not establish MXNT intent or authorization. Current issuer licensing claims concern Salvadoran CNAD registration. GENIUS remains pre-effective; expected January 18, 2027 effectiveness and separate July 18, 2028 general DASP restriction do not establish current foreign registration. The optional enforcement finding is omitted: current terms identify the issuer as formerly Tether International Limited, which was a respondent in the CFTC October 15, 2021 USDT reserve-disclosure settlement. That historical issuer action does not establish a GENIUS action or MXNT issuance prohibition.",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -105,7 +111,7 @@
         "BDO aggregate Tether fiat-token reserve assurance report at June 30, 2026",
         "Tether USA(T) launch statement identifying Anchorage Digital Bank as USA(T) issuer and discussing USDT separately"
       ],
-      "summary": "In the public sources checked on 2026-10-07, no token-specific GENIUS PPSI approval, state qualification, official application, OCC foreign-issuer registration or Treasury foreign comparability determination was found for MXNT / Tether International, S.A. de C.V. This is a bounded public-evidence finding, not proof that no confidential application exists. No token-specific public U.S. regulatory action was located. Existing charters and foreign licenses are not GENIUS approval.",
+      "summary": "In the public sources checked on 2026-10-07, no token-specific GENIUS PPSI approval, state qualification, official application, OCC foreign-issuer registration or Treasury foreign comparability determination was found for MXNT / Tether International, S.A. de C.V. This is a bounded public-evidence finding, not proof that no confidential application exists. Existing charters and foreign licenses are not GENIUS approval.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [

@@ -3,23 +3,23 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Ondo calls USDon a stablecoin backed 1:1 by U.S. dollars held in its brokerage accounts and describes its use for stock purchases and redemptions. That settlement use fits the GENIUS design/use limb, irrespective of a platform-only purpose or non-U.S. distribution. Public materials establish USDon/USDC conversion at 1:1 subject to swapper liquidity, but do not establish an issuer contractual obligation to redeem USDon for a fixed monetary value excluding another digital asset. Bank-wire U.S. dollar redemptions are expressly not currently supported. The published securities prospectus and recovered Sales Terms do not specifically identify USDon as a security. Accordingly, neither apparent-payment-stablecoin nor excluded-security is established on the available evidence.",
+      "summary": "Ondo describes USDon as a dollar-backed stablecoin used for settlement of tokenized stocks. Public documentation supports payment/settlement design and 1:1 USDon/USDC swaps subject to swapper liquidity. It does not establish a contractual USDon issuer obligation to redeem for national currency or a national-currency bank deposit. The stock-redemption policy says wire-dollar redemptions are not supported, but it is not a complete USDon rights document. GENIUS section 2(22) excludes fixed-value digital assets from qualifying monetary-value redemption consideration. The reviewed public documents therefore leave the payment-stablecoin threshold unresolved. No security exclusion is inferred from the separately documented stock products.",
       "references": [
         {
-          "label": "GENIUS Act enacted payment stablecoin definition",
+          "label": "GENIUS Act enacted payment-stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "accessedAt": "2026-10-07",
           "sourceDate": "2025-07-18"
         },
         {
-          "label": "Ondo issuer USDon disclosure: 1:1 brokerage cash backing and settlement function",
+          "label": "Ondo USDon cash backing and settlement description",
           "url": "https://docs.ondo.finance/ondo-stocks/available-assets",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "Ondo investing and redeeming",
+          "label": "Ondo stock redemption and USDon conversion policy",
           "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
@@ -31,62 +31,44 @@
     "issuerEntity": "Ondo Global Markets (BVI) Limited",
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "USDon is a separately described dollar-backed settlement token, not automatically covered by the security classification of Ondo Stocks tracker certificates. The August 2026 monthly Ankura report identifies Ondo Global Markets (BVI) Limited and includes USDon liabilities, supporting the issuer string; it reconciles aggregate Stocks, USDY and USDon collateral without a segregated USDon reserve schedule or stand-alone USDon monthly assurance. reserveDisclosurePresent is issuer-level backing/transparency evidence, not independent token-specific assurance. The published conversion policy is 1:1 USDon/USDC subject to liquidity; it does not establish direct 1:1 fiat redemption, and wire-dollar redemptions are not supported. U.S.-person exclusions in stock-offering materials do not by themselves decide USDon payment-stablecoin scope. The Treasury August 17, 2026 proposed-rule announcement expects substantive GENIUS effectiveness on January 18, 2027 and the broad unpermitted DASP offer/sale restriction on July 18, 2028; current proposals and SCRC procedures are not issuer approvals. No token-specific GENIUS enforcement action was located in the scoped October 7 primary-domain searches.",
+    "notes": "Review as of 2026-10-07. The August 2026 issuer-prepared monthly report, verified by Ankura under the Sales Terms, names Ondo Global Markets (BVI) Limited as Issuer and includes USDon liabilities. Its collateral schedule is aggregate across products and does not establish a separately allocated USDon reserve schedule. The stock transparency page is not retained as a USDon-specific reserve-disclosure URL. Reserve-disclosure, redemption-policy and monthly-attestation booleans are omitted rather than extrapolated from stock redemption procedures or shared reporting. Enforcement status is omitted because the bounded name search does not establish an issuer-wide enforcement conclusion. No U.S. authorization, announced GENIUS pathway or registered foreign exception is asserted.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "Ondo Global Markets trust and transparency",
-        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Ondo Global Markets available assets",
-        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Ondo investing and redeeming",
-        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Ondo issuer USDon disclosure: 1:1 brokerage cash backing and settlement function",
-        "url": "https://docs.ondo.finance/ondo-stocks/available-assets",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "August 2026 monthly Ankura report including USDon liabilities (platform-wide scope)",
-        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&st=7ohgw8sv&dl=0",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act enacted payment stablecoin definition",
+        "label": "GENIUS Act enacted payment-stablecoin definition",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "accessedAt": "2026-10-07",
         "sourceDate": "2025-07-18"
       },
       {
-        "label": "OCC digital asset licensing applications tracker",
+        "label": "Ondo USDon cash backing and settlement description",
+        "url": "https://docs.ondo.finance/ondo-stocks/available-assets",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Ondo stock redemption and USDon conversion policy",
+        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Ondo August 2026 aggregate monthly report archive including USDon liabilities",
+        "url": "https://www.dropbox.com/scl/fo/7rlmba8f49nvbp3xwz1of/ABv0vSjd6cIDAUTIlwm2KwA?rlkey=hokf0tffqvezfmsto25cvpovs&st=7ohgw8sv&dl=0",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC pending digital-assets bank licensing applications",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated entities and issuance-approved coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
         "accessedAt": "2026-10-07"
       },
       {
@@ -97,38 +79,43 @@
         "sourceDate": "2026-09-24"
       },
       {
-        "label": "Stablecoin Certification Review Committee procedural rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Treasury GENIUS issuance, offer and sale proposed-rule announcement",
+        "label": "Treasury proposed issuance and offer/sale regulations",
         "url": "https://home.treasury.gov/news/press-releases/sb0605",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state-certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 implementing proposal and OCC digital asset licensing applications tracker; the latter is a bank-charter tracker, not a PPSI approval list",
-        "Federal Reserve September 24, 2026 proposed domestic PPSI framework and application process",
-        "Treasury August 17, 2026 issuance, offer and sale proposed-rule announcement, including foreign-issuer implementation",
-        "September 30, 2026 Stablecoin Certification Review Committee procedural rule; state-regime procedures are not issuer authorization",
-        "NYDFS regulated virtual-currency entities directory and Greenlist; neither is a GENIUS permission register",
-        "Ondo issuer available-assets, investing/redeeming, trust/transparency, legal-and-regulatory and Important Notes disclosures; August 2026 monthly Ankura report",
-        "October 7, 2026 exact-name public searches for Ondo Global Markets and USDon GENIUS approval/enforcement across OCC, FDIC, NCUA, Federal Reserve, Treasury and SEC domains; no qualifying authorization or token-specific GENIUS action located"
+        "OCC live pending digital-assets bank licensing application table; nine applicant rows read, no matching Ondo issuer",
+        "Federal Register API exact-name search for Ondo Global Markets and USDon through 2026-10-07; no issuer matches and only unrelated historical marine-mammal results for USDon",
+        "NYDFS current regulated-entity directory and issuance-approved Greenlist",
+        "Federal Reserve September 24 implementation proposals, Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedural rule",
+        "Ondo USDon available-assets description, stock investing/redemption policy, shared transparency page and August 2026 report archive",
+        "Exact-name federal-domain authorization search for Ondo Global Markets and USDon across OCC, Federal Register, FDIC, NCUA, Federal Reserve and Treasury"
       ],
-      "summary": "No opened primary source identifies Ondo Global Markets (BVI) Limited or USDon as an approved GENIUS payment-stablecoin issuer or an approved foreign-exception issuer as of October 7, 2026. The OCC tracker concerns bank licensing and cannot establish PPSI permission; Federal Reserve proposals, Treasury foreign-pathway discussion and SCRC procedural implementation do not authorize this issuer. Register/search absence is bounded negative evidence, not a finding of unlawfulness, absence of a nonpublic application, or inability to qualify later.",
+      "summary": "As of 2026-10-07, the opened issuer disclosures, OCC table, Federal Register exact-name searches, NYDFS directory and federal implementation sources did not identify a GENIUS PPSI approval, state-qualified designation, officially pending GENIUS application or registered foreign-issuer exception for Ondo Global Markets (BVI) Limited / USDon. The OCC table is a bank-charter inventory, not an exhaustive PPSI register. This is a bounded public negative review and does not exclude nonpublic or differently named filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC digital asset licensing applications tracker",
+          "label": "OCC pending digital-assets bank licensing applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated entities and issuance-approved coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
           "accessedAt": "2026-10-07"
         },
         {
@@ -139,24 +126,18 @@
           "sourceDate": "2026-09-24"
         },
         {
-          "label": "Treasury GENIUS issuance, offer and sale proposed-rule announcement",
+          "label": "Treasury proposed issuance and offer/sale regulations",
           "url": "https://home.treasury.gov/news/press-releases/sb0605",
           "sourceKind": "federal-regulator",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-08-17"
         },
         {
-          "label": "Stablecoin Certification Review Committee procedural rule",
+          "label": "SCRC state-certification procedural rule",
           "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
           "sourceKind": "federal-register",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "NYDFS regulated virtual currency entities directory",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
         }
       ]
     },

@@ -3,139 +3,61 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Bera USD (BUSD), formerly HONEY, is marketed as a payment/remittance dollar stablecoin, but minting and redemption operate through HoneyFactory against whitelisted crypto collateral at governance-configured rates. The opened specification does not establish a legal issuer obligation to redeem for a fixed amount of monetary value; crypto-collateral redemption alone does not resolve the GENIUS definition.",
-      "references": [
-        {
-          "label": "Bera USD current collateral, minting and redemption specification",
-          "url": "https://docs.berachain.com/general/tokens/busd",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act, Public Law 119-27",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
-          "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
-        }
-      ]
+      "summary": "Honey is a Berachain-native asset with stablecoin-like use and reserve-backed mechanics, but current public materials do not establish an issuer obligation that clearly resolves GENIUS payment-stablecoin applicability."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
+    "issuerEntity": "Berachain Foundation (Cayman Islands)",
+    "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://docs.berachain.com/general/tokens/busd",
+    "reserveDisclosureUrl": "https://busd.berachain.com/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "HONEY was renamed Bera USD (BUSD) on August 19, 2026 without changing contract 0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce. Official documentation describes whitelisted crypto collateral, governance-configured mint/redeem rates and proportional basket redemption upon collateral depeg. Reserve and redemption disclosure presence refers to these published mechanics, not verified live balances, an attested reserve report or guaranteed fiat redemption. No monthly third-party examination was located. The existing Berachain Foundation (Cayman Islands) issuerEntity and Cayman Islands issuerDomicile are preserved as legacy attributions pending legal-issuer evidence; the reviewed token specification does not verify them. BERA airdrop terms identify Bera Chain Foundation for BERA only and cannot establish this stablecoin issuer. Deletion of the load-bearing issuerEntity is not accepted merely because its attribution remains unverified. Foreign-exception status remains unknown. Main-site terms and reserve interfaces returned HTTP 429 and browser extraction was unavailable; reserveDisclosureUrl therefore points to the accessible official specification. No public GENIUS-specific enforcement action was located in the bounded review.",
+    "notes": "GENIUS applicability remains unclear because Honey is protocol-native and reserve-backed, but the public source set does not clearly establish an issuer-redeemable payment stablecoin obligation.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Berachain HONEY docs",
         "url": "https://docs.berachain.com/learn/pol/tokens/honey",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-06-07"
       },
       {
-        "label": "Bera USD current collateral, minting and redemption specification",
-        "url": "https://docs.berachain.com/general/tokens/busd",
+        "label": "Berachain honey.berachain.com reserve display",
+        "url": "https://honey.berachain.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act, Public Law 119-27",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC digital-assets licensing applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "SCRC state certification forms and procedures",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-09-30",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury GENIUS implementation timing",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-06-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html — reopened pending digital-asset charter table; no matching issuer; this is not a comprehensive PPSI approval register",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — proposed GENIUS framework, not issuer approval",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm — SCRC certification procedure; intake subject to PRA approval and Treasury notice",
-        "https://home.treasury.gov/news/press-releases/sb0605 — separate issuer-effective and DASP timing; foreign-issuer framework",
-        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm — proposed application and prudential framework",
-        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act — proposed FDIC issuer standards",
-        "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards — proposed NCUA issuer standards",
-        "Independent exact-name public search: (Wyoming Stable Token Commission OR Gemini Trust Company OR HeLa OR Berachain) AND (GENIUS OR PPSI) across occ.gov, federalreserve.gov, fdic.gov, ncua.gov and home.treasury.gov; no matching issuer-specific approval/application located",
-        "Independent public search: (FRNT OR GUSD OR HLUSD OR Berachain) AND GENIUS Act AND approval/application; no issuer-specific approval or application located",
-        "Berachain current BUSD specification, legacy HONEY redirect and official documentation index; same-contract rename August 19, 2026",
-        "Independent official-project-domain search: HONEY/Bera USD with GENIUS, issuer or legal entity; no named token obligor or issuer-specific approval/application located",
-        "Official BUSD/HONEY dashboards and main-site terms returned HTTP 429; dedicated verifier-owned browser attempts failed Network.enable extension RPC timeout before tab creation; neither treated as reviewed content",
-        "Official BERA airdrop terms reopened: Bera Chain Foundation identified for BERA airdrop only, not proof of HONEY/BUSD legal issuance"
+        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3, FR 2026-04089)",
+        "FinCEN/OFAC joint NPRM (FR 2026-06963)",
+        "Federal Register search for Berachain or HONEY PPSI filings",
+        "Berachain HONEY documentation (docs.berachain.com)",
+        "Berachain Foundation corporate profile (Cayman Islands, George Town)",
+        "Web search for Berachain GENIUS Act compliance filings 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official application, selected issuer pathway or foreign-issuer exception was located for Bera USD/BUSD, HONEY or Berachain as of 2026-10-07. The actual token-issuing legal entity remains unverified. Project governance and Foundation affiliation do not establish a PPSI or an enforceable monetary-value redemption obligation. This review does not concern Binance USD/BUSD or the BERA/USD native-token trading pair. The legacy issuerEntity/domicile remain unverified and are not relied upon as proof of token issuance or a foreign exception.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or announced intent was located for HONEY or the Berachain Foundation. The issuer is a Cayman Islands foundation with no publicly disclosed U.S. regulatory pathway under the GENIUS Act.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "GENIUS Act, Public Law 119-27",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
-          "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "OCC GENIUS Act proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "OCC digital-assets licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "SCRC state certification forms and procedures",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-09-30",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury GENIUS implementation timing",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-08-17",
-          "accessedAt": "2026-10-07"
-        }
-      ]
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "issuerEntity": "Berachain Foundation (Cayman Islands)",
-    "issuerDomicile": "Cayman Islands"
+    "reviewedAt": "2026-06-18"
   }
 }

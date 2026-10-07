@@ -3,20 +3,20 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDCx on Movement is marketed for dollar payments and remittances and backed 1:1 by USDC in Circle xReserve. Circle identifies Movement as the token deployer and describes redemption through a partner-chain burn and USDC withdrawal. The reviewed disclosures do not identify a token-level legal issuer obligated to redeem USDCx for fixed monetary value; the disclosed withdrawal delivers another digital asset. Applicability remains unclear on that issuer-obligation element.",
+      "summary": "USDCx on Movement is marketed as a dollar-denominated stablecoin for payments and remittances, but the token is deployed by Movement as a partner-chain token through Circle xReserve rather than being Circle-issued USDC. The issuer-level GENIUS classification is therefore unclear.",
       "references": [
         {
           "label": "Movement USDCx announcement",
           "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-03-25",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Circle xReserve overview",
           "url": "https://www.circle.com/xreserve",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -29,136 +29,67 @@
     "reserveDisclosureUrl": "https://www.circle.com/xreserve",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Circle xReserve holds the USDC backing for a separately deployed Movement token. Movement Network Foundation is identified as the website/service operator in Cayman Islands terms, but those terms do not identify it as the USDCx redemption obligor; issuerEntity is therefore left unset. The public xReserve disclosure supports reserve and token-to-USDC withdrawal presence, not an independent monthly Movement USDCx attestation or a fiat-redemption undertaking. Circle USDC authorizations are not attributed to this token. GENIUS implementation remains pre-effective on the reviewed October 7 record; Treasury describes January 18, 2027 as the expected effective date and July 18, 2028 as the general DASP offer-sale deadline.",
+    "notes": "Circle's xReserve materials say the partner blockchain team deploys the USDC-backed token while Circle deploys the reserve contract. Movement's launch materials describe USDCx as intended for everyday payments, remittances, and fintech use, so this row is retained as an unclear, confusable payment-stablecoin case. No token-specific U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located; Circle's separate MiCA/USDC status should not be transferred to USDCx.",
     "references": [
       {
         "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-06-22",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Movement USDCx announcement",
         "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-03-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Circle xReserve overview",
         "url": "https://www.circle.com/xreserve",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS issuer and application proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "FDIC GENIUS issuer requirements proposal",
-        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-04-07"
-      },
-      {
-        "label": "Treasury SCRC procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Treasury GENIUS issuance and offer-sale proposal",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "NCUA GENIUS implementation and proposed application framework",
-        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Circle Movement USDCx launch",
-        "url": "https://www.circle.com/blog/usdcx-on-movement-now-available-via-circle-xreserve",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-03-25"
-      },
-      {
-        "label": "Movement Network Foundation service terms",
-        "url": "https://www.movementnetwork.xyz/terms-of-service",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-04-06"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Opened OCC Bulletin 2026-3 and searched OCC public regulator records for the token and issuer names",
-        "Opened Federal Reserve September 24, 2026 GENIUS issuer and application proposals",
-        "Opened FDIC April 7, 2026 GENIUS issuer requirements proposal",
-        "Opened NCUA GENIUS implementation and application FAQ",
-        "Opened Treasury September 30, 2026 SCRC procedural rule and August 17 issuance/offer-sale proposal",
-        "Targeted searches of OCC, Federal Reserve, FDIC, NCUA and NYDFS domains for token/issuer GENIUS approvals, applications and enforcement",
-        "Opened Movement launch announcement, Circle xReserve overview and Circle Movement launch disclosure",
-        "Opened Movement Network Foundation terms; issuer/redemption obligation not established"
+        "ESMA interim MiCA register landing page and ART/EMT register files, last updated 2026-08-12",
+        "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+        "Federal Register joint PPSI CIP NPRM, 91 FR 37234",
+        "FDIC GENIUS Act PPSI proposed rule materials",
+        "Movement USDCx launch disclosure",
+        "Circle xReserve overview and Movement USDCx integration disclosure",
+        "Targeted searches for Movement, USDCx, Circle xReserve, and GENIUS authorization or application records"
       ],
-      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state qualification or named official pending application was located for USDCx on Movement or an identified Movement token issuer in the checked regulator materials and targeted searches. The reviewed federal documents describe proposed issuer frameworks; Treasury's September 30 interim final rule concerns state certification procedures and states that certifications await PRA approval. Ordinary licenses and reserve disclosures do not establish PPSI approval. No token-specific GENIUS warning or prohibition was located. This is a bounded public-evidence finding, not proof about nonpublic filings.",
+      "summary": "The reviewed U.S. regulator and Federal Register materials describe a proposed GENIUS framework but do not identify Movement, Move Industries, Circle xReserve, or USDCx on Movement as an approved or pending permitted payment stablecoin issuer. The ESMA ART/EMT register review also found no assigned-token or issuer match.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "reviewedAt": "2026-08-14",
       "references": [
         {
-          "label": "Federal Reserve GENIUS issuer and application proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
         },
         {
-          "label": "FDIC GENIUS issuer requirements proposal",
-          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-04-07"
-        },
-        {
-          "label": "Treasury SCRC procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "Treasury GENIUS issuance and offer-sale proposal",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "NCUA GENIUS implementation and proposed application framework",
-          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
+          "sourceDate": "2026-06-22",
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-08-14"
   }
 }

@@ -16,10 +16,10 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "GLDY is described by its issuer as a restricted, gold-backed tokenized security available only to accredited investors, rather than a payment stablecoin.",
+      "summary": "Streamex describes GLDY as a gold-backed tokenized security issued by its Cayman Islands fund. Its June 2026 Form 10-Q identifies GLDY tokens as non-voting participating equity interests in Streamex Ltd.; the current product page markets the token to accredited investors. These fund equity interests support the GENIUS section 2(22)(B)(iii) securities exclusion.",
       "references": [
         {
-          "label": "Streamex GLDY product: restricted-security and accredited-investor terms",
+          "label": "Streamex GLDY product: gold exposure and accredited-investor marketing",
           "url": "https://www.streamex.com/products/gldy/",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
@@ -30,6 +30,12 @@
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-02-18"
+        },
+        {
+          "label": "Streamex June 2026 Form 10-Q: GLDY participating equity interests, Note 12",
+          "url": "https://ir.streamex.com/node/12336/html",
+          "sourceKind": "issuer-filing",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -39,7 +45,7 @@
     "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "GLDY is outside GENIUS payment-stablecoin tracking because Streamex describes it as a restricted security with gold-price exposure and yield paid in additional gold. This is an applicability exclusion, not evidence of GENIUS authorization.",
+    "notes": "GLDY is outside GENIUS payment-stablecoin tracking because the issuer describes it as a tokenized security and its Form 10-Q identifies the tokens as participating equity interests in a Cayman Islands entity. The gold-price exposure and gold-leasing returns are separately disclosed. This is an applicability exclusion, not GENIUS authorization. issuerEntity remains unchanged as Streamex, Ltd.; the privacy notice explicitly names that legal issuer and its Cayman Islands incorporation.",
     "references": [
       {
         "label": "GENIUS Act, Public Law 119-27: payment stablecoin definition",

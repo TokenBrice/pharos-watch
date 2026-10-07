@@ -69,23 +69,23 @@
         "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions.md",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications: public pending-application table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "Federal Reserve September 24, 2026 issuer and application proposals",
-        "FDIC April 7, 2026 requirements-and-standards proposal",
-        "NCUA Financial Technology and Digital Assets page: GENIUS implementation and licensing FAQs",
-        "SCRC September 30, 2026 procedural interim final rule",
-        "NYDFS regulated-entities table and Greenlist",
-        "Federal Register API document search: Frankencoin OR ZCHF OR dEURO OR EURO3 OR HLiquity OR HCHF; count 0",
-        "Enacted GENIUS Act Public Law 119-27, sections 2, 18 and 20",
-        "EURO3 protocol payment-coin and user-minting disclosures",
-        "3A DAO LLC governance and managing-member documentation",
-        "EURO3 collateral-redemption and fee disclosures",
-        "Public EURO3/3A DAO MiCA and GENIUS searches",
-        "Independent verifier query: named tokens and Swisscoast with GENIUS/PPSI/OCC/enforcement; no qualifying public match located on 2026-10-07"
+        "OCC Bulletin 2026-3 and complete OCC Digital Assets Licensing Applications pending table, reopened 2026-10-07; no EURO3 or 3A DAO applicant",
+        "Federal Register exact token-name query including EURO3, reopened 2026-10-07; count 0",
+        "NYDFS regulated-entity directory and Greenlist, reopened 2026-10-07; no EURO3 or 3A DAO entry",
+        "Federal Reserve September 24, 2026 proposals; FDIC April 7, 2026 proposal; NCUA GENIUS implementation FAQ; September 30, 2026 SCRC procedural rule",
+        "GENIUS Act Public Law 119-27, sections 2, 3, 18 and 20",
+        "Current EURO3 payment-coin, user-minting, collateral-redemption and 3A DAO governance documents",
+        "Public EURO3 GENIUS, PPSI, OCC and authorization search on 2026-10-07; no qualifying match located"
       ],
       "summary": "No EURO3 / 3A DAO-specific federal PPSI approval, official application, state-qualified GENIUS authorization or OCC-registered foreign-issuer exception was located in the opened public regulatory sources and protocol disclosures. The search does not rule out a non-public filing. Collateralized protocol mechanics do not establish an issuer obligation to redeem for fixed monetary value, so applicability remains unclear rather than authorized or definitively excluded.",
       "reviewer": "Pharos compliance research",
@@ -153,6 +153,12 @@
           "label": "EURO3 lending redemptions: collateral and DAO-controlled fees",
           "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions.md",
           "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications: public pending-application table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
           "accessedAt": "2026-10-07"
         }
       ]

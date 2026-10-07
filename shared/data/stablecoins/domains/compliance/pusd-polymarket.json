@@ -9,160 +9,63 @@
           "label": "Polymarket pUSD documentation",
           "url": "https://docs.polymarket.com/concepts/pusd",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Federal Register: proposed GENIUS payment-stablecoin definition",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "GENIUS Act Public Law 119-27, section 2 definitions",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
+    "daspOfferSaleStatus": "unknown",
     "references": [
       {
         "label": "Polymarket pUSD documentation",
         "url": "https://docs.polymarket.com/concepts/pusd",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Polymarket geographic restrictions",
         "url": "https://help.polymarket.com/en/articles/13364163-geographic-restrictions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Federal Register: proposed GENIUS payment-stablecoin definition",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "GENIUS Act Public Law 119-27, section 2 definitions",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Polymarket pUSD product and USDC.e unwrap documentation, reviewed 2026-10-01",
         "url": "https://docs.polymarket.com/concepts/pusd",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Polymarket exchange upgrade: 1:1 USDC backing and conversion",
-        "url": "https://help.polymarket.com/en/articles/14762452-polymarket-exchange-upgrade-april-28-2026",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Polymarket official collateral-token disclosure",
-        "url": "https://help.polymarket.com/en/articles/13364250-does-polymarket-have-a-token",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC GENIUS issuer framework remains a proposal",
-        "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "Federal Reserve GENIUS standards and applications proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "CFTC January 3 2022 Blockratize platform order; not pUSD GENIUS enforcement",
-        "url": "https://www.cftc.gov/media/6891/enfblockratizeorder010322/download",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2022-01-03",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       }
     ],
-    "notes": "Historical 2026-08-14 review: applicability non-payment-token; authorization, issuer pathway, foreign exception and DASP posture not-applicable. Prior note: No GENIUS authorization was assessed because the reviewed product description makes pUSD platform collateral, not a payment stablecoin. Re-check if pUSD is later externally listed or marketed for general payments, and confirm the token issuer's legal entity. D17 review on 2026-10-01 withdraws that categorical exclusion pending qualified token-specific legal analysis of holder repayment obligations and any US securities or deposit exclusion. Authorization and pathway are separately unknown; no approval or negative authorization census is asserted. Platform-only use and lack of external listing are product facts, not statutory exclusions. The enforcement field remains the historical 2026-08-14 posture and was not refreshed in this applicability review. Re-review on publication of governing holder terms or qualified regulator/legal analysis, otherwise by 2027-01-01. October 7 2026 re-verification: unclear applicability is retained, but authorization unknown is replaced with a dated, bounded no-public-authorization-found review. Current pUSD docs show ERC-20 transferability, USDC.e wrap/unwrap contract calls and admin pause gates, while the April 28 exchange-upgrade help disclosure describes native USDC backing/settlement. This terminology mismatch is not resolved by assuming native and bridged USDC are legally identical. Neither document establishes a token-specific issuer obligation to repay national-currency monetary value or a qualified securities/deposit exclusion. Coinbase/Circle permissions and prediction-market operator permissions do not automatically authorize this token. Geographic restrictions are selective, explicitly allowing Bulgaria, so neither all-EU exclusion nor blanket closed-loop exemption is asserted. Polymarket.com/tos reopened but reader exposed page shell/US popup rather than binding clauses; no exact token legal issuer or domicile is guessed. No independent reserve attestation or token-specific GENIUS approval was established. General DASP posture is pre-effective, separate from the platform's current country restrictions and sanctions. Enforcement negative is token-specific and does not erase platform/affiliate regulatory history. Independent verification October 7 2026 confirms the current authorization conclusion is no-public-authorization-found, superseding the historical October 1 unknown status, while applicability remains unclear and pathway unknown. The live Terms route returned a content shell in both static and browser reads; Adventure One QSS Inc. appears in the international platform footer but is not established as the token issuer. The CFTC January 3 2022 Blockratize order concerns earlier event-contract platform conduct and does not establish a pUSD GENIUS enforcement action. No broader assertion of an enforcement-free Polymarket corporate history is made.",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "Polymarket pUSD protocol documentation; transferable collateral and USDC.e conversion",
-        "Polymarket exchange upgrade and collateral-token help disclosures",
-        "Polymarket geographic restrictions including expressly allowed Bulgaria",
-        "Polymarket Terms URL independently read as reader text, raw HTML and named browser tab; operative clauses absent, footer Adventure One QSS Inc. not established token issuer",
-        "Wayback availability API for Polymarket terms returned HTTP 429",
-        "CFTC January 3 2022 Blockratize order reopened: historical platform event-contract violations, not the pUSD token launched in 2026",
-        "Independent grouped exact-token GENIUS search for ONED, Open USD, Origin Dollar and Polymarket USD on OCC, FDIC, NCUA, Federal Reserve and Treasury domains; no matching issuer authorization located",
-        "Independent grouped exact-token enforcement search on OCC, Treasury, NYDFS, SEC and CFTC domains; no token-specific GENIUS action located",
-        "OCC February 25 2026 proposed GENIUS rule bulletin, reopened official occ.treas.gov mirror",
-        "Federal Reserve September 24 2026 issuer standards and applications proposals",
-        "Treasury September 30 2026 SCRC certification-procedure interim final rule",
-        "Treasury August 17 2026 announcement distinguishing January 18 2027 expected effective date and July 18 2028 general DASP restriction",
-        "NYDFS virtual-currency regulated-business directory; legacy licenses not equated with GENIUS approval"
-      ],
-      "summary": "No public GENIUS PPSI approval, state-qualified issuer authorization, official GENIUS application or foreign registration was located for Polymarket USD/pUSD and an identified pUSD issuer in the stated materials and exact-token searches. This is a bounded public-source review, not proof of legal non-compliance or an assertion that no nonpublic application exists. The SCRC IFR is procedural and legacy trust/MTL permissions are not GENIUS issuer qualification. No token-specific GENIUS enforcement action was located; platform or affiliate regulatory history is not treated as token enforcement. The exact legal token issuer remains unresolved, limiting entity-level completeness; the negative conclusion covers the stated token names and opened public materials only.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS issuer framework remains a proposal",
-          "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "Federal Reserve GENIUS standards and applications proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        }
-      ]
-    }
+    "notes": "Historical 2026-08-14 review: applicability non-payment-token; authorization, issuer pathway, foreign exception and DASP posture not-applicable. Prior note: No GENIUS authorization was assessed because the reviewed product description makes pUSD platform collateral, not a payment stablecoin. Re-check if pUSD is later externally listed or marketed for general payments, and confirm the token issuer's legal entity. D17 review on 2026-10-01 withdraws that categorical exclusion pending qualified token-specific legal analysis of holder repayment obligations and any US securities or deposit exclusion. Authorization and pathway are separately unknown; no approval or negative authorization census is asserted. Platform-only use and lack of external listing are product facts, not statutory exclusions. The enforcement field remains the historical 2026-08-14 posture and was not refreshed in this applicability review. Re-review on publication of governing holder terms or qualified regulator/legal analysis, otherwise by 2027-01-01.",
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC26)",
+    "reviewedAt": "2026-10-01"
   }
 }

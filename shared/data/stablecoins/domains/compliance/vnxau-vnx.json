@@ -3,7 +3,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "VNXAU represents allocated physical gold and is marketed as a commodity or investment token, not as a fiat-redeemable payment stablecoin.",
+      "summary": "VNXAU represents ownership of allocated physical gold at one gram per token. Its documented value reference and holder rights concern gold, rather than a fixed amount of national currency or a national-currency-denominated deposit.",
       "references": [
         {
           "label": "VNX Gold product description",
@@ -24,7 +24,6 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "VNX Commodities AG",
     "issuerDomicile": "Liechtenstein",
-    "licensingRegulator": "Liechtenstein Financial Market Authority (FMA); TVTG/Blockchain Act registrations",
     "foreignExceptionStatus": "not-applicable",
     "references": [
       {
@@ -46,15 +45,9 @@
         "url": "https://vnx.li/vnxau",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "FMA Liechtenstein current register: VNX Commodities AG TVTG registrations",
-        "url": "https://register.fma-li.li/search?searchText=VNX&number=&searchType=active&sortColumn=name&ascending=true&page=0",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07"
       }
     ],
-    "notes": "VNXAU represents one gram of allocated physical gold with holder ownership and physical redemption, not an obligation to redeem a fixed amount of national currency or currency-denominated monetary value. Market-price sale/exchange into cash does not itself create that obligation. GENIUS payment-stablecoin authorization and DASP payment-stablecoin offering restrictions are therefore not applicable. FMA TVTG registrations and its general physical-metals notice are not U.S. issuer authorization or a token-specific MiCA exemption.",
+    "notes": "The current VNXAU case study identifies VNX Commodities AG as the Liechtenstein-incorporated Token Generator and describes holder ownership of allocated gold. Token cancellation and the corresponding gold action are subject to the applicable contractual arrangement. These gold rights do not establish fixed national-currency monetary redemption under GENIUS sections 2(17) and 2(22). Payment-stablecoin authorization and offering restrictions are therefore not applicable. The FMA physical-metals notice is general context, not a token-specific action or authorization. The optional licensingRegulator field is omitted because the live FMA registration details could not be independently recovered in this adjudication.",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07",
     "daspOfferSaleStatus": "not-applicable"

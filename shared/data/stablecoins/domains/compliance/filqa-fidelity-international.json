@@ -30,13 +30,6 @@
           "sourceDate": "2025-07-18"
         },
         {
-          "label": "Fidelity September 14, 2026 prospectus (official pointer; text verified via linked mirror)",
-          "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-14"
-        },
-        {
           "label": "Fidelity September 14, 2026 issuer prospectus text via Jina retrieval mirror",
           "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
           "sourceKind": "issuer-disclosure",
@@ -51,7 +44,7 @@
     "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Reviewed as tokenized fund-share equity, not a GENIUS-authorized payment stablecoin or a MiCA EMT/ART. The official issuer PDF endpoint returned HTTP 403 and the dedicated browser attempt timed out; its issuer-authored September 14, 2026 prospectus text was independently reopened through the linked Jina mirror. Cayman fund registration and manager/distributor licensing are not token-specific GENIUS permissions. This is distinct from Fidelity Digital Assets National Association's FIDD.",
+    "notes": "Reviewed as tokenized fund-share equity, with no GENIUS payment-stablecoin authorization asserted. The official issuer PDF endpoint returned HTTP 403; the issuer-authored September 14, 2026 prospectus text was independently reopened through the linked Jina retrieval mirror. Cayman fund registration and manager or distributor licensing are not token-specific GENIUS permissions. This fund is distinct from Fidelity Digital Assets National Association's FIDD.",
     "references": [
       {
         "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
@@ -59,13 +52,6 @@
         "sourceKind": "statute",
         "accessedAt": "2026-10-07",
         "sourceDate": "2025-07-18"
-      },
-      {
-        "label": "Fidelity September 14, 2026 prospectus (official pointer; text verified via linked mirror)",
-        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-14"
       },
       {
         "label": "Fidelity September 14, 2026 issuer prospectus text via Jina retrieval mirror",

@@ -3,20 +3,8 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "cgUSD is presented as a USD-pegged Treasury-backed token with a fixed $1 quoted unit, rebasing token balances and USDC withdrawal. Yield accrual alone does not make it an appreciating-price vault receipt. The withdrawal FAQ describes Treasury-price risk, potentially reduced claim amounts and a 35 bps fee. The separate redemption mechanics page describes USDC recasting and fees waived during an early promotion, not a permanent absence of withdrawal penalties. Cygnus Information Limited is a verified BVI corporate entity associated with the website and the different CGN token, but no reviewed contract establishes its cgUSD national-currency or deposit redemption obligation. Digital-asset redemption and the unresolved legal obligor leave GENIUS applicability unclear.",
+      "summary": "cgUSD is documented as a dollar-targeted, Treasury-backed rebasing token on Base with minting and redemption in USDC. Its token and overview pages describe 1:1 USDC redemption, while the withdrawal FAQ permits Treasury-price movements to reduce the claimable amount and quotes a 35-basis-point fee. The interface terms identify Cygnus Finance without naming a legal cgUSD issuer or a national-currency or bank-deposit redemption obligor. The unresolved issuer obligation and inconsistent redemption disclosures support unclear applicability under GENIUS section 2(22); neither yield accrual nor USDC redemption establishes a categorical exclusion.",
       "references": [
-        {
-          "label": "ARKS Labs website: FinCEN MSB registration and HK/US addresses",
-          "url": "https://www.arkslabs.io/",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Cygnus Finance website footer: Cygnus Information Limited copyright",
-          "url": "https://www.cygnus.finance/",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
         {
           "label": "Cygnus cgUSD overview",
           "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
@@ -30,45 +18,84 @@
           "accessedAt": "2026-10-07"
         },
         {
+          "label": "Cygnus cgUSD redemption",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
           "label": "Cygnus current withdrawal FAQ: timing, fees and Treasury valuation risk",
           "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
           "sourceKind": "issuer-disclosure",
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "label": "Cygnus interface terms of use",
+          "url": "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "accessedAt": "2026-10-07",
           "sourceDate": "2025-07-18"
-        },
-        {
-          "label": "GLEIF LEI record: Cygnus Information Limited BVI corporate identity only",
-          "url": "https://api.gleif.org/api/v1/lei-records/25490042I90M0EGQ0T03",
-          "sourceKind": "regulator-directory",
-          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Cygnus Information Limited",
-    "issuerDomicile": "British Virgin Islands: Cygnus Information Limited, LEI 25490042I90M0EGQ0T03. The issuer-hosted CGN whitepaper and GLEIF establish this entity's registration, not its legal obligations to cgUSD holders. ARKS Labs separately publishes Hong Kong and U.S. operational centres and attributes MSB registration No. 31000226418649 to Arks Foundation.",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "As of 2026-10-07, Cygnus Information Limited is retained as the existing issuer-associated entity because the website footer, issuer-hosted CGN whitepaper and GLEIF identify it. Its cgUSD legal obligations remain unverified. The CGN whitepaper publication/admission date is 2026-07-28 and relates to the different CGN token; Title II notification is not cgUSD EMT/ART authorization or U.S. qualification. ARKS self-claims subsidiary Arks Foundation FinCEN MSB registration 31000226418649; this was not independently confirmed and does not establish cgUSD prudential licensing. The withdrawal FAQ quotes 5-7 days, a 35 bps fee and possible claim reduction. The separate redemption mechanics page quotes 2-5 days and waives fees during an early promotion. Their publication chronology was not verified; neither is converted into an unconditional par-redemption promise. Reserve/redemption flags record public conceptual disclosures, not verified actual holdings or GENIUS adequacy. No current cgUSD-specific monthly reserve attestation was verified. No qualifying public authorization or foreign-exception registration was identified; the broad U.S. regime is pre-effective, with DASP restrictions assessed separately.",
+    "notes": "Reviewed 2026-10-07. No exact legal cgUSD issuer or issuer domicile is assigned. Cygnus Information Limited appears in the website footer, GLEIF corporate record and the separate CGN whitepaper, which do not establish that it issues cgUSD or owes holders redemption. ARKS publishes a subsidiary MSB-registration claim; no prudential cgUSD license is inferred. The withdrawal FAQ states 5-7 days, a 35-basis-point fee and possible claim reduction; the separate redemption page states 2-5 days with an early-promotion fee waiver. Their publication chronology is not established. Conceptual Treasury collateral documentation does not verify actual holdings or a current reserve report. No public 1:1 national-currency issuer redemption policy or current monthly independent reserve attestation was verified, so the corresponding optional presence fields are omitted. Unknown pathway and foreign-exception fields do not assert authorization or rejection. DASP posture refers to the GENIUS statutory timetable, not unconditional permission under other laws.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury expected effective date and later DASP sales restriction",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
       },
       {
         "label": "Cygnus cgUSD overview",
@@ -89,99 +116,58 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "ARKS Labs website: FinCEN MSB registration and addresses",
-        "url": "https://www.arkslabs.io/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Cygnus Finance website: Cygnus Information Limited entity",
-        "url": "https://www.cygnus.finance/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC digital assets licensing applications: no Cygnus/ARKS/cgUSD applicant identified",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Cygnus issuer-hosted CGN whitepaper: corporate address and LEI, not cgUSD authorization",
-        "url": "https://www.cygnus.finance/papers/micar-whitepaper",
-        "sourceKind": "issuer-filing",
-        "sourceDate": "2026-07-28",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
-      },
-      {
         "label": "Cygnus current withdrawal FAQ: timing, fees and Treasury valuation risk",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Treasury GENIUS foreign issuer proposal and expected effective date",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "Treasury state certification procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "Federal Reserve GENIUS implementation proposed rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-29"
-      },
-      {
-        "label": "NYDFS virtual currency regulated entities and stablecoin greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GLEIF LEI record: Cygnus Information Limited BVI corporate identity only",
-        "url": "https://api.gleif.org/api/v1/lei-records/25490042I90M0EGQ0T03",
-        "sourceKind": "regulator-directory",
+        "label": "Cygnus interface terms of use",
+        "url": "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
+        "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "https://home.treasury.gov/news/press-releases/sb0605",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
         "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "https://www.cygnus.finance/",
-        "https://www.cygnus.finance/papers/micar-whitepaper",
-        "https://www.arkslabs.io/",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md",
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
         "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
         "https://wiki.cygnus.finance/whitepaper/legal/interface-terms-of-use.md",
-        "Indexed OCC, SEC, NYDFS and FinCEN searches for Cygnus Information Limited, cgUSD and ARKS GENIUS approvals, applications and enforcement"
+        "Official-domain exact-name review for cgUSD, Cygnus Information Limited and ARKS Labs with GENIUS, stablecoin approval and enforcement across OCC, Federal Register, NYDFS, Federal Reserve, FDIC, Treasury, SEC and FinCEN, cutoff 2026-10-07; no qualifying token-specific authorization located."
       ],
-      "summary": "As of 2026-10-07, no public cgUSD/Cygnus/ARKS GENIUS PPSI approval, qualified state status, official application or registered foreign exception was found in the opened regulator materials, OCC table, NYDFS directory and issuer disclosures. The OCC table is not exhaustive and proposed rules do not adjudicate applications. ARKS MSB status is an issuer claim, not a verified prudential license. Foreign-exception status remains unknown because neither a qualifying comparable regime determination nor token-specific registration was identified.",
+      "summary": "As of 2026-10-07, the reopened OCC pending digital-asset bank-charter table, OCC proposal, Federal Register SCRC procedure, Federal Reserve proposal, NYDFS directory and token documents, together with token/entity-specific official-domain searches, did not identify a qualifying public GENIUS issuer approval, state qualification, pending GENIUS application or registered foreign exception for this token. The OCC table is not an exhaustive GENIUS issuer register; general rulemaking and ordinary licenses are not token-specific authorization. This bounded public-evidence finding does not exclude confidential or unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07"

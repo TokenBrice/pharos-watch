@@ -3,131 +3,71 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDN represents M locked on Ethereum. Holders manually claim rewards, and the redemption application transfers USDN to Ethereum as wM, with an optional subsequent swap to USDC. Crypto payout and increasing token quantities do not independently establish a payment-stablecoin exclusion. The exact legal issuer repayment obligation and any security or deposit exclusion remain unresolved."
+      "summary": "USDN represents M locked on Ethereum; Noble holders manually claim accrued rewards and the current redemption app offers Ethereum wM. Under owner ruling D17, crypto payout and increasing token quantities do not establish a payment-stablecoin exclusion. Qualified token-specific legal analysis of the repayment obligation and any securities or deposit exclusion remains necessary."
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
     "issuerEntity": "NASD Inc (Noble)",
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
+    "daspOfferSaleStatus": "unknown",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USDN represents M collateral; rewards are manually claimed and the app redemption route transfers USDN to Ethereum as wM, with an optional subsequent crypto swap. Neither crypto payout nor increasing token quantities independently establishes exclusion from GENIUS payment-stablecoin scope. Token-specific issuer obligation and potential security/deposit treatment remain unresolved. Existing issuerEntity NASD Inc (Noble) and United States domicile are retained because current website terms identify NASD Inc. and a Delaware address, but those website terms do not establish it as the legally obligated token redeemer. No token-specific GENIUS PPSI approval, state qualification, official application or foreign registration was located in the checked public sources as of 2026-10-07, resolving authorizationStatus unknown to no-public-authorization-found. Current pre-effective timing supports not-yet-restricted; no affirmative permission is inferred. Reserve disclosure concerns underlying M0 collateral, not a monthly USDN accountant report.",
+    "notes": "Reviewed 2026-10-01 under D17: Noble's current documentation requires manual rewards claims; the redemption app offers transfer to Ethereum as wM. Neither fact establishes GENIUS applicability or authorization. The prior 2026-06-18 assessment's automatic-rebase and categorical yield-exclusion rationale is withdrawn and preserved in the curation history. Existing issuer identity metadata is retained, but the legally obligated redeeming issuer and holder contracts require product-specific review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "GENIUS Act text S.1582: payment stablecoin definition and yield prohibition",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Noble USDN: yield-bearing rebasing design",
+        "url": "https://noble.xyz/usdn",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Noble blog: introducing USDN",
         "url": "https://noble.xyz/blog/introducing-usdn",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "M0 dashboard: reserve transparency",
         "url": "https://dashboard.m0.org/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-06-07"
       },
       {
         "label": "Enacted GENIUS Act: payment stablecoin definition",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Noble USDN overview: M backing and manual rewards claims",
         "url": "https://docs.noble.xyz/learn/usdn/overview/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Noble Dollar app: Ethereum wM redemption",
         "url": "https://dollar.noble.xyz/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Noble website terms: NASD Inc. operator identity",
-        "url": "https://noble.xyz/terms-&-conditions",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Noble USDN architecture",
-        "url": "https://docs.noble.xyz/learn/usdn/architecture/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS issuer and application proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Treasury GENIUS issuance, offer and sale proposal",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "Treasury SCRC interim procedural rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC Bulletin 2026-3 and current OCC interpretations and decisions index reopened on 2026-10-07",
-        "Federal Reserve September 24, 2026 GENIUS issuer and application proposal announcement reopened",
-        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural rule reopened",
-        "NYDFS virtual-currency business directory and Greenlist reopened; MoonPay USA LLC and MoonPay Trust Company, LLC distinguished",
-        "Official-domain search for MoonPay USA, Bridge Building Inc., NASD Inc. (Noble), mantraUSD and M0 with GENIUS or PPSI found no qualifying exact-token approval or official application",
-        "SEC, FinCEN, NYDFS, OCC and OFAC exact-entity enforcement search returned no matching action; historical securities-SRO NASD and unrelated Noble Corporation matches excluded",
-        "Noble USDN overview, architecture, working launch blog, website terms and Ethereum wM redemption application reopened; NASD website operator identity does not establish token repayment obligation",
-        "M0 dashboard returned a JavaScript shell; unique verifier browser tab navigation returned ERR_ABORTED; no live reserve figures extracted"
-      ],
-      "summary": "As of 2026-10-07, the checked public regulator and issuer sources did not identify a qualifying GENIUS PPSI approval, state-qualified designation, official GENIUS application or registered foreign-issuer exception for USDN / Noble (NASD Inc.). This finding concerns the reviewed public record and does not exclude confidential or unpublished filings. Ordinary licenses and affiliate charter decisions are separate from token-specific GENIUS authorization.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "Federal Reserve GENIUS issuer and application proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Treasury SCRC interim procedural rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        }
-      ]
-    }
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC24)",
+    "reviewedAt": "2026-10-01"
   }
 }

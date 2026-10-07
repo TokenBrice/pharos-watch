@@ -22,11 +22,10 @@
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Fidelity Digital Assets, National Association",
     "issuerDomicile": "United States",
     "licensingRegulator": "OCC",
-    "primaryFederalRegulator": "OCC",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -34,7 +33,7 @@
     "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Reviewed 2026-10-07. Fidelity Digital Assets, National Association is the sole FIDD issuer and USD redemption obligor. OCC active-trust-bank list as of August 31, 2026 names charter 25398; NYDFS confirms conversion effective December 12, 2025. Existing federal-qualified-nonbank pathway records the statutory route for an uninsured national bank, not an attained PPSI authorization. OCC December 12 decision conditions 3 and 5 distinguish future GENIUS compliance and separate written nonobjection for a bank-issued stablecoin from ordinary charter approval. No public section 5 GENIUS approval or official GENIUS application was located. February 4 issuer launch commentary describes GENIUS regulatory clarity but does not announce a formal PPSI application. Latest opened PwC examination dated September 25, 2026 addresses August 7 and 31 reserves and explicitly does not examine legal/regulatory compliance. Removed stale categorical assertions that no approval framework or PPSI approvals exist anywhere.",
+    "notes": "Reviewed 2026-10-07. Fidelity Digital Assets, National Association is the sole FIDD issuer and USD redemption obligor. The OCC active trust-bank list as of August 31, 2026 names charter 25398; NYDFS records federal conversion effective December 12, 2025. The uninsured national trust-bank charter establishes existing OCC licensing, not a GENIUS section 5 approval or an announced GENIUS application. issuerPathway remains unknown and the GENIUS-specific primaryFederalRegulator field is omitted pending evidence of a current or announced GENIUS route. OCC decision conditions 3 and 5 distinguish future GENIUS compliance and a separate written stablecoin nonobjection from charter approval. The opened records and named searches found no qualifying public GENIUS approval, official application or GENIUS enforcement action for FIDD. This bounded negative finding does not establish the absence of confidential filings or unrelated historical actions. February 4 issuer launch commentary describes regulatory clarity without announcing a GENIUS application. The September 25, 2026 PwC examination covers August 7 and 31 reserves and does not examine legal or regulatory compliance. not-yet-restricted refers to GENIUS DASP timing, not a guarantee of availability in every jurisdiction.",
     "references": [
       {
         "label": "OCC Conditional Approval: Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
@@ -97,26 +96,27 @@
         "sourceKind": "auditor-report",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-09-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: issuer definitions and DASP timing",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "Independent exact-name searches (FIDD / Fidelity Digital Assets) of OCC, FDIC, Federal Reserve, Treasury and NYDFS domains, 2026-10-07",
-        "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125d.pdf",
-        "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
-        "https://www.fidelitydigitalassets.com/stablecoin",
-        "https://www.fidelitydigitalassets.com/fidd-terms",
-        "https://www.fidelitydigitalassets.com/research-and-insights/fidelity-investmentsr-expands-digital-asset-investment-lineup-stablecoin",
-        "https://fwc.widen.net/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&download=true",
-        "https://www.dfs.ny.gov/reports-and-publications/weekly-bulletins/wb20251219",
-        "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4"
+        "OCC digital-assets licensing application table, recovered directly from official HTML: currently displayed bank applications; not a complete GENIUS PPSI register",
+        "OCC December 12, 2025 Fidelity national trust-bank decision, including stablecoin conditions 3 and 5; August 31, 2026 active trust-bank register",
+        "OCC Bulletin 2026-3 and March 2, 2026 Federal Register GENIUS proposal, official HTML body recovered directly",
+        "September 29, 2026 Federal Reserve GENIUS standards proposal and September 30, 2026 SCRC procedural rule",
+        "NYDFS current regulated entities and issuance Greenlist, and December 19, 2025 bulletin recording Fidelity federal conversion",
+        "FIDD terms updated April 13, 2026, live stablecoin reserve hub, February 4 launch statement and issuer-hosted republication, August reserve examination dated September 25, 2026",
+        "Federal Register exact-name API searches through 2026-10-07 for FIDD and Fidelity Digital Assets, including the October 6, 2026 SEC custody proposal returned by the issuer/GENIUS query",
+        "2026-10-07 official-domain exact-name search for Fidelity Digital Assets / FIDD with GENIUS, payment stablecoin and enforcement terms across OCC, Federal Reserve, FDIC, NCUA, Treasury, NYDFS and Federal Register; follow-up OCC and Federal Register searches"
       ],
-      "summary": "No qualifying exact Fidelity Digital Assets, National Association / FIDD public section 5 GENIUS PPSI approval, state qualification, official GENIUS application, or GENIUS enforcement action was located. The opened OCC charter decision and active-bank list establish bank status, not PPSI approval. Issuer commentary on GENIUS regulatory clarity is not a filed application.",
+      "summary": "The opened issuer and regulator sources and exact-name searches through 2026-10-07 did not locate a public FIDD/Fidelity Digital Assets, National Association GENIUS section 5 approval, state qualification, official GENIUS application or GENIUS enforcement action. The ordinary trust-bank charter and separate stablecoin activity nonobjection condition do not establish GENIUS authorization. Federal Register FIDD search returned no records; the issuer/GENIUS result was an SEC custody proposal citing bank charters, not an issuer authorization. Issuer launch commentary does not announce a GENIUS application. Findings are limited to the reviewed public record and do not rule out unpublished filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -140,6 +140,12 @@
           "sourceKind": "federal-register",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC public digital-assets bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
     },

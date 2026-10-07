@@ -7,16 +7,15 @@
       "references": [
         {
           "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "AnchorX AxCNH description",
           "url": "https://www.anchorx.org/about-us",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -24,114 +23,64 @@
     "issuerPathway": "unknown",
     "issuerEntity": "AnchorX.KZ Limited",
     "issuerDomicile": "Kazakhstan",
-    "licensingRegulator": "Astana Financial Services Authority (AFSA); active FinTech Lab Participant license AFSA-A-LA-2025-0013 for Providing Money Services in relation to Digital Assets as issuer of a fiat stablecoin",
+    "licensingRegulator": "Astana Financial Services Authority (AFSA); fiat stablecoin issuer authorization",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "notes": "AFSA lists AnchorX.KZ Limited as an active FinTech Lab Participant authorized for fiat-stablecoin money services. This foreign license does not establish GENIUS issuer approval, state qualification, foreign comparability or OCC registration. Issuer materials describe 1:1 CNH redemption and monthly public reserve attestations; service terms limit current services to Professional Investors under the referenced SFO definition. The reserve dashboard expressly aggregates issuance versions from AnchorX.KZ Limited and AnchorX Global Limited and displays a February 22, 2024 snapshot. Disclosure-presence flags do not assert current balances, independent assurance, or reserve sufficiency for either version. Keep the existing KZ issuer attribution without assigning its license to the Global entity. No qualifying public U.S. approval, pending application, foreign registration or issuer-announced GENIUS pathway was located. The linked June 2026 report is publicly previewable by title, but its contents were not recovered in this verification; no monthlyAttestationPresent finding is made.",
+    "notes": "AFSA authorization is a Kazakhstan stablecoin-issuer approval, not a U.S. GENIUS PPSI approval. No token-specific U.S. PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found; the OCC implementation materials remain at proposed-rule stage as of this review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act regulations proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "AFSA: AnchorX.KZ Limited fiat stablecoin issuer authorization",
         "url": "https://afsa.aifc.kz/afsa-grants-first-stablecoin-issuer-license/",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "AnchorX AxCNH issuer disclosure",
         "url": "https://www.anchorx.org/about-us",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve September 2026 GENIUS proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-09-24",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury proposed U.S. issuance and foreign-token offer rules",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury state certification procedural rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-09-30",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS virtual-currency entity directory and issuance Greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "AFSA current AnchorX.KZ license record",
-        "url": "https://publicreg.myafsa.com/licence_details/AFSA-A-LA-2025-0013/",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "AnchorX service terms",
-        "url": "https://anchorx.org/terms",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "AnchorX transparency disclosure",
-        "url": "https://anchorx.org/transparency",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and complete current digital-assets bank licensing applications table",
-        "Federal Reserve September 24, 2026 GENIUS proposals; Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedural rule",
-        "Complete NYDFS regulated-entity table and stablecoin issuance Greenlist",
-        "Current token-specific issuer terms, product and transparency pages; Canadian OSC order for QCAD and AFSA company/license register for AnchorX",
-        "Regulator-domain search for Tetra Trust, CAD Digital, QCAD Digital Trust, Stablecorp, AnchorX and AxCNH combined with GENIUS/PPSI/stablecoin across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
-        "Issuer-domain searches on tetradg.com, stablecorp.ca and anchorx.org for GENIUS, PPSI, OCC and foreign issuer",
-        "OFAC, FinCEN, SEC and CFTC name searches for those entities; responsive SEC results were corporate filings rather than enforcement records"
+        "OCC GENIUS Act proposed rule and OCC Digital Assets Licensing Applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials and foreign-issuer framework materials",
+        "GENIUS Act statutory text on permitted and foreign issuers",
+        "AFSA official stablecoin issuer announcement and AIFC public register",
+        "AnchorX official AxCNH disclosures",
+        "Web searches for AnchorX/AxCNH GENIUS Act approval, application, or foreign-exception registration"
       ],
-      "summary": "As of October 7, 2026, the checked issuer disclosures, OCC tracker, NYDFS directory and regulator-domain searches did not identify a qualifying public GENIUS PPSI approval, state qualification, pending GENIUS application or foreign registration for AxCNH/AnchorX.KZ Limited. Foreign licensing does not satisfy those U.S. requirements. No public U.S. issuer/token enforcement action was located in the specified searches. This finding does not exclude confidential or unindexed filings and does not establish U.S. distribution eligibility.",
+      "summary": "AnchorX has a foreign AFSA stablecoin-issuer authorization, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AxCNH.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "reviewedAt": "2026-08-14",
       "references": [
         {
           "label": "OCC Digital Assets Licensing Applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Treasury GENIUS Act proposed rule on illicit-finance requirements",
           "url": "https://home.treasury.gov/news/press-releases/sb0435",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://anchorx.org/transparency",
-    "redemptionPolicyPresent": true
+    "reviewedAt": "2026-08-14"
   }
 }

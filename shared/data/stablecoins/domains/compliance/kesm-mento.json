@@ -1,40 +1,15 @@
 {
   "id": "kesm-mento",
   "genius": {
-    "applicability": "unclear",
+    "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "KESm is marketed as a decentralized Kenyan shilling payment/FX stablecoin, but uses legacy V2 shared crypto reserves and Broker swaps; the deprecation proposal offers an exit into USDm rather than a contractual fiat payment. The reviewed sources do not identify a person obligated to redeem, convert or repurchase the token for a fixed amount of monetary value as section 2(22) requires. Payment marketing satisfies only one limb; applicability remains unclear, not conclusively excluded.",
+      "summary": "Mento markets KESm as a decentralized Kenyan-shilling stablecoin for payments and lists KESm in its payment-product materials, giving it an apparent payment use even though its legal issuer posture is unresolved.",
       "references": [
         {
           "label": "Mento local payments and KESm product listing",
           "url": "https://www.mento.org/use-cases/local-payments",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Mento stablecoins product directory",
-          "url": "https://www.mento.org/stablecoins",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Mento StableToken documentation",
-          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Mento pinned stablecoin backing configuration",
-          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -47,213 +22,78 @@
     "reserveDisclosureUrl": "https://reserve.mento.org/",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "As of 2026-10-07, bounded regulator and issuer searches located no KESm/Mento-specific GENIUS PPSI approval, state qualification, official application, foreign registration/comparability decision, issuer-announced GENIUS route or public enforcement action. Legal issuer, domicile and pathway remain unresolved; Mento Labs GmbH infrastructure/operational attribution is not a fixed-fiat redemption issuer disclosure. Current governance includes upgrade/admin controls; the 2024 issuerless analysis is not conclusive and MGP-19 is a proposal, not proven execution. The protocol dashboard is public collateral disclosure, not evidence of GENIUS-compliant reserve composition or monthly independent attestation. No holder-facing contractual fiat-redemption policy was found in the opened product/protocol materials; third-party offramps and USDm swaps do not establish one. The SCRC procedural rule is effective but issuer standards/application rules reviewed remain proposed; no earlier final-rule trigger was found. DASP status is a pre-effective assessment, conditional on scope, not permission or compliance. Treasury distinguishes foreign lawful-order conditions at effectiveness from the broader July 18 2028 DASP restriction.",
+    "notes": "As of 2026-08-14, no token-specific GENIUS permitted payment stablecoin approval, state-qualified approval, official application, or foreign-issuer exception registration was found in the reviewed Federal Register, OCC, Treasury, and Mento materials. Mento describes KESm as decentralized and reserve-backed, but the reviewed sources do not identify a legal U.S. issuer or GENIUS pathway. The regime remains in proposed-rules phase, so a future pathway should not be inferred.",
     "references": [
       {
         "label": "GENIUS Act statutory text",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-03-02"
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "U.S. Treasury GENIUS Act proposed AML and sanctions rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-04-08"
-      },
-      {
-        "label": "Federal Reserve GENIUS issuer standards proposal",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-29"
-      },
-      {
-        "label": "Stablecoin Certification Review Committee forms and procedures",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "New York DFS virtual currency businesses and greenlisted coins",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC digital asset licensing applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury GENIUS issuance, offer and sale proposal",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "FinCEN enforcement actions index",
-        "url": "https://www.fincen.gov/news/enforcement-actions",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Mento stablecoins product directory",
-        "url": "https://www.mento.org/stablecoins",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Mento StableToken documentation",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Mento Reserve",
-        "url": "https://reserve.mento.org/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Mento MiCAR workshop: protocol counsel issuer analysis",
-        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2024-11-18"
-      },
-      {
-        "label": "Mento governance and upgrade controls",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "MGP-18: proposed Mento V2 deprecation",
-        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "MGP-19: proposed issuance, reserve stewardship and operating roles",
-        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-21"
-      },
-      {
-        "label": "Mento pinned stablecoin backing configuration",
-        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Mento local payments",
         "url": "https://www.mento.org/use-cases/local-payments",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Mento Reserve",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "https://home.treasury.gov/news/press-releases/sb0435",
-        "https://home.treasury.gov/news/press-releases/sb0605",
-        "https://www.fincen.gov/news/enforcement-actions",
-        "https://www.mento.org/stablecoins",
-        "https://reserve.mento.org/",
-        "https://www.mento.org/blog/highlights-from-the-micar-workshop",
-        "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
-        "Independent query, 2026-10-07: \"Mento\" (\"GENIUS\" OR \"PPSI\" OR \"stablecoin\") (site:occ.gov OR site:federalreserve.gov OR site:fdic.gov OR site:ncua.gov OR site:dfs.ny.gov OR site:home.treasury.gov). No relevant token-issuer authorization hit.",
-        "Independent query, 2026-10-07: (GHSm OR JPYm OR KESm OR XOFm OR ZARm OR \"Mento Labs\") (\"GENIUS Act\" OR \"PPSI\" OR \"foreign registration\" OR \"redemption policy\"). No qualifying route or fixed-fiat issuer policy located.",
-        "Independent query, 2026-10-07: \"Mento\" stablecoin (enforcement OR sanctions OR \"MiCA\" OR \"issuer\"). No relevant public token-specific action located.",
-        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf"
+        "Federal Register OCC GENIUS Act issuance proposed rule (91 FR 10202)",
+        "OCC GENIUS Act proposed rule and public releases",
+        "U.S. Treasury/FinCEN/OFAC GENIUS Act proposed AML and sanctions rule",
+        "Public web search for KESm/Mento plus GENIUS, PPSI, and foreign-issuer registration",
+        "Mento local-payments, stablecoin, and reserve disclosures"
       ],
-      "summary": "The opened OCC bank licensing table, GENIUS proposals, Federal Reserve proposal, Treasury foreign/issuance proposal, SCRC procedure, NYDFS entity/coin lists, issuer documents and bounded public regulator/enforcement searches did not identify KESm, Mento Labs GmbH, Mento Protocol Foundation or AP Reserve Foundation as an approved GENIUS issuer, official applicant, state-qualified issuer or registered foreign exception for this token. The OCC bank tracker is not exhaustive and proposals are not licensing registers; this is a dated negative-public-evidence result, not proof of illegality or no private application. No GENIUS issuer-intent announcement or token-specific public enforcement action located.",
+      "summary": "The reviewed regulator materials describe the GENIUS permitting and rulemaking framework but do not name Mento, KESm, or a Mento issuer as a permitted issuer or pending applicant. Mento public product pages identify KESm as a decentralized local-currency stablecoin and show reserve data, but no U.S. authorization, application, or foreign-exception registration was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "reviewedAt": "2026-08-14",
       "references": [
         {
           "label": "OCC GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-03-02"
-        },
-        {
-          "label": "Federal Reserve GENIUS issuer standards proposal",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-29"
-        },
-        {
-          "label": "Stablecoin Certification Review Committee forms and procedures",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "New York DFS virtual currency businesses and greenlisted coins",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "OCC digital asset licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury GENIUS issuance, offer and sale proposal",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "FinCEN enforcement actions index",
-          "url": "https://www.fincen.gov/news/enforcement-actions",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-08-14"
   }
 }

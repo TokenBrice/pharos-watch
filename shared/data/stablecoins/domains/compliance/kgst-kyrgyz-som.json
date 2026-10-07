@@ -9,135 +9,70 @@
           "label": "KGST issuer website",
           "url": "https://www.kgstoken.kg/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Kyrgyz Republic Financial Market Regulatory and Supervisory Service registration notice",
           "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-08"
+          "sourceDate": "2025-07-08",
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "foreignExceptionStatus": "unknown",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
     "issuerEntity": "KGSToken LLC",
     "issuerDomicile": "Kyrgyzstan",
     "licensingRegulator": "Kyrgyz Republic Financial Market Regulatory and Supervisory Service (FSA)",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.kgstoken.kg/",
     "monthlyAttestationPresent": false,
-    "notes": "The July 8, 2025 FSA primary notice confirms state registration of the first KGST stablecoin issue by KGSToken LLC through a public offering in the June 23-27 reporting period; this does not itself establish a security under U.S. law, GENIUS qualification or foreign-exception recognition. The issuer describes fiat/cash-equivalent reserves and reports domestic oversight. Its general reserve page is an issuer disclosure, not an independently verified or monthly attestation report; no actual dated monthly report was located. No named U.S. approval, application, issuer-announced GENIUS plan or foreign registration was found. Treasury's August 17 proposal gives January 18, 2027 as the expected effectiveness date, subject to the statutory final-rule trigger. The September 30 SCRC interim final rule is procedural. not-yet-restricted describes only GENIUS's phased DASP restriction, not general U.S. legality or authorization. The broad DASP prohibition starts July 18, 2028; the foreign lawful-order condition starts when the Act becomes effective.",
     "references": [
       {
         "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "KGST issuer website",
         "url": "https://www.kgstoken.kg/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Kyrgyz Republic Financial Market Regulatory and Supervisory Service registration notice",
         "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-08"
-      },
-      {
-        "label": "OCC Digital Assets Licensing Applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "Treasury: State Stablecoin Regulatory Committee procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "NYDFS virtual currency regulated entities and approved issuance list",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
+        "sourceDate": "2025-07-08",
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf - independently reopened primary source on 2026-10-07",
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html - independently reopened primary source on 2026-10-07",
-        "https://www.kgstoken.kg/ - independently reopened primary source on 2026-10-07",
-        "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/ - independently reopened primary source on 2026-10-07",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html - independently reopened primary source on 2026-10-07",
-        "https://home.treasury.gov/news/press-releases/sb0605 - independently reopened primary source on 2026-10-07",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm - independently reopened primary source on 2026-10-07",
-        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses - independently reopened primary source on 2026-10-07",
-        "Independent bounded search on 2026-10-07: (JPYC OR JPYSC OR SBI Shinsei Trust Bank OR KGST OR KGSToken OR KRWQ) (GENIUS approval application registration enforcement), restricted to occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, ncua.gov and dfs.ny.gov; no named token/issuer GENIUS authorization record surfaced."
+        "OCC GENIUS Act proposed rule and Federal Register implementation materials",
+        "OCC digital-assets licensing applications page",
+        "Federal Register and official U.S. regulator searches for KGST and KGSToken LLC",
+        "Treasury foreign-issuer comparability and OCC registration materials",
+        "KGST issuer disclosures",
+        "Kyrgyz Republic Financial Market Regulatory and Supervisory Service domestic registration notice"
       ],
-      "summary": "Domestic Kyrgyz issuance registration is confirmed in an opened regulator notice, but no public GENIUS PPSI approval, state qualification, regulator-confirmed application or registered foreign-issuer exception was located for KGST or KGSToken LLC as of 2026-10-07. The reviewed OCC digital-asset table is not a comprehensive GENIUS register, and confidential filings cannot be excluded.",
+      "summary": "Domestic Kyrgyz registration was found, but no U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found for KGST or KGSToken LLC as of 2026-08-14.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS Act proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "Kyrgyz Republic Financial Market Regulatory and Supervisory Service registration notice",
-          "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
-          "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-08"
-        },
-        {
-          "label": "OCC Digital Assets Licensing Applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "NYDFS virtual currency regulated entities and approved issuance list",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    }
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

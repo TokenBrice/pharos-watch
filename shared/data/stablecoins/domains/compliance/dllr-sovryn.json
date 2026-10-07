@@ -70,19 +70,46 @@
         "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "sourceKind": "regulator-directory",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+        "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury: proposed issuance, offer and sale rules and effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3, opened 2026-10-07",
-        "Federal Reserve September 24, 2026 issuer standards/application proposals, opened 2026-10-07",
-        "Treasury SCRC interim certification rule of September 30, 2026, opened 2026-10-07",
-        "NYDFS regulated-entity directory and issuance Greenlist, opened 2026-10-07",
-        "Regulator-domain search: site:occ.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov (\"Sovryn\" OR \"Money On Chain\" OR \"Alto Foundation\" OR \"Felix Labs\") stablecoin",
-        "Issuer-intent search: (\"Sovryn\" OR \"Money On Chain\" OR \"Alto Foundation\" OR \"Felix Labs\") (\"GENIUS Act\" OR PPSI OR \"OCC charter\")",
-        "Sovryn DLLR product FAQ and Sovryn terms, opened 2026-10-07"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (all nine pending bank applicants inspected in official raw HTML)",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "OCC Bulletin 2026-3; Federal Reserve September 24 issuer/application proposals; Treasury September 30 SCRC procedures and August 17 issuance/offer/sale proposal",
+        "https://sovryn.com/sovryn-dollar",
+        "https://sovryn.com/terms-conditions",
+        "Exact indexed search: site:occ.gov \"Sovryn\"",
+        "Official-domain search: (site:occ.gov OR site:federalregister.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov) (\"Sovryn\" OR \"DLLR\" OR \"StandX\" OR \"USSD\" OR \"Frax Inc\") (stablecoin OR GENIUS OR enforcement OR application) before:2026-10-08; no qualifying target record located; search relaxed its domain constraint"
       ],
-      "summary": "Token and project-name searches and the opened regulator and Sovryn sources located no qualifying public DLLR issuer approval, state qualification, GENIUS-specific pending application or foreign registration. This is a bounded public-source finding, not a claim that no confidential filing exists.",
+      "summary": "Review bounded to the October 7, 2026 cutoff: the nine-applicant OCC bank-licensing table, both pages of the 112-record GENIUS Federal Register inventory, NYDFS entity and issuance tables, implementation materials, indexed named searches and Sovryn token/terms pages did not identify public DLLR GENIUS approval, state qualification, a named GENIUS application or foreign registration. The OCC table concerns ordinary bank licensing, not a dedicated PPSI register. No legal issuer was established, so this finding does not purport to cover filings under an unidentified entity or confidential filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -119,6 +146,31 @@
           "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
           "sourceKind": "regulator-directory",
           "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, first page",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=GENIUS&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: GENIUS inventory through October 7, 2026, second page",
+          "url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&conditions%5Bterm%5D=GENIUS&format=json&order=newest&page=2&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury: proposed issuance, offer and sale rules and effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
         }
       ]
     },

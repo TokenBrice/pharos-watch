@@ -3,39 +3,26 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Metronome documentation describes crypto-collateral borrowing and dollar-denominated synthetic assets usable in trading and yield strategies. It does not establish an identifiable legal issuer obligation to redeem holders for fixed national currency or a currency-denominated deposit as required by the GENIUS definition. General stablecoin utility leaves applicability genuinely ambiguous; CDP architecture alone does not establish an exemption. Synth-marketplace documentation describes design, not verification that swaps currently operate.",
+      "summary": "msUSD is a synthetic asset minted from overcollateralized crypto positions and exchanged inside Metronome's permissionless Synth system. It is stablecoin-shaped, but the public design is a DeFi synthetic/CDP rather than a named issuer's fixed-value payment obligation, so GENIUS applicability remains unclear.",
       "references": [
         {
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Metronome Synth protocol overview",
           "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Metronome Synth Marketplace",
           "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/synth-marketplace",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Metronome staged governance and retained multisig powers",
-          "url": "https://docs.metronome.io/metronome-2.0/governance",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Metronome Synth interface terms and conditions",
-          "url": "https://github.com/autonomoussoftware/metronome-synth-legal/blob/master/terms-and-conditions.md",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2023-01-10",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -44,141 +31,66 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "No token-specific public GENIUS authorization or announced application was located. January 2023 terms identify Autonomous Software as interface provider, not a verified legal issuer. Governance documentation describes staged decentralization, multisig implementation and retained veto/mint-burn authority; fully decentralized issuerlessness is not assumed. Synth-marketplace documentation is retained as design evidence without asserting present swap operation. No legal fixed-monetary-value holder redemption policy, issuer fiat-reserve disclosure or statutory monthly reserve attestation was found in the reviewed sources. On-chain crypto collateral information and borrower repayment are distinct from those documents. Treasury expects January 18, 2027 effectiveness; the September SCRC procedural IFR is not token approval.",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Explicitly assessed because msUSD is a roughly $29.3M tracked stablecoin-shaped asset. Metronome's public materials describe a permissionless multi-collateral synthetic protocol, internal swaps, mintage caps, and liquidations rather than a conventional issuer redemption promise. No public GENIUS approval, state-qualified approval, official application, or foreign-issuer exception registration was located; rulemaking remains in proposed-rules phase.",
     "references": [
       {
         "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Treasury state-level GENIUS regime NPRM",
         "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-04-01",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury foreign-issuer proposal and implementation timing",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS framework and approval proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-09-24",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Treasury SCRC procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "sourceDate": "2026-09-30",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS regulated virtual currency entities and Greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Metronome Synth protocol overview",
         "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Metronome Synth Marketplace",
         "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/synth-marketplace",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Metronome staged governance and retained multisig powers",
-        "url": "https://docs.metronome.io/metronome-2.0/governance",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Metronome Synth interface terms and conditions",
-        "url": "https://github.com/autonomoussoftware/metronome-synth-legal/blob/master/terms-and-conditions.md",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2023-01-10",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS statutory definitions",
-        "OCC Bulletin 2026-3 and current digital-asset pending bank applications table",
-        "Federal Reserve September 24 framework and application-procedure proposals",
-        "Treasury April comparability and August foreign-issuer proposals and September 30 SCRC procedural IFR",
-        "NYDFS regulated virtual currency entity table and Greenlist",
-        "Exact token/protocol and disclosed operator-name searches across OCC, Federal Reserve, FDIC, NCUA and NYDFS public indexed materials for approval, application, registration or GENIUS enforcement",
-        "Metronome msUSD official product/control/legal disclosures"
+        "GENIUS Act statutory text and payment-stablecoin issuer definitions",
+        "OCC GENIUS Act proposed rule and 2026 implementation bulletins",
+        "OCC digital assets licensing applications table",
+        "Treasury state-level GENIUS comparability NPRM",
+        "Federal Register and federal-regulator searches for Metronome/msUSD authorization or application",
+        "Metronome Synth protocol, marketplace, mintage-cap, and liquidation documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
       ],
-      "summary": "As of October 7, 2026, opened regulator directories, implementation publications, product disclosures and exact-name regulator searches yielded no public token-specific PPSI approval, GENIUS state qualification, official pending application, registered foreign exception or GENIUS enforcement action for Metronome msUSD. These are bounded public checks, not proof that every nonpublic record is absent. The OCC bank-applications table and NYDFS ordinary licensing list are not complete GENIUS authorization registers. Legal issuer identity remains unresolved, so undisclosed-entity records cannot be excluded.",
+      "summary": "The review found no token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for msUSD. Metronome documentation describes a permissionless synthetic/CDP system with collateral factors, mintage caps, swaps, and liquidations, not a legal GENIUS payment-stablecoin issuer.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC digital assets licensing applications",
-          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "regulator-directory",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS framework and approval proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-09-24",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury foreign-issuer proposal and implementation timing",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-08-17",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Treasury SCRC procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "sourceDate": "2026-09-30",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS regulated virtual currency entities and Greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        }
-      ]
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false
+    "reviewedAt": "2026-08-14"
   }
 }

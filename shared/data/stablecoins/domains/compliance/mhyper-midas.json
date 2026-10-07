@@ -44,12 +44,10 @@
     "issuerDomicile": "Germany",
     "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The token-specific reserve API reopened on October 7, 2026 reports issuer portfolio positions, assets, liabilities and equity, with an October 7 source timestamp. These are issuer disclosures and do not establish independent monthly accountant assurance. Redemption follows NAV rather than a fixed 1:1 USD obligation. Enforcement no-public-action-found is limited to the October 7 exact-name indexed searches across SEC, OCC, CFTC, Treasury, OFAC, FinCEN, FDIC, NCUA and Federal Reserve domains; no undisclosed-investigation conclusion is made.",
+    "notes": "GENIUS section 2(22) requires fixed monetary-value redemption and separately excludes securities. This tracker perimeter classification follows the token-specific investment-certificate/debt-security documents and is not a U.S. judicial or regulatory securities determination. FMA prospectus approval is a document review, not issuer licensing or GENIUS approval. No U.S. issuer pathway, federal regulator, state regulator or foreign-issuer registration is asserted. The token-specific issuer portfolio API returned public positions, assets, liabilities and equity with an October 7, 2026 update timestamp. ReserveDisclosurePresent records that self-reported portfolio disclosure, not an independently audited reserve report or a requirement to hold the notional underlying. RedemptionPolicyPresent is false because standard redemption follows NAV less fees and limitations rather than a fixed USD 1 monetary-value entitlement. Monthly independent reserve-attestation posture is omitted because the current methodology page could not be independently reopened.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
@@ -84,18 +82,6 @@
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-07-17",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas eligibility and compliance: U.S. person restrictions",
-        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas Attestation Engine: independent verification rollout limitations",
-        "url": "https://docs.midas.app/transparency/the-midas-attestation-engine",
-        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
       {

@@ -101,18 +101,29 @@
         "sourceKind": "federal-register",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register Aave and GHO document search through October 7, 2026: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22GHO%22%20OR%20%22Aave%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS Act enacted text (Public Law 119-27)",
-        "OCC Bulletin 2026-3 and complete digital-assets pending-licensing table",
-        "Federal Reserve September 24, 2026 GENIUS proposals",
-        "FDIC April 7, 2026 proposed PPSI requirements",
-        "NCUA digital-assets GENIUS implementation FAQ",
-        "Treasury September 30, 2026 SCRC procedural rule",
-        "Aave current GHO, facilitators, and terms disclosures",
-        "Token-specific Aave/GHO GENIUS searches across OCC, Federal Reserve, FDIC, NCUA, and NYDFS domains"
+        "GENIUS Act enacted text, Public Law 119-27",
+        "OCC Bulletin 2026-3 and complete digital-assets pending-licensing table, reopened 2026-10-07; no Aave or GHO applicant",
+        "Federal Register exact Aave or GHO document query through 2026-10-07; count 0",
+        "NYDFS regulated-entity directory and Greenlist, reopened 2026-10-07; no Aave or GHO entry",
+        "Federal Reserve September 24, 2026 proposals; FDIC April 7, 2026 proposal; NCUA GENIUS implementation FAQ; September 30, 2026 SCRC procedural rule",
+        "Current Aave GHO product page, facilitator documentation, GHO technical documentation and Aave Labs terms",
+        "Token-specific Aave or GHO GENIUS searches across OCC, Federal Reserve, FDIC, NCUA and NYDFS domains on 2026-10-07; no qualifying match located"
       ],
       "summary": "As of 2026-10-07, the opened federal implementation sources describe proposed issuer frameworks and the OCC pending-charter table lists unrelated applicants. No public qualifying GENIUS approval, application, state qualification, or foreign registration naming Aave, GHO, or a disclosed GHO issuer was located. This bounded public-source conclusion does not exclude confidential or unpublished filings.",
       "reviewer": "Pharos compliance research",
@@ -150,6 +161,18 @@
           "sourceKind": "federal-register",
           "accessedAt": "2026-10-07",
           "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register Aave and GHO document search through October 7, 2026: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22GHO%22%20OR%20%22Aave%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
         }
       ]
     },

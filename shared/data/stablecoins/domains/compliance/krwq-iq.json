@@ -3,169 +3,88 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "KRWQ is marketed as a fully backed, fixed-KRW stablecoin for global payments, settlement and trading, so it was reviewed as an apparent payment stablecoin. Public issuer materials attribute the project to IQ using Frax infrastructure but do not resolve the legally obligated issuing entity.",
+      "summary": "KRWQ is a fully backed, fixed-KRW stablecoin marketed for global payments, settlement, and trading, so it was reviewed as an apparent payment stablecoin; public materials identify IQ and Frax but do not clearly state a U.S. legal issuer.",
       "references": [
         {
           "label": "KRWQ official site",
           "url": "https://www.krwq.cash/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "KRWQ official About page",
           "url": "https://www.krwq.cash/about",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "foreignExceptionStatus": "unknown",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
     "issuerEntity": "IQ (with Frax Finance infrastructure)",
+    "issuerDomicile": "South Korea / international offshore distribution",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.krwq.cash/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "issuerEntity retains the existing IQ/Frax project attribution for issuer-key consistency; it is not verification of the exact legal issuer or redemption obligor. issuerDomicile is omitted because Korean founding-team links and global offshore marketing do not establish the legal issuer's domicile; the actual mint page excludes Korean residents, citizens and persons located in Korea. Eligible whitelisted counterparties can mint/redeem; the public UI currently quotes USDC conversion and unrestricted retail fiat redemption is not established. The current site says attestations are published as issued, while the whitepaper describes future independent reports; no actual dated monthly independent report was found. IQ's GENIUS-compatible Frax-infrastructure claim is not a named approval, pending application or specific intention to pursue a GENIUS license for KRWQ. Treasury's August 17 proposal gives January 18, 2027 as the expected effectiveness date, subject to the statutory final-rule trigger. The September 30 SCRC interim final rule is procedural. not-yet-restricted describes only GENIUS's phased DASP restriction, not general U.S. legality or authorization. The broad DASP prohibition starts July 18, 2028; the foreign lawful-order condition starts when the Act becomes effective.",
+    "notes": "KRWQ's public materials describe IQ/Frax infrastructure, global DeFi and payment use, and no offering to Korean residents, but do not identify a U.S. permitted issuer or a token-specific GENIUS application/registration. The site advertises monthly attestations, while the whitepaper describes independent attestations as planned and no dated independent report was located, so monthlyAttestationPresent is conservatively false. The GENIUS framework remains in proposed-rules phase and is not yet effective.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule bulletin",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC GENIUS Act proposed rule: Federal Register 91 FR 10202",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-03-02"
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "KRWQ official site",
         "url": "https://www.krwq.cash/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "KRWQ official About page",
         "url": "https://www.krwq.cash/about",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "KRWQ reserve transparency",
         "url": "https://www.krwq.cash/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "KRWQ institutional whitepaper and legal disclosures",
-        "url": "https://krwq.cash/whitepaper.pdf",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "KRWQ mint/redeem UI and geographic disclaimer",
-        "url": "https://www.krwq.cash/mint",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "IQ: KRWQ launch and Frax GENIUS-compatible infrastructure claim",
-        "url": "https://blog.iqai.com/krwq-the-first-korean-won-stablecoin-on-base/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-10-30"
-      },
-      {
-        "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "Treasury: State Stablecoin Regulatory Committee procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "NYDFS virtual currency regulated entities and approved issuance list",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html - independently reopened primary source on 2026-10-07",
-        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm - independently reopened primary source on 2026-10-07",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html - independently reopened primary source on 2026-10-07",
-        "https://www.krwq.cash/ - independently reopened primary source on 2026-10-07",
-        "https://www.krwq.cash/about - independently reopened primary source on 2026-10-07",
-        "https://www.krwq.cash/transparency - independently reopened primary source on 2026-10-07",
-        "https://krwq.cash/whitepaper.pdf - independently reopened primary source on 2026-10-07",
-        "https://www.krwq.cash/mint - independently reopened primary source on 2026-10-07",
-        "https://blog.iqai.com/krwq-the-first-korean-won-stablecoin-on-base/ - independently reopened primary source on 2026-10-07",
-        "https://home.treasury.gov/news/press-releases/sb0605 - independently reopened primary source on 2026-10-07",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm - independently reopened primary source on 2026-10-07",
-        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses - independently reopened primary source on 2026-10-07",
-        "Independent bounded search on 2026-10-07: (JPYC OR JPYSC OR SBI Shinsei Trust Bank OR KGST OR KGSToken OR KRWQ) (GENIUS approval application registration enforcement), restricted to occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, ncua.gov and dfs.ny.gov; no named token/issuer GENIUS authorization record surfaced.",
-        "Independent bounded search for (KRWQ OR IQ) GENIUS approval/application/registration on occ.gov, home.treasury.gov and dfs.ny.gov; no issuer-specific official record surfaced."
+        "OCC GENIUS Act proposed rule bulletin 2026-3",
+        "OCC GENIUS Act proposed rule, Federal Register 91 FR 10202",
+        "OCC digital assets licensing applications list",
+        "KRWQ official site, About page, whitepaper, and reserve transparency page",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-issuer registration materials searched for IQ/Frax/KRWQ",
+        "Searches for KRWQ plus GENIUS Act, permitted payment stablecoin issuer, and foreign-issuer registration"
       ],
-      "summary": "The opened issuer disclosures, OCC pending applications, NYDFS tables and official-domain searches disclosed no token-specific KRWQ/IQ GENIUS approval, state qualification, official application or foreign registration as of 2026-10-07. Exact legal issuer identity remains unresolved. GENIUS-compatible infrastructure and partner reserve assets do not establish authorization or a concrete KRWQ GENIUS filing plan; absence from a bank-charter table is not proof of no confidential filing.",
+      "summary": "The reviewed OCC and Federal Register materials establish the proposed U.S. payment-stablecoin approval and foreign-issuer registration framework, but no token-specific KRWQ/IQ/Frax approval, state-qualified pathway, official application, or foreign registration was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS Act proposed rule bulletin",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "OCC digital assets licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "IQ: KRWQ launch and Frax GENIUS-compatible infrastructure claim",
-          "url": "https://blog.iqai.com/krwq-the-first-korean-won-stablecoin-on-base/",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-10-30"
-        },
-        {
-          "label": "Treasury: GENIUS implementation and phased offer/sale restrictions",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "NYDFS virtual currency regulated entities and approved issuance list",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    }
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

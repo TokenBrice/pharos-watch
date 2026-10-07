@@ -32,16 +32,14 @@
     "issuerPathway": "unknown",
     "issuerEntity": "MoonPay USA LLC",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
+    "licensingRegulator": "NYDFS and state money-transmitter regulators; FinCEN MSB registration",
     "stateRegulator": "NYDFS",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.moonpay.com/legal/stablecoin_terms",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "MoonPay stablecoin terms identify MoonPay USA LLC as issuer, and September 2026 Exodus Rewards terms expressly name it for XO Cash, subject to applicable-affiliate language. The NYDFS register lists MoonPay USA LLC with virtual-currency and money-transmitter licenses (June 2025) and the distinct MoonPay Trust Company, LLC with a limited-purpose trust charter (November 2025). These do not establish XO GENIUS authorization or state qualification. The charter press release contemplates possible future issuance by the trust affiliate with further NYDFS approval; token-specific intent attributed to another MoonPay token is not transferred to XO. No public XO PPSI approval, official application or issuer-announced GENIUS application intent was located as of 2026-10-07. After static-shell/browser failure, the public transparency client bundle confirmed MoonPay's claim of monthly AICPA-standard reserve examinations and identified a secure portal for approved counterparties. The public coins endpoint names XO Cash, while the report endpoint returns HTTP401. Accordingly monthlyAttestationPresent remains false for publicly accessible reserve reports; this does not assert that private reports do not exist. Current EEA issuer/program exclusions and inconsistent European support instructions are separate MiCA scope/distribution issues, not U.S. authorization evidence.",
+    "notes": "Reviewed 2026-10-07. MoonPay stablecoin terms identify MoonPay USA LLC as issuer and provide one-for-one U.S. dollar redemption for eligible onboarded customers. The September 28, 2026 Exodus Rewards terms expressly name MoonPay USA LLC or its applicable affiliate for XO Cash. MoonPay's public transparency token directory includes XO Cash, and its first-party client disclosure identifies MoonPay USA LLC-issued stablecoins. The NYDFS directory separately lists MoonPay USA LLC virtual-currency and money-transmitter licenses and MoonPay Trust Company, LLC's limited-purpose trust charter. The trust affiliate's potential future GENIUS issuance path requires further NYDFS approval and is not a demonstrated XO authorization or an issuer pathway for the USA LLC. ReserveDisclosurePresent refers to the public reserve-management policy in sections 1.2 and 5.1 of the stablecoin terms, not a verified current asset allocation or accountant report. MoonPay's public client disclosure claims monthly independent reserve examinations, while the portal is for approved counterparties and the unauthenticated reports endpoint returned HTTP 401. MonthlyAttestationPresent is omitted because no current XO reserve examination report was inspected; lack of anonymous access does not prove absence of attestations. EnforcementStatus is omitted because this adjudication did not independently complete a comprehensive named-entity enforcement review. DASP posture refers only to the pre-effective GENIUS authorization-based restrictions, not all other applicable laws or sanctions.",
     "references": [
       {
         "label": "Exodus, MoonPay, and M0 XO announcement",
@@ -117,33 +115,43 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "MoonPay stablecoin transparency disclosure",
-        "url": "https://www.moonpay.com/business/transparency",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
         "label": "Treasury section 3 GENIUS proposed rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0605",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-08-17",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register MoonPay named-entity search through 2026-10-07",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MoonPay%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MoonPay first-party transparency client disclosure",
+        "url": "https://www.moonpay.com/business/transparency/_next/static/immutable/chunks/3l73kzc8ghaj7.js",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MoonPay public stablecoin directory naming XO Cash",
+        "url": "https://www.moonpay.com/business/transparency/api/coins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3: proposed rule, reopened full raw body on 2026-10-07",
-        "OCC pending digital-assets banking-license table: nine visible applicants, raw HTML reopened 2026-10-07; not a comprehensive PPSI register",
-        "GENIUS Act Public Law 119-27: sections 2, 3 and implementation provisions reopened 2026-10-07",
-        "Treasury September 30 SCRC procedural rule and August 17 section 3 proposed-rule release, reopened 2026-10-07",
-        "Independent targeted WSPN/Metallicus/MoonPay/BabelFish GENIUS/PPSI searches on OCC, FDIC, Federal Reserve, NCUA and Treasury domains on 2026-10-07",
-        "FinCEN enforcement index and independent SEC/CFTC/FinCEN/NYDFS named-entity enforcement searches on 2026-10-07",
-        "MoonPay USA LLC stablecoin terms and licenses; NYDFS entity register and November 25 trust-charter announcement",
-        "Exodus December announcement, May 8 XO launch, September 28 Rewards contract, October 2 Exodus Pay/Rewards help and XO Cash site",
-        "MoonPay transparency shell; own browser navigation timed out; first-party client bundle and public coins API reopened; unauthenticated reports API returned HTTP 401",
-        "Current ctUSD and PYUSDx sibling sidecars for entity consistency only; no sibling authorization transferred"
+        "OCC digital-assets licensing applications tracker: full raw active table, nine visible applicants; no MoonPay entry; ordinary charter tracker, not comprehensive PPSI register",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MoonPay%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "NYDFS regulated-entity directory and Greenlist: MoonPay USA LLC and distinct MoonPay Trust Company, LLC; no XO GENIUS designation",
+        "MoonPay stablecoin terms, licenses, November 25, 2025 trust-charter announcement, first-party transparency client and public coins directory",
+        "Exodus December 16, 2025 payment announcement, May 8, 2026 XO Cash launch, and September 28, 2026 Rewards terms",
+        "OCC Bulletin 2026-3 substantive raw proposal text; Federal Reserve September 24, 2026 proposals; FDIC April 7, 2026 proposal; NCUA GENIUS implementation FAQ",
+        "Treasury August 17, 2026 section 3 release and September 30, 2026 SCRC Federal Register procedural rule",
+        "Dated 2026-10-07 adjudication searches for MoonPay USA LLC, MoonPay and XO Cash with GENIUS/PPSI/authorization on OCC, Federal Register, FDIC, Federal Reserve, NCUA, Treasury and NYDFS domains; issuer-intent search on moonpay.com and exodus.com"
       ],
-      "summary": "No opened public primary source established XO-specific PPSI approval, state-qualified authorization, official GENIUS application or announced XO issuer application intent. MoonPay USA LLC's existing licenses and the separate trust affiliate's potential future issuance plans are insufficient. Current OCC banking-applicant rows do not name MoonPay; the September SCRC procedural rule does not certify an issuer or state. This negative conclusion is bounded by the reviewed public record on 2026-10-07 and does not rule out unpublished applications.",
+      "summary": "Review dated 2026-10-07 found no qualifying public XO-specific PPSI approval, state qualification, official GENIUS application or registered foreign exception. The Federal Register exact MoonPay search through the review date returned count 0. The OCC ordinary banking-applicant table did not name MoonPay. NYDFS lists existing business licenses and a distinct trust affiliate, not XO GENIUS qualification. Reviewed XO disclosures did not explicitly announce an XO GENIUS application or issuer route; the group trust announcement concerns potential future issuance requiring additional approval. Generic implementation proposals and SCRC procedures do not grant issuer approval. This finding is limited to the reviewed public record and does not rule out confidential or unpublished filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -164,6 +172,12 @@
           "url": "https://www.prnewswire.com/news-releases/moonpay-secures-new-york-trust-charter-to-expand-regulated-financial-infrastructure-302625161.html",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2025-11-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register MoonPay named-entity search through 2026-10-07",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MoonPay%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

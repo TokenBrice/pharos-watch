@@ -18,7 +18,6 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Tetra Trust Company (through CAD Digital Inc.)",
     "issuerDomicile": "Canada",
-    "licensingRegulator": "Alberta Treasury Board and Finance; Loan and Trust Corporations Act (Alberta)",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -91,15 +90,22 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and complete current digital-assets bank licensing applications table",
-        "Federal Reserve September 24, 2026 GENIUS proposals; Treasury August 17 issuance/offer/sale proposal and September 30 SCRC procedural rule",
-        "Complete NYDFS regulated-entity table and stablecoin issuance Greenlist",
-        "Current token-specific issuer terms, product and transparency pages; Canadian OSC order for QCAD and AFSA company/license register for AnchorX",
-        "Regulator-domain search for Tetra Trust, CAD Digital, QCAD Digital Trust, Stablecorp, AnchorX and AxCNH combined with GENIUS/PPSI/stablecoin across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
-        "Issuer-domain searches on tetradg.com, stablecorp.ca and anchorx.org for GENIUS, PPSI, OCC and foreign issuer",
-        "OFAC, FinCEN, SEC and CFTC name searches for those entities; responsive SEC results were corporate filings rather than enforcement records"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://tetradg.com/cadd-terms-and-conditions/",
+        "https://tetradg.com/cadd-reserve-attestations/",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Tetra+Trust%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22CAD+Digital%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22CADD%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07",
+        "Independent official-domain name search for Tetra Trust, CAD Digital and CADD with GENIUS/PPSI/enforcement/penalty terms across OCC, Federal Register, NYDFS, FDIC, Federal Reserve, NCUA, Treasury, OFAC, SEC, CFTC and FinCEN; no token-specific authorization or enforcement result located.",
+        "Issuer-domain searches on tetradg.com for GENIUS, PPSI and OCC; no indexed matching issuer intent statement located."
       ],
-      "summary": "As of October 7, 2026, the checked issuer disclosures, OCC tracker, NYDFS directory and regulator-domain searches did not identify a qualifying public GENIUS PPSI approval, state qualification, pending GENIUS application or foreign registration for CADD/Tetra Trust Company (through CAD Digital Inc.). Foreign licensing does not satisfy those U.S. requirements. No public U.S. issuer/token enforcement action was located in the specified searches. This finding does not exclude confidential or unindexed filings and does not establish U.S. distribution eligibility.",
+      "summary": "As of 2026-10-07, reopened CADD issuer terms and reserve disclosures, the complete OCC pending digital-asset licensing table, NYDFS regulated-entity table and issuance Greenlist, current federal implementing proposals, exact-name Federal Register API searches and official-domain searches did not identify a qualifying public GENIUS PPSI approval, state qualification, official application or foreign registration for CADD, Tetra Trust Company or CAD Digital Inc. Tetra Trust and CAD Digital searches returned zero Federal Register records; CADD returned 25 unrelated records. No public U.S. token/issuer enforcement action was located in the specified indexed searches. These bounded findings do not exclude confidential or unindexed records and do not establish U.S. distribution eligibility.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07"
     },

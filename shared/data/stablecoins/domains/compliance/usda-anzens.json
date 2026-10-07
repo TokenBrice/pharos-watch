@@ -32,8 +32,7 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.linkedin.com/posts/anzens-usda_anzens-january-attestation-report-activity-7430042803411271680-9qRD",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Reviewed October 7, 2026. Published terms identify Anzens Inc., a Delaware company, and specify KYC-gated mint/redemption and fiat withdrawal, including separate arrangements for foreign entities. The AML statement claims alignment with the GENIUS Act and close regulator cooperation but names no qualification route, PPSI application or approval; this general alignment claim is not upgraded to issuer-announced-intent. Partner disclosure calls Anzens a FinCEN MSB; registration was not independently verified and supplies no PPSI authority. The previously asserted 17 state no-objection letters were not verified and are removed. The public Anzens January attestation post contains a five-page independent accountant examination; its LinkedIn-hosted transcript was opened. The Network Firm LLP signed February 9, 2026, examining January 31 reserves of $12,079,477 against 11,728,518 USDA. Reserves consisted of $11,965,192 Superstate Short Duration U.S. Government Securities Fund shares held directly by Anzens and $114,285 dollars with BitGo custody. ReserveDisclosurePresent is corrected to true using the stable issuer publication URL; monthlyAttestationPresent records the publicly available monthly report and issuer-published monthly cadence claim. No later monthly reserve report was located, so these flags do not assert current October reserve coverage or uninterrupted cadence. The report expressly excludes examination of legal/regulatory compliance. Its custody naming is preserved as historical report wording; the whole reserve portfolio must not be described as cash held at BitGo. No token-specific GENIUS authorization or enforcement action was located in the bounded opened official/issuer corpus.",
+    "notes": "Reviewed October 7, 2026. Published terms identify Anzens Inc., a Delaware company, and specify KYC-gated mint/redemption and fiat withdrawal, including separate arrangements for foreign entities. The AML statement claims alignment with the GENIUS Act and close regulator cooperation but names no qualification route, PPSI application or approval; this general alignment claim is not upgraded to issuer-announced-intent. Partner disclosure calls Anzens a FinCEN MSB; registration was not independently verified and supplies no PPSI authority. The previously asserted 17 state no-objection letters were not verified and are removed. The public Anzens January attestation post contains a five-page independent accountant examination; its LinkedIn-hosted transcript was opened. The Network Firm LLP signed February 9, 2026, examining January 31 reserves of $12,079,477 against 11,728,518 USDA. Reserves consisted of $11,965,192 Superstate Short Duration U.S. Government Securities Fund shares held directly by Anzens and $114,285 dollars with BitGo custody. ReserveDisclosurePresent records the publicly available historical reserve report at the stable issuer publication URL. The issuer claims monthly publication, but the reopened report covers January 31, 2026 and no later monthly report was established. monthlyAttestationPresent is omitted because current monthly publication cannot be confirmed at high confidence. The historical report does not establish October reserve coverage or uninterrupted cadence. The report expressly excludes examination of legal/regulatory compliance. Its custody naming is preserved as historical report wording; the whole reserve portfolio must not be described as cash held at BitGo. No token-specific GENIUS authorization or enforcement action was located in the bounded opened official/issuer corpus. The Federal Register exact-name Anzens search returned zero documents through October 7, 2026. Arizona DIFI licensing guidance and bounded searches of Arizona, Delaware, Missouri and Texas regulator domains yielded no named GENIUS qualification. The Arizona license-search endpoint was blocked, so this review makes no absence-of-state-license finding.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -120,6 +119,18 @@
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-03-21",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact-name Anzens search through October 7, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Anzens%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Arizona DIFI financial-enterprise licensing framework",
+        "url": "https://difi.az.gov/licensing/financial-enterprises",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
@@ -127,7 +138,9 @@
         "2026-10-07: Anzens homepage, terms, risk and AML/GENIUS-alignment disclosures; EMURGO launch and issuer-specific partnership disclosures",
         "2026-10-07: Issuer January attestation publication, LinkedIn structured publication date and full attached accountant-report transcript; historical EMURGO examination announcement",
         "2026-10-07: OCC Bulletin 2026-3 and full digital-assets licensing application table, Federal Reserve September 24 implementation proposal, Treasury September 30 SCRC procedures and NYDFS regulated entities/approved-issuance tables",
-        "2026-10-07: Exact Anzens/USDA GENIUS approval/application/enforcement search across OCC, FDIC, Federal Reserve and NYDFS domains; Anzens/USDA Europe/EEA/MiCA listing search"
+        "2026-10-07: Exact Anzens/USDA GENIUS approval/application/enforcement search across OCC, FDIC, Federal Reserve and NYDFS domains; Anzens/USDA Europe/EEA/MiCA listing search",
+        "2026-10-07: Federal Register exact-name Anzens query through 2026-10-07 returned zero documents: https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Anzens%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "2026-10-07: Arizona DIFI financial-enterprise licensing page and Anzens/USDA searches on Arizona, Delaware, Missouri and Texas regulator domains; no named GENIUS designation located. Arizona license-search endpoint returned HTTP 403 and was not inspected; no absence-of-license conclusion is made."
       ],
       "summary": "No token-specific PPSI approval, GENIUS state qualification, official PPSI application or registered foreign exception was located for Anzens Inc./USDA in the checked corpus. The issuer AML page asserts regulatory alignment without a qualification route or filed application. MSB status and an off-ramp partner foreign license do not evidence PPSI authorization. Negative authorization and action findings are limited to reviewed public sources, not every register or private filing.",
       "reviewer": "Pharos compliance research",

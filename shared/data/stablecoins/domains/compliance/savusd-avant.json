@@ -18,66 +18,51 @@
     ]
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "savUSD is a senior strategy-vault share received by staking avUSD. Avant states that its avUSD exchange rate increases as strategy yield accrues and that conversion back to avUSD has a one-day cooldown. The share represents variable-value strategy exposure rather than maintaining one fixed amount of monetary value for payment or settlement. This tracker classification follows the sweep savings/strategy-vault rubric and does not assert a securities-law exemption.",
+      "summary": "Issuer documentation establishes that savUSD is a senior yield-bearing wrapper received by staking avUSD, with an accruing exchange rate and conversion back to avUSD. Under owner ruling D17, these mechanics alone do not establish a GENIUS exclusion. Applicability remains unclear pending qualified token-specific analysis of holder repayment obligations and any securities or deposit exclusion; authorization research is separate.",
       "references": [
         {
           "label": "GENIUS Act text: payment stablecoin definition and yield restriction",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-01"
         },
         {
           "label": "Avant: savUSD senior tranche and accruing exchange rate",
           "url": "https://docs.avantprotocol.com/overview/core-tokens.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-01"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "The October 1 D17 row kept applicability unclear pending qualified token-specific legal analysis. The current sweep rubric instead proposes a non-payment-token assessment for this NAV-accreting senior strategy share. Yield alone is not the basis: the separately identified strategy-tranche rights and appreciating avUSD exchange rate support the editorial scope application. This proposed applicability change requires approval because it conflicts with the prior owner-specific caution; no token-specific regulator ruling or qualified legal opinion was located. No securities or deposit exemption, approval of yield, or issuer authorization is asserted. The exact legal issuer of the savUSD share remains unresolved, so issuerEntity is omitted.",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "The prior 2026-08-14 editorial assessment treated savUSD as a non-payment-token from its variable avUSD conversion. The 2026-10-01 D17 review withdraws that definitive GENIUS classification pending qualified token-specific legal analysis, without asserting payment-stablecoin scope or authorization. The MiCA assessment is unchanged by this U.S.-only ruling.",
     "references": [
       {
         "label": "OCC proposed GENIUS Act rule",
         "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Avant core tokens documentation",
         "url": "https://docs.avantprotocol.com/overview/core-tokens",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Enacted GENIUS Act: payment stablecoin definition",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
-      },
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "Enacted GENIUS Act Public Law 119-27",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "accessedAt": "2026-08-14"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC04): GENIUS applicability review; other historical observations retain their prior scope",
+    "reviewedAt": "2026-10-01"
   }
 }

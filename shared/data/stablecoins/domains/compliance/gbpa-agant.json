@@ -90,21 +90,18 @@
     "reviewedAt": "2026-10-07",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS NPRM, including proposed foreign-issuer registration",
-        "OCC pending digital-assets licensing applications inventory (limited charter-application scope)",
-        "GENIUS Act Public Law 119-27",
-        "Treasury August 17 GENIUS offer/sale proposal and September 30 SCRC procedural rule",
-        "FDIC April 7 prudential implementation NPRM",
-        "Federal Reserve September 29 prudential implementation NPRM",
-        "NYDFS regulated virtual-currency entities and approved-stablecoin lists",
-        "Exact-name public searches on OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Agant Finance/GBPA, BCP Technologies/tGBP, Anchorpoint Financial/HKDAP and HSBC RedCoin, with GENIUS/PPSI/enforcement terms, returned no exact token-specific public approval, application, foreign registration, comparability determination or GENIUS enforcement action (searched 2026-10-07). No nonpublic process or exhaustive all-state census is claimed.",
-        "Exact token issuer terms/product disclosures and reserve/redemption materials listed in this review"
+        "OCC digital-assets licensing applications inventory, including the complete nine-row pending-applicant table recovered from official raw HTML; no Agant Finance Limited entry. Reviewed 2026-10-07.",
+        "OCC Bulletin 2026-3, including the substantive official raw-HTML proposed-rule text and foreign-issuer applications/registration discussion. Reviewed 2026-10-07.",
+        "Federal Register 91 FR 61688, Treasury SCRC interim procedural rule of September 30, 2026; no Agant/GBPA authorization and certifications remain subject to a PRA-approval/opening-notice gate. Reviewed 2026-10-07.",
+        "NYDFS complete regulated-entity table and issuance Greenlist; no Agant Finance Limited or GBPA entry. Reviewed 2026-10-07.",
+        "Treasury August 17, 2026 offer/sale proposal, Federal Reserve September 24, 2026 implementation proposal announcement, and FDIC April 7, 2026 standards proposal; general proposed frameworks, not Agant/GBPA approvals. Reviewed 2026-10-07.",
+        "Agant GBPA token documentation, business platform terms, company-page regulatory footer recovered from raw HTML, and September 30, 2026 Nephos GBPA report. Reviewed 2026-10-07.",
+        "Exact-name public searches for Agant with GENIUS/OCC/PPSI/enforcement terms, and regulator-domain searches including OCC, Federal Register, Treasury, Federal Reserve, FDIC, NCUA and NYDFS; no qualifying named Agant/GBPA GENIUS approval, application or foreign registration located. Reviewed 2026-10-07."
       ],
-      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official GENIUS application, OCC foreign-issuer registration or Treasury comparability determination was located for Agant Finance Limited or GBPA. The finding is limited to the opened public materials and exact-name searches; it does not establish that the issuer is ineligible or has no nonpublic application.",
+      "summary": "As of 2026-10-07, no public token-specific GENIUS issuer approval, state-qualified approval, official GENIUS application, OCC foreign registration or Treasury comparability determination was located for Agant Finance Limited or GBPA in the listed public sources and named searches. The OCC table covers pending bank licensing applications, and NYDFS is an existing virtual-currency directory; neither is a comprehensive GENIUS issuer register. This bounded finding does not establish issuer ineligibility or exclude confidential or unindexed filings.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07",
       "references": [
@@ -143,7 +140,6 @@
         }
       ]
     },
-    "licensingRegulator": "UK Financial Conduct Authority cryptoasset AML registration (issuer-disclosed FRN 1037671); this is not a GENIUS authorization",
-    "monthlyAttestationPresent": false
+    "licensingRegulator": "UK Financial Conduct Authority cryptoasset AML registration (issuer-disclosed FRN 1037671); this is not a GENIUS authorization"
   }
 }

@@ -46,7 +46,7 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Anything Labs is a public project brand, not a verified legal issuer entity in the reviewed disclosures. Applicability is corrected to unclear because payment marketing is evident but the statutory monetary-value redemption obligation is not. No legal entity, domicile, licensing regulator or official GENIUS route is inferred from the brand, a smart-contract audit, a trading venue or an institutional issuance service. The opened U.S. framework sources, NYDFS tables and exact-name regulator searches yielded no public token-specific PPSI approval, state qualification, official application or foreign registration. No reserve composition/report, fixed-value redemption policy or monthly attestation was located. Rulemaking remains pre-effective; not-yet-restricted does not assert affirmative legal availability. The old OCC directory reference is omitted because its applicant table could not be reopened; the negative review does not claim it was inspected. Independent verification on 2026-10-07 reopened every retained reference URL. The statutory applicability analysis is an editorial assessment rather than a regulator ruling.",
+    "notes": "Anything Labs is a public project brand, not a verified legal issuer entity in the reviewed disclosures. Payment and settlement marketing is evident, but the website, access page, issuance page and whitepaper do not establish a fixed monetary-value redemption obligation. Applicability therefore remains unclear rather than asserting a payment-stablecoin classification. No legal entity, domicile, licensing regulator or GENIUS issuer route is inferred. The complete OCC pending-applicant table was recovered from raw official HTML and contains no Anything Labs entry. The Federal Register exact-name search returned zero documents through October 7, 2026; opened framework sources, NYDFS tables and bounded regulator-domain searches did not identify a qualifying token-specific approval, official application, foreign registration or enforcement action. No reserve composition/report, fixed-value redemption policy or monthly attestation was located in the reviewed issuer corpus. Rulemaking remains pre-effective; not-yet-restricted does not assert affirmative legal availability. This is an editorial scope assessment and a bounded public-source negative finding, not a regulator ruling or proof that unpublished filings do not exist.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule: Bulletin 2026-3",
@@ -126,10 +126,24 @@
         "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "sourceKind": "state-regulator",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC current digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact-name Anything Labs search through October 7, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Anything%20Labs%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (complete pending-applicant table recovered from raw HTML; no Anything Labs entry)",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Anything%20Labs%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100 (zero exact-name documents through 2026-10-07)",
         "https://public-inspection.federalregister.gov/2026-04089.pdf",
         "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
         "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
@@ -209,6 +223,18 @@
           "label": "Anything Labs UUSD issuance infrastructure",
           "url": "https://uusd.ai/issuance",
           "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC current digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name Anything Labs search through October 7, 2026",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Anything%20Labs%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
           "accessedAt": "2026-10-07"
         }
       ]

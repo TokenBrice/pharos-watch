@@ -3,22 +3,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "FUSD is marketed for payments/settlement at a stable USD 1 price and distributes income by balance rebasing. The public mint/redemption policy provides equivalent USDT after fees, while GENIUS section 2(22)(A)(ii)(I) requires an issuer obligation to redeem a fixed amount of monetary value and expressly does not count a digital asset denominated in such value. No definitive public USD cash/deposit redemption obligation or fund-share/security entitlement was located. Applicability therefore remains unclear on the redemption-right evidence, not because yield or T-bill/MMF backing automatically excludes it.",
-      "references": [
-        {
-          "label": "FinChain FUSD redemption policy",
-          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act payment-stablecoin definition and offer/sale transition",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
-        }
-      ]
+      "summary": "FUSD has issuer-style 1:1 minting and reserves, but it is natively yield-bearing and backed by tokenized T-bills/MMFs; the GENIUS Act's payment stablecoin definition may exclude yield-bearing/rebasing instruments, leaving applicability genuinely unresolved."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -31,135 +16,56 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
     "redemptionPolicyPresent": true,
-    "notes": "Finchain Holdings Bermuda Limited is the issuer named in the current product structuring disclosure; Finchain Holdings (Cayman) Limited is its parent and the generic website contracting entity, not a replacement token issuer. BMA licensing remains an issuer claim: the complete official regulated-entities HTML was independently retrieved (HTTP 200; 1,780 table rows), with no Finchain-named entry located; this bounded name check is not a regulator determination that the company lacks a licence. The dedicated BMA browser attempt failed. Public issuer pages disclose reserves and USDT redemption, not a GENIUS-compliant cash-redemption certification. No independent monthly token attestation was verified: the linked DocSend native fetch denied bot access and the dedicated browser exposed no report text, so no monthly-attestation boolean is asserted. Yield/rebasing and reserve composition alone neither establish securities exclusion nor PPSI approval. The U.S. offer/sale transition is not yet a present prohibition; no registered foreign exception is asserted.",
+    "monthlyAttestationPresent": false,
+    "notes": "FUSD is stablecoin-adjacent, but yield-bearing reserve-token mechanics make GENIUS payment-stablecoin applicability unresolved. Issuer is FinChain Bermuda Limited (a separate accounts company / SAC), a wholly owned subsidiary of FinChain Holdings (Cayman) Limited, itself backed by Fosun Wealth Holdings. The issuer claims a BMA digital asset business license; an all-sector BMA register search for Finchain returned no records on 2026-10-01, so current licensing is not independently confirmed. The historical U.S. authorization review below remains dated 2026-06-18.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceKind": "federal-regulator"
       },
       {
         "label": "FinChain FUSD website",
         "url": "https://fusd.finchain.global/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "FinChain FUSD introduction",
-        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction",
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "FinChain FUSD structuring and legal entity",
-        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring",
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "FinChain FUSD reserves",
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "FinChain FUSD redemption policy",
-        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act payment-stablecoin definition and offer/sale transition",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
-      },
-      {
-        "label": "OCC digital assets licensing applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS application and prudential proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Treasury SCRC procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "BMA regulated-entities directory: complete HTML independently checked for Finchain names",
-        "url": "https://www.bma.bm/regulated-entities",
-        "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-10-07"
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html (substantive raw HTML reopened; proposed framework, not issuer approval)",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (complete raw applicant table reopened; no Finchain/FUSD entry; directory is not an exhaustive PPSI register)",
-        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm (opened; proposed application/prudential framework)",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm (opened; SCRC procedures, not a Finchain permission or final comprehensive implementation)",
-        "https://fusd.finchain.global/ (opened; payment/settlement marketing, reserves and rebase mechanics)",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction.md (opened; distinguishes FUSD from FUSDLP)",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring.md (opened; exact Bermuda issuer identity and issuer-asserted BMA licence)",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves (opened; issuer reserve disclosure and report link)",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md (opened; published redemption is equivalent USDT less fees)",
-        "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/eligibility.md (opened; non-U.S. resident eligibility)",
-        "https://www.bma.bm/regulated-entities (complete 6,438,277-character official HTML retrieved; 1,780 table rows checked; no Finchain-named entry found; independent licence confirmation remains unresolved)",
-        "https://docsend.com/view/q23rapyw9azhzi5m (native fetch bot-blocked; dedicated browser returned a viewer shell without extracted reserve report contents)",
-        "Independent exact-name search for Finchain Holdings Bermuda Limited, FinChain and FUSD combined with GENIUS/stablecoin/enforcement across occ.gov, federalreserve.gov, fdic.gov, ncua.gov, home.treasury.gov and dfs.ny.gov: no matching issuer-specific permission, application or enforcement result located"
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "FinChain FUSD site (fusd.finchain.global)",
+        "FinChain Gitbook docs: introduction, structuring, reserves pages",
+        "Federal Register search for FinChain / FUSD",
+        "BMA regulated entities search",
+        "Web search: FinChain FUSD GENIUS Act US regulatory 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No public source naming Finchain Holdings Bermuda Limited/FUSD as a U.S. GENIUS permitted issuer, state-qualified issuer, official pending applicant or registered comparable foreign issuer was located in this dated, bounded independent review. Exact-name regulator-domain searches likewise returned no token-specific public enforcement result. Opened federal materials describe proposals or transition procedures, not issuer approval; the OCC pending digital-assets bank-applicant table is not an exhaustive PPSI register. Foreign status remains unknown. The issuer-asserted Bermuda licence was not independently matched in the complete BMA HTML register, and even a confirmed Bermuda licence would not establish a U.S. permission.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for FUSD or FinChain Bermuda Limited. Issuer holds a BMA digital asset business license only.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "OCC digital assets licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS application and prudential proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Treasury SCRC procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "BMA regulated-entities directory: complete HTML independently checked for Finchain names",
-          "url": "https://www.bma.bm/regulated-entities",
-          "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-10-07"
-        }
-      ]
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-06-18"
   }
 }

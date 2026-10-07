@@ -3,22 +3,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Electronic Dollar is a Reserve RToken minted and redeemed against an on-chain collateral basket. No legal issuer obligation to convert it into a fixed amount of national currency or a bank deposit was identified; payment-stablecoin applicability remains ambiguous rather than established by its USD peg.",
-      "references": [
-        {
-          "label": "Reserve protocol collateral-token issuance and redemption",
-          "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS payment-stablecoin and monetary-value definitions",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
-        }
-      ]
+      "summary": "Electronic USD is a Reserve Protocol RToken with on-chain basket collateral and governance rather than a legal fiat issuer."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -30,97 +15,42 @@
     "reserveDisclosureUrl": "https://app.reserve.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reviewed 2026-10-07. Permissionless RToken issuance/redemption returns collateral tokens and differs from a demonstrated contractual USD redemption obligation. Reserve governance can change baskets and throttle operations; decentralized branding alone does not establish an exclusion. The existing issuerEntity is retained as a governance descriptor, not a verified incorporated legal issuer or approved PPSI. Reserve disclosure refers to its on-chain dashboard, not fiat reserves or an accountant attestation. The previously recorded dashboard-disclosure flag is retained, but current dashboard contents could not be independently rendered: static HTML was an application shell and two owned browser attempts failed before navigation. Current disclosure availability requires further verification; no reserve amounts are asserted. No exact-token GENIUS authorization, official application, registered foreign exception, or GENIUS enforcement action was located in the bounded review. Proposed substantive rules and the state-certification procedural interim rule are not issuer approvals.",
+    "notes": "eUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found. The payment use case via RPay (Latin America) makes applicability genuinely unclear rather than a clean non-payment-token exclusion.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceKind": "federal-regulator"
       },
       {
         "label": "Reserve app",
         "url": "https://app.reserve.org/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "sourceKind": "issuer-disclosure"
       },
       {
         "label": "Reserve docs",
         "url": "https://docs.reserve.org/",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Reserve protocol collateral-token issuance and redemption",
-        "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Reserve governance and basket operations",
-        "url": "https://docs.reserve.org/core-components/yield-dtfs/protocol-operations.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Reserve website and protocol terms",
-        "url": "https://reserve.org/terms-and-conditions",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-06-03"
-      },
-      {
-        "label": "GENIUS enacted definitions and effective date",
-        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "Independent exact-name searches (Electronic Dollar / Reserve Protocol) of OCC, FDIC, Federal Reserve, Treasury and NYDFS domains, 2026-10-07",
-        "https://reserve.org/terms-and-conditions",
-        "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
-        "https://docs.reserve.org/core-components/yield-dtfs/protocol-operations.md",
-        "https://docs.reserve.org/",
-        "https://app.reserve.org/",
-        "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview"
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Reserve Protocol documentation and app disclosures",
+        "Web search for Reserve Protocol / eUSD GENIUS Act compliance 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No qualifying public GENIUS PPSI approval, state qualification, official GENIUS application, registered foreign exception or token-specific GENIUS enforcement action was located for Electronic Dollar / Reserve Protocol in the listed sources and exact-name searches. This is bounded negative evidence, not proof that no filing exists or that no issuer anywhere has an approval.",
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD. No GENIUS approvals have been granted to any issuer as of 2026-06-18; rulemaking remains at NPRM stage.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS proposed rule official GPO mirror",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-03-02"
-        },
-        {
-          "label": "Federal Reserve GENIUS standards proposal",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-29"
-        },
-        {
-          "label": "State certification procedural interim rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        }
-      ]
+      "reviewedAt": "2026-06-18"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-06-18"
   }
 }

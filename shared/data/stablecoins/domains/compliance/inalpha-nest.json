@@ -36,6 +36,12 @@
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-03-20",
           "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "inALPHA vault NAV and share-price disclosure",
+          "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -46,8 +52,7 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/positions",
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "inALPHA is assessed as a variable-NAV vault share outside the tracked GENIUS payment-stablecoin authorization posture. The public exit mechanics redeem shares at portfolio value, subject to liquidity; redemptionPolicyPresent is false because a fixed 1:1 monetary redemption policy was not established. The positions API is provider-generated portfolio disclosure, not independent monthly reserve assurance. The opened Nest documentation and targeted Nest monthly-attestation search did not identify an independent monthly vault-reserve report. The March 20, 2026 terms identify Nest DAO LLC as the Marshall Islands Products/interface provider and permit fund managers and asset issuers to create vaults. They do not name the legal issuer or redemption obligor of this exact share token, so issuerEntity and issuerDomicile are omitted. Geographic restrictions prohibit U.S.-located, organized or ordinarily resident users from platform and direct smart-contract access; this eligibility policy is not GENIUS qualification.",
+    "notes": "inALPHA is assessed as a variable-NAV vault share outside the tracked GENIUS payment-stablecoin authorization posture. The public exit mechanics redeem shares at portfolio value, subject to liquidity; redemptionPolicyPresent is false because these are not fixed 1:1 monetary redemptions. The positions API is provider-generated portfolio disclosure and does not establish independent monthly reserve assurance. Monthly attestation status is omitted because the reviewed disclosures and targeted search do not establish the complete current report footprint. The March 20, 2026 terms identify Nest DAO LLC as the Marshall Islands Products/interface provider and permit fund managers and asset issuers to create vaults; they do not name the legal issuer or redemption obligor of this exact share token, so issuerEntity and issuerDomicile are omitted. Geographic restrictions prohibit U.S.-located, organized or ordinarily resident users from platform and direct smart-contract access; this eligibility policy is not GENIUS qualification.",
     "references": [
       {
         "label": "Nest vault operations: pro rata NAV shares",
@@ -85,6 +90,12 @@
       {
         "label": "Nest geographic restrictions: platform and smart-contract eligibility",
         "url": "https://docs.nest.credit/security-and-compliance/geographic-restrictions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "inALPHA vault NAV and share-price disclosure",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/price",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       }

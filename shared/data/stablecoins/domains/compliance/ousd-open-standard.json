@@ -25,15 +25,13 @@
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
     "licensingRegulator": "FinCEN MSB registration and applicable state money transmitter regulators for Bridge Building Inc. (NMLS #2450917). OCC preliminary conditional approval applies to the separate Bridge National Trust Bank in organization, not the current OUSD issuer.",
-    "primaryFederalRegulator": "Unknown",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://reserves.bridge.xyz/ousd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reviewed October 7 2026. Bridge's OUSD launch expressly names Bridge Building Inc. as current issuer and separates Bridge National Trust Bank in organization: it is not operational and does not issue OUSD. OCC Corporate Decision 1365 is preliminary conditional charter approval of that proposed bank under Bridge Ventures LLC, not a GENIUS PPSI authorization of BBI or OUSD. Issuer-announced-intent preserves Bridge's public GENIUS-ready group/platform positioning; no current token-specific authorization or confirmed issuer pathway is inferred. Binding BBI terms provide eligible-holder $1 redemption subject to onboarding/compliance, and the dashboard publicly itemizes reserves. Open Standard promises monthly attestations, while the Bridge FAQ discusses quarterly independent transparency reports; no completed monthly OUSD attestation was located, so monthlyAttestationPresent remains false. Bridge EEA supported assets are only USDC and EURC, and Kraken lists Open OUSD among EEA restricted tokens; global exchange marketing does not prove an EU offer. BBI's FinCEN/MSB and state MTL framework and the separate Luxembourg Bridge Building S.A. EMI/CASP permissions are not GENIUS approval or OUSD MiCA permission. General GENIUS DASP restrictions are not yet active; token-specific public GENIUS enforcement was not found in bounded searches, not a clean bill of health for every affiliate.",
+    "notes": "Reviewed 2026-10-07. Bridge's token-specific OUSD overview states that OUSD reserves are maintained in compliance with U.S. regulatory requirements and expressly names the GENIUS Act. Issuer-announced-intent records this issuer-stated GENIUS posture, not verified statutory compliance or official authorization. Bridge's September 30 launch names Bridge Building Inc. as the current issuer and expressly states that Bridge National Trust Bank is a separate entity in organization, is not operational and does not issue OUSD. OCC Corporate Decision 1365 is preliminary conditional charter approval of that proposed bank, not a GENIUS PPSI approval of the current issuer. The issuer pathway remains unknown. Binding BBI terms provide eligible-user redemption for one U.S. dollar, subject to onboarding, compliance and stated processing conditions. The public OUSD dashboard itemizes reserve assets but links no independent reserve attestation. Open Standard promises monthly attestations; Bridge's FAQ describes future quarterly transparency reports. MonthlyAttestationPresent is false because a published monthly OUSD attestation was not located on the opened disclosure pages. DASP posture records the pre-effective GENIUS timing described by Treasury, not general legality under all U.S. laws. No enforcement-history conclusion or primary federal regulator assignment is asserted.",
     "references": [
       {
         "label": "Bridge OUSD launch: current BBI issuer and explicit national trust bank limitation",
@@ -89,25 +87,10 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC GENIUS issuer framework remains a proposal",
-        "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "Federal Reserve GENIUS standards and applications proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
+        "label": "Bridge OUSD overview: token-specific issuer GENIUS reserve-compliance statement",
+        "url": "https://apidocs.bridge.xyz/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
@@ -117,55 +100,6 @@
         "sourceDate": "2026-08-17"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "Bridge September 30 2026 OUSD launch naming Bridge Building Inc. and distinguishing proposed nonoperational bank",
-        "BBI binding stablecoin terms, U.S. license disclosure, OUSD reserve dashboard and issuance FAQ",
-        "Open Standard OUSD launch disclosure",
-        "OCC Corporate Decision 1365: separate proposed Bridge National Trust Bank conditional charter",
-        "Bridge February 17 2026 GENIUS-ready conditional-bank announcement",
-        "Independent grouped exact-token GENIUS search for ONED, Open USD, Origin Dollar and Polymarket USD on OCC, FDIC, NCUA, Federal Reserve and Treasury domains; no matching issuer authorization located",
-        "Independent grouped exact-token enforcement search on OCC, Treasury, NYDFS, SEC and CFTC domains; no token-specific GENIUS action located",
-        "OCC February 25 2026 proposed GENIUS rule bulletin, reopened official occ.treas.gov mirror",
-        "Federal Reserve September 24 2026 issuer standards and applications proposals",
-        "Treasury September 30 2026 SCRC certification-procedure interim final rule",
-        "Treasury August 17 2026 announcement distinguishing January 18 2027 expected effective date and July 18 2028 general DASP restriction",
-        "NYDFS virtual-currency regulated-business directory; legacy licenses not equated with GENIUS approval"
-      ],
-      "summary": "No public GENIUS PPSI approval, state-qualified issuer authorization, official GENIUS application or foreign registration was located for Open USD/OUSD and Bridge Building Inc. in the stated materials and exact-token searches. This is a bounded public-source review, not proof of legal non-compliance or an assertion that no nonpublic application exists. The SCRC IFR is procedural and legacy trust/MTL permissions are not GENIUS issuer qualification. No token-specific GENIUS enforcement action was located; platform or affiliate regulatory history is not treated as token enforcement.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC GENIUS issuer framework remains a proposal",
-          "url": "https://www.occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "Federal Reserve GENIUS standards and applications proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Treasury SCRC interim final rule: certification procedure, not issuer approval",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        }
-      ]
-    },
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07"
   }

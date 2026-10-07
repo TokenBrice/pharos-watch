@@ -3,178 +3,61 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDF is minted at a 1:1 USDT reference and redeemed for USDT after a 0.1% fee. Strategy profits accrue to the separate asUSDF token. The enacted payment-stablecoin definition requires payment or settlement design and an issuer obligation for a fixed amount of monetary value. Aster terms do not identify the legal token issuer or establish a direct currency or deposit repayment obligation. These unresolved rights keep applicability unclear; crypto redemption and yield marketing alone do not establish exclusion.",
+      "summary": "USDF is redeemable for USDT, while strategy profits are distributed to the separately staked asUSDF wrapper. Under owner ruling D17, these features do not establish a payment-stablecoin exclusion. Applicability remains uncertain pending qualified token-specific analysis of the repayment obligation and any securities or deposit exclusion.",
       "references": [
         {
-          "label": "Enacted GENIUS Act: payment stablecoin definition",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "label": "GENIUS Act text: payment stablecoin definition and yield restriction",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2025-07-18"
+          "accessedAt": "2026-08-14"
         },
         {
-          "label": "Aster USDF documentation",
+          "label": "Aster: USDF strategy and weekly yield distribution",
           "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Aster USDF FAQ: USDT redemption and separate asUSDF wrapper",
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Aster Terms and Conditions: eligibility and contracting identity",
-          "url": "https://docs.asterdex.com/resources/terms-and-conditions",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "unknown",
     "issuerPathway": "unknown",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "Aster terms updated February 25, 2026 exclude U.S.-located and U.S.-organized platform users and apply Hong Kong law. They name only Aster, so issuerEntity and issuerDomicile remain omitted. Ceffu is identified as custodian, not token issuer. The prior D17 applicability caution is retained. GENIUS authorization research is separate from scope. No token-specific public authorization was located on October 7, 2026. The pre-effective GENIUS DASP status does not override issuer platform restrictions.",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "Reviewed 2026-10-01 under D17: Aster's FAQ specifies USDT redemption, a 0.1% fee and a separate yield-bearing asUSDF token. Crypto payout and yield marketing do not establish a GENIUS exclusion or authorization. The prior 2026-08-14 non-payment-token assessment and its sources are preserved in the curation history; no token-specific legal determination is asserted.",
     "references": [
       {
         "label": "OCC proposed GENIUS Act rule",
         "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Aster USDF documentation",
         "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Enacted GENIUS Act: payment stablecoin definition",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Aster USDF FAQ: USDT redemption and separate asUSDF wrapper",
         "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Aster Terms and Conditions: eligibility and contracting identity",
-        "url": "https://docs.asterdex.com/resources/terms-and-conditions",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
-      },
-      {
-        "label": "OCC digital asset licensing applications",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS virtual currency entities and Greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Federal Reserve GENIUS implementation proposal",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-29"
-      },
-      {
-        "label": "Treasury SCRC procedural interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "redemptionPolicyPresent": true,
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC Bulletin 2026-3 and pending digital asset licensing application table, reopened 2026-10-07; official HTML main content extracted directly",
-        "NYDFS virtual currency regulated-entity directory and Greenlist, reopened 2026-10-07",
-        "Federal Reserve September 29 GENIUS NPRM, reopened 2026-10-07 by direct official HTML extraction; Treasury September 30 SCRC procedural rule, reopened 2026-10-07",
-        "Aster USDF strategy, redemption FAQ and February 25, 2026 platform terms, reopened 2026-10-07 through official GitBook markdown alternates",
-        "Aster, Astherus and asUSDF with GENIUS, PPSI, enforcement, approval and application: scoped search of OCC, FDIC, Federal Reserve, NCUA, Treasury, NYDFS, SEC, CFTC and FinCEN domains on 2026-10-07"
-      ],
-      "summary": "The opened OCC licensing table and NYDFS directory contain no matching Aster USDF or Aster / Astherus entry. The opened regulator rulemaking materials and current issuer disclosures provide no token-specific GENIUS approval, pending application or foreign registration. Scoped regulator-domain and issuer-intent searches located no qualifying public authorization or enforcement record. These are bounded public-source findings; confidential or unindexed filings are not excluded. The Treasury procedural rule is not issuer approval.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
-      "references": [
-        {
-          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        },
-        {
-          "label": "OCC digital asset licensing applications",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS virtual currency entities and Greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Federal Reserve GENIUS implementation proposal",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-29"
-        },
-        {
-          "label": "Treasury SCRC procedural interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "Aster USDF documentation",
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Aster USDF FAQ: USDT redemption and separate asUSDF wrapper",
-          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Aster Terms and Conditions: eligibility and contracting identity",
-          "url": "https://docs.asterdex.com/resources/terms-and-conditions",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
-        }
-      ]
-    }
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC24)",
+    "reviewedAt": "2026-10-01"
   }
 }

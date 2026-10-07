@@ -9,7 +9,7 @@
           "label": "Token Teknoloji EUROT product page",
           "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -24,154 +24,78 @@
     "reserveDisclosureUrl": "https://www.token.com.tr/en/proof-of-reserves/",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "As of 2026-10-07, no token-specific U.S. GENIUS authorization, official application or registered foreign-issuer exception was found in the reviewed public sources. The issuer describes euro backing and conversion through Bitlo; no contractual direct par-redemption policy or publicly available monthly attestation was located. A conflicting FAQ line refers to Turkish-lira reserves, while the product description and reserve table refer to euro backing; this disclosure inconsistency remains unresolved. Reserve letters shown are dated 2024 and do not establish current reserve adequacy. The Turkish SPK lists Token Teknoloji AŞ among firms not continuing crypto-asset service-provider activity; that domestic list does not establish a U.S. GENIUS enforcement finding or token redemption failure. The Act remains pre-effective, with January 18, 2027 expected; foreign qualification remains unknown.",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "notes": "As of 2026-08-14, no token-specific GENIUS permitted payment stablecoin approval, state-qualified approval, official application, or foreign-issuer exception registration was found in the reviewed Federal Register, OCC, Treasury, and issuer materials. Token Teknoloji's public pages describe 1:1 euro backing and conversion through Bitlo, but do not identify a U.S. GENIUS pathway. The product page and reserve page should be re-checked because the former describes euro backing while another FAQ line refers to Turkish-lira reserves.",
     "references": [
       {
         "label": "GENIUS Act statutory text",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-03-02"
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "U.S. Treasury GENIUS Act proposed AML and sanctions rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0435",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-04-08"
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Token Teknoloji EUROT product page",
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Token Teknoloji proof of reserves",
         "url": "https://www.token.com.tr/en/proof-of-reserves/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "U.S. Treasury: expected GENIUS effective date and foreign issuer lawful-order requirements",
-        "url": "https://home.treasury.gov/news/press-releases/sb0605",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-08-17"
-      },
-      {
-        "label": "Federal Reserve: GENIUS implementation proposals",
-        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-24"
-      },
-      {
-        "label": "Stablecoin Certification Review Committee procedures interim final rule",
-        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-        "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-30"
-      },
-      {
-        "label": "OCC digital-assets licensing applications inventory",
-        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "regulator-directory",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "NYDFS virtual currency businesses and Greenlist",
-        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-        "sourceKind": "state-regulator",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Turkish SPK: firms not continuing crypto-asset service-provider activity",
-        "url": "https://spk.gov.tr/kurumlar/kripto-varlik-hizmet-saglayicilar/tasfiye-surecinde-olanlar-listesi",
-        "sourceKind": "regulator-directory",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and OCC GENIUS proposed rule, 91 FR 10202",
-        "OCC pending digital-assets licensing applications inventory (bank-charter scope only)",
-        "Treasury August 17 GENIUS effective-date and foreign issuer statement",
-        "Federal Reserve September 24 GENIUS implementation proposals",
-        "September 30 Stablecoin Certification Review Committee procedures rule",
-        "NYDFS virtual-currency businesses directory and Greenlist",
-        "Token Teknoloji EUROT product, proof-of-reserves and about-us disclosures",
-        "Independent exact issuer/token domain searches across OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS on 2026-10-07",
-        "Independent public searches for this issuer/token paired with GENIUS, PPSI, U.S. application and foreign-issuer registration on 2026-10-07"
+        "Federal Register OCC GENIUS Act issuance proposed rule (91 FR 10202)",
+        "OCC GENIUS Act proposed rule and public releases",
+        "U.S. Treasury/FinCEN/OFAC GENIUS Act proposed AML and sanctions rule",
+        "Public web search for EUROT/Token Teknoloji plus GENIUS, PPSI, and foreign-issuer registration",
+        "Token Teknoloji EUROT product and proof-of-reserves pages"
       ],
-      "summary": "No public token-specific PPSI approval, state-qualified approval, regulator-confirmed pending application, registered foreign-issuer exception, or U.S. GENIUS enforcement action was located for Token Teknoloji A.Ş. or EUROT in these reviewed sources as of 2026-10-07. Exact-name searches produced no matching official authorization. Proposed federal implementation rules and the SCRC procedural rule do not establish issuer approval or an earlier Act effective date. The public-source review is not a claim that no private application exists.",
+      "summary": "The reviewed regulator materials describe the GENIUS permitting and rulemaking framework but do not name Token Teknoloji, EUROT, or a Token Teknoloji issuer as a permitted issuer or pending applicant. The issuer's public pages describe a Turkish EUROT product and reserve disclosures, but no U.S. authorization, application, or foreign-exception registration was found.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "reviewedAt": "2026-08-14",
       "references": [
         {
           "label": "OCC GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-02-25"
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-03-02"
-        },
-        {
-          "label": "U.S. Treasury: expected GENIUS effective date and foreign issuer lawful-order requirements",
-          "url": "https://home.treasury.gov/news/press-releases/sb0605",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-08-17"
-        },
-        {
-          "label": "Federal Reserve: GENIUS implementation proposals",
-          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-24"
-        },
-        {
-          "label": "Stablecoin Certification Review Committee procedures interim final rule",
-          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
-          "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07",
-          "sourceDate": "2026-09-30"
-        },
-        {
-          "label": "OCC digital-assets licensing applications inventory",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "regulator-directory",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "NYDFS virtual currency businesses and Greenlist",
-          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
-          "sourceKind": "state-regulator",
-          "accessedAt": "2026-10-07"
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
         }
       ]
-    }
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

@@ -2,17 +2,32 @@
   "id": "dusd-fluid",
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Fluid DigitalDollar was historically described as a transferable USD-referenced token minted from treasury-account USD, burned on return and redeemable to a bank account at 1:1. The issuer-authored December 31, 2021 FAQ supports apparent payment-stablecoin treatment of that historical instrument. Frozen status and unverified current operations are separate facts.",
+      "references": [
+        {
+          "label": "Fluid Finance December 31, 2021 DUSD FAQ text via Jina retrieval mirror",
+          "url": "https://r.jina.ai/https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2021-12-31",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act enacted public law",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Fluid Finance SA, en liquidation",
     "issuerDomicile": "Switzerland",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "unknown",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Fluid Finance SA, en liquidation is preserved as the historical legal issuer. The Swiss Official Gazette records bankruptcy dissolution effective April 22, 2024. The issuer FAQ dated December 31, 2021 remains retrievable through a same-page text mirror and describes USD minting, transfers and 1:1 DUSD redemption. redemptionPolicyPresent records that historical published policy, without asserting current redemption availability. No current reserve disclosure or monthly independent attestation was verified. The coin remains frozen, and daspOfferSaleStatus stays unknown because current operations and U.S. distribution were not established. No token-specific public GENIUS authorization or foreign registration was located. The September 30 SCRC procedural rule does not establish issuer qualification.",
+    "notes": "Fluid Finance SA, en liquidation is preserved as the historical legal issuer. The Swiss Official Gazette records bankruptcy dissolution effective April 22, 2024. The issuer-authored December 31, 2021 FAQ was independently reopened through a same-page text mirror and describes USD minting, transfers and 1:1 DUSD redemption. It does not establish a current operational redemption policy. The coin remains frozen; current reserves, redemption availability and U.S. distribution are unverified. Reserve, redemption and monthly-attestation presence flags are therefore omitted, rather than inferring current presence or absence from archived material or inaccessible websites. No general enforcement finding is asserted. The bounded public-source review found no token-specific GENIUS permission; the SCRC procedural rule does not establish issuer qualification.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule (91 FR 10202)",
@@ -29,8 +44,8 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Fluid Finance DUSD FAQ",
-        "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8",
+        "label": "Fluid Finance December 31, 2021 DUSD FAQ text via Jina retrieval mirror",
+        "url": "https://r.jina.ai/https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2021-12-31",
         "accessedAt": "2026-10-07"
@@ -38,6 +53,13 @@
       {
         "label": "Swiss Official Gazette: Fluid Finance SA liquidation following bankruptcy",
         "url": "https://www.shab.ch/shabforms/servlet/Search?EID=7&DOCID=HR02-1006028406",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2024-05-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Swiss Official Gazette bankruptcy notice text via Jina retrieval mirror",
+        "url": "https://r.jina.ai/https://www.shab.ch/shabforms/servlet/Search?EID=7&DOCID=HR02-1006028406",
         "sourceKind": "issuer-filing",
         "sourceDate": "2024-05-08",
         "accessedAt": "2026-10-07"
@@ -68,41 +90,35 @@
         "sourceKind": "federal-register",
         "sourceDate": "2026-09-30",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact-name Fluid Finance search through October 7, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Fluid%20Finance%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency entity and issuance-approved coin directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 and official GovInfo 91 FR 10202 proposal, reopened directly",
-        "OCC digital-asset licensing applications tracker, reopened directly; ordinary bank-charter applications are distinct from GENIUS PPSI approvals",
-        "GENIUS Act Public Law 119-27, reopened enacted text",
-        "Treasury August 17, 2026 Section 3 proposal and September 30, 2026 SCRC procedural rule, reopened directly",
-        "Fluid Finance exact-name searches on OCC, FDIC, Federal Reserve, NCUA and Treasury public websites",
-        "Historical issuer FAQ and Swiss Official Gazette bankruptcy notice independently recovered through same-primary-page text mirrors; legacy rollout page and current issuer endpoints do not establish current operations"
+        "OCC digital-asset licensing applications tracker: full active applicant table inspected; no Fluid Finance entry; ordinary charters are not GENIUS approvals",
+        "Federal Register API exact-name Fluid Finance query through 2026-10-07: count 0",
+        "NYDFS virtual-currency regulated-entity and issuance-approved coin tables: no Fluid Finance or Fluid DUSD entry",
+        "OCC Bulletin 2026-3 and GovInfo 91 FR 10202 proposal",
+        "Treasury April 1 state-regime proposal, August 17 Section 3 proposal and September 30 SCRC procedural rule",
+        "Exact-name Fluid Finance search across OCC, Federal Register, FDIC, Federal Reserve, NCUA, Treasury and NYDFS domains: no matching public GENIUS permission found",
+        "Historical issuer FAQ independently reopened via same-page retrieval mirror; current fluid.ch/dusd/ returned HTTP 522 and fluid.finance/dusd returned a domain-for-sale page"
       ],
-      "summary": "No public GENIUS PPSI approval, state qualification, official GENIUS application or registered foreign exception was located for Fluid Finance SA or this historical DUSD as of 2026-10-07. The historical issuer FAQ documents USD payment/redemption mechanics and EU/UK availability, but no U.S. GENIUS filing. The Swiss Official Gazette records bankruptcy and the legal name Fluid Finance SA, en liquidation. Current reserve reporting and operational redemption were not verified.",
+      "summary": "No public GENIUS PPSI approval, state qualification, official GENIUS application or registered foreign exception was located for Fluid Finance SA or historical Fluid DigitalDollar in the named public sources through the 2026-10-07 review. The Federal Register exact-name query returned no documents; the OCC active charter applicant table and NYDFS directory contained no issuer/token match. General rulemaking sources do not authorize this issuer. Historical issuer materials establish payment/redemption design only; current operating disclosures were unavailable. This bounded negative review does not establish that no unpublished filing exists.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "applicabilityBasis": {
-      "summary": "Fluid DigitalDollar was historically described as a transferable USD-referenced token minted from treasury-account USD, burned on return and redeemable to a bank account at 1:1. The issuer-authored FAQ supports apparent payment-stablecoin treatment; frozen status and unverified current operations are separate facts.",
-      "references": [
-        {
-          "label": "Fluid Finance DUSD FAQ",
-          "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2021-12-31",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "GENIUS Act enacted public law",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-          "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    }
+    "reviewedAt": "2026-10-07"
   }
 }

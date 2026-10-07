@@ -18,102 +18,73 @@
     ]
   },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "The exact USDC-1 product issues yvUSDC-1 shares redeemable under proportional vault accounting. Independently rendered on 7 October 2026, the product page displayed a price per share of 1.120861 and multiple allocated strategies. Its exact proxy at 0xbe53a109b494e5c9f97b9cd39fe969be68bf6204 links to the reviewed YearnV3Vault implementation. The implementation converts shares using total assets divided by total supply, and redeem explicitly permits realization of losses. The reviewed holder disclosures evidence variable strategy-position rights rather than an undertaking to repay each share for fixed monetary value. Apply the strategy-vault rubric; no securities or deposit exemption or regulator determination is asserted.",
+      "summary": "yvUSDC-1 is a Yearn multi-strategy vault share redeemable for underlying USDC under contract share accounting. GENIUS applicability remains unclear pending qualified token-specific analysis of holder rights, the fixed-monetary-value repayment obligation, and any securities or deposit exclusion. Vault mechanics and yield generation alone do not establish a legal exclusion.",
       "references": [
-        {
-          "label": "Yearn USDC-1 vault product page",
-          "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Yearn v3 vault documentation: strategy-vault mechanics",
-          "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "USDC-1 vault proxy: exact implementation linkage",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Verified Yearn v3 vault implementation source",
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2eBEb73da7D40C70E7202ae14467",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        },
         {
           "label": "GENIUS Act statutory text",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-01"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule: rulemaking remains non-final",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Yearn USDC-1 vault product page",
+          "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "The 1 October 2026 D17 review withdrew the earlier non-payment classification pending token-specific holder-rights analysis. This independent sweep rendered the exact vault in explicitly spawned Chromium, rechecked its URL immediately before extraction, reopened the exact proxy and implementation, and read the proportional conversion formula and loss-bearing redeem function. Its variable strategy-position rights support the current sweep non-payment-token rubric, without claiming a regulator ruling or a categorical yield exemption. Restoring this classification is flagged for approval because it reverses the recent D17 posture. The separate MiCA restoration reverses D06 and is also flagged. Circle issuer permissions and its payment-stablecoin pathway do not attach to yvUSDC-1.",
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "The 2026-08-14 review classified this vault as non-payment-token and its authorization, issuer pathway, foreign exception, and DASP posture as not-applicable based on its yield-bearing share design; it also recorded no-public-action-found. On 2026-10-01, ruling D17 withdrew that categorical exclusion and its dependent not-applicable labels. The current review confirms vault mechanics and statutory definitions, but does not establish token-specific legal applicability, authorization, enforcement, or offer/sale posture. Qualified holder-contract analysis remains required. Ruling D06 separately withdrew the unsupported MiCA out-of-scope row after rechecking its cited sources; MiCA is now not assessed.",
     "references": [
       {
         "label": "GENIUS Act statutory text",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Yearn USDC-1 vault product page",
         "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Yearn v3 vault documentation: strategy-vault mechanics",
         "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       },
       {
         "label": "Verified Yearn v3 vault implementation source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2eBEb73da7D40C70E7202ae14467",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "USDC-1 vault proxy: exact implementation linkage",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Yearn v3 developer overview: proportional vault-share rights",
-        "url": "https://docs.yearn.fi/developers/v3/overview",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-01"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Sol curation pass 2026-10-01 (RuleC12)",
+    "reviewedAt": "2026-10-01"
   }
 }

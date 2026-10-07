@@ -26,15 +26,29 @@
     ]
   },
   "genius": {
-    "applicability": "excluded-security",
+    "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "mRe7YIELD is a Midas Software GmbH blockchain-based debt certificate with the Re7 reference strategy as underlying. Its February 2, 2026 KID describes a tokenized bearer debt security with performance-dependent redemption and no investor ownership claim to underlying assets. Redemption follows underlying portfolio performance or NAV and does not promise a fixed USD 1 payment obligation. The documented debt-security/investment-certificate structure supports the tracker excluded-security classification.",
+      "summary": "mRe7YIELD is an investment-performance certificate issued by Midas Software GmbH. The token-specific KID and final terms make redemption depend on underlying strategy performance, less fees, rather than a fixed monetary amount. The July 17, 2026 successor prospectus continues the series under ISIN CH1423447536. The documented investment and variable-value redemption structure supports non-payment-token without requiring a U.S. securities-law determination.",
       "references": [
         {
           "label": "mRe7YIELD legal investment-product documentation",
           "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-02-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Midas mRe7YIELD final terms: debt instrument and strategy exposure",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/TXP3spquPMlsrPCVKmtu/Midas_Final_Terms_mRE7YIELD_Update_2025.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Midas 2026 base prospectus: continued mRE7YIELD security series",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
           "accessedAt": "2026-10-07"
         },
         {
@@ -50,36 +64,15 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "Midas Software GmbH",
     "issuerDomicile": "Germany",
-    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "GENIUS section 2(22) requires payment or settlement use, an obligation to redeem for fixed monetary value, and a stable-value representation; it separately excludes securities defined by the specified U.S. securities laws. This is a tracker perimeter assessment of the documented investment certificate, not a U.S. securities ruling. FMA prospectus approval does not establish MiCA issuer authorization or GENIUS approval. Current Midas eligibility documentation excludes U.S. citizens and residents. The February 2, 2026 KID and updated 2025 final terms describe investment-performance redemption less fees, subordinated issuer claims and no guaranteed principal. The July 17, 2026 prospectus lists the continuing mRE7YIELD series under ISIN CH1423447536. The foreign-issuer and DASP payment-stablecoin pathways are not applicable to this excluded instrument.",
+    "notes": "This assessment follows the documented variable-value investment certificate and does not assert a U.S. federal securities determination. The July 17, 2026 base prospectus names Midas Software GmbH in Berlin, Germany and continues this token series. FMA prospectus approval concerns the prospectus and does not establish GENIUS issuer authorization. Public disclosure and enforcement fields are omitted where this adjudication could not independently substantiate them.",
     "references": [
-      {
-        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
-      },
       {
         "label": "mRe7YIELD legal investment-product documentation",
         "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/9Xz2l1mKa8bDtQufrvS0/KID_mRe7YIELD.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-02",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "Midas eligibility and compliance: U.S. person restrictions",
-        "url": "https://docs.midas.app/legal/eligibility-and-compliance",
-        "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
       {
@@ -94,6 +87,13 @@
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
         "accessedAt": "2026-10-07"
       }
     ],
