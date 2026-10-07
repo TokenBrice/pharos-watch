@@ -19,16 +19,41 @@ import { titleCaseSlug } from "@/lib/title-case-slug";
 /** Route cells shipped in static HTML; larger inventories (max 88) report the rest in `routesTruncated`. */
 export const BRIDGE_ROUTE_PROJECTION_LIMIT = 40;
 
-/** One reviewed route, sized for a deployment-strip cell. */
+/**
+ * One projected route as serialized into the page payload: only what the
+ * client cannot derive. Optional fields are omitted at their default, never
+ * null. `expandBridgeRoute` restores the full `BridgeRouteClientRow`.
+ */
+export interface BridgeRouteWireRow {
+  /** Normalized deployment id (`<chain>:<address>`); its prefix is the route's chain id. */
+  key: string;
+  tierKey: BridgeRouteRiskTier;
+  /** Slug of the route's `protocol:<slug>` failure domain, when it has one. */
+  protocolKey?: string;
+  /** The route crosses a bridge; absent for native issuance. */
+  bridged?: true;
+  /** Reviewed bridge protocol, shipped only where a cell names it: a chain carrying several drawn routes. */
+  protocolLabel?: string;
+  /** The review is unresolved: the tier is the schema's unknown placeholder, not a reviewed finding. */
+  unresolved?: true;
+}
+
+/** One reviewed route, sized for a deployment-strip cell (`expandBridgeRoute`). */
 export interface BridgeRouteClientRow {
   /** Normalized deployment id (`<chain>:<address>`): joins `FailureDomainSpan.routeKeys` and control components. */
   key: string;
+  /** The deployment-key prefix. */
   chainId: string;
   chainLabel: string;
   tierKey: BridgeRouteRiskTier;
   /** `getBridgeTierLabel`: the native tier reads "Native" on a multi-chain asset. */
   tierLabel: string;
-  /** Reviewed bridge protocol; null for native issuance, which crosses no bridge. */
+  /** False for native issuance, which crosses no bridge. */
+  bridged: boolean;
+  /**
+   * Reviewed bridge protocol on a chain carrying several drawn routes, where
+   * the cell names it; null otherwise, and always null for native issuance.
+   */
   protocolLabel: string | null;
   /** The route's `protocol:<slug>` failure domain; joins `FailureDomainSpan.protocolKeys`. */
   protocolKey: string | null;
@@ -36,9 +61,9 @@ export interface BridgeRouteClientRow {
   reviewed: boolean;
   /**
    * `card.breakdowns.control.components[].key` of this route's bridge component.
-   * Null in the static projection (the card loads at runtime); fill it with
-   * `bindBridgeRouteControlComponents`. Stays null when the engine compiled no
-   * component for the route (native issuance, unresolved or immaterial routes).
+   * Null until `bindBridgeRouteControlComponents` joins the runtime card. Stays
+   * null when the engine compiled no component for the route (native
+   * issuance, unresolved or immaterial routes).
    */
   controlComponentKey: string | null;
 }
@@ -75,7 +100,7 @@ export interface BridgeRouteRiskClientSummary {
   /** Chain the asset is natively issued from, when the review identifies one. */
   homeChainId: string | null;
   /** Home chain first, then published tier order, then chain name; tier mix kept proportional when capped. */
-  routes: BridgeRouteClientRow[];
+  routes: BridgeRouteWireRow[];
   routesTruncated: number;
   sources: StablecoinLink[];
 }
@@ -87,19 +112,52 @@ export function bridgeRouteTierLabel(tier: string): string {
   return BRIDGE_TIER_LABELS[tier as BridgeRouteRiskTier] ?? tier;
 }
 
-function projectRoute(route: BridgeRouteDeployment, chainId: string, chainCount: number): BridgeRouteClientRow {
-  const protocolDomain = route.failureDomainKeys?.find((key) => key.startsWith("protocol:"));
+/** A route's chain id: the prefix of its normalized deployment key. */
+function bridgeRouteChainId(key: string): string {
+  const separator = key.indexOf(":");
+  return separator > 0 ? key.slice(0, separator) : key;
+}
+
+/** Restores the derivable fields of a serialized route; `chainCount` is the summary's. */
+export function expandBridgeRoute(row: BridgeRouteWireRow, chainCount: number): BridgeRouteClientRow {
+  const chainId = bridgeRouteChainId(row.key);
   return {
-    key: normalizeDeploymentId(route.id) || route.id,
+    key: row.key,
     chainId,
     chainLabel: CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId),
-    tierKey: route.riskTier,
-    tierLabel: getBridgeTierLabel(route.riskTier, chainCount),
-    protocolLabel: route.routeClass === "native" ? null : route.protocol,
-    protocolKey: protocolDomain ? protocolDomain.slice("protocol:".length) : null,
-    reviewed: route.reviewDisposition === "reviewed",
+    tierKey: row.tierKey,
+    tierLabel: getBridgeTierLabel(row.tierKey, chainCount),
+    bridged: row.bridged === true,
+    protocolLabel: row.protocolLabel ?? null,
+    protocolKey: row.protocolKey ?? null,
+    reviewed: row.unresolved !== true,
     controlComponentKey: null,
   };
+}
+
+export function expandBridgeRoutes(summary: BridgeRouteRiskClientSummary): BridgeRouteClientRow[] {
+  return summary.routes.map((row) => expandBridgeRoute(row, summary.chainCount));
+}
+
+/** A projected route with the server-side facts ordering, capping and labelling need. */
+interface RouteEntry {
+  row: BridgeRouteWireRow;
+  chainId: string;
+  chainLabel: string;
+  /** Reviewed protocol of a bridged route; null for native issuance. */
+  protocol: string | null;
+}
+
+function projectRoute(route: BridgeRouteDeployment): RouteEntry {
+  const protocolDomain = route.failureDomainKeys?.find((key) => key.startsWith("protocol:"));
+  const native = route.routeClass === "native";
+  const row: BridgeRouteWireRow = { key: normalizeDeploymentId(route.id) || route.id, tierKey: route.riskTier };
+  if (protocolDomain !== undefined) row.protocolKey = protocolDomain.slice("protocol:".length);
+  if (!native) row.bridged = true;
+  if (route.reviewDisposition !== "reviewed") row.unresolved = true;
+  const chainId = bridgeRouteChainId(row.key);
+  const chainLabel = CHAIN_META[chainId]?.name ?? titleCaseSlug(chainId);
+  return { row, chainId, chainLabel, protocol: native ? null : route.protocol };
 }
 
 /**
@@ -107,9 +165,9 @@ function projectRoute(route: BridgeRouteDeployment, chainId: string, chainCount:
  * name as canonical (a tie resolves to null), restricted to native chains when
  * the asset is natively issued on several.
  */
-function resolveHomeChain(routes: readonly BridgeRouteDeployment[], rows: readonly BridgeRouteClientRow[]): string | null {
+function resolveHomeChain(routes: readonly BridgeRouteDeployment[], entries: readonly RouteEntry[]): string | null {
   const nativeChains = new Set(
-    rows.filter((row, index) => routes[index]!.routeClass === "native" && row.reviewed).map((row) => row.chainId),
+    entries.filter((entry) => entry.protocol === null && entry.row.unresolved !== true).map((entry) => entry.chainId),
   );
   if (nativeChains.size === 1) return [...nativeChains][0]!;
   const votes = new Map<string, number>();
@@ -127,14 +185,14 @@ function resolveHomeChain(routes: readonly BridgeRouteDeployment[], rows: readon
  * cell, then each slot goes to the group with the most routes per cell), so a
  * truncated strip keeps the inventory's real mix instead of its first rows.
  * Groups are the reviewed tiers plus the unresolved routes, the entries the
- * legend counts. `rows` arrive in display order and keep it.
+ * legend counts. `entries` arrive in display order and keep it.
  */
-function capRoutes(rows: readonly BridgeRouteClientRow[]): BridgeRouteClientRow[] {
-  if (rows.length <= BRIDGE_ROUTE_PROJECTION_LIMIT) return [...rows];
-  const groupOf = (row: BridgeRouteClientRow): string => (row.reviewed ? row.tierKey : "unresolved");
+function capRoutes(entries: readonly RouteEntry[]): RouteEntry[] {
+  if (entries.length <= BRIDGE_ROUTE_PROJECTION_LIMIT) return [...entries];
+  const groupOf = ({ row }: RouteEntry): string => (row.unresolved ? "unresolved" : row.tierKey);
   const groupOrder: readonly string[] = [...TIER_ORDER, "unresolved"];
   const totals = new Map<string, number>();
-  for (const row of rows) totals.set(groupOf(row), (totals.get(groupOf(row)) ?? 0) + 1);
+  for (const entry of entries) totals.set(groupOf(entry), (totals.get(groupOf(entry)) ?? 0) + 1);
   const quotas = new Map<string, number>([...totals.keys()].map((group) => [group, 1]));
   for (let slots = quotas.size; slots < BRIDGE_ROUTE_PROJECTION_LIMIT; slots += 1) {
     let next: string | null = null;
@@ -148,8 +206,8 @@ function capRoutes(rows: readonly BridgeRouteClientRow[]): BridgeRouteClientRow[
     quotas.set(next, quotas.get(next)! + 1);
   }
   const taken = new Map<string, number>();
-  return rows.filter((row) => {
-    const group = groupOf(row);
+  return entries.filter((entry) => {
+    const group = groupOf(entry);
     const count = taken.get(group) ?? 0;
     if (count >= quotas.get(group)!) return false;
     taken.set(group, count + 1);
@@ -161,9 +219,8 @@ export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): Bridg
   const profile = coin.bridgeRouteRisk;
   if (!profile) return null;
   const routes = profile.routes ?? [];
-  const chainIds = routes.map((route) => normalizeChainId(route.destinationChain) ?? route.destinationChain);
-  const chainCount = new Set(chainIds).size;
-  const rows = routes.map((route, index) => projectRoute(route, chainIds[index]!, chainCount));
+  const entries = routes.map(projectRoute);
+  const chainCount = new Set(entries.map((entry) => entry.chainId)).size;
   const tierCounts: Partial<Record<BridgeRouteRiskTier, number>> = {};
   let weakestRouteTier: BridgeRouteRiskTier | null = null;
   let thirdPartyRouteCount = 0;
@@ -179,14 +236,16 @@ export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): Bridg
       weakestRouteTier = route.riskTier;
     }
   }
-  const homeChainId = resolveHomeChain(routes, rows);
-  const ordered = [...rows].sort((left, right) =>
+  const homeChainId = resolveHomeChain(routes, entries);
+  const ordered = [...entries].sort((left, right) =>
     Number(right.chainId === homeChainId) - Number(left.chainId === homeChainId)
-    || TIER_ORDER.indexOf(left.tierKey) - TIER_ORDER.indexOf(right.tierKey)
+    || TIER_ORDER.indexOf(left.row.tierKey) - TIER_ORDER.indexOf(right.row.tierKey)
     || left.chainLabel.localeCompare(right.chainLabel)
-    || left.key.localeCompare(right.key),
+    || left.row.key.localeCompare(right.row.key),
   );
   const projected = capRoutes(ordered);
+  const drawnPerChain = new Map<string, number>();
+  for (const { chainId } of projected) drawnPerChain.set(chainId, (drawnPerChain.get(chainId) ?? 0) + 1);
   return {
     authoredTier: profile.tier,
     authoredTierLabel: getBridgeTierLabel(profile.tier, chainCount),
@@ -201,29 +260,31 @@ export function projectBridgeRouteRiskClientSummary(coin: StablecoinMeta): Bridg
     thirdPartyRouteCount,
     tierCounts,
     homeChainId,
-    routes: projected,
-    routesTruncated: rows.length - projected.length,
+    routes: projected.map(({ row, chainId, protocol }) =>
+      protocol !== null && drawnPerChain.get(chainId)! > 1 ? { ...row, protocolLabel: protocol } : row,
+    ),
+    routesTruncated: entries.length - projected.length,
     sources: profile.sources ?? [],
   };
 }
 
 /**
- * Join each projected route to its bridge component in the runtime report card.
- * The engine keys a bridge component `bridge:<deploymentKey>:<controlKey>` and
- * every bridge control key starts `bridge-` (`bridge-meta:`, `bridge-supply:`,
- * `bridge-group:`), so the prefix match is exact; a route owns at most one.
+ * Expand the projected routes and join each to its bridge component in the
+ * runtime report card. The engine keys a bridge component
+ * `bridge:<deploymentKey>:<controlKey>` and every bridge control key starts
+ * `bridge-` (`bridge-meta:`, `bridge-supply:`, `bridge-group:`), so the prefix
+ * match is exact; a route owns at most one. Before the card arrives every
+ * `controlComponentKey` stays null.
  */
 export function bindBridgeRouteControlComponents(
   summary: BridgeRouteRiskClientSummary,
   components: readonly { key: string; kind: string }[] | null | undefined,
-): BridgeRouteRiskClientSummary {
+): BridgeRouteClientRow[] {
+  const routes = expandBridgeRoutes(summary);
   const bridgeKeys = (components ?? []).filter((component) => component.kind === "bridge").map((component) => component.key);
-  if (bridgeKeys.length === 0) return summary;
-  return {
-    ...summary,
-    routes: summary.routes.map((route) => ({
-      ...route,
-      controlComponentKey: bridgeKeys.find((key) => key.startsWith(`bridge:${route.key}:bridge-`)) ?? null,
-    })),
-  };
+  if (bridgeKeys.length === 0) return routes;
+  return routes.map((route) => ({
+    ...route,
+    controlComponentKey: bridgeKeys.find((key) => key.startsWith(`bridge:${route.key}:bridge-`)) ?? null,
+  }));
 }

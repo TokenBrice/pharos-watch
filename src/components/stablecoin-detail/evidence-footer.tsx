@@ -2,18 +2,15 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { MODULE_DISCLOSURE_SUMMARY_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { SourceLinkList, type SourceLink } from "@/components/stablecoin-detail/source-link-list";
 import { useShowWorkMode } from "@/hooks/use-show-work-mode";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 import { cn } from "@/lib/utils";
 
-export interface EvidenceFooterSource {
-  label: string;
-  url: string;
-  /** Trailing annotation after the link, e.g. "Supports capacity". */
-  note?: string;
-}
+/** A folded source row; rendered by the shared `SourceLinkList`. */
+export type EvidenceFooterSource = SourceLink;
 
 /**
  * Footer controls keep the 16 px text line but carry a >= 32 px hit area: the
@@ -189,26 +186,7 @@ export function EvidenceFooter({
     >
       <div className="mt-2 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">
         {hasNotes ? <div className="space-y-2">{notes}</div> : null}
-        {hasSources ? (
-          <ul aria-label={sourcesLabel} className="space-y-2">
-            {sources?.map((source) => (
-              <li key={`${source.label}:${source.url}`} className="flex min-w-0 gap-2">
-                <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-                <span className="min-w-0">
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pharos-focus-ring break-words rounded-sm underline underline-offset-2 transition-colors hover:text-foreground"
-                  >
-                    {source.label}
-                  </a>
-                  {source.note ? <span className="ml-2 text-muted-foreground/80">{source.note}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {sources && hasSources ? <SourceLinkList aria-label={sourcesLabel} sources={sources} className="space-y-2" /> : null}
         {hasSources && sourcesFootnote ? <div>{sourcesFootnote}</div> : null}
       </div>
     </ModuleDisclosure>

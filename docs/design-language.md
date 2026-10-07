@@ -149,6 +149,7 @@ Prefer the established utilities in `src/app/globals.css`:
 | `.pharos-empty-note` | Bounded empty-state treatment inside a data surface. |
 | `.pharos-meta` | Compact secondary metadata. |
 | `.pharos-prose-link` | Inline link treatment in explanatory copy. |
+| `.pharos-source-list` | External source list rendered by `SourceLinkList`: CSS-masked external-link glyph, focus ring and underline on bare `<li><a>` rows. |
 
 Check the current declarations before depending on exact padding, radius, shadow, or responsive behavior. Those implementation details belong to `src/app/globals.css` and the token files.
 
