@@ -16,53 +16,5 @@
         "url": "https://docs.avantprotocol.com/overview/core-tokens"
       }
     ]
-  },
-  "genius": {
-    "applicability": "unclear",
-    "applicabilityBasis": {
-      "summary": "Issuer documentation establishes that savUSD is a senior yield-bearing wrapper received by staking avUSD, with an accruing exchange rate and conversion back to avUSD. Under owner ruling D17, these mechanics alone do not establish a GENIUS exclusion. Applicability remains unclear pending qualified token-specific analysis of holder repayment obligations and any securities or deposit exclusion; authorization research is separate.",
-      "references": [
-        {
-          "label": "GENIUS Act text: payment stablecoin definition and yield restriction",
-          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-01"
-        },
-        {
-          "label": "Avant: savUSD senior tranche and accruing exchange rate",
-          "url": "https://docs.avantprotocol.com/overview/core-tokens.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
-        }
-      ]
-    },
-    "authorizationStatus": "unknown",
-    "issuerPathway": "unknown",
-    "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
-    "notes": "The prior 2026-08-14 editorial assessment treated savUSD as a non-payment-token from its variable avUSD conversion. The 2026-10-01 D17 review withdraws that definitive GENIUS classification pending qualified token-specific legal analysis, without asserting payment-stablecoin scope or authorization. The MiCA assessment is unchanged by this U.S.-only ruling.",
-    "references": [
-      {
-        "label": "OCC proposed GENIUS Act rule",
-        "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "Avant core tokens documentation",
-        "url": "https://docs.avantprotocol.com/overview/core-tokens",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
-      }
-    ],
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC04): GENIUS applicability review; other historical observations retain their prior scope",
-    "reviewedAt": "2026-10-01"
   }
 }
