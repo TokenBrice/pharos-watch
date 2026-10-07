@@ -52,6 +52,14 @@ describe("focused checks", () => {
     )).toBe(false);
   });
 
+  it("selects the failure-scenario gate for editorial data without unrelated checks", () => {
+    const plan = buildFocusedCheckPlan(["data/failure-scenarios.json"]);
+    expect(plan.checks).toEqual([
+      { command: "npm run check:failure-scenarios", source: "failure-scenarios" },
+      { command: "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts", source: "failure-scenarios" },
+    ]);
+  });
+
   it("keeps directory test coverage for non-module and deleted files", () => {
     expect(buildFocusedCheckPlan(["src/deleted-module.ts"]).checks.map((check) => check.command)).toContain("npx vitest run src");
     expect(buildFocusedCheckPlan(["src/app/globals.css"]).checks.map((check) => check.command)).toContain("npx vitest run src");

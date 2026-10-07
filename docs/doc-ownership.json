@@ -12,6 +12,27 @@
   ],
   "mappings": [
     {
+      "id": "failure-scenario-verification",
+      "label": "Monthly on-chain failure-scenario drift reports",
+      "risk": "high",
+      "sources": [
+        "scripts/maintenance/verify-failure-scenarios.ts",
+        "shared/lib/failure-scenario-checks/**",
+        ".codex/skills/scenario-verification/**"
+      ],
+      "docs": ["docs/process/failure-scenarios.md"],
+      "background": [
+        { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
+        { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }
+      ],
+      "checks": ["npm run verify:failure-scenarios -- --coin crvusd-curve", "npm run check:agent-skills"],
+      "rules": [
+        "Verification is pinned and read-only; changed and unavailable require maintainer review.",
+        "Only the maintainer approves exact scenario content; edits invalidate its content hash.",
+        "Unregistered falsifiers remain explicitly unchecked."
+      ]
+    },
+    {
       "id": "daily-social-posts",
       "label": "Daily data graphics for manual social publication",
       "risk": "high",
@@ -644,6 +665,25 @@
       "background": [{ "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }],
       "alsoRead": ["worker/AGENTS.md"],
       "rules": ["Consume Worker response bodies before opening more fetches."]
+    },
+    {
+      "id": "failure-scenarios",
+      "label": "Curated failure scenario approval",
+      "risk": "high",
+      "sources": [
+        "data/failure-scenarios.json",
+        "shared/types/failure-scenarios.ts",
+        "shared/lib/failure-scenarios.ts",
+        "shared/lib/__tests__/failure-scenarios.test.ts",
+        "scripts/ci/check-failure-scenarios.ts",
+        "scripts/maintenance/approve-failure-scenario.ts"
+      ],
+      "docs": ["docs/process/failure-scenarios.md"],
+      "checks": [
+        "npm run check:failure-scenarios",
+        "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts"
+      ],
+      "rules": ["Approval is maintainer-only and binds exact canonical content; drafts never publish in production."]
     },
     {
       "id": "shared-runtime",
