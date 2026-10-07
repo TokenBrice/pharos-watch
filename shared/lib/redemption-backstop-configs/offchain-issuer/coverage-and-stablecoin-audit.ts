@@ -532,18 +532,29 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "qcad-stablecorp": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    costModel: undisclosedReviewedFee(
-      "Stablecorp/authorized-partner redemption terms govern QCAD redemption; public materials reviewed do not publish one fixed redemption fee",
+    costModel: fixedFee(
+      0,
+      "QCAD Token Terms and Conditions, Article 7, Section 7.1: QCDT and the Servicer do not currently charge any fees to an Authorized Participant on Purchase or to a Redeemer in connection with a Redemption. The OSC decision dated 2025-11-20 (representation 11) states the same. This is the issuer-side fee only; Section 7.2 leaves the redeemer's own banking fees and any Authorized Participant brokerage commission separate, and Section 7.3 requires 30 days notice before any fee is introduced",
     ),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "settlement", "cost"],
+      missingScoringFields: ["capacity", "settlement"],
       rationale:
-        "Stablecorp transparency published 2026-08-21 confirms that QCAD is backed 1:1 and redeemable, but it does not publish an executable redemption limit, accepted-request-to-bank-credit SLA, or all-in redemption cost; the 2026-09-04 re-open found no dated terms adding those bounds.",
-      reviewedAt: "2026-09-04",
+        "The regulator-filed QCAD Token Terms and Conditions (SEDAR+) and the OSC decision dated 2025-11-20 establish a zero issuer redemption fee and no minimum redemption size, so cost is no longer withheld. They still publish no executable redemption limit and no accepted-request-to-bank-credit SLA: redemption is conditioned on circumstances rendering a sale through a CTP impractical or impossible, and the terms name no payment deadline.",
+      reviewedAt: "2026-10-07",
       docs: [
         sourceRef("Stablecorp", "https://stablecorp.ca/", ["route", "access"]),
         sourceRef("Stablecorp transparency (published 2026-08-21)", "https://stablecorp.ca/transparency", ["route"]),
+        sourceRef(
+          "QCAD Token Terms and Conditions, Article 7 (SEDAR+ filing)",
+          "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+          ["fees", "access"],
+        ),
+        sourceRef(
+          "OSC decision In the Matter of QCAD Digital Trust (November 20, 2025)",
+          "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust",
+          ["route", "fees", "access"],
+        ),
       ],
     },
     docs: [
@@ -551,8 +562,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", [
         "capacity",
       ]),
+      sourceRef(
+        "QCAD Token Terms and Conditions, Article 7 (SEDAR+ filing)",
+        "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+        ["fees", "access"],
+      ),
     ],
-    notes: ["Modeled as issuer redemption for qualified holders under QCAD Digital Trust and authorized partner rails"],
+    notes: [
+      "Modeled as issuer redemption for qualified holders under QCAD Digital Trust and authorized partner rails",
+      "Fee reviewed 2026-10-07 from the regulator record: Terms and Conditions Section 7.1 charges no purchase or redemption fee and there is no minimum redemption size; OSC decision representation 11 confirms the Servicer receives no purchase/redemption fees. Holder-side banking charges, Authorized Participant commissions (representation 23) and network gas stay outside this issuer fee.",
+    ],
   },
   "dusd-fluid": {
     ...issuerBase,

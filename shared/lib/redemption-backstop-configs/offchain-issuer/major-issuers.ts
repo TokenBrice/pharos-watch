@@ -231,9 +231,16 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
+    v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
       sourceRef("Circle Mint", "https://www.circle.com/circle-mint", ["route", "capacity", "access", "settlement"]),
       sourceRefRouteCapacity("Circle EURC", "https://www.circle.com/eurc"),
+      sourceRef("Circle redemption structure (effective March 15, 2026)", "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644", ["fees"]),
+      sourceRef("Circle product fee schedule", "https://help.circle.com/support/en/circle-product-fee-schedule?id=kb_article_view&sysparm_article=KB0010626", ["fees"]),
+    ],
+    notes: [
+      "Sol unknown-resolver wave 2026-10-07 (EXIT_ROUTE_3): the Circle USDC/EURC redemption structure effective March 15, 2026 has at most 5 bps daily base fee plus 5 bps marginal monthly net-redemption overage. The V9-only 10 bps issuer-fee ceiling is conservative across the published tiers; it does not assert that the zero-burn-fee EEA cohort pays 10 bps or assume fee credits.",
+      "Circle and its banking partners charge no outgoing redemption-wire fee; any receiving-bank fee is a third-party cost outside the issuer-fee ceiling, not asserted zero. No capacity, holder cohort or settlement promise changes. Fresh producer evidence is required to replace captured undisclosed fee evidence.",
     ],
   },
   "usdc-circle": {
@@ -242,6 +249,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     capacityModel: { kind: "supply-ratio", ratio: 0.07, confidence: "documented-bound", basis: "hot-buffer" },
     reviewedAt: "2026-05-17",
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
+    v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
       sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
       sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", [
@@ -250,9 +258,13 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "access",
         "fees",
       ]),
+      sourceRef("Circle redemption structure (effective March 15, 2026)", "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644", ["fees"]),
+      sourceRef("Circle product fee schedule", "https://help.circle.com/support/en/circle-product-fee-schedule?id=kb_article_view&sysparm_article=KB0010626", ["fees"]),
     ],
     notes: [
       "Tracked USDC metadata records a 7% cash-deposit reserve slice; Pharos uses that cash slice as the documented hot-buffer lower bound and does not promote the unvalidated 20% proposal.",
+      "Sol unknown-resolver wave 2026-10-07 (EXIT_ROUTE_3): Circle's redemption structure effective March 15, 2026 caps the institutional daily gross-redemption charge at 5 bps, plus at most 5 bps marginal monthly net-redemption overage. The V9-only 10 bps issuer-fee ceiling covers the additive maximum without assuming fee credits, unused monthly allowances, or eligibility for a lower-fee tier.",
+      "Circle and its banking partners do not charge an outgoing redemption-wire fee. Receiving-bank charges are third-party costs outside this issuer-fee ceiling, not asserted zero. The Standard tier's gross-redemption cap does not constrain the modeled Institutional route; no captured capacity or settlement term is increased by this cost review.",
     ],
   },
   "usdp-paxos": {
@@ -506,8 +518,17 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
+    v9RouteCostTerms: { feeBpsMax: 0 },
     docs: [
       sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
+      sourceRef(
+        "TrueUSD Terms of Use, Fees (modified 2024-01-11; reviewed 2026-10-07)",
+        "https://app.tusd.io/terms-of-use",
+        ["fees"],
+      ),
+    ],
+    notes: [
+      "The Terms of Use Fees section states that the Company does not charge fees for minting or redeeming TrueUSD. The V9 ceiling covers issuer-charged redemption fees only; third-party bank/wire charges and blockchain transaction costs remain holder-borne and are not asserted to be zero.",
     ],
   },
   "eurs-stasis": {
