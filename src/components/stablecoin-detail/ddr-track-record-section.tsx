@@ -110,7 +110,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
           </p>
         ) : null}
         <p className="text-xs leading-relaxed text-muted-foreground">{record.publicWarning}</p>
-        <EvidenceFooter trailing={record.reviewedAt ? `Reviewed ${record.reviewedAt}` : undefined}>
+        <EvidenceFooter reviewed={record.reviewedAt ?? undefined}>
           <Link
             href="/depeg"
             className="pharos-focus-ring rounded-sm underline decoration-dashed underline-offset-2 hover:text-foreground"

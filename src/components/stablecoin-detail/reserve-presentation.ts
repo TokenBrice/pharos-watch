@@ -1,7 +1,9 @@
 import { ApiFetchError } from "@/lib/api";
 import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
+import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { ReserveRisk, ReserveSlice } from "@shared/types";
+import { formatIsoDate, formatIsoTimestamp } from "@shared/lib/format";
 
 /** `neutral` is informational; `watch` is an active condition (amber). Nothing here is red. */
 export type ReserveNoticeTone = "neutral" | "watch";
@@ -52,6 +54,8 @@ export interface ReserveCompositionSlice {
   risk: ReserveRisk;
   /** Obligor / asset-class line for tooltips; never rendered as tile text. */
   detail: string | null;
+  /** The slice's reviewed role in the basket (its asset class label), when classified. */
+  role?: string | null;
 }
 
 const SECONDS_PER_DAY = 86_400;
@@ -138,25 +142,17 @@ export function buildReserveFetchNotice(
   };
 }
 
+/** `YYYY-MM-DD HH:MM UTC`: the `as of` half of the sentence is UTC, so both halves share one frame. */
 function formatReserveUpdatedAt(timestamp: number | undefined): string {
-  return timestamp
-    ? new Date(timestamp * 1000).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-        // The `as of` half of this sentence is UTC; both halves must share one frame.
-        timeZone: "UTC",
-        timeZoneName: "short",
-      })
+  return timestamp && Number.isFinite(timestamp)
+    ? `${formatIsoTimestamp(timestamp).slice(0, 16).replace("T", " ")} UTC`
     : "the previous successful run";
 }
 
 export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
   const sourceTimestamp = reserves.metadata?.sourceTimestamp;
   const sourceDate = typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp)
-    ? new Date(sourceTimestamp * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })
+    ? formatIsoDate(sourceTimestamp)
     : null;
   const assurance = reserves.metadata?.details?.assurance;
   const reportDate = assurance && typeof assurance === "object" && "reportDate" in assurance
@@ -505,6 +501,22 @@ export function reviewedCompositionSlices(summary: ReserveQualityClientSummary):
       pct: slice.pct,
       risk: slice.risk,
       detail: [slice.obligor, slice.assetClassLabel, slice.horizonLabel].filter(Boolean).join(" · ") || null,
+      role: slice.assetClassLabel,
+    }))
+    .sort((a, b) => b.pct - a.pct);
+}
+
+/** The wrapped parent's reviewed slices, drawn in the wrapper's Reserves module as a look-through. */
+export function lookThroughCompositionSlices(lookThrough: ReserveLookThroughClientSummary): ReserveCompositionSlice[] {
+  return lookThrough.slices
+    .filter((slice) => Number.isFinite(slice.pct) && slice.pct > 0)
+    .map((slice) => ({
+      key: slice.key,
+      label: reserveSliceLabel(slice.name, slice.obligor),
+      pct: slice.pct,
+      risk: slice.risk,
+      detail: [slice.obligor, slice.assetClassLabel].filter(Boolean).join(" · ") || null,
+      role: slice.assetClassLabel,
     }))
     .sort((a, b) => b.pct - a.pct);
 }

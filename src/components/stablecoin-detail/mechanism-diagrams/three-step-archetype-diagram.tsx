@@ -2,10 +2,10 @@ import type { MechanismArchetype } from "@shared/types";
 
 import {
   ThreeStepMechanismDiagram,
-  type MechanismStepOverride,
   type MechanismStepText,
   type ThreeStepMechanismDiagramProps,
 } from "./three-step-diagram";
+import type { MechanismTemplateFacts } from "./types";
 
 export type ThreeStepArchetype = Exclude<MechanismArchetype, "synthetic-delta-neutral">;
 
@@ -13,9 +13,20 @@ export function isThreeStepArchetype(archetype: MechanismArchetype): archetype i
   return archetype !== "synthetic-delta-neutral";
 }
 
-type ThreeStepConfig = {
+export type ThreeStepConfig = {
   accentColor: string;
+  /**
+   * The family's stress path, phrased so it holds for every member. It names
+   * no coin: coin pages draw it as is, and a coin's own dated incident comes
+   * from its coin override.
+   */
   stressFootnote: string;
+  /**
+   * The family's canonical dated incident ("USDC, Mar 2023"), appended only on
+   * the generic archetype render (`/learn`, OG images). Never drawn on a coin
+   * page, where it would name another coin.
+   */
+  stressPrecedent?: string;
   ariaLabel: (symbol: string) => string;
   description: (symbol: string) => string;
   defaultSteps: (symbol: string) => readonly [MechanismStepText, MechanismStepText, MechanismStepText];
@@ -27,7 +38,8 @@ type ThreeStepConfig = {
 const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> = {
   "fiat-cash": {
     accentColor: "var(--mechanism-fiat-cash)",
-    stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",
+    stressFootnote: "stress: banking-rail freeze",
+    stressPrecedent: "USDC, Mar 2023",
     ariaLabel: (symbol) =>
       `${symbol} mechanism: customer funds in by bank transfer, custodied 1:1, redeemable through the issuer by eligible holders`,
     description: (symbol) =>
@@ -61,7 +73,8 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
   },
   cdp: {
     accentColor: "var(--mechanism-cdp)",
-    stressFootnote: "stress: collateral cascade (DAI, Mar 2020)",
+    stressFootnote: "stress: collateral cascade",
+    stressPrecedent: "DAI, Mar 2020",
     ariaLabel: (symbol) =>
       `Users overcollateralize crypto in a vault to mint ${symbol} as debt; the position is liquidated if collateral falls below the safety ratio.`,
     description: (symbol) =>
@@ -83,7 +96,8 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
   },
   algorithmic: {
     accentColor: "var(--mechanism-algorithmic)",
-    stressFootnote: "stress: reflexive collapse (UST, May 2022)",
+    stressFootnote: "stress: reflexive collapse",
+    stressPrecedent: "UST, May 2022",
     ariaLabel: (symbol) =>
       `An algorithmic mint/burn module trades a governance token for ${symbol} to defend the peg; the design has no 1:1 reserve backing.`,
     description: (symbol) =>
@@ -228,43 +242,89 @@ const TBILL_PAR_REDEMPTION_CONFIG: ThreeStepConfig = {
 };
 
 /**
- * Resolves the archetype's diagram copy for one coin. `navToken` is the coin's
- * `flags.navToken`; `undefined`/`null` means "no coin in hand" and keeps the
- * archetype default.
+ * `cdp` coins whose reviewed mechanism has no liquidation engine: Djed-style
+ * reserves (ZSD, DJED), 1:1 conversion modules and facilitator mints. They
+ * share the archetype's collateral book but none of its liquidation path, so
+ * the default copy ("liquidates below ratio", the collateral cascade)
+ * would contradict the coin's own Backing evidence. Every line here holds for
+ * the whole family that `deriveLiquidationEngine` selects; coin specifics go
+ * through coin overrides.
+ */
+const CDP_RESERVE_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-cdp)",
+  stressFootnote: "stress: reserve shortfall with no liquidation backstop",
+  ariaLabel: (symbol) =>
+    `${symbol} mechanism: the protocol mints and redeems ${symbol} against collateral it holds in reserve; there are no borrower positions and no liquidation engine.`,
+  description: (symbol) =>
+    `Collateral is deposited with the protocol, which holds it in reserve and mints or redeems ${symbol} under its own rules; with no borrower positions there is no liquidation engine, so a fall in reserve value is absorbed by the reserve rather than cleared by liquidations.`,
+  defaultSteps: (symbol) => [
+    { label: "Collateral in", subtitle: "held by the protocol" },
+    { label: "Protocol reserve", subtitle: "mint and redeem by rule" },
+    { label: `${symbol} minted`, subtitle: "no liquidation engine" },
+  ],
+};
+
+/**
+ * The `rwa-credit-fund` family default describes the archetype ("quarterly
+ * redemption gates"), but members range from quarterly fund windows to FIFO
+ * queues served as liquidity allows (syrupUSDC) and weekly processing. A coin
+ * page therefore states no cadence: redemption follows the issuer's terms,
+ * and the coin's own Redemption route carries the specifics.
+ */
+const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-rwa-credit-fund)",
+  stressFootnote: "stress: NAV markdown / redemption gate",
+  ariaLabel: (symbol) =>
+    `Investor cash funds a credit portfolio; ${symbol} value tracks credit performance, and redemptions follow the issuer's terms.`,
+  description: (symbol) =>
+    `Investors subscribe or deposit cash; the issuer deploys it into private credit or structured debt with real default risk and limited liquidity; ${symbol} value reflects credit performance, with redemption timing and gates set by the issuer's terms.`,
+  defaultSteps: (symbol) => [
+    { label: "Investor cash", subtitle: "subscribed or deposited" },
+    { label: "Credit portfolio", subtitle: "default and liquidity risk" },
+    { label: `${symbol} issued`, subtitle: "value tracks credit losses" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 75,
+    topY: 90,
+    peakY: 140,
+    label: "redeem",
+    strokeWidth: 1.2,
+    dashed: true,
+  },
+};
+
+/**
+ * Resolves the archetype's diagram copy. `facts` is the coin in hand (see
+ * {@link MechanismTemplateFacts}); without it the archetype keeps its family
+ * description, as on `/learn`.
  */
 export function resolveThreeStepConfig(
   archetype: ThreeStepArchetype,
-  navToken?: boolean | null,
+  facts?: MechanismTemplateFacts,
 ): ThreeStepConfig {
-  if (archetype === "tbill" && navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
+  if (!facts) return THREE_STEP_ARCHETYPE_CONFIG[archetype];
+  if (archetype === "tbill" && facts.navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
+  if (archetype === "cdp" && facts.liquidationEngine === false) return CDP_RESERVE_CONFIG;
+  if (archetype === "rwa-credit-fund") return RWA_CREDIT_COIN_CONFIG;
   return THREE_STEP_ARCHETYPE_CONFIG[archetype];
 }
 
 export interface ThreeStepArchetypeDiagramProps {
   archetype: ThreeStepArchetype;
   symbol: string;
-  steps?: ReadonlyArray<MechanismStepOverride>;
-  stressFootnote?: string;
-  /** Coin's `flags.navToken`; omit where no coin is in hand (see {@link resolveThreeStepConfig}). */
-  navToken?: boolean | null;
 }
 
-export function ThreeStepArchetypeDiagram({
-  archetype,
-  symbol,
-  steps: overrideSteps,
-  stressFootnote,
-  navToken,
-}: ThreeStepArchetypeDiagramProps) {
-  const config = resolveThreeStepConfig(archetype, navToken);
+/** Generic archetype diagram (`/learn`, OG images): family copy and its dated precedent, no coin facts. */
+export function ThreeStepArchetypeDiagram({ archetype, symbol }: ThreeStepArchetypeDiagramProps) {
+  const config = resolveThreeStepConfig(archetype);
   return (
     <ThreeStepMechanismDiagram
       ariaLabel={config.ariaLabel(symbol)}
       description={config.description(symbol)}
       accentColor={config.accentColor}
       defaultSteps={config.defaultSteps(symbol)}
-      overrideSteps={overrideSteps}
-      stressFootnote={stressFootnote ?? config.stressFootnote}
+      stressFootnote={config.stressPrecedent ? `${config.stressFootnote} (${config.stressPrecedent})` : config.stressFootnote}
       returnArrow={config.returnArrow}
       stepTone={config.stepTone}
       dashed={config.dashed}

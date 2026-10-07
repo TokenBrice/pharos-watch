@@ -99,7 +99,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
   ];
   const resolvedArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
   if (resolvedArchetype) {
-    // key-info-card already has a "Learn how X stablecoins work" CTA adjacent to the diagram.
+    // peg-stability-card already has a "Learn how X stablecoins work" CTA on the mechanism diagram.
     // Use this slot for a screener deep-link instead to avoid a duplicate CTA.
     trackerLinks.push({
       href: `/screener/?mechanisms=${resolvedArchetype}&lifecycle=active`,
@@ -124,10 +124,14 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
   const peersHref = pegSlug ? `/stablecoins/${pegSlug}/` : "/screener/";
   const hiddenComparisonCount = Math.max(0, staticComparisonPages.length - COMPARISON_MOBILE_CARD_CAP);
 
+  // The bleed must never exceed the page gutter (`MainContent`: px-4, lg:px-5,
+  // xl:px-9) or the document scrolls sideways. Below xl the gutter is the whole
+  // margin, so the panel becomes a flush full-width band; at xl it bleeds into
+  // part of the wider gutter and keeps its rounded frame.
   return (
     <section
       id="explore-next"
-      className="mt-8 -mx-4 space-y-6 rounded-xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6"
+      className="mt-8 -mx-4 space-y-6 bg-muted/15 px-4 py-6 lg:-mx-5 lg:px-5 xl:-mx-6 xl:rounded-xl xl:px-6"
       aria-labelledby="explore-next-heading"
     >
       <div className="space-y-1.5">

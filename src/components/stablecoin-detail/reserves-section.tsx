@@ -1,16 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { RefreshCw } from "lucide-react";
-import { ReserveTreemap } from "@/components/reserve-treemap";
+import { formatReserveRiskTier, ReserveRiskSwatch, ReserveTreemap } from "@/components/reserve-treemap";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EvidenceFooter, type EvidenceFooterSource } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceModule, type EvidenceModuleVariant } from "@/components/stablecoin-detail/evidence-module";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   buildReserveCompositionNote,
   buildReserveFeedStatus,
@@ -18,18 +18,14 @@ import {
   buildReserveSourceChip,
   liveCompositionDiffers,
   compositionSlices,
+  lookThroughCompositionSlices,
   reserveSliceLabel,
   reviewedCompositionSlices,
   type ReserveCompositionSlice,
   type ReserveFeedStatusModel,
 } from "@/components/stablecoin-detail/reserve-presentation";
-import {
-  DETAIL_MODULE_BODY_CLASS,
-  DETAIL_MODULE_HEADER_CLASS,
-  DETAIL_MODULE_SHELL_CLASS,
-  DETAIL_MODULE_TITLE_CLASS,
-  SECTION_SCROLL_MT,
-} from "@/components/stablecoin-detail/section-title-class";
+import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import { deriveVerdictLine } from "@/components/stablecoin-detail/verdict-line";
 import { revealAnchorId } from "@/lib/anchor-reveal";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
@@ -38,8 +34,11 @@ import {
   type ReserveQualityClientSummary,
   type ReserveQualityLadderClientRow,
 } from "@/lib/stablecoin-detail-reserve-quality-client";
+import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import { cn } from "@/lib/utils";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
+import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ReserveLiquidityHorizon, StablecoinMeta } from "@shared/types";
 
 export interface ReservesSectionProps {
@@ -50,6 +49,14 @@ export interface ReservesSectionProps {
   isFetching?: boolean;
   isLoading?: boolean;
   qualitySummary?: ReserveQualityClientSummary | null;
+  /**
+   * The wrapped parent's reviewed slices, drawn in place of a wrapper's single
+   * reviewed slice. Used only when the reviewed basis is exactly one slice.
+   */
+  lookThrough?: ReserveLookThroughClientSummary | null;
+  /** Layout chosen by the page: `module` (default) or `tile` beside the Safety Score. */
+  variant?: EvidenceModuleVariant;
+  stripForm?: boolean;
 }
 
 const FEED_STATUS_ANCHOR_ID = "reserve-feed-status";
@@ -92,7 +99,7 @@ function LadderRow({ row }: { row: ReserveQualityLadderClientRow }) {
   );
 }
 
-/** A chip that explains itself on hover/focus; tap-only readers get the same sentence in the Sources fold. */
+/** A chip that explains itself on hover/focus; tap-only readers get the same sentence in the merged sources fold. */
 function ExplainedChip({ label, tooltip, className }: { label: string; tooltip: string | null; className: string }) {
   if (!tooltip) {
     return <Badge variant="outline" className={className}>{label}</Badge>;
@@ -154,10 +161,13 @@ function RetryButton({ onRetry, isFetching }: { onRetry: () => Promise<unknown> 
 /**
  * At most four facts, in reading order: how fast the basket exits, how much of
  * it has no identified obligor, its largest position, and the review's date.
+ * A look-through drops the date fact: the module keeps one visible date (the
+ * footer's review stamp) and folds the others into its provenance.
  */
 function buildFacts(
   summary: ReserveQualityClientSummary | null,
   slices: readonly ReserveCompositionSlice[],
+  { includeAsOf }: { includeAsOf: boolean },
 ): FactGridItem[] {
   const facts: FactGridItem[] = [];
 
@@ -208,11 +218,9 @@ function buildFacts(
     });
   }
 
-  if (summary?.asOf) {
+  if (includeAsOf && summary?.asOf) {
     const source = summary.sources[0];
-    // Source labels can carry reviewer page notes after the first ";" — only the
-    // report name belongs in the summary layer; the full label stays in the title.
-    const sourceName = source ? source.label.split(";")[0]!.trim() : null;
+    const sourceName = source ? reportName(source.label) : null;
     facts.push({
       key: "as-of",
       label: "As of",
@@ -229,19 +237,25 @@ function buildFacts(
   return facts;
 }
 
+/**
+ * Source labels can carry reviewer page notes after the first ";": only the
+ * report name belongs in the summary layer; the full label stays in the title.
+ */
+function reportName(label: string): string {
+  return label.split(";")[0]!.trim();
+}
+
+/** Slice data only: reviewer narrative folds with the sources, confidence sits in the chip row. */
 function SliceDetail({ summary }: { summary: ReserveQualityClientSummary }) {
   const slices = [...summary.slices].sort((a, b) => b.pct - a.pct);
   return (
     <ModuleDisclosure label="Slice detail & risk factors">
       <div className="mt-3 space-y-3">
-        {summary.compositionBasis ? <p className={SLICE_LINE_CLASS}>{summary.compositionBasis}</p> : null}
-        {summary.knownUnknownExposureNote ? <p className={SLICE_LINE_CLASS}>{summary.knownUnknownExposureNote}</p> : null}
         {summary.selfExposurePct != null ? (
           <p className={SLICE_LINE_CLASS}>
             {`Issuer self-exposure: ${formatReserveQualityPct(summary.selfExposurePct)} of the basket is the issuer's own assets rather than independent collateral.`}
           </p>
         ) : null}
-        {summary.confidenceLabel ? <p className={SLICE_LINE_CLASS}>{`Review confidence: ${summary.confidenceLabel}`}</p> : null}
         <ul aria-label="Reserve slices" className="space-y-2.5">
           {slices.map((slice) => {
             const label = reserveSliceLabel(slice.name, slice.obligor);
@@ -331,13 +345,80 @@ function FeedStatusDetail({
 }
 
 /**
- * The one Reserves module: lede and risk-toned treemap of the *reviewed* slices
- * (the Safety Score basis), up to four facts, then folded ladder, slice detail,
- * the dated live attestation/proof feed, and feed status. The summary is always
- * the reviewed slices, or an explicit "no reviewed composition" state: live
- * figures never reach it. A live feed is always exposed in the dated "Live
- * reserve feed" fold, worded by whether it differs from the reviewed slices.
- * Also owns the `#reserve-quality` anchor the hero and FAQ link to.
+ * A wrapper whose whole reviewed basis is one claim on its parent draws the
+ * parent's reviewed basket instead. This line names the wrapper slice it stands
+ * for and labels the basket "via <parent>". The parent's review date folds into
+ * the provenance, so the footer's review stamp stays the one visible date.
+ */
+function LookThroughCaption({
+  wrapper,
+  lookThrough,
+}: {
+  wrapper: ReserveCompositionSlice;
+  lookThrough: ReserveLookThroughClientSummary;
+}) {
+  return (
+    <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      <ReserveRiskSwatch risk={wrapper.risk} />
+      <span className="font-medium text-foreground">{wrapper.label}</span>
+      <span className="font-mono tabular-nums text-foreground">{formatReserveQualityPct(wrapper.pct)}</span>
+      <span className="font-medium">{formatReserveRiskTier(wrapper.risk)}</span>
+      <span aria-hidden="true">→</span>
+      <span>
+        via{" "}
+        <Link
+          href={buildStablecoinUrl(lookThrough.parentId, "#reserves")}
+          className="pharos-focus-ring rounded-sm font-mono font-semibold text-foreground underline decoration-dotted underline-offset-4 transition-colors hover:decoration-solid motion-reduce:transition-none"
+        >
+          {lookThrough.parentSymbol}
+        </Link>
+        {" reserves"}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * The verdict is the generated lede when it fits the summary budget, else its
+ * first sentence (slice count and convertibility); the trailing exposure
+ * sentences restate figures the facts and slice detail already carry.
+ */
+function buildVerdict(summary: ReserveQualityClientSummary | null): string | null {
+  if (!summary) return null;
+  return findSummaryBudgetViolations(summary.lede).length === 0 ? summary.lede : deriveVerdictLine(summary.lede);
+}
+
+/**
+ * A look-through verdict counts the slices actually drawn (the parent's), not
+ * the wrapper's single claim the lede counts, and names the largest one: the
+ * caption above already says which wrapper slice the basket stands for.
+ */
+function buildLookThroughVerdict(parentSymbol: string, slices: readonly ReserveCompositionSlice[]): string | null {
+  const top = slices[0];
+  if (!top) return null;
+  return slices.length === 1
+    ? `Via ${parentSymbol}: 1 reviewed slice, ${top.label}.`
+    : `Via ${parentSymbol}: ${slices.length} reviewed slices, led by ${top.label} at ${formatReserveQualityPct(top.pct)}.`;
+}
+
+/**
+ * The one Reserves module (plan §8a): the risk-toned treemap of the *reviewed*
+ * slices (the Safety Score basis), the lede as verdict, a chip row
+ * (confidence · source type), up to four facts, then the folded ladder, slice
+ * detail, dated live attestation/proof feed and feed status, and last the
+ * merged review notes & sources fold above one footer line. The header carries
+ * one status chip (liquidity) and, when the feed is unhealthy, the ops chip.
+ *
+ * The summary is always the reviewed slices, or an explicit "no reviewed
+ * composition" state: live figures never reach it. A wrapper whose one
+ * reviewed slice is its parent draws the parent's reviewed slices instead,
+ * labelled "via <parent>"; any other one-slice basket is a compact composition
+ * bar. A live feed is always exposed in the dated "Live reserve feed" fold,
+ * worded by whether it differs from the reviewed slices. Also owns the
+ * `#reserve-quality` alias the hero and FAQ link to, pinned to the module top.
+ *
+ * Pillar-primary: it never folds, at any breakpoint, and it carries no
+ * stretch filler, so its natural height sits beside the Safety Score.
  */
 export function ReservesSection({
   coin,
@@ -347,6 +428,9 @@ export function ReservesSection({
   isFetching = false,
   isLoading = false,
   qualitySummary = null,
+  lookThrough = null,
+  variant = "module",
+  stripForm,
 }: ReservesSectionProps) {
   // The reviewed basis is the curated `coin.reserves`. The quality summary is
   // derived from it but only exists when slices carry both asset class and
@@ -359,27 +443,29 @@ export function ReservesSection({
     () => (reserves ? compositionSlices(reserves.reserves) : []),
     [reserves],
   );
+  const lookThroughSlices = useMemo(
+    () => (lookThrough ? lookThroughCompositionSlices(lookThrough) : []),
+    [lookThrough],
+  );
 
   if (!reserves && !reserveFetchError && !qualitySummary && !coin.reserves?.length) {
     if (!isLoading) return null;
     return (
-      <section
-        id="reserves"
-        aria-label="Reserve composition"
-        aria-busy="true"
-        className="flex min-h-[320px] min-w-0 flex-1 flex-col"
-      >
+      <section id="reserves" aria-label="Reserve composition" aria-busy="true" className="min-w-0">
         <div className="mb-4 flex items-center gap-2">
           <Skeleton className="h-4 w-36 rounded-sm" />
           <Skeleton className="h-5 w-10 rounded-full" />
         </div>
-        <Skeleton className="min-h-[250px] flex-1 rounded-md" />
+        <Skeleton className="h-64 rounded-md sm:h-72" />
         <span className="sr-only">Loading reserve composition</span>
       </section>
     );
   }
 
   const hasReviewedBasis = reviewedSlices.length > 0;
+  // A look-through stands in only for a wrapper's single reviewed slice.
+  const wrapperSlice = reviewedSlices.length === 1 && lookThroughSlices.length > 0 ? reviewedSlices[0]! : null;
+  const lookThroughView = lookThrough && wrapperSlice ? { parent: lookThrough, wrapper: wrapperSlice } : null;
   const feedStatus = buildReserveFeedStatus(reserves, reserveFetchError);
   const sourceChip = buildReserveSourceChip(reserves);
   const footnote = reserves
@@ -388,87 +474,173 @@ export function ReservesSection({
   const isLiveFeed = reserves?.mode === "live" || reserves?.mode === "live-stale";
   // A live feed is always exposed in its dated disclosure, never promoted into the summary.
   const showLiveFeed = isLiveFeed && liveSlices.length > 0;
-  const facts = buildFacts(qualitySummary, reviewedSlices);
+  const facts = buildFacts(qualitySummary, reviewedSlices, { includeAsOf: lookThroughView == null });
+  const verdict = lookThroughView
+    ? buildLookThroughVerdict(lookThroughView.parent.parentSymbol, lookThroughSlices)
+    : buildVerdict(qualitySummary);
+  const reviewedAt = qualitySummary?.reviewedAt ?? undefined;
+  // A look-through stacks three more dates on one card (the parent's review,
+  // the wrapper basis's as-of, the live check), so it keeps one visible date,
+  // the footer's review stamp, and folds the rest into the provenance.
+  const keepsOneDate = lookThroughView != null && reviewedAt != null;
+  // Footer line: the live feed's dated stamp on the left, the review date on
+  // the right. A fallback note ("showing curated reserve baseline") takes the
+  // right slot only when there is no review date, else it folds with the sources.
+  const liveStamp = isLiveFeed && !keepsOneDate ? (footnote?.text ?? null) : null;
+  const baselineNote = isLiveFeed ? null : (footnote?.text ?? null);
 
   const sources: EvidenceFooterSource[] = [];
   for (const source of [...(qualitySummary?.sources ?? []), ...(footnote?.references ?? [])]) {
     if (!sources.some((existing) => existing.url === source.url)) sources.push({ label: source.label, url: source.url });
   }
+  const basisSource = qualitySummary?.sources[0];
+  // The "Live reserve feed" fold already opens on the dated stamp; it is
+  // repeated here only when that fold is absent.
+  const foldedLiveStamp = keepsOneDate && isLiveFeed && !showLiveFeed ? (footnote?.text ?? null) : null;
+  const lookThroughDates = lookThroughView
+    ? [
+        lookThroughView.parent.parentReviewedAt
+          ? `${lookThroughView.parent.parentSymbol} reserves reviewed ${lookThroughView.parent.parentReviewedAt}${
+            reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
+          }.`
+          : null,
+        qualitySummary?.asOf
+          ? `${coin.symbol} basis as of ${qualitySummary.asOf}${basisSource ? `, per ${reportName(basisSource.label)}` : ""}.`
+          : null,
+        foldedLiveStamp ? `Live feed: ${foldedLiveStamp}.` : null,
+      ].filter((line): line is string => line != null)
+    : [];
+  // Folded provenance lines ride under the source list; with no sources they
+  // become review notes so the merged fold still carries them.
+  const datesInFootnote = sources.length > 0 ? lookThroughDates : [];
   const provenanceSentence = sourceChip?.tooltip ?? null;
-  const sourcesFootnote = provenanceSentence || (hasReviewedBasis && footnote?.text)
+  const foldedBaselineNote = reviewedAt ? baselineNote : null;
+  const sourcesFootnote = provenanceSentence || foldedBaselineNote || datesInFootnote.length > 0
     ? (
         <>
+          {datesInFootnote.map((line) => <span key={line} className="block">{line}</span>)}
           {provenanceSentence ? <span className="block">{provenanceSentence}</span> : null}
-          {hasReviewedBasis && footnote?.text ? <span className="block">{footnote.text}</span> : null}
+          {foldedBaselineNote ? <span className="block">{foldedBaselineNote}</span> : null}
         </>
       )
     : undefined;
+  const reviewNotes = [
+    qualitySummary?.compositionBasis,
+    qualitySummary?.knownUnknownExposureNote,
+    ...(sources.length > 0 ? [] : lookThroughDates),
+  ].filter((note): note is string => Boolean(note));
+
+  const headerRight = qualitySummary || feedStatus ? (
+    <>
+      {qualitySummary ? (
+        // The module's verdict chip ("Opaque exit") never truncates: `shrink-0!`
+        // beats the header slot's shrink-and-truncate rule; the title wraps instead.
+        <Badge variant="outline" className={cn(CHIP_CLASS, "shrink-0!", qualitySummary.chipToneClass)}>
+          {qualitySummary.chipLabel}
+        </Badge>
+      ) : null}
+      {feedStatus ? <FeedStatusChip status={feedStatus} /> : null}
+    </>
+  ) : undefined;
+
+  const chipRow = qualitySummary?.confidenceLabel || sourceChip ? (
+    <>
+      {qualitySummary?.confidenceLabel ? (
+        <Badge variant="outline" className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill)}>
+          {`Confidence: ${qualitySummary.confidenceLabel}`}
+        </Badge>
+      ) : null}
+      {sourceChip ? (
+        <ExplainedChip
+          label={sourceChip.label}
+          tooltip={sourceChip.tooltip}
+          className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill)}
+        />
+      ) : null}
+    </>
+  ) : undefined;
+
+  const visual = (
+    <>
+      {/* Zero-size alias pinned to the module top (the shell is `relative`), so
+          `#reserve-quality` lands on the header without adding layout. */}
+      <span id="reserve-quality" aria-hidden="true" className={cn("absolute inset-x-0 top-0 h-0", SECTION_SCROLL_MT)} />
+      {lookThroughView ? (
+        <div className="space-y-3">
+          <LookThroughCaption wrapper={lookThroughView.wrapper} lookThrough={lookThroughView.parent} />
+          <ReserveTreemap
+            slices={lookThroughSlices}
+            subject={`${lookThroughView.parent.parentSymbol} reviewed reserve slices, held via ${lookThroughView.wrapper.label}`}
+          />
+        </div>
+      ) : hasReviewedBasis ? (
+        <ReserveTreemap slices={reviewedSlices} subject="Reviewed reserve slices" />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {!reserves && reserveFetchError
+              ? "Reserve composition could not be loaded."
+              : "No reviewed reserve composition yet."}
+          </p>
+          {!reserves && onRetry ? <RetryButton onRetry={onRetry} isFetching={isFetching} /> : null}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <TooltipProvider>
-      <Card id="reserves" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
-        <span id="reserve-quality" aria-hidden="true" className={cn("block h-0", SECTION_SCROLL_MT)} />
-        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Reserves</StablecoinModuleTitle>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {qualitySummary ? (
-              <Badge variant="outline" className={cn(CHIP_CLASS, qualitySummary.chipToneClass)}>
-                {qualitySummary.chipLabel}
-              </Badge>
+      <EvidenceModule
+        id="reserves"
+        title="Reserves"
+        variant={variant}
+        stripForm={stripForm}
+        collapsibleOnMobile={false}
+        className="relative"
+        headerRight={headerRight}
+        visual={visual}
+        verdict={verdict}
+        chipRow={chipRow}
+        // The domain folds in fixed order; the shell closes the module with the
+        // provenance fold and footer line.
+        folds={
+          <>
+            {qualitySummary && qualitySummary.ladder.length > 0 ? (
+              <ModuleDisclosure label="Liquidity ladder">
+                <ul aria-label="Liquidity horizon ladder" className="mt-3 space-y-1.5">
+                  {qualitySummary.ladder.map((row) => (
+                    <LadderRow key={row.key} row={row} />
+                  ))}
+                </ul>
+              </ModuleDisclosure>
             ) : null}
-            {sourceChip ? (
-              <ExplainedChip
-                label={sourceChip.label}
-                tooltip={sourceChip.tooltip}
-                className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill)}
+            {qualitySummary ? <SliceDetail summary={qualitySummary} /> : null}
+            {showLiveFeed ? (
+              <LiveFeedDetail
+                slices={liveSlices}
+                datedLabel={footnote?.text ?? null}
+                note={buildReserveCompositionNote(reserves)}
+                relation={!hasReviewedBasis ? "unreviewed" : liveCompositionDiffers(liveSlices, reviewedSlices) ? "differs" : "matches"}
               />
             ) : null}
-            {feedStatus ? <FeedStatusChip status={feedStatus} /> : null}
-          </div>
-        </CardHeader>
-        <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-          {qualitySummary ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">{qualitySummary.lede}</p>
-          ) : null}
-          {hasReviewedBasis ? (
-            <ReserveTreemap slices={reviewedSlices} subject="Reviewed reserve slices" />
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                {!reserves && reserveFetchError
-                  ? "Reserve composition could not be loaded."
-                  : "No reviewed reserve composition yet."}
-              </p>
-              {!reserves && onRetry ? <RetryButton onRetry={onRetry} isFetching={isFetching} /> : null}
-            </div>
-          )}
-          <FactGrid aria-label="Reserve facts" items={facts} />
-          {qualitySummary && qualitySummary.ladder.length > 0 ? (
-            <ModuleDisclosure label="Liquidity ladder">
-              <ul aria-label="Liquidity horizon ladder" className="mt-3 space-y-1.5">
-                {qualitySummary.ladder.map((row) => (
-                  <LadderRow key={row.key} row={row} />
-                ))}
-              </ul>
-            </ModuleDisclosure>
-          ) : null}
-          {qualitySummary ? <SliceDetail summary={qualitySummary} /> : null}
-          {showLiveFeed ? (
-            <LiveFeedDetail
-              slices={liveSlices}
-              datedLabel={footnote?.text ?? null}
-              note={buildReserveCompositionNote(reserves)}
-              relation={!hasReviewedBasis ? "unreviewed" : liveCompositionDiffers(liveSlices, reviewedSlices) ? "differs" : "matches"}
-            />
-          ) : null}
-          {feedStatus ? <FeedStatusDetail status={feedStatus} onRetry={onRetry} isFetching={isFetching} /> : null}
+            {feedStatus ? <FeedStatusDetail status={feedStatus} onRetry={onRetry} isFetching={isFetching} /> : null}
+          </>
+        }
+        footer={
           <EvidenceFooter
             sources={sources}
             sourcesFootnote={sourcesFootnote}
-            trailing={qualitySummary?.reviewedAt ? `Reviewed ${qualitySummary.reviewedAt}` : footnote?.text || undefined}
-          />
-        </CardContent>
-      </Card>
+            notes={reviewNotes.length > 0 ? reviewNotes.map((note) => <p key={note}>{note}</p>) : undefined}
+            notesCount={reviewNotes.length}
+            reviewed={reviewedAt}
+            trailing={reviewedAt ? undefined : (baselineNote ?? undefined)}
+          >
+            {liveStamp ? <span>{liveStamp}</span> : null}
+          </EvidenceFooter>
+        }
+      >
+        <FactGrid aria-label="Reserve facts" items={facts} />
+      </EvidenceModule>
     </TooltipProvider>
   );
 }

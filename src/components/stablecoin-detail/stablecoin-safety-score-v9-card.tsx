@@ -6,7 +6,6 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { OpsStatusChip, PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
@@ -204,7 +203,6 @@ export function StablecoinSafetyScoreV9Card({
               </ModuleDisclosure>
             </section>
           ) : null}
-          <EvidenceFooter topic="safetyScore" />
         </div>
         <div className="mx-4 mb-5 sm:mx-5">
           <ShowYourWorkPanel
