@@ -11,6 +11,7 @@ import {
 import {
   OFF_SLOT_SCHEDULED_PRODUCERS,
   SCHEDULED_SLOT_PLANS,
+  type ScheduledWorkerRole,
 } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseAssignments } from "../lib/wrangler-toml.mjs";
@@ -23,7 +24,7 @@ import type {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const SOURCE_OWNER = {
-  wrangler: "worker/wrangler.toml [triggers.crons]",
+  wrangler: "worker/wrangler.toml + worker/wrangler.heavy.toml [triggers.crons]",
   schedules: "shared/lib/cron-jobs.ts [CRON_SCHEDULES/CRON_TRIGGER_SCHEDULES]",
   jobDefinitions: "shared/lib/cron-jobs.ts [CRON_JOB_DEFINITIONS]",
   budgetDefinitions: "shared/lib/cron-jobs.ts [CRON_CONNECTION_BUDGET_ENTRIES]",
@@ -36,6 +37,8 @@ export interface CronScheduleSyncReport {
   growthPolicy: CronGrowthTopologyPolicyForCheck;
   duplicateSlotPlanSchedules: string[];
   duplicateWranglerSchedules: string[];
+  misownedWranglerSchedules: string[];
+  workerTriggerCounts: Record<ScheduledWorkerRole, number>;
   extraPlanKeys: string[];
   failed: boolean;
   missingBudgetJobs: string[];
@@ -112,7 +115,7 @@ export function evaluateCronScheduleSync(input: {
   cronTriggerSchedules?: Readonly<Record<string, readonly string[]>>;
   growthPolicy?: CronGrowthTopologyPolicyForCheck;
   scheduledSlotPlans?: Readonly<Record<string, ScheduledSlotPlanForCheck>>;
-  wranglerCronTriggers: Iterable<string>;
+  wranglerCronTriggers: Record<ScheduledWorkerRole, Iterable<string>>;
 }): CronScheduleSyncReport {
   const cronSchedules = input.cronSchedules ?? CRON_SCHEDULES;
   const cronTriggerSchedules: Readonly<Record<string, readonly string[]>> =
@@ -124,12 +127,17 @@ export function evaluateCronScheduleSync(input: {
           )
         : CRON_TRIGGER_SCHEDULES
     );
-  const scheduledSlotPlans = input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
+  const scheduledSlotPlans: Readonly<Record<string, ScheduledSlotPlanForCheck>> =
+    input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
   const cronJobDefinitions = input.cronJobDefinitions ?? CRON_JOB_DEFINITIONS;
   const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
   const growthPolicy = input.growthPolicy ?? CRON_GROWTH_HEADROOM_POLICY;
 
-  const wranglerCronTriggers = [...input.wranglerCronTriggers];
+  const workerTriggers = {
+    public: [...input.wranglerCronTriggers.public],
+    heavy: [...input.wranglerCronTriggers.heavy],
+  };
+  const wranglerCronTriggers = [...workerTriggers.public, ...workerTriggers.heavy];
   const duplicateWranglerSchedules = findDuplicates(wranglerCronTriggers);
   const wranglerCrons = new Set(wranglerCronTriggers);
   const sharedScheduleEntries = Object.entries(cronTriggerSchedules).flatMap(
@@ -152,6 +160,12 @@ export function evaluateCronScheduleSync(input: {
     slotPlanScheduleEntries.map(([, schedule]) => schedule),
   );
 
+  const misownedWranglerSchedules = (["public", "heavy"] as const).flatMap((role) =>
+    workerTriggers[role].filter((expression) => {
+      const key = slotPlanKeyByExpression.get(expression);
+      return key != null && scheduledSlotPlans[key]?.worker !== role;
+    }).map((expression) => `${role}:${expression}`),
+  );
   const onlyInWranglerSchedules = [...wranglerCrons].filter((schedule) => !sharedCrons.has(schedule));
   const onlyInSharedSchedules = [...sharedCrons].filter((schedule) => !wranglerCrons.has(schedule));
   const onlyInSlotPlanSchedules = [...slotPlanCrons].filter((schedule) => !sharedCrons.has(schedule));
@@ -181,6 +195,7 @@ export function evaluateCronScheduleSync(input: {
 
   const failed = Boolean(
     duplicateWranglerSchedules.length ||
+    misownedWranglerSchedules.length ||
     duplicateSlotPlanSchedules.length ||
     onlyInWranglerSchedules.length ||
     onlyInSharedSchedules.length ||
@@ -201,6 +216,8 @@ export function evaluateCronScheduleSync(input: {
     extraPlanKeys,
     duplicateSlotPlanSchedules,
     duplicateWranglerSchedules,
+    misownedWranglerSchedules,
+    workerTriggerCounts: { public: workerTriggers.public.length, heavy: workerTriggers.heavy.length },
     failed,
     missingBudgetJobs,
     missingPlanKeys,
@@ -221,12 +238,16 @@ export function evaluateCronScheduleSync(input: {
 export function printCronScheduleSyncReport(report: CronScheduleSyncReport): void {
   if (!report.failed) {
     console.log(
-      `Cron schedule check passed (${report.wranglerTriggerCount} triggers match, ${report.slotPlanTriggerCount} slot plans mapped).`,
+      `Cron schedule check passed (${report.wranglerTriggerCount} union triggers: public ${report.workerTriggerCounts.public}, heavy ${report.workerTriggerCounts.heavy}; ${report.slotPlanTriggerCount} mapped).`,
     );
     return;
   }
 
   console.error("Cron schedule mismatch detected!");
+  if (report.misownedWranglerSchedules.length) {
+    console.error(`\nWrong Worker ownership in ${SOURCE_OWNER.wrangler}:`);
+    console.error(formatList(report.misownedWranglerSchedules).join("\n"));
+  }
 
   if (report.physicalTriggerLimitExceeded) {
     console.error(
@@ -335,8 +356,12 @@ function isMainModule(): boolean {
 if (isMainModule()) {
   try {
     const wranglerToml = readFileSync(join(ROOT, "worker/wrangler.toml"), "utf-8");
+    const heavyToml = readFileSync(join(ROOT, "worker/wrangler.heavy.toml"), "utf-8");
     const report = evaluateCronScheduleSync({
-      wranglerCronTriggers: parseWranglerCronTriggers(wranglerToml),
+      wranglerCronTriggers: {
+        public: parseWranglerCronTriggers(wranglerToml),
+        heavy: parseWranglerCronTriggers(heavyToml),
+      },
     });
     printCronScheduleSyncReport(report);
     if (report.failed) {

@@ -334,17 +334,17 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
-  it("admits from publication evidence when a deploy replaced the Worker version mid-quarter", async () => {
+  it.each(["worker-v1", "public-script-version"])("admits heavy V9 from current publication evidence despite core UUID %s", async (coreVersion) => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
-    // The 12:15 core slot finished ok on the previous Worker version; the
-    // publication ledger still proves this slot published the live cache.
+    // Public quarter-hour publication and heavy V9 execution have different
+    // script UUIDs; the publication ledger/time join remains the authority.
     const fixture = dbWithCoreSlot(
       {
         state: "finished",
         result_status: "ok",
-        worker_version: "worker-v1",
+        worker_version: coreVersion,
       },
       {
         published_at: Math.floor(
@@ -358,7 +358,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     }));
 
     const result = await runV9AfterCoreWithinWindow(
-      options(fixture.db, scheduledTimeMs),
+      options(fixture.db, scheduledTimeMs, { workerVersion: "heavy-script-version" }),
       run,
     );
 

@@ -1,10 +1,10 @@
 # Cron Trigger Budget Policy
 
-This policy governs the addition of new cron trigger expressions to `worker/wrangler.toml`.
+This policy governs the union of cron trigger expressions in `worker/wrangler.toml` and `worker/wrangler.heavy.toml`.
 
 ## Source Of Truth
 
-`worker/wrangler.toml` owns the deployed cron expressions. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`. Run `npm run check:cron-sync` and `npm run check:cron-connections` for the current inventory and capacity report.
+The two Wrangler configs jointly own deployed cron expressions. Each expression occurs exactly once under its public/heavy owner in `shared/lib/scheduled-runner-registry.ts` and maps to one Cloudflare scheduled invocation dispatched through `worker/src/handlers/scheduled.ts`. `shared/lib/cron-jobs.ts` remains the logical/physical schedule authority. Run `npm run check:cron-sync` and `npm run check:cron-connections` for the aggregate inventory and capacity report.
 
 The platform header-wait limit and the stricter trigger-wide budget Pharos applies on top of it are stated once, in `docs/worker-and-api-limits.md` under "Connection-budget operating assumption". How that budget is measured and applied per slot is in `docs/worker-infrastructure.md`, section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget".
 
@@ -17,6 +17,8 @@ The growth gate and current counts are owned by `CRON_GROWTH_HEADROOM_POLICY` an
 ### Current growth gate
 
 The gate has three reviewed ceilings — physical trigger expressions, fetch-capable scheduled entries, and headroom-full (`5/6`) slots — and their current values live in `CRON_GROWTH_HEADROOM_POLICY` (`shared/lib/cron-jobs.ts`). Read them there rather than from prose; changing one is a policy change, not a routine schedule edit. ADR-22 isolates the D1-only DDR heap and pairs the critical mint/burn cadence; ADR-23 applies the same hourly-alias correction to the extended mint/burn lane after same-version production abandonments proved that its combined sub-hourly expression was still CPU-bound. Neither change increases logical work, fetch-capable entries, or connection pressure. `npm run check:cron-sync` rejects a physical trigger past the reviewed count, and `npm run check:cron-connections` rejects a fetch-capable entry count or a headroom-full (`5/6`) trigger count above the reviewed ceilings in `CRON_GROWTH_HEADROOM_POLICY`.
+
+ADR-38 redistributes existing work across public and heavy scripts; it adds zero expressions, logical work or fetch-capable entries. All growth ceilings apply to the union, never independently per script. Reserve sync and recovery remain public pending `M0_API_KEY`; only publication, charts/preparation and supply attribution move to heavy.
 
 The 2026-10-07 redemption review found `sync-redemption-backstops` declared `maxConnections: 0` while its source observes the earnUSD redemption queue over RPC (measured serial peak 1). Correcting the declaration moved the reviewed fetch-capable entry count by one without adding logical work, triggers, or per-trigger pressure (the four-hour reserve slot stays `3/6`, recovery `2/6`); the ceiling note in `CRON_GROWTH_HEADROOM_POLICY` records it as an accounting correction, not growth.
 
@@ -49,7 +51,7 @@ When proposing a new cron job:
 ## Enforcement
 
 - `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails on missing or stale schedule-bound budget rows, when any trigger is at or above `6/6`, when a third `5/6` slot is introduced, or when the fetch-capable scheduled-entry count passes `maxFetchCapableEntriesBeforeRebalance` in `CRON_GROWTH_HEADROOM_POLICY`.
-- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps the raw `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, rejects duplicate Wrangler or slot-plan trigger expressions before set comparison, and rejects growth beyond the reviewed physical-trigger count in `CRON_GROWTH_HEADROOM_POLICY`.
+- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps the duplicate-free union of both Wrangler configs aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, rejects omitted, duplicate or misowned expressions, and enforces the unchanged aggregate physical-trigger gate in `CRON_GROWTH_HEADROOM_POLICY`.
 
 ## Workflow and Queue Review Outcome (ADR-26)
 

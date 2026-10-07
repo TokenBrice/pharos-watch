@@ -168,6 +168,7 @@ The active frontend operator mode is now:
   - `Actions`: searchable intent/risk catalog with one shared execution dialog, direct dry runs where supported, structured results, and persistent action history
   - `Comms`: delivery-first Telegram operations followed by separate audience coverage
   - `History`: window, severity, surface, cause, and public-impact filters plus correlated incident, action, and credential activity
+  - History renders independent public/heavy script names, verified version UUIDs and activation times from `workerVersions`, never the latest producer-head singleton. Missing markers explicitly show unavailable; deployment commit/ID and causal transition attribution remain Unknown.
   - `API Management`: attention-first, searchable, filterable, sortable, paginated credential inventory with one selected-row editor and one-time token acknowledgement
 - Workspace order is stable for operator muscle memory: `Triage`, `Pipeline`, `Reliability`, `Crons`, `Actions`, `Comms`, `History`, and `API Management`. Urgency stays in Triage rather than reordering navigation.
 
@@ -184,6 +185,8 @@ Probe groups are sourced from `shared/lib/api-endpoints/`:
 ## Backend Contract (`GET /api/status`)
 
 Source: `worker/src/api/status.ts`
+
+`workerVersions: { public: Marker | null, heavy: Marker | null }` is owned by `shared/types/status/response.ts`. Each marker is `{ scriptName, workerVersion, activatedAt }`, read directly from the deploy-verified `worker-active-version:<role>` cache key by `getActiveWorkerVersionMarker()` in `worker/src/lib/worker-version-first-seen.ts`. Missing/malformed evidence is null; failed D1 reads add the named `sectionErrors.workerVersions` / `worker_versions_query_failed` error, never a latest-run guess. Per-run `workerVersion` scalars remain execution UUIDs. Scheduler liveness lanes, query, thresholds and the GitHub monitor are unchanged.
 
 The [history endpoint](#history-endpoint-get-apistatus-history) owns timeline responses and completeness evidence.
 
@@ -486,6 +489,7 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
+- `workerVersions`: independently verified public/heavy activation markers; nullable evidence, not inferred current execution versions.
 - `/api/status` intentionally omits the legacy top-level `gtProbe`, `priceProviderDiagnostics`, `cacheBlobSizes`, and `alertBroker` projections. The alert-broker summary is no longer published on any surface: `assessPublicHealth` keeps an empty compatibility object (only `alertBrokerImpactStatus` still feeds status evaluation) and `buildPublicHealthResponse` does not serialize it to `/api/health`
 
 ### Cron error escalation

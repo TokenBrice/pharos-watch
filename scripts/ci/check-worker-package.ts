@@ -16,14 +16,17 @@ interface WorkerPackageOptions {
 
 export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {}): WorkerPackageRunResult {
   const repoRoot = process.cwd();
-  const outputDirectory = resolve(repoRoot, ".cache/release-check/worker-bundle");
-  rmSync(outputDirectory, { force: true, recursive: true });
-  const result = run(
-    "npx",
-    ["--no-install", "wrangler", "deploy", "--dry-run", "--outdir", outputDirectory],
-    { cwd: resolve(repoRoot, "worker"), stdio: "inherit" },
-  );
-  return { status: result.status ?? (result.error ? 1 : 0) };
+  for (const [role, config] of [["public", "wrangler.toml"], ["heavy", "wrangler.heavy.toml"]]) {
+    const outputDirectory = resolve(repoRoot, `.cache/release-check/worker-bundle-${role}`);
+    rmSync(outputDirectory, { force: true, recursive: true });
+    const result = run(
+      "npx",
+      ["--no-install", "wrangler", "deploy", "--config", config, "--dry-run", "--outdir", outputDirectory],
+      { cwd: resolve(repoRoot, "worker"), stdio: "inherit" },
+    );
+    if (result.error || result.status !== 0) return { status: result.status ?? 1 };
+  }
+  return { status: 0 };
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

@@ -55,6 +55,12 @@ describe("normalizeChangedFiles", () => {
 });
 
 describe("hasWorkerDeployImpact", () => {
+  it.each(["worker/wrangler.toml", "worker/wrangler.heavy.toml", "worker/src/index.heavy.ts"])(
+    "selects the paired Worker release for %s",
+    (file) => {
+      expect(classifyChangedFiles([file])).toMatchObject({ workerChanged: true, workerDeployRequired: true });
+    },
+  );
   it("returns false for frontend-only changes", () => {
     expect(hasWorkerDeployImpact(["src/app/page.tsx", "src/components/header.tsx", "docs/testing.md"])).toBe(false);
   });

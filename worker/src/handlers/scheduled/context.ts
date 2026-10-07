@@ -1,5 +1,5 @@
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { getScheduledTaskDescriptor } from "@shared/lib/scheduled-runner-registry";
+import { getScheduledTaskDescriptor, SCHEDULED_SLOT_PLANS, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 import {
   createLeaseOwner,
   runCronWithLease,
@@ -18,7 +18,7 @@ import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provi
 import { createDwellirNativeCapability, type DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
-import { parseCsvEnv, type Env } from "../../lib/env";
+import { parseCsvEnv, type ScheduledEnv } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
   type MintBurnFreshnessConfig,
@@ -115,10 +115,11 @@ function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promis
 
 export interface ScheduledRuntimeContext {
   db: D1Database;
-  env: Env;
+  env: ScheduledEnv;
   ctx: ExecutionContext;
   cron: string;
   scheduleKey: CronScheduleKey;
+  workerRole?: ScheduledWorkerRole;
   scheduledTimeMs: number | null;
   slotStartedAt: number;
   slotSignal?: AbortSignal;
@@ -208,6 +209,7 @@ export function parseStablecoinsCapabilities(
 export interface ScheduledRuntimeInit {
   cron: string;
   scheduleKey: CronScheduleKey;
+  workerRole?: ScheduledWorkerRole;
   scheduledTimeMs: number | null;
   slotStartedAt: number;
   slotBudgetStartedAtMs?: number;
@@ -218,7 +220,7 @@ export interface ScheduledRuntimeInit {
 }
 
 export function createScheduledRuntimeContext(
-  env: Env,
+  env: ScheduledEnv,
   ctx: ExecutionContext,
   scheduled: ScheduledRuntimeInit,
 ): ScheduledRuntimeContext {
@@ -242,6 +244,7 @@ export function createScheduledRuntimeContext(
     ctx,
     cron: scheduled.cron,
     scheduleKey: scheduled.scheduleKey,
+    workerRole: scheduled.workerRole ?? SCHEDULED_SLOT_PLANS[scheduled.scheduleKey].worker,
     scheduledTimeMs: scheduled.scheduledTimeMs,
     slotStartedAt: scheduled.slotStartedAt,
     slotBudgetStartedAtMs,

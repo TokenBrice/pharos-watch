@@ -13,7 +13,6 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import {
   DEFAULT_INCIDENT_HISTORY_QUERY,
   buildIncidentHistoryUrl,
-  deriveWorkerVersionEvidence,
   parseIncidentHistoryQuery,
   type IncidentHistoryFilters,
   type IncidentHistoryQuery,
@@ -112,14 +111,13 @@ export default function HistoryClient() {
                 completeness: "unknown" as const,
                 message: "History is loading; showing only transitions included in the current status response.",
               };
-        const workerVersionEvidence = deriveWorkerVersionEvidence(data);
         return (
           <HistorySection
             allTransitions={allTransitions}
             latestTransition={allTransitions[0] ?? null}
             reserveComposition={data.reserveComposition}
             releaseMetadataState={releaseMetadataState}
-            workerVersionEvidence={workerVersionEvidence}
+            workerVersions={data.workerVersions}
             adminActionLog={{
               entries: adminActionLogQuery.data?.entries ?? [],
               error: adminActionLogQuery.error,

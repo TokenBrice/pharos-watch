@@ -1,3 +1,5 @@
+import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+
 export interface CronJobDefinitionForCheck {
   job: string;
 }
@@ -31,6 +33,7 @@ export interface CronGrowthHeadroomPolicyForCheck {
 }
 
 export interface ScheduledSlotPlanForCheck {
+  worker: ScheduledWorkerRole;
   schedule?: string;
   triggerSchedules?: readonly string[];
   jobChains: readonly (readonly string[])[];

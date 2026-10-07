@@ -162,6 +162,7 @@ const NEXT_APP_ROUTE_BASENAMES: Record<string, true> = {
 const ROOT_ENTRYPOINT_PATTERNS = [
   /^functions\//,
   /^worker\/src\/index\.ts$/,
+  /^worker\/src\/index\.heavy\.ts$/,
   /^worker\/src\/handlers\/scheduled\.ts$/,
 ];
 

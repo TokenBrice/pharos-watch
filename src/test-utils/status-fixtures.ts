@@ -151,6 +151,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
   return {
     timestamp: 1_700_000_000,
     dbHealthy: true,
+    workerVersions: { public: null, heavy: null },
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
     rawOverallStatus: "healthy",
