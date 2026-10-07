@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import type { UseQueryResult } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,9 +11,10 @@ import { FreezeSeizureModule, type FreezeSeizureModuleProps } from "../freeze-se
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
 import type { TransferReviewView } from "@/lib/transfer-review";
+import type { ApiQueryWithMetaResult } from "@/hooks/use-api-query";
 import type { BlacklistSummaryResponse } from "@shared/types";
 
-type UsageResult = UseQueryResult<BlacklistSummaryResponse, Error>;
+type UsageResult = ApiQueryWithMetaResult<BlacklistSummaryResponse>;
 
 const SUMMARY: BlacklistabilityClientSummary = {
   status: "freezable",
