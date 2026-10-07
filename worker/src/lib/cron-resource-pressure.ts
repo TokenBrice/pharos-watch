@@ -1,5 +1,15 @@
 import { ResourcePressureSchema, type ResourcePressure } from "@shared/types/status/cron";
 
+/** Select valid evidence by its observation clock; the candidate wins ties. */
+export function selectLatestResourcePressure(
+  current: ResourcePressure | null,
+  candidate: unknown,
+): ResourcePressure | null {
+  const parsed = ResourcePressureSchema.safeParse(candidate);
+  return parsed.success && (!current || parsed.data.observedAt >= current.observedAt)
+    ? parsed.data : current;
+}
+
 /** Estimates and intake evidence only: Workers exposes no usable heap API. */
 export function buildResourcePressure(
   input: Partial<ResourcePressure> & { cacheBypassed?: boolean } = {},

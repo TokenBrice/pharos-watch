@@ -12,6 +12,7 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import type { RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
@@ -270,12 +271,14 @@ export async function syncRedemptionBackstops(
   // every snapshot it could resolve, so it travels as quality, not a degraded run.
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
-  const runMetadata: CronMetadataRecord = {
+  const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
     reserveViewSchemaVersion: 1,
     reserveGenerationId: acceptedReserveGeneration.generationId,
     reserveContentSha256: acceptedReserveGeneration.contentSha256,
     runClockSec: now,
-    consumedReserveInputs: Object.fromEntries(snapshots.filter((entry) => entry.reserveInput).map((entry) => [entry.stablecoinId, entry.reserveInput])),
+    consumedReserveInputs: Object.fromEntries(
+      snapshots.flatMap((entry) => entry.reserveInput ? [[entry.stablecoinId, entry.reserveInput]] : []),
+    ),
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,

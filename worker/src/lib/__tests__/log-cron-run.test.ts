@@ -30,6 +30,19 @@ describe("logCronRun", () => {
     expect(JSON.parse(row.metadata).resourcePressure).toEqual(offset < 0 ? progress : terminal);
   });
 
+  it("retains valid progress evidence when later progress or terminal evidence is invalid", async () => {
+    const { sqlite, db } = fixtures.open();
+    const pressure = buildResourcePressure({ phase: "decode", observedAt: 100, intakeBytes: 4 });
+    const invalid = { ...pressure, observedAt: -1 };
+    await logCronRun(db, "test-job", async (_signal, report) => {
+      await report({ stage: "decode", metadata: { resourcePressure: pressure } });
+      await report({ stage: "publish", metadata: { resourcePressure: invalid } });
+      return { metadata: JSON.stringify({ resourcePressure: invalid }) };
+    });
+    const row = sqlite.prepare("SELECT metadata FROM cron_runs").get() as { metadata: string };
+    expect(JSON.parse(row.metadata).resourcePressure).toEqual(pressure);
+  });
+
   it("retains coalesced evidence on throw without refreshing its observation clock", async () => {
     const { sqlite, db } = fixtures.open();
     const first = buildResourcePressure({ phase: "intake", observedAt: 100, intakeBytes: 2 });

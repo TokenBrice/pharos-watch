@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -279,6 +280,35 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.currentMirroredCount).toBeUndefined();
     expect(typeof metadata.registryHash).toBe("string");
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
+  });
+
+  it("records only consumed reserve inputs using the shared sealed-input schema", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const reserveInput = ConsumedReserveInputSchema.parse({
+      generationId: "reserve:1700000000:test",
+      contentSha256: "a".repeat(64),
+      stablecoinId: "cusd-cap",
+      attemptId: "accepted-attempt",
+      configFingerprint: null,
+      freshness: {
+        stale: false, staleReasons: [], assessedAt: now, fetchedAt: now - 60,
+        attemptId: "accepted-attempt", fetchAgeSec: 60, fetchBudgetSec: 172800,
+        sourceTimestamp: null, sourceAgeSec: null, sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
+      },
+    });
+    resolveRedemptionBackstopEntryMock
+      .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", now, { reserveInput }))
+      .mockResolvedValueOnce(makeResolvedSnapshot("iusd-infinifi", now));
+
+    // Load after the non-hoisted mock functions initialize; a static import would run their factories too early.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const metadata = RedemptionReserveRunMetadataSchema.parse(JSON.parse(result.metadata ?? "{}"));
+
+    expect(metadata.consumedReserveInputs).toEqual({ "cusd-cap": reserveInput });
+    expect(metadata.consumedReserveInputs).not.toHaveProperty("iusd-infinifi");
+    expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.consumedReserveInputs)
+      .toEqual(metadata.consumedReserveInputs);
   });
 
   it("propagates snapshot write failures without reporting successful metadata", async () => {

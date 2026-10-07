@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildResourcePressure } from "../cron-resource-pressure";
+import { buildResourcePressure, selectLatestResourcePressure } from "../cron-resource-pressure";
 
 describe("buildResourcePressure", () => {
   it("distinguishes unavailable measurements from measured zero and never claims heap", () => {
@@ -24,5 +24,22 @@ describe("buildResourcePressure", () => {
     expect(() => buildResourcePressure({ intakeBytes: -1 })).toThrow();
     expect(() => buildResourcePressure({ observedAt: Infinity })).toThrow();
     expect(() => buildResourcePressure({ platformOutcome: "platform-abandoned" })).toThrow();
+  });
+});
+
+describe("selectLatestResourcePressure", () => {
+  it.each([-1, 0, 1])("selects valid candidates only when equally recent or newer (%s)", (offset) => {
+    const current = buildResourcePressure({ phase: "decode", observedAt: 100 });
+    const candidate = buildResourcePressure({ phase: "publish", observedAt: 100 + offset });
+    expect(selectLatestResourcePressure(current, candidate)).toEqual(offset < 0 ? current : candidate);
+    expect(selectLatestResourcePressure(null, candidate)).toEqual(candidate);
+  });
+
+  it("retains current evidence or absence when a candidate fails the schema", () => {
+    const current = buildResourcePressure({ observedAt: 100 });
+    for (const candidate of [undefined, null, {}, { ...current, observedAt: -1 }]) {
+      expect(selectLatestResourcePressure(current, candidate)).toBe(current);
+      expect(selectLatestResourcePressure(null, candidate)).toBeNull();
+    }
   });
 });

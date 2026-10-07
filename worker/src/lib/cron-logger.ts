@@ -1,6 +1,6 @@
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
-import { ResourcePressureSchema, type CronResultStatus, type ResourcePressure } from "@shared/types/status/cron";
+import type { CronResultStatus, ResourcePressure } from "@shared/types/status/cron";
 import { sleep } from "./abort";
 import {
   CRON_ABANDONED_JOB_GRACE_MS,
@@ -28,7 +28,7 @@ import { sanitizeBoundedMetadata } from "./sensitive-metadata";
 import { compactCronMetadataForPersistence } from "./cron-metadata-persistence";
 import { parseJsonObject } from "./json-parse";
 import { confirmedCronOutputAt } from "./cron-output";
-import { buildResourcePressure } from "./cron-resource-pressure";
+import { buildResourcePressure, selectLatestResourcePressure } from "./cron-resource-pressure";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
@@ -471,10 +471,7 @@ export async function logCronRun(
   let latestResourcePressure: ResourcePressure | null = null;
   const reportProgress: CronProgressReporter = (update) => {
     // Keep valid evidence even when this job skips D1 progress or coalesces this update.
-    const pressure = ResourcePressureSchema.safeParse(update.metadata?.resourcePressure);
-    if (pressure.success && (!latestResourcePressure || pressure.data.observedAt >= latestResourcePressure.observedAt)) {
-      latestResourcePressure = pressure.data;
-    }
+    latestResourcePressure = selectLatestResourcePressure(latestResourcePressure, update.metadata?.resourcePressure);
     if (shouldSkipCronProgress(job)) return progressWriteTail;
     progressActivated = true;
     progressState = {
@@ -564,10 +561,8 @@ export async function logCronRun(
     const resultStatus = resolvedResult?.status ?? "ok";
     const completedAt = Math.floor(Date.now() / 1000);
     const parsedMetadata = parseJsonObject(resolvedResult?.metadata);
-    const resultPressure = ResourcePressureSchema.safeParse(parsedMetadata?.resourcePressure);
-    const resourcePressure = resultPressure.success
-      && (!latestResourcePressure || resultPressure.data.observedAt >= latestResourcePressure.observedAt)
-      ? resultPressure.data : latestResourcePressure ?? buildResourcePressure();
+    const resourcePressure = selectLatestResourcePressure(latestResourcePressure, parsedMetadata?.resourcePressure)
+      ?? buildResourcePressure();
     outputPublishedAt = confirmedCronOutputAt(resolvedResult, parsedMetadata, completedAt);
     productivity = inferCronProductivity(resolvedResult, parsedMetadata, outputPublishedAt);
     const publicationCount = productivity.publications?.length ?? 0;
@@ -660,10 +655,8 @@ export async function logCronRun(
     }
     const classifiedError = classifyError(e);
     const errorMetadata = parseJsonObject(serializeTerminalCronMetadata(e, classifiedError)) ?? {};
-    const errorPressure = ResourcePressureSchema.safeParse(errorMetadata.resourcePressure);
-    const resourcePressure = errorPressure.success
-      && (!latestResourcePressure || errorPressure.data.observedAt >= latestResourcePressure.observedAt)
-      ? errorPressure.data : latestResourcePressure ?? buildResourcePressure();
+    const resourcePressure = selectLatestResourcePressure(latestResourcePressure, errorMetadata.resourcePressure)
+      ?? buildResourcePressure();
     const terminalMetadata = compactCronMetadataForPersistence(JSON.stringify({
       ...errorMetadata, resourcePressure,
     })).metadata;
