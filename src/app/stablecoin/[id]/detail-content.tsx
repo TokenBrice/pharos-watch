@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReactNode, Ref, RefObject } from "react";
 import Link from "next/link";
-import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles } from "lucide-react";
+import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
 import { AiSummary } from "@/components/ai-summary";
 import { BackToSource } from "@/components/back-to-source";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
@@ -23,6 +23,7 @@ import { AccessPosturePanel } from "@/components/stablecoin-detail/access-postur
 import { BackingMetricsCard, type BackingMetricsInput } from "@/components/stablecoin-detail/backing-metrics-card";
 import { ControlRoleTag } from "@/components/stablecoin-detail/control-role-tag";
 import { EvidenceStateStrip } from "@/components/stablecoin-detail/evidence-module";
+import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
@@ -56,7 +57,10 @@ import { DetailRiskContextSections } from "./detail-risk-context-sections";
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
 const DETAIL_SECTIONS = [
-  { id: "overview", label: "Risk", icon: Scale },
+  // "How it breaks" is interleaved inside the Risk zone, directly under the
+  // score, so Risk resumes at the marker below that module.
+  { id: "overview", label: "Risk", icon: Scale, resumeAnchorIds: ["risk-evidence-resume"] },
+  { id: "how-it-breaks", label: "How it breaks", icon: Unlink },
   { id: "context", label: "Context", icon: ChartPie },
   { id: "liquidity", label: "Market", icon: Droplet },
   { id: "activity", label: "Activity", icon: HeartPulse },
@@ -80,6 +84,8 @@ interface DetailContentProps {
   /** A pure or savings pass-through wrapper's parent, built server-side, for the Backing KPI look-through. */
   backingParent: NonNullable<BackingMetricsInput["parent"]> | null;
   transferReview: TransferReviewView | null;
+  /** The coin's publishable failure scenario; null drops the pill and the section. */
+  failureScenario: FailureScenarioSelection | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -145,19 +151,23 @@ function hasContextZoneContent(viewModel: ReadyDetailViewModel, hasVariantCard: 
 
 function DetailNavigation({
   contextHasContent,
+  hasFailureScenario,
   onActiveChange,
   viewModel,
 }: {
   contextHasContent: boolean;
+  hasFailureScenario: boolean;
   onActiveChange: (id: string) => void;
   viewModel: ReadyDetailViewModel;
 }) {
   return (
     <LongformScrollspyNav
-      sections={DETAIL_SECTIONS.filter((section) =>
-        section.id === "activity"
-          ? viewModel.hasYieldSection || viewModel.hasBlacklist
-          : section.id !== "context" || contextHasContent)}
+      sections={DETAIL_SECTIONS.filter((section) => {
+        if (section.id === "activity") return viewModel.hasYieldSection || viewModel.hasBlacklist;
+        if (section.id === "context") return contextHasContent;
+        if (section.id === "how-it-breaks") return hasFailureScenario;
+        return true;
+      })}
       railLabel="Jump to"
       navAriaLabel="Stablecoin detail section navigation"
       emphasis="pill-tabs"
@@ -333,6 +343,7 @@ export function DetailContent({
   parentLiquidationEngine,
   backingParent,
   transferReview,
+  failureScenario,
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
@@ -423,6 +434,7 @@ export function DetailContent({
               for the whole dossier rather than ending with a wrapper. */}
           <DetailNavigation
             contextHasContent={contextHasContent}
+            hasFailureScenario={failureScenario !== null}
             onActiveChange={onActiveBannerChange}
             viewModel={viewModel}
           />
@@ -434,6 +446,7 @@ export function DetailContent({
               mechanismBacking={mechanismBacking}
               parentLiquidationEngine={parentLiquidationEngine}
               sharedModules={sharedModules}
+              failureScenario={failureScenario}
               transferReview={transferReview}
               overviewGateRef={overviewGateRef}
               variantRelationshipCard={variantRelationshipCard}

@@ -101,6 +101,7 @@ export function EvidenceFooter({
   showWorkToggle = false,
   sources,
   sourcesLabel = "Sources",
+  numberedSources = false,
   sourcesFootnote,
   notes,
   notesCount,
@@ -116,6 +117,11 @@ export function EvidenceFooter({
   sources?: readonly EvidenceFooterSource[];
   /** Fold label when there are no notes. */
   sourcesLabel?: string;
+  /**
+   * Numbers the list (`<ol>`, 1-based in `sources` order) for a module whose
+   * body cites its sources by number, e.g. the failure scenario's steps.
+   */
+  numberedSources?: boolean;
   /** Rendered under the source list inside the fold, e.g. a provenance line. */
   sourcesFootnote?: ReactNode;
   /** Reviewer narrative, folded together with the sources. */
@@ -174,6 +180,7 @@ export function EvidenceFooter({
     </span>
   ) : null;
 
+  const SourceList = numberedSources ? "ol" : "ul";
   const fold = hasFold ? (
     <ModuleDisclosure
       id={foldId}
@@ -190,10 +197,16 @@ export function EvidenceFooter({
       <div className="mt-2 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">
         {hasNotes ? <div className="space-y-2">{notes}</div> : null}
         {hasSources ? (
-          <ul aria-label={sourcesLabel} className="space-y-2">
-            {sources?.map((source) => (
+          <SourceList aria-label={sourcesLabel} className="space-y-2">
+            {sources?.map((source, index) => (
               <li key={`${source.label}:${source.url}`} className="flex min-w-0 gap-2">
-                <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                {numberedSources ? (
+                  <span aria-hidden="true" className="pharos-numeric w-5 shrink-0 text-right text-foreground/70">
+                    {index + 1}
+                  </span>
+                ) : (
+                  <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                )}
                 <span className="min-w-0">
                   <a
                     href={source.url}
@@ -207,7 +220,7 @@ export function EvidenceFooter({
                 </span>
               </li>
             ))}
-          </ul>
+          </SourceList>
         ) : null}
         {hasSources && sourcesFootnote ? <div>{sourcesFootnote}</div> : null}
       </div>

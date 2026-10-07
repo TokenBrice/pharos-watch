@@ -20,6 +20,7 @@ import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
+import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import {
@@ -80,6 +81,8 @@ interface StablecoinDetailClientProps {
   /** A pure or savings pass-through wrapper's parent, for the Backing KPI's "via <parent>" look-through. */
   backingParent?: NonNullable<BackingMetricsInput["parent"]> | null;
   transferReview?: TransferReviewView | null;
+  /** The coin's publishable failure scenario (a marked draft in development), or null. */
+  failureScenario?: FailureScenarioSelection | null;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
@@ -119,6 +122,7 @@ function StablecoinDetailClientContent({
   parentLiquidationEngine = null,
   backingParent = null,
   transferReview = null,
+  failureScenario = null,
   exploreNextContent = null,
   faqContent = null,
   archivedLiveSummary = null,
@@ -194,6 +198,7 @@ function StablecoinDetailClientContent({
         parentLiquidationEngine={parentLiquidationEngine}
         backingParent={backingParent}
         transferReview={transferReview}
+        failureScenario={failureScenario}
         onFeedbackOpenChange={setFeedbackOpen}
         overviewGateRef={overviewGateRef}
         viewModel={viewModel}

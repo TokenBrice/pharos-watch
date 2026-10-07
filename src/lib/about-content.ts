@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Skull,
   TrendingUp,
+  Unlink,
   type LucideIcon,
 } from "lucide-react";
 import { CAUSE_LABEL_LIST } from "@shared/lib/cause-of-death";
@@ -221,6 +222,12 @@ export function getTrackedFeatures({
       icon: Skull,
       href: "/cemetery/",
       linkLabel: "Open cemetery",
+    },
+    {
+      title: "Failure scenarios",
+      description:
+        "On selected coins, a curated narrative of one hypothetical way the coin could break: each step, the safeguard missing at it, who could stop it, and what would invalidate the story. Every scenario is approved by a maintainer and re-checked on a schedule. It is not a simulator and never changes a Safety Score.",
+      icon: Unlink,
     },
     {
       title: "FreezeWatch",
