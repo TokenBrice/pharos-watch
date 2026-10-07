@@ -36,6 +36,8 @@ async function seed(mismatches = 1) {
   const fetch = mockLiveReserveAdapterRegistry(good);
   const fixture = fixtures.open();
   fixture.sqlite.function("unixepoch", () => Math.floor(Date.now() / 1000));
+  // SQL deadline fences and JS admission must share the fixture's advancing clock.
+  fixture.sqlite.function("julianday", (_time: string) => Date.now() / 86_400_000 + 2_440_587.5);
   fixture.sqlite.prepare(`INSERT INTO cron_slot_executions
     (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, finished_at, updated_at)
     VALUES ('fourHourlyReserveSync', ?, 'finished', 'producer', 1, ?, ?, ?)`)

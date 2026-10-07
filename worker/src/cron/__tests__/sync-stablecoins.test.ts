@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, type MockRoute } from "@shared/test-utils/mock-fetch";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import type { StablecoinMeta } from "@shared/types";
+import type * as FetchRetry from "../../lib/fetch-retry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import {
@@ -71,7 +72,10 @@ vi.mock("../../lib/authoritative-price-sources", () => ({
   fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
 }));
 vi.mock("../../lib/resolve-market-cap", () => ({ resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0) }));
-vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
+vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
+  ...mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }),
+}));
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 vi.mock("../../lib/coingecko", () => ({
   cgUrl: vi.fn((path: string) => `https://api.coingecko.com${path}`),
@@ -105,17 +109,7 @@ function fallbackCoinGeckoData(): Record<string, { usd: number; usd_market_cap: 
 }
 
 function throwingDlResponse(): Response {
-  const response: Partial<Response> = {
-    ok: true,
-    status: 200,
-    headers: new Headers({ "Content-Type": "application/json" }),
-    json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
-    text: () => Promise.resolve("truncated{"),
-    body: null,
-    bodyUsed: false,
-    clone: () => throwingDlResponse(),
-  };
-  return response as Response;
+  return new Response("truncated{", { headers: { "Content-Type": "application/json" } });
 }
 
 describe("syncStablecoins", () => {

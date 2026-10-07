@@ -5,6 +5,7 @@ import type {
 } from "../../handlers/scheduled/slot-groups";
 import type { ScheduledRuntimeContext } from "../../handlers/scheduled/context";
 import type { CronResult } from "../../lib/cron-logger";
+import type * as V9SlotWindow from "../../lib/v9-slot-window";
 import { buildScheduledSlotSummary, summarizeCronResult } from "../../handlers/scheduled/slot-summary";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
@@ -32,9 +33,10 @@ vi.mock("../../handlers/scheduled/slot-groups", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/v9-slot-window", () => ({
-  runV9AfterCoreWithinWindow,
-}));
+vi.mock("../../lib/v9-slot-window", async (importOriginal) => {
+  const actual = await importOriginal<typeof V9SlotWindow>();
+  return { ...actual, runV9AfterCoreWithinWindow };
+});
 
 vi.mock("../../cron/compute-safety-score-v9", () => ({
   computeSafetyScoreV9,
@@ -104,7 +106,7 @@ describe("V9 publication Workflow trigger", () => {
     expect(order).toEqual(["cron", "workflow"]);
     // The Workflow reads its slot from params; the id stays deterministic for
     // idempotency, but is not the input channel.
-    expect(workflow.create).toHaveBeenCalledWith({
+    expect(workflow.create).toHaveBeenCalledExactlyOnceWith({
       id: "v9-publication-1788433200",
       params: { slotStartedAt: 1788433200 },
     });
@@ -142,10 +144,14 @@ describe("V9 publication Workflow trigger", () => {
     expect(workflow.create).toHaveBeenCalledOnce();
   });
 
-  it("does not shadow an identity-bearing cadence deferral", async () => {
+  it("does not shadow an identity-bearing deployment recapture deferral", async () => {
     computeSafetyScoreV9.mockResolvedValue({
       status: "skipped_neutral",
-      metadata: JSON.stringify({ sourceGenerationId: "source", baseInputGenerationId: "base" }),
+      metadata: JSON.stringify({
+        sourceGenerationId: "source",
+        baseInputGenerationId: "base",
+        reason: "v9-evaluator-changed-recapture-pending",
+      }),
     });
     const workflow = { create: vi.fn(), get: vi.fn() };
     await runV9PublicationSlot(runtimeWith("shadow", workflow));
@@ -160,6 +166,22 @@ describe("V9 publication Workflow trigger", () => {
     const workflow = { create: vi.fn(), get: vi.fn() };
     await runV9PublicationSlot(runtimeWith("shadow", workflow));
     expect(workflow.create).not.toHaveBeenCalled();
+  });
+
+  it.each(["22", "52"])("creates exactly one shadow instance for the :%s slot", async (minute) => {
+    const workflow = { create: vi.fn(), get: vi.fn() };
+    const runtime = runtimeWith("shadow", workflow);
+    runtime.scheduledTimeMs = Date.parse(`2026-10-07T12:${minute}:00Z`);
+    runtime.slotStartedAt = Math.floor(runtime.scheduledTimeMs / 1_000);
+
+    await runV9PublicationSlot(runtime);
+
+    expect(computeSafetyScoreV9).toHaveBeenCalledOnce();
+    expect(workflow.create).toHaveBeenCalledExactlyOnceWith({
+      id: `v9-publication-${runtime.slotStartedAt}`,
+      params: { slotStartedAt: runtime.slotStartedAt },
+    });
+    expect(workflow.get).not.toHaveBeenCalled();
   });
 
   it("treats an existing deterministic instance as a duplicate no-op", async () => {
@@ -177,6 +199,7 @@ describe("V9 publication Workflow trigger", () => {
     );
 
     expect(result).toMatchObject({ jobsRun: 1, jobsSucceeded: 1 });
+    expect(workflow.create).toHaveBeenCalledOnce();
     expect(workflow.get).toHaveBeenCalledWith(
       "v9-publication-1788433200",
     );
