@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { initMetrics } from "../pool-helpers";
+import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeouts";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   V2_ENRICHMENT_MAX_WALL_MS,
@@ -50,7 +51,7 @@ function makeEnrichment(options: {
 }): {
   pool: PoolEntry;
   fetchMulticall: ReturnType<typeof vi.fn>;
-  run: (extra?: { slotStartedAtSec?: number }) => Promise<void>;
+  run: (extra?: { deadline?: SlotDeadline }) => Promise<void>;
 } {
   const candidate = replayCandidate(REPLAY);
   const metric = initMetrics(REPLAY.assetId, REPLAY.stablecoinSymbol);
@@ -73,7 +74,7 @@ function makeEnrichment(options: {
       return results;
     },
   );
-  const run = (extra: { slotStartedAtSec?: number } = {}) =>
+  const run = (extra: { deadline?: SlotDeadline } = {}) =>
     enrichEvmV2ExecutionModels({
       metrics: new Map([[metric.stablecoinId, metric]]),
       chainAddressToId,
@@ -159,11 +160,10 @@ describe("EVM V2 verification transport classification", () => {
     vi.useFakeTimers();
     const nowMs = Date.now();
     try {
-      // A slot start far in the past makes the resolved deadline expired, so
-      // the batch loop must gate every probe without issuing any multicall.
-      const expiredSlotSec = Math.floor(nowMs / 1000) - 3_600;
+      // An expired executing event gates probes without issuing multicalls.
+      const deadline = createSlotDeadline(nowMs - 3_600_000);
       const harness = makeEnrichment({});
-      await harness.run({ slotStartedAtSec: expiredSlotSec });
+      await harness.run({ deadline });
 
       expect(harness.fetchMulticall).not.toHaveBeenCalled();
       expect(harness.pool.extra?.executionCapabilityGate).toEqual({
@@ -191,18 +191,18 @@ describe("EVM V2 verification transport classification", () => {
     }
   });
 
-  it("resolves the enrichment deadline as the earlier of the slot budget and the loop cap", () => {
-    const nowMs = Date.now();
-    vi.spyOn(Date, "now").mockReturnValue(nowMs);
-    const slotSec = Math.floor(nowMs / 1000);
-    const withSlot = resolveV2EnrichmentDeadlineMs(slotSec);
-    expect(withSlot).toBeLessThanOrEqual(nowMs + V2_ENRICHMENT_MAX_WALL_MS);
-    expect(withSlot).toBeGreaterThan(nowMs);
-
-    // No slot context: the standalone loop cap bounds the deadline.
-    const noSlot = resolveV2EnrichmentDeadlineMs(undefined);
-    expect(noSlot).toBeGreaterThan(nowMs);
-    expect(noSlot).toBeLessThanOrEqual(nowMs + V2_ENRICHMENT_MAX_WALL_MS);
-    vi.restoreAllMocks();
+  it("clips the local cap to the original event deadline after waits", () => {
+    vi.useFakeTimers();
+    try {
+      const eventEntryMs = Date.now();
+      const deadline = createSlotDeadline(eventEntryMs);
+      expect(resolveV2EnrichmentDeadlineMs(deadline)).toBe(eventEntryMs + V2_ENRICHMENT_MAX_WALL_MS);
+      vi.setSystemTime(deadline.platformDeadlineMs - 30_000);
+      expect(resolveV2EnrichmentDeadlineMs(deadline)).toBe(deadline.platformDeadlineMs);
+      // Standalone calls retain the existing local cap, not a fresh slot.
+      expect(resolveV2EnrichmentDeadlineMs()).toBe(Date.now() + V2_ENRICHMENT_MAX_WALL_MS);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -304,6 +304,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
+        deadline: scheduledRuntime.deadline,
         publishShadowTargets: false,
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
         stageRecovery: {
@@ -332,6 +333,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
+        deadline: scheduledRuntime.deadline,
         stageRecovery: {
           graphApiKey: null,
           coingeckoApiKey: scheduledRuntime.coingeckoApiKey,

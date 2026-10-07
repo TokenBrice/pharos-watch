@@ -1,25 +1,37 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
-import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { runScheduledSlotGroups } from "../slot-groups";
 import { logSkippedCronRun } from "../preflight-skip";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+function fencedRuntime(overrides: Partial<ScheduledRuntimeContext>) {
+  const fixture = fixtures.open();
+  const runtime = makeScheduledRuntime({ ...overrides, db: fixture.db, invocationId: "producer-invocation" });
+  runtime.executionFence = {
+    scheduleKey: runtime.scheduleKey, slotStartedAt: runtime.slotStartedAt,
+    invocationId: "executing-invocation", owner: "executing-owner", generation: 3, workerRole: "public",
+  };
+  fixture.sqlite.prepare(`INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner,
+    execution_generation, invocation_id, started_at, updated_at, child_marker_version)
+    VALUES (?, ?, 'running', 'executing-owner', 3, 'executing-invocation', ?, ?, 1)`)
+    .run(runtime.scheduleKey, runtime.slotStartedAt, runtime.slotStartedAt, runtime.slotStartedAt);
+  return { runtime, sqlite: fixture.sqlite };
+}
 
 function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
 ): ScheduledRuntimeContext {
-  return makeScheduledRuntime({
-    db: makeNoopD1({
-      prepare: () => ({
-        bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
-      }),
-    }),
+  return fencedRuntime({
     cron: "0 8 * * *",
     scheduleKey: "daily0800Utc",
     scheduledTimeMs: null,
     slotStartedAt: 0,
     runLeasedCron,
-  });
+  }).runtime;
 }
 
 describe("scheduled slot groups", () => {
@@ -224,33 +236,18 @@ describe("scheduled slot groups", () => {
 });
 
 describe("logSkippedCronRun", () => {
-  function recordingRuntime(): { runtime: ScheduledRuntimeContext; binds: unknown[][] } {
-    const binds: unknown[][] = [];
-    const runtime = makeScheduledRuntime({
-      db: makeNoopD1({
-        prepare: () => ({
-          bind: (...args: unknown[]) => {
-            binds.push(args);
-            return { run: async () => ({ meta: { changes: 1 } }) };
-          },
-        }),
-      }),
+  function recordingRuntime() {
+    return fencedRuntime({
       cron: "16,46 * * * *",
       scheduleKey: "halfHourlyChartsOffset",
       scheduledTimeMs: null,
       slotStartedAt: 1_772_000_000,
       runLeasedCron: vi.fn() as ScheduledRuntimeContext["runLeasedCron"],
     });
-    return { runtime, binds };
-  }
-
-  function skipMetadata(binds: unknown[]): Record<string, unknown> {
-    const payload = binds.find((bind) => typeof bind === "string" && bind.startsWith("{"));
-    return JSON.parse(String(payload)) as Record<string, unknown>;
   }
 
   it("records a skipped preflight run as degraded under a deduplicating run key", async () => {
-    const { runtime, binds } = recordingRuntime();
+    const { runtime, sqlite } = recordingRuntime();
 
     await logSkippedCronRun(runtime, {
       job: "sync-dex-liquidity",
@@ -259,25 +256,24 @@ describe("logSkippedCronRun", () => {
       metadata: { circuitSource: "dex-liquidity" },
     });
 
-    expect(binds[0]).toContain("degraded");
-    expect(binds[0]).toContain(
-      "scheduled-preflight:halfHourlyChartsOffset:1772000000:sync-dex-liquidity:circuit-open",
-    );
-    const metadata = skipMetadata(binds[0]);
+    const row = sqlite.prepare("SELECT * FROM cron_runs").get()!;
+    expect(row.status).toBe("degraded");
+    expect(row.idempotency_key).toMatch(/^scheduled-child:[a-f0-9]{64}$/);
+    expect(row.degraded_reason).toBe("circuit-open");
+    const metadata = JSON.parse(row.metadata as string);
     expect(metadata).toMatchObject({
-      circuitSource: "dex-liquidity",
-      skippedReason: "circuit-open",
-      reason: "circuit-open",
-      message: "DEX circuit open",
-      slotStartedAt: 1_772_000_000,
-      scheduleKey: "halfHourlyChartsOffset",
+      circuitSource: "dex-liquidity", skippedReason: "circuit-open", reason: "circuit-open",
+      message: "DEX circuit open", slotStartedAt: 1_772_000_000, scheduleKey: "halfHourlyChartsOffset",
+      childDisposition: "not_started", schedulerTerminalSource: "preflight", schedulerAttemptKey: row.idempotency_key,
     });
     expect(metadata).not.toHaveProperty("skipped");
-    expect(binds[0][12]).toBe("circuit-open");
+    expect(sqlite.prepare("SELECT started_at, terminal_source FROM scheduled_child_attempts").get())
+      .toEqual({ started_at: null, terminal_source: "preflight" });
+    expect(sqlite.prepare("SELECT outcome FROM worker_producer_history").get()).toEqual({ outcome: "not_started" });
   });
 
   it("allows explicitly benign skip rows", async () => {
-    const { runtime, binds } = recordingRuntime();
+    const { runtime, sqlite } = recordingRuntime();
 
     await logSkippedCronRun(runtime, {
       job: "sync-dex-liquidity",
@@ -285,18 +281,30 @@ describe("logSkippedCronRun", () => {
       status: "ok",
     });
 
-    expect(binds[0]).toContain("ok");
-    expect(binds[0]).not.toContain("degraded");
-    expect(binds[0][12]).toBeNull();
+    expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs").get())
+      .toEqual({ status: "ok", degraded_reason: null });
   });
 
   it("preserves a canonical reason on neutral direct skips", async () => {
-    const { runtime, binds } = recordingRuntime();
+    const { runtime, sqlite } = recordingRuntime();
     await logSkippedCronRun(runtime, {
       job: "sync-dex-liquidity", reason: "producer-priority", status: "skipped_neutral",
       metadata: { reason: "legacy-override" },
     });
-    expect(binds[0][12]).toBe("producer-priority");
-    expect(skipMetadata(binds[0])).toMatchObject({ reason: "producer-priority", skippedReason: "producer-priority" });
+    const row = sqlite.prepare("SELECT degraded_reason, metadata FROM cron_runs").get()!;
+    expect(row.degraded_reason).toBe("producer-priority");
+    expect(JSON.parse(row.metadata as string)).toMatchObject({
+      reason: "producer-priority", skippedReason: "producer-priority", childDisposition: "not_started",
+    });
+    expect(sqlite.prepare("SELECT outcome FROM worker_producer_history").get()).toEqual({ outcome: "skipped_neutral" });
+  });
+
+  it("rejects a preflight terminal after executing-fence takeover without advancing history", async () => {
+    const { runtime, sqlite } = recordingRuntime();
+    sqlite.exec("UPDATE cron_slot_executions SET execution_generation = 4, execution_owner = 'new-owner'");
+    await expect(logSkippedCronRun(runtime, { job: "sync-dex-liquidity", reason: "circuit-open" }))
+      .rejects.toMatchObject({ reason: "cron-child-terminal-superseded" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_producer_history").get()).toEqual({ count: 0 });
   });
 });

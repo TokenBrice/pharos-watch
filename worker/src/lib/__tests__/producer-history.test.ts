@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { loadProducerHeads, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
+import { loadProducerHeads, prepareProducerOutcomeStatements, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
 import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -8,6 +8,19 @@ const createMigratedDb = fixtures.open;
 afterEach(() => fixtures.closeAll());
 
 describe("producer history", () => {
+  it("prepares transactional statements without persisting before their batch", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const statements = prepareProducerOutcomeStatements(db, {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "prepared", idempotencyKey: "prepared",
+      invokedAt: 100, completedAt: 101, outcome: "ok",
+      productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: "prepared", publishedAt: 101 }] },
+    });
+    expect(statements).toHaveLength(3);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_producer_history").get()).toEqual({ count: 0 });
+    await db.batch(statements);
+    expect(sqlite.prepare("SELECT invocation_count FROM worker_producer_heads").get()).toEqual({ invocation_count: 1 });
+  });
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
     const { sqlite, db } = createMigratedDb();
     const identity = {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { resolveScheduledSlotPolicy } from "../../../lib/scheduled-slot-policy";
 
 const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
@@ -64,6 +65,10 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
     scheduledTimeMs: 1_000_000,
     slotStartedAt: 1_000,
     invocationId: "recovery-poll",
+    executionFence: {
+      scheduleKey: "fiveMinuteReserveRecovery", slotStartedAt: 1_000, invocationId: "recovery-poll",
+      owner: "executing-owner", generation: 7, workerRole: "public",
+    },
     runLeasedCron: vi.fn(async (
       _job: string,
       fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
@@ -128,9 +133,10 @@ describe("reserve recovery mode", () => {
     expect(mocks.sweep).toHaveBeenCalledTimes(1);
     expect(mocks.sweep).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ staleAfterSec: 300, limit: 10 }),
+      expect.objectContaining({ limit: 10 }),
     );
     expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("slotKey");
+    expect(mocks.sweep.mock.calls[0]![1]).not.toHaveProperty("staleAfterSec");
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
     expect(mocks.configRecovery).not.toHaveBeenCalled();
@@ -156,7 +162,8 @@ describe("reserve recovery mode", () => {
     };
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint });
 
-    const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    const value = runtime("recover");
+    const result = await runFiveMinuteReserveRecoverySlot(value);
 
     expect(result.jobsErrored).toBe(0);
     expect(mocks.claim).toHaveBeenCalledWith(expect.anything(), {
@@ -164,6 +171,19 @@ describe("reserve recovery mode", () => {
       leaseSec: 900,
     });
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
+    expect(mocks.createRuntime).toHaveBeenCalledWith(value.env, value.ctx, expect.objectContaining({
+      slotStartedAt: checkpoint.slotStartedAt,
+      executionFence: value.executionFence,
+      deadline: value.deadline,
+      slotBudgetStartedAtMs: value.deadline.eventEntryMs,
+      jobAttemptNo: checkpoint.attemptNo,
+    }));
+    expect(mocks.createRuntime.mock.calls[0]![2].deadline).toBe(value.deadline);
+    expect(mocks.createRuntime.mock.calls[0]![2].executionFence).toBe(value.executionFence);
+    expect(mocks.sweep.mock.calls[1]![1]).not.toHaveProperty("staleAfterSec");
+    expect(mocks.prepare).toHaveBeenCalledWith(value.db, {
+      staleAfterSec: resolveScheduledSlotPolicy("fourHourlyReserveSync").slotSilenceSec, limit: 1,
+    });
     expect(reportProgress.mock.calls.map(([update]) => update.stage)).toEqual([
       "sweeping-stale-slots",
       "recovering-reserve-config",

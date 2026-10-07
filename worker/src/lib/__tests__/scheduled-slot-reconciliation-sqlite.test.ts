@@ -6,6 +6,7 @@ import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 import { buildResourcePressure } from "../cron-resource-pressure";
 
+const NEW_WORKER_VERSION = "12345678-1234-1234-1234-123456789abc";
 const fixtures = createLatestSchemaFixtureTracker();
 const createMigratedDb = fixtures.open;
 
@@ -61,14 +62,20 @@ function seedStaleSlotWithDeadChild(
   if (options.firstSeenAt != null) {
     sqlite.prepare(
       `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-first-seen:worker-new', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: "worker-new", firstSeenAt: options.firstSeenAt }), options.firstSeenAt);
+       VALUES ('worker-version-first-seen:${NEW_WORKER_VERSION}', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, firstSeenAt: options.firstSeenAt }), options.firstSeenAt);
   }
   if (options.activatedAt != null) {
     sqlite.prepare(
       `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-activated:worker-new', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: options.activatedAt }), options.activatedAt);
+       VALUES ('worker-version-activated:${NEW_WORKER_VERSION}', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, activatedAt: options.activatedAt }), options.activatedAt);
+  }
+  const activation = options.activatedAt ?? options.firstSeenAt;
+  if (activation != null) {
+    sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('worker-active-version:public',?,?)")
+      .run(JSON.stringify({ worker: "public", scriptName: "stablecoin-api",
+        workerVersion: NEW_WORKER_VERSION, activatedAt: activation }), activation);
   }
   return slotStartedAt;
 }
@@ -197,7 +204,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ).toMatchObject({ candidateSlots: 0, slotsReconciled: 0 });
   });
 
-  it("repairs producer telemetry when a synthetic cron row was the only completed write", async () => {
+  it("retains pre-protocol terminal evidence without reauthoring history from legacy non-start claims", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const slotStartedAt = nowSec - 3_600;
@@ -262,13 +269,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
          FROM worker_producer_history`,
         )
         .all(),
-    ).toEqual([
-      {
-        idempotency_key: idempotencyKey,
-        outcome: "not_started",
-        productive: 0,
-      },
-    ]);
+    ).toEqual([]);
     expect(
       sqlite
         .prepare(
@@ -276,13 +277,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
          FROM worker_producer_heads`,
         )
         .all(),
-    ).toEqual([
-      {
-        last_invocation_id: "shared-invocation",
-        last_outcome: "not_started",
-        invocation_count: 1,
-      },
-    ]);
+    ).toEqual([]);
   });
 
   it("persists a producer cron exception through the partial idempotency index", async () => {
@@ -385,7 +380,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       slotKey: "halfHourlyOffset",
     });
 
-    expect(summary).toMatchObject({ syntheticCronRuns: 1, notStartedCronRuns: 1 });
+    expect(summary).toMatchObject({ syntheticCronRuns: 1, notStartedCronRuns: 0 });
     expect(sqlite.prepare(
       `SELECT started_at, status
          FROM cron_runs
@@ -402,7 +397,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ).get()).toMatchObject({
       invoked_at: slotInvokedAt,
       completed_at: slotUpdatedAt,
-      outcome: "not_started",
+      outcome: "abandoned",
     });
     expect(JSON.parse(String((sqlite.prepare(
       `SELECT metadata_json
@@ -515,7 +510,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     ).get()).toEqual({ count: 0 });
     expect(sqlite.prepare(
       `SELECT status, error, degraded_reason FROM cron_runs WHERE job = 'sync-cl-exit-depth'`,
-    ).get()).toEqual({ status: "error", error: "scheduled slot abandoned before child job started [stale-slot-reconciled]", degraded_reason: "stale-slot-reconciled" });
+    ).get()).toEqual({ status: "error", error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]", degraded_reason: "stale-slot-reconciled" });
   });
 
   it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
@@ -530,7 +525,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
 
@@ -572,7 +567,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
 
@@ -625,7 +620,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
     const run = sqlite.prepare(
@@ -679,21 +674,22 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     // The replacing version activated 30 seconds before the old isolate died.
     sqlite.prepare(
       `INSERT INTO cache (key, value, updated_at)
-       VALUES ('worker-version-activated:worker-new', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
+       VALUES ('worker-version-activated:${NEW_WORKER_VERSION}', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: NEW_WORKER_VERSION, activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
+    sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('worker-active-version:public',?,?)")
+      .run(JSON.stringify({ worker: "public", scriptName: "stablecoin-api",
+        workerVersion: NEW_WORKER_VERSION, activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
 
     const summary = await sweepStaleScheduledSlotExecutions(db, {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "hourlyYieldSync",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
 
-    // Three planned members had written progress; the Dwellir parity chain
-    // member never started in this (replayed 2026-09-23) shape, so it is
-    // reconciled as a not-started run alongside them.
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 4, notStartedCronRuns: 1 });
+    // Three children wrote progress; the legacy parity child has unknown execution.
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 4, notStartedCronRuns: 0 });
     const yieldRun = sqlite.prepare(
       `SELECT status, error, duration_ms, metadata
          FROM cron_runs
@@ -712,7 +708,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       progressUpdatedAt,
       activeDurationMs: 1_000,
       slotWorkerVersion: "worker-old",
-      reconciledByWorkerVersion: "worker-new",
+      reconciledByWorkerVersion: NEW_WORKER_VERSION,
       reconciledByWorkerVersionActivatedAt: progressUpdatedAt - 30,
     });
   });
@@ -737,7 +733,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
 
@@ -779,9 +775,9 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     },
     {
       name: "stays abandoned when the progress version matches the reconciler",
-      progressWorkerVersion: "worker-new",
+      progressWorkerVersion: NEW_WORKER_VERSION,
       expectedStatus: "error",
-      expectedSlotWorkerVersion: "worker-new",
+      expectedSlotWorkerVersion: NEW_WORKER_VERSION,
       activationRecorded: false,
     },
   ])("with a NULL slot worker_version, $name", async ({
@@ -807,7 +803,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       nowSec,
       staleAfterSec: 1_200,
       slotKey: "halfHourlyMeasuredExecution",
-      reconcilerWorkerVersion: "worker-new",
+      reconcilerWorkerVersion: NEW_WORKER_VERSION,
       reconcilerWorkerRole: "public",
     });
 
@@ -925,6 +921,7 @@ describe("bounded abandonment progress evidence", () => {
     seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
     sqlite.prepare("UPDATE cron_leases SET heartbeat_at = ?, lease_until = ?, updated_at = ?").run(nowSec, nowSec + 600, nowSec);
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ currentCoinId: "usdnr-nerona" }));
+    sqlite.prepare("UPDATE cron_slot_executions SET started_at=?").run(nowSec - 600);
     await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'sync-cl-exit-depth'").get()).toEqual({ count: 0 });

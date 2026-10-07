@@ -14,6 +14,22 @@ import {
 
 export { staleSlotEventCacheKey } from "./scheduled-slot-reconciliation";
 
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import type { CronScheduleKey } from "@shared/lib/cron-jobs";
+import type { SlotDeadline } from "./cron-timeouts";
+import { settleAfterAbort } from "./cron-abort-settlement";
+import { resolveScheduledSlotPolicy, scheduledSlotSilenceSql } from "./scheduled-slot-policy";
+import type { ScheduledSlotPolicy } from "./scheduled-slot-policy";
+
+export interface ScheduledExecutionFence {
+  readonly scheduleKey: string;
+  readonly slotStartedAt: number;
+  readonly invocationId: string;
+  readonly owner: string;
+  readonly generation: number;
+  readonly workerRole: ScheduledWorkerRole;
+}
+
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;
   owner?: string;
@@ -22,6 +38,7 @@ export interface ScheduledSlotExecutionOptions {
   preSweepStale?: boolean;
   preSweepLimit?: number;
   deadlineMs?: number;
+  deadline?: SlotDeadline;
   invocationId?: string | null;
   workerVersion?: string | null;
   workerRole?: ScheduledWorkerRole;
@@ -45,20 +62,7 @@ interface ScheduledSlotFenceMetadata {
   jobsSkipped: number;
 }
 
-// The slot heartbeat is a fence-owned wall-clock timer, independent of child
-// job duration, so a healthy slot of any length keeps its row fresh. Five
-// minutes of silence therefore means the isolate is gone (OOM/eviction kills
-// write no terminal row), and waiting longer only extends the outage window
-// for every lane that gates on this slot. A heartbeat write that is queued
-// behind a D1 overload for a full heartbeat period does not count as silence:
-// the fence starts a replacement attempt (the write is an idempotent CAS), so
-// only a genuinely unreachable D1 or a dead isolate can let the row go stale.
-const SLOT_EXECUTION_RUNNING_STALE_SEC = 5 * 60;
-export const SLOT_EXECUTION_HEARTBEAT_SEC = 60;
-// A Cloudflare scheduled invocation cannot outlive the 15-minute event wall
-// clock, so a running row older than that plus a minute of skew is provably
-// dead regardless of what its heartbeat column claims.
-const SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC = 16 * 60;
+export const SLOT_EXECUTION_HEARTBEAT_SEC = resolveScheduledSlotPolicy("").heartbeatSec;
 
 type SlotExecutionRow = {
   state: string;
@@ -68,6 +72,7 @@ type SlotExecutionRow = {
   worker_version: string | null;
   started_at: number;
   updated_at: number;
+  child_marker_version?: number | null;
 };
 
 type StaleSlotExecutionRow = StaleSlotExecutionArtifact;
@@ -126,6 +131,7 @@ export interface ScheduledSlotSweepSummary {
   leasesCleared: number;
   recoveryCheckpointsPrepared: number;
   notStartedCronRuns: number;
+  slotPolicies: Record<string, ScheduledSlotPolicy>;
   abandonedSlots: Array<{
     slotKey: string;
     slotStartedAt: number;
@@ -144,7 +150,7 @@ async function getScheduledSlotExecution(
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state, execution_owner, execution_generation, invocation_id, worker_version, started_at, updated_at
+        `SELECT state, execution_owner, execution_generation, invocation_id, worker_version, started_at, updated_at, child_marker_version
            FROM cron_slot_executions
            WHERE slot_key = ? AND slot_started_at = ?`,
       )
@@ -156,13 +162,14 @@ async function getScheduledSlotExecution(
 async function listStaleScheduledSlotExecutions(
   db: D1Database,
   slotKey: string | null,
-  staleBefore: number,
+  nowSec: number,
   wallDeadBefore: number,
   limit: number,
   excludeSlotStartedAt?: number,
 ): Promise<StaleSlotExecutionRow[]> {
   const predicates: string[] = [];
   const bindArgs: Array<string | number> = [];
+  const silence = scheduledSlotSilenceSql();
   if (slotKey) {
     predicates.push("slot_key = ?");
     bindArgs.push(slotKey);
@@ -176,14 +183,14 @@ async function listStaleScheduledSlotExecutions(
   // is owned by a fresh reconciler whose liveness started_at does not measure.
   predicates.push(
     "state IN ('running', 'reconciling')",
-    "(updated_at <= ? OR (state = 'running' AND started_at <= ?))",
+    `(updated_at <= ? - (${silence.sql}) OR (state = 'running' AND started_at <= ?))`,
   );
-  bindArgs.push(staleBefore, wallDeadBefore, limit);
+  bindArgs.push(nowSec, ...silence.bindings, wallDeadBefore, limit);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT slot_key, slot_started_at, state, execution_owner, execution_generation,
-                invocation_id, worker_version, started_at, updated_at
+                invocation_id, worker_version, started_at, updated_at, child_marker_version
            FROM cron_slot_executions
            WHERE ${predicates.join("\n             AND ")}
            ORDER BY updated_at ASC, slot_started_at ASC
@@ -231,7 +238,10 @@ async function finishStaleScheduledSlotExecution(
            AND slot_started_at = ?
            AND state = 'reconciling'
            AND execution_owner = ?
-           AND execution_generation = ?${survivingChildProgressGuard}`,
+           AND execution_generation = ?${survivingChildProgressGuard}
+           AND NOT EXISTS (SELECT 1 FROM scheduled_child_attempts
+             WHERE execution_schedule_key = cron_slot_executions.slot_key
+               AND execution_slot_started_at = cron_slot_executions.slot_started_at AND terminal_token IS NULL)`,
       )
       .bind(
         nowSec,
@@ -239,6 +249,7 @@ async function finishStaleScheduledSlotExecution(
         JSON.stringify({
           error: STALE_SLOT_ERROR,
           staleSlotReconciliation: reconciliation,
+          slotPolicy: resolveScheduledSlotPolicy(slot.slot_key),
         }),
         slot.slot_key,
         slot.slot_started_at,
@@ -256,9 +267,9 @@ async function claimStaleScheduledSlotForReconciliation(
   slot: StaleSlotExecutionRow,
   reconciliationOwner: string,
   nowSec: number,
-  staleBefore: number,
 ): Promise<number | null> {
   const nextGeneration = slot.execution_generation + 1;
+  const policy = resolveScheduledSlotPolicy(slot.slot_key);
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -285,8 +296,8 @@ async function claimStaleScheduledSlotForReconciliation(
         slot.execution_owner,
         slot.execution_generation,
         slot.updated_at,
-        staleBefore,
-        nowSec - SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC,
+        nowSec - policy.slotSilenceSec,
+        nowSec - policy.hardDeadSec,
       )
       .run(),
   );
@@ -298,19 +309,21 @@ export async function sweepStaleScheduledSlotExecutions(
   options: ScheduledSlotSweepOptions = {},
 ): Promise<ScheduledSlotSweepSummary> {
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
-  const staleAfterSec = Math.max(60, options.staleAfterSec ?? SLOT_EXECUTION_RUNNING_STALE_SEC);
+  const policy = resolveScheduledSlotPolicy(options.slotKey ?? "");
+  const staleAfterSec = policy.slotSilenceSec;
   const limit = Math.max(1, Math.min(options.limit ?? 25, 100));
   const staleBefore = nowSec - staleAfterSec;
   const staleSlots = await listStaleScheduledSlotExecutions(
     db,
     options.slotKey ?? null,
-    staleBefore,
-    nowSec - SLOT_EXECUTION_WALL_CLOCK_DEAD_SEC,
+    nowSec,
+    nowSec - policy.hardDeadSec,
     limit,
     options.excludeSlotStartedAt,
   );
   const summary: ScheduledSlotSweepSummary = {
     staleBefore,
+    slotPolicies: {},
     candidateSlots: staleSlots.length,
     slotsReconciled: 0,
     syntheticCronRuns: 0,
@@ -322,6 +335,7 @@ export async function sweepStaleScheduledSlotExecutions(
   };
 
   for (const staleSlot of staleSlots) {
+    summary.slotPolicies[staleSlot.slot_key] = resolveScheduledSlotPolicy(staleSlot.slot_key);
     if (options.signal?.aborted) {
       throw options.signal.reason instanceof Error ? options.signal.reason : new Error("scheduled slot sweep aborted");
     }
@@ -334,7 +348,6 @@ export async function sweepStaleScheduledSlotExecutions(
       staleSlot,
       reconciliationOwner,
       nowSec,
-      staleBefore,
     );
     if (reconciliationGeneration == null) {
       continue;
@@ -391,6 +404,7 @@ async function claimScheduledSlotExecution(
   workerRole?: ScheduledWorkerRole,
 ): Promise<ScheduledSlotClaimResult> {
   const nowSec = Math.floor(Date.now() / 1000);
+  const policy = resolveScheduledSlotPolicy(slotKey);
   const staleBefore = nowSec - staleAfterSec;
   const inserted = await runWithOverloadRetry(() =>
     db
@@ -418,17 +432,18 @@ async function claimScheduledSlotExecution(
     return { status: "claimed", executionGeneration: existing.execution_generation };
   }
 
-  if (existing.updated_at < staleBefore) {
+  if (existing.updated_at <= staleBefore || (existing.state === "running" && existing.started_at <= nowSec - policy.hardDeadSec)) {
     const staleSlot: StaleSlotExecutionRow = {
       slot_key: slotKey,
       slot_started_at: slotStartedAt,
-      state: "running",
+      state: existing.state as StaleSlotExecutionRow["state"],
       execution_owner: existing.execution_owner,
       execution_generation: existing.execution_generation,
       invocation_id: existing.invocation_id,
       worker_version: existing.worker_version,
       started_at: existing.started_at,
       updated_at: existing.updated_at,
+      child_marker_version: existing.child_marker_version,
     };
     const staleSlotTakeover: StaleSlotTakeoverSummary = {
       previousOwner: existing.execution_owner,
@@ -459,7 +474,7 @@ async function claimScheduledSlotExecution(
              AND execution_owner = ?
              AND execution_generation = ?
              AND updated_at = ?
-             AND updated_at < ?`,
+             AND (updated_at <= ? OR started_at <= ?)`,
         )
         .bind(
           owner,
@@ -474,6 +489,7 @@ async function claimScheduledSlotExecution(
           existing.execution_generation,
           existing.updated_at,
           staleBefore,
+          nowSec - policy.hardDeadSec,
         )
         .run(),
     );
@@ -564,7 +580,11 @@ async function finishScheduledSlotExecution(
            AND slot_started_at = ?
            AND execution_owner = ?
            AND execution_generation = ?
-           AND state = 'running'`,
+           AND state = 'running'
+           AND NOT EXISTS (SELECT 1 FROM scheduled_child_attempts
+             WHERE execution_schedule_key = cron_slot_executions.slot_key
+               AND execution_slot_started_at = cron_slot_executions.slot_started_at
+               AND execution_generation = cron_slot_executions.execution_generation AND terminal_token IS NULL)`,
       )
       .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner, executionGeneration)
       .run(),
@@ -611,12 +631,13 @@ function attachSlotRuntimeMetadata<T>(
 export async function runScheduledSlotWithFence(
   db: D1Database,
   slotKey: string,
-  fn: (signal: AbortSignal) => Promise<ScheduledSlotFenceMetadata | void>,
+  fn: (signal: AbortSignal, fence: ScheduledExecutionFence) => Promise<ScheduledSlotFenceMetadata | void>,
   opts: ScheduledSlotExecutionOptions,
 ): Promise<ScheduledSlotExecutionResult> {
   const owner = opts.owner ?? createLeaseOwner(slotKey);
-  const heartbeatSec = Math.max(15, opts.heartbeatSec ?? SLOT_EXECUTION_HEARTBEAT_SEC);
-  const staleAfterSec = Math.max(heartbeatSec * 2, opts.staleAfterSec ?? SLOT_EXECUTION_RUNNING_STALE_SEC);
+  const policy = resolveScheduledSlotPolicy(slotKey);
+  const heartbeatSec = Math.max(15, opts.heartbeatSec ?? policy.heartbeatSec);
+  const staleAfterSec = policy.slotSilenceSec;
   let staleSlotPreSweep: ScheduledSlotSweepSummary | { error: string } | undefined;
   if (opts.preSweepStale !== false) {
     try {
@@ -643,7 +664,7 @@ export async function runScheduledSlotWithFence(
     opts.slotStartedAt,
     owner,
     staleAfterSec,
-    opts.invocationId ?? null,
+    opts.invocationId ?? owner,
     opts.workerVersion ?? null,
     opts.workerRole,
   );
@@ -666,6 +687,19 @@ export async function runScheduledSlotWithFence(
   }
   const staleSlotTakeover = "staleSlotTakeover" in claimResult ? claimResult.staleSlotTakeover : undefined;
   const executionGeneration = claimResult.executionGeneration;
+  const executionFence: ScheduledExecutionFence = Object.freeze({
+    scheduleKey: slotKey, slotStartedAt: opts.slotStartedAt, invocationId: opts.invocationId ?? owner,
+    owner, generation: executionGeneration,
+    workerRole: opts.workerRole ?? SCHEDULED_SLOT_PLANS[slotKey as CronScheduleKey]?.worker ?? "public",
+  });
+  const stamped = await runWithOverloadRetry(() => db.prepare(
+    `UPDATE cron_slot_executions SET child_marker_version = 1,
+       metadata = json_set(COALESCE(metadata, '{}'), '$.slotPolicy', json(?), '$.slotDeadlineMs', ?)
+     WHERE slot_key = ? AND slot_started_at = ? AND state = 'running'
+       AND execution_owner = ? AND execution_generation = ? AND invocation_id = ?`,
+  ).bind(JSON.stringify(policy), opts.deadline?.platformDeadlineMs ?? opts.deadlineMs ?? null,
+    slotKey, opts.slotStartedAt, owner, executionGeneration, executionFence.invocationId).run());
+  if ((stamped.meta.changes ?? 0) !== 1) throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
 
   const slotController = new AbortController();
   let heartbeatFailures = 0;
@@ -673,8 +707,6 @@ export async function runScheduledSlotWithFence(
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
   const heartbeatAttempts = new Set<Promise<void>>();
   let heartbeatLatestStartedAtMs = 0;
-  let deadlineReject: ((error: Error) => void) | null = null;
-  let deadlineSettled = false;
   const timer = setInterval(() => {
     // Skip only while an attempt is still inside its first heartbeat period.
     // A heartbeat stuck beyond that is queued behind a D1 overload (overload
@@ -707,45 +739,29 @@ export async function runScheduledSlotWithFence(
       });
     heartbeatAttempts.add(attempt);
   }, heartbeatSec * 1000);
-  const abortForDeadline = () => {
-    if (deadlineSettled) return;
-    deadlineSettled = true;
-    const error =
-      slotController.signal.aborted && slotController.signal.reason instanceof Error
-        ? slotController.signal.reason
-        : new ScheduledSlotDeadlineExceededError(slotKey, opts.slotStartedAt);
-    if (!slotController.signal.aborted) {
-      slotController.abort(error);
-    }
-    deadlineReject?.(error);
-  };
-  const deadlineMs = opts.deadlineMs;
-  const deadlinePromise =
-    deadlineMs == null
-      ? null
-      : new Promise<never>((_, reject) => {
-          deadlineReject = reject;
-          const delayMs = deadlineMs - Date.now();
-          if (delayMs <= 0) {
-            abortForDeadline();
-          } else {
-            deadlineTimer = setTimeout(abortForDeadline, delayMs);
-          }
-        });
+  const deadlineMs = opts.deadline?.platformDeadlineMs ?? opts.deadlineMs;
+  if (deadlineMs != null) {
+    const abortForDeadline = () => slotController.abort(new ScheduledSlotDeadlineExceededError(slotKey, opts.slotStartedAt));
+    if (deadlineMs <= Date.now()) abortForDeadline();
+    else deadlineTimer = setTimeout(abortForDeadline, deadlineMs - Date.now());
+  }
 
+  let workDrained = true;
   try {
-    const workPromise = fn(slotController.signal);
-    if (deadlinePromise) {
-      void workPromise.catch(() => {});
+    const outcome = await settleAfterAbort(() => fn(slotController.signal, executionFence), slotController.signal, {
+      observer: true, platformDeadlineMs: opts.deadline?.platformDeadlineMs,
+    });
+    clearTimeout(deadlineTimer ?? undefined);
+    if (outcome.status === "aborted") {
+      workDrained = outcome.settled;
+      throw outcome.error ?? outcome.reason;
     }
-    const metadata = deadlinePromise ? await Promise.race([workPromise, deadlinePromise]) : await workPromise;
-    deadlineSettled = true;
-    deadlineReject = null;
-    if (deadlineTimer) {
-      clearTimeout(deadlineTimer);
-      deadlineTimer = null;
-    }
-    const slotMetadata = attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotPreSweep, staleSlotTakeover);
+    if (outcome.status === "rejected") throw outcome.error;
+    const metadata = outcome.value;
+    const slotMetadata = {
+      ...attachSlotRuntimeMetadata(metadata, heartbeatFailures, staleSlotPreSweep, staleSlotTakeover),
+      slotPolicy: policy, ...(opts.deadline ? { slotDeadlineMs: opts.deadline.platformDeadlineMs } : {}),
+    };
     const resultStatus =
       metadata && metadata.jobsErrored > 0
         ? "error"
@@ -778,8 +794,10 @@ export async function runScheduledSlotWithFence(
       metadata: slotMetadata,
     };
   } catch (err) {
+    if (!slotController.signal.aborted) slotController.abort(err);
     clearInterval(timer);
     await Promise.allSettled(heartbeatAttempts);
+    if (!workDrained) throw err;
     try {
       const finished = await finishScheduledSlotExecution(
         db,
@@ -810,8 +828,6 @@ export async function runScheduledSlotWithFence(
   } finally {
     slotController.abort(new Error(`scheduled slot ${slotKey}@${opts.slotStartedAt} finished`));
     if (deadlineTimer) clearTimeout(deadlineTimer);
-    deadlineSettled = true;
-    deadlineReject = null;
     clearInterval(timer);
   }
 }
