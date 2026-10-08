@@ -3,6 +3,11 @@ import { DependencyScenarioArtifactSchema, DependencyScenariosResponseSchema, de
 import type { DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { chunkDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
+import { DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
+import { buildRouteContext } from "../../handlers/http/context";
+import { getRouteMatch } from "../../routes/registry";
+import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
+import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 
 const loadIdentity = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreIdentity: loadIdentity }));
@@ -75,8 +80,28 @@ describe("dependency scenario read handler", () => {
     const body = DependencyScenariosResponseSchema.parse(await response.json());
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get(DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER)).toBe(DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT);
     expect(body.freshness).toMatchObject({ status: "current", reason: null, ageSec: 100 });
     expect(body.artifact?.scenarios[0]?.results[1]).toMatchObject({ modeledScore: null, modeledGrade: "NR" });
+  });
+  it("binds live reader capability to the exact runtime UUID, not its release tag", async () => {
+    const version = "12345678-1234-4234-8234-123456789abc";
+    const request = new Request("https://api.pharos.watch/api/dependency-scenarios/v1");
+    const match = getRouteMatch(new URL(request.url).pathname);
+    if (!match) throw new Error("Scenario route is missing");
+    const db = database(null);
+    const context = buildRouteContext({
+      request, url: new URL(request.url),
+      env: makeScheduledEnv({ DB: db, CF_VERSION_METADATA: { id: version, tag: "release-tag", timestamp: "2026-10-08T00:00:00Z" } }),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: false, routeDependencies: match.dependencies,
+    });
+    const response = await match.handle(context);
+    expect(response.headers.get(DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER)).toBe(DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT);
+    expect(response.headers.get(DEPENDENCY_SCENARIO_READER_VERSION_HEADER)).toBe(version);
+    expect(db.getHistory().every(entry => entry.sql.startsWith("SELECT"))).toBe(true);
+    const withoutMetadata = await handleDependencyScenarios(database(null), null);
+    expect(withoutMetadata.headers.get(DEPENDENCY_SCENARIO_READER_VERSION_HEADER)).toBeNull();
   });
   it("preserves modeled technical null separately from NR and refuses stale schema bytes", async () => {
     const value = artifact();
@@ -100,7 +125,9 @@ describe("dependency scenario read handler", () => {
     expect(body.freshness).toMatchObject({ status: "earlier-generation", reason: "source-generation-mismatch", ageSec: 100 });
   });
   it("returns unavailable for missing or malformed artifacts, never a false current result", async () => {
-    const missing = await (await handleDependencyScenarios(database(null))).json();
+    const missingResponse = await handleDependencyScenarios(database(null));
+    expect(missingResponse.headers.get(DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER)).toBe(DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT);
+    const missing = await missingResponse.json();
     expect(missing).toMatchObject({ artifact: null, freshness: { status: "unavailable", reason: "artifact-unavailable", ageSec: null } });
     const malformed = await (await handleDependencyScenarios(database("not-json"))).json();
     expect(malformed).toMatchObject({ artifact: null, freshness: { status: "unavailable", reason: "artifact-read-failed", ageSec: null } });

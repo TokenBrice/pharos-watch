@@ -7,16 +7,6 @@ interface Context {
   env: { SELECTOR_SNAPSHOTS?: KVNamespace };
 }
 
-function bufferKvStream(stream: ReadableStream<unknown>, maxBytes: number) {
-  const bytes = stream.pipeThrough(new TransformStream<unknown, Uint8Array>({
-    transform(chunk, controller) {
-      if (!(chunk instanceof Uint8Array)) throw new TypeError("KV stream returned a non-byte chunk");
-      controller.enqueue(chunk);
-    },
-  }));
-  return bufferReadableStream(bytes, { maxBytes });
-}
-
 /** Immutable daily graphics and their manifest (published last as a commit marker). */
 export async function onRequest({ request, env }: Context): Promise<Response> {
   const fail = (status: number) => new Response(null, { status, headers: { "Cache-Control": "no-store" } });
@@ -30,14 +20,14 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   try {
     const manifestStream = await env.SELECTOR_SNAPSHOTS.get(`daily-social:${date}.json`, "stream");
     if (!manifestStream) return fail(404);
-    const manifestBytes = (await bufferKvStream(manifestStream, 32_768)).bytes;
+    const manifestBytes = (await bufferReadableStream(manifestStream, { maxBytes: 32_768 })).bytes;
     const manifest = DailySocialManifestSchema.parse(JSON.parse(new TextDecoder().decode(manifestBytes)));
     if (manifest.snapshot.editionDate !== date) return fail(502);
     let bytes = manifestBytes;
     if (extension === "png") {
       const stream = await env.SELECTOR_SNAPSHOTS.get(`daily-social:${date}:${manifest.imageSha256}.png`, "stream");
       if (!stream) return fail(404);
-      bytes = (await bufferKvStream(stream, 5 * 1024 * 1024)).bytes;
+      bytes = (await bufferReadableStream(stream, { maxBytes: 5 * 1024 * 1024 })).bytes;
       if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)) return fail(502);
       const digest = await crypto.subtle.digest("SHA-256", bytes);
       const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");

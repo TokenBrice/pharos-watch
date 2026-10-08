@@ -1,10 +1,17 @@
 import { execFileSync } from "node:child_process";
+import type * as ChildProcess from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { pagesArtifactEnvironment, selectPagesReleaseArtifacts } from "../ci/run-pages-artifact-lane.ts";
-import { createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData } from "../lib/pages-release-data.mts";
+import { describe, expect, it, vi } from "vitest";
+import { pagesArtifactEnvironment, runPagesArtifactLane } from "../ci/run-pages-artifact-lane.ts";
+import { createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
+
+const spawn = vi.hoisted(() => vi.fn());
+vi.mock("node:child_process", async (importOriginal) => ({
+  ...(await importOriginal<typeof ChildProcess>()),
+  spawnSync: spawn,
+}));
 
 const aliases = (target: string) => `# BEGIN GENERATED PUBLIC DATASET ALIASES\n/datasets/topic/latest.json /datasets/topic/${target}.json 200\n# END GENERATED PUBLIC DATASET ALIASES`;
 const write = (root: string, path: string, value: string) => {
@@ -37,6 +44,31 @@ describe("Pages artifact input profile", () => {
       SEO_PREVIOUS_SITEMAP_URL: "",
     });
     expect(pagesArtifactEnvironment({}, "https://explicit.example/sitemap.xml").SEO_PREVIOUS_SITEMAP_URL).toBe("https://explicit.example/sitemap.xml");
+  });
+
+  it("never forwards acquisition tokens or other credentials to generator/build children", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-child-env-"));
+    try {
+      dataFixture(root);
+      for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
+        vi.stubEnv(name, "test-credential");
+      }
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      const result = await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+      expect(result.dataStatus).toBe("degraded-data");
+      expect(spawn.mock.calls.length).toBeGreaterThan(0);
+      for (const call of spawn.mock.calls) {
+        const childEnv = call[2].env as NodeJS.ProcessEnv;
+        expect(childEnv.NODE_ENV).toBe("production");
+        for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
+          expect(childEnv).not.toHaveProperty(name);
+        }
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("considers only unexpired identity-matched main artifacts, newest first", () => {

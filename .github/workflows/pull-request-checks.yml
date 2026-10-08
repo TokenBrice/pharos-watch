@@ -183,6 +183,39 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.16.0"
+      - name: Acquire release data with the trusted base helper
+        # Execute before candidate workspace setup; never give the token to
+        # candidate npm scripts, generators, or build commands.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_PAGES_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TRUSTED_PAGES_MODULE_PATH: ${{ runner.temp }}/trusted-pages-release-data.mts
+          PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
+          NODE_OPTIONS: ""
+        run: |
+          if ! git show "${TRUSTED_PAGES_BASE_SHA}:scripts/lib/pages-release-data.mts" > "${TRUSTED_PAGES_MODULE_PATH}"; then
+            rm -f "${TRUSTED_PAGES_MODULE_PATH}"
+          fi
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+          import { pathToFileURL } from "node:url";
+          const directory = process.env.PAGES_RELEASE_DATA_DIR;
+          const trustedPath = process.env.TRUSTED_PAGES_MODULE_PATH;
+          const trusted = existsSync(trustedPath) ? await import(pathToFileURL(trustedPath).href) : {};
+          if (typeof trusted.preparePagesReleaseData === "function") {
+            trusted.preparePagesReleaseData(directory, process.cwd());
+          } else {
+            // First-rollout bases lack this helper. Never substitute PR code.
+            const result = { schemaVersion: 1, dataStatus: "degraded-data", reason: "pages-artifact-data-unavailable" };
+            mkdirSync(directory, { recursive: true });
+            writeFileSync(join(directory, "release-data-result.json"), JSON.stringify(result) + "\n");
+            console.log(JSON.stringify(result));
+          }
+          NODE
       - uses: $/.github/actions/setup-workspace
         with:
           cache-npm: "false"
@@ -191,7 +224,7 @@ jobs:
           workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - name: Replay release data and enforce Pages artifact gates
         env:
-          GH_TOKEN: ${{ github.token }}
+          PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           PR_LANE_ID: pages-artifact
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
 

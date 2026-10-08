@@ -109,6 +109,7 @@ index	idx_depeg_stablecoin
 index	idx_depeg_started
 index	idx_depeg_started_id
 index	idx_depeg_unique
+index	idx_dependency_scenario_chunks_retention
 index	idx_detail_cache_write_generations_updated
 index	idx_dex_deployment_outcomes_outcome
 index	idx_dex_deployment_outcomes_stablecoin

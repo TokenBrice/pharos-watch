@@ -11,7 +11,7 @@ import {
   useStressSignals,
   useYieldRankings,
 } from "@/hooks/api-hooks";
-import { useQuerySlices } from "@/hooks/use-query-slice";
+import { useQuerySlice } from "@/hooks/use-query-slice";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
@@ -105,16 +105,14 @@ export function useCompareDataModel({
   const stressQuery = useStressSignals();
   const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
 
-  const { list, peg, bluechip, dex, reportCards, redemption, yieldRankings, stress } = useQuerySlices({
-    list: listQuery,
-    peg: pegQuery,
-    bluechip: bluechipQuery,
-    dex: dexQuery,
-    reportCards: reportCardsQuery,
-    redemption: redemptionQuery,
-    yieldRankings: yieldQuery,
-    stress: stressQuery,
-  });
+  const list = useQuerySlice(listQuery);
+  const peg = useQuerySlice(pegQuery);
+  const bluechip = useQuerySlice(bluechipQuery);
+  const dex = useQuerySlice(dexQuery);
+  const reportCards = useQuerySlice(reportCardsQuery);
+  const redemption = useQuerySlice(redemptionQuery);
+  const yieldRankings = useQuerySlice(yieldQuery);
+  const stress = useQuerySlice(stressQuery);
   const listData = list.data;
   const pegSummary = peg.data;
   const dexData = dex.data;

@@ -1,6 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { checkWorkerPackage } from "../ci/check-worker-package.ts";
@@ -63,30 +65,53 @@ describe("Worker release packaging", () => {
   it("strictly dry-runs both production roles with the same strict/config contract as deploy", () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-strict-package-"));
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
-    const calls: string[][] = [];
     try {
+      mkdirSync(join(root, "worker"));
+      const workflow = parseYaml(readFileSync(".github/workflows/deploy-cloudflare.yml", "utf8"));
+      const deploySteps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; run?: string }>;
+      // Each production role deploys immediately before its activation proof.
+      // Execute those shell stages with npx intercepted, retaining actual argv
+      // rather than comparing shell spelling or option order.
+      const productionArgs = ["verify-heavy-deployment", "verify-worker-deployment"].map((id) => {
+        const verificationIndex = deploySteps.findIndex((step) => step.id === id);
+        expect(verificationIndex).toBeGreaterThan(0);
+        const run = deploySteps[verificationIndex - 1].run;
+        expect(run).toBeDefined();
+        const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH, GITHUB_SHA: "a".repeat(40) };
+        const result = spawnSync("bash", ["-e", "-c", `npx() { printf '%s\\0' "$@"; }\n${run}`], {
+          cwd: root, env, encoding: "utf8",
+        });
+        expect(result.status, result.stderr).toBe(0);
+        return result.stdout.split("\0").filter(Boolean);
+      });
+      const calls: string[][] = [];
       expect(checkWorkerPackage({ run: (command, args, options) => {
         expect(command).toBe("npx");
         expect(options.cwd).toBe(join(root, "worker"));
         calls.push(args);
         return { status: 0 };
       } }).status).toBe(0);
+      expect(calls).toHaveLength(2);
+      const contracts = [calls, productionArgs].map((commands) => commands.map((args) => {
+        expect(args.slice(0, 3)).toEqual(["--no-install", "wrangler", "deploy"]);
+        const { values } = parseArgs({
+          args: args.slice(3), strict: true,
+          options: {
+            strict: { type: "boolean" }, config: { type: "string" },
+            "dry-run": { type: "boolean" }, outdir: { type: "string" }, message: { type: "string" },
+          },
+        });
+        return { strict: values.strict, config: values.config };
+      }).sort((a, b) => String(a.config).localeCompare(String(b.config))));
+      expect(contracts[0]).toEqual(contracts[1]);
+      expect(contracts[0]).toEqual([
+        { strict: true, config: "wrangler.heavy.toml" },
+        { strict: true, config: "wrangler.toml" },
+      ]);
+      for (const args of calls) expect(args).toContain("--dry-run");
     } finally {
       cwd.mockRestore();
       rmSync(root, { recursive: true, force: true });
-    }
-    const workflow = parseYaml(readFileSync(".github/workflows/deploy-cloudflare.yml", "utf8"));
-    const deployCommands = workflow.jobs["deploy-worker"].steps
-      .map((step: { run?: string }) => step.run ?? "")
-      .filter((run: string) => /wrangler deploy\b/.test(run));
-    expect(calls).toHaveLength(2);
-    expect(deployCommands).toHaveLength(2);
-    for (const args of calls) {
-      expect(args).toContain("--strict");
-      expect(args).toContain("--dry-run");
-      const config = args[args.indexOf("--config") + 1];
-      const production = deployCommands.find((run: string) => run.includes(`--config ${config}`));
-      expect(production).toMatch(/wrangler deploy\s+--strict\b/);
     }
   });
 });

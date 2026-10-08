@@ -257,13 +257,13 @@ export function createLaneCommand(
   }
 }
 
-function inspectCheckout(base: string, head: string) {
-  const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" }).trim();
+export function inspectPrCheckout(base: string, head: string, repoRoot = process.cwd()) {
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
   return {
     headSha: git("rev-parse", "--verify", "HEAD^{commit}"),
     requestedHeadSha: git("rev-parse", "--verify", `${head}^{commit}`),
     mergeBase: git("merge-base", base, head),
-    treeClean: git("status", "--porcelain").length === 0,
+    treeClean: git("status", "--porcelain", "--untracked-files=all").length === 0,
   };
 }
 
@@ -296,7 +296,7 @@ export async function runPrChecks(
     stdout = process.stdout,
     repoRoot = process.cwd(),
     runtimeVersions = readRuntimeVersions,
-    inspectCheckout: inspect = inspectCheckout,
+    inspectCheckout: inspect = (base, head) => inspectPrCheckout(base, head, repoRoot),
     selectPlanTestFiles: selectTests = selectPlanTestFiles,
     runSecrets = runLocalTrustedGitleaks,
     writeReceipt = writePrCheckReceipt,
@@ -312,6 +312,7 @@ export async function runPrChecks(
   let headSha = "";
   let treeClean = false;
   let weakened = false;
+  const incompleteReasons: string[] = [];
   let flags: PrCheckFlags = { noFetch: false, skipCoverage: false, plan: false, forwardedTestArgs: [] };
   const leaves: PrCheckReceiptLeaf[] = [];
   const json = argv.includes("--json");
@@ -352,6 +353,11 @@ export async function runPrChecks(
     const checkout = inspect(baseSha, head);
     headSha = checkout.headSha;
     treeClean = checkout.treeClean;
+    if (!treeClean) {
+      weakened = true;
+      incompleteReasons.push("dirty-worktree");
+      warn("[check:pr] WARNING: dirty-worktree — tracked or untracked edits are outside the committed-range proof. Checks may run for authoring feedback, but this cannot certify HEAD readiness.");
+    }
     if (checkout.requestedHeadSha !== headSha) {
       throw new Error(`--head=${head} resolves to ${checkout.requestedHeadSha}, not checked-out HEAD ${headSha}. Tests and coverage inspect the checkout; check out the requested commit first.`);
     }
@@ -424,9 +430,12 @@ export async function runPrChecks(
       lanes: leaves.filter((leaf) => leaf.status !== "not-selected").map((leaf) => ({
         ...leaf, status: leaf.status as "passed" | "failed" | "skipped", failureTail: leaf.firstError ?? "",
       })),
-      status: outcome === "failed" ? "failed" : "passed", durationMs: Math.max(0, now() - startedAt),
+      status: outcome, incompleteReasons, durationMs: Math.max(0, now() - startedAt),
     }, { json, label: "check:pr", stdout, stderr });
     log(`[check:pr] Outcome: ${outcome}${outcome === "incomplete" ? " (weakened invocation; not readiness proof)" : ""}`);
+    if (incompleteReasons.includes("dirty-worktree")) {
+      warn("[check:pr] NOT READINESS PROOF: dirty-worktree. Commit final edits and rerun the complete gate on a clean checkout.");
+    }
     return outcome === "failed" ? 1 : 0;
   } catch (error) {
     const firstError = error instanceof Error ? error.message : String(error);
@@ -443,6 +452,7 @@ export async function runPrChecks(
     if (headSha) writeReceipt({
       schemaVersion: 1, ...runtime, baseSha, headSha, treeClean,
       flags: { ...flags, noFetchEnv: env.PHAROS_PR_NO_FETCH === "1" }, weakened,
+      incompleteReasons,
       startedAt: new Date(startedAt).toISOString(), finishedAt: new Date(now()).toISOString(),
       leaves: flags.plan ? leaves.map((leaf) => leaf.status === "failed" || leaf.status === "not-selected" ? leaf : { ...leaf, status: "skipped" }) : leaves,
       outcome: computeReceiptOutcome(leaves, weakened),

@@ -99,6 +99,7 @@ describe("route context typing", () => {
       routeDependencies: ["workerVersion"] as const,
     });
     expect(workerVersionCtx.workerVersion).toBe("preview-v1");
+    expect(workerVersionCtx.workerVersionId).toBe("preview-id");
 
     const feedbackCtx = buildRouteContext({
       request,

@@ -3,6 +3,7 @@ import {
   defineLazyDbRoute,
   defineLazyDbUrlRoute,
   defineLazyNoContextRoute,
+  defineLazyStaticRoute,
   type StaticRouteDefinition,
 } from "./shared";
 
@@ -30,7 +31,11 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("safety-grades", () => import("../api/safety-grades").then(({ handleSafetyGrades }) => handleSafetyGrades)),
   // Keep the handler outside the eager Worker graph, as required by the lazy route registry.
   defineLazyDbRoute("dependency-graph-v1", () => import("../api/dependency-graph").then(({ handleDependencyGraph }) => handleDependencyGraph)),
-  defineLazyDbRoute("dependency-scenarios", () => import("../api/dependency-scenarios").then(({ handleDependencyScenarios }) => handleDependencyScenarios)),
+  defineLazyStaticRoute("dependency-scenarios", async () => {
+    // The Worker lazy registry forbids static handler imports into the eager isolate graph.
+    const { handleDependencyScenarios } = await import("../api/dependency-scenarios");
+    return ({ db, workerVersionId }) => handleDependencyScenarios(db, workerVersionId);
+  }),
   defineLazyDbRoute("depeg-resolver", () => import("../api/depeg-resolver").then(({ handleDepegResolver }) => handleDepegResolver)),
   defineLazyDbRoute("depeg-resolver-review", () => import("../api/depeg-resolver-review").then(({ handleDepegResolverReview }) => handleDepegResolverReview)),
   defineLazyDbRoute("redemption-backstops", () => import("../api/redemption-backstops").then(({ handleRedemptionBackstops }) => handleRedemptionBackstops)),

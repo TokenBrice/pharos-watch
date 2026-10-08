@@ -13,7 +13,7 @@ import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { useQuerySlice, useQuerySlices, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
+import { useQuerySlice, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import {
@@ -174,14 +174,20 @@ export function useStablecoinDetailViewModel({
   const yieldRankings = useGatedQuerySlice(yieldRankingsQuery, yieldEnabled);
   const stressSignals = useGatedQuerySlice(stressSignalsQuery, stressEnabled);
 
-  const queries = useQuerySlices({
-    supplyHistory: supplyQuery,
-    stablecoinList: listQuery,
-    pegSummary: pegQuery,
-    dexLiquidity: liquidity,
-    reportCards,
-    redemptionBackstops,
-  });
+  const supplyHistory = useQuerySlice(supplyQuery);
+  const stablecoinList = useQuerySlice(listQuery);
+  const pegSummary = useQuerySlice(pegQuery);
+  const queries = useMemo(
+    () => ({
+      supplyHistory,
+      stablecoinList,
+      pegSummary,
+      dexLiquidity: liquidity,
+      reportCards,
+      redemptionBackstops,
+    }),
+    [supplyHistory, stablecoinList, pegSummary, liquidity, reportCards, redemptionBackstops],
+  );
   const flowsSlice = useQuerySlice(flowsQuery);
   const blacklistSlice = useQuerySlice(blacklistQuery);
 

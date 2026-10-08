@@ -65,7 +65,16 @@ export async function getActiveWorkerVersionMarker(
   const row = await db.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
     .bind(`worker-active-version:${role}`)
     .first<{ value: string; updated_at: number }>();
-  if (!row) return null;
+  return parseActiveWorkerVersionMarker(row, role);
+}
+
+/** Shared by binding and offline readers of the deploy-owned activation row. */
+export function parseActiveWorkerVersionMarker(
+  row: unknown,
+  role: ScheduledWorkerRole,
+): ActiveWorkerVersionMarker | null {
+  if (!row || typeof row !== "object" || !("value" in row) || typeof row.value !== "string"
+    || !("updated_at" in row) || typeof row.updated_at !== "number") return null;
   try {
     const marker: unknown = JSON.parse(row.value);
     if (!marker || typeof marker !== "object" || Array.isArray(marker)) return null;

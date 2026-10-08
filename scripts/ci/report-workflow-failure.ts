@@ -22,9 +22,17 @@ export interface WorkflowJob {
   conclusion: string | null;
   steps?: WorkflowStep[];
 }
+export interface CompletedWorkflowRun {
+  run_number: number;
+  run_attempt: number;
+  event: string;
+  head_branch: string | null;
+  conclusion: string | null;
+}
 export interface GitHubClient {
   listIssues(): Promise<WorkflowIssue[]>;
   listJobs(): Promise<WorkflowJob[]>;
+  latestGreenRun(workflowFile: string): Promise<CompletedWorkflowRun | null>;
   jobLog(jobId: number): Promise<string>;
   createIssue(title: string, body: string): Promise<WorkflowIssue>;
   updateIssue(number: number, patch: { state?: "open" | "closed"; body?: string }): Promise<void>;
@@ -101,6 +109,13 @@ export async function reportWorkflowFailure(
     return { ...result, ignored: true };
   }
   if (Object.keys(report.needs).length === 0) throw new Error("Reporting requires mandatory job results");
+  // Completed successful main runs are a durable recovery watermark even when
+  // their reporter had no incident issue to close or update.
+  const latestGreen = await github.latestGreenRun(report.workflowFile);
+  if (latestGreen && (latestGreen.run_number > report.runNumber
+    || (latestGreen.run_number === report.runNumber && latestGreen.run_attempt > report.runAttempt))) {
+    return { ...result, ignored: true };
+  }
   const issues = (await github.listIssues()).filter((issue) => !issue.pull_request
     && issue.body?.includes(workflowMarker(report.workflowFile)));
   // An older overlapping run must not undo a newer incident/recovery decision.
@@ -191,6 +206,17 @@ export function createGitHubClient(repository: string, runId: string, token: str
     listIssues: () => pages<WorkflowIssue>("/issues?state=all"),
     // filter=latest retains successful jobs from prior attempts on failed-job reruns.
     listJobs: () => pages<WorkflowJob>(`/actions/runs/${runId}/jobs?filter=latest`, "jobs"),
+    latestGreenRun: async (workflowFile) => {
+      for (let page = 1; ; page++) {
+        const data = await request<{ workflow_runs: CompletedWorkflowRun[] }>(
+          `/actions/workflows/${encodeURIComponent(workflowFile)}/runs?branch=main&status=success&per_page=100&page=${page}`,
+        );
+        const green = data.workflow_runs.find((run) => run.head_branch === "main" && run.conclusion === "success"
+          && ["push", "schedule", "workflow_dispatch"].includes(run.event));
+        if (green) return green;
+        if (data.workflow_runs.length < 100) return null;
+      }
+    },
     jobLog: async (id) => {
       const response = await fetch(`${base}/actions/jobs/${id}/logs`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },

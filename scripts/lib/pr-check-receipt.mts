@@ -23,6 +23,7 @@ export interface PrCheckReceipt {
   treeClean: boolean;
   flags: Record<string, unknown>;
   weakened: boolean;
+  incompleteReasons?: string[];
   startedAt: string;
   finishedAt: string;
   leaves: PrCheckReceiptLeaf[];
@@ -41,6 +42,7 @@ const ReceiptSchema = z.object({
   treeClean: z.boolean(),
   flags: z.record(z.string(), z.unknown()),
   weakened: z.boolean(),
+  incompleteReasons: z.array(z.string()).optional(),
   startedAt: z.string(),
   finishedAt: z.string(),
   leaves: z.array(z.object({

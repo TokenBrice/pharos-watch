@@ -51,7 +51,7 @@
 | 0261     | `0261_native_dex_generations.sql`                         | Add isolated Orca/Raydium diagnostic generations, exact final-bank quote outcomes, count-guarded atomic native pointers and indexed retention; no scoring admission or historical import. |
 | 0262     | `0262_safety_score_publication_journal.sql`                 | Add change-only, generation-addressed compact accepted Safety cards and accepted/held attempt lineage; no backfill or scoring change. |
 | 0263     | `0263_safety_score_capture_archive.sql`                     | Add the narrow R2 accepted-capture integrity/discovery index; no blobs, backfill or scoring change. |
-| 0264     | `0264_dependency_scenario_chunks.sql`                    | Add append-only content-addressed dependency scenario chunks; legacy cache bodies remain readable and latest advances only after verified readback. |
+| 0264     | `0264_dependency_scenario_chunks.sql`                    | Add content-addressed dependency scenario chunks with creation clock and retention index; legacy bodies remain readable and latest advances only after verified readback and reader capability proof. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -328,7 +328,7 @@ Migration `0260` must apply before both new Workers activate. The nullable proto
 
 Migration `0263` adds only the accepted-capture R2 index and publication-time index, with no backfill or data mutation. Apply before the heavy Worker activates its `SAFETY_CAPTURE_ARCHIVE` binding to existing bucket `pharos-measurements`; no bucket or lifecycle creation belongs to this release. Capture the pre-window Time Travel bookmark, migration ledger and deployed Worker versions. Worker rollback stops prospective archiving but leaves D1/R2 evidence intact; object expiry remains owned by the existing lifecycle.
 
-Migration `0264` adds only the dependency scenario chunk table, with no backfill or deletion. Apply before the new public Worker reader activates, then allow the scheduled publisher to write chunk manifests. Capture the pre-window Time Travel bookmark, migration ledger and Worker version. Worker rollback does not remove D1 chunks or restore the latest marker; an old reader cannot consume a chunk manifest, so stop refreshes and use an explicitly verified retained single-row artifact if restoring that reader. Never restore D1 for a code-only rollback.
+Migration `0264` adds only the dependency scenario chunk table and creation-clock retention index, with no migration backfill or deletion. Apply before the new public Worker reader activates; the publisher requires live version-bound capability proof before committing chunk manifests. Retention keeps chunks referenced by retained/latest manifests, protects current/recent publication attempts, and deletes at most 500 aged orphan rows per successful refresh. Capture the pre-window Time Travel bookmark, migration ledger and Worker version. Worker rollback does not remove D1 chunks or restore the latest marker; an old reader cannot consume a chunk manifest, so stop refreshes and use an explicitly verified retained single-row artifact if restoring that reader. Never restore D1 for a code-only rollback.
 
 ## Recent Migration Rollback Notes
 

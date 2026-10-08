@@ -1,21 +1,30 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runDirectCli } from "../lib/cli-args.mjs";
-import { PAGES_RELEASE_DATA_ARCHIVE, PAGES_RELEASE_DATA_PATHS, overlayPagesReleaseData, replayPagesDetailSnapshots } from "../lib/pages-release-data.mts";
+import { PAGES_RELEASE_DATA_ARCHIVE, PAGES_RELEASE_DATA_PATHS, preparePagesReleaseData, overlayPagesReleaseData, replayPagesDetailSnapshots, type PagesReleaseDataAcquisitionResult } from "../lib/pages-release-data.mts";
 
-const REPOSITORY = "TokenBrice/pharos-watch";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
 const PUBLIC_FLAGS = ["HERO_VERDICT", "QUIET_DEVIATIONS", "MOBILE_STICKY_SUMMARY", "DEPEG_RESOLVER", "DEPEG_RESOLVER_REVIEWER"];
 
+export function scrubPagesBuildEnvironment(env: Partial<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
+  return {
+    ...Object.fromEntries(Object.entries(env).filter(([name]) =>
+      !/(?:TOKEN|SECRET|PASSWORD|API_KEY|ACCESS_KEY|PRIVATE_KEY|CREDENTIAL|AUTH)/i.test(name)
+      && !name.startsWith("GH_") && !name.startsWith("CLOUDFLARE_") && !name.startsWith("WRANGLER_"),
+    )),
+    NODE_ENV: env.NODE_ENV ?? "production",
+  };
+}
+
 export function pagesArtifactEnvironment(env: Partial<NodeJS.ProcessEnv>, previousSitemapUrl?: string): NodeJS.ProcessEnv {
   return {
-    ...env,
+    ...scrubPagesBuildEnvironment(env),
     NODE_ENV: "production",
     NEXT_PUBLIC_GA_ID: env.NEXT_PUBLIC_GA_ID ?? "",
     NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
@@ -30,44 +39,6 @@ export function pagesArtifactEnvironment(env: Partial<NodeJS.ProcessEnv>, previo
     API_BASE_URL: "",
     SEO_PREVIOUS_SITEMAP_URL: previousSitemapUrl ?? "",
   };
-}
-
-interface ReleaseArtifact {
-  id: number;
-  name: string;
-  expired: boolean;
-  created_at: string;
-  workflow_run?: { id: number; head_branch: string; head_sha: string };
-}
-interface ReleaseRun { conclusion: string; head_branch: string; head_sha: string; path: string }
-
-export function selectPagesReleaseArtifacts(artifacts: readonly ReleaseArtifact[]): ReleaseArtifact[] {
-  return artifacts.filter((artifact) => !artifact.expired && artifact.workflow_run?.head_branch === "main"
-    && artifact.name === `pages-release-data-${artifact.workflow_run.head_sha}`
-    && /^[a-f0-9]{40}$/.test(artifact.workflow_run.head_sha))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-}
-
-interface AcquiredReleaseData { archive: string; name: string }
-
-function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleaseData | undefined {
-  const gh = (args: string[]) => execFileSync("gh", args, { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 128 * 1024 * 1024 });
-  // No ambient repo inference: forks still replay only successful trusted-main
-  // release data. Every GitHub operation below is GET-only.
-  const pages = JSON.parse(gh(["api", "--method", "GET", "--paginate", "--slurp", `repos/${REPOSITORY}/actions/artifacts?per_page=100`]).toString()) as { artifacts: ReleaseArtifact[] }[];
-  for (const artifact of selectPagesReleaseArtifacts(pages.flatMap((page) => page.artifacts))) {
-    const run = JSON.parse(gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/runs/${artifact.workflow_run!.id}`]).toString()) as ReleaseRun;
-    if (run.conclusion !== "success" || run.head_branch !== "main" || run.head_sha !== artifact.workflow_run!.head_sha
-      || ![".github/workflows/deploy-cloudflare.yml", ".github/workflows/rebuild-pages.yml"].includes(run.path)) continue;
-    const zip = join(directory, "release-data.zip");
-    writeFileSync(zip, gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/artifacts/${artifact.id}/zip`]));
-    const members = execFileSync("unzip", ["-Z1", zip], { encoding: "utf8" }).trim().split("\n");
-    if (members.length !== 1 || members[0] !== PAGES_RELEASE_DATA_ARCHIVE) throw new Error("pages-artifact-data-invalid: unexpected artifact contents");
-    const archive = join(directory, PAGES_RELEASE_DATA_ARCHIVE);
-    writeFileSync(archive, execFileSync("unzip", ["-p", zip, PAGES_RELEASE_DATA_ARCHIVE], { maxBuffer: 128 * 1024 * 1024 }));
-    return { archive, name: artifact.name };
-  }
-  return undefined;
 }
 
 export interface PagesArtifactResult {
@@ -91,7 +62,7 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
   };
   const command = (stage: string, program: string, args: string[], overrides: Partial<NodeJS.ProcessEnv> = {}) => {
     console.log(`[pages-artifact] ${stage}: ${program} ${args.join(" ")}`);
-    const result = spawnSync(program, args, { cwd: repoRoot, env: { ...env, ...overrides }, stdio: "inherit" });
+    const result = spawnSync(program, args, { cwd: repoRoot, env: scrubPagesBuildEnvironment({ ...env, ...overrides }), stdio: "inherit" });
     if (result.error || result.status !== 0) throw new Error(`pages-artifact-stage-failed: ${stage} (${result.error?.message ?? `exit ${result.status}, signal ${result.signal ?? "none"}`})`);
   };
   const originals = PAGES_RELEASE_DATA_PATHS.filter((path) => existsSync(join(repoRoot, path)));
@@ -102,16 +73,21 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
       cpSync(join(repoRoot, path), join(temporary, "original", path), { recursive: true });
     }
     inputsBackedUp = true;
-    let retained: AcquiredReleaseData | undefined;
+    let acquisition: PagesReleaseDataAcquisitionResult = { schemaVersion: 1, dataStatus: "degraded-data", reason: "pages-artifact-data-unavailable" };
+    const acquisitionDirectory = process.env.PAGES_RELEASE_DATA_DIR ?? temporary;
     if (download) {
-      try { retained = acquireReleaseData(temporary, repoRoot); }
-      catch (error) {
-        // Setup/auth/API availability has a defined weaker-input fallback; an
-        // invalid downloaded artifact is not an unavailable-data condition.
-        if (error instanceof Error && error.message.startsWith("pages-artifact-data-invalid:")) throw error;
-        report("- Data acquisition: `pages-artifact-data-unavailable` (GitHub CLI/auth/API/download unavailable)");
+      if (process.env.PAGES_RELEASE_DATA_DIR) {
+        acquisition = JSON.parse(readFileSync(join(acquisitionDirectory, "release-data-result.json"), "utf8")) as PagesReleaseDataAcquisitionResult;
+        if (acquisition.schemaVersion !== 1 || !["release-snapshot", "degraded-data"].includes(acquisition.dataStatus)) {
+          throw new Error("pages-artifact-data-invalid: invalid trusted acquisition result");
+        }
+      } else {
+        acquisition = preparePagesReleaseData(acquisitionDirectory, repoRoot);
       }
     }
+    const retained = acquisition.dataStatus === "release-snapshot"
+      ? { archive: join(acquisitionDirectory, PAGES_RELEASE_DATA_ARCHIVE), name: acquisition.artifactName! }
+      : undefined;
     const result: PagesArtifactResult = retained
       ? { dataStatus: "release-snapshot", artifactName: retained.name }
       : { dataStatus: "degraded-data" };

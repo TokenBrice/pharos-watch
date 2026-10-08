@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, type DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
-import { DEPENDENCY_SCENARIO_CHUNK_BYTES } from "@shared/types/dependency-scenario-storage";
+import { DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
 import { chunkDependencyScenarioPayload, reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
 import { ReportCardsV9CurrentResponseSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
@@ -19,8 +19,12 @@ import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfReq
 import { parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
 import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
+import { parseActiveWorkerVersionMarker } from "../src/lib/worker-version-first-seen";
 
 const DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT = 24;
+const DEPENDENCY_SCENARIO_ORPHAN_GRACE_SEC = 86_400;
+const DEPENDENCY_SCENARIO_CHUNK_PRUNE_LIMIT = 500;
+const DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS = 15 * 60_000;
 
 function verificationStamp(source: ReportCardsV9CurrentResponse, artifactBytes: string): string {
   const identity = source.safetyScoreIdentity;
@@ -36,7 +40,7 @@ function verificationStamp(source: ReportCardsV9CurrentResponse, artifactBytes: 
 const USAGE = `Usage: node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts --mode <plan|compute|publish> --out-dir <path> [--input <capture.json>] [--publication <publication.json>]
 Plan exports the production capture and accepted publication. Compute without --publication is a local replay only and cannot be published. Publish verifies immutable payload bytes before advancing the commit marker.`;
 function remote(...args: string[]): string {
-  const run = spawnSync("npx", ["--no-install", "wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", ...args], { cwd: resolve("worker"), encoding: "utf8", maxBuffer: 50_000_000 });
+  const run = spawnSync("npx", ["--no-install", "wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", ...args], { cwd: resolve("worker"), encoding: "utf8", maxBuffer: 50_000_000, timeout: DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS });
   if (run.status !== 0) throw new Error(`D1 command failed: ${run.stderr || run.stdout}`);
   return run.stdout;
 }
@@ -44,6 +48,34 @@ const sqlString = (value: string) => `'${value.replaceAll("'", "''")}'`;
 function readRemote(key: string): string | null {
   const result = JSON.parse(remote("--command", `SELECT value FROM cache WHERE key = ${sqlString(key)}`));
   return result[0]?.results[0]?.value ?? null;
+}
+
+function readActivePublicVersion() {
+  const result: unknown = JSON.parse(remote("--command", "SELECT value, updated_at FROM cache WHERE key = 'worker-active-version:public'"));
+  if (!Array.isArray(result)) return null;
+  const first: unknown = result[0];
+  if (!first || typeof first !== "object" || !("results" in first) || !Array.isArray(first.results)
+    || !("success" in first) || first.success !== true) return null;
+  return parseActiveWorkerVersionMarker(first.results[0], "public");
+}
+
+async function requireChunkReader(expectedVersion?: string): Promise<string> {
+  try {
+    const active = readActivePublicVersion();
+    if (!active || (expectedVersion !== undefined && active.workerVersion !== expectedVersion)) throw new Error("active-reader-identity-unavailable");
+    const response = await fetch("https://api.pharos.watch/api/dependency-scenarios/v1", {
+      cache: "no-store", headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(10_000),
+    });
+    const supported = response.ok
+      && response.headers.get(DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER) === DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT
+      && response.headers.get(DEPENDENCY_SCENARIO_READER_VERSION_HEADER) === active.workerVersion;
+    // Only headers are proof inputs; release the body before another connection.
+    await response.body?.cancel();
+    if (!supported || readActivePublicVersion()?.workerVersion !== active.workerVersion) throw new Error("active-reader-capability-unproven");
+    return active.workerVersion;
+  } catch (error) {
+    throw Object.assign(new Error("dependency-scenarios-chunk-reader-unavailable"), { cause: error });
+  }
 }
 async function main(): Promise<void> {
   const { values } = parseStrictCliArgs(process.argv.slice(2), { options: { mode: { type: "string" }, "out-dir": { type: "string" }, input: { type: "string" }, publication: { type: "string" } } });
@@ -91,30 +123,54 @@ async function main(): Promise<void> {
     if (readFileSync(stampPath, "utf8").trim() !== verificationStamp(source, bytes)) throw new Error("Accepted-publication verification stamp mismatch");
     const digest = createHash("sha256").update(bytes).digest("hex");
     const key = `${DEPENDENCY_SCENARIOS_CACHE_PREFIX}artifact:${digest}`;
-    const writeRow = (rowKey: string, value: string) => {
+    const startedAtMs = Date.now();
+    const writingKey = `${DEPENDENCY_SCENARIOS_CACHE_PREFIX}writing:${randomUUID()}`;
+    const chunked = Buffer.byteLength(bytes) > DEPENDENCY_SCENARIO_CHUNK_BYTES;
+    const assertPublicationDeadline = () => {
+      if (Date.now() - startedAtMs >= DEPENDENCY_SCENARIO_PUBLICATION_DEADLINE_MS) throw new Error("dependency-scenarios-publication-deadline-exceeded");
+    };
+    const readerVersion = chunked ? await requireChunkReader() : null;
+    const writeRow = (rowKey: string, value: string, updatedAtSec = artifact.computedAtSec) => {
+      assertPublicationDeadline();
       const sqlPath = resolve(directory, "publish.sql");
-      writeFileSync(sqlPath, `INSERT INTO cache (key,value,updated_at) VALUES (${sqlString(rowKey)},${sqlString(value)},${artifact.computedAtSec}) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at;`);
+      writeFileSync(sqlPath, `INSERT INTO cache (key,value,updated_at) VALUES (${sqlString(rowKey)},${sqlString(value)},${updatedAtSec}) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at;`);
       remote("--file", sqlPath);
       if (readRemote(rowKey) !== value) throw new Error(`Readback mismatch for ${rowKey}`);
     };
     // Immutable content first. An unsuccessful readback never advances latest.
-    if (Buffer.byteLength(bytes) <= DEPENDENCY_SCENARIO_CHUNK_BYTES) {
-      writeRow(key, bytes);
-    } else {
-      const { manifest, chunks } = chunkDependencyScenarioPayload(bytes);
-      const sqlPath = resolve(directory, "publish.sql");
-      // One bounded statement per call: no unbounded D1 batch or parallel
-      // connections. Conflicting immutable rows are checked, never overwritten.
-      for (const chunk of chunks) {
-        writeFileSync(sqlPath, `INSERT INTO dependency_scenario_payload_chunks (payload_id,chunk_index,value,byte_length,sha256) VALUES (${sqlString(key)},${chunk.chunk_index},${sqlString(chunk.value)},${chunk.byte_length},${sqlString(chunk.sha256)}) ON CONFLICT(payload_id,chunk_index) DO NOTHING;`);
-        remote("--file", sqlPath);
+    try {
+      if (!chunked) {
+        writeRow(key, bytes);
+      } else {
+        writeRow(writingKey, key, Math.floor(startedAtMs / 1000));
+        const { manifest, chunks } = chunkDependencyScenarioPayload(bytes);
+        const sqlPath = resolve(directory, "publish.sql");
+        // One bounded statement per call: no unbounded D1 batch or parallel
+        // connections. Conflicting immutable rows are checked, never overwritten.
+        for (const chunk of chunks) {
+          assertPublicationDeadline();
+          writeFileSync(sqlPath, `INSERT INTO dependency_scenario_payload_chunks (payload_id,chunk_index,value,byte_length,sha256) VALUES (${sqlString(key)},${chunk.chunk_index},${sqlString(chunk.value)},${chunk.byte_length},${sqlString(chunk.sha256)}) ON CONFLICT(payload_id,chunk_index) DO NOTHING;`);
+          remote("--file", sqlPath);
+        }
+        const readback = JSON.parse(remote("--command", `SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ${sqlString(key)} ORDER BY chunk_index`));
+        if (reassembleDependencyScenarioPayload(manifest, readback[0]?.results ?? [], digest) !== bytes) throw new Error(`Readback mismatch for ${key}`);
+        // Reprove activation after staging; deployment may have changed meanwhile.
+        await requireChunkReader(readerVersion!);
+        // The manifest is immutable payload metadata, not the commit marker.
+        writeRow(key, JSON.stringify(manifest));
       }
-      const readback = JSON.parse(remote("--command", `SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ${sqlString(key)} ORDER BY chunk_index`));
-      if (reassembleDependencyScenarioPayload(manifest, readback[0]?.results ?? [], digest) !== bytes) throw new Error(`Readback mismatch for ${key}`);
-      // The manifest is immutable payload metadata, not the commit marker.
-      writeRow(key, JSON.stringify(manifest));
+      if (chunked && readActivePublicVersion()?.workerVersion !== readerVersion) throw new Error("dependency-scenarios-chunk-reader-unavailable");
+      writeRow(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`, key);
+    } finally {
+      if (chunked) {
+        try {
+          // SAFETY: writingKey uses a fixed prefix plus this attempt's generated UUID, is SQL-escaped, and deletes only that exact owned marker.
+          remote("--command", `DELETE FROM cache WHERE key = ${sqlString(writingKey)}`);
+        } catch (error) {
+          console.warn(`Dependency scenario writing marker cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     }
-    writeRow(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`, key);
     // Prune only after the new marker's successful readback. The marker lookup
     // stays inside this statement so a changed marker can never lose its row.
     try {
@@ -122,6 +178,12 @@ async function main(): Promise<void> {
       const markerKey = sqlString(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`);
       // SAFETY: both keys are fixed module constants passed through sqlString and the LIMIT is the integer DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT constant; no external input reaches the SQL.
       remote("--command", `DELETE FROM cache WHERE key GLOB ${artifactKeys} AND key <> (SELECT value FROM cache WHERE key = ${markerKey}) AND key NOT IN (SELECT key FROM cache WHERE key GLOB ${artifactKeys} ORDER BY updated_at DESC, key DESC LIMIT ${DEPENDENCY_SCENARIOS_RETAINED_ARTIFACT_COUNT})`);
+      const cutoff = Math.floor(Date.now() / 1000) - DEPENDENCY_SCENARIO_ORPHAN_GRACE_SEC;
+      const writingKeys = sqlString(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}writing:*`);
+      // SAFETY: deletion selects at most the fixed row limit, protects current/latest/retained payloads and live writing markers, and admits only chunks older than the fixed grace period; all strings use sqlString.
+      remote("--command", `DELETE FROM dependency_scenario_payload_chunks WHERE rowid IN (SELECT c.rowid FROM dependency_scenario_payload_chunks c WHERE c.created_at < ${cutoff} AND c.payload_id <> ${sqlString(key)} AND c.payload_id <> COALESCE((SELECT value FROM cache WHERE key = ${markerKey}), '') AND NOT EXISTS (SELECT 1 FROM cache WHERE key = c.payload_id) AND NOT EXISTS (SELECT 1 FROM cache WHERE key GLOB ${writingKeys} AND value = c.payload_id AND updated_at >= ${cutoff}) AND NOT EXISTS (SELECT 1 FROM dependency_scenario_payload_chunks recent WHERE recent.payload_id = c.payload_id AND recent.created_at >= ${cutoff}) ORDER BY c.created_at, c.payload_id, c.chunk_index LIMIT ${DEPENDENCY_SCENARIO_CHUNK_PRUNE_LIMIT})`);
+      // SAFETY: writing keys are fixed-prefix filtered and age-bounded; the inner SELECT caps stale marker deletion to 50 rows. The 24-hour grace exceeds the publisher's enforced 15-minute write deadline.
+      remote("--command", `DELETE FROM cache WHERE key IN (SELECT key FROM cache WHERE key GLOB ${writingKeys} AND updated_at < ${cutoff} ORDER BY updated_at, key LIMIT 50)`);
     } catch (error) {
       console.warn(`Dependency scenario artifact pruning failed; publication remains committed: ${error instanceof Error ? error.message : String(error)}`);
     }

@@ -21,7 +21,8 @@ export interface GateReport<TClassification = unknown> {
   durationMs: number;
   head: string;
   lanes: GateLaneReport[];
-  status: "failed" | "passed";
+  status: "failed" | "passed" | "incomplete";
+  incompleteReasons?: string[];
 }
 
 const FAILURE_TAIL_MAX_CHARS = 4_000;

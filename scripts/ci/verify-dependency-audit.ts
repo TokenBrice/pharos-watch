@@ -5,9 +5,12 @@ import {
   type SpawnSyncOptionsWithStringEncoding,
   type SpawnSyncReturns,
 } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { CliUsageError, parseStrictCliArgs } from "../lib/cli-args.mjs";
 
 const registryUrl: URL = new URL("./dependency-audit-exceptions.json", import.meta.url);
 
@@ -258,14 +261,139 @@ export function runFullLockfileDependencyAudit({
   return verifyDependencyAuditReport(report, { now, registry });
 }
 
+interface AdvisoryPackagePair {
+  advisoryId: string;
+  package: string;
+}
+
+function collectAdvisoryPackagePairs(report: unknown): Map<string, AdvisoryPackagePair> {
+  if (!isObject(report) || !isObject(report.vulnerabilities) || report.error) {
+    throw new Error("npm audit did not return a valid audit report.");
+  }
+  const vulnerabilities = report.vulnerabilities;
+  const pairs = new Map<string, AdvisoryPackagePair>();
+  for (const [name, vulnerability] of Object.entries(vulnerabilities)) {
+    if (!isHighOrCritical(vulnerability)) continue;
+    const visited = new Set<string>();
+    const pending = [name];
+    let foundAdvisory = false;
+    while (pending.length) {
+      const dependency = pending.pop()!;
+      if (visited.has(dependency)) continue;
+      visited.add(dependency);
+      const node = vulnerabilities[dependency];
+      if (!isObject(node) || !Array.isArray(node.via) || node.via.length === 0) {
+        throw new Error(`npm audit returned an invalid advisory graph for ${name}.`);
+      }
+      for (const via of node.via) {
+        if (typeof via === "string") {
+          pending.push(via);
+        } else if (isObject(via) && typeof via.url === "string" &&
+          /^https:\/\/github\.com\/advisories\/GHSA-[A-Za-z0-9-]+$/.test(via.url)) {
+          const advisoryId = via.url.slice(via.url.lastIndexOf("/") + 1);
+          pairs.set(JSON.stringify([advisoryId, name]), { advisoryId, package: name });
+          foundAdvisory = true;
+        } else {
+          throw new Error(`npm audit returned an invalid advisory identity for ${name}.`);
+        }
+      }
+    }
+    if (!foundAdvisory) throw new Error(`npm audit returned an unresolved advisory graph for ${name}.`);
+  }
+  return pairs;
+}
+
+export function verifyDependencyAuditDelta(
+  currentReport: unknown,
+  baseReport: unknown,
+  { registry = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY, now = new Date() }: { registry?: unknown; now?: Date } = {},
+): { preExisting: AdvisoryPackagePair[] } {
+  validateRegistry(registry, now);
+  const currentPairs = collectAdvisoryPackagePairs(currentReport);
+  const basePairs = collectAdvisoryPackagePairs(baseReport);
+  const newPairs = [...currentPairs].filter(([key]) => !basePairs.has(key)).map(([, pair]) => pair);
+  if (newPairs.length) {
+    throw new Error(`New high/critical advisory/package pairs: ${newPairs
+      .map((pair) => `${pair.advisoryId} affects ${pair.package}`).sort().join("; ")}.`);
+  }
+  return {
+    preExisting: [...currentPairs.values()].sort((left, right) =>
+      left.advisoryId.localeCompare(right.advisoryId) || left.package.localeCompare(right.package)),
+  };
+}
+
+export function runNewSinceDependencyAudit({
+  baseSha,
+  cwd = process.cwd(),
+  env = process.env,
+  now = new Date(),
+  registry = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY,
+  spawn = spawnSync as AuditSpawn,
+  stdout = process.stdout,
+}: {
+  baseSha: string;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  now?: Date;
+  registry?: unknown;
+  spawn?: AuditSpawn;
+  stdout?: { write(chunk: string): unknown };
+}): { preExisting: AdvisoryPackagePair[] } {
+  if (!/^[a-f0-9]{40}$/i.test(baseSha)) {
+    throw new Error("--new-since requires a full base commit SHA; fetch the frozen PR base before auditing.");
+  }
+  const directory = mkdtempSync(join(tmpdir(), "pharos-base-dependency-audit-"));
+  try {
+    for (const file of ["package.json", "package-lock.json"]) {
+      const result = spawn("git", ["show", `${baseSha}:${file}`], { cwd, env, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (result.error || result.status !== 0) {
+        throw new Error(`Cannot read ${file} at base ${baseSha}; fetch the frozen PR base before auditing.`);
+      }
+      writeFileSync(join(directory, file), result.stdout);
+    }
+    const reports = [directory, cwd].map((auditCwd) => {
+      const result = spawn("npm", ["audit", "--package-lock-only", "--json", "--audit-level=high", "--include=dev"],
+        { cwd: auditCwd, env, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (result.error) throw result.error;
+      if (result.status !== 0 && result.status !== 1) {
+        throw new Error(`npm audit exited unexpectedly with status ${result.status ?? "unknown"}.`);
+      }
+      try {
+        return JSON.parse(result.stdout) as unknown;
+      } catch {
+        throw new Error("npm audit did not emit JSON.");
+      }
+    });
+    const delta = verifyDependencyAuditDelta(reports[1], reports[0], { registry, now });
+    for (const pair of delta.preExisting) {
+      stdout.write(`[dependency-audit] ${pair.advisoryId} affects ${pair.package}: pre-existing, tracked by weekly audit\n`);
+    }
+    stdout.write(`[dependency-audit] no new high/critical advisory/package pairs since ${baseSha}\n`);
+    return delta;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 function runCli(): void {
   try {
+    const { values } = parseStrictCliArgs(process.argv.slice(2), {
+      options: { "new-since": { type: "string" } },
+    });
+    if (values.help) {
+      console.log("Usage: verify-dependency-audit.ts [--new-since=<baseSha>]");
+      return;
+    }
+    if (typeof values["new-since"] === "string") {
+      runNewSinceDependencyAudit({ baseSha: values["new-since"] });
+      return;
+    }
     const { acceptedExceptionIds } = runFullLockfileDependencyAudit();
     const accepted = acceptedExceptionIds.length > 0 ? acceptedExceptionIds.join(", ") : "none";
     console.log(`[dependency-audit] accepted exceptions: ${accepted}`);
   } catch (error) {
     console.error(`[dependency-audit] ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
+    process.exitCode = error instanceof CliUsageError ? 2 : 1;
   }
 }
 

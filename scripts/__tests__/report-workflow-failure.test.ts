@@ -21,6 +21,7 @@ function fixture() {
   const github: GitHubClient = {
     listIssues: vi.fn(async () => issues.map((issue) => ({ ...issue }))),
     listJobs: vi.fn(async () => jobs),
+    latestGreenRun: vi.fn(async () => null),
     jobLog: vi.fn(async () => "2026-10-08T04:00:00Z Error: unsupported lint glob\nfunctions/**/*.tsx"),
     createIssue: vi.fn(async (_title: string, body: string) => {
       const issue = { number: issues.length + 1, state: "open" as const, body, html_url: `https://github.com/org/repo/issues/${issues.length + 1}` };
@@ -125,6 +126,34 @@ describe("workflow incident lifecycle", () => {
     expect(f.issues[0].state).toBe("open");
   });
 
+  it("ignores an older red run after a newer green run completed without any incident history", async () => {
+    const f = fixture();
+    const green = { ...f.report, runNumber: 11, needs: { "full-static": { result: "success" } } };
+    expect(await reportWorkflowFailure(green, f.github, f.alert)).toMatchObject({ opened: 0, ignored: false });
+    expect(f.issues).toEqual([]);
+    // GitHub persists the completed workflow independently of incident issues.
+    vi.mocked(f.github.latestGreenRun).mockResolvedValue({
+      run_number: green.runNumber, run_attempt: green.runAttempt, event: "schedule",
+      head_branch: "main", conclusion: "success",
+    });
+    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 0, ignored: true, alerted: false });
+    expect(f.github.createIssue).not.toHaveBeenCalled();
+    expect(f.github.updateIssue).not.toHaveBeenCalled();
+    expect(f.github.comment).not.toHaveBeenCalled();
+    expect(f.alert).not.toHaveBeenCalled();
+  });
+
+  it("ignores an older attempt after a green rerun, but reports failures newer than the last green", async () => {
+    const f = fixture();
+    vi.mocked(f.github.latestGreenRun).mockResolvedValue({
+      run_number: f.report.runNumber, run_attempt: 2, event: "workflow_dispatch",
+      head_branch: "main", conclusion: "success",
+    });
+    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).ignored).toBe(true);
+    f.report.runNumber++;
+    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 1, alerted: true, ignored: false });
+  });
+
   it("matches named matrix and reusable workflow leaves and excludes advisory jobs", async () => {
     const f = fixture();
     f.report.needs = { "full-tests": { result: "failure" }, "pages-release": { result: "failure" } };
@@ -156,9 +185,12 @@ describe("workflow incident lifecycle", () => {
   });
 });
 
-describe("native Node entrypoint", () => {
-  it("loads without npm dependencies and refuses a non-main event without network mutation", () => {
-    const run = spawnSync(process.execPath, ["scripts/ci/report-workflow-failure.ts"], {
+describe("composite action entrypoint", () => {
+  it("executes the action's reporting command and refuses a non-main event without network mutation", () => {
+    const action = parseYaml(readFileSync(".github/actions/report-workflow-failure/action.yml", "utf8"));
+    const reportingStep = action.runs.steps.find((step: { run?: string }) => typeof step.run === "string");
+    expect(reportingStep).toBeDefined();
+    const run = spawnSync("bash", ["-e", "-o", "pipefail", "-c", reportingStep.run], {
       encoding: "utf8",
       env: {
         ...process.env, WORKFLOW_FILE: "nightly-validation.yml", GITHUB_WORKFLOW: "Nightly Validation",
@@ -219,6 +251,25 @@ describe("incident provider boundaries", () => {
     expect(fetchMock.mock.calls[1][0]).toContain("page=2");
     expect(fetchMock.mock.calls[2][0]).toContain("filter=latest");
   });
+
+  it("uses completed successful main runs as the durable watermark and excludes non-main or PR runs", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ workflow_runs: [
+      { run_number: 14, run_attempt: 1, event: "pull_request", head_branch: "main", conclusion: "success" },
+      { run_number: 13, run_attempt: 1, event: "workflow_dispatch", head_branch: "feature", conclusion: "success" },
+      { run_number: 12, run_attempt: 1, event: "schedule", head_branch: "main", conclusion: "failure" },
+      { run_number: 11, run_attempt: 2, event: "schedule", head_branch: "main", conclusion: "success" },
+    ] })));
+    const client = createGitHubClient("org/repo", "123", "test-token");
+    expect(await client.latestGreenRun("nightly-validation.yml")).toMatchObject({ run_number: 11, run_attempt: 2 });
+    const [url, options] = fetchMock.mock.calls[0];
+    const requested = new URL(String(url));
+    expect(requested.pathname).toBe("/repos/org/repo/actions/workflows/nightly-validation.yml/runs");
+    expect(requested.searchParams.get("branch")).toBe("main");
+    expect(requested.searchParams.get("status")).toBe("success");
+    expect(options?.method).toBe("GET");
+  });
 });
 
 describe("workflow reporting wiring", () => {
@@ -257,7 +308,6 @@ describe("workflow reporting wiring", () => {
       if (step.uses) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
       if (step.run) {
         expect(step.run).not.toContain("${{");
-        expect(step.run).toBe("node scripts/ci/report-workflow-failure.ts");
       }
     }
   });

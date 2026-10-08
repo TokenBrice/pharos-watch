@@ -175,7 +175,7 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     vi.unstubAllGlobals();
   });
 
-  it("holds malformed address evidence then consumes only after durable third-scan quarantine", async () => {
+  it.each([null, "[]", "42"])("holds malformed address evidence with prior %s then consumes only after durable third-scan quarantine", async (priorValue) => {
     const base = findConfig("usdt-tether");
     const config = { ...base, events: [base.events.find((event) => event.signature.startsWith("AddedBlackList"))!] };
     const sqlite = new DatabaseSync(":memory:");
@@ -189,6 +189,11 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     const timestamp = 1_700_000_000_000;
     const valid = { block_number: 100, block_timestamp: timestamp, transaction_id: "ab".repeat(32),
       event_index: 0, event_name: "AddedBlackList", result: { _blackListedUser: "0x" + "11".repeat(20) } };
+    if (priorValue != null) {
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+        `blacklist:decode-retry:${config.configKey}:${valid.block_number}:${valid.transaction_id}:1`, priorValue, 0,
+      );
+    }
     mockFetch([{ match: "api.trongrid.io/v1/contracts/", body: { success: true, data: [
       valid, { ...valid, block_timestamp: timestamp + 1000, event_index: 1, result: {} },
       { ...valid, block_timestamp: timestamp + 2000, event_index: 2 },

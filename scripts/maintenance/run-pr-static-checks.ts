@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
@@ -196,6 +197,21 @@ export function buildPrStaticCheckPlan(
   };
 }
 
+export function resolvePrDependencyAuditBase(
+  env: NodeJS.ProcessEnv,
+  head: string,
+  execGit: (args: string[]) => string = (args) => execFileSync("git", args, { encoding: "utf8" }),
+): string {
+  if (env.PR_BASE_SHA) return env.PR_BASE_SHA;
+  try {
+    const baseSha = execGit(["merge-base", head, "origin/main"]).trim();
+    if (!/^[a-f0-9]{40}$/i.test(baseSha)) throw new Error("merge-base did not return a commit SHA");
+    return baseSha;
+  } catch {
+    throw new Error("Cannot resolve dependency-audit base; fetch origin/main or set the frozen PR_BASE_SHA.");
+  }
+}
+
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
@@ -231,7 +247,9 @@ export async function runPrStaticChecks({
     args:
       command.name === "lint:changed"
         ? [`--base=${base}`, `--head=${head}`]
-        : (command.args ?? []),
+        : command.name === "check:dependency-audit"
+          ? [`--new-since=${resolvePrDependencyAuditBase(env, head)}`]
+          : (command.args ?? []),
   }));
   const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);

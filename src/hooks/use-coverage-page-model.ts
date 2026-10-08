@@ -9,7 +9,7 @@ import {
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { useQuerySlices } from "@/hooks/use-query-slice";
+import { useQuerySlice } from "@/hooks/use-query-slice";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
 import { logosById } from "@/lib/logos";
@@ -17,15 +17,17 @@ import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { useCoverageFilters } from "@/hooks/use-coverage-filters";
 
 export function useCoveragePageModel() {
-  const resources = useQuerySlices({
-    stablecoins: useStablecoins(),
-    pegSummary: usePegSummary(),
-    dexLiquidity: useDexLiquidity(),
-    redemptionBackstops: useRedemptionBackstops(),
-    yieldRankings: useYieldRankings(),
-    mintBurnFlows: useMintBurnFlows(),
-    reportCards: useReportCardsV9(),
-  });
+  const stablecoins = useQuerySlice(useStablecoins());
+  const pegSummary = useQuerySlice(usePegSummary());
+  const dexLiquidity = useQuerySlice(useDexLiquidity());
+  const redemptionBackstops = useQuerySlice(useRedemptionBackstops());
+  const yieldRankings = useQuerySlice(useYieldRankings());
+  const mintBurnFlows = useQuerySlice(useMintBurnFlows());
+  const reportCards = useQuerySlice(useReportCardsV9());
+  const resources = useMemo(
+    () => ({ stablecoins, pegSummary, dexLiquidity, redemptionBackstops, yieldRankings, mintBurnFlows, reportCards }),
+    [stablecoins, pegSummary, dexLiquidity, redemptionBackstops, yieldRankings, mintBurnFlows, reportCards],
+  );
   const matrix = useMemo(() => buildCoverageMatrixModel(resources), [resources]);
   const safetyScoreDataCoverage = useMemo(
     () => buildDataCoverageModel(matrix.safetyScoreResponse),

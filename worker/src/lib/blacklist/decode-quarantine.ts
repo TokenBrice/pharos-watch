@@ -55,8 +55,8 @@ export async function quarantineBlacklistDecodeFailure(
       : identity;
     const key = `blacklist:decode-retry:${configKey}:${evidenceId}`;
     const prior = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(key).first<{ value: string }>();
-    const state: unknown = prior ? JSON.parse(prior.value) : null;
-    if (state != null && !isRecord(state)) return false;
+    const parsed: unknown = prior ? JSON.parse(prior.value) : null;
+    const state = isRecord(parsed) ? parsed : null;
     if (state?.quarantined === true) return true;
     const attempts = (typeof state?.attempts === "number" && Number.isSafeInteger(state.attempts) ? state.attempts : 0)
       + (state?.observation === observation ? 0 : 1);

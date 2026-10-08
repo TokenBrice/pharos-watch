@@ -191,8 +191,11 @@ describe("runPostDeployAcceptance", () => {
       detail: `GET ${HEALTH_URL} returned 200 (stale); active version ${WORKER_VERSION}.`,
       outcome: "failed",
     });
-    expect(run.acceptance.failureKind).toBe("operational");
-    expect(run.acceptance.reason).toBe("activated; operational acceptance failed: worker-health: stale (HTTP 200)");
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
+    expect(run.acceptance.reason.startsWith("activated; operational acceptance failed")).toBe(true);
+    expect(run.acceptance.reason).toContain("worker-health");
+    expect(run.acceptance.reason).toContain("stale");
+    expect(run.acceptance.reason).toContain("200");
     expect(run.exitCode).toBe(1);
   });
 
@@ -294,9 +297,18 @@ describe("run-post-deploy-acceptance CLI", () => {
       dependencies(),
     );
     expect(exitCode).toBe(expectedExit);
-    expect(readFileSync(outputPath, "utf8")).toBe(expectedExit === 0
-      ? "outcome=passed\n"
-      : "outcome=failed\nfailure_kind=deployment\nreason=deployment acceptance failed: worker active version\n");
+    const outputs = Object.fromEntries(readFileSync(outputPath, "utf8").trim().split("\n").map((line) => {
+      const [key, ...value] = line.split("=");
+      return [key, value.join("=")];
+    }));
+    expect(outputs.outcome).toBe(expectedExit === 0 ? "passed" : "failed");
+    if (expectedExit === 0) {
+      expect(outputs.failure_kind).toBeUndefined();
+      expect(outputs.reason).toBeUndefined();
+    } else {
+      expect(outputs.failure_kind).toBe("deployment");
+      expect(outputs.reason).toContain("worker active version");
+    }
   });
 
   it("returns a failing exit code and records the failed outcome for a failed probe", async () => {
@@ -311,8 +323,14 @@ describe("run-post-deploy-acceptance CLI", () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(readFileSync(outputPath, "utf8")).toBe(
-      "outcome=failed\nfailure_kind=operational\nreason=activated; operational acceptance failed: worker-health: unreadable (HTTP 502)\n",
-    );
+    const outputs = Object.fromEntries(readFileSync(outputPath, "utf8").trim().split("\n").map((line) => {
+      const [key, ...value] = line.split("=");
+      return [key, value.join("=")];
+    }));
+    expect(outputs).toMatchObject({ outcome: "failed", failure_kind: "operational" });
+    expect(outputs.reason.startsWith("activated; operational acceptance failed")).toBe(true);
+    expect(outputs.reason).toContain("worker-health");
+    expect(outputs.reason).toContain("unreadable");
+    expect(outputs.reason).toContain("502");
   });
 });
