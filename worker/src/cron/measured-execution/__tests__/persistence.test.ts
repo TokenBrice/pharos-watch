@@ -19,7 +19,7 @@ import {
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { makeV3Target } from "./measured-execution.test-support";
-import { databases, evidenceDb, seedGeneration } from "./persistence.test-support";
+import { databases, evidenceDb, seedGeneration, seedMeasuredProducerAttempt } from "./persistence.test-support";
 
 afterEach(() => databases.closeAll());
 
@@ -111,6 +111,29 @@ describe("measured execution publication", () => {
 });
 
 describe("measured execution durable publication", () => {
+  it("records the supplemental producer on the shared active quote surface", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const inventory = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: 1_000 });
+    await publishDexMeasuredQuoteGeneration({
+      db,
+      targetGeneration: { ...inventory, targets: [target], publishedAt: 1_000 },
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }],
+      generationId: "supplemental-quotes",
+      quotedAt: 1_060,
+      producerScheduleKey: "halfHourlyMeasuredExecutionSupplemental",
+    });
+    expect(sqlite.prepare(
+      "SELECT surface, producer_schedule_key, producer_job, producer_path, state FROM surface_publication_generations WHERE generation_id = ?",
+    ).get("supplemental-quotes")).toEqual({
+      surface: "dex-measured-execution-quotes",
+      producer_schedule_key: "halfHourlyMeasuredExecutionSupplemental",
+      producer_job: "sync-cl-exit-depth",
+      producer_path: "halfHourlyMeasuredExecutionSupplemental",
+      state: "published",
+    });
+  });
+
   it("retains the original empty-read clock and clears quarantine on the latest non-empty outcome", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
@@ -645,6 +668,33 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution clock-bounded cohort reads", () => {
+  it("retains twelve quarter-hour observations without leaking later supplemental history", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const targetGenerationId = "quarter-hour-targets";
+    for (let opportunity = 0; opportunity < 12; opportunity++) {
+      const generationId = `quarter-hour-quotes-${opportunity}`;
+      const quotedAt = 1_000 + opportunity * 900;
+      seedGeneration(sqlite, {
+        generationId, targetGenerationId, publishedAt: quotedAt + 60,
+        state: opportunity === 11 ? "published" : "superseded",
+        rows: [{ target, profile: fixtureProfile(target, { targetGenerationId, quoteGenerationId: generationId, quotedAt }) }],
+      });
+    }
+    const latest = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    expect(latest?.quoteGenerationId).toBe("quarter-hour-quotes-11");
+    expect(latest?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
+      completeProducerCycleCount: 12, successfulObservationCount: 12,
+      observationWindowStartedAt: 1_060, observationWindowEndedAt: 10_960,
+    });
+    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, { publishedAtCeilingSec: 5_560 });
+    expect(clocked?.quoteGenerationId).toBe("quarter-hour-quotes-5");
+    expect(clocked?.byTargetId.get(target.targetId)?.observationHistory).toMatchObject({
+      completeProducerCycleCount: 6, successfulObservationCount: 6,
+      observationWindowEndedAt: 5_560,
+    });
+  });
+
   it("reads the newest cohort published at or before the consumer clock", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
@@ -764,6 +814,123 @@ describe("measured execution generation prune", () => {
         "candidate", "cutoff", "published", "recent",
         "targets-candidate", "targets-cutoff", "targets-published", "targets-recent",
       ]);
+  });
+
+  it("drains a provenance-known abandoned active candidate by physical rows, then its empty ledger", async () => {
+    const { db, sqlite } = databases.open();
+    const nowSec = 100_000;
+    const generationId = "abandoned-active-targets";
+    seedMeasuredProducerAttempt(sqlite, { job: "sync-dex-liquidity", scheduleKey: "halfHourlyChartsOffset",
+      invocationId: "invocation", clockSec: nowSec - 14_401 });
+    // Cleanup may run beside a newer invocation of the same producer job.
+    sqlite.prepare(`INSERT INTO cron_leases VALUES ('sync-dex-liquidity', 'unrelated-owner', ?, ?, ?)`).run(nowSec + 900, nowSec, nowSec);
+    sqlite.prepare(`INSERT INTO surface_publication_generations
+      (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
+      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 37,
+        'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
+      .run(generationId, nowSec - 14_401);
+    const targetInsert = sqlite.prepare(`INSERT INTO dex_measured_execution_targets
+      (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)
+      VALUES (?, ?, 'usdc-circle', 'uniswap-v3-quoter-v2', 'uniswap-v3', 'ethereum', ?, ?, '{}')`);
+    for (let index = 0; index < 37; index++) targetInsert.run(generationId, `target-${index}`, `pool-${index}`, nowSec - 14_401);
+    const count = () => Number(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?").get(generationId)!.count);
+    const ledgerQuery = sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = ?");
+    expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
+      deletedTargetRows: 16, deletedGenerationRows: 0, error: null,
+    });
+    expect(count()).toBe(21);
+    expect(ledgerQuery.get(generationId)).toMatchObject({ state: "candidate" });
+    expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({ deletedTargetRows: 16, error: null });
+    expect(count()).toBe(5);
+    expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
+      deletedTargetRows: 5, deletedGenerationRows: 1, error: null,
+    });
+    expect(count()).toBe(0);
+    expect(ledgerQuery.get(generationId)).toBeUndefined();
+  });
+
+  it.each(["lease", "progress", "slot", "child", "quote-reference", "ledger-reference", "malformed-reference", "unknown-owner", "missing-terminal", "cutoff", "validated", "published", "shadow"] as const)(
+    "retains an old candidate without positive no-owner/no-reference proof: %s",
+    async (protection) => {
+      const { db, sqlite } = databases.open();
+      const nowSec = 100_000;
+      const generationId = "protected-active-targets";
+      seedMeasuredProducerAttempt(sqlite, { job: "sync-dex-liquidity", scheduleKey: "halfHourlyChartsOffset",
+        invocationId: "invocation", clockSec: nowSec - 14_401 });
+      sqlite.prepare(`INSERT INTO surface_publication_generations
+        (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
+        VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 1,
+          'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
+        .run(generationId, nowSec - 14_401);
+      const target = fixtureTarget("ethereum");
+      sqlite.prepare(`INSERT INTO dex_measured_execution_targets
+        (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(generationId, target.targetId, target.stablecoinId, target.adapterProfileId, target.protocol,
+          target.chain, target.poolId, target.capturedAt, JSON.stringify(target));
+      if (protection === "lease") sqlite.prepare(`INSERT INTO cron_leases VALUES ('sync-dex-liquidity', 'owner', ?, ?, ?)`).run(nowSec, nowSec, nowSec);
+      if (protection === "progress") sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, lease_owner) VALUES ('sync-dex-liquidity', ?, ?, 'owner')`).run(nowSec - 20_000, nowSec - 20_000);
+      if (protection === "slot" || protection === "child") {
+        sqlite.prepare(`INSERT INTO cron_slot_executions
+          (slot_key, slot_started_at, state, execution_owner, started_at, updated_at, invocation_id)
+          VALUES ('halfHourlyChartsOffset', ?, ?, 'owner', ?, ?, 'invocation')`)
+          .run(nowSec, protection === "slot" ? "running" : "completed", nowSec, nowSec);
+      }
+      if (protection === "child") sqlite.prepare(`INSERT INTO scheduled_child_attempts
+        (attempt_key, schedule_key, slot_started_at, job, producer_path, producer_kind, invocation_id, attempt_no,
+         execution_schedule_key, execution_slot_started_at, execution_invocation_id, execution_generation, execution_owner)
+        VALUES ('attempt', 'halfHourlyChartsOffset', ?, 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation', 1,
+          'halfHourlyChartsOffset', ?, 'invocation', 1, 'owner')`).run(nowSec, nowSec);
+      if (protection === "quote-reference") seedGeneration(sqlite, {
+        generationId: "current-quote-reference", targetGenerationId: generationId, publishedAt: nowSec,
+        state: "published", rows: [{ target, status: "failed", failureReason: "pool-revert" }],
+      });
+      if (protection === "ledger-reference" || protection === "malformed-reference") {
+        sqlite.prepare(`INSERT INTO surface_publication_generations
+          (surface, generation_id, started_at, state, dependency_snapshot_json)
+          VALUES ('dex-measured-execution-quotes', 'empty-quote-reference', ?, 'published', ?)`)
+          .run(nowSec, protection === "ledger-reference" ? JSON.stringify({ targetGenerationId: generationId }) : "{invalid");
+      }
+      if (protection === "unknown-owner") sqlite.prepare("UPDATE surface_publication_generations SET producer_job = NULL WHERE generation_id = ?").run(generationId);
+      if (protection === "missing-terminal") sqlite.prepare("DELETE FROM cron_runs WHERE invocation_id = 'invocation'").run();
+      if (protection === "cutoff") sqlite.prepare("UPDATE surface_publication_generations SET started_at = ? WHERE generation_id = ?").run(nowSec - 14_400, generationId);
+      if (protection === "validated") sqlite.prepare("UPDATE surface_publication_generations SET validated_at = ? WHERE generation_id = ?").run(nowSec - 14_401, generationId);
+      if (protection === "published") sqlite.prepare("UPDATE surface_publication_generations SET state = 'published', published_at = ? WHERE generation_id = ?").run(nowSec - 14_401, generationId);
+      if (protection === "shadow") sqlite.prepare("UPDATE surface_publication_generations SET surface = 'dex-shadow-measured-execution-targets' WHERE generation_id = ?").run(generationId);
+      expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({ deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
+      expect(sqlite.prepare("SELECT generation_id FROM dex_measured_execution_targets WHERE generation_id = ?").get(generationId)).toBeDefined();
+      expect(sqlite.prepare("SELECT generation_id FROM surface_publication_generations WHERE generation_id = ?").get(generationId)).toBeDefined();
+    },
+  );
+
+  it("attributes target and quote candidates to their exact fenced scheduled producer", async () => {
+    const { db, sqlite } = databases.open();
+    const clockSec = 100_000;
+    seedMeasuredProducerAttempt(sqlite, { job: "sync-dex-liquidity", scheduleKey: "halfHourlyChartsOffset",
+      invocationId: "target-invocation", clockSec, terminal: false });
+    const target = fixtureTarget("ethereum");
+    const targets = await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: clockSec });
+    expect(sqlite.prepare("SELECT invocation_id FROM surface_publication_generations WHERE generation_id = ?").get(targets.generationId)!.invocation_id).toBe("target-invocation");
+    seedMeasuredProducerAttempt(sqlite, { job: "sync-cl-exit-depth", scheduleKey: "halfHourlyMeasuredExecution",
+      invocationId: "quote-invocation", clockSec, terminal: false });
+    const quotes = await publishDexMeasuredQuoteGeneration({ db,
+      targetGeneration: { ...targets, targets: [target], publishedAt: clockSec },
+      outcomes: [{ target, status: "failed", failureReason: "pool-revert" }], quotedAt: clockSec });
+    expect(sqlite.prepare("SELECT invocation_id FROM surface_publication_generations WHERE generation_id = ?").get(quotes.generationId)!.invocation_id).toBe("quote-invocation");
+  });
+
+  it("bounds a dense terminal generation delete to physical rows rather than generation count", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const rows = Array.from({ length: 37 }, (_, index) => ({
+      target: { ...target, targetId: `dense-${index}` }, status: "failed" as const, failureReason: "pool-revert",
+    }));
+    seedGeneration(sqlite, { generationId: "dense-quotes", targetGenerationId: "dense-targets",
+      publishedAt: 10_000, state: "failed", rows });
+    const result = await pruneDexMeasuredExecutionGenerations(db, 100_000);
+    expect(result).toMatchObject({ deletedQuoteRows: 16, deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(21);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(37);
   });
 
   it("reports cleanup errors without throwing after publication", async () => {

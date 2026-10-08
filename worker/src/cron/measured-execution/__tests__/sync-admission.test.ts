@@ -36,10 +36,10 @@ import {
   CURVE_NXUSD_METAPOOL_POLICY,
   CURVE_R3_METAPOOL_POLICIES,
   CURVE_USD1_METAPOOL_POLICY,
-} from "../curve-composite";
+} from "@shared/lib/curve-composite-policies";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  CURVE_CRYPTOSWAP_SHADOW_COHORT,
+  CURVE_CRYPTOSWAP_REVIEWED_COHORT,
 } from "../curve-cryptoswap";
 import {
   CURVE_3POOL_STABLESWAP_POLICY,
@@ -52,7 +52,7 @@ import {
 } from "../curve-stableswap-ng";
 import {
   CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
-  UNISWAP_V4_SHADOW_DEPLOYMENTS,
+  UNISWAP_V4_REVIEWED_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
 import { CURVE_3POOL_TOKEN_ADDRESSES } from "./measured-execution.test-support";
 
@@ -546,6 +546,22 @@ describe("measured execution overflow admission", () => {
     ).toBe(3);
   });
 
+  it("uses supplemental opportunities to finish a four-cohort rotation without widening per-run admission", () => {
+    const targets = ["coin-a", "coin-b", "coin-c", "coin-d"].map((coin) => target(coin, 100_000));
+    const covered = new Set<string>();
+    let cursor: string | null = null;
+    for (let opportunity = 0; opportunity < 4; opportunity++) {
+      const admission = admitTargetsWithinBudget(targets, { cursor, maxEstimatedRpcRequests: 10 });
+      expect(admission.estimatedRpcRequests).toBeLessThanOrEqual(10);
+      expect(admission.oversized.size).toBe(0);
+      expect(admission.admitted.size).toBe(1);
+      for (const targetId of admission.admitted) covered.add(targetId);
+      cursor = admission.nextCursor;
+    }
+    expect(covered).toEqual(new Set(targets.map((entry) => entry.targetId)));
+    expect(estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 10 })).toBe(4);
+  });
+
   it("packs later cohorts while resuming at the first deferred cohort", () => {
     const targets = [
       target("coin-a", 10_000_000),
@@ -803,6 +819,24 @@ describe("measured execution overflow admission", () => {
     ).toBe("ok");
   });
 
+  it("allows four quarter-hour active opportunities but retains the shadow rotation guard", () => {
+    const input = {
+      attemptedFailureCount: 0, deferredCount: 2,
+      admissionRotationCycles: 4, cursorWriteStatus: "written" as const,
+    };
+    expect(resolveMeasuredExecutionCronStatus({ ...input, maxAdmissionRotationCycles: 4 })).toBe("ok");
+    expect(resolveMeasuredExecutionCronStatus(input)).toBe("degraded");
+    expect(resolveMeasuredExecutionCronStatus({
+      ...input, admissionRotationCycles: 5, maxAdmissionRotationCycles: 4,
+    })).toBe("degraded");
+    expect(resolveMeasuredExecutionCronStatus({
+      ...input, cursorWriteStatus: "write-failed", maxAdmissionRotationCycles: 4,
+    })).toBe("degraded");
+    expect(resolveMeasuredExecutionCronStatus({
+      ...input, attemptedFailureCount: 1, maxAdmissionRotationCycles: 4,
+    })).toBe("degraded");
+  });
+
   it("degrades rotation that cannot refresh every admitted target within one hour", () => {
     expect(
       resolveMeasuredExecutionCronStatus({
@@ -874,7 +908,7 @@ describe("measured profile score-eligibility contract", () => {
         `${policy.chain}:${policy.poolAddress}`,
         policy.scoreEligible,
       )),
-      ...CURVE_CRYPTOSWAP_SHADOW_COHORT.map((policy) => profile(
+      ...CURVE_CRYPTOSWAP_REVIEWED_COHORT.map((policy) => profile(
         CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
         policy.chain,
         `${policy.chain}:${policy.poolAddress}`,
@@ -901,7 +935,7 @@ describe("measured profile score-eligibility contract", () => {
         `${deployment.chain}:${deployment.poolAddress}`,
         false,
       )),
-      ...["ethereum", ...UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment) => deployment.chain)].map(
+      ...UNISWAP_V4_REVIEWED_DEPLOYMENTS.map((deployment) => deployment.chain).map(
         (chain) => {
           const deployment = getUniswapV4Deployment(chain);
           if (!deployment) throw new Error(`missing Uniswap V4 deployment for ${chain}`);

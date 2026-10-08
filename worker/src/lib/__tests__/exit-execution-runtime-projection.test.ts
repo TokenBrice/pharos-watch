@@ -48,7 +48,7 @@ const inputReference: ExitExecutionCertificate["inputReference"] = {
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK,
 };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
-const call = { assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK, lane: "redemption" as const, reviews: [review], inputReference, outputReference };
+const call = { assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK, reviews: [review], inputReference, outputReference };
 beforeEach(() => { state.canonicalCompletion = 1; state.diagnostic = false; vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 

@@ -107,10 +107,14 @@ describe("V4 recovered exact PoolKey admission", () => {
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(true);
   });
 
-  it.each(["base", "bsc", "arbitrum", "polygon", "unichain", "tempo"])("keeps recovered %s PoolKeys shadow-only", (chain) => {
+  it.each(["base", "bsc", "arbitrum", "polygon", "tempo"])("keeps recovered %s PoolKeys shadow-only", (chain) => {
     const target = buildUniswapV4RegisteredExecutionTarget(exactInput(chain))?.measuredExecutionTarget;
     expect(target).toBeDefined();
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(false);
+  });
+
+  it("retains Unichain provider identities without constructing a retired measured target", () => {
+    expect(buildUniswapV4RegisteredExecutionTarget(exactInput("unichain"))?.measuredExecutionTarget).toBeUndefined();
   });
 
   it("rejects hooked keys, missing currency/fee facts, and duplicate source packets", () => {

@@ -8,27 +8,27 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DexMeasuredExecutionTargetSchema,
+  toDexMeasuredExecutionPublicProfile,
   type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
-  CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
-  CURVE_GUSD_3CRV_METAPOOL_POLICY,
-  CURVE_METAPOOL_ADAPTER_PROFILE_ID,
-  CURVE_NXUSD_METAPOOL_POLICY,
-  CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
-  CURVE_R3_METAPOOL_POLICIES,
-  CURVE_USD1_METAPOOL_POLICY,
+  CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_GUSD_3CRV_METAPOOL_POLICY,
+  CURVE_METAPOOL_ADAPTER_PROFILE_ID, CURVE_NXUSD_METAPOOL_POLICY,
+  CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, CURVE_R3_METAPOOL_POLICIES,
+  CURVE_USD1_METAPOOL_POLICY, type CurveCompositePoolPolicy, type CurveMetapoolPolicy,
+} from "@shared/lib/curve-composite-policies";
+import {
   buildCurveCompositeMeasuredExecutionTarget,
   createCurveCompositeQuoteExecutor,
   encodeCurveCompositeQuote,
   evaluateCurveCompositeEligibility,
   validateCurveCompositeProfileProof,
-  type CurveCompositePoolPolicy,
   type CurveCompositeRuntimeEvidence,
-  type CurveMetapoolPolicy,
 } from "../curve-composite";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
+import { validateMeasuredExecutionProfile } from "@shared/lib/p4-exit-route-measured-profile-validation";
+import { matchesCurveCompositeTarget } from "@shared/lib/curve-composite-policies";
 import { factoryMembershipProof, poolCoinProof, tokenDecimalsProof } from "./curve-proof.test-support";
 import { makeCurveCompositeReferenceMaps } from "./measured-execution.test-support";
 
@@ -526,7 +526,41 @@ function compositeProfile(
 }
 
 describe("reviewed Curve rate-bearing and metapool targets", () => {
-  it("collects exactly the ten owner-ratified metapools as shadow display-only routes", () => {
+  it.each([
+    { family: "rate-bearing", makeTarget: rateTarget, policy: CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, makeEvidence: rateEvidence },
+    { family: "metapool", makeTarget: metapoolTarget, policy: CURVE_USD1_METAPOOL_POLICY, makeEvidence: metapoolEvidence },
+  ])("validates public $family provenance without CL fallback or scoring admission", ({ makeTarget, policy, makeEvidence }) => {
+    const target = makeTarget()!;
+    const profile = toDexMeasuredExecutionPublicProfile(compositeProfile(target, policy, makeEvidence()));
+    const context = {
+      stablecoinId: policy.stablecoinId, observedAt: BLOCK_TIMESTAMP,
+      pool: {
+        poolId: target.poolId, project: "curve", chain: policy.chain, tvlUsd: target.retainedTvlUsd,
+        symbol: "composite", poolType: "curve-stableswap",
+        source: "dl" as const, extra: { measuredExecutionPhysicalPoolId: target.poolId },
+      },
+    };
+    const issues = validateMeasuredExecutionProfile(profile, context);
+    expect(issues).toContain("adapter-not-score-eligible");
+    expect(issues).not.toContain("invalid-cl-token-count");
+    expect(issues).not.toContain("physical-pool-provenance-mismatch");
+    expect(issues).not.toContain("invalid-curve-composite-identity");
+    expect(issues).not.toContain("curve-base-pool-mismatch");
+    expect(issues).not.toContain("curve-rate-provider-mismatch");
+    const provenance = profile.curveCompositeProvenance!;
+    expect(validateMeasuredExecutionProfile({
+      ...profile, curveCompositeProvenance: { ...provenance, poolIndex: provenance.poolIndex + 1 },
+    }, context)).toContain("physical-pool-provenance-mismatch");
+    expect(validateMeasuredExecutionProfile({
+      ...profile, poolTokenAddresses: [...profile.poolTokenAddresses!].reverse(),
+    }, context)).toContain("invalid-curve-composite-identity");
+    expect(matchesCurveCompositeTarget(target)).toBe(true);
+    expect(matchesCurveCompositeTarget({ ...target, poolTokenAddresses: [...target.poolTokenAddresses!].reverse() })).toBe(false);
+    expect(matchesCurveCompositeTarget({ ...target, poolId: `${target.chain}:0x${"11".repeat(20)}` })).toBe(false);
+    expect(matchesCurveCompositeTarget({ ...target, tokenIn: target.tokenOut, tokenOut: target.tokenIn })).toBe(false);
+  });
+
+  it("collects exactly the ten reviewed metapools as shadow display-only routes", () => {
     expect(CURVE_R3_METAPOOL_POLICIES).toHaveLength(10);
     expect(new Set(CURVE_R3_METAPOOL_POLICIES.map((policy) => policy.stablecoinId))).toEqual(
       new Set([

@@ -7,7 +7,7 @@ import type {
   DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { canonicalEvmAddress } from "./evm-codecs";
-import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite-policies";
+import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "@shared/lib/curve-composite-policies";
 import { buildMeasuredExecutionTargetValue } from "./inventory";
 import {
   createCurveStableSwapExecutionPipeline,
@@ -20,7 +20,6 @@ import {
   type CurveCompositeRuntimeEvidence,
 } from "./curve-composite-runtime-proof";
 
-export * from "./curve-composite-policies";
 export { evaluateCurveCompositeEligibility, validateCurveCompositeProfileProof, verifyCurveCompositeDeployment } from "./curve-composite-runtime-proof";
 export type { CurveCompositeDeploymentVerification, CurveCompositeEligibility, CurveCompositeRuntimeEvidence } from "./curve-composite-runtime-proof";
 

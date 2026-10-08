@@ -14,6 +14,7 @@ import {
 } from "../p4-exit-route-capacity";
 import { makeMeasuredProfile, withMeasuredObservationHistory } from "@shared/test-utils/measured-execution.test-support";
 import { validateMeasuredExecutionProfile } from "../p4-exit-route-measured-profile-validation";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "../p4-exit-route-capability-policy";
 
 import {
   aerodromeMeasuredProfile,
@@ -110,7 +111,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
@@ -292,7 +293,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
@@ -324,7 +325,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
       unsupportedPoolCount: 0,
@@ -509,7 +510,7 @@ describe("P4 DEX exit route observations", () => {
 
     const mature = run(3);
     expect(mature.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
@@ -569,7 +570,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
@@ -697,7 +698,7 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(legacyProductionCoverage)).toBe(false);
     const explicitProductionCoverage = {
       ...legacyProductionCoverage,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       scoreEligibleCapabilityPoolCount: 38,
     };
     expect(
@@ -733,7 +734,7 @@ describe("P4 DEX exit route observations", () => {
     // the bounded route-selection budget.
     const overflowOnlyCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 283,
       observationCount: 24,
       scoreEligibleObservationCount: 24,
@@ -803,7 +804,7 @@ describe("P4 DEX exit route observations", () => {
     // an invented key, so the carve-out could never fire on real coverage.
     const producerCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 372,
       observationCount: 24,
       scoreEligibleObservationCount: 24,
@@ -865,7 +866,7 @@ describe("P4 DEX exit route observations", () => {
     // remaining gap: 3 targets deferred before any capability was exercised.
     const rotationDeferredCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 372,
       observationCount: 24,
       scoreEligibleObservationCount: 24,
@@ -903,7 +904,7 @@ describe("P4 DEX exit route observations", () => {
   it("certifies live USDT/USDC/DAI/EURC budgeted surfaces and keeps crvUSD open", () => {
     const usdtShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1307,
       observationCount: 24,
       scoreEligibleObservationCount: 24,
@@ -935,7 +936,7 @@ describe("P4 DEX exit route observations", () => {
 
     const daiShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 119,
       observationCount: 24,
       scoreEligibleObservationCount: 24,
@@ -956,7 +957,7 @@ describe("P4 DEX exit route observations", () => {
 
     const eurcShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 42,
       observationCount: 8,
       scoreEligibleObservationCount: 8,
@@ -979,7 +980,7 @@ describe("P4 DEX exit route observations", () => {
 
     const crvusdShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 113,
       observationCount: 3,
       scoreEligibleObservationCount: 3,

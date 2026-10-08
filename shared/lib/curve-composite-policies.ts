@@ -1,9 +1,9 @@
-import { canonicalEvmAddress } from "./evm-codecs";
-import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
+import { canonicalEvmAddress } from "./evm-address";
+import { DEX_MEASURED_ADAPTER_PROFILE_IDS, type DexMeasuredExecutionTarget } from "../types/measured-execution";
 import {
   CURVE_STABLESWAP_DEPLOYMENT,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
-} from "@shared/lib/measured-execution-deployment-policies";
+} from "./measured-execution-deployment-policies";
 import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS, CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS, CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS,
@@ -412,7 +412,7 @@ function ethereumLegacyFactory3CrvMetapool(input: {
 }
 
 /**
- * Owner-ratified metapool routes. Each entry is an exact physical deployment
+ * Reviewed shadow metapool routes, not approved scoring activations. Each entry is an exact physical deployment
  * with pinned registry, implementation, base-pool, token-order, and runtime
  * code identities. No other metapool is admitted by this adapter.
  */
@@ -682,6 +682,10 @@ export const CURVE_R3_METAPOOL_POLICIES = [
   CURVE_TUSD_AM3CRV_METAPOOL_POLICY,
 ] as const satisfies readonly CurveMetapoolPolicy[];
 
+export const CURVE_R3_METAPOOL_POOL_IDENTITIES = CURVE_R3_METAPOOL_POLICIES.map(
+  (policy) => [policy.chain, policy.poolAddress] as const,
+);
+
 const POLICIES: readonly CurveCompositePoolPolicy[] = [
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_USD1_METAPOOL_POLICY,
@@ -703,4 +707,27 @@ export function getCurveCompositePolicy(
 export function isCurveCompositeAdapterProfileId(profileId: string): boolean {
   return profileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID ||
     profileId === CURVE_METAPOOL_ADAPTER_PROFILE_ID;
+}
+
+/** Source identity retention shares the exact quote-policy roster. */
+export function shouldRetainCurveCompositePoolIdentity(chain: string, poolAddress: string): boolean {
+  return getCurveCompositePolicy(chain, poolAddress) !== null;
+}
+
+/** Validate the full ordered underlying execution path, not the physical LP pair. */
+export function matchesCurveCompositeTarget(target: DexMeasuredExecutionTarget): boolean {
+  const prefix = `${target.chain}:`;
+  if (target.protocol !== "curve" || !target.poolId.startsWith(prefix)) return false;
+  const policy = getCurveCompositePolicy(target.chain, target.poolId.slice(prefix.length));
+  if (!policy || policy.adapterProfileId !== target.adapterProfileId || policy.stablecoinId !== target.stablecoinId) {
+    return false;
+  }
+  const input = policy.executionTokens[policy.inputIndex]!;
+  const output = policy.executionTokens[policy.outputIndex]!;
+  return target.poolTokenAddresses?.length === policy.executionTokens.length &&
+    target.poolTokenAddresses.every((address, index) => address === policy.executionTokens[index]!.address) &&
+    target.tokenIn.address === input.address && target.tokenIn.decimals === input.decimals &&
+    target.tokenIn.trackedAssetId === policy.stablecoinId &&
+    target.tokenOut.address === output.address && target.tokenOut.decimals === output.decimals &&
+    target.tokenOut.trackedAssetId === output.trackedAssetId;
 }

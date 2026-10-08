@@ -82,6 +82,7 @@ export interface LiquidityMetrics {
 
 import type {
   DexAmmExecutionModel,
+  DexStoredAmmExecutionModel,
   DexExecutionCapabilityGate,
   DexLiquidityPool,
   DexVolumeAvailabilityRecord,
@@ -102,7 +103,7 @@ export type LiquiditySourceMixByFamily = Partial<Record<LiquidityPoolSourceFamil
 /** Internal descriptor awaiting same-block factory and reserve verification. */
 export interface EvmV2ExecutionCandidate {
   source: "uniswap-v2" | "pancakeswap-v2" | "solidly-v2";
-  solidlyProtocol?: "aerodrome" | "velodrome" | "shadow-exchange";
+  solidlyProtocol?: "aerodrome" | "velodrome";
   poolAddress: `0x${string}`;
   tokenAddresses: [`0x${string}`, `0x${string}`];
   tokenSymbols: [string, string];
@@ -204,7 +205,7 @@ export interface PoolEntry {
     /** Reviewed exact-family failure retained for P4 completeness accounting. */
     executionCapabilityGate?: DexExecutionCapabilityGate;
     /** Exact direct-API inputs retained for supported AMM execution simulation. */
-    ammExecutionModel?: DexAmmExecutionModel;
+    ammExecutionModel?: DexStoredAmmExecutionModel;
     /** Internal V2 candidate; consumed before scoring and never published. */
     evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
     /** Internal Curve NG rate-input candidate; consumed before scoring and never published. */
@@ -486,7 +487,7 @@ export interface GlobalAgg {
 
 /**
  * Report-only counters for optimistic defaults and silent exclusions in the
- * DEX liquidity pipeline (Liquidity Score v6 Phase 0.2 observability).
+ * DEX liquidity pipeline: permanent diagnostics, introduced in Liquidity v6 Phase 0.2.
  * Fixed key set, scalar counts only. Surfaced in cron run metadata as
  * `fallbackCounters`; never persisted per-pool and never read by any scoring
  * formula. Pool-intake keys populate during the scoring-stage run; scoring

@@ -289,10 +289,21 @@ export function buildP4DexExitRouteObservations(params: {
       }
     }
     if (ammModel != null) {
+      if (ammModel.source === "retired-solidly-v2") {
+        unsupportedPoolCount++;
+        unsupportedReasons.retiredSolidlyVariant = (unsupportedReasons.retiredSolidlyVariant ?? 0) + 1;
+        continue;
+      }
+      if (ammModel.source === "solidly-v2" && capability.model !== "solidly-v2") {
+        unsupportedPoolCount++;
+        unsupportedReasons.invalidSolidlyDeployment = (unsupportedReasons.invalidSolidlyDeployment ?? 0) + 1;
+        continue;
+      }
       const modelIssues = validateAmmExecutionModel(ammModel, {
         chain: pool.chain,
         stablecoinId: params.stablecoinId,
         retainedTvlUsd: pool.tvlUsd,
+        nowSec: params.observedAt,
       });
       if (modelIssues.length > 0) {
         unsupportedPoolCount++;
@@ -317,6 +328,8 @@ export function buildP4DexExitRouteObservations(params: {
 
         const output = outputFromAmmToken(pool.chain, outputToken);
         const outputIdentity = canonicalExitRouteAssetKey(pool.chain, outputToken.address);
+        const state = ammModel.source === "solidly-v2" ? ammModel.solidlyState : undefined;
+        const inputToken = ammModel.tokens[ammModel.trackedTokenIndex]!;
         observations.push({
           routeId: buildDexRouteId([
             normalizedKey(params.stablecoinId),
@@ -339,14 +352,24 @@ export function buildP4DexExitRouteObservations(params: {
           output,
           ...trackedExactAmmOutputValuationFields(
             outputToken,
-            `dex-amm-output-reference:${ammModel.source}:${outputToken.referencePriceSource}`,
-            params.observedAt,
+            state ? outputToken.referencePriceSourceId! : `dex-amm-output-reference:${ammModel.source}:${outputToken.referencePriceSource}`,
+            state ? outputToken.referencePriceObservedAt! : params.observedAt,
           ),
           evidenceKind: capability.outputEvidenceKind,
           confidence: capability.confidence,
           scoreEligible: capability.scoreEligible,
-          observedAt: params.observedAt,
-          freshnessSeconds: 0,
+          observedAt: state ? state.blockTimestamp! : params.observedAt,
+          freshnessSeconds: state ? Math.max(0, params.observedAt - Math.min(
+            state.blockTimestamp!, inputToken.referencePriceObservedAt!, outputToken.referencePriceObservedAt!,
+          )) : 0,
+          ...(state ? {
+            ammExecutionEvidence: {
+              sourceGenerationId: state.sourceGenerationId!, blockNumber: state.blockNumber,
+              blockHash: state.blockHash, blockTimestamp: state.blockTimestamp!,
+              inputReference: { priceUsd: inputToken.referencePriceUsd, sourceId: inputToken.referencePriceSourceId!, observedAt: inputToken.referencePriceObservedAt! },
+              outputReference: { priceUsd: outputToken.referencePriceUsd, sourceId: outputToken.referencePriceSourceId!, observedAt: outputToken.referencePriceObservedAt! },
+            },
+          } : {}),
           commonModeKeys: commonModeKeys(pool, output),
           capacityCurve: curve,
         });

@@ -18,7 +18,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import { buildMeasuredExecutionTargetValue } from "../measured-execution/inventory";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  getCurveCryptoSwapShadowPolicy,
+  getCurveCryptoSwapReviewedPolicy,
 } from "../measured-execution/curve-cryptoswap";
 import {
   CURVE_3POOL_STABLESWAP_POLICY,
@@ -373,7 +373,7 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   const { curveData } = input;
   if (!curveData || !isCryptoSwap(curveData.registryId) || curveData.apiIsBroken) return null;
   if (!curveData.poolAddress) return null;
-  const policy = getCurveCryptoSwapShadowPolicy(input.chain, curveData.poolAddress);
+  const policy = getCurveCryptoSwapReviewedPolicy(input.chain, curveData.poolAddress);
   if (!policy) return null;
   const executionCoins = curveData.executionCoins;
   if (!executionCoins || executionCoins.length !== 2) return null;
@@ -658,7 +658,7 @@ export function resolveActiveCurveCryptoSwapCandidateByTvl(
   if (!candidate.poolAddress || !isCryptoSwap(candidate.registryId) || candidate.isMetaPool || candidate.apiIsBroken) {
     return null;
   }
-  const policy = getCurveCryptoSwapShadowPolicy(chain, candidate.poolAddress);
+  const policy = getCurveCryptoSwapReviewedPolicy(chain, candidate.poolAddress);
   return policy ? candidate : null;
 }
 

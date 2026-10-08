@@ -151,7 +151,7 @@ describe("retained V4 target recovery", () => {
     expect(f.dependencies.rpcBatch.mock.calls[0]![1][0].params[0].topics[1]).toBe(POOL_ID);
   });
 
-  it.each(["base", "bsc", "polygon", "arbitrum", "unichain", "tempo"])("does not grant %s score eligibility merely because identity/deployment recovery succeeded", async (chain) => {
+  it.each(["base", "bsc", "polygon", "arbitrum", "tempo"])("does not grant %s score eligibility merely because identity/deployment recovery succeeded", async (chain) => {
     const f = fixture(chain);
     await enrichUniswapV4ExecutionTargets(f.input);
     expect(f.pool.extra?.measuredExecutionTarget).toBeDefined();

@@ -37,7 +37,7 @@ import { resolveTrackedStablecoinId } from "./token-resolution";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { shouldRetainCurveCompositePoolIdentity } from "../measured-execution/curve-composite-identities";
+import { shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./defillama-v4-identity";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;

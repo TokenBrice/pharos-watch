@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import {
   buildDexScoreDetailsJson,
   selectStillFreshDexRouteSetHold,
@@ -69,6 +70,28 @@ describe("P4 route observation persistence envelope", () => {
         observationCount: 1,
       },
     });
+  });
+
+  it("preserves original Solidly evidence through persistence and a hold without extending its clock", () => {
+    const { candidate, previousObservation, coverage, nowSec } = makeDexRouteHoldFixture();
+    const originalClock = nowSec - 120;
+    const previous = {
+      ...previousObservation, scoreEligible: false, observedAt: originalClock, freshnessSeconds: 180,
+      ammExecutionEvidence: {
+        sourceGenerationId: "dex-liquidity-scoring-stage:original", blockNumber: 52199671,
+        blockHash: `0x${"a".repeat(64)}`, blockTimestamp: originalClock,
+        inputReference: { priceUsd: 1, sourceId: "coingecko", observedAt: originalClock - 60 },
+        outputReference: { priceUsd: 1, sourceId: "coingecko", observedAt: originalClock - 60 },
+      },
+    };
+    const persisted = buildDexScoreDetailsJson(Object.assign(makeP4ScoreResult(), {
+      exitRouteObservations: [previous], exitRouteObservationCoverage: coverage,
+    }));
+    const held = selectStillFreshDexRouteSetHold(candidate, persisted, nowSec);
+    expect(held?.observations[0]).toMatchObject(previous);
+    expect(ExitRouteObservationSchema.parse(JSON.parse(persisted).exitRouteObservations[0]).ammExecutionEvidence)
+      .toEqual(previous.ammExecutionEvidence);
+    expect(selectStillFreshDexRouteSetHold(candidate, persisted, originalClock + 3601)).toBeNull();
   });
 
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
+import { isDexExitRouteCoverageComplete, isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import {
   DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
   buildDexPlaceholderScoreDetailsJson,
@@ -87,12 +89,18 @@ describe("DEX placeholder deployment-census coverage", () => {
       ],
       nowSec: NOW_SEC,
     });
+    // A known-empty census is not a positive route/capability denominator.
+    expect(isDexExitRouteCoverageComplete(classification.coverage)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(classification.coverage)).toBe(false);
+    const staleCoverage = { ...classification.coverage, capabilityMatrixVersion: "retired-matrix" };
+    expect(isDexExitRouteCoverageComplete(staleCoverage)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(staleCoverage)).toBe(false);
 
     expect(classification).toEqual({
       state: "complete-empty",
       coverage: {
         status: "populated",
-        capabilityMatrixVersion: "p4a.9",
+        capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
         retainedPoolCount: 0,
         observationCount: 0,
         scoreEligibleObservationCount: 0,

@@ -515,7 +515,7 @@ export async function buildRedemptionBackstopEntry(
     }
   }
   const executionRoutes = await observeReviewedExitExecutionRoutes({
-    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, lane: "redemption", db, signal: options.signal, rpcOptions: options.rpcOptions,
+    assetId: stablecoinId, circulatingUsd: supplyUsd, clockSec: now, db, signal: options.signal, rpcOptions: options.rpcOptions,
     stablecoinsCache: options.stablecoinsCache, envelope: options.exitExecutionEnvelope, reviews: options.exitExecutionReviews,
   });
   if (executionRoutes.observations.length > 0) {

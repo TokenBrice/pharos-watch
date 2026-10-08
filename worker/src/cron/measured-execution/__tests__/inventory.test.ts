@@ -53,6 +53,13 @@ function directPool(
 }
 
 describe("measured execution target inventory", () => {
+  it("keeps native physical-pool direction keys case-correct", () => {
+    expect(buildMeasuredPoolDirectionKey(" USDC-CIRCLE ", "Solana:AbCd")).toBe("usdc-circle|solana:AbCd");
+    expect(buildMeasuredPoolDirectionKey("usdc-circle", "solana:AbCd")).not.toBe(buildMeasuredPoolDirectionKey("usdc-circle", "solana:abcd"));
+    expect(buildMeasuredPoolDirectionKey("usdc-circle", "ethereum:0xABCD")).toBe("usdc-circle|ethereum:0xabcd");
+    expect(buildMeasuredPoolDirectionKey("usdc-circle", "sui:0xAB")).toBe(buildMeasuredPoolDirectionKey("usdc-circle", "sui:0xab"));
+  });
+
   it("parses exactly one Uniswap v3 percent fee and rejects ambiguous metadata", () => {
     expect(parseUniV3FeePips("Uniswap V3 0.01%")).toBe(100);
     expect(parseUniV3FeePips("fees 0.01% and 0.05%")).toBeNull();

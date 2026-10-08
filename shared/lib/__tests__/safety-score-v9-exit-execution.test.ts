@@ -14,7 +14,7 @@ function admission(certificate: ExitExecutionCertificate, clockSec = executionCl
 }
 
 describe("exact-request execution certificate admission", () => {
-  it("admits a complete executable amount and a separately proven partial prefix, but not unavailable state", () => {
+  it("admits a full executable request and a separately proven partial execution, but not unavailable state", () => {
     expect(admission(makeExecutionCertificate())).toMatchObject({ state: "observed", point: { executableUsd: 100_000 } });
     const partial = makeExecutionCertificate();
     Object.assign(partial.points[0]!, { executedRawInput: "50000000000", executableUsd: 50_000, certification: "exact-lower-bound" });
@@ -49,7 +49,7 @@ describe("exact-request execution certificate admission", () => {
 
   it("preserves observed zero but refuses missing or smaller defining requests", () => {
     const zero = makeExecutionCertificate();
-    Object.assign(zero.points[0]!, { executedRawInput: "0", executableUsd: 0, certification: "exact-lower-bound", executionCostBps: 0, allInCostBps: 0, fees: [], reason: "observed-no-bids" });
+    Object.assign(zero.points[0]!, { executedRawInput: "0", executableUsd: 0, certification: "exact-lower-bound", executionCostBps: 0, allInCostBps: 0, fees: [], reason: "observed-no-execution" });
     zero.points[0]!.outputs[0]!.rawUnits = "0";
     expect(admission(zero)).toMatchObject({ state: "observed", point: { executableUsd: 0 } });
     expect(resolveExitExecutionRequestPoint(zero, { requestedNotionalUsd: 1_000_000, maxCostBps: 200 })).toBeNull();
@@ -97,11 +97,21 @@ describe("exact-request execution certificate admission", () => {
     expect(admission(undisclosed)).toMatchObject({ state: "unavailable", responsibility: "issuer-undisclosed" });
     expect(admission(makeExecutionCertificate(), Date.parse(executionReview.reviewedAt) / 1000 - 1)).toMatchObject({ state: "unavailable", reason: "execution-review-expired" });
   });
+  it("refuses every missing required gate on an otherwise executable request", () => {
+    for (const requiredGate of V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels["securitize-offramp"]!.requiredGates) {
+      const certificate = makeExecutionCertificate();
+      certificate.gates = certificate.gates.filter((gate) => gate.gateId !== requiredGate);
+      expect(admission(certificate)).toMatchObject({
+        state: "unavailable", reason: `execution-gate-missing:${requiredGate}`,
+      });
+    }
+  });
+
 
   it("keeps old scoring available while withholding a new uncertified model even with a favorable producer flag", () => {
     const legacy = makeExitRoute();
     const score = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [legacy] }, V9_CANDIDATE_POLICY_V1);
-    const uncertified = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [{ ...legacy, executionModelId: "orderbook" }] }, V9_CANDIDATE_POLICY_V1);
+    const uncertified = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [{ ...legacy, executionModelId: "securitize-offramp" }] }, V9_CANDIDATE_POLICY_V1);
     expect(score.routes[0]!.included).toBe(true);
     expect(uncertified.routes[0]).toMatchObject({ included: false, exclusionReason: "unsupported-same-notional-route" });
     expect(uncertified.score).toBeLessThan(score.score!);

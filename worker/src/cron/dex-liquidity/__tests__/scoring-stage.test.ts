@@ -20,6 +20,7 @@ import {
 } from "../scoring-stage";
 import type { LiquidityMetrics, PoolEntry } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import archivedSolidly from "./fixtures/solidly-v2-2026-10-05-archive.json";
 
 const openDatabases: ReturnType<typeof createLatestSchemaSqlite>["sqlite"][] = [];
 const textEncoder = new TextEncoder();
@@ -194,13 +195,6 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
   return {
     fallback: {
       weakCoverageCoinsBeforeFallback: 7,
-      directCexOrderbookDepth: {
-        checkedSymbols: 2,
-        venueCount: 3,
-        observations: 4,
-        maxDepthDown2PctUsdBySymbol: { USDC: 10_000_000 },
-        maxDepthUp2PctUsdBySymbol: { USDC: 9_000_000 },
-      },
     },
     metrics,
     poolRejections: [],
@@ -282,6 +276,44 @@ afterEach(() => {
 });
 
 describe("DEX liquidity scoring stage", () => {
+  it.each(archivedSolidly)("retains original state/reference clocks while retiring stored $poolId augmentation", (fixture) => {
+    const pool = poolState(1);
+    const entry = pool.metrics.get("major")!.topPools[0]!;
+    const rawModel = {
+      source: "solidly-v2", invariant: fixture.state.stable ? "solidly-stable" : "constant-product",
+      trackedTokenIndex: 0, feeRate: Number(fixture.state.fee) / (fixture.state.variant === "shadow" ? 1_000_000 : 10_000),
+      tokens: [fixture.token0, fixture.token1].map((address, index) => ({
+        address, symbol: index === 0 ? "INPUT" : "OUTPUT", decimals: index === 0 ? fixture.state.decimals0 : fixture.state.decimals1,
+        balance: Number(index === 0 ? fixture.state.reserve0 : fixture.state.reserve1) / 10 ** (index === 0 ? fixture.state.decimals0 : fixture.state.decimals1),
+        referencePriceUsd: 1, referencePriceSource: "tracked-market", referencePriceSourceId: "coingecko",
+        referencePriceObservedAt: 940, trackedAssetId: index === 0 ? "major" : "minor",
+      })),
+      solidlyState: { ...fixture.state, fee: Number(fixture.state.fee), blockNumber: fixture.blockNumber,
+        blockHash: fixture.blockHash, blockTimestamp: 1000, sourceGenerationId: "historical-solidly-generation",
+        poolAddress: fixture.poolId.split(":")[1]!, factoryAddress: fixture.factory, verifiedQuoteCount: 4,
+        quoteChecks: fixture.points.filter((point) => point.tokenInIndex === 0).map((point) => ({
+          tokenInIndex: 0, amountIn: point.amountIn, amountOut: point.amountOut!,
+        })),
+      },
+    };
+    // Replay a stored pre-retirement wire shape, not a new producer model.
+    entry.extra = JSON.parse(JSON.stringify({ ammExecutionModel: rawModel }));
+    const decoded = decodeDexLiquidityScoringStageChunks([...encodeDexLiquidityScoringStageChunks(sourceState(), pool)]);
+    const decodedEntry = decoded.poolState.metrics.get("major")!.topPools[0]!;
+    expect(decodedEntry.tvlUsd).toBe(entry.tvlUsd);
+    const model = decodedEntry.extra!.ammExecutionModel!;
+    expect(model.tokens[0]!.referencePriceObservedAt).toBe(940);
+    if (fixture.state.variant === "shadow" || !fixture.state.stable) {
+      expect(model.source).toBe("retired-solidly-v2");
+      if (model.source !== "retired-solidly-v2") throw new Error("Stored retired augmentation must be unavailable");
+      expect(model.unavailableReason).toBe("retired-solidly-variant");
+      expect(model.retiredSolidlyState).toMatchObject({ blockTimestamp: 1000, blockHash: fixture.blockHash, sourceGenerationId: "historical-solidly-generation" });
+    } else {
+      expect(model.source).toBe("solidly-v2");
+      expect(model.solidlyState).toMatchObject({ blockTimestamp: 1000, blockHash: fixture.blockHash, sourceGenerationId: "historical-solidly-generation" });
+    }
+  });
+
   it("round-trips the production-shaped 7,402-pool graph in bounded ordered chunks", () => {
     const source = sourceState();
     const pool = poolState();

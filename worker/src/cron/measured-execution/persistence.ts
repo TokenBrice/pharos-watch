@@ -26,6 +26,21 @@ export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
 const GENERATION_RETENTION_SEC = 4 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
+
+// Attribution must be captured while the exact leased child still owns its
+// execution fence, including candidates interrupted before publication.
+const SCHEDULED_PUBLISHER_INVOCATION_SQL = `
+  SELECT CASE WHEN COUNT(*) = 1 THEN MAX(attempt.invocation_id) ELSE NULL END
+    FROM scheduled_child_attempts attempt
+    JOIN cron_leases lease ON lease.job = attempt.job AND lease.lease_owner = attempt.lease_owner
+    JOIN cron_slot_executions slot ON slot.slot_key = attempt.execution_schedule_key
+      AND slot.slot_started_at = attempt.execution_slot_started_at
+      AND slot.execution_owner = attempt.execution_owner
+      AND slot.execution_generation = attempt.execution_generation
+      AND slot.invocation_id = attempt.execution_invocation_id
+   WHERE attempt.schedule_key = ? AND attempt.job = ? AND attempt.producer_path = ?
+     AND attempt.producer_kind = 'scheduled-job' AND attempt.terminal_token IS NULL
+     AND slot.state = 'running'`;
 interface TargetRow {
   generation_id: string;
   target_id: string;
@@ -199,15 +214,24 @@ export async function loadLatestPublishedDexShadowMeasuredTargets(
   return loadLatestPublishedNativeMeasuredTargets(DEX_SHADOW_PERSISTENCE, db, signal);
 }
 
+export type DexActiveMeasuredExecutionScheduleKey =
+  | "halfHourlyMeasuredExecution"
+  | "halfHourlyMeasuredExecutionSupplemental";
+
 export async function publishDexMeasuredQuoteGeneration(input: {
   db: D1Database;
   targetGeneration: PublishedDexMeasuredTargets;
   outcomes: readonly DexMeasuredQuoteOutcome[];
   quotedAt: number;
   generationId?: string;
+  producerScheduleKey?: DexActiveMeasuredExecutionScheduleKey;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  return publishNativeMeasuredQuoteGeneration(DEX_PERSISTENCE, input);
+  return publishNativeMeasuredQuoteGeneration(
+    input.producerScheduleKey === "halfHourlyMeasuredExecutionSupplemental"
+      ? DEX_SUPPLEMENTAL_PERSISTENCE : DEX_PERSISTENCE,
+    input,
+  );
 }
 
 export async function publishDexShadowMeasuredQuoteGeneration(input: {
@@ -280,6 +304,15 @@ const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMe
   quoteProducer: { scheduleKey: "halfHourlyMeasuredExecution", job: "sync-cl-exit-depth", path: "halfHourlyMeasuredExecution" },
 };
 
+const DEX_SUPPLEMENTAL_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+  ...DEX_PERSISTENCE,
+  quoteProducer: {
+    scheduleKey: "halfHourlyMeasuredExecutionSupplemental",
+    job: "sync-cl-exit-depth",
+    path: "halfHourlyMeasuredExecutionSupplemental",
+  },
+};
+
 const DEX_SHADOW_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
   label: "DEX shadow",
   activation: "shadow",
@@ -322,8 +355,8 @@ async function publishNativeMeasuredTargetInventory<
           .prepare(
             `INSERT INTO surface_publication_generations
        (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
-        producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, 'scheduled-job')`,
+        producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
+       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, 'scheduled-job', (${SCHEDULED_PUBLISHER_INVOCATION_SQL}))`,
           )
           .bind(
             config.targetSurface,
@@ -331,6 +364,9 @@ async function publishNativeMeasuredTargetInventory<
             input.capturedAt,
             targets.length,
             previous?.generation_id ?? null,
+            config.targetProducer.scheduleKey,
+            config.targetProducer.job,
+            config.targetProducer.path,
             config.targetProducer.scheduleKey,
             config.targetProducer.job,
             config.targetProducer.path,
@@ -508,8 +544,8 @@ async function publishNativeMeasuredQuoteGeneration<
           .prepare(
             `INSERT INTO surface_publication_generations
        (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
-        dependency_snapshot_json, producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, ?, 'scheduled-job')`,
+        dependency_snapshot_json, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
+       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, ?, 'scheduled-job', (${SCHEDULED_PUBLISHER_INVOCATION_SQL}))`,
           )
           .bind(
             config.quoteSurface,
@@ -518,6 +554,9 @@ async function publishNativeMeasuredQuoteGeneration<
             persistedOutcomes.length,
             previous?.generation_id ?? null,
             JSON.stringify(dependencyManifest),
+            config.quoteProducer.scheduleKey,
+            config.quoteProducer.job,
+            config.quoteProducer.path,
             config.quoteProducer.scheduleKey,
             config.quoteProducer.job,
             config.quoteProducer.path,
@@ -616,22 +655,85 @@ export async function pruneDexMeasuredExecutionGenerations(
   signal?: AbortSignal,
 ): Promise<DexMeasuredExecutionRetentionResult> {
   const cutoff = nowSec - GENERATION_RETENTION_SEC;
+  // Missing producer identity is not proof of abandonment. In particular, old
+  // provenance-free candidates remain retained until separately diagnosed.
+  // The four-hour floor exceeds every scheduled publisher's in-flight budget;
+  // ownership and references are still checked atomically at each DELETE.
+  const abandonedCandidate = `
+    candidate.state = 'candidate'
+    AND candidate.published_at IS NULL AND candidate.validated_at IS NULL
+    AND candidate.producer_kind = 'scheduled-job'
+    AND (
+      (candidate.surface = '${DEX_MEASURED_TARGET_SURFACE}'
+       AND candidate.producer_job = 'sync-dex-liquidity'
+       AND candidate.producer_schedule_key = 'halfHourlyChartsOffset'
+       AND candidate.producer_path = 'halfHourlyChartsOffset')
+      OR
+      (candidate.surface = '${DEX_MEASURED_QUOTE_SURFACE}'
+       AND candidate.producer_job = 'sync-cl-exit-depth'
+       AND candidate.producer_schedule_key IN ('halfHourlyMeasuredExecution', 'halfHourlyMeasuredExecutionSupplemental')
+       AND candidate.producer_path = candidate.producer_schedule_key)
+    )
+    AND candidate.invocation_id IS NOT NULL
+    AND EXISTS (SELECT 1 FROM scheduled_child_attempts completed
+      WHERE completed.invocation_id = candidate.invocation_id
+        AND completed.job = candidate.producer_job
+        AND completed.schedule_key = candidate.producer_schedule_key
+        AND completed.producer_path = candidate.producer_path
+        AND completed.terminal_token IS NOT NULL AND completed.lease_owner IS NOT NULL)
+    AND EXISTS (SELECT 1 FROM cron_runs completed
+      WHERE completed.invocation_id = candidate.invocation_id
+        AND completed.job = candidate.producer_job
+        AND completed.schedule_key = candidate.producer_schedule_key
+        AND completed.producer_path = candidate.producer_path
+        AND completed.status IN ('ok', 'degraded', 'error'))
+    AND NOT EXISTS (SELECT 1 FROM cron_leases owner
+      JOIN scheduled_child_attempts attempt ON attempt.job = owner.job
+        AND attempt.lease_owner = owner.lease_owner
+      WHERE attempt.invocation_id = candidate.invocation_id
+        AND attempt.job = candidate.producer_job AND owner.lease_until >= ?)
+    AND NOT EXISTS (SELECT 1 FROM cron_run_progress owner
+      JOIN scheduled_child_attempts attempt ON attempt.job = owner.job
+        AND attempt.lease_owner = owner.lease_owner
+      WHERE attempt.invocation_id = candidate.invocation_id AND attempt.job = candidate.producer_job)
+    AND NOT EXISTS (SELECT 1 FROM scheduled_child_attempts owner
+      WHERE owner.job = candidate.producer_job AND owner.invocation_id = candidate.invocation_id
+        AND owner.terminal_token IS NULL)
+    AND NOT EXISTS (SELECT 1 FROM cron_slot_executions owner
+      WHERE owner.invocation_id = candidate.invocation_id
+        AND owner.state IN ('running', 'reconciling'))
+    AND NOT EXISTS (SELECT 1 FROM surface_publication_generations reference
+      WHERE reference.generation_id != candidate.generation_id
+        AND (reference.previous_generation_id = candidate.generation_id
+          OR (reference.dependency_snapshot_json IS NOT NULL AND CASE
+            WHEN json_valid(reference.dependency_snapshot_json)
+            THEN json_extract(reference.dependency_snapshot_json, '$.targetGenerationId') = candidate.generation_id
+            ELSE 1 END)))
+    AND NOT EXISTS (SELECT 1 FROM dex_measured_execution_quotes reference
+      WHERE reference.target_generation_id = candidate.generation_id)`;
   const retiredGenerationCandidates = `
-         SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-         ORDER BY started_at ASC LIMIT ?`;
+         SELECT candidate.generation_id FROM surface_publication_generations candidate
+         WHERE candidate.surface IN (?, ?) AND candidate.started_at < ?
+           AND (candidate.state IN ('failed', 'rejected', 'superseded') OR (${abandonedCandidate}))
+         ORDER BY candidate.started_at ASC, candidate.generation_id ASC LIMIT ?`;
   const family = await runCappedPruneFamily({
     db,
     signal,
     statements: {
       quotes: {
         sql: `DELETE FROM dex_measured_execution_quotes
-       WHERE generation_id IN (${retiredGenerationCandidates}
+       WHERE rowid IN (
+         SELECT row.rowid FROM dex_measured_execution_quotes row
+         JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
+         WHERE row.generation_id IN (${retiredGenerationCandidates})
+         ORDER BY generation.started_at ASC, row.generation_id ASC, row.rowid ASC LIMIT ?
        )`,
         bindsForLimit: (limit) => [
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
+          nowSec,
+          limit,
           limit,
         ],
         batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
@@ -639,13 +741,20 @@ export async function pruneDexMeasuredExecutionGenerations(
       },
       targets: {
         sql: `DELETE FROM dex_measured_execution_targets
-       WHERE generation_id IN (${retiredGenerationCandidates}
-       )
-       AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
+       WHERE rowid IN (
+         SELECT row.rowid FROM dex_measured_execution_targets row
+         JOIN surface_publication_generations generation ON generation.generation_id = row.generation_id
+         WHERE row.generation_id IN (${retiredGenerationCandidates})
+           AND NOT EXISTS (SELECT 1 FROM dex_measured_execution_quotes reference
+             WHERE reference.target_generation_id = row.generation_id)
+         ORDER BY generation.started_at ASC, row.generation_id ASC, row.rowid ASC LIMIT ?
+       )`,
         bindsForLimit: (limit) => [
           DEX_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           cutoff,
+          nowSec,
+          limit,
           limit,
         ],
         batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
@@ -657,8 +766,8 @@ export async function pruneDexMeasuredExecutionGenerations(
          SELECT candidate.rowid
            FROM surface_publication_generations candidate
           WHERE candidate.surface IN (?, ?, ?, ?)
-            AND candidate.state IN ('failed', 'rejected', 'superseded')
             AND candidate.started_at < ?
+            AND (candidate.state IN ('failed', 'rejected', 'superseded') OR (${abandonedCandidate}))
             AND NOT EXISTS (
               SELECT 1 FROM dex_measured_execution_quotes q
                WHERE q.generation_id = candidate.generation_id
@@ -677,6 +786,7 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
+          nowSec,
           limit,
         ],
         batchLimit: GENERATION_PRUNE_MAX_PER_RUN,

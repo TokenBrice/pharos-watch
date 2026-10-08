@@ -60,12 +60,8 @@ import {
   type DirectApiPoolCompactionCounts,
 } from "./orchestrator-phases/direct-api";
 import { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
-import {
-  fetchDirectCexOrderbookDepthTelemetry,
-  type FallbackCrawlerPhaseResult,
-} from "./orchestrator-phases/fallback";
 import { getFallbackTargets } from "./fetch-fallbacks";
-import { loadTrackedStablecoinMaps } from "./orchestrator-phases/lookups";
+import { loadTrackedStablecoinMaps, type TrackedStablecoinMaps } from "./orchestrator-phases/lookups";
 import { mergeDexPriceObservationMap } from "./subgraph-helpers";
 import {
   buildPoolIdentity,
@@ -692,7 +688,6 @@ type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSo
 type DexLiquidityLookups = ReturnType<typeof buildSymbolLookups>;
 type DexLiquiditySubgraphEnrichment = Awaited<ReturnType<typeof fetchSubgraphEnrichmentPhase>>;
 type DexLiquidityDirectApiPhase = Awaited<ReturnType<typeof runDirectApiFetchPhase>>;
-type DexLiquidityFallbackPhase = FallbackCrawlerPhaseResult;
 type DexLiquidityAnalysis = Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
 type DexLiquidityPersistence = NonNullable<Awaited<ReturnType<typeof persistScores>>>;
 type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writeHistoricalSnapshots>>>;
@@ -701,6 +696,7 @@ interface DexLiquiditySourceState {
   validationReferences: Awaited<ReturnType<typeof loadPriceValidationReferences>>;
   stablecoinPriceById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinPriceById"];
   stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinMcapById"];
+  stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"];
   dataSources: DexLiquidityDataSources;
   lookups: DexLiquidityLookups;
   curvePoolMap: Awaited<ReturnType<typeof buildCurveLookups>>["curvePoolMap"];
@@ -719,7 +715,6 @@ interface DexLiquiditySourceState {
   failedSources: string[];
   criticalSourceFailures: string[];
   fallbackSignals: string[];
-  directCexOrderbookDepth: DexLiquidityFallbackPhase["directCexOrderbookDepth"];
 }
 
 interface DexLiquidityScoreState {
@@ -807,15 +802,8 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   });
 
   const validationReferences = await loadPriceValidationReferences(ctx.db);
-  const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec);
+  const { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = await loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec);
   const lookups = buildSymbolLookups();
-  // Coinbase level-2 books can be large even though only a compact summary is
-  // retained. Fetch them before any DEX pool graph exists so transient response
-  // parsing cannot collide with the scoring lane's memory peak.
-  const directCexOrderbookDepth = await fetchDirectCexOrderbookDepthTelemetry({
-    signal: ctx.signal,
-    failedSources,
-  });
 
   const directApiFetchers = buildDexDirectApiFetchers({
     db: ctx.db,
@@ -1007,6 +995,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     validationReferences,
     stablecoinPriceById,
     stablecoinMcapById,
+    stablecoinPriceProvenanceById,
     dataSources,
     lookups,
     curvePoolMap,
@@ -1023,7 +1012,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     failedSources,
     criticalSourceFailures,
     fallbackSignals,
-    directCexOrderbookDepth,
   };
 }
 
@@ -1203,6 +1191,9 @@ async function buildDexLiquidityPoolState(
     chainAddressToId: sourceState.lookups.chainAddressToId,
     contractMetaByChainAddress: sourceState.lookups.contractMetaByChainAddress,
     stablecoinPriceById: sourceState.stablecoinPriceById,
+    stablecoinPriceProvenanceById: sourceState.stablecoinPriceProvenanceById,
+    nowSec: Math.floor(Date.now() / 1000),
+    sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
     deadline: ctx.deadline,
@@ -1247,15 +1238,14 @@ async function buildDexLiquidityPoolState(
     },
   });
 
-  const fallback: FallbackCrawlerPhaseResult = {
+  const fallback: DexLiquidityPoolState["fallback"] = {
     weakCoverageCoinsBeforeFallback: new Set(
       getFallbackTargets(metrics, sourceState.priceObservations, { requireTrackedContracts: true })
         .map((meta) => meta.id),
     ).size,
-    directCexOrderbookDepth: sourceState.directCexOrderbookDepth,
   };
   await ctx.reportDexProgress("pool-processing-complete", {
-    message: "Completed pool merge and bounded market telemetry", providerFamily: "dex-liquidity", done: metrics.size,
+    message: "Completed pool merge", providerFamily: "dex-liquidity", done: metrics.size,
     counts: {
       metricRows: metrics.size, poolRejections: poolRejections.reduce((sum, rejection) => sum + rejection.count, 0),
       stagedPoolsMerged: staged.mergedCount, stagedPoolsSkipped: staged.skippedCount,
@@ -1329,7 +1319,6 @@ async function scoreDexLiquidityPoolState(
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,
     weakCoverageCoinsBeforeFallback: poolState.fallback.weakCoverageCoinsBeforeFallback,
-    directCexOrderbookDepth: poolState.fallback.directCexOrderbookDepth,
     dlYieldsAvailable: sourceState.dlYieldsAvailable,
     dlProtocolsAvailable: sourceState.dlProtocolsAvailable,
     criticalSourceFailures: sourceState.criticalSourceFailures,

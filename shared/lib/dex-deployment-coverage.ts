@@ -22,9 +22,7 @@ export type DexDiscoveryProvider =
   | "icon-balanced"
   | "kava-swap"
   | "osmosis-sqs"
-  | "noble-swap"
-  | "soroban-exhaustive"
-  | "btcusd-public-https";
+  | "noble-swap";
 
 export type DexDiscoveryCrawlerLeafId =
   | "coingecko"
@@ -414,14 +412,6 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
   {
     providerId: "noble-swap", lifecycle: "active", supports: isNobleSwapDiscoveryDeployment,
     scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, timeoutMs: 15_000, crawlerLeaf: "cosmos",
-  },
-  {
-    providerId: "soroban-exhaustive", lifecycle: "disabled", supports: () => false,
-    scope: "exhaustive", requestCostMs: 0, executionOrder: 120, timeoutMs: 15_000,
-  },
-  {
-    providerId: "btcusd-public-https", lifecycle: "disabled", supports: () => false,
-    scope: "supplemental", requestCostMs: 0, executionOrder: 130, timeoutMs: 15_000,
   },
 ] as const;
 

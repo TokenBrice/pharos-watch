@@ -183,7 +183,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const request = selectV9ExitStressRequest(circulatingUsd, envelope)!;
     expect(request.requestedNotionalUsd).toBe(25_000_000);
-    const result = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec: CLOCK, lane: "redemption", reviews: [review], inputReference, outputReference, envelope });
+    const result = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec: CLOCK, reviews: [review], inputReference, outputReference, envelope });
     expect(result.failures).toEqual([]);
     const observation = result.observations[0]!;
     expect(observation).toMatchObject({ scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
@@ -194,7 +194,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const producerSupply = 210_000_000;
     const produced = await observeReviewedExitExecutionRoutes({
-      assetId: "fixture-vault", circulatingUsd: producerSupply, clockSec: CLOCK, lane: "redemption",
+      assetId: "fixture-vault", circulatingUsd: producerSupply, clockSec: CLOCK,
       reviews: [review], inputReference, outputReference, envelope,
     });
     const certificate = produced.observations[0]!.executionCertificate!;
@@ -218,7 +218,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   it("re-admits the producer certificate at both fact compilation and Exit evaluation using the consumer's current request", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const produced = await observeReviewedExitExecutionRoutes({
-      assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, lane: "redemption",
+      assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK,
       reviews: [review], inputReference, outputReference, envelope,
     });
     const observation = produced.observations[0]!;
@@ -291,7 +291,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       ] },
     };
     const db = { prepare() { throw new Error("preloaded cache must not trigger another read"); } } as unknown as D1Database;
-    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, lane: "redemption" as const, db, stablecoinsCache: cache, reviews: [review] };
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, db, stablecoinsCache: cache, reviews: [review] };
     const admitted = await observeReviewedExitExecutionRoutes(call);
     expect(admitted.failures).toEqual([]);
     expect(admitted.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });
@@ -314,7 +314,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       metadataIdentity: "verified", consecutiveFallbackRuns: 0,
     };
     const db = { prepare() { throw new Error("preloaded price and FX state must not read D1"); } } as unknown as D1Database;
-    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, lane: "redemption" as const, db, stablecoinsCache: cache, fxRateState, reviews: [review] };
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, db, stablecoinsCache: cache, fxRateState, reviews: [review] };
     const result = await observeReviewedExitExecutionRoutes(call);
     expect(result.failures).toEqual([]);
     expect(result.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });

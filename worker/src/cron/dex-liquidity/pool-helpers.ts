@@ -37,7 +37,7 @@ function computeTvlDepthScore(depthRatio: number): number {
   return clampScore(TVL_DEPTH_SLOPE * Math.log10(depthRatio / TVL_DEPTH_ANCHOR_RATIO));
 }
 
-/** Zero-initialized report-only fallback/default counters (Liquidity v6 Phase 0.2). */
+/** Permanent report-only fallback/default counters, introduced in Liquidity v6 Phase 0.2. */
 export function initLiquidityFallbackCounters(): LiquidityFallbackCounters {
   return {
     unmeasuredBalanceOptimistic: 0,

@@ -1,13 +1,16 @@
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
-import { quoteSolidlyV2Raw, type SolidlyV2MathVariant, type SolidlyV2QuoteState } from "@shared/lib/solidly-v2-math";
+import { quoteSolidlyV2Raw, solidlyUsdToRawAmount, type SolidlyV2QuoteState } from "@shared/lib/solidly-v2-math";
+import { SOLIDLY_V2_DEPLOYMENTS } from "@shared/lib/solidly-v2-deployments";
+import { buildSolidlyV2CapacityChecks } from "@shared/lib/p4-exit-route-amm-simulation";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { decodeAbiParameters, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmCodeAtBlock, fetchEvmMulticall3Aggregate3AtBlock } from "../../lib/evm-rpc";
 import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
-import { usdToRawAmount } from "../measured-execution/fixed-point";
 import {
   asEvmCaptureAddress, decodeEvmCaptureAddress, decodeEvmCaptureBool, decodeEvmCaptureUint256,
   mapEvmCaptureResults, resolveTrackedReferencePrices, runPinnedBlockCapture,
@@ -18,48 +21,11 @@ import type { EvmV2ExecutionCandidate, LiquidityMetrics, PoolEntry, SymbolLookup
 
 export const SOLIDLY_V2_ABI = parseAbi([
   "function getPool(address,address,bool) view returns (address)",
-  "function getPair(address,address,bool) view returns (address)",
   "function getFee(address,bool) view returns (uint256)",
   "function getAmountOut(uint256,address) view returns (uint256)",
   "function metadata() view returns (uint256,uint256,uint256,uint256,bool,address,address)",
 ]);
 
-interface SolidlyV2Deployment {
-  protocol: NonNullable<EvmV2ExecutionCandidate["solidlyProtocol"]>;
-  chain: "base" | "optimism" | "sonic";
-  variant: SolidlyV2MathVariant;
-  factoryAddress: `0x${string}`;
-  factoryCodeHash: `0x${string}`;
-  poolCodeHash: `0x${string}`;
-  implementationAddress?: `0x${string}`;
-  implementationCodeHash?: `0x${string}`;
-}
-
-/** Reviewed pinned runtime packet: 2026-10-05. All cohorts collect diagnostic depth only. */
-export const SOLIDLY_V2_DEPLOYMENTS: readonly SolidlyV2Deployment[] = [
-  {
-    protocol: "aerodrome", chain: "base", variant: "aerodrome",
-    factoryAddress: "0x420dd381b31aef6683db6b902084cb0ffece40da",
-    factoryCodeHash: "0xe2a176e5d2bcfb214b784ec6d6733708a6376a464f203cc265c284c9f349fea3",
-    poolCodeHash: "0x7dd6ffe6daf4e82054c91becd71b8c9ba0a135f0f403da1ef7b0f81bb8ba4408",
-    implementationAddress: "0xa4e46b4f701c62e14df11b48dce76a7d793cd6d7",
-    implementationCodeHash: "0xd22754a0a3b39db7298dbbc2be1e34b34320988ea67065c85fa28ae66c02d31e",
-  },
-  {
-    protocol: "velodrome", chain: "optimism", variant: "velodrome",
-    factoryAddress: "0xf1046053aa5682b4f9a81b5481394da16be5ff5a",
-    factoryCodeHash: "0x550399c9f73f73cc4bd8294c72155db44f7832fbc84fa190f38168869f90a8d4",
-    poolCodeHash: "0x1338d20d2b1849933e083072be42c61c5ab7b8f4a5ce05d8f8944a4280f21b48",
-    implementationAddress: "0x95885af5492195f0754be71ad1545fe81364e531",
-    implementationCodeHash: "0x6a4a3ed659632c1f4920ffb47208c9bd8a6ff8acda6d51ca878642acb52c7d02",
-  },
-  {
-    protocol: "shadow-exchange", chain: "sonic", variant: "shadow",
-    factoryAddress: "0x2da25e7446a70d7be65fd4c053948becaa6374c8",
-    factoryCodeHash: "0xe13d1508c4e3a955d3757f3e83e010cffc6e6512dd0eff7e723a2c19ef52d0c8",
-    poolCodeHash: "0x195974f003706e271b23292ddc6c3cf931758e1833a17e6adb5d879519a167df",
-  },
-];
 
 export function buildSolidlyV2ExecutionCandidate(input: {
   chain: string; protocol: string; poolType: string; poolAddress: string;
@@ -67,8 +33,7 @@ export function buildSolidlyV2ExecutionCandidate(input: {
 }): EvmV2ExecutionCandidate | null {
   const chain = canonicalExitRouteChain(input.chain);
   const protocol = normalizeProtocol(input.protocol);
-  const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) => row.chain === chain &&
-    (row.protocol === protocol || row.protocol === "shadow-exchange" && protocol === "shadow-exchange-legacy"));
+  const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) => row.chain === chain && row.protocol === protocol);
   if (!deployment || /(v3|v4|concentrated|clmm|cg-cl-|slipstream)/i.test(input.poolType) || input.tokenAddresses.length !== 2) return null;
   const poolAddress = asEvmCaptureAddress(chain, input.poolAddress);
   const token0 = asEvmCaptureAddress(chain, input.tokenAddresses[0]);
@@ -108,6 +73,9 @@ export async function enrichSolidlyV2ExecutionModels(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
+  stablecoinPriceProvenanceById?: ReadonlyMap<string, Required<Pick<DexAmmExecutionModel["tokens"][number], "referencePriceSourceId" | "referencePriceObservedAt">>>;
+  nowSec?: number;
+  sourceGenerationId?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   dependencies?: SolidlyV2Dependencies;
@@ -122,6 +90,10 @@ export async function enrichSolidlyV2ExecutionModels(input: {
   }
   if (references.length === 0) return;
   if (!input.chainRpcs) { for (const row of references) applyGate(row, "transport-unavailable"); return; }
+  if (!Number.isSafeInteger(input.nowSec) || !input.sourceGenerationId) {
+    for (const row of references) applyGate(row, "incomplete-exact-capture");
+    return;
+  }
   const deps = input.dependencies ?? DEFAULT_DEPENDENCIES;
   const options = { chainRpcs: input.chainRpcs, signal: input.signal, timeoutMs: 15_000, maxRetries: 1, deadlineMs: input.deadlineMs };
   for (const deployment of SOLIDLY_V2_DEPLOYMENTS) {
@@ -137,6 +109,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
     try {
       await runPinnedBlockCapture<Array<() => void>, GateReason>({
         chain: deployment.chain, rpcOptions: options,
+        nowSec: input.nowSec, maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
         fetchBlockNumber: deps.fetchBlockNumber, fetchBlockHeader: deps.fetchBlockHeader,
         verifyDeployment: async ({ blockNumber }) => {
           const factoryCode = await deps.fetchCodeAtBlock(deployment.chain, deployment.factoryAddress, blockNumber, options);
@@ -152,7 +125,9 @@ export async function enrichSolidlyV2ExecutionModels(input: {
           ], blockNumber, options);
           if (!results) return { ok: false, reason: "transport-unavailable" };
           const mapped = mapEvmCaptureResults(results);
-          if (decodeEvmCaptureAddress(deployment.chain, mapped.get("implementation")) !== deployment.implementationAddress) return { ok: false, reason: "deployment-code-mismatch" };
+          const implementation = decodeEvmCaptureAddress(deployment.chain, mapped.get("implementation"));
+          if (!implementation) return { ok: false, reason: "incomplete-exact-capture" };
+          if (implementation !== deployment.implementationAddress) return { ok: false, reason: "deployment-code-mismatch" };
           const paused = decodeEvmCaptureBool(mapped.get("paused"));
           return paused === false ? { ok: true } : { ok: false, reason: paused ? "paused-or-swap-disabled" : "incomplete-exact-capture" };
         },
@@ -167,7 +142,6 @@ export async function enrichSolidlyV2ExecutionModels(input: {
               const candidate = rows[0]!.candidate;
               const target = candidate.poolAddress;
               const [token0, token1] = candidate.tokenAddresses;
-              const fn = deployment.variant === "shadow" ? "getPair" : "getPool";
               return [
                 { label: `${index}-stable`, target, callData: "0x22be3de1" },
                 { label: `${index}-factory`, target, callData: "0xc45a0155" },
@@ -177,11 +151,8 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 { label: `${index}-metadata`, target, callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "metadata" }) },
                 { label: `${index}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
                 { label: `${index}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
-                ...[false, true].flatMap((stable) => [
-                  { label: `${index}-pair-${stable}`, target: deployment.factoryAddress, callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: fn, args: [token0, token1, stable] }) },
-                  { label: `${index}-fee-${stable}`, target: deployment.variant === "shadow" ? target : deployment.factoryAddress,
-                    callData: deployment.variant === "shadow" ? "0xddca3f43" : encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getFee", args: [target, stable] }) },
-                ]),
+                { label: `${index}-pair-true`, target: deployment.factoryAddress, callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getPool", args: [token0, token1, true] }) },
+                { label: `${index}-fee-true`, target: deployment.factoryAddress, callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getFee", args: [target, true] }) },
               ];
             });
             const raw = await deps.fetchMulticall(deployment.chain, calls, blockNumber, options);
@@ -192,16 +163,28 @@ export async function enrichSolidlyV2ExecutionModels(input: {
               const candidate = rows[0]!.candidate;
               const stable = decodeEvmCaptureBool(results.get(`${index}-stable`));
               const factory = decodeEvmCaptureAddress(deployment.chain, results.get(`${index}-factory`));
+              if (!factory || stable == null) { gate(rows, "incomplete-exact-capture"); continue; }
               if (factory !== deployment.factoryAddress) { gate(rows, "exact-pool-join-unresolved"); continue; }
-              if (stable == null) { gate(rows, "incomplete-exact-capture"); continue; }
-              if (decodeEvmCaptureAddress(deployment.chain, results.get(`${index}-pair-${stable}`)) !== candidate.poolAddress) { gate(rows, "exact-pool-join-unresolved"); continue; }
+              // Volatile diagnostics are retired. Keep the ordinary pool, but
+              // never fetch runtime/quotes or fall through to generic CP authority.
+              if (!stable) {
+                for (const row of rows) actions.push(() => {
+                  const extra = { ...(row.pool.extra ?? {}) };
+                  delete extra.ammExecutionModel; delete extra.evmV2ExecutionCandidate; delete extra.executionCapabilityGate;
+                  row.pool.extra = extra;
+                });
+                continue;
+              }
+              const member = decodeEvmCaptureAddress(deployment.chain, results.get(`${index}-pair-true`));
+              if (!member) { gate(rows, "incomplete-exact-capture"); continue; }
+              if (member !== candidate.poolAddress) { gate(rows, "exact-pool-join-unresolved"); continue; }
               const token0 = decodeEvmCaptureAddress(deployment.chain, results.get(`${index}-token0`));
               const token1 = decodeEvmCaptureAddress(deployment.chain, results.get(`${index}-token1`));
               if (!token0 || !token1 || token0 === token1 || !candidate.tokenAddresses.includes(token0) || !candidate.tokenAddresses.includes(token1)) { gate(rows, "ambiguous-token-identity"); continue; }
               const decimalReads = candidate.tokenAddresses.map((_, i) => decodeEvmCaptureUint256(results.get(`${index}-decimals${i}`)));
               const decimals = [decimalReads[candidate.tokenAddresses.indexOf(token0)], decimalReads[candidate.tokenAddresses.indexOf(token1)]];
               const fee = decodeEvmCaptureUint256(results.get(`${index}-fee-${stable}`));
-              const denominator = deployment.variant === "shadow" ? 1_000_000 : 10_000;
+              const denominator = 10_000;
               if (decimals.some((value) => value == null || value > 77n) || fee == null || fee >= BigInt(denominator)) { gate(rows, "incomplete-exact-capture"); continue; }
               const reserveResult = results.get(`${index}-reserves`);
               const metadataResult = results.get(`${index}-metadata`);
@@ -225,9 +208,17 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 if (tracked.trackedTokenIndex == null) { gate([reference], tracked.reason); continue; }
                 const prices = resolveTrackedReferencePrices({ balances, assetIds, trackedTokenIndex: tracked.trackedTokenIndex, stablecoinPriceById: input.stablecoinPriceById, implyUntrackedPrices: false });
                 if (!prices.ok || prices.value.sources.some((source) => source !== "tracked-market")) { gate([reference], "incomplete-exact-capture"); continue; }
+                const provenance = assetIds.map((assetId) => assetId ? input.stablecoinPriceProvenanceById?.get(assetId) : undefined);
+                if (provenance.some((price) => !price?.referencePriceSourceId ||
+                  !Number.isSafeInteger(price.referencePriceObservedAt) || price.referencePriceObservedAt <= 0 ||
+                  price.referencePriceObservedAt > input.nowSec! ||
+                  price.referencePriceObservedAt > header.timestamp + 60 ||
+                  input.nowSec! - price.referencePriceObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
+                  gate([reference], "incomplete-exact-capture"); continue;
+                }
                 const tokenInIndex = tracked.trackedTokenIndex as 0 | 1;
                 const points = EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.map((usd) => {
-                  const amountIn = usdToRawAmount(usd, Number(decimals[tokenInIndex]), prices.value.prices[tokenInIndex]!);
+                  const amountIn = solidlyUsdToRawAmount(usd, Number(decimals[tokenInIndex]), prices.value.prices[tokenInIndex]!);
                   const amountOut = amountIn == null ? null : quoteSolidlyV2Raw(quoteState, amountIn, tokenInIndex);
                   return { amountIn, amountOut };
                 });
@@ -240,16 +231,43 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 const quotes = mapEvmCaptureResults(quoteResults);
                 if (points.some((point, i) => decodeEvmCaptureUint256(quotes.get(`quote-${i}`)) !== point.amountOut)) { gate([reference], "quote-failed"); continue; }
                 const model: DexAmmExecutionModel = {
-                  source: "solidly-v2", invariant: stable ? "solidly-stable" : "constant-product",
+                  source: "solidly-v2", invariant: "solidly-stable",
                   trackedTokenIndex: tokenInIndex, feeRate: Number(fee) / denominator,
                   tokens: tokens.map((address, i) => ({
                     address, symbol: input.contractMetaByChainAddress.get(canonicalExitRouteAssetKey(deployment.chain, address))?.symbol ?? candidate.tokenSymbols[candidate.tokenAddresses.indexOf(address)]!,
                     decimals: Number(decimals[i]), balance: balances[i]!, referencePriceUsd: prices.value.prices[i]!, referencePriceSource: "tracked-market", trackedAssetId: assetIds[i],
+                    ...provenance[i]!,
                   })),
-                  solidlyState: { variant: deployment.variant, stable, reserve0: reserves[0].toString(), reserve1: reserves[1].toString(), fee: Number(fee), blockNumber, blockHash: header.hash, factoryAddress: deployment.factoryAddress, poolAddress: candidate.poolAddress,
+                  solidlyState: { variant: deployment.variant, stable: true, reserve0: reserves[0].toString(), reserve1: reserves[1].toString(), fee: Number(fee), blockNumber, blockHash: header.hash, blockTimestamp: header.timestamp, sourceGenerationId: input.sourceGenerationId!, factoryAddress: deployment.factoryAddress, poolAddress: candidate.poolAddress,
                     verifiedQuoteCount: points.length, quoteChecks: points.map((point) => ({ tokenInIndex, amountIn: point.amountIn!.toString(), amountOut: point.amountOut!.toString() })),
                   },
                 };
+                const capacityChecks = buildSolidlyV2CapacityChecks(model);
+                if (!capacityChecks) { gate([reference], "invalid-invariant-parameters"); continue; }
+                const endpointChecks = new Map(points.map((point) => [point.amountIn!.toString(), point.amountOut!.toString()]));
+                const additional = new Map<string, string>();
+                for (const check of capacityChecks) {
+                  for (const [amountIn, amountOut] of [
+                    [check.selectedAmountIn, check.selectedAmountOut],
+                    [check.rejectedAmountIn, check.rejectedAmountOut],
+                  ]) {
+                    if (amountIn && amountIn !== "0" && amountOut != null && !endpointChecks.has(amountIn)) additional.set(amountIn, amountOut);
+                  }
+                }
+                if (additional.size > 2 * points.length || Date.now() >= input.deadlineMs) { gate([reference], "transport-unavailable"); continue; }
+                if (additional.size > 0) {
+                  const endpoints = await deps.fetchMulticall(deployment.chain, [...additional].map(([amountIn], i) => ({
+                    label: `endpoint-${i}`, target: candidate.poolAddress,
+                    callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getAmountOut", args: [BigInt(amountIn), tokens[tokenInIndex]] }),
+                  })), blockNumber, options);
+                  if (!endpoints || Date.now() >= input.deadlineMs) { gate([reference], "transport-unavailable"); continue; }
+                  const endpointResults = mapEvmCaptureResults(endpoints);
+                  if ([...additional].some(([, amountOut], i) => decodeEvmCaptureUint256(endpointResults.get(`endpoint-${i}`))?.toString() !== amountOut)) { gate([reference], "quote-failed"); continue; }
+                  for (const [amountIn, amountOut] of additional) endpointChecks.set(amountIn, amountOut);
+                }
+                model.solidlyState!.capacityChecks = capacityChecks;
+                model.solidlyState!.quoteChecks = [...endpointChecks].map(([amountIn, amountOut]) => ({ tokenInIndex, amountIn, amountOut }));
+                model.solidlyState!.verifiedQuoteCount = endpointChecks.size;
                 actions.push(() => {
                   reference.pool.poolId = canonicalExitRouteAssetKey(deployment.chain, candidate.poolAddress);
                   const extra = { ...(reference.pool.extra ?? {}) };

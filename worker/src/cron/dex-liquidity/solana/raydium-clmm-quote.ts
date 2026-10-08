@@ -1,6 +1,8 @@
 import { fetchSolanaAccountBatch, solanaPublicKey, type SolanaAccount } from "../../reserve-adapters/solana";
 import type { AdapterContext } from "../../reserve-adapters/types";
 import { programAddress, publicKeyBytes } from "./program-address";
+import type { SolanaDexBankCaptureSink } from "@shared/types/solana-dex-bank";
+import { captureSolanaDexBank } from "./bank-capture";
 
 export const RAYDIUM_CLMM_PROGRAM_ID = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK";
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -188,7 +190,7 @@ export async function raydiumTickArrayAddress(poolAddress: string, start: number
 }
 
 /** Discovery finds addresses only; all quote inputs are re-read in one <=8-account bank snapshot. */
-export async function fetchRaydiumSnapshot(poolAddress: string, discovery: RaydiumPool, tokenMintIn: string, signal: AbortSignal, ctx?: AdapterContext, minContextSlot = discovery.slot): Promise<RaydiumSnapshot> {
+export async function fetchRaydiumSnapshot(poolAddress: string, discovery: RaydiumPool, tokenMintIn: string, signal: AbortSignal, ctx?: AdapterContext, minContextSlot = discovery.slot, onBankCapture?: SolanaDexBankCaptureSink): Promise<RaydiumSnapshot> {
   const bitmapAddress = await programAddress(RAYDIUM_CLMM_PROGRAM_ID, [new TextEncoder().encode("pool_tick_array_bitmap_extension"), publicKeyBytes(poolAddress)]);
   const census = await fetchSolanaAccountBatch([poolAddress, bitmapAddress], signal, ctx, minContextSlot);
   function owned(accounts: Map<string, SolanaAccount | null>, address: string): SolanaAccount {
@@ -205,7 +207,8 @@ export async function fetchRaydiumSnapshot(poolAddress: string, discovery: Raydi
   const starts = initializedArrayStarts(current, owned(census.accounts, bitmapAddress).data, poolAddress).filter((start) => aToB ? start <= currentStart : start >= currentStart).sort((a, b) => aToB ? b - a : a - b).slice(0, 3);
   const addresses: string[] = [];
   for (const start of starts) addresses.push(await raydiumTickArrayAddress(poolAddress, start));
-  const batch = await fetchSolanaAccountBatch([poolAddress, current.config, bitmapAddress, current.tokenMintA, current.tokenMintB, ...addresses], signal, ctx, census.slot);
+  const bankAddresses = [poolAddress, current.config, bitmapAddress, current.tokenMintA, current.tokenMintB, ...addresses];
+  const batch = await fetchSolanaAccountBatch(bankAddresses, signal, ctx, census.slot);
   const pool = decodeRaydiumPool(owned(batch.accounts, poolAddress).data, batch.slot);
   if (pool.config !== current.config || pool.tokenMintA !== current.tokenMintA || pool.tokenMintB !== current.tokenMintB || pool.tickSpacing !== current.tickSpacing) throw new Error("Raydium snapshot identity changed");
   const config = owned(batch.accounts, pool.config).data;
@@ -223,8 +226,10 @@ export async function fetchRaydiumSnapshot(poolAddress: string, discovery: Raydi
   });
   const mints = [pool.tokenMintA, pool.tokenMintB].map((address) => {
     const account = batch.accounts.get(address);
-    if (!account) throw new Error("Missing Raydium mint");
+    const decimals = address === pool.tokenMintA ? pool.decimalsA : pool.decimalsB;
+    if (!account || account.owner !== TOKEN_PROGRAM || account.data.length !== 82 || account.data[45] !== 1 || account.data[44] !== decimals) throw new Error("Raydium Token-2022/unsupported mint in final bank");
     return { slot: batch.slot, address, account };
   });
+  if (onBankCapture) await captureSolanaDexBank({ profileId: "raydium-clmm-exact-v1", poolAddress, slot: batch.slot, addresses: bankAddresses, accounts: batch.accounts, sink: onBankCapture });
   return { slot: batch.slot, poolAddress, pool, configSlot: batch.slot, bitmapSlot: batch.slot, feeRate: configView.getUint32(47, true), initializedStarts, tickArrays, mints };
 }

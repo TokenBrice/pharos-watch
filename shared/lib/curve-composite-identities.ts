@@ -27,31 +27,3 @@ export const CURVE_OUSD_3CRV_METAPOOL_ADDRESS =
 export const CURVE_TUSD_AM3CRV_METAPOOL_ADDRESS =
   "0xadf577b69eeac9df325536cf1af106372f2da263" as const;
 
-export const CURVE_R3_METAPOOL_POOL_IDENTITIES = [
-  ["ethereum", CURVE_ALUSD_3CRV_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_EUSD_FRAXBP_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_GUSD_3CRV_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_LUSD_3CRV_METAPOOL_ADDRESS],
-  ["polygon", CURVE_MAI_AM3CRV_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_MSUSD_FRAXBP_METAPOOL_ADDRESS],
-  ["ethereum", CURVE_OUSD_3CRV_METAPOOL_ADDRESS],
-  ["polygon", CURVE_TUSD_AM3CRV_METAPOOL_ADDRESS],
-] as const;
-
-const REVIEWED_CURVE_COMPOSITE_POOLS = new Set<string>([
-  `ethereum:${CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS}`,
-  `ethereum:${CURVE_USD1_COMPOSITE_POOL_ADDRESS}`,
-  `avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`,
-  ...CURVE_R3_METAPOOL_POOL_IDENTITIES.map(([chain, address]) => `${chain}:${address}`),
-]);
-
-export function shouldRetainCurveCompositePoolIdentity(
-  chain: string,
-  poolAddress: string,
-): boolean {
-  return REVIEWED_CURVE_COMPOSITE_POOLS.has(
-    `${chain.trim().toLowerCase()}:${poolAddress.trim().toLowerCase()}`,
-  );
-}

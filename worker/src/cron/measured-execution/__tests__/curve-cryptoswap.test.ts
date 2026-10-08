@@ -10,14 +10,14 @@ import {
 } from "../profiles";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  CURVE_CRYPTOSWAP_SHADOW_COHORT,
+  CURVE_CRYPTOSWAP_REVIEWED_COHORT,
   createCurveCryptoSwapQuoteExecutor,
   decodeCurveCryptoSwapGetDy,
   decodeCurveCryptoSwapQuotePoint,
   encodeCurveCryptoSwapGetDy,
   evaluateCurveCryptoSwapEligibility,
   getCurveCryptoSwapReviewedDeploymentFamily,
-  getCurveCryptoSwapShadowPolicy,
+  getCurveCryptoSwapReviewedPolicy,
   resolveCurveCryptoSwapTokenIndices,
   validateCurveCryptoSwapProfileProof,
   type CurveCryptoSwapPoolPolicy,
@@ -136,9 +136,9 @@ function completeRuntimeEvidence() {
 
 describe("Curve CryptoSwap policy", () => {
   it("pins the nineteen reviewed active Ethereum TwoCrypto pools", () => {
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(19);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.every((entry) => entry.generation === "twocrypto-ng")).toBe(true);
-    const active = CURVE_CRYPTOSWAP_SHADOW_COHORT;
+    expect(CURVE_CRYPTOSWAP_REVIEWED_COHORT).toHaveLength(19);
+    expect(CURVE_CRYPTOSWAP_REVIEWED_COHORT.every((entry) => entry.generation === "twocrypto-ng")).toBe(true);
+    const active = CURVE_CRYPTOSWAP_REVIEWED_COHORT;
     expect(active.every((entry) => entry.transferSemanticsReviewed)).toBe(true);
     const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
     expect(pinned).toHaveLength(8);
@@ -182,7 +182,7 @@ describe("Curve CryptoSwap policy", () => {
     // The family allowlist and the per-pool pins are separate literals; they
     // must not drift apart, or a family-anchored pool would accept a factory,
     // views, or math deployment no pinned pool ever proved.
-    for (const entry of CURVE_CRYPTOSWAP_SHADOW_COHORT) {
+    for (const entry of CURVE_CRYPTOSWAP_REVIEWED_COHORT) {
       if (entry.identityAnchor !== "pinned-pool-code") continue;
       const family = getCurveCryptoSwapReviewedDeploymentFamily(entry.chain, entry.generation);
       expect(family).not.toBeNull();
@@ -199,7 +199,7 @@ describe("Curve CryptoSwap policy", () => {
   });
 
   it("admits a family-anchored pool on the reviewed dependency triple alone", () => {
-    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find(
+    const policy = CURVE_CRYPTOSWAP_REVIEWED_COHORT.find(
       (entry) => entry.identityAnchor === "reviewed-deployment-family",
     );
     if (!policy) throw new Error("missing family-anchored Curve CryptoSwap policy");
@@ -258,7 +258,7 @@ describe("Curve CryptoSwap policy", () => {
   });
 
   it("admits a reviewed active policy only with complete matching runtime evidence", () => {
-    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.identityAnchor === "pinned-pool-code");
+    const policy = CURVE_CRYPTOSWAP_REVIEWED_COHORT.find((entry) => entry.identityAnchor === "pinned-pool-code");
     if (!policy) throw new Error("missing active Curve CryptoSwap policy");
     expect(
       evaluateCurveCryptoSwapEligibility({
@@ -356,7 +356,7 @@ describe("Curve CryptoSwap token indices and ABI", () => {
       poolId: "ethereum:defillama-route-fingerprint-not-an-address",
     });
     expect(resolveCurveCryptoSwapTokenIndices(target)).toEqual({ ok: true, inputIndex: 0, outputIndex: 2 });
-    expect(getCurveCryptoSwapShadowPolicy(target.chain, TWOCRYPTO_POOL)?.poolAddress).toBe(TWOCRYPTO_POOL);
+    expect(getCurveCryptoSwapReviewedPolicy(target.chain, TWOCRYPTO_POOL)?.poolAddress).toBe(TWOCRYPTO_POOL);
     expect(target.poolId).not.toContain(TRICRYPTO_POOL);
 
     expect(
@@ -516,7 +516,7 @@ describe("Curve CryptoSwap quote transport", () => {
   });
 
   it("rejects active quotes when provider token order disagrees with on-chain coins", async () => {
-    const policy = getCurveCryptoSwapShadowPolicy("ethereum", ACTIVE_TWOCRYPTO_POOL);
+    const policy = getCurveCryptoSwapReviewedPolicy("ethereum", ACTIVE_TWOCRYPTO_POOL);
     if (policy == null) throw new Error("missing active Curve CryptoSwap policy");
     const executeMulticall = vi.fn(async () => [
       {
@@ -570,7 +570,7 @@ describe("Curve CryptoSwap quote transport", () => {
 
 describe("Curve CryptoSwap stored proof validation", () => {
   function makeProfile(target = makeTarget()): DexMeasuredExecutionProfile {
-    const policy = getCurveCryptoSwapShadowPolicy("ethereum", TWOCRYPTO_POOL);
+    const policy = getCurveCryptoSwapReviewedPolicy("ethereum", TWOCRYPTO_POOL);
     if (policy == null) throw new Error("missing TwoCrypto policy fixture");
     const amountInRaw = 1_000n * 10n ** 18n;
     const decoded = decodeCurveCryptoSwapQuotePoint(
@@ -638,7 +638,7 @@ describe("Curve CryptoSwap stored proof validation", () => {
     // TWOCRYPTO_POOL is family-anchored: any readable pool hash is accepted,
     // an unreadable one is not.
     const profile = makeProfile();
-    expect(getCurveCryptoSwapShadowPolicy("ethereum", TWOCRYPTO_POOL)?.identityAnchor).toBe(
+    expect(getCurveCryptoSwapReviewedPolicy("ethereum", TWOCRYPTO_POOL)?.identityAnchor).toBe(
       "reviewed-deployment-family",
     );
     expect(

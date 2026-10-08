@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
+import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import {
   buildAmmCapacityCurve,
   validateAmmExecutionModel,
@@ -743,7 +744,7 @@ describe("constant-product V2 execution", () => {
       actualReserve1: 1n * 10n ** 6n,
     });
 
-    const model = metric.topPools[0]!.extra?.ammExecutionModel;
+    const model = DexAmmExecutionModelSchema.parse(metric.topPools[0]!.extra?.ammExecutionModel);
     expect(model).toMatchObject({
       source: "uniswap-v2",
       trackedTokenIndex: 0,
@@ -902,7 +903,7 @@ describe("constant-product V2 execution", () => {
     it(`replays the exact U5 tuple and complete V2 curve for ${replay.assetId}`, async () => {
       const result = await runReplay(replay);
       const retained = result.metric.topPools[0]!;
-      const model = retained.extra?.ammExecutionModel;
+      const model = DexAmmExecutionModelSchema.parse(retained.extra?.ammExecutionModel);
       const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
         (entry) => entry.source === "pancakeswap-v2",
       )!;

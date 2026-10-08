@@ -6,9 +6,8 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmMulticall3Result, type EvmRpcOptions } from "../../lib/evm-rpc";
+import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
-  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
@@ -146,35 +145,10 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
   }
 }
 
-const defaultQuoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
+const quoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
   gas: QUOTER_MULTICALL_GAS,
   maxBatchSize: QUOTER_MULTICALL_BATCH_SIZE,
 });
-const quoterMulticallExecutor: typeof defaultQuoterMulticallExecutor = async (input) => {
-  if (input.chain !== "xdc") return defaultQuoterMulticallExecutor(input);
-  const options: EvmRpcOptions = {
-    chainRpcs: input.chainRpcs,
-    signal: input.signal,
-    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-    maxRetries: 0,
-    gas: QUOTER_MULTICALL_GAS,
-    multicallBatchSize: QUOTER_MULTICALL_BATCH_SIZE,
-    ...(input.rpcBudget ? {
-      deadlineMs: input.rpcBudget.deadlineMs,
-      beforeRequest: () => {
-        const consumed = input.rpcBudget!.tryConsume();
-        const reason = input.rpcBudget!.stopReason;
-        if (!consumed && reason) input.onBudgetStop?.(reason);
-        return consumed;
-      },
-    } : {}),
-  };
-  const header = await fetchEvmBlockHeader(input.chain, input.blockNumber, options);
-  if (!header || header.number !== input.blockNumber) return null;
-  return fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-    ...options, multicallFallbackBlockHash: header.hash,
-  });
-};
 
 export async function quoteQuoterV2Requests(input: {
   requests: readonly QuoterV2Request[];

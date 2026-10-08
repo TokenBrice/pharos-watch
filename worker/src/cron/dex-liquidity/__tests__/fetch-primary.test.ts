@@ -34,14 +34,12 @@ import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "..
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
 import { CURVE_CHAINS } from "../constants";
-import {
-  CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
-  CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
-  CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
-  CURVE_R3_METAPOOL_POOL_IDENTITIES,
-  CURVE_USD1_COMPOSITE_POOL_ADDRESS,
-  shouldRetainCurveCompositePoolIdentity,
-} from "../../measured-execution/curve-composite-identities";
+import { CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
+CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
+CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
+CURVE_USD1_COMPOSITE_POOL_ADDRESS,
+} from "@shared/lib/curve-composite-identities";
+import { CURVE_R3_METAPOOL_POOL_IDENTITIES, shouldRetainCurveCompositePoolIdentity } from "@shared/lib/curve-composite-policies";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../../measured-execution/curve-composite";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeApiPool } from "./fetch-primary.test-support";
@@ -436,7 +434,7 @@ describe("buildCurveLookups", () => {
     ]);
   });
 
-  it("retains every owner-ratified metapool physical identity and no address variants", () => {
+  it("retains every reviewed shadow metapool physical identity and no address variants", () => {
     expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(10);
     for (const [chain, poolAddress] of CURVE_R3_METAPOOL_POOL_IDENTITIES) {
       expect(shouldRetainCurveCompositePoolIdentity(chain, poolAddress)).toBe(true);

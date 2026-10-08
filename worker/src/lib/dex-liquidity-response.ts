@@ -5,6 +5,7 @@ import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   DexExitRouteObservationsSchema,
   DexPoolVolumeObservationSchema,
+  DexRetiredSolidlyLegacyModelSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
@@ -267,7 +268,10 @@ export function normalizeTopPools(
       cleaned.chain = toChainDisplay(poolRecord.chain);
     }
     if (poolRecord.extra && typeof poolRecord.extra === "object" && !Array.isArray(poolRecord.extra)) {
-      cleaned.extra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+      const cleanedExtra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+      const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(cleanedExtra.ammExecutionModel);
+      if (retired.success) cleanedExtra.ammExecutionModel = retired.data;
+      cleaned.extra = cleanedExtra;
     }
     // Absent = legacy row whose volume eligibility was never recorded; a
     // malformed observation is dropped rather than published as measured.
@@ -287,15 +291,14 @@ export function normalizeTopPools(
   return pools;
 }
 
-// M7: Wide tolerance windows (24h for 24h baseline, 48h for 7d baseline) handle
-// missed cron runs gracefully. The dex-liquidity cron runs every 30 min, but if
-// several runs are missed, we still find a usable baseline within the tolerance.
-export function selectTrendBaseline(
-  history: DexHistoryRow[],
+// Select the nearest eligible daily observation within the caller's tolerance
+// (12h daily / 36h weekly). Keep extra fields paired with that exact row.
+export function selectTrendBaseline<T extends DexHistoryRow>(
+  history: T[],
   targetSec: number,
   toleranceSec: number,
-): DexHistoryRow | null {
-  let best: DexHistoryRow | null = null;
+): T | null {
+  let best: T | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const row of history) {

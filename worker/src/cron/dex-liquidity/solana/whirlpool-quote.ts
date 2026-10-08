@@ -1,6 +1,8 @@
 import { fetchSolanaAccountBatch, solanaPublicKey, type SolanaAccount } from "../../reserve-adapters/solana";
 import type { AdapterContext } from "../../reserve-adapters/types";
 import { programAddress, publicKeyBytes } from "./program-address";
+import type { SolanaDexBankCaptureSink } from "@shared/types/solana-dex-bank";
+import { captureSolanaDexBank } from "./bank-capture";
 
 export const ORCA_WHIRLPOOL_PROGRAM_ID = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 const Q64 = 1n << 64n;
@@ -201,11 +203,12 @@ export async function whirlpoolTickArrayAddress(poolAddress: string, startTickIn
   return programAddress(ORCA_WHIRLPOOL_PROGRAM_ID, seeds);
 }
 
-export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: Pick<WhirlpoolState, "tickCurrentIndex" | "tickSpacing" | "slot" | "tokenMintA" | "tokenMintB">, signal: AbortSignal, ctx?: AdapterContext, minContextSlot = discovery.slot): Promise<WhirlpoolSnapshot> {
+export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: Pick<WhirlpoolState, "tickCurrentIndex" | "tickSpacing" | "slot" | "tokenMintA" | "tokenMintB">, signal: AbortSignal, ctx?: AdapterContext, minContextSlot = discovery.slot, onBankCapture?: SolanaDexBankCaptureSink): Promise<WhirlpoolSnapshot & { mints: { slot: number; address: string; account: SolanaAccount }[] }> {
   const starts = [...new Set([...tickArrayStarts(discovery.tickCurrentIndex, discovery.tickSpacing, true), ...tickArrayStarts(discovery.tickCurrentIndex, discovery.tickSpacing, false)])];
   const addresses: string[] = [];
   for (const start of starts) addresses.push(await whirlpoolTickArrayAddress(poolAddress, start));
-  const batch = await fetchSolanaAccountBatch([poolAddress, ...addresses], signal, ctx, Math.max(discovery.slot, minContextSlot));
+  const bankAddresses = [poolAddress, discovery.tokenMintA, discovery.tokenMintB, ...addresses];
+  const batch = await fetchSolanaAccountBatch(bankAddresses, signal, ctx, Math.max(discovery.slot, minContextSlot));
   function ownedAccount(address: string): SolanaAccount | null {
     const account = batch.accounts.get(address) ?? null;
     if (account && account.owner !== ORCA_WHIRLPOOL_PROGRAM_ID) throw new Error("Whirlpool account owner mismatch");
@@ -216,6 +219,11 @@ export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: Pic
   const pool = decodeWhirlpool(account.data, batch.slot);
   if (pool.tokenMintA !== discovery.tokenMintA || pool.tokenMintB !== discovery.tokenMintB) throw new Error("Whirlpool discovery identity changed");
   if (pool.tickSpacing !== discovery.tickSpacing || [...tickArrayStarts(pool.tickCurrentIndex, pool.tickSpacing, true), ...tickArrayStarts(pool.tickCurrentIndex, pool.tickSpacing, false)].some((start) => !starts.includes(start))) throw new Error("Whirlpool moved outside discovered tick arrays");
+  const mints = [pool.tokenMintA, pool.tokenMintB].map((address) => {
+    const mint = batch.accounts.get(address);
+    if (!mint || mint.owner !== "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" || mint.data.length !== 82 || mint.data[45] !== 1 || mint.data[44] > 18) throw new Error("Whirlpool Token-2022/unsupported mint in final bank");
+    return { slot: batch.slot, address, account: mint };
+  });
   const tickArrays: WhirlpoolTickArray[] = [];
   for (let i = 0; i < addresses.length; i++) {
     const tickAccount = ownedAccount(addresses[i]);
@@ -224,5 +232,6 @@ export async function fetchWhirlpoolSnapshot(poolAddress: string, discovery: Pic
     if (array.startTickIndex !== starts[i]) throw new Error("Whirlpool tick array PDA binding mismatch");
     tickArrays.push(array);
   }
-  return { slot: batch.slot, poolAddress, pool, tickArrays };
+  if (onBankCapture) await captureSolanaDexBank({ profileId: "orca-whirlpool-exact-v1", poolAddress, slot: batch.slot, addresses: bankAddresses, accounts: batch.accounts, sink: onBankCapture });
+  return { slot: batch.slot, poolAddress, pool, tickArrays, mints };
 }

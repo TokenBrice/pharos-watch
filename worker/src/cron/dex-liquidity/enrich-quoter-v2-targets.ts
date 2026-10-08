@@ -7,7 +7,7 @@ import type { SlotDeadline } from "../../lib/cron-timeouts";
 import { buildMeasuredPoolDirectionKey, buildPancakeMeasuredExecutionTargets, buildSlipstreamMeasuredExecutionTargets, buildUniV3DirectMeasuredExecutionTargets } from "../measured-execution/inventory";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible, isTickSpacingQuoterV2Profile, type DexMeasuredExecutionDeployment } from "../measured-execution/registry";
 import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
-import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS, QUOTER_V2_CAPTURE_XDC_MAX_POOLS, QUOTER_V2_CAPTURE_MAX_REQUESTS, QUOTER_V2_CAPTURE_MAX_WALL_MS } from "./quoter-v2-pool-capture";
+import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_MAX_POOLS, QUOTER_V2_CAPTURE_MAX_REQUESTS, QUOTER_V2_CAPTURE_MAX_WALL_MS } from "./quoter-v2-pool-capture";
 import { normalizeProtocol } from "./pool-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
 
@@ -32,9 +32,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
         : protocol === "pancakeswap" ? "pancakeswap-v3-quoter-v2"
         : protocol === "aerodrome" ? "aerodrome-slipstream-quoter-v2"
         : protocol === "hyperswap-v3" ? "hyperswap-v3-quoter-v2"
-        : protocol === "hybra-finance-v3" ? "hybra-v3-quoter-v2"
-        : protocol === "kodiak-v3" ? "kodiak-v3-quoter-v2"
-        : protocol === "xswap-v3" ? "xswap-v3-quoter-v2" : null;
+        : protocol === "kodiak-v3" ? "kodiak-v3-quoter-v2" : null;
       if (!adapterProfileId) continue;
       const chain = canonicalExitRouteChain(pool.chain);
       if (!getDexMeasuredExecutionDeployment(adapterProfileId, chain)) continue;
@@ -58,8 +56,7 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   for (const group of groups.values()) {
     throwIfAborted(input.signal);
     if (remaining === 0 || rpcBudget.remainingRequests === 0 || rpcBudget.stopReason || Date.now() >= deadline) break;
-    const selected = [...group.pools.keys()].slice(0, Math.min(remaining,
-      group.chain === "xdc" ? QUOTER_V2_CAPTURE_XDC_MAX_POOLS : QUOTER_V2_CAPTURE_MAX_POOLS));
+    const selected = [...group.pools.keys()].slice(0, Math.min(remaining, QUOTER_V2_CAPTURE_MAX_POOLS));
     remaining -= selected.length;
     const timeout = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
     const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;

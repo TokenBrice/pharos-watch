@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  DexMeasuredExecutionTargetSchema,
   buildDexMeasuredCapacityCurve,
   buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
@@ -10,10 +11,50 @@ import {
   validateDexMeasuredExecutionProfile,
 } from "../../types/measured-execution";
 import { ExitRouteCapacityPointSchema } from "../../types/exit-route";
+import { canonicalExitRouteScopedId } from "../../types/exit-route-identity";
+import { SolanaDexShadowTargetSchema } from "../../types/solana-dex-bank";
 
 import { TOKEN_IN, TOKEN_OUT, proofPoint, revertedProofPoint, target, profile, validationInput } from "./dex-measured-execution.test-support";
 
 describe("DEX measured execution contract", () => {
+  it("preserves Base58 identities without weakening EVM target schemas", () => {
+    const native = {
+      adapterProfileId: "orca-whirlpool-exact-v1", stablecoinId: "usdc-circle", chain: "solana", protocol: "orca",
+      poolId: "solana:AbCd", tokenInAddress: "MintA", tokenOutAddress: "MintB", poolTokenAddresses: ["MintA", "MintB"],
+    };
+    const id = buildDexMeasuredExecutionTargetId(native);
+    expect(id).toContain("|solana:AbCd|MintA|MintB|MintA|MintB|");
+    expect(buildDexMeasuredExecutionTargetId({ ...native, poolId: "solana:abcd" })).not.toBe(id);
+    expect(buildDexMeasuredExecutionTargetId({ ...native, tokenInAddress: "Minta" })).not.toBe(id);
+    expect(SolanaDexShadowTargetSchema.safeParse({ chain: "solana", profileId: native.adapterProfileId, poolAddress: "A".repeat(32), tokenMintIn: "B".repeat(32), tokenMintOut: "C".repeat(32) }).success).toBe(true);
+    const evmTarget = target();
+    expect(DexMeasuredExecutionTargetSchema.safeParse(evmTarget).success).toBe(true);
+    expect(DexMeasuredExecutionTargetSchema.safeParse({
+      ...evmTarget,
+      tokenIn: { ...evmTarget.tokenIn, address: "B".repeat(32) },
+    }).success).toBe(false);
+    expect(DexMeasuredExecutionTargetSchema.safeParse({
+      ...evmTarget,
+      tokenOut: { ...evmTarget.tokenOut, address: "C".repeat(32) },
+    }).success).toBe(false);
+    expect(DexMeasuredExecutionTargetSchema.safeParse({
+      ...evmTarget,
+      poolTokenAddresses: ["B".repeat(32), "C".repeat(32)],
+    }).success).toBe(false);
+  });
+
+  it("normalizes Sui address bytes but preserves Move module and currency names", () => {
+    const native = {
+      adapterProfileId: "cetus-clmm-exact-v1", stablecoinId: "usdc-circle", chain: "sui", protocol: "cetus",
+      poolId: "sui:0xAB", tokenInAddress: "0xCD::coin::USDC", tokenOutAddress: "0xEF::coin::SUI",
+    };
+    const id = buildDexMeasuredExecutionTargetId(native);
+    expect(id).toBe(buildDexMeasuredExecutionTargetId({ ...native, poolId: "sui:0xab", tokenInAddress: "0xcd::coin::USDC" }));
+    expect(id).not.toBe(buildDexMeasuredExecutionTargetId({ ...native, tokenInAddress: "0xcd::coin::usdc" }));
+    expect(canonicalExitRouteScopedId("solana", "AbCd")).toBe("AbCd");
+    expect(canonicalExitRouteScopedId("sui", "0xAB::Coin0xCD::USDC")).toBe(`0x${"ab".padStart(64, "0")}::Coin0xCD::USDC`);
+  });
+
   it("uses the reviewed TVL-tiered ladder", () => {
     expect(getDexMeasuredExecutionProbeNotionals(200_000)).toEqual([1_000, 100_000]);
     expect(getDexMeasuredExecutionProbeNotionals(1_000_000)).toEqual([1_000, 100_000, 1_000_000]);
