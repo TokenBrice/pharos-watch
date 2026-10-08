@@ -538,7 +538,7 @@ Asset/state/review-filtered incidents. `total`/optional `totalExact` replace `co
 
 ```json
 {
-  "currentVersion": "6.32"
+  "currentVersion": "6.33"
 }
 ```
 
@@ -576,7 +576,7 @@ Cross-market peg summary. v6.31: optional `coins[].unknownCoverageSeconds` remov
 
 ```json
 {
-  "currentVersion": "6.32"
+  "currentVersion": "6.33"
 }
 ```
 
@@ -915,7 +915,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.47",
-  "methodologyVersion": "10.10"
+  "methodologyVersion": "10.11"
 }
 ```
 
@@ -992,8 +992,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.32",
-  "methodologyVersion": "6.32"
+  "currentVersion": "6.33",
+  "methodologyVersion": "6.33"
 }
 ```
 

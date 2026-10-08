@@ -150,7 +150,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "qcad-stablecorp",
     "display": {
@@ -166,6 +166,13 @@
     "params": {
       "label": "CAD fiat reserves",
       "risk": "very-low",
+      "nativeQuantityBasis": {
+        "reserveUnit": { "kind": "currency", "unit": "CAD" },
+        "supplyToken": "QCAD",
+        "nominalValuePerToken": 1,
+        "reviewedAt": "2026-07-22",
+        "evidenceRef": "https://stablecorp.ca/transparency"
+      },
       "reserveProbe": {
         "kind": "json-path",
         "path": [

@@ -128,7 +128,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
-    "version": 1,
+    "version": 3,
     "semantics": "attestation-mix",
     "scoring": {
       "maxSourceAgeSec": 4000000,

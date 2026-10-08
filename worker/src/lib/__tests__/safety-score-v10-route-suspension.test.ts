@@ -4,6 +4,7 @@ import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -78,7 +79,7 @@ describe("reviewed exact-channel suspension", () => {
 
   it("retains public diagnostic evidence without a capture row and never infers measured total failure from suspension alone", () => {
     const fixed = makeV9FixedInput({ assetId: ID, clockSec: CLOCK, includeDexObservations: false,
-      dexOverrides: { exitRouteObservationCoverage: { status: "populated", capabilityMatrixVersion: "p4a.9",
+      dexOverrides: { exitRouteObservationCoverage: { status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
         retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
         unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {} } },
     });

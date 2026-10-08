@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.11",
+    title: "Research-only exact orderbooks and source-bound reserve inputs",
+    date: "2026-10-08",
+    effectiveAt: 1791417600,
+    summary:
+      "The coordinated retirement release closes exact orderbook admission to research-only/diagnostic and corrects reserve quantity, source-clock and redemption-evidence inputs without activating staged reserve or DEX scoring cohorts.",
+    impact: [
+      "Retire the dormant exact Kraken request observer and review-producer arm. Public books do not establish same-run account, deposit, withdrawal, fee or maximum-settlement gates. Historical orderbook model identifiers, gates and basis vocabulary remain interpretable; no current reviewed Kraken exact model existed.",
+      "Existing Securitize and synchronous ERC-4626 admission, generic direct-orderbook-depth/CoinGecko synthetic books, exchange spot prices and pool/TVL/supply accounting remain separate and unchanged by the orderbook closure.",
+      "Reserve producer contracts retain native CAD/QCAD and GBP/tGBP quantities on their reviewed nominal basis, never USD; ETH supply telemetry keeps its own diagnostic clock rather than implying whole-reserve freshness. Single-asset bindings use v2 and the six Chainlink bindings use v3 with original clocks and typed unavailable reasons.",
+      "BC3M has a source-reviewed 86,400-second inclusive reserve-to-every-pinned-circulation-block allowance, grounded in its own Chainlink heartbeat and Backed daily/10% reporting disclosure. A ratio requires complete same-run inventory-adjusted on-chain circulation/API reconciliation and is withheld beyond that allowance; original clocks remain. BIB01 stays quarantined with no policy or activation change. Missing source-specific temporal review still emits reserve-supply-temporal-policy-unreviewed, with no gross-supply fallback or borrowed TUSD bound. The allowance is not simultaneous reserve/liability attestation, a production observation or scoring activation. Unsupported reserve-snapshot redemption envelopes are removed; genuine River exit telemetry and active Origin vault/redemption remain. These input corrections may affect availability or downstream scores only after fresh admitted evidence.",
+      "Retired Solidly diagnostics and unavailable/stale proof packets grant no exact Exit credit. Surviving Base/Optimism stable capabilities remain explicitly non-scoring; no C01/C02/Curve/native cohort activation or MYRC independent-evidence promotion is authorized. Static and weak reserve source classes remain outside independent scoring admission.",
+      "Neutral captured-input replay is required before release; newly admitted producer evidence additionally needs original-clock production observation and attributed fixed-clock comparison. No replay equivalence, mover, gap-count, resource or production-health result is claimed here.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.10",
     title: "Distinct evidence obligations, known reserve bounds and researched incident absence",
     date: "2026-10-07",

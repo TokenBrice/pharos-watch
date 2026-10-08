@@ -14,7 +14,12 @@ vi.mock("../../publication-contract", () => ({
 }));
 vi.mock("../../provider-circuit-health", () => ({ loadProviderCircuitHealth: vi.fn(async () => null) }));
 vi.mock("../../canary-checks", () => ({ loadCanaryStatus: vi.fn(async () => null) }));
-vi.mock("../derived-data", () => ({ getMintBurnReconciliation: vi.fn(async () => null) }));
+vi.mock("../derived-data", () => ({ getMintBurnReconciliation: vi.fn(async (_db: D1Database, now: number) => ({
+  conservationVersion: 1 as const,
+  checkedAt: now,
+  criticalCount: 0,
+  rows: [],
+})) }));
 vi.mock("../../live-reserves/store", () => ({ loadFreshIndependentLiveReserveMap: vi.fn(async () => new Map()) }));
 vi.mock("../../collateral-drift", () => ({
   summarizeCollateralDriftFromLiveReserveMap: vi.fn(() => ({ driftCoins: [] })),

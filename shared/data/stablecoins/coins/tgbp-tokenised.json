@@ -111,7 +111,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "tgbp-tokenised",
     "suspended": {
@@ -132,6 +132,13 @@
     "params": {
       "label": "GBP cash and short-term UK gilts",
       "risk": "very-low",
+      "nativeQuantityBasis": {
+        "reserveUnit": { "kind": "currency", "unit": "GBP" },
+        "supplyToken": "tGBP",
+        "nominalValuePerToken": 1,
+        "reviewedAt": "2026-10-01",
+        "evidenceRef": "https://www.tokenisedgbp.com/transparency"
+      },
       "reserveProbe": {
         "kind": "json-path",
         "path": [

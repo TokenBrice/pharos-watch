@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     data: [{ date: 1_700_000_000, circulatingUsd: 1_000_000, price: 0.99 }],
     error: null,
   })),
+  pegDeviationChart: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -18,17 +19,10 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/components/peg-deviation-chart", () => ({
-  PegDeviationChart: ({
-    data,
-    stablecoinId,
-  }: {
-    data: readonly unknown[];
-    stablecoinId: string;
-  }) => (
-    <output data-testid="case-study-peg-chart">
-      {stablecoinId}:{data.length}
-    </output>
-  ),
+  PegDeviationChart: (props: { data: readonly unknown[] }) => {
+    mocks.pegDeviationChart(props);
+    return <output data-testid="case-study-peg-chart">{props.data.length}</output>;
+  },
 }));
 
 const NOW_MS = Date.UTC(2026, 8, 22, 12);
@@ -45,6 +39,7 @@ describe.each(CHART_FIXTURES)("$slug chart", ({ widget, eventWindows }) => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_MS);
     mocks.useSupplyHistory.mockClear();
+    mocks.pegDeviationChart.mockClear();
   });
 
   afterEach(() => {
@@ -58,9 +53,12 @@ describe.each(CHART_FIXTURES)("$slug chart", ({ widget, eventWindows }) => {
       widget.coinId,
       getCaseStudyChartDays(eventWindows, NOW_MS),
     );
-    expect(screen.getByTestId("case-study-peg-chart").textContent).toBe(
-      `${widget.coinId}:1`,
-    );
+    expect(mocks.pegDeviationChart).toHaveBeenCalledWith({
+      data: mocks.useSupplyHistory.mock.results[0].value.data,
+      pegCurrency: "USD",
+      embedded: true,
+    });
+    expect(screen.getByTestId("case-study-peg-chart").textContent).toBe("1");
     expect(screen.getByText(widget.caption)).toBeDefined();
   });
 });

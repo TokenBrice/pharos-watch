@@ -1,5 +1,6 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { describe, expect, it } from "vitest";
 import donorCapture from "./fixtures/safety-score-v9-a-plus-donor-capture.json";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
@@ -172,7 +173,7 @@ function buildFixture() {
         exitRouteObservations: [dexObservation],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.9",
+          capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.33",
+    title: "Confidence-qualified weekly DEX history for liquidity erosion",
+    date: "2026-10-08",
+    effectiveAt: 1791417600,
+    summary:
+      "DEWS Liquidity Erosion admits the nearest positive-TVL history observation with confidence at least 0.5 inside an inclusive 36-hour weekly tolerance, retaining the selected observation's score, TVL and date.",
+    impact: [
+      "Without an eligible weekly baseline, both historical score and TVL anchors remain null/unavailable rather than using weak or out-of-window observations. This changes input availability and can change DEWS scores and bands.",
+      "The live DEX history lower bound is now minus 8.5 days. Historical reconstruction reads DEX history from the earliest event UTC day minus 15.5 days; supply history bounds are unchanged.",
+      "Weak public DEX history remains visible, and the existing confidence >=0.75 durability and digest gates remain unchanged. No collector, Liquidity, PSI, DDR or Safety scoring admission is promoted; depeg detection rules are unchanged.",
+      "Release requires owner-approved production-history replay under U-C20-16. No production replay, mover, band-equivalence or runtime-health result is claimed by this entry.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.32",
     title: "Quarantine malformed asset inputs without withholding healthy DEWS peers",
     date: "2026-10-07",

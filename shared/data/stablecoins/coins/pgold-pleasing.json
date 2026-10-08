@@ -86,7 +86,7 @@
   },
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "pgold-pleasing",
     "display": {

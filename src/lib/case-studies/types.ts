@@ -38,9 +38,9 @@ export interface CaseStudySection {
 
 /**
  * Live Pharos chart embedded in the body. Hydrates client-side via
- * `useSupplyHistory(coinId)` (fine under static export) and overlays the coin's
- * curated annotations. Only populate for data-rich (≈2024+) coins where a real
- * series exists; omit for pre-collection historical events.
+ * `useSupplyHistory(coinId)` (fine under static export), without annotation
+ * overlays. Only populate for data-rich (≈2024+) coins where a real series
+ * exists; omit for pre-collection historical events.
  */
 export interface CaseStudyDataWidget {
   readonly kind: "peg-deviation";
