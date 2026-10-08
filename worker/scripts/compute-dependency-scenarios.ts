@@ -5,11 +5,13 @@ import { spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
 import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, type DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
+import { DEPENDENCY_SCENARIO_CHUNK_BYTES } from "@shared/types/dependency-scenario-storage";
+import { chunkDependencyScenarioPayload, reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
 import { ReportCardsV9CurrentResponseSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
 import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
@@ -96,7 +98,22 @@ async function main(): Promise<void> {
       if (readRemote(rowKey) !== value) throw new Error(`Readback mismatch for ${rowKey}`);
     };
     // Immutable content first. An unsuccessful readback never advances latest.
-    writeRow(key, bytes);
+    if (Buffer.byteLength(bytes) <= DEPENDENCY_SCENARIO_CHUNK_BYTES) {
+      writeRow(key, bytes);
+    } else {
+      const { manifest, chunks } = chunkDependencyScenarioPayload(bytes);
+      const sqlPath = resolve(directory, "publish.sql");
+      // One bounded statement per call: no unbounded D1 batch or parallel
+      // connections. Conflicting immutable rows are checked, never overwritten.
+      for (const chunk of chunks) {
+        writeFileSync(sqlPath, `INSERT INTO dependency_scenario_payload_chunks (payload_id,chunk_index,value,byte_length,sha256) VALUES (${sqlString(key)},${chunk.chunk_index},${sqlString(chunk.value)},${chunk.byte_length},${sqlString(chunk.sha256)}) ON CONFLICT(payload_id,chunk_index) DO NOTHING;`);
+        remote("--file", sqlPath);
+      }
+      const readback = JSON.parse(remote("--command", `SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ${sqlString(key)} ORDER BY chunk_index`));
+      if (reassembleDependencyScenarioPayload(manifest, readback[0]?.results ?? [], digest) !== bytes) throw new Error(`Readback mismatch for ${key}`);
+      // The manifest is immutable payload metadata, not the commit marker.
+      writeRow(key, JSON.stringify(manifest));
+    }
     writeRow(`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`, key);
     // Prune only after the new marker's successful readback. The marker lookup
     // stays inside this statement so a changed marker can never lose its row.
@@ -151,6 +168,7 @@ async function main(): Promise<void> {
   const { v9FactSetDigest: _digest, ...rawCompileInput } = replay.pipeline.compiledFacts;
   replay = null as unknown as typeof replay;
   const policy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
+  const evaluateScenario = createV9ContagionScenarioEvaluator({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId: candidate.publicationGenerationId });
   const scenarios: DependencyScenarioArtifact["scenarios"] = [];
   for (const { hubId: rootId } of hubs) {
     const shocks: ContagionShock[] = [
@@ -161,7 +179,7 @@ async function main(): Promise<void> {
     for (const shock of shocks) {
       globalThis.gc?.();
       const id = `${rootId}:${shock.kind}`;
-      const result = evaluateV9ContagionScenario({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId: candidate.publicationGenerationId }, { id, shocks: [shock] });
+      const result = evaluateScenario({ id, shocks: [shock] });
       const assumptions = shock.kind === "score-limit" ? ["Root downstream-consumed final projection is limited to 40; its published headline score is not overwritten."] : shock.kind === "depeg" ? ["Active depeg of 1,000 bps for one day; captured historical peg performance and exit facts are held fixed."] : ["Root mint authority is compromised; missing mint control is modeled as global unbounded EOA minting with zero delay."];
       scenarios.push({ id, rootId, shock, assumptions, results: result.rows.filter(row => row.failure === null && (row.coinId === rootId || row.changedDimensions.length > 0)).map(row => ({
         assetId: row.coinId, publishedScore: row.baselineScore, publishedGrade: row.baselineGrade,

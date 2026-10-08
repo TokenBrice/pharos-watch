@@ -82,7 +82,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
-      "sha256": "ef6ebde4fade1c83124401e207b0b4f6d68ad80f6b59ea74f5a7876e4fc49132"
+      "sha256": "531ea3be2db19bc310ad2c41f1e9bb6408194b2b0bf53b533b0a7787981161c8"
     },
     {
       "path": "shared/lib/dependency-graph.ts",
@@ -710,7 +710,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/full-stablecoin-catalog.ts",
-      "sha256": "c403c959ddeffdbe01fb83510ffa0c16c621e9336598f0f5c2254139d4f5210a"
+      "sha256": "9dd6b4920c1a63c2f8b59ea29b69df4d3842f78aa3d97a22a3db2b2ebf85731f"
     },
     {
       "path": "worker/src/lib/redemption-backstop-capacity/profile.ts",
@@ -742,7 +742,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
-      "sha256": "edbbb29d4c13c76ebbc1b95e63391aed5f7110eaebf0b7fc4f8bb66c3f454d42"
+      "sha256": "3a219f6f5f11dfda01981e7fbb20263363d1f0c27a395740c87b7e2d2e06e653"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-access-lookthrough.ts",
@@ -818,7 +818,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-context.ts",
-      "sha256": "aa82a7c9d8f10a48a4705425933cd5bec7bf961344ee01ff03c2bf993bf94730"
+      "sha256": "aadb1371d84e4127e6c20bb2a1ec38a0f667151e116a215f0a52d490db25a80e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
@@ -903,7 +903,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-07-block-26139859-shock-coverage.json.gz"
     }
   ],
-  "digest": "d5b79949719c049498f51d08aa205aa9dcd2e5db0cd98928dc3dfefe93d2d03d"
+  "digest": "cdb775d573bf54c94a120cf3079cc3fb137899ed178f154f1fea6f792e99336a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

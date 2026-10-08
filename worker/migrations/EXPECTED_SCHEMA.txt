@@ -371,6 +371,7 @@ table	depeg_resolver_publication_snapshot_refs
 table	depeg_resolver_publication_snapshot_rows
 table	depeg_resolver_publication_snapshots
 table	depeg_resolver_publication_snapshots_v2
+table	dependency_scenario_payload_chunks
 table	detail_cache_write_generations
 table	dex_deployment_outcomes
 table	dex_discovery_meta

@@ -388,6 +388,41 @@ describe("Safety Score v9 public projection", () => {
     expect(card.scoreTrace.boundedUncertaintyAttribution).toEqual(baseline.scoreTrace.boundedUncertaintyAttribution);
   });
 
+  it.each([false, true])("reconciles repeated causal roots with critical=%s canonical emitted facts", critical => {
+    const input = fixture("asset", critical ? {
+      score: null, grade: "NR", pillars: { backing: null, exit: 90, control: 94 },
+      nrReasons: [{ code: "missing-pillar", field: "pillars.backing", message: "Backing is missing." }],
+    } : { score: 91.8, grade: "A+" });
+    const baseline = projectSafetyScoreV9Card(input).card;
+    const gapId = "asset:gap:reserve-composition";
+    input.trace.unresolvedFacts = [
+      { code: "missing-reserve-composition", path: "backing:source", reason: "One source obligation.", critical: false,
+        responsibility: "unresearched", sourceGapId: gapId, cause: "U", causeGapIds: [gapId],
+        scoringDisposition: "bounded-uncertainty" },
+      { code: "partial-reserve-review", path: "backing:scoring-witness", reason: "Repeated causal witnesses.", critical,
+        responsibility: "unresearched", cause: "U", causeGapIds: [gapId, gapId],
+        scoringDisposition: "bounded-uncertainty" },
+    ];
+    const response = buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:canonical-causes-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:canonical-causes-test", publishedAtSec: 1_001, results: [input],
+    });
+    const card = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response))).cards[0]!;
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    expect(evidence.totalFactCount).toBe(2);
+    expect(evidence.facts).toHaveLength(2);
+    expect(evidence.facts[1]![6]).toHaveLength(1);
+    expect(evidence.summaries.find(summary => summary.responsibility === "unresearched"))
+      .toMatchObject({ factCount: 1, ...(critical ? { criticalFactCount: 1 } : {}), reasonCodes: ["missing-reserve-composition", "partial-reserve-review"] });
+    expect(evidence.summaries.find(summary => summary.responsibility === "unresearched")?.criticalFactCount ?? 0).toBe(Number(critical));
+    expect(card.score).toBe(baseline.score);
+    expect(card.grade).toBe(baseline.grade);
+    // Preserve rejection of the formerly mismatched producer summary.
+    const mismatched = structuredClone(card);
+    mismatched.scoreTrace.evidenceResponsibility.summaries.find(summary => summary.responsibility === "unresearched")!.factCount = 2;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(mismatched).success).toBe(false);
+  });
+
   it("counts critical roots once and preserves distinct, foreign, gapless and multi-root obligations", () => {
     const facts = [
       { source: "local:gap:first", causes: ["local:gap:first"], critical: false },

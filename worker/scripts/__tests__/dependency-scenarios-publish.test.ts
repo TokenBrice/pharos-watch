@@ -17,6 +17,8 @@ import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9
 import { normalizeFixedInput } from "../../src/lib/report-cards-fixed-input";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/safety-score-v9/xaut-supply-attribution-contract";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
+import { DEPENDENCY_SCENARIO_CHUNK_BYTES } from "@shared/types/dependency-scenario-storage";
+import { reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
 
 const temporaryDirectories: string[] = [];
 afterEach(() => temporaryDirectories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -31,7 +33,10 @@ const { DatabaseSync } = require('node:sqlite');
 const args = process.argv.slice(2);
 const sql = args.includes('--file') ? fs.readFileSync(args[args.indexOf('--file') + 1], 'utf8') : args[args.indexOf('--command') + 1];
 const db = new DatabaseSync(process.env.SCENARIO_TEST_DB);
-const event = sql.startsWith('INSERT') ? (sql.includes(':latest') ? 'write-marker' : 'write-artifact') : sql.startsWith('DELETE') ? 'prune' : sql.includes(':latest') ? 'read-marker' : 'read-artifact';
+const event = sql.includes('dependency_scenario_payload_chunks') ? (sql.startsWith('INSERT') ? 'write-chunk' : 'read-chunks') : sql.startsWith('INSERT') ? (sql.includes(':latest') ? 'write-marker' : 'write-artifact') : sql.startsWith('DELETE') ? 'prune' : sql.includes(':latest') ? 'read-marker' : 'read-artifact';
+if (sql.startsWith('INSERT') && Buffer.byteLength(sql) >= 100000) {
+ console.error('D1 statement size exceeded'); process.exit(1);
+}
 fs.appendFileSync(process.env.SCENARIO_TEST_EVENTS, JSON.stringify(event) + '\\n');
 if (event === 'prune' && process.env.SCENARIO_TEST_FAIL_PRUNE === '1') {
  console.error('simulated-prune-outage'); process.exit(1);
@@ -42,13 +47,19 @@ if (event === 'prune' && process.env.SCENARIO_TEST_MOVE_MARKER) {
 if (sql.startsWith('SELECT')) {
  let results = db.prepare(sql).all();
  if (event === 'read-artifact' && process.env.SCENARIO_TEST_BAD_READBACK === '1') results = [{value:'corrupt-readback'}];
+ if (event === 'read-chunks' && process.env.SCENARIO_TEST_BAD_CHUNKS === 'missing') results.pop();
+ if (event === 'read-chunks' && process.env.SCENARIO_TEST_BAD_CHUNKS === 'hash') results[0].sha256 = '0'.repeat(64);
+ if (event === 'read-chunks' && process.env.SCENARIO_TEST_BAD_CHUNKS === 'whole-hash') {
+  results[0].value = results[0].value.replace('Publisher', 'Corrupted');
+  results[0].sha256 = require('node:crypto').createHash('sha256').update(results[0].value).digest('hex');
+ }
  console.log(JSON.stringify([{results,success:true}]));
 } else {
  db.exec(sql); console.log(JSON.stringify([{results:[],success:true}]));
 }
 db.close();
 `;
-function setup() {
+function setup(payloadSize?: number) {
   const directory = mkdtempSync(resolve(tmpdir(), "pharos-scenario-publish-"));
   temporaryDirectories.push(directory);
   const bin = resolve(directory, "bin");
@@ -58,6 +69,7 @@ function setup() {
   const databasePath = resolve(directory, "cache.sqlite");
   const db = new DatabaseSync(databasePath);
   db.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+  db.exec(readFileSync(resolve("worker/migrations/0264_dependency_scenario_chunks.sql"), "utf8"));
   for (let index = 0; index < 40; index++) {
     db.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(`${artifactPrefix}old-${String(index).padStart(2, "0")}`, `old-payload-${index}`, 1000 + index);
   }
@@ -65,7 +77,9 @@ function setup() {
   db.prepare("INSERT INTO cache VALUES (?, ?, ?)").run("report-cards:v9", "untouched-canonical", 1000);
   db.close();
   const source = makeReportCardsV9Response();
-  const bytes = JSON.stringify({ schemaVersion: 2, sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId, sourceBaseInputGenerationId: source.safetyScoreIdentity.baseInputGenerationId, evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest, methodologyVersion: source.methodology.version, computedAtSec: 10_000, cohort: { rootIds: [], selection: "Publisher storage fixture" }, scenarios: [] });
+  const artifact = { schemaVersion: 2, sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId, sourceBaseInputGenerationId: source.safetyScoreIdentity.baseInputGenerationId, evaluationBuildDigest: source.safetyScoreIdentity.evaluationBuildDigest, methodologyVersion: source.methodology.version, computedAtSec: 10_000, cohort: { rootIds: [], selection: "Publisher storage fixture" }, scenarios: [] };
+  if (payloadSize) artifact.cohort.selection += "x".repeat(payloadSize - Buffer.byteLength(JSON.stringify(artifact)));
+  const bytes = JSON.stringify(artifact);
   writeFileSync(resolve(directory, "artifact.json"), bytes);
   writeFileSync(resolve(directory, "publication.json"), JSON.stringify(source));
   const stamp = createHash("sha256").update(stableJsonStringifyV1({
@@ -244,5 +258,51 @@ describe("dependency scenario publication retention", () => {
     try {
       expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey)?.value).toBe(`${artifactPrefix}old-00`);
     } finally { db.close(); }
+  }, 30_000);
+});
+
+describe("dependency scenario chunk publication", () => {
+  it.each([DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_BYTES + 1])("publishes the actual %i-byte boundary safely", size => {
+    const fixture = setup(size);
+    const run = fixture.invoke();
+    expect(run.status, run.stderr).toBe(0);
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      const stored = String(db.prepare("SELECT value FROM cache WHERE key = ?").get(fixture.publishedKey)?.value);
+      if (size === DEPENDENCY_SCENARIO_CHUNK_BYTES) {
+        expect(stored).toBe(fixture.bytes);
+        expect(fixture.events()).not.toContain("write-chunk");
+      } else {
+        const chunks = db.prepare("SELECT chunk_index,value,byte_length,sha256 FROM dependency_scenario_payload_chunks WHERE payload_id = ? ORDER BY chunk_index").all(fixture.publishedKey);
+        expect(chunks).toHaveLength(2);
+        expect(reassembleDependencyScenarioPayload(JSON.parse(stored), chunks, fixture.publishedKey.slice(artifactPrefix.length))).toBe(fixture.bytes);
+        expect(fixture.events()).toEqual(["write-chunk", "write-chunk", "read-chunks", "write-artifact", "read-artifact", "write-marker", "read-marker", "prune"]);
+      }
+      expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey)?.value).toBe(fixture.publishedKey);
+    } finally { db.close(); }
+  }, 30_000);
+  it.each(["missing", "hash", "whole-hash"])("never commits %s chunk readbacks", defect => {
+    const fixture = setup(DEPENDENCY_SCENARIO_CHUNK_BYTES + 1);
+    const run = fixture.invoke({ SCENARIO_TEST_BAD_CHUNKS: defect });
+    expect(run.status).not.toBe(0);
+    expect(fixture.events()).toEqual(["write-chunk", "write-chunk", "read-chunks"]);
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey)?.value).toBe(`${artifactPrefix}old-00`);
+      expect(db.prepare("SELECT value FROM cache WHERE key = ?").get(fixture.publishedKey)).toBeUndefined();
+    } finally { db.close(); }
+  }, 30_000);
+  it("does not overwrite conflicting immutable chunks or move latest", () => {
+    const fixture = setup(DEPENDENCY_SCENARIO_CHUNK_BYTES + 1);
+    const db = new DatabaseSync(fixture.databasePath);
+    try {
+      db.prepare("INSERT INTO dependency_scenario_payload_chunks VALUES (?,0,'bad',3,?)").run(fixture.publishedKey, "0".repeat(64));
+    } finally { db.close(); }
+    expect(fixture.invoke().status).not.toBe(0);
+    const after = new DatabaseSync(fixture.databasePath);
+    try {
+      expect(after.prepare("SELECT value FROM dependency_scenario_payload_chunks WHERE payload_id = ? AND chunk_index = 0").get(fixture.publishedKey)?.value).toBe("bad");
+      expect(after.prepare("SELECT value FROM cache WHERE key = ?").get(markerKey)?.value).toBe(`${artifactPrefix}old-00`);
+    } finally { after.close(); }
   }, 30_000);
 });

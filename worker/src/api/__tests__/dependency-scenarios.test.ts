@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DependencyScenarioArtifactSchema, DependencyScenariosResponseSchema, dependencyScenarioFreshness, DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC, DEPENDENCY_SCENARIOS_CACHE_PREFIX } from "@shared/types/dependency-scenarios";
 import type { DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { chunkDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
 
 const loadIdentity = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/safety-score-active-source", () => ({ loadActiveSafetyScoreIdentity: loadIdentity }));
@@ -108,5 +109,48 @@ describe("dependency scenario read handler", () => {
     loadIdentity.mockResolvedValue({ kind: "error", safetyScoreIdentity: null });
     const body = DependencyScenariosResponseSchema.parse(await (await handleDependencyScenarios(database())).json());
     expect(body.freshness).toMatchObject({ status: "unavailable", reason: "accepted-publication-unavailable", ageSec: 100 });
+  });
+});
+
+describe("dependency scenario chunk reader", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_100_000);
+    loadIdentity.mockResolvedValue({ kind: "v9", safetyScoreIdentity: { publicationGenerationId: "accepted-1" } });
+  });
+  afterEach(() => vi.useRealTimers());
+  function chunkedDatabase(defect?: string) {
+    const value = artifact();
+    // A full 45-scenario matrix over a representative large asset census.
+    value.cohort.rootIds = Array.from({ length: 15 }, (_, index) => `root-${index}`);
+    value.scenarios = value.cohort.rootIds.flatMap(rootId => ["score-limit", "depeg", "mint-control-compromise"].map(kind => ({
+      ...value.scenarios[0]!, id: `${rootId}:${kind}`, rootId,
+      shock: { kind: "mint-control-compromise" as const, assetId: rootId },
+      results: Array.from({ length: 250 }, (_, index) => ({ ...value.scenarios[0]!.results[0]!, assetId: index === 0 ? rootId : `child-${index}` })),
+    })));
+    const bytes = JSON.stringify(value);
+    expect(new TextEncoder().encode(bytes).length).toBeGreaterThan(2_000_000);
+    const { manifest, chunks } = chunkDependencyScenarioPayload(bytes);
+    const key = `${DEPENDENCY_SCENARIOS_CACHE_PREFIX}artifact:${manifest.payloadSha256}`;
+    if (defect === "missing") chunks.pop();
+    if (defect === "hash") chunks[0]!.sha256 = "0".repeat(64);
+    if (defect === "whole-hash") manifest.payloadSha256 = "0".repeat(64);
+    if (defect === "index") chunks[1]!.chunk_index = 0;
+    return { value, db: mockD1([
+      { match: "SELECT value FROM cache", matchBinds: [`${DEPENDENCY_SCENARIOS_CACHE_PREFIX}latest`], rows: [{ value: key }] },
+      { match: "SELECT value FROM cache", matchBinds: [key], rows: [{ value: JSON.stringify(manifest) }] },
+      { match: "FROM dependency_scenario_payload_chunks", matchBinds: [key], rows: chunks },
+    ]) };
+  }
+  it("serves a representative oversized matrix only after complete verified reassembly", async () => {
+    const { value, db } = chunkedDatabase();
+    const body = DependencyScenariosResponseSchema.parse(await (await handleDependencyScenarios(db)).json());
+    expect(body.artifact).toEqual(value);
+    expect(body.freshness.status).toBe("current");
+  });
+  it.each(["missing", "hash", "whole-hash", "index"])("withholds the entire %s set as unavailable", async defect => {
+    const { db } = chunkedDatabase(defect);
+    const body = DependencyScenariosResponseSchema.parse(await (await handleDependencyScenarios(db)).json());
+    expect(body).toMatchObject({ artifact: null, freshness: { status: "unavailable", reason: "artifact-read-failed", ageSec: null } });
   });
 });
