@@ -16,6 +16,9 @@ import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/r
 import {
   RedemptionBackstopsResponseSchema,
   type RedemptionCapacityConfidence,
+  ExecutableRedemptionObserverIdSchema,
+  EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS,
+  type ExecutableRedemptionObserverDefinition,
   type RedemptionDocSourceSupport,
   type RedemptionRouteFamily,
 } from "@shared/types/redemption";
@@ -128,7 +131,10 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   sourcesWithoutSupports: 103,
   missingSupportKindCounts: {
     route: 58,
-    capacity: 10,
+    // Audited honest source-role corrections raised this count: RD1-01/RD1-03,
+    // RD2-07/RD2-08/RD2-09/RD2-10/RD2-11, RD3-03/RD3-04 and RD5-08.
+    // Backing, targets, inaccessible terms and other payout branches are not capacity evidence.
+    capacity: 37,
     fees: 126,
     access: 157,
     settlement: 167,
@@ -251,6 +257,18 @@ export function validateRedemptionBackstopRegistry(
       }
     }
   }
+  for (const observerId of ExecutableRedemptionObserverIdSchema.options) {
+    const descriptor: ExecutableRedemptionObserverDefinition = EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS[observerId];
+    const coin = TRACKED_META_BY_ID.get(descriptor.coinId);
+    const contract = coin?.contracts?.find((entry) => entry.chain === descriptor.chain);
+    if (!contract || contract.address.toLowerCase() !== descriptor.inputContract.toLowerCase()) {
+      addFinding(findings, "error", "observer-contract-mismatch", `${observerId}: descriptor input does not match tracked ${descriptor.chain} contract.`, { stablecoinId: descriptor.coinId });
+    }
+    if (!descriptor.outputAssetKeys.length || new Set(descriptor.outputAssetKeys).size !== descriptor.outputAssetKeys.length ||
+        descriptor.outputAssetKeys.some((key) => !TRACKED_META_BY_ID.has(key))) {
+      addFinding(findings, "error", "observer-output-invalid", `${observerId}: descriptor outputs must be exact unique tracked output identities.`, { stablecoinId: descriptor.coinId });
+    }
+  }
 
   const mergedIds = Object.keys(mergedConfigs).sort();
   if (seenById.size !== mergedIds.length) {
@@ -370,7 +388,7 @@ export function validateRedemptionBackstopRegistry(
       outputAssetType: config.outputAssetType,
       capacityModelKind: config.capacityModel.kind,
       capacityConfidence,
-      capacityBasis: config.capacityModel.basis ?? null,
+      capacityBasis: "basis" in config.capacityModel ? config.capacityModel.basis ?? null : null,
       resolvedCapacityBasis:
         resolveCapacityBasis(config.routeFamily, config.capacityModel, resolvedCapacityConfidence) ?? null,
       capacityFallbackSource: resolveCapacityFallbackSource(config.capacityModel),
@@ -473,6 +491,21 @@ function validateConfigInvariants(
   findings: RedemptionRegistryFinding[],
 ): void {
   const context = { stablecoinId: id, family: owner?.name, filePath: sourceFilePath ?? owner?.filePath };
+  if (config.capacityModel.kind === "executable-observer") {
+    const model = config.capacityModel;
+    const descriptor: ExecutableRedemptionObserverDefinition = EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS[model.observerId];
+    if (!descriptor || descriptor.coinId !== id || descriptor.sourceLane !== "direct") {
+      addFinding(findings, "error", "observer-config-mismatch", `${id}: observer must name this coin's standalone direct strategy.`, context);
+    } else {
+      if (model.capacityUse === "measured" && descriptor.capacityCapability !== "measured") {
+        addFinding(findings, "error", "observer-capability-mismatch", `${id}: diagnostic observer cannot admit measured capacity.`, context);
+      }
+      if (model.requiredOutputAssetKeys.length !== descriptor.outputAssetKeys.length ||
+          !model.requiredOutputAssetKeys.every((key) => descriptor.outputAssetKeys.includes(key))) {
+        addFinding(findings, "error", "observer-output-mismatch", `${id}: required outputs do not exactly match the observer descriptor.`, context);
+      }
+    }
+  }
   if (config.costModel.kind === "dynamic-or-unclear" && !config.costModel.feeDescription) {
     addFinding(
       findings,
@@ -538,7 +571,7 @@ function validateConfigInvariants(
       context,
     );
   }
-  if (config.capacityModel.confidence === "documented-bound") {
+  if ("confidence" in config.capacityModel && config.capacityModel.confidence === "documented-bound") {
     if (!config.reviewedAt) {
       addFinding(
         findings,

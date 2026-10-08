@@ -117,7 +117,7 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 - Frost never paints a gradient or a background, with one exception: the Cemetery plot map's drawn beam is a frost gradient from the lantern. On that page frost appears only on the One Beam figure and that beam, which rests on the figure and moves only on interaction.
 - Health, warning, error, freshness, and score colors must represent state consistently in both themes.
 - Never rely on color alone. Pair it with text, position, shape, iconography, or another redundant channel.
-- JavaScript chart colors normally come from the shared runtime maps described in [design-tokens.md](./design-tokens.md), not local hex constants. Intentional local canonical palettes are the market-cap delta colors in `src/components/mcap-chart.tsx`, `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`, and `ANNOTATION_HEX_COLORS` in `src/components/chart-primitives/annotations.tsx`.
+- JavaScript chart colors normally come from the shared runtime maps described in [design-tokens.md](./design-tokens.md), not local hex constants. Intentional local canonical palettes are the market-cap delta colors in `src/components/mcap-chart.tsx` and `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`.
 
 ## Page Shells
 
@@ -149,6 +149,7 @@ Prefer the established utilities in `src/app/globals.css`:
 | `.pharos-empty-note` | Bounded empty-state treatment inside a data surface. |
 | `.pharos-meta` | Compact secondary metadata. |
 | `.pharos-prose-link` | Inline link treatment in explanatory copy. |
+| `.pharos-source-list` | External source list rendered by `SourceLinkList`: CSS-masked external-link glyph, focus ring and underline on bare `<li><a>` rows. |
 
 Check the current declarations before depending on exact padding, radius, shadow, or responsive behavior. Those implementation details belong to `src/app/globals.css` and the token files.
 

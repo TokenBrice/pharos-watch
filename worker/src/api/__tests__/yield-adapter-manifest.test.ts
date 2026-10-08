@@ -142,11 +142,7 @@ describe("handleYieldAdapterManifest", () => {
       entry.stablecoinId === "scrvusd-curve" &&
       entry.lifecycle === "quarantined"
     );
-    expect(scrvusdQuarantined).toMatchObject({
-      family: "onchain",
-      sourceKey: null,
-      sourceKeyPattern: "onchain:scrvusd-curve",
-    });
+    expect(scrvusdQuarantined).toBeUndefined();
 
     expect(YIELD_VARIANT_MAP["iusd-infinifi"]).toMatchObject({
       variantSymbol: "siUSD",

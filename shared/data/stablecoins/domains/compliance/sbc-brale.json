@@ -1,32 +1,15 @@
 {
   "id": "sbc-brale",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA Interim Register and register guidance",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Brale disclosures",
-        "url": "https://brale.xyz/legal/disclosures"
-      },
-      {
-        "label": "Brale SBC product page",
-        "url": "https://brale.xyz/stablecoins/sbc"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "SBC is a Brale-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly attestations."
+      "summary": "Brale identifies SBC as a payments-focused USD stablecoin, issued by Brale in partnership with Stable Coin Inc., and redeemable 1:1 for US dollars. Its August reserve examination names Brale Inc."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Brale Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / state money transmitter regulators (registered MSB, 45 US jurisdictions)",
+    "licensingRegulator": "FinCEN / state money transmitter regulators (registered MSB; NMLS ID #2376957; 45 US jurisdictions licensed or exempt)",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -34,48 +17,112 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/SBC",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "The historical June 18 review recorded the May 31 reserve report. The latest MCCPA examination reviewed on 2026-10-01 covers August 31, 2026 and is signed September 15, 2026; reserve attestation and MSB/state licenses do not establish GENIUS authorization.",
+    "notes": "Reviewed October 7, 2026. Preserve Brale Inc. as the exact legal issuer string, consistent with Brale-issued sibling sidecars (MXNE, USDGLO and USTX). FinCEN MSB registration and state money-transmitter licensing or exemption are ordinary licenses and do not establish GENIUS PPSI approval or state qualification. Brale security disclosures state 45 US jurisdictions licensed or exempt and an EU regulatory application in progress, without a named EU authority or token-specific decision; generic alignment with emerging GENIUS frameworks does not establish a concrete GENIUS application. MCCPA examined reserves and circulation of 8,717,242 SBC as of August 31, 2026 and signed September 15; reserves comprise 8,141,977 cash/cash equivalents and 575,265 US government-backed debt. The SBC archive provides monthly reports. These disclosures establish public reporting, not statutory reserve compliance or authorization. Preserve unknown issuerPathway. GENIUS primary issuer rules remain pre-effective; the general DASP prohibition begins July 18, 2028 under the current timetable.",
     "references": [
       {
         "label": "Brale SBC reserve disclosure",
         "url": "https://brale.xyz/stablecoins/SBC",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Brale terms",
         "url": "https://brale.xyz/legal/terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Brale disclosures",
         "url": "https://brale.xyz/legal/disclosures",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MCCPA SBC August 31, 2026 reserve examination",
+        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-15",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mississippi licensed money transmitter list",
+        "url": "https://dbcf.ms.gov/wp-content/uploads/2026/02/Money-Transmitter-List-02102026.pdf",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brale regulatory coverage",
+        "url": "https://brale.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury foreign payment stablecoin issuer proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brale security and regulatory coverage disclosures",
+        "url": "https://brale.xyz/security",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC pending digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Brale SBC reserve, terms, and disclosure pages (accessed 2026-06-18): no GENIUS Act authorization or application claim found",
-        "Brale.xyz homepage (accessed 2026-06-18): identifies Brale as registered MSB in 45 US jurisdictions, no GENIUS Act or PPSI mention",
-        "Visa/Brale June 4 2026 Canton Network SBC pilot announcement: confirms Brale operates as FinCEN-registered MSB and money transmitter; no GENIUS authorization or intent announced",
-        "OCC GENIUS Act NPRM (Bulletin 2026-3, Feb 25 2026) and Federal Register public releases: Brale does not appear as a PPSI applicant or charter applicant",
-        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026): Brale not named in any public PPSI filing context",
-        "General web search for 'Brale GENIUS Act PPSI application 2026': no results found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 proposed implementing rules",
+        "OCC pending digital-assets licensing application table (bounded list, not a complete PPSI register)",
+        "Federal Reserve September 24, 2026 implementing-rule proposal",
+        "FDIC April 7, 2026 GENIUS implementing-rule proposal",
+        "Treasury August 17, 2026 implementation proposal",
+        "September 30, 2026 State Stablecoin Regulatory Committee procedural interim final rule",
+        "FinCEN public enforcement-action index",
+        "Targeted official-domain searches for Brale / SBC / Stable Coin Inc. GENIUS/PPSI approvals, applications and enforcement",
+        "Brale terms, disclosures, SBC product page and security page",
+        "MCCPA August 2026 SBC reserve examination",
+        "Mississippi February 9, 2026 money-transmitter directory"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for SBC as of 2026-06-18. Brale continues to operate under existing FinCEN MSB and state money transmitter licenses with no announced GENIUS pathway.",
+      "summary": "No token-specific PPSI approval, GENIUS state qualification, official application or stablecoin enforcement action for Brale Inc. and SBC was identified in the reviewed public sources on October 7, 2026. State money-transmitter licensing and generic GENIUS-alignment statements are not such approvals. No claim is made about unpublished applications or unreviewed state records.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC pending digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS implementation proposal and effective-date timetable",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

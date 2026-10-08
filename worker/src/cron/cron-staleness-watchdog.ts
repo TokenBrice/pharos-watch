@@ -441,7 +441,7 @@ export async function runCronStalenessWatchdog(
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const status = await buildCacheStatuses(db, nowSec);
-  const producers = deriveCronFreshnessProducers();
+  const producers = deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS);
   const cronOnlyProducers = producers.filter((producer) => producer.laneKey == null);
   const producerFacts = await loadProducerFreshnessFacts(
     db,

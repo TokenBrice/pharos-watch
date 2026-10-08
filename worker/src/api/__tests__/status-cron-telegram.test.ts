@@ -44,7 +44,7 @@ describe("handleStatus", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("includes cron health data in the response", async () => {
+  it("includes only registered current cron health data", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
       {
@@ -72,7 +72,7 @@ describe("handleStatus", () => {
     expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
-    expect(body.crons["compute-safety-score-v9-workflow"]?.expectedIntervalSec).toBe(30 * 60);
+    expect(body.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
   });
 
   it("includes budget-only scheduled surface telemetry in status", async () => {

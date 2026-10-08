@@ -99,7 +99,9 @@ type FallbackTier = "static" | "audited-fallback" | "curated-fallback" | "none";
 
 export interface LiveWithheldRow {
   assetId: string;
-  supplyUsd: number;
+  supplyUsd: number | null;
+  supplyAvailability: "observed" | "unavailable";
+  supplyUnavailableReason: "null-supply" | "missing-supply" | null;
   liveScore: number | null;
   liveGrade: V9Grade;
   fallbackScore: number | null;
@@ -107,6 +109,13 @@ export interface LiveWithheldRow {
   fallbackTier: FallbackTier;
   fallbackEvidenceCeiling: number | null;
   fallbackBindingCapKind: string | null;
+}
+
+export interface LiveWithheldReport {
+  clockSec: number;
+  rows: LiveWithheldRow[];
+  assessedCount: number;
+  excludedCounts: Record<"no-live" | "already-fallback" | "baseline-pipeline-gap" | "fallback-pipeline-gap" | "unchanged-or-upgrade", number>;
 }
 
 function cardForAsset(cards: readonly ReplayCard[], assetId: string): ReplayCard {
@@ -201,13 +210,15 @@ function buildCounterfactualPipeline(
   });
 }
 
-function supplyByAssetId(replay: Replay): ReadonlyMap<string, number> {
-  return new Map(
-    replay.pipeline.evaluatedSet.assets.map((asset) => [
-      asset.assetId,
-      asset.stressState?.exitPortfolio?.circulatingUsd ?? 0,
-    ]),
-  );
+function supplyByAssetId(replay: Replay): ReadonlyMap<string, Pick<LiveWithheldRow, "supplyUsd" | "supplyAvailability" | "supplyUnavailableReason">> {
+  return new Map<string, Pick<LiveWithheldRow, "supplyUsd" | "supplyAvailability" | "supplyUnavailableReason">>(replay.pipeline.evaluatedSet.assets.map(asset => {
+    const supply = asset.stressState?.exitPortfolio?.circulatingUsd;
+    return [asset.assetId, {
+      supplyUsd: supply ?? null,
+      supplyAvailability: supply == null ? "unavailable" : "observed",
+      supplyUnavailableReason: supply === null ? "null-supply" : supply === undefined ? "missing-supply" : null,
+    }];
+  }));
 }
 
 /**
@@ -219,23 +230,33 @@ function supplyByAssetId(replay: Replay): ReadonlyMap<string, number> {
 export function buildLiveWithheldCounterfactualReport(
   replayValue: Replay,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta> = ACTIVE_META_BY_ID,
-): LiveWithheldRow[] {
+): LiveWithheldReport {
   const replay = ReplaySchema.parse(replayValue);
   const { fixedInput, candidate } = replay.pipeline;
   const alreadyFallback = new Set(fixedInput.liveToFallbackCoins);
   const supplies = supplyByAssetId(replay);
   const rows: LiveWithheldRow[] = [];
+  const excludedCounts: LiveWithheldReport["excludedCounts"] = {
+    "no-live": 0, "already-fallback": 0, "baseline-pipeline-gap": 0,
+    "fallback-pipeline-gap": 0, "unchanged-or-upgrade": 0,
+  };
+  let assessedCount = 0;
 
   for (const assetId of fixedInput.activeAssetIds) {
     const meta = metaById.get(assetId);
     if (!meta) throw new Error(`Replay active asset ${assetId} is missing registry metadata`);
     const liveRows = fixedInput.liveReserveMap[assetId];
-    if (meta.liveReservesConfig == null || liveRows === undefined || liveRows.length === 0 || alreadyFallback.has(assetId)) {
+    if (alreadyFallback.has(assetId)) { excludedCounts["already-fallback"]++; continue; }
+    if (meta.liveReservesConfig == null || liveRows === undefined || liveRows.length === 0) {
+      excludedCounts["no-live"]++;
       continue;
     }
 
     const liveCard = cardForAsset(candidate.cards, assetId);
-    if (liveCard.ratingStatus === "pipeline-gap" || liveCard.grade === null) continue;
+    if (liveCard.ratingStatus === "pipeline-gap" || liveCard.grade === null) {
+      excludedCounts["baseline-pipeline-gap"]++;
+      continue;
+    }
     const counterfactual = buildCounterfactualPipeline(
       replay,
       withLiveReserveWithheld(fixedInput, assetId),
@@ -244,16 +265,25 @@ export function buildLiveWithheldCounterfactualReport(
     );
     const fallbackCard = counterfactual.candidate.cards.find((card) => card.id === assetId);
     if (!fallbackCard) throw new Error(`Counterfactual candidate has no card for active asset ${assetId}`);
-    if (fallbackCard.ratingStatus === "pipeline-gap" || fallbackCard.grade === null) continue;
+    if (fallbackCard.ratingStatus === "pipeline-gap" || fallbackCard.grade === null) {
+      excludedCounts["fallback-pipeline-gap"]++;
+      continue;
+    }
+    assessedCount++;
     const extensionAsset = counterfactual.extension.assets.find((asset) => asset.assetId === assetId);
     const admission = fallbackTier(extensionAsset?.reviewedStaticReserveRows ?? null);
     const liveGrade = liveCard.grade;
     const fallbackGrade = fallbackCard.grade;
-    if (REPORT_CARD_GRADE_RANK[fallbackGrade] >= REPORT_CARD_GRADE_RANK[liveGrade]) continue;
+    if (REPORT_CARD_GRADE_RANK[fallbackGrade] >= REPORT_CARD_GRADE_RANK[liveGrade]) {
+      excludedCounts["unchanged-or-upgrade"]++;
+      continue;
+    }
 
     rows.push({
       assetId,
-      supplyUsd: supplies.get(assetId) ?? 0,
+      ...(supplies.get(assetId) ?? {
+        supplyUsd: null, supplyAvailability: "unavailable", supplyUnavailableReason: "missing-supply",
+      }),
       liveScore: liveCard.score,
       liveGrade,
       fallbackScore: fallbackCard.score,
@@ -264,28 +294,34 @@ export function buildLiveWithheldCounterfactualReport(
     });
   }
 
-  return rows.sort(
-    (left, right) => right.supplyUsd - left.supplyUsd || left.assetId.localeCompare(right.assetId),
-  );
+  rows.sort((left, right) => left.supplyUsd === null
+    ? right.supplyUsd === null ? left.assetId.localeCompare(right.assetId) : -1
+    : right.supplyUsd === null ? 1 : right.supplyUsd - left.supplyUsd || left.assetId.localeCompare(right.assetId));
+  return { clockSec: fixedInput.clockSec, rows, assessedCount, excludedCounts };
 }
 
 function displayScore(score: number | null): string {
   return score === null ? "NR" : score.toFixed(3).replace(/\.?(0+)$/, "");
 }
 
-export function renderLiveWithheldCounterfactualReport(rows: readonly LiveWithheldRow[]): string {
+export function renderLiveWithheldCounterfactualReport(report: LiveWithheldReport): string {
+  const { rows } = report;
   const lines = [
     "# Live-withheld counterfactual report",
     "",
+    `Capture clock: ${report.clockSec}. Assessed eligible assets: ${report.assessedCount}.`,
+    `Excluded findings: ${Object.entries(report.excludedCounts).map(([reason, count]) => `${reason}=${count}`).join(", ")}.`,
+    "Assessed counts include unchanged/upgraded outcomes; exclusions are not feed-health evidence.",
+    "",
     rows.length === 0
-      ? "No live-backed asset would change grade if its live reserve producer went silent."
+      ? "No assessed eligible strict grade downgrades. Excluded assets are not a healthy-feed claim."
       : "| Asset | Supply (USD) | Live | If producer silent | Fallback tier | Evidence ceiling | Counterfactual binding cap |",
   ];
   if (rows.length > 0) {
     lines.push("|---|---:|---|---|---|---:|---|");
     for (const row of rows) {
       lines.push(
-        `| ${row.assetId} | ${Math.round(row.supplyUsd).toLocaleString("en-US")} | ${displayScore(row.liveScore)} / ${row.liveGrade} | ${displayScore(row.fallbackScore)} / ${row.fallbackGrade} | ${row.fallbackTier} | ${row.fallbackEvidenceCeiling ?? "none"} | ${row.fallbackBindingCapKind ?? "none"} |`,
+        `| ${row.assetId} | ${row.supplyUsd === null ? `unknown (${row.supplyUnavailableReason})` : Math.round(row.supplyUsd).toLocaleString("en-US")} | ${displayScore(row.liveScore)} / ${row.liveGrade} | ${displayScore(row.fallbackScore)} / ${row.fallbackGrade} | ${row.fallbackTier} | ${row.fallbackEvidenceCeiling ?? "none"} | ${row.fallbackBindingCapKind ?? "none"} |`,
       );
     }
   }
@@ -303,14 +339,14 @@ async function main(): Promise<void> {
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values.replay === "string", "--replay is required");
   const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
-  const rows = buildLiveWithheldCounterfactualReport(replay);
-  const markdown = renderLiveWithheldCounterfactualReport(rows);
+  const report = buildLiveWithheldCounterfactualReport(replay);
+  const markdown = renderLiveWithheldCounterfactualReport(report);
   if (typeof values.output === "string") {
     writeFileSync(values.output, markdown, "utf8");
   } else {
     process.stdout.write(markdown);
   }
-  console.error(`live-withheld-counterfactual: ${rows.length} grade drop(s)`);
+  console.error(`live-withheld-counterfactual: ${report.rows.length} grade drop(s); assessed=${report.assessedCount}; excluded=${JSON.stringify(report.excludedCounts)}`);
 }
 
 if (process.argv[1]?.endsWith("check-safety-score-v9-live-withheld.ts")) {

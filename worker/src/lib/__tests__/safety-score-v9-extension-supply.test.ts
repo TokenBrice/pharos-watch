@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
 import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
 import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gnosis.json";
@@ -17,6 +18,7 @@ import {
 } from "../safety-score-v9/extension-supply";
 import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "../safety-score-v9/curated-single-route-supply";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -766,6 +768,67 @@ describe("buildSafetyScoreV9SupplyReview", () => {
   });
 });
 
+describe("provider-origin HyperEVM supply identity", () => {
+  const identities = [
+    ["usdt-tether", "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"],
+    ["usde-ethena", "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"],
+    ["m-m0", "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"],
+    ["frxusd-frax", "0x80eede496655fb9047dd39d9f418d5483ed600df"],
+    ["rusd-reservoir", "0x866d66f64fb81461903e1e38d998e747ecf35e78"],
+  ] as const;
+
+  function input(assetId: string, label = "Hyperliquid L1"): ReportCardsFixedInput {
+    return {
+      chainCirculatingById: { [assetId]: { Ethereum: { current: 80 }, [label]: { current: 20 } } },
+      safetyScoreV9SupplyAttributionById: {},
+    } as unknown as ReportCardsFixedInput;
+  }
+
+  function routes(address: string): BridgeRoutes {
+    return [
+      ETH_ROUTE,
+      { ...ETH_ROUTE, id: `hyperevm:${address}`, routeClass: "canonical", issuanceModel: "bridge-representation" },
+      { ...ETH_ROUTE, id: "hyperliquid:core-token", routeClass: "canonical", issuanceModel: "bridge-representation" },
+    ];
+  }
+
+  it.each(identities)("joins the provider EVM observation for %s without changing its amount", (assetId, address) => {
+    const fixed = input(assetId);
+    const review = buildSafetyScoreV9SupplyReview(fixed, assetId, profile(routes(address)));
+    expect(safetyScoreV9RouteSupplyShare(review, `hyperevm:${address}`)).toBe(0.2);
+    expect(safetyScoreV9RouteSupplyShare(review, "hyperliquid:core-token")).toBeNull();
+    expect(review!.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyUsd, 0)).toBe(100);
+    expect(fixed.chainCirculatingById[assetId]!["Hyperliquid L1"]!.current).toBe(20);
+  });
+
+  it("keeps USDC's genuine HyperCore provider row on HyperCore", () => {
+    const review = buildSafetyScoreV9SupplyReview(input("usdc-circle"), "usdc-circle", profile(routes("0xevm")));
+    expect(safetyScoreV9RouteSupplyShare(review, "hyperliquid:core-token")).toBe(0.2);
+    expect(safetyScoreV9RouteSupplyShare(review, "hyperevm:0xevm")).toBeNull();
+  });
+
+  it("does not invent a split between competing EVM routes", () => {
+    const [assetId, address] = identities[0];
+    const competing = [...routes(address), { ...ETH_ROUTE, id: "hyperevm:second", routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }];
+    const review = buildSafetyScoreV9SupplyReview(input(assetId), assetId, profile(competing));
+    expect(safetyScoreV9RouteSupplyShare(review, `hyperevm:${address}`)).toBeNull();
+    expect(review!.selectedBridgeRoutes).toContainEqual({
+      deploymentRouteKey: `ambiguous-chain:${assetId}:hyperevm`,
+      supplyUsd: 20, supplyShare: 0.2, reviewState: "unmatched",
+    });
+  });
+
+  it("requires the reviewed provider and exact catalog deployment identity", () => {
+    const [assetId, address] = identities[0];
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const review = buildSafetyScoreV9SupplyReview(input(assetId), assetId, profile(routes(address)), {
+      meta: { ...meta, contracts: meta.contracts?.filter(contract => contract.chain !== "hyperevm") },
+    });
+    expect(safetyScoreV9RouteSupplyShare(review, "hyperliquid:core-token")).toBe(0.2);
+    expect(safetyScoreV9RouteSupplyShare(review, `hyperevm:${address}`)).toBeNull();
+  });
+});
+
 describe("curated native single-route supply attribution", () => {
   const XDAI_PROFILE = xdaiRiskReview.bridgeRouteRisk as unknown as BridgeRouteRiskProfile;
   const XDAI_ROUTE_ID = "gnosis:0xe91d153e0b41518a2ce8dd3d7944fa863463a97d";
@@ -807,7 +870,9 @@ describe("curated native single-route supply attribution", () => {
         .sort()
         .map((key) => ({ kind: "bridge-route", key })),
     );
-    expect(safetyScoreV9RouteSupplyShare(review, XDAI_ROUTE_ID)).toBe(1);
+    expect(safetyScoreV9RouteSupplyShare(
+      review, CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION["xdai-gnosis"]!.routeId,
+    )).toBe(1);
   });
 
   it("feeds materialSupplyShare 1 into every xdai bridge control via the attribution review", () => {

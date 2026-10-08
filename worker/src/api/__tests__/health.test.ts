@@ -13,6 +13,7 @@ import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { evaluateStablecoinActivePriceCoverage } from "../../lib/stablecoin-publication-coverage";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
@@ -184,6 +185,15 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     { match: "SELECT status", rows: [], first: { status: "ok" } },
     { match: "status = 'ok'", rows: [], first: { started_at: statusStartedAt } },
     ...extras,
+    ...(extras.some((entry) => entry.matchBinds?.includes("ops:d1-capacity:v1")) ? [] : [{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["ops:d1-capacity:v1"],
+      rows: [],
+      first: {
+        value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+        updated_at: now,
+      },
+    }]),
   ]);
 }
 
@@ -355,12 +365,52 @@ describe("handleHealth", () => {
     row.value = JSON.stringify(snapshot);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
-      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201 } },
+      { match: "AS last_any", rows: [], first: { last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
     ] });
     const body = await (await handleHealth(db)).json() as HealthResponse;
     expect(body.status).toBe("stale");
     expect(body.warnings).toContain("scheduled_delivery_stalled");
-    expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
+    // The handler samples its own clock; allow the one-second boundary.
+    expect(body.schedulerLiveness?.ageSeconds).toBeGreaterThanOrEqual(1201);
+    expect(body.schedulerLiveness?.ageSeconds).toBeLessThanOrEqual(1203);
+  });
+  it.each([
+    [1801, "degraded", "heavy_scheduled_delivery_stalled"],
+    [2701, "stale", "heavy_scheduled_delivery_stalled"],
+    [null, "degraded", "heavy_scheduler_liveness_unavailable"],
+  ] as const)("detects heavy delivery loss (%s) through a healthy cached projection", async (age, status, warning) => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    row.value = JSON.stringify(snapshot);
+    const db = buildStatusD1Scenario({ sections: [], overrides: [
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [], first: row },
+      { match: "AS last_any", rows: [], first: {
+        last_any: now - 1, reserve: now - 30, telegram: now - 30, digest: now - 30,
+        heavy: age == null ? null : now - age,
+      } },
+    ] });
+    const body = await (await handleHealth(db)).json() as HealthResponse;
+    expect(body.status).toBe(status);
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.schedulerLiveness?.heavy.ageSeconds).toBe(age);
+    expect(body.warnings).toContain(warning);
+    expect(body.warnings).not.toContain("scheduled_delivery_stalled");
+  });
+  it("clears a cached heavy scheduler floor by recomputing independent blockers live", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 60);
+    const snapshot = JSON.parse(row.value);
+    snapshot.publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json();
+    snapshot.publicHealth.status = "stale";
+    snapshot.publicHealth.warnings = ["heavy_scheduled_delivery_stalled"];
+    snapshot.publicHealth.schedulerLiveness.heavy.status = "stale";
+    row.value = JSON.stringify(snapshot);
+    const body = await (await handleHealth(makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] }))).json() as HealthResponse;
+    expect(body.schedulerLiveness?.heavy.status).toBe("healthy");
+    expect(body.warnings).not.toContain("heavy_scheduled_delivery_stalled");
+    expect(body.status).toBe("stale");
   });
   it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -399,6 +449,15 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["ops:d1-capacity:v1"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+          updated_at: now,
+        },
+      },
       {
         match: "cache WHERE key IN",
         rows: [
@@ -534,6 +593,32 @@ describe("handleHealth", () => {
     expect(body.warnings).toContain("d1-capacity-warning");
     expect(body.warnings.join(" ")).not.toContain("75");
   });
+
+  it.each(["missing", "malformed", "expired", "future-clock"] as const)(
+    "exposes only the sanitized unavailable capacity reason (%s)",
+    async (reason) => {
+      const now = Math.floor(Date.now() / 1000);
+      const observedAt = reason === "expired" ? now - 26 * 3600 - 1 : reason === "future-clock" ? now + 3600 : now;
+      const first = reason === "missing" ? null : {
+        value: reason === "malformed" ? "{" : JSON.stringify({
+          version: 1,
+          assessment: assessD1Capacity({ observedAt, databaseSizeBytes: 1_000_000_000 }),
+        }),
+        updated_at: now,
+      };
+      const db = makeHealthyHealthDb(now, { extras: [{
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["ops:d1-capacity:v1"],
+        rows: [],
+        first,
+      }] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.status).toBe("degraded");
+      expect(body.warnings).toContain(`d1-capacity-${reason}`);
+      expect(body).not.toHaveProperty("d1Capacity");
+      expect(JSON.stringify(body)).not.toContain("databaseSizeBytes");
+    },
+  );
 
   it("warns without degrading when a complete active publication has alert-eligible missing prices", async () => {
     const now = Math.floor(Date.now() / 1000);

@@ -12,8 +12,29 @@ import {
   isDexCensusAttemptComplete,
   type DexCensusAttemptResult,
 } from "../dex-deployment-coverage";
+import { CURVE_R3_METAPOOL_POLICIES, CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY } from "../curve-composite-policies";
 
 describe("DEX capability gates", () => {
+  it("keeps every exact composite policy shadow even under a profile-wide active registration", () => {
+    for (const policy of [CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY,
+      CURVE_NXUSD_METAPOOL_POLICY, ...CURVE_R3_METAPOOL_POLICIES]) {
+      const registration = getDexExecutionCapabilityRegistration(policy.adapterProfileId)!;
+      expect(registration.lifecycle).toBe("shadow");
+      expect(policy.mode).toBe("shadow");
+      expect(policy.scoreEligible).toBe(false);
+      const profile = {
+        adapterProfileId: policy.adapterProfileId, chain: policy.chain,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+        tokenIn: { ...policy.executionTokens[policy.inputIndex]!, referencePriceUsd: 1 },
+        tokenOut: { ...policy.executionTokens[policy.outputIndex]!, referencePriceUsd: 1 },
+      };
+      expect(isDexExecutionProfileAdmittedForScoring(profile, registration)).toBe(false);
+      expect(isDexExecutionProfileAdmittedForScoring(profile, { ...registration, lifecycle: "active" })).toBe(false);
+      expect(isDexExecutionProfileAdmittedForScoring({ ...profile, poolId: `${policy.chain}:0x${"11".repeat(20)}` },
+        { ...registration, lifecycle: "active" })).toBe(false);
+    }
+  });
+
   it("predeclares current and future profile slots without admitting shadow profiles", () => {
     const profileIds = DEX_EXECUTION_CAPABILITY_REGISTRY.map((entry) => entry.profileId);
     expect(new Set(profileIds).size).toBe(profileIds.length);
@@ -94,8 +115,6 @@ describe("DEX census contracts", () => {
     const ids = DEX_DISCOVERY_PROVIDER_REGISTRY.map((entry) => entry.providerId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(DEX_DISCOVERY_PROVIDER_REGISTRY.every((entry) => entry.requestCostMs >= 0 && entry.timeoutMs > 0)).toBe(true);
-    expect(ids).toEqual(expect.arrayContaining(["soroban-exhaustive", "btcusd-public-https"]));
-    expect(DEX_DISCOVERY_PROVIDER_REGISTRY.filter((entry) => entry.lifecycle === "disabled").map((entry) => entry.providerId))
-      .toEqual(["soroban-exhaustive", "btcusd-public-https"]);
+    expect(ids).toContain("aquarius");
   });
 });

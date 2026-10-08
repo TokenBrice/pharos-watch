@@ -15,6 +15,7 @@ import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { fetchSafetyScoreV9SolanaRpc, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 
 interface ObserverDependencies {
   fetchEvmBlockNumber: typeof fetchEvmBlockNumber;
@@ -23,6 +24,7 @@ interface ObserverDependencies {
   resolveClosestBlockAtOrBeforeTimestamp: typeof resolveClosestBlockAtOrBeforeTimestamp;
   observeEconomicSolanaMint: typeof observeEconomicSolanaMint;
   fetchMoveFungibleAssetSupply: typeof fetchMoveFungibleAssetSupply;
+  fetchSafetyScoreV9SolanaRpc: typeof fetchSafetyScoreV9SolanaRpc;
 }
 
 const DEFAULT_DEPENDENCIES: ObserverDependencies = {
@@ -32,6 +34,7 @@ const DEFAULT_DEPENDENCIES: ObserverDependencies = {
   resolveClosestBlockAtOrBeforeTimestamp,
   observeEconomicSolanaMint,
   fetchMoveFungibleAssetSupply,
+  fetchSafetyScoreV9SolanaRpc,
 };
 
 function rejected(deploymentKey: string): SafetyScoreV9TransferMaterialityObservation {
@@ -132,15 +135,41 @@ async function observeChainDeployments(
   const rejectedRows = () => new Map(targets.map((target) => [target.deploymentKey, rejected(target.deploymentKey)]));
   if (chainId === "solana") {
     const rows = rejectedRows();
-    for (const target of targets) {
+    // Snapshot all mints before fetching their shared block anchor. Sequential
+    // account/anchor/account reads can move later mints beyond the fixed clock;
+    // one finalized context preserves the same quantities and admission gates.
+    for (let offset = 0; offset < targets.length; offset += 100) {
+      const batch = targets.slice(offset, offset + 100);
       try {
-        const mint = await dependencies.observeEconomicSolanaMint({
-          address: target.address, decimals: target.expectedDecimals, clockSec: scoringClockSec, chainRpcs, signal,
-        });
-        if (mint) rows.set(target.deploymentKey, {
-          deploymentKey: target.deploymentKey, rawTokenUnits: mint.amount, decimals: target.expectedDecimals,
-          blockNumber: mint.slot.split(":")[0]!, observedAtSec: mint.observedAtSec, status: "accepted",
-        });
+        const snapshot = await dependencies.fetchSafetyScoreV9SolanaRpc<{
+          context?: { slot?: number }; value?: unknown[];
+        }>("getMultipleAccounts", [batch.map(target => target.address), {
+          commitment: "finalized", encoding: "jsonParsed",
+        }], signal, chainRpcs);
+        if (!snapshot || !Array.isArray(snapshot.value) || snapshot.value.length !== batch.length ||
+            !Number.isSafeInteger(snapshot.context?.slot) || snapshot.context!.slot! < 0) continue;
+        const anchors = new Map<string, Promise<unknown>>();
+        for (const [index, target] of batch.entries()) {
+          const read: SafetyScoreV9SolanaRpcFetcher = async <T>(method: string, params: unknown[], readSignal?: AbortSignal): Promise<T | null> => {
+            if (method === "getAccountInfo") return {
+              context: snapshot.context, value: snapshot.value![index],
+            } as T;
+            const key = JSON.stringify([method, params]);
+            let response = anchors.get(key);
+            if (!response) {
+              response = dependencies.fetchSafetyScoreV9SolanaRpc(method, params, readSignal, chainRpcs);
+              anchors.set(key, response);
+            }
+            return await response as T | null;
+          };
+          const mint = await dependencies.observeEconomicSolanaMint({
+            address: target.address, decimals: target.expectedDecimals, clockSec: scoringClockSec, chainRpcs, signal,
+          }, read);
+          if (mint) rows.set(target.deploymentKey, {
+            deploymentKey: target.deploymentKey, rawTokenUnits: mint.amount, decimals: target.expectedDecimals,
+            blockNumber: mint.slot.split(":")[0]!, observedAtSec: mint.observedAtSec, status: "accepted",
+          });
+        }
       } catch (error) { rethrowIfAborted(error, signal); }
     }
     return rows;

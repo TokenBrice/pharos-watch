@@ -8,92 +8,34 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata } from "../live-reserves/store";
 import {
   readRedemptionBackstopLiveMetadata,
+  evaluateRedemptionCapacityEvidenceAdmission,
   type RedemptionBackstopLiveMetadata,
 } from "../redemption-backstop/live-metadata";
 import {
+  buildBoundedCapacityFields,
   resolveCapacityBasis,
-  resolveReserveSyncCapacityConfidence,
   type CapacityResolution,
   type CapacityResolverContext,
 } from "./profile";
 
 type ReserveSyncModel = Extract<RedemptionCapacityModel, { kind: "reserve-sync-metadata" }>;
 
-type ReserveSyncCapacityFields = Pick<
-  CapacityResolution,
-  "immediateCapacityUsd" | "immediateCapacityRatio" | "scoringCapacityUsd" | "scoringCapacityRatio" | "capacityProfile"
-> & {
-  hasSupplyCeiling: boolean;
-  hasPositiveSupply: boolean;
-  capacityExceedsSupply: boolean;
-  dailyLimitCapsCapacity: boolean;
-};
-
-function clampUnitInterval(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-function buildReserveSyncCapacityFields(params: {
-  rawCapacityUsd: number;
-  supplyUsd: number | null;
-  dailyLimitUsd?: number | null;
-  queueDepthUsd?: number | null;
-  capacityProfileConfidence: RedemptionBackstopEntry["capacityConfidence"];
-  applyDailyLimit: boolean;
-  includeEventualSupplyInProfile?: boolean;
-}): ReserveSyncCapacityFields {
-  const hasSupplyCeiling = params.supplyUsd != null;
-  const hasPositiveSupply = hasSupplyCeiling && (params.supplyUsd as number) > 0;
-  const capacityExceedsSupply = hasSupplyCeiling && params.rawCapacityUsd > (params.supplyUsd as number);
-  const immediateCapacityUsd = hasSupplyCeiling
-    ? Math.max(0, Math.min(params.supplyUsd as number, params.rawCapacityUsd))
-    : Math.max(0, params.rawCapacityUsd);
-  const immediateCapacityRatio = hasPositiveSupply
-    ? immediateCapacityUsd / (params.supplyUsd as number)
-    : null;
-  const dailyLimitCapsCapacity =
-    params.applyDailyLimit && params.dailyLimitUsd != null
-      ? params.dailyLimitUsd < immediateCapacityUsd
-      : false;
-  const scoringCapacityUsd = dailyLimitCapsCapacity
-    ? Math.max(0, params.dailyLimitUsd as number)
-    : immediateCapacityUsd;
-  const scoringCapacityRatio =
-    dailyLimitCapsCapacity && hasPositiveSupply
-      ? clampUnitInterval(scoringCapacityUsd / (params.supplyUsd as number))
-      : immediateCapacityRatio;
-
-  return {
-    immediateCapacityUsd,
-    immediateCapacityRatio,
-    scoringCapacityUsd,
-    scoringCapacityRatio,
-    capacityProfile: {
-      immediateUsd: immediateCapacityUsd,
-      ...(params.dailyLimitUsd != null ? { dailyLimitUsd: params.dailyLimitUsd } : {}),
-      ...(params.queueDepthUsd != null ? { queuedUsd: params.queueDepthUsd } : {}),
-      ...(params.includeEventualSupplyInProfile && hasSupplyCeiling ? { eventualUsd: params.supplyUsd as number } : {}),
-      scoringUsd: scoringCapacityUsd,
-      scoringHorizon: dailyLimitCapsCapacity ? "daily" : params.queueDepthUsd != null ? "queued" : "immediate",
-      capacityProfileConfidence: params.capacityProfileConfidence,
-    },
-    hasSupplyCeiling,
-    hasPositiveSupply,
-    capacityExceedsSupply,
-    dailyLimitCapsCapacity,
-  };
-}
-
 function pickRouteStatusFields(
   liveMetadata: RedemptionBackstopLiveMetadata,
-): Partial<
-  Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
-> {
+): Partial<Pick<CapacityResolution,
+  "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt" |
+  "consumedReserveRouteStatus" | "settlementBoundUnproven" | "capacityRejectionReason" | "sharedResourceKey" | "dailyLimitUsd"
+>> {
   return {
+    consumedReserveRouteStatus: liveMetadata.routeStatus != null,
     ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
     ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
     ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
     ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+    ...(liveMetadata.settlementBoundUnproven ? { settlementBoundUnproven: true } : {}),
+    ...(liveMetadata.capacityRejectionReason ? { capacityRejectionReason: liveMetadata.capacityRejectionReason } : {}),
+    ...(liveMetadata.sharedResourceKey ? { sharedResourceKey: liveMetadata.sharedResourceKey } : {}),
+    ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
   };
 }
 
@@ -114,7 +56,7 @@ function buildReserveSyncFallbackFields(
   | "capacitySemantics"
 > &
   Partial<
-    Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
+    Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt" | "consumedReserveRouteStatus">
   > {
   const { capacityConfidence, capacitySemantics } = params;
   return {
@@ -137,7 +79,7 @@ export async function resolveReserveSyncCapacity(
   context: CapacityResolverContext,
 ): Promise<CapacityResolution> {
   const { db, stablecoinId, supplyUsd, now, options } = context;
-  const liveCapacityConfidence = resolveReserveSyncCapacityConfidence(stablecoinId);
+  const unquantifiedConfidence = "heuristic" as const;
   const fallbackCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] =
     model.confidence === "documented-bound" || model.confidence === "heuristic" ? model.confidence : "heuristic";
   const capacitySemantics = resolveCapacitySemantics({
@@ -148,25 +90,17 @@ export async function resolveReserveSyncCapacity(
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId, now);
-  // Capacity has its own evidence/warning policy, but cannot reuse rejected
-  // configuration, authority, or freshness evidence from reserve admission.
-  const snapshotRejected = retainedSnapshot?.admission?.reasons.some((reason) =>
-    reason !== "non-independent" && reason !== "degraded-snapshot" && reason !== "insufficient-slices",
-  ) ?? false;
-  const snapshotMetadata = snapshotRejected ? null : retainedSnapshot;
+  const admission = evaluateRedemptionCapacityEvidenceAdmission(stablecoinId, retainedSnapshot, now);
   const liveMetadata =
-    (!snapshotRejected ? options.redemptionLiveMetadata : undefined)
-    ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
+    (admission.eligible ? options.redemptionLiveMetadata : undefined)
+    ?? readRedemptionBackstopLiveMetadata(stablecoinId, retainedSnapshot, now);
 
-  // The bounded-gap lane is reserved for OPEN routes: a paused route's zero is
-  // the measured pause, not an evidence gap, so it falls through to the
-  // measured capacity path below regardless of the producer flag.
-  if (liveMetadata.settlementBoundUnproven && liveMetadata.routeStatus === "open") {
-    const flaggedCapacityConfidence =
-      liveMetadata.capacityKind === "documented-bound"
-        ? ("documented-bound" as const)
-        : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence ?? liveCapacityConfidence);
+  // A validated async marker invalidates immediate/scoring cash even on an
+  // unknown route or a configured fallback. A measured pause remains zero.
+  if (liveMetadata.settlementBoundUnproven && (liveMetadata.routeStatus !== "paused" || !liveMetadata.canUseCapacity)) {
+    const flaggedCapacityConfidence = unquantifiedConfidence;
     return {
+      consumedReserveCapacity: true,
       immediateCapacityUsd: null,
       immediateCapacityRatio: null,
       scoringCapacityUsd: null,
@@ -199,6 +133,9 @@ export async function resolveReserveSyncCapacity(
       ...(liveMetadata.minRedeemUsd != null ? { minRedeemUsd: liveMetadata.minRedeemUsd } : {}),
       ...(liveMetadata.liveHolderEligibility ? { liveHolderEligibility: liveMetadata.liveHolderEligibility } : {}),
       ...pickRouteStatusFields(liveMetadata),
+      capacityRejectionReason: liveMetadata.capacityRejectionReason &&
+        liveMetadata.capacityRejectionReason !== "redeemable-capacity-unobserved"
+        ? liveMetadata.capacityRejectionReason : "settlement-bound-unproven",
       notes: [
         ...liveMetadata.capacityNotes,
         "Live redemption settlement completion bound is unproven; capacity is not established",
@@ -236,14 +173,15 @@ export async function resolveReserveSyncCapacity(
       capacityExceedsSupply,
       dailyLimitCapsCapacity,
       ...capacityFields
-    } = buildReserveSyncCapacityFields({
+    } = buildBoundedCapacityFields({
       rawCapacityUsd,
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       queueDepthUsd: liveMetadata.queueDepthUsd,
       capacityProfileConfidence: liveCapacityConfidence,
+      settlementBoundUnproven: liveMetadata.settlementBoundUnproven,
       applyDailyLimit: true,
-      includeEventualSupplyInProfile: model.eventualCapacityModel === "supply-full",
+      eventualCapacityUsd: model.eventualCapacityModel === "supply-full" ? supplyUsd : undefined,
     });
     const clampNote = capacityExceedsSupply
       ? "Live reserve redemption capacity exceeds current supply; clamped to supply for scoring"
@@ -257,6 +195,7 @@ export async function resolveReserveSyncCapacity(
         : null;
 
     return {
+      consumedReserveCapacity: true,
       ...capacityFields,
       eventualCapacityUsd:
         model.eventualCapacityModel === "supply-full" && hasSupplyCeiling ? supplyUsd : undefined,
@@ -292,15 +231,18 @@ export async function resolveReserveSyncCapacity(
     };
   }
 
-  if (model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
-    const capacityFields = buildReserveSyncCapacityFields({
+  const canUseConfiguredFallback = liveMetadata.routeStatus == null || liveMetadata.routeStatus === "open";
+  if (canUseConfiguredFallback && model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
+    const capacityFields = buildBoundedCapacityFields({
       rawCapacityUsd: supplyUsd * model.fallbackRatio,
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       capacityProfileConfidence: fallbackCapacityConfidence,
+      settlementBoundUnproven: liveMetadata.settlementBoundUnproven,
       applyDailyLimit: true,
     });
     return {
+      consumedReserveCapacity: liveMetadata.dailyLimitUsd != null,
       immediateCapacityUsd: capacityFields.immediateCapacityUsd,
       immediateCapacityRatio: capacityFields.immediateCapacityRatio,
       scoringCapacityUsd: capacityFields.scoringCapacityUsd,
@@ -319,15 +261,17 @@ export async function resolveReserveSyncCapacity(
     };
   }
 
-  if (model.fallbackUsd != null) {
-    const capacityFields = buildReserveSyncCapacityFields({
+  if (canUseConfiguredFallback && model.fallbackUsd != null) {
+    const capacityFields = buildBoundedCapacityFields({
       rawCapacityUsd: model.fallbackUsd,
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       capacityProfileConfidence: fallbackCapacityConfidence,
+      settlementBoundUnproven: liveMetadata.settlementBoundUnproven,
       applyDailyLimit: model.fallbackUsd > 0,
     });
     return {
+      consumedReserveCapacity: liveMetadata.dailyLimitUsd != null,
       immediateCapacityUsd: capacityFields.immediateCapacityUsd,
       immediateCapacityRatio: capacityFields.immediateCapacityRatio,
       scoringCapacityUsd: capacityFields.scoringCapacityUsd,
@@ -355,9 +299,9 @@ export async function resolveReserveSyncCapacity(
     provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
     sourceMode: "static",
     resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
-    capacityConfidence: liveCapacityConfidence,
-    // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
-    capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
+    capacityConfidence: unquantifiedConfidence,
+    // routeFamily=null: recomputed by the public projection.
+    capacityBasis: resolveCapacityBasis(null, model, unquantifiedConfidence),
     capacitySemantics,
     ...pickRouteStatusFields(liveMetadata),
     notes: [...liveMetadata.capacityNotes, liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],

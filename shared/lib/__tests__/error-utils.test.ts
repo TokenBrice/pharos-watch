@@ -11,6 +11,41 @@ describe("toErrorMessage", () => {
     });
   });
 
+  it("leaves lazy stacks untouched for message-only extraction but preserves full diagnostics", () => {
+    let stackReads = 0;
+    const error = new Error("request failed", { cause: new Error("secret detail") });
+    Object.defineProperty(error, "stack", {
+      get() {
+        stackReads++;
+        return "Error: request failed\n    at publication";
+      },
+    });
+    expect(toErrorMessage(error, (text) => text.replaceAll("secret", "[redacted]")))
+      .toBe("request failed; cause: [redacted] detail");
+    expect(stackReads).toBe(0);
+    expect(describeError(error)).toMatchObject({
+      message: "request failed; cause: secret detail",
+      stack: "Error: request failed\n    at publication",
+    });
+    expect(stackReads).toBe(1);
+  });
+
+  it("preserves cause messages without reading a lazy stack", () => {
+    let stackReads = 0;
+    const error = new Error("outer", { cause: new Error("inner") });
+    Object.defineProperty(error, "stack", {
+      get() { stackReads++; return "diagnostic stack"; },
+    });
+
+    expect(toErrorMessage(error)).toBe("outer; cause: inner");
+    expect(stackReads).toBe(0);
+    expect(describeError(error)).toMatchObject({
+      message: "outer; cause: inner",
+      stack: "diagnostic stack",
+    });
+    expect(stackReads).toBe(1);
+  });
+
   it("preserves own codes on Error subclasses", () => {
     class NetworkError extends Error {
       readonly code = "NETWORK_DOWN";

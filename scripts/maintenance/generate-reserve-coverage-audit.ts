@@ -7,6 +7,7 @@ import {
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
+  TRACKED_SOURCE_COINS,
 } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveEvidenceClass, LiveReserveFreshnessMode } from "@shared/types/live-reserves";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types";
@@ -89,6 +90,28 @@ export interface CuratedOnlyReserveCandidateRow extends LiveReserveSourceQuality
   rank: number;
 }
 
+export interface MissingCuratedReserveRow extends CuratedOnlyReserveCandidateRow {
+  effectiveLiveAdapter: string | null;
+}
+
+export interface AuthoredReserveConfigRow {
+  coinId: string;
+  adapter: string;
+  status: NonNullable<StablecoinMeta["status"]>;
+  suspensionReason: string | null;
+  reviewBy: string | null;
+  reviewDue: boolean;
+}
+
+export interface ReserveConfigCensus {
+  authoredConfigCount: number;
+  activeExecutableCount: number;
+  activeSuspendedCount: number;
+  nonActiveConfiguredCount: number;
+  nonActiveConfiguredByLifecycle: Record<"quarantined" | "frozen" | "delisted" | "pre-launch", number>;
+  dormantConfigs: AuthoredReserveConfigRow[];
+}
+
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
 /** One coin's resolved prod reserve state, as carried by the `--reserve-states` input. */
@@ -112,6 +135,7 @@ export interface AdapterReliabilityRow {
 
 export interface ReserveCoverageAuditInput {
   trackedCoins?: readonly StablecoinMeta[];
+  sourceCoins?: readonly StablecoinMeta[];
   activeCoins?: readonly StablecoinMeta[];
   preLaunchCoins?: readonly StablecoinMeta[];
   frozenCoins?: readonly StablecoinMeta[];
@@ -132,6 +156,8 @@ export interface ReserveCoverageAudit {
     frozenCount: number;
     activeWithCuratedReserves: number;
     activeReserveSliceCount: number;
+    activeWithoutCuratedReservesCount: number;
+    unconfiguredWithoutCuratedReservesCount: number;
     activeLinkedReserveSliceCount: number;
     activeUnlinkedReserveSliceCount: number;
     activeUnlinkedReserveSlicePctGte10Count: number;
@@ -175,6 +201,9 @@ export interface ReserveCoverageAudit {
   freshnessObservationsMissing: number;
   adapterReliability: AdapterReliabilityRow[];
   reserveStatesSupplied: boolean;
+  configCensus: ReserveConfigCensus;
+  activeWithoutCuratedReserves: MissingCuratedReserveRow[];
+  unconfiguredWithoutCuratedReserves: MissingCuratedReserveRow[];
   curatedOnlyActiveCandidates: CuratedOnlyReserveCandidateRow[];
   missingReserveReview: ReserveEvidenceGapRow[];
   staleReserveReview: ReserveEvidenceGapRow[];
@@ -265,6 +294,50 @@ function buildCuratedOnlyCandidates(
   });
 
   return sortByMarketCapOrRank(rows);
+}
+
+function buildConfigCensus(coins: readonly StablecoinMeta[], generatedAt: string): ReserveConfigCensus {
+  const census: ReserveConfigCensus = {
+    authoredConfigCount: 0, activeExecutableCount: 0, activeSuspendedCount: 0, nonActiveConfiguredCount: 0,
+    nonActiveConfiguredByLifecycle: { quarantined: 0, frozen: 0, delisted: 0, "pre-launch": 0 },
+    dormantConfigs: [],
+  };
+  for (const coin of coins) {
+    const config = coin.liveReservesConfig;
+    if (!config) continue;
+    census.authoredConfigCount++;
+    const status = coin.status ?? "active";
+    if (status !== "active") {
+      census.nonActiveConfiguredCount++;
+      census.nonActiveConfiguredByLifecycle[status]++;
+    } else if (config.suspended) census.activeSuspendedCount++;
+    else {
+      census.activeExecutableCount++;
+      continue;
+    }
+    const reviewBy = config.suspended?.reviewBy ?? coin.listingStatusReview?.reviewBy ?? null;
+    census.dormantConfigs.push({
+      coinId: coin.id, adapter: config.adapter, status,
+      suspensionReason: config.suspended?.reason ?? null, reviewBy,
+      reviewDue: reviewBy != null && Date.parse(`${reviewBy}T00:00:00Z`) <= Date.parse(generatedAt),
+    });
+  }
+  return census;
+}
+
+function buildMissingCuratedRows(
+  activeCoins: readonly StablecoinMeta[],
+  marketCapById: ReadonlyMap<string, number> | null,
+): MissingCuratedReserveRow[] {
+  return sortByMarketCapOrRank(activeCoins.flatMap((coin, index): MissingCuratedReserveRow[] => {
+    if (reserveSlicesFor(coin).length > 0) return [];
+    return [{
+      coinId: coin.id, symbol: coin.symbol, name: coin.name, rank: index + 1,
+      marketCapUsd: marketCapById?.get(coin.id) ?? null,
+      effectiveLiveAdapter: coin.liveReservesConfig?.adapter ?? null,
+      ...(REVIEWED_LIVE_RESERVE_SOURCE_NOTES[coin.id] ?? DEFAULT_SOURCE_QUALITY_NOTE),
+    }];
+  }));
 }
 
 function evidenceClassForCoin(coin: StablecoinMeta): LiveReserveEvidenceClass | null {
@@ -402,6 +475,7 @@ function buildAdapterReliability(
 function buildFreshnessCoverage(
   activeCoins: readonly StablecoinMeta[],
   rows: readonly ReserveStateRow[],
+  warnings: string[],
 ) {
   const states = new Map(rows.map((row) => [row.id, row]));
   const freshnessProbeGaps: ReserveEvidenceGapRow[] = [];
@@ -411,6 +485,10 @@ function buildFreshnessCoverage(
     const config = coin.liveReservesConfig;
     if (!config) continue;
     const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
+    if (!definition) {
+      warnings.push(`Unknown live reserve adapter for ${coin.id}: ${config.adapter}`);
+      continue;
+    }
     if (definition.evidenceClass !== "independent") continue;
     const modes: readonly string[] = "validation" in definition
       ? definition.validation.allowedFreshnessModes ?? []
@@ -441,6 +519,7 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const preLaunchCoins = input.preLaunchCoins ?? PRE_LAUNCH_STABLECOINS;
   const frozenCoins = input.frozenCoins ?? FROZEN_STABLECOINS;
+  const configCensus = buildConfigCensus(input.sourceCoins ?? input.trackedCoins ?? TRACKED_SOURCE_COINS, generatedAt);
   const activeIds = new Set(activeCoins.map((coin) => coin.id));
   const warnings: string[] = [];
   const liveEnabledByEvidenceClass = emptyEvidenceClassCounts();
@@ -633,12 +712,12 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
       liveEnabledActiveCount += 1;
       liveEnabledByEvidenceClass[evidenceClass] += 1;
       if (evidenceClass === "independent") independentConfiguredIds.push(coin.id);
-    } else if (coin.liveReservesConfig?.adapter) {
-      warnings.push(`Unknown live reserve adapter for ${coin.id}: ${coin.liveReservesConfig.adapter}`);
     }
   }
 
   const curatedOnlyActiveCandidates = buildCuratedOnlyCandidates(activeCoins, marketCapById);
+  const activeWithoutCuratedReserves = buildMissingCuratedRows(activeCoins, marketCapById);
+  const unconfiguredWithoutCuratedReserves = activeWithoutCuratedReserves.filter((row) => row.effectiveLiveAdapter == null);
   const reserveStateRows = extractReserveStateRows(input.reserveStates);
   let reportCardActiveCount: number | null = null;
   let backingFromLiveReservesActiveCount: number | null = null;
@@ -659,15 +738,20 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
 
   return {
     generatedAt,
-    ...buildFreshnessCoverage(activeCoins, reserveStateRows),
+    ...buildFreshnessCoverage(activeCoins, reserveStateRows, warnings),
     adapterReliability: buildAdapterReliability(activeCoins, reserveStateRows),
     reserveStatesSupplied: input.reserveStates !== undefined,
+    configCensus,
+    activeWithoutCuratedReserves,
+    unconfiguredWithoutCuratedReserves,
     mode: input.mode ?? (input.reportCards === undefined ? "static" : "input"),
     summary: {
       trackedCount: trackedCoins.length,
       activeCount: activeCoins.length,
       preLaunchCount: preLaunchCoins.length,
       frozenCount: frozenCoins.length,
+      activeWithoutCuratedReservesCount: activeWithoutCuratedReserves.length,
+      unconfiguredWithoutCuratedReservesCount: unconfiguredWithoutCuratedReserves.length,
       activeWithCuratedReserves: activeCoins.filter((coin) => reserveSlicesFor(coin).length > 0).length,
       activeReserveSliceCount,
       activeLinkedReserveSliceCount,
@@ -792,6 +876,20 @@ function renderAdapterReliability(audit: ReserveCoverageAudit): string[] {
   });
 }
 
+function renderMissingCuratedRows(rows: readonly MissingCuratedReserveRow[]): string[] {
+  return renderMarkdownRows({
+    headings: ["coin", "mcap", "effective live adapter", "quality", "score-grade plausible", "source disposition"],
+    rows,
+    cells: (row) => [
+      `${row.symbol} (${row.coinId})`, formatUsd(row.marketCapUsd), row.effectiveLiveAdapter ?? "effective-unconfigured",
+      row.sourceQuality, row.scoreGradePlausible ? "yes" : "no",
+      `${row.sourceUrl ?? "unreviewed"}; ${row.expectedAdapterFamily}; ${row.freshnessEvidence}`,
+    ],
+    empty: "_None._",
+  });
+}
+
+
 export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit): string {
   const clippedGaps = (audit.independentConfiguredButNotScoreGradeIds ?? []).slice(0, SCORE_GRADE_GAP_LIMIT);
   const lines = [
@@ -807,6 +905,8 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Pre-launch stablecoins: ${audit.summary.preLaunchCount}`,
     `- Frozen stablecoins: ${audit.summary.frozenCount}`,
     `- Active coins with curated reserves: ${audit.summary.activeWithCuratedReserves}`,
+    `- Active coins without curated reserves: ${audit.summary.activeWithoutCuratedReservesCount}`,
+    `- Effective-unconfigured active coins without curated reserves: ${audit.summary.unconfiguredWithoutCuratedReservesCount}`,
     `- Active reserve slices: ${audit.summary.activeReserveSliceCount}`,
     `- Active linked reserve slices: ${audit.summary.activeLinkedReserveSliceCount}`,
     `- Active unlinked reserve slices: ${audit.summary.activeUnlinkedReserveSliceCount}`,
@@ -848,6 +948,33 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Independent configured but not score-grade: ${renderNullableCount(
       audit.summary.independentConfiguredButNotScoreGradeCount,
     )}`,
+    "",
+    "## Authored Config Census (Collection Policy, Not Production Coverage)",
+    "",
+    `- Authored configurations: ${audit.configCensus.authoredConfigCount}`,
+    `- Active unsuspended executable configurations: ${audit.configCensus.activeExecutableCount}`,
+    `- Active suspended configurations: ${audit.configCensus.activeSuspendedCount}`,
+    `- Non-active configured: ${audit.configCensus.nonActiveConfiguredCount}`,
+    ...Object.entries(audit.configCensus.nonActiveConfiguredByLifecycle).map(([status, count]) => `- Non-active ${status}: ${count}`),
+    "",
+    "Suspension/lifecycle partition is source-owned; inactive+suspended is counted once as non-active. A review deadline becoming due never resumes collection. Production observations are only supplied by report-card/reserve-state inputs, not inferred from authored bindings.",
+    "",
+    ...renderMarkdownRows({
+      headings: ["coin", "adapter", "lifecycle", "suspension reason", "review by", "review due"],
+      rows: audit.configCensus.dormantConfigs,
+      cells: (row) => [row.coinId, row.adapter, row.status, row.suspensionReason ?? "none", row.reviewBy ?? "not recorded", row.reviewDue ? "yes" : "no"],
+      empty: "_None._",
+    }),
+    "",
+    "## Active Without Curated Reserves",
+    "",
+    ...renderMissingCuratedRows(audit.activeWithoutCuratedReserves),
+    "",
+    "## Effective-Unconfigured Without Curated Reserves",
+    "",
+    "Canonical effective configuration is shown; an absent effective binding alone does not identify an authored suspension. Cross-reference the separate source-owned census. Missing supply remains unavailable.",
+    "",
+    ...renderMissingCuratedRows(audit.unconfiguredWithoutCuratedReserves),
     "",
     "## Freshness: Tolerated, Not Preferred",
     "",

@@ -6,7 +6,7 @@ import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } fro
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candidate";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import { makeV9TwoAssetFixedInput, v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
-import { buildLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";
+import { buildLiveWithheldCounterfactualReport, renderLiveWithheldCounterfactualReport } from "../check-safety-score-v9-live-withheld";
 
 function fixtureMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   return eligibleReserveMeta({
@@ -70,12 +70,15 @@ describe("buildLiveWithheldCounterfactualReport", () => {
     if (!alpha?.stressState?.exitPortfolio) throw new Error("Fixture has no alpha exit portfolio");
     alpha.stressState.exitPortfolio.circulatingUsd = null;
 
-    const rows = buildLiveWithheldCounterfactualReport(replay, metaById);
+    const report = buildLiveWithheldCounterfactualReport(replay, metaById);
+    const { rows } = report;
 
     expect(rows).toEqual([
       expect.objectContaining({
         assetId: "alpha",
-        supplyUsd: 0,
+        supplyUsd: null,
+        supplyAvailability: "unavailable",
+        supplyUnavailableReason: "null-supply",
         fallbackTier: "none",
         fallbackEvidenceCeiling: null,
         fallbackBindingCapKind: null,
@@ -83,6 +86,8 @@ describe("buildLiveWithheldCounterfactualReport", () => {
     ]);
     expect(REPORT_CARD_GRADE_RANK[rows[0]!.fallbackGrade]).toBeLessThan(REPORT_CARD_GRADE_RANK[rows[0]!.liveGrade]);
     expect(rows.some((row) => row.assetId === "beta")).toBe(false);
+    expect(report.excludedCounts["already-fallback"]).toBe(1);
+    expect(renderLiveWithheldCounterfactualReport(report)).toContain("unknown (null-supply)");
   });
 
   it("does not classify a pipeline-gap observation as a grade downgrade", () => {
@@ -92,6 +97,21 @@ describe("buildLiveWithheldCounterfactualReport", () => {
       card.id === "alpha" ? gap : card,
     );
 
-    expect(buildLiveWithheldCounterfactualReport(replay, metaById)).toEqual([]);
+    const report = buildLiveWithheldCounterfactualReport(replay, metaById);
+    expect(report.rows).toEqual([]);
+    expect(report.excludedCounts["baseline-pipeline-gap"]).toBe(1);
+    expect(renderLiveWithheldCounterfactualReport(report)).toContain("No assessed eligible strict grade downgrades");
+  });
+
+  it.each([0, undefined])("preserves observed zero versus missing supply (%s)", (supply) => {
+    const { replay, metaById } = healthyReplay(["beta"]);
+    const alpha = replay.pipeline.evaluatedSet.assets.find(asset => asset.assetId === "alpha")!;
+    alpha.stressState!.exitPortfolio!.circulatingUsd = supply;
+    const report = buildLiveWithheldCounterfactualReport(replay, metaById);
+    expect(report.rows[0]).toMatchObject(supply === 0
+      ? { supplyUsd: 0, supplyAvailability: "observed", supplyUnavailableReason: null }
+      : { supplyUsd: null, supplyAvailability: "unavailable", supplyUnavailableReason: "missing-supply" });
+    const rendered = renderLiveWithheldCounterfactualReport(report);
+    expect(rendered).toContain(supply === 0 ? "| 0 |" : "unknown (missing-supply)");
   });
 });

@@ -57,10 +57,3 @@ export function assertHoldingsReportHost(value: string): void {
   }
 }
 
-/** Opportunistic guard only: JS-only Dropbox listings still require daily manual review. */
-export function assertNoNewerHoldingsReport(listing: string, reportDate: string): void {
-  for (const match of listing.matchAll(/ATCAttest_(\d{2})(\d{2})(\d{2})\.pdf/g)) {
-    const date = `20${match[1]}-${match[2]}-${match[3]}`;
-    if (date > reportDate) throw new Error(`usdy-holdings-report: newer unreviewed report ${date}`);
-  }
-}

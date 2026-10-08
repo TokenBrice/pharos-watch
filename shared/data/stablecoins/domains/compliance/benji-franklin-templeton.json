@@ -4,7 +4,7 @@
     "applicability": "excluded-security",
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Franklin Templeton",
+    "issuerEntity": "Franklin Templeton Trust",
     "issuerDomicile": "United States",
     "licensingRegulator": "SEC registered investment company context",
     "foreignExceptionStatus": "not-applicable",
@@ -13,20 +13,66 @@
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "BENJI is treated as outside GENIUS payment-stablecoin tracking because it represents shares of a registered money market fund rather than a payment stablecoin.",
+    "notes": "BENJI represents shares of the SEC-registered Franklin OnChain U.S. Government Money Fund. The issuer-associated legal entity is Franklin Templeton Trust, identified by SEC EDGAR registrant metadata and its fund filings; the transfer agent is not substituted for the investment company. Public withdrawal API instructions burn fund shares and remit proceeds, but do not establish a guaranteed 1:1 monetary redemption policy; redemptionPolicyPresent remains false under the tracker definition. Reserve and monthly-attestation flags remain false in the payment-stablecoin sense; ordinary fund portfolio filings are not GENIUS reserve attestations. Targeted SEC-domain searches did not locate an enforcement action naming this fund or trust as respondent. The fund is quarantined, so the absent MiCA row remains absent under sweep coverage rules.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
-        "label": "Franklin OnChain U.S. Government Money Fund",
-        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-        "sourceKind": "issuer-disclosure"
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Franklin Benji: one FOBXX fund share equals one BENJI token",
+        "url": "https://digitalassets.franklintempleton.com/benji/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SEC EDGAR Franklin Templeton Trust: registrant and fund filing index (CIK 1786958)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1786958/000165558926000970/c485bpos.htm",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Franklin Benji withdrawal instructions: redeeming and burning fund shares",
+        "url": "https://digitalassets.franklintempleton.com/api-docs/docs/Functions/initiate-a-withdrawal/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "Franklin states that each BENJI token represents one share of the SEC-registered Franklin OnChain U.S. Government Money Fund (FOBXX). SEC EDGAR identifies Franklin Templeton Trust as the registered investment company. Securities are expressly excluded from the GENIUS payment-stablecoin definition by section 2(22)(B)(iii); a money-fund stable NAV does not turn its shares into payment stablecoins.",
+      "references": [
+        {
+          "label": "Franklin Benji: one FOBXX fund share equals one BENJI token",
+          "url": "https://digitalassets.franklintempleton.com/benji/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SEC EDGAR Franklin Templeton Trust: registrant and fund filing index (CIK 1786958)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1786958/000165558926000970/c485bpos.htm",
+          "sourceKind": "issuer-filing",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    }
   }
 }

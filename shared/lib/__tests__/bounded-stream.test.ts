@@ -20,6 +20,18 @@ describe("parseDeclaredLength", () => {
 });
 
 describe("bufferReadableStream", () => {
+  it("observes every consumed chunk including cap+1, never declared or retained length", async () => {
+    const onChunk = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(2));
+        controller.enqueue(new Uint8Array(2));
+      },
+    });
+    await expect(bufferReadableStream(stream, { maxBytes: 3, onChunk })).rejects.toMatchObject({ observedBytes: 4 });
+    expect(onChunk.mock.calls).toEqual([[2], [2]]);
+  });
+
   it("preserves all chunks below and at the cap, including empty zero-cap input", async () => {
     for (const maxBytes of [3, 4]) {
       const stream = new ReadableStream<Uint8Array>({

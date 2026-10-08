@@ -105,6 +105,23 @@ describe("cron staleness watchdog", () => {
     sendToChatMock.mockResolvedValue({ ok: true });
   });
 
+  it("excludes retired Workflow freshness obligations", () => {
+    const producers = deriveCronFreshnessProducers(CRON_JOB_DEFINITIONS);
+    expect(producers.map((producer) => producer.producerJob)).not.toContain("compute-safety-score-v9-workflow");
+    expect(producers.map((producer) => producer.producerJob)).toContain("compute-safety-score-v9");
+  });
+
+
+  it("does not expect evidence from the retired Workflow observer", async () => {
+    mockCacheStatus({});
+    const result = await runCronStalenessWatchdog(fakeDb());
+    const metadata = JSON.parse(result.metadata!);
+    const job = "compute-safety-score-v9-workflow";
+    expect(metadata.checkedProducers.includes(job)).toBe(false);
+    expect(metadata.stale.some((observation: { producerJob: string }) => observation.producerJob === job)).toBe(false);
+    expect(metadata.checkedProducers).toContain("compute-safety-score-v9");
+  });
+
   it("derives consumer freshness coverage from the canonical producer registry", () => {
     const added = {
       ...CRON_JOB_DEFINITIONS[0],

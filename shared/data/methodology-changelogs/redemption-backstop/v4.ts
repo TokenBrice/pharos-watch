@@ -2,6 +2,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.48",
+    title: "Direct observer capacity and fail-closed route evidence",
+    date: "2026-10-08",
+    effectiveAt: 1791417600,
+    summary:
+      "Redemption v4.48 separates registry-driven executable observers from reserve composition, names capacity admission failures and binds fresh supply/provenance to immutable snapshots. Cost ceilings and final-completion evidence retain their actual scope; unmeasured liquidity never becomes a resolved zero.",
+    impact: [
+      "The executable-observer capacity model carries an exact observer ID, diagnostic-only/measured use and required payout keys, scheduled transport/signal/request guards and original block/time. Lido, Monetrix and Saturn retain null numeric capacity; USDfr's restricted par-state USDC measurement has separate all-in execution gaps. apyUSD measures funded apxUSD UnlockReceipts only with same-run valuation and remains eventual-only; no full-NAV, reserve idle cash or static fallback supplies missing proof.",
+      "ONyc/NUSD baseline capacity is unquantified, not fixed-usd zero. Generic sfrxUSD and every async reserve-sync branch preserve settlementBoundUnproven and withhold immediate/scoring capacity; independently observed paused zero remains adverse. CapacityRejectionReason names exact reserve/route/source/output failures, and independent nested same-run on-chain capacity does not make timestamp-less composition verified.",
+      "Stablecoins supply generation must be positive, no later than the run clock and within the cadence-derived producer-to-producer consumer window (twice the producer interval, currently 1800 seconds), distinct from public endpoint and executable-state freshness budgets. stablecoinsInput records updatedAt, assessedAt and maxAgeSec; invalid global input holds prior completed output. Missing per-asset supply stays null and independently measured absolute capacity can survive without a ratio.",
+      "Accepted reserve cache/schema and consumed manifests advance together to v2, preserving original freshnessMode and sourceFreshnessInvalid with strict matching fingerprints. Malformed or missing required immutable details invalidate the whole run; only an earlier complete immutable generation may be served with its own clock/methodology, otherwise 503. Direct-only evidence never fabricates reserveInput.",
+      "Reservoir rUSD, srUSD and wsrUSD retain one shared USDC PSM resource and independently pinned route evidence; wsrUSD is directly rUSD-backed and cannot import the separate srUSD SavingModule fee. Mento's branches bind all guards to one numbered source block, distinguish measured zero from unreadable guards and key shared inventory caches by that block.",
+      "A percentage minimum or minimum-dollar charge cannot clear maximum-cost evidence. Request points retain their own costs; captured scalar reuse requires both matching notional and cost budget. Fixed issuer/fund zero remains separate from bank/network/partner costs, NAV impairment and different payout branches. RLUSD/TUSD/USDGO/YLDS and Circle/Gate provenance corrections retain those distinctions.",
+      "Scalar SLAs require completed-endpoint settlement support; business-day targets, processing and cooldown terms retain explicit gaps. Spiko D+1 and the former USN five-Business-Day to seven-calendar-day conversion do not establish an unconditional elapsed completion maximum. This corrects the earlier v4.44 USN bound; the separately measured sUSN handler period never proves downstream USN fiat completion.",
+      "BRSRV, CUMIU, chfSAFO, EURW, USDSM and USDU gain reviewed eventual entitlements with capacity/settlement/cost gaps retained. XGZ/ZARU/STBT, KGST, Ripio wFIAT and HLUSD do not infer full-USD proceeds from backing. EURR's selected issuer channel remains suspended; JUSD/BFUSD operational retirements preserve history. Shared scoring weights, ladders, stress/portfolio thresholds and grade gates are unchanged.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.47",
     title: "Unquantified HBD haircut-sensitive conversion cost",
     date: "2026-10-06",

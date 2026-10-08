@@ -1,7 +1,7 @@
 import { bytesToBase64 } from "@shared/lib/base64";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
-import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
+import { cancelResponseBodyQuietly, readResponseBytesWithinLimitWithSignal, readResponseTextBoundedWithSignal } from "./response-body";
 import { buildTweetText } from "./twitter-digest-text";
 
 export { buildTweetText } from "./twitter-digest-text";
@@ -147,25 +147,25 @@ async function uploadTweetImage(imageUrl: string, creds: TwitterCreds): Promise<
   const imageSignal = AbortSignal.timeout(10_000);
   const imageResponse = await fetch(imageUrl, { signal: imageSignal });
   if (!imageResponse.ok) {
-    await drainResponseBody(imageResponse);
+    await cancelResponseBodyQuietly(imageResponse);
     throw new Error(`Safety map image HTTP ${imageResponse.status}`);
   }
   const contentType = imageResponse.headers.get("Content-Type")?.toLowerCase() ?? "";
   if (!contentType.startsWith("image/png")) {
-    await drainResponseBody(imageResponse);
+    await cancelResponseBodyQuietly(imageResponse);
     throw new Error(`Safety map image has unsupported content type: ${contentType || "missing"}`);
   }
   const declaredLength = Number(imageResponse.headers.get("Content-Length"));
   if (Number.isFinite(declaredLength) && declaredLength > TWITTER_IMAGE_MAX_BYTES) {
-    await drainResponseBody(imageResponse);
+    await cancelResponseBodyQuietly(imageResponse);
     throw new Error(`Safety map image exceeds ${TWITTER_IMAGE_MAX_BYTES} bytes`);
   }
-  const imageBytes = await imageResponse.arrayBuffer();
+  const imageBytes = await readResponseBytesWithinLimitWithSignal(imageResponse, TWITTER_IMAGE_MAX_BYTES, imageSignal);
   if (imageBytes.byteLength === 0 || imageBytes.byteLength > TWITTER_IMAGE_MAX_BYTES) {
     throw new Error(`Safety map image size is invalid: ${imageBytes.byteLength}`);
   }
 
-  return uploadTweetImageBytes(imageBytes, creds);
+  return uploadTweetImageBytes(imageBytes.buffer, creds);
 }
 
 async function uploadTweetImageBytes(imageBytes: ArrayBuffer, creds: TwitterCreds): Promise<string> {

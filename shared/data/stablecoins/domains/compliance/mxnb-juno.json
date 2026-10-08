@@ -1,8 +1,5 @@
 {
   "id": "mxnb-juno",
-  "mica": {
-    "status": "out-of-scope"
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -10,16 +7,16 @@
       "references": [
         {
           "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/index.php/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Juno MXNB basic operations",
           "url": "https://docs.bitso.com/juno/docs/overview-of-basic-operations",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -34,93 +31,158 @@
     "reserveDisclosureUrl": "https://mxnb.mx/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "CNAD's public register lists Nvío Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005 and lists MXNB as eligible for trading. That foreign authorization is not a U.S. GENIUS approval or foreign-issuer exception registration. No token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found; foreign-exception status remains unknown.",
+    "notes": "CNAD's public register lists Nvío Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005 and lists MXNB as eligible for trading. That foreign authorization is not a U.S. GENIUS approval or foreign-issuer exception registration. No token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found; foreign-exception status remains unknown. GENIUS substantive implementation remains in proposed rulemaking; Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 as the later general DASP offer/sale restriction date. The September 30 SCRC interim rule concerns procedures and states certifications are not yet accepted pending Paperwork Reduction Act approval. Neither local licensing nor reserve disclosure establishes U.S. GENIUS authorization. The public reporting cadence is quarterly, not monthly. The opened Q2 BDO report is a financial valuation engagement and expressly does not confirm reserve accounts with banks; it is not an independent reserve assurance opinion. Its EM EX EN CI addressee does not justify changing the current issuerEntity corroborated by CNAD.",
     "references": [
       {
         "label": "OCC GENIUS Act regulations proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Reserve GENIUS customer-identification proposal",
         "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
         "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
         "sourceKind": "state-regulator",
         "sourceDate": "2026-06-09",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CNAD public issuer register",
         "url": "https://cnad.gob.sv/issuers/",
         "sourceKind": "foreign-regulator",
         "sourceDate": "2026-04-28",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CNAD stablecoins eligible for trading",
         "url": "https://cnad.gob.sv/stablecoins-eligible-for-trading/",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "MXNB transparency page",
         "url": "https://mxnb.mx/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposed rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "CNAD Spanish public issuer register",
+        "url": "https://cnad.gob.sv/es/issuers/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MXNB issuance and redemption eligibility terms",
+        "url": "https://mxnb.mx/MXNB_T_C_2024_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BDO Mexico MXNB Q2 2026 financial valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-16"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA interim MiCA register EMT and ART files",
-        "OCC GENIUS Act proposed rule and current Digital Assets Licensing Applications table",
-        "Federal Register GENIUS implementation proposals, including OCC 91 FR 10202 and the joint 91 FR 37234 CIP proposal",
-        "Federal Reserve GENIUS customer-identification proposal",
-        "FDIC GENIUS Act proposed rules",
-        "New York DFS GENIUS-aligned state-qualified stablecoin proposal",
-        "U.S. Treasury state-regime comparability proposal",
-        "CNAD public issuer and eligible-stablecoin registers",
-        "MXNB whitepaper, Juno operations documentation, and transparency page"
+        "OCC Bulletin 2026-3 and current Digital Assets Licensing Applications table; no named issuer or token approval/application located",
+        "Federal Reserve September 29, 2026 GENIUS implementation NPRM (R-1899)",
+        "Treasury August 17, 2026 Section 3 NPRM announcement and September 30, 2026 SCRC interim procedural rule",
+        "Exact token and legal-issuer GENIUS, enforcement and sanctions search across OCC, FDIC, Federal Reserve, Treasury, FinCEN, NCUA and NYDFS public domains; no exact matching authorization or action located",
+        "Federal Reserve joint customer-identification proposal and New York DFS June 9 proposed stablecoin rule",
+        "CNAD public issuer and eligible-stablecoin registers; Juno MXNB basic operations; MXNB FAQ, eligibility terms, transparency page and Q2 financial valuation report"
       ],
-      "summary": "CNAD authorization evidence was found for Nvío and MXNB, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found for MXNB as of 2026-08-14.",
+      "summary": "No public GENIUS permitted-payment-stablecoin-issuer approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination or token-specific GENIUS enforcement action was located for Nvío Pagos El Salvador, S.A. de C.V. (Juno) or its token as of 2026-10-07. The reviewed rules are proposals or interim procedural rules, not issuer approvals. This is a bounded public-evidence finding, not proof of illegality or absence of unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC GENIUS Act regulations proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC digital assets licensing applications",
           "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "CNAD public issuer register",
           "url": "https://cnad.gob.sv/issuers/",
           "sourceKind": "foreign-regulator",
           "sourceDate": "2026-04-28",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposed rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-yet-restricted"
   }
 }

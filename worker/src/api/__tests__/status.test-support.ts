@@ -12,6 +12,7 @@ import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { resolveReserveFeedReviews } from "../../lib/reserve-feed-reviews";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
 
 stubCryptoForAuth();
 
@@ -65,6 +66,10 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       lastFiveMinuteStartedAt: now - 30, ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
       lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({ scheduleKey, lastStartedAt: now - 30 })),
       unavailableReason: null,
+      heavy: {
+        scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30, ageSeconds: 30,
+        warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      },
     },
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
@@ -77,6 +82,9 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
     },
     caches: {},
     crons: {
+      ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([job, expectedIntervalSec]) => [
+        job, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+      ])),
       "sync-stablecoins": {
         lastRun: {
           startedAt: now - 60,
@@ -141,7 +149,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
   });
   return [
-    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30 } },
+    { match: "AS last_any", rows: [], first: { last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30 } },
     { match: "cache WHERE key IN", rows: healthy
       ? [
           ...["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"].map((key) => makeCacheRow(key)),
@@ -154,7 +162,13 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
       ? Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 30))
       : [makeCronRow("sync-stablecoins", "ok", 30)] },
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
-    { match: "FROM cache WHERE key = ?", matchBinds: ["ops:d1-capacity:v1"], rows: [], first: null },
+    {
+      match: "FROM cache WHERE key = ?", matchBinds: ["ops:d1-capacity:v1"], rows: [],
+      first: {
+        value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+        updated_at: now,
+      },
+    },
     { match: "key LIKE 'circuit:%'", rows: [] },
     { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     { match: "depeg_events", rows: [], first: { cnt: 0 } },
@@ -322,6 +336,7 @@ function fixtureMockD1(
           reserve: Math.floor(Date.now() / 1000) - 30,
           telegram: Math.floor(Date.now() / 1000) - 30,
           digest: Math.floor(Date.now() / 1000) - 30,
+          heavy: Math.floor(Date.now() / 1000) - 30,
         },
       }] : []),
       ...(!includeStatusDefaults || hasPublicationFixture ? [] : [{ ...publicationFixture, allowUnused: true }]),

@@ -85,7 +85,6 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 - **Read boundary:** every queried row is mapped and then validated against the complete `TapeEventSchema` (in `worker/src/lib/tape-event-helpers.ts`) before it is emitted. A row whose stored `payload_json` is not a JSON object, or whose mapped event fails the schema, is quarantined with a named reason in the Worker log (`payload-json-invalid` / `wire-schema-invalid`, plus the failing field paths) and counted in `droppedRows`; it is never published as an event, and the remaining rows are still served. Corrupt JSON is not coerced into an empty payload.
 - **Static-catalog dates:** cemetery and lifecycle projectors accept only round-trip-valid `YYYY-MM` or `YYYY-MM-DD` UTC dates. Missing or calendar-invalid values are logged and skipped; they never become publication-time events.
 - **Hook:** `useEvents()` in `src/hooks/use-events.ts` wraps the infinite-query path; `useLatestEvents()` wraps the single-page latest-N path used by the homepage tape marquee and the permalink buffer.
-- **Chart annotations:** chart hooks follow event cursors across pages up to 2,000 matching tape events per query window. If another cursor remains at that safety cap, the hook publishes `isTruncated: true` instead of silently presenting the capped set as complete.
 
 `/api/events` is allowlisted on the same-origin site-data lane, so the page reads it through `/_site-data/events` from the browser.
 

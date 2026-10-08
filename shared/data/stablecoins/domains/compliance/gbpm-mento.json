@@ -2,25 +2,178 @@
   "id": "gbpm-mento",
   "genius": {
     "applicability": "unclear",
-    "authorizationStatus": "unknown",
+    "applicabilityBasis": {
+      "summary": "GBPm is marketed for currency payments, remittances or trade and targets GBP value. GBPm is issued against locked USDm through Mento CDP branches; redemption is into protocol collateral and subject to documented market-hour restrictions. The reviewed disclosures do not identify a person legally obligated to convert, redeem or repurchase holders' tokens for a fixed amount of national-currency or deposit monetary value. GENIUS section 2(22) excludes fixed-value digital assets from that redemption limb, so USDm swaps/collateral redemption plus payment marketing do not establish the full definition. Applicability remains unclear rather than conclusively exempt or apparently qualifying.",
+      "references": [
+        {
+          "label": "Mento stablecoins: GBPm product page",
+          "url": "https://www.mento.org/stablecoins?8f925f5c_page=2",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Mento StableToken documentation",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Mento CDP mechanics and collateral redemption",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Mento Labs GmbH",
-    "notes": "Reviewed issuer-family attribution for GBPm. This identifies the Mento operating entity for cross-asset control-domain attribution; it does not resolve whether decentralized Mento governance is the statutory issuer.",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://reserve.mento.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-07. GBPm is minted by borrowers against USDm collateral. The published CDP documentation describes collateral redemption and FX market-hour restrictions. The reviewed materials do not establish a named legal issuer obligated to redeem at par in the referenced national currency or a national-currency bank deposit. redemptionPolicyPresent is false for such an issuer 1:1 monetary-value policy; public protocol USDm swap or collateral-redemption mechanics are documented. The live Mento Reserve dashboard is self-published reserve and CDP collateral disclosure. No independent monthly reserve attestation was located. Mento Labs GmbH is identified as a technical and reserve-operations provider, and the Cayman Mento Protocol Foundation privacy notice identifies a data controller; neither role alone establishes token issuance or a holder redemption obligation. MGP-19 is a governance proposal, not verified evidence of completed control transfers. The expected GENIUS effective date is January 18, 2027; foreign-issuer lawful-order conditions and the July 18, 2028 general DASP licensed-issuer rule have distinct clocks. No token-specific authorization, registered foreign exception or enforcement source was found in the bounded public review. Applicability and foreign-exception posture remain unresolved. issuerEntity is Mento Protocol as a factual protocol-family descriptor for the documented GBPm issuance system and Safety Score issuer attribution. It does not identify a legal entity or establish the statutory issuer or a holder-facing monetary redemption obligation. Mento Labs GmbH is not established by these disclosures as GBPm's legal issuer. The descriptor preserves the Mento-family issuer key mento.",
     "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entities and greenlisted stablecoins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
       {
         "label": "Mento stablecoins: GBPm product page",
         "url": "https://www.mento.org/stablecoins?8f925f5c_page=2",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-24"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Mento StableToken documentation",
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-24"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mento CDP mechanics and collateral redemption",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mento Reserve",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mento counsel workshop analysis of protocol issuance and MiCA",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-11-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MGP-19 proposal: governance, reserve stewardship and operating roles",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-21",
+        "accessedAt": "2026-10-07"
       }
     ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS proposed rule bulletin and official 91 FR 10202 PDF: https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html; https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+        "Treasury AML/sanctions proposal, Section 3 proposal and SCRC procedure: https://home.treasury.gov/news/press-releases/sb0435; https://home.treasury.gov/news/press-releases/sb0605; https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "Federal Reserve issuer/application proposals: https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "NYDFS public regulated-entity directory and greenlist: https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "Mento stablecoin directory, StableToken/CDP documentation, reserve dashboard, counsel workshop and MGP-18/MGP-19 disclosures, reopened 2026-10-07",
+        "Independent public searches, 2026-10-07: \"Mento\" (site:occ.gov OR site:dfs.ny.gov OR site:home.treasury.gov OR site:esma.europa.eu OR site:bafin.de) stablecoin authorization GENIUS; \"Mento\" (\"GENIUS\" OR \"PPSI\" OR \"enforcement\" OR \"OCC\" OR \"MiCA\") AUDm BRLm CADm CHFm COPm GBPm"
+      ],
+      "summary": "As of 2026-10-07, the independently reopened regulator proposals, NYDFS entity directory and greenlist, Mento product/governance disclosures and recorded searches did not identify GBPm or an established legal issuer of GBPm as a GENIUS permitted issuer, state-qualified issuer, official pending applicant or registered foreign issuer. The materials do not establish a GENIUS-specific issuer intent statement or token-specific enforcement action. The statutory legal issuer remains unresolved. This is a bounded public-source finding; it does not prove absence of confidential filings or exhaustive review of all state registers.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/pdf/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities and greenlisted stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-24"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Mento Protocol"
   }
 }

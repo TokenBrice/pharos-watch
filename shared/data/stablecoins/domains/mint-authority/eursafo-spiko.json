@@ -289,12 +289,20 @@
       {
         "executionScope": {
           "controllerDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_3)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Pinned Ethereum block 26095799 (2026-10-01T06:53:11Z): proxy and singleton exact source-runtime matches; six owners, threshold 3, zero guard",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Verified Safe source: execTransaction and Executor.execute permit arbitrary destination/calldata, including self changes, without delay",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a"
+            },
             {
               "label": "Verified Minter implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043"
@@ -306,27 +314,66 @@
           ],
           "pin": {
             "position": "26095799",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; PermissionManager ADMIN group 0; 3-of-6"
+            "hash": "0x66b3767c3535af23e54a4f4137bf1bd039ef7623763da4bb41dff5e22b99d2f8",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:7b29197932202be6fa78f0d35891a19f663f21a2d2116ee36cc04fcea3c2f7ad"
           },
           "observedState": {
             "position": "26095799",
-            "hash": null,
-            "runtimeIdentity": "Minter implementation 0xd4f4fb505b8c3c3cf3c39947246b2cafa10fe043; PermissionManager implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e; complete reachable-source inventory unproved",
-            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; PermissionManager ADMIN group 0; 3-of-6"
+            "hash": "0x66b3767c3535af23e54a4f4137bf1bd039ef7623763da4bb41dff5e22b99d2f8",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:7b29197932202be6fa78f0d35891a19f663f21a2d2116ee36cc04fcea3c2f7ad"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "admin-maximal-execution",
+              "targetDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+              "entrypointKind": "evm-selector",
+              "entrypoints": ["0x6a761202"],
+              "callMode": "call",
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": ["eursafo-spiko"],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+                "executorDeployment": "ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+                "sourceDeployment": "ethereum:0x41675c099f32341bf84bfc5382af534df5c7461a",
+                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26095799",
+                  "hash": "0x66b3767c3535af23e54a4f4137bf1bd039ef7623763da4bb41dff5e22b99d2f8",
+                  "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+                  "signerIdentity": "sha256:owners-and-threshold-abi:7b29197932202be6fa78f0d35891a19f663f21a2d2116ee36cc04fcea3c2f7ad"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:525c99ddd57e1e33ea9e9c81645d83e02a417c5b3614307a82eab5212aeee48c",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:525c99ddd57e1e33ea9e9c81645d83e02a417c5b3614307a82eab5212aeee48c",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x41675c099f32341bf84bfc5382af534df5c7461a",
+                  "location": "contracts/Safe.sol:execTransaction and contracts/base/Executor.sol:execute. Exact proxy and singleton bytecode match at block 26095799; slot 0 binds singleton; guard zero. Signed arbitrary CALL and DELEGATECALL plus self-only owner/module/handler changes admit the adverse upper envelope, not benign extension certification. Existing PM ADMIN mint/upgrade reach retained."
+                }
+              }
+            },
             {
               "id": "native-mint",
               "targetDeployment": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
@@ -1680,12 +1727,20 @@
         "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
         "executionScope": {
           "controllerDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_3)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Pinned Arbitrum block 510775539 (2026-10-01T20:49:30Z): proxy executable core matches verified source after CBOR metadata removal; singleton exact runtime match; six owners, threshold 3, zero guard",
+              "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Verified SafeL2/Safe/Executor source matching pinned singleton; arbitrary destination and calldata with no mandatory delay",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+            },
             {
               "label": "Exact EURSAFO issuer deployment identity",
               "url": "https://public-api.spiko.io/share-classes/eurSAFO"
@@ -1693,27 +1748,57 @@
           ],
           "pin": {
             "position": "510775539",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x3a41146efae528ab5ff4d2a716531fb37a50fbcc595b5f07252bdbe2c41429e0",
+            "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "sha256:owners-and-threshold-abi:ef659141288e48eccdac7d29926f55a265abc287029108cd88e205b6f0f48848"
           },
           "observedState": {
             "position": "510775539",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x3a41146efae528ab5ff4d2a716531fb37a50fbcc595b5f07252bdbe2c41429e0",
+            "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "sha256:owners-and-threshold-abi:ef659141288e48eccdac7d29926f55a265abc287029108cd88e205b6f0f48848"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "admin-maximal-execution",
+              "targetDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
+              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
+              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+                "executorDeployment": "arbitrum:0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+                "sourceDeployment": "arbitrum:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "510775539", "hash": "0x3a41146efae528ab5ff4d2a716531fb37a50fbcc595b5f07252bdbe2c41429e0",
+                  "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+                  "signerIdentity": "sha256:owners-and-threshold-abi:ef659141288e48eccdac7d29926f55a265abc287029108cd88e205b6f0f48848"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                  "location": "SafeL2.sol -> Safe.sol:execTransaction -> Executor.sol:execute. Exact singleton runtime at pinned block; SafeProxy executable 118-byte core equals verified source after removal only of trailing compiler CBOR metadata. Guard zero. Arbitrary signed destination/calldata, CALL/DELEGATECALL and self changes; adverse upper envelope preserves reviewed native PM ADMIN issuance reach without benign module claims."
+                }
+              }
+            },
             {
               "id": "native-mint",
               "targetDeployment": "arbitrum:0x1412632f2b89e87bfa20c1318a43ced25f1d7b76",
@@ -1790,12 +1875,20 @@
         "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
         "executionScope": {
           "controllerDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_3)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Pinned Base block 52042428 (2026-10-01T17:03:23Z): exact verified proxy/singleton bytecode matches; six owners, threshold 3, zero guard",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Verified SafeL2/Safe/Executor source matching pinned singleton; unrestricted signed destination/calldata",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+            },
             {
               "label": "Exact EURSAFO issuer deployment identity",
               "url": "https://public-api.spiko.io/share-classes/eurSAFO"
@@ -1803,27 +1896,57 @@
           ],
           "pin": {
             "position": "52042428",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x8154966807b13c53729cffddb8ad5c00dde05ef829c98509de94adb365a607fe",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
           },
           "observedState": {
             "position": "52042428",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x4eaa52b6280593a8820c45ce38f974290ae52cea; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x8154966807b13c53729cffddb8ad5c00dde05ef829c98509de94adb365a607fe",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "admin-maximal-execution",
+              "targetDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
+              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
+              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+                "executorDeployment": "base:0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+                "sourceDeployment": "base:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "52042428", "hash": "0x8154966807b13c53729cffddb8ad5c00dde05ef829c98509de94adb365a607fe",
+                  "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+                  "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                  "location": "SafeL2.sol -> Safe.sol:execTransaction -> Executor.sol:execute. Exact proxy and singleton source-runtime correspondence at pinned block; slot 0 binds singleton, zero guard, 3-of-6 owners. Signed arbitrary CALL/DELEGATECALL and self changes with no mandatory delay; adverse upper envelope retains native PM ADMIN issuance reach, not benign extension certification."
+                }
+              }
+            },
             {
               "id": "native-mint",
               "targetDeployment": "base:0xd879846cbe20751bde8a9342a3cca00a3e56ca47",
@@ -1884,56 +2007,98 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedAt": "2026-10-01",
-          "observedBlock": 94788467,
+          "observedAt": "2026-10-07",
+          "observedBlock": 95120070,
           "source": "onchain"
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-01",
-        "observedBlock": 94788467,
+        "observedAt": "2026-10-07",
+        "observedBlock": 95120070,
         "sources": [
+          {
+            "label": "Pinned Polygon block 95120070 (2026-10-07T15:01:35Z): matching owners/threshold/guard and empty modules with terminal sentinel; native mint authorization true",
+            "url": "https://api-polygon-mainnet-full.n.dwellir.com"
+          },
           {
             "label": "Exact EURSAFO issuer deployment identity",
             "url": "https://public-api.spiko.io/share-classes/eurSAFO"
           }
         ],
-        "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
+        "evidence": "At Polygon block 95120070 (2026-10-07T15:01:35Z), getOwners returned the same exact six addresses, getThreshold returned 3, guard storage was zero and getModulesPaginated(address(1),100) returned no modules and the terminal sentinel. Slot 0 bound the exact runtime-matched SafeL2 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. EURSAFO authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; canCall(Safe,EURSAFO,0x40c10f19) returned true. Verified Safe arbitrary signed execution has no mandatory delay and retains adverse native issuance reach; no independent-human key-custody claim is made.",
         "executionScope": {
           "controllerDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
+          "observedAt": "2026-10-07",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_3)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Pinned Polygon block 95120070 (2026-10-07T15:01:35Z): exact proxy/singleton source-runtime matches, current full Safe topology and native mint authorization",
+              "url": "https://api-polygon-mainnet-full.n.dwellir.com"
+            },
+            {
+              "label": "Verified SafeL2/Safe/Executor source matching pinned singleton: arbitrary destination/calldata without mandatory delay",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+            },
             {
               "label": "Exact EURSAFO issuer deployment identity",
               "url": "https://public-api.spiko.io/share-classes/eurSAFO"
             }
           ],
           "pin": {
-            "position": "94788467",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9; ADMIN group 0; 3-of-6 Safe"
+            "position": "95120070",
+            "hash": "0xfbe2c365030498388cc62a41de1f78a9af731a1c9450af2274e5a6ef9752e262",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:df00b3b81440235c1088b3cdb6094ee447cd743d2ab06ddae1c5d87347bab121"
           },
           "observedState": {
-            "position": "94788467",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9; ADMIN group 0; 3-of-6 Safe"
+            "position": "95120070",
+            "hash": "0xfbe2c365030498388cc62a41de1f78a9af731a1c9450af2274e5a6ef9752e262",
+            "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+            "signerIdentity": "sha256:owners-and-threshold-abi:df00b3b81440235c1088b3cdb6094ee447cd743d2ab06ddae1c5d87347bab121"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "admin-maximal-execution",
+              "targetDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
+              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
+              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+                "executorDeployment": "polygon:0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+                "sourceDeployment": "polygon:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "95120070", "hash": "0xfbe2c365030498388cc62a41de1f78a9af731a1c9450af2274e5a6ef9752e262",
+                  "runtimeIdentity": "sha256:rpc-hex-text:4c0d9dfd76a6bf1150fe312519f388fbfe69e70130b4d0c4705b44d796313305",
+                  "signerIdentity": "sha256:owners-and-threshold-abi:df00b3b81440235c1088b3cdb6094ee447cd743d2ab06ddae1c5d87347bab121"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                  "location": "SafeL2.sol -> Safe.sol:execTransaction -> Executor.sol:execute. Exact proxy/singleton runtime matches at block 95120070 with same-pin owners, threshold, zero guard and empty modules ending in sentinel. Native token PM canCall(Safe,token,mint)=true. Arbitrary signed CALL/DELEGATECALL and self changes admit adverse issuance upper envelope without benign extension claims."
+                }
+              }
+            },
             {
               "id": "native-mint",
               "targetDeployment": "polygon:0x272ea767712cc4839f4a27ee35eb73116158c8a2",
@@ -2010,12 +2175,20 @@
         "evidence": "Verified R2F6 pinned getRequirements(token,mint) mask 0x5, ADMIN group membership and getOwners/getThreshold establish this exact 3-of-6 native controller. Extensions, other privileged selectors, key custody and complete liability reach remain unreviewed.",
         "executionScope": {
           "controllerDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
-          "reviewedAt": "2026-10-01",
+          "reviewedAt": "2026-10-07",
           "observedAt": "2026-10-01",
           "expiresAt": "2027-10-01",
-          "reviewer": "Sol V10 data curation 2026-10-01 (DataSpiko)",
-          "confidence": "partial",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_3)",
+          "confidence": "verified",
           "sources": [
+            {
+              "label": "Pinned Etherlink block 54683983 (2026-10-01T17:03:23Z): proxy core matches verified source after CBOR metadata removal; singleton exact runtime match; six owners, threshold 3, zero guard",
+              "url": "https://api-etherlink-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Verified SafeL2/Safe/Executor source matching pinned singleton; unrestricted signed destination/calldata",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+            },
             {
               "label": "Exact EURSAFO issuer deployment identity",
               "url": "https://public-api.spiko.io/share-classes/eurSAFO"
@@ -2023,27 +2196,57 @@
           ],
           "pin": {
             "position": "54683983",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x6aa7c956fbd4938bdfe48859cf3e155674080dea7ef8da4b0600846e6373d6a7",
+            "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
           },
           "observedState": {
             "position": "54683983",
-            "hash": null,
-            "runtimeIdentity": "Native EURSAFO PermissionManager membership and token mint selector; complete runtime/source reach unproved",
-            "signerIdentity": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538; ADMIN group 0; 3-of-6 Safe"
+            "hash": "0x6aa7c956fbd4938bdfe48859cf3e155674080dea7ef8da4b0600846e6373d6a7",
+            "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+            "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
+            {
+              "id": "admin-maximal-execution",
+              "targetDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+              "entrypointKind": "evm-selector", "entrypoints": ["0x6a761202"], "callMode": "call",
+              "capabilities": ["mint", "burn", "upgrade", "freeze", "seize", "oracle-update", "bridge-mint", "custody-transfer", "parameter-change"],
+              "capSemantics": { "kind": "unbounded", "bound": null },
+              "claimImpairment": "unbounded", "economicLossScope": "global-claim", "unavoidableDelaySec": 0, "activation": "active",
+              "affectedLiabilityIds": ["eursafo-spiko"], "affectedDeployments": [], "reach": "root",
+              "controlRefs": [], "reactivationRefs": [], "permissionChangeRefs": [], "upgradeRefs": [], "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+                "executorDeployment": "etherlink:0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+                "sourceDeployment": "etherlink:0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                "targets": "any-contract", "calldata": "arbitrary-bytes", "capabilities": "all-reachable",
+                "arbitraryCallVerified": true, "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "54683983", "hash": "0x6aa7c956fbd4938bdfe48859cf3e155674080dea7ef8da4b0600846e6373d6a7",
+                  "runtimeIdentity": "sha256:rpc-hex-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
+                  "signerIdentity": "sha256:owners-and-threshold-abi:1c6ff6ffef115e79683bd6a4cab95dd1d529f673ff4c85e0b2b58bdf4d2b23f1"
+                },
+                "sourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "observedSourceRuntimeIdentity": "sha256:rpc-hex-text:afbd74993cd89f8aba8211406873d8a868eb762a53eebf6c0922300643aae060",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+                  "location": "SafeL2.sol -> Safe.sol:execTransaction -> Executor.sol:execute. Exact singleton runtime at pinned block; 118-byte SafeProxy executable core equals verified source after removing only trailing compiler CBOR metadata. Slot 0 binds singleton, zero guard. Signed arbitrary CALL/DELEGATECALL and self changes; adverse upper envelope preserves native PM ADMIN mint reach without benign module claims."
+                }
+              }
+            },
             {
               "id": "native-mint",
               "targetDeployment": "etherlink:0x35dfec1813c43d82e6b87c682f560bbb8ea0c121",

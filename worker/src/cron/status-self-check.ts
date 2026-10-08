@@ -3,7 +3,8 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../lib/response-body";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
@@ -67,7 +68,7 @@ interface ProbeStats {
   latencySummary: ProbeLatencySummary;
   status: StatusLevel;
   transportStatus: StatusLevel;
-  semanticStatus: StatusLevel;
+  semanticStatus: StatusLevel | null;
 }
 
 interface ExternalProductionProbeTarget {
@@ -200,9 +201,9 @@ function computeProbeStats(probes: ProbeResult[]): ProbeStats {
     failCount,
     latencySummary,
     transportStatus,
-    semanticStatus: probes.reduce<StatusLevel>((worst, probe) =>
+    semanticStatus: probes.reduce<StatusLevel | null>((worst, probe) =>
       probe.semanticStatus && (probe.ok || probe.error?.startsWith("reported-"))
-        ? maxProbeStatus(worst, probe.semanticStatus) : worst, "healthy"),
+        ? (worst == null ? probe.semanticStatus : maxProbeStatus(worst, probe.semanticStatus)) : worst, null),
     status: maxProbeStatus(
       transportStatus,
       semanticProbeStatus,
@@ -345,7 +346,7 @@ async function evaluateProbeResponse(
   }
 
   try {
-    const payload = (await response.json()) as { status?: unknown };
+    const payload = await readResponseJsonWithinLimitWithSignal<{ status?: unknown }>(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
     if (payload.status === "healthy") {
       return {
         ok: true,
@@ -701,6 +702,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
           checkedAt: snapshot.checkedAt,
           previousCheckedAt: snapshot.previousCheckedAt,
           tableCount: snapshot.tables.length,
+          failedTables: snapshot.failedTables,
+          failedTableCount: snapshot.failedTables.length,
           topGrowers: snapshot.topGrowers,
         }
       : null;
@@ -828,7 +831,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       outputPublishedAt: failedOutputs.size === 0 ? now : null,
       failedOutputs: [...failedOutputs],
       ...(reason ? { reason } : {}),
-      ...(semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
+      ...(semanticStatus != null && semanticStatus !== "healthy" ? { quality: { reason: `probe-plane-${semanticStatus}` } } : {}),
+      ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),
       sampleCount,
       passCount,
       failCount,

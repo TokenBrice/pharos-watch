@@ -85,4 +85,46 @@ describe("refreshD1TableGrowthSnapshot", () => {
     expect(supplyHistory?.rowCountDelta).toBeNull();
     expect(snapshot?.topGrowers.some((row) => row.tableName === "supply_history")).toBe(false);
   });
+
+  it.each([null, undefined, "invalid", "0", -1, 0.5, NaN, Infinity])(
+    "rejects invalid row counts in a mixed SQLite census (%s)",
+    async (rowCount) => {
+      const { db } = fixtures.open();
+      const invalidDb = new Proxy(db, {
+        get(target, property, receiver) {
+          if (property !== "prepare") return Reflect.get(target, property, receiver);
+          return (sql: string) => {
+            const statement = target.prepare(sql);
+            if (!sql.includes('FROM "supply_history"')) return statement;
+            return new Proxy(statement, {
+              get(statementTarget, statementProperty, statementReceiver) {
+                if (statementProperty !== "first") return Reflect.get(statementTarget, statementProperty, statementReceiver);
+                return async () => rowCount === undefined ? null : { row_count: rowCount };
+              },
+            });
+          };
+        },
+      }) as D1Database;
+      const snapshot = await refreshD1TableGrowthSnapshot(invalidDb, 1_800_000_000);
+      expect(snapshot?.failedTables).toEqual(["supply_history"]);
+      expect(snapshot?.tables.some((row) => row.tableName === "supply_history")).toBe(false);
+      expect(snapshot?.tables.find((row) => row.tableName === "cron_runs")?.rowCount).toBe(0);
+    },
+  );
+
+  it("preserves observed zero, negative deltas, nullable timestamps and same-day reuse", async () => {
+    const observedAt = 1_800_000_000;
+    const { db, sqlite } = fixtures.open();
+    const previousCheckedAt = observedAt - DAY_SEC;
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY, cachedSnapshot(previousCheckedAt, 3), previousCheckedAt,
+    );
+    const snapshot = await refreshD1TableGrowthSnapshot(db, observedAt);
+    expect(snapshot?.tables.find((row) => row.tableName === "supply_history")).toMatchObject({
+      rowCount: 0, previousRowCount: 3, rowCountDelta: -3, oldestTimestamp: null, newestTimestamp: null,
+    });
+    expect(snapshot?.failedTables).toEqual([]);
+    expect(snapshot?.topGrowers).toEqual([]);
+    await expect(refreshD1TableGrowthSnapshot(db, observedAt + 1)).resolves.toEqual(snapshot);
+  });
 });

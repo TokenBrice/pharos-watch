@@ -116,7 +116,7 @@ export function renderL2BeatBridgeRouteReviewAuditMarkdown(audit: L2BeatBridgeRo
     "",
     "## Operator Notes",
     "",
-    "- Reviewed bridge controls can author `scopedQuestions` that bound Safety Score V9 control-gap ceilings; the v8 Decentralization blend is retired.",
+    "- The current Safety Score consumes only reviewed bridge evidence; heuristic matches never author a profile or backing dependency.",
     "- This report is a review queue only. It never mutates stablecoin metadata.",
     "- Strong native or canonical routes never lift a score; missing bridgeRouteRisk remains neutral until reviewed.",
     "",

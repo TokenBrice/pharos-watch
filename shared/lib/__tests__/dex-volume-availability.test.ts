@@ -11,6 +11,7 @@ import {
   type DexPoolVolumeObservationInput,
 } from "../dex-volume-availability";
 import { DexVolumeAvailabilityRecordSchema } from "../../types/market";
+import { LIQUIDITY_SCORE_WEIGHTS } from "../liquidity-score-weights";
 
 const AS_OF = 1_790_000_000;
 const HOUR = 3_600;
@@ -199,6 +200,18 @@ describe("DEC-19 LiquidityScore contract (coverage-gated)", () => {
   });
   const activityOf = (pools: DexPoolVolumeObservationInput[]) =>
     resolveVolumeActivityComponent(summarizeDexVolumeWindow(pools, "24h", CLOCK).availability);
+
+  it.each(LIQUIDITY_SCORE_WEIGHTS)("applies the authored $key share without redistribution", ({ key, weight }) => {
+    const result = composeLiquidityScore({
+      tvlDepth: key === "tvlDepth" ? 100 : 0,
+      poolQuality: key === "poolQuality" ? 100 : 0,
+      durability: key === "durability" ? 100 : 0,
+      pairDiversity: key === "pairDiversity" ? 100 : 0,
+      volumeActivity: { status: "measured", score: key === "volumeActivity" ? 100 : 0 },
+    });
+    expect(result.status).toBe("rated");
+    expect(result.score).toBe(Math.round(100 * weight));
+  });
 
   it("scores a complete measured zero as 0 activity under the full weight denominator", () => {
     const activity = activityOf([pool(1, 0, 600_000), pool(2, 0, 400_000)]);

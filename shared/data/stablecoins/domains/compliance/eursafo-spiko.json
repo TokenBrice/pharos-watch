@@ -1,32 +1,50 @@
 {
   "id": "eursafo-spiko",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Spiko SICAV prospectus: SAFO UCITS sub-fund, 1 September 2026",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Exact EUR KID, ISIN FR0014015LD3",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "AFM investment-fund register: SPIKO SICAV, incoming UCITS passport, product type financial instrument",
+        "url": "https://www.afm.nl/nl-nl/sector/registers/vergunningenregisters/beleggingsinstellingen/details?id=3EB284BB-7CF7-F011-8406-000D3A4674CC"
+      },
+      {
+        "label": "MiCA Article 2 excludes financial instruments",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
   },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "EURSAFO is a tokenized share of the Spiko Amundi Overnight Swap Fund, a French UCITS sub-fund with NAV-based investment returns, not a payment stablecoin.",
+      "summary": "EURSAFO is EUR share class FR0014015LD3 of the Spiko Amundi Overnight Swap Fund, a French UCITS sub-fund with accumulating NAV-based investment returns, not a payment stablecoin.",
       "references": [
+        {
+          "label": "Exact EUR KID, ISIN FR0014015LD3",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-29",
+          "accessedAt": "2026-10-07"
+        },
         {
           "label": "AFM investment-fund register: SPIKO SICAV and SAFO",
           "url": "https://www.afm.nl/nl-nl/sector/registers/vergunningenregisters/beleggingsinstellingen/details?id=3EB284BB-7CF7-F011-8406-000D3A4674CC",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
-        },
-        {
-          "label": "Spiko and Amundi SAFO launch announcement",
-          "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
-          "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-03-19",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: Public Law 119-27",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -37,30 +55,58 @@
     "licensingRegulator": "AMF; UCITS governed by Directive 2009/65/EC",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "EURSAFO is a tokenized UCITS fund share, with its value determined by the fund NAV and investment returns. The AMF/UCITS authorization is a securities/fund authorization, not a GENIUS permitted-payment-stablecoin approval.",
+    "notes": "EURSAFO is the EUR share class FR0014015LD3 of SPIKO AMUNDI OVERNIGHT SWAP FUND, a sub-fund of Spiko SICAV. Its value follows the fund net asset value and accumulated investment returns, and redemption is executed at that net asset value rather than for a fixed amount of monetary value. The prospectus states that the sub-fund's shares may not be offered or sold to a US Person as defined in Regulation S. The AMF and UCITS authorization is a securities and fund authorization, not a GENIUS permitted payment stablecoin issuer approval. The AMF Enforcement Committee decision of 20 December 2021 issued a warning and a 100,000 euro fine to the management company Twenty First Capital over capital, traceability and conflict-of-interest procedures; this review located no U.S. action naming the fund, its manager or Spiko Finance.",
     "references": [
       {
         "label": "AFM investment-fund register: SPIKO SICAV and SAFO",
         "url": "https://www.afm.nl/nl-nl/sector/registers/vergunningenregisters/beleggingsinstellingen/details?id=3EB284BB-7CF7-F011-8406-000D3A4674CC",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Spiko SICAV prospectus: SAFO UCITS sub-fund",
         "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-01",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Spiko and Amundi SAFO launch announcement",
         "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-03-19",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Exact EUR KID, ISIN FR0014015LD3",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "AMF Enforcement Committee decision of 20 December 2021 on Twenty First Capital",
+        "url": "https://www.amf-france.org/en/news-publications/news-releases/enforcement-committee-news-releases/amf-enforcement-committee-fines-asset-management-company-several-breaches-its-professional",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2021-12-20",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -38,7 +38,7 @@ export interface StabilityInputForDay {
   depegCount: number;
   eligibleUniverseCount: number;
   coveredUniverseCount: number;
-  shadowCoverageCount: number;
+  historicalAssetCoverageCount: number;
   historicalPriceCoverageCount: number;
   peakDeviationFallbackCount: number;
   openDepegsWithoutPrice: number;
@@ -188,7 +188,7 @@ export function buildStabilityInputForDay(
     depegCount: depegs.length,
     eligibleUniverseCount: universe.eligibleUniverseCount,
     coveredUniverseCount: universe.coveredUniverseCount,
-    shadowCoverageCount: universe.shadowCoverageCount,
+    historicalAssetCoverageCount: universe.historicalAssetCoverageCount,
     historicalPriceCoverageCount,
     peakDeviationFallbackCount,
     openDepegsWithoutPrice,

@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "authorizationType": "emi",
     "competentAuthority": "FIN-FSA",
-    "authorizedEntity": "Paxos Issuance Europe Oy (formerly Membrane Finance Oy)",
+    "authorizedEntity": "Paxos Issuance Europe Oy",
     "references": [
       {
         "label": "ESMA MiCA register (issuers of EMTs)",
@@ -16,8 +16,8 @@
         "url": "https://www.paxos.com/euroe-redemptions"
       },
       {
-        "label": "EUROe whitepaper",
-        "url": "https://www.membrane.fi/whitepapers/EUROe.html"
+        "label": "ESMA interim MiCA EMT issuer register: EUROe, Paxos Issuance Europe Oy, FIN-FSA EMI authorization",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
   }

@@ -136,7 +136,7 @@ Cold-load nested hashes such as `#depeg-history` reveal enclosing disclosures an
 
 Active pages render only an `sr-only` server-owned `h1` before the client island so the hydrated dossier begins with the coin hero. The `Suspense` crawl-state fallback places `StablecoinDetailSeoContent` and the data-derived FAQ after its hero/loading shell, preserving meaningful static HTML without putting either block ahead of the identity. `StablecoinDetailSeoContent` also remains the static read-only profile for quarantined and delisted records. The server shell passes `ExploreNextSection` and the FAQ into `StablecoinDetailClient`; the client renders them inside and immediately after the Explore zone, respectively.
 
-Detail experiments remain source-gated: hero verdict, depeg resolver, and the DDR reviewer feed (`depegResolverReviewer`, which gates `DdrTrackRecordSection`) default on; blacklist banner, quiet deviations, mobile sticky summary, and chart annotations default off. [`process/feature-flags.md`](./process/feature-flags.md) owns the bindings, defaults, and expiry policy.
+Detail controls remain source-gated: hero verdict, depeg resolver, and the DDR reviewer feed (`depegResolverReviewer`, which gates `DdrTrackRecordSection`) default on; quiet deviations and mobile sticky summary default off in source. Quiet/sticky deletion awaits exact-build visual and real-device review by 2026-11-15. DDR/DDRR controls await 30 deployed rollback-free days and populated reviewer evidence. The blacklist banner and chart annotation overlay have been retired; the annotation corpus and review history remain. [`process/feature-flags.md`](./process/feature-flags.md) owns the bindings, defaults, and expiry policy.
 
 ### Scrollspy vs section rules
 

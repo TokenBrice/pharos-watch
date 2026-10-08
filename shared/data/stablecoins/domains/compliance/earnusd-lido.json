@@ -1,0 +1,72 @@
+{
+  "id": "earnusd-lido",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Lido Earn: earnUSD shares, compounded returns and queued withdrawals",
+        "url": "https://docs.lido.fi/earn/"
+      },
+      {
+        "label": "Lido Earn: exact earnUSD ShareManager deployment",
+        "url": "https://docs.lido.fi/earn/deployment-contracts"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "earnUSD is the performance-linked share token of the Lido Earn USD-denominated strategy vault, curated by Mellow. The Lido deployment register identifies Ethereum ShareManager 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981 and vault 0x014e6da8f283c4af65b2aa0f201438680a004452, matching the tracked token. Returns compound into the share token, and holders request and later claim USDC withdrawals. These are variable-value vault rights rather than a fixed-dollar issuer redemption obligation or a payment instrument.",
+      "references": [
+        {
+          "label": "Lido Earn: earnUSD shares, compounded returns and queued withdrawals",
+          "url": "https://docs.lido.fi/earn/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Lido Earn: exact earnUSD ShareManager deployment",
+          "url": "https://docs.lido.fi/earn/deployment-contracts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Mellow: earnUSD MetaVault and share-token rights",
+          "url": "https://docs.mellow.finance/lido-earn/earnusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Lido DAO interface terms and Lido Earn eligibility",
+          "url": "https://lido.fi/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-23"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a variable-value strategy-vault share against the GENIUS Act section 2(22) payment-stablecoin definition. Dollar-denominated strategies and USDC payouts do not establish a fixed-dollar redemption obligation per share. Lido interface terms last updated 2026-09-23 require that Lido Earn vault users, including EarnUSD, are not accessing from and are not citizens or residents of the United States or the United Kingdom; that is an interface eligibility restriction, not a GENIUS prohibition or foreign-exception determination. Mellow is identified as curator, while a legal token issuer or redemption obligor remains unresolved, so issuerEntity is omitted. No securities or fund exclusion, payment-stablecoin authorization, or inherited Circle reserve attestation is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

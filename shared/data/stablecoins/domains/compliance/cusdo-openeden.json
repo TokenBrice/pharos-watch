@@ -1,0 +1,77 @@
+{
+  "id": "cusdo-openeden",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "OpenEden cUSDO: price-accruing USDO wrapper",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "cUSDO is a non-rebasing wrapper of USDO whose redeemable USDO amount and token value increase with accrued reserve yield. Its units represent an appreciating wrapper position rather than a fixed amount of national currency or bank deposits.",
+      "references": [
+        {
+          "label": "OpenEden cUSDO Token",
+          "url": "https://docs.openeden.com/usdo/cusdo-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OpenEden USDO FAQ",
+          "url": "https://docs.openeden.com/usdo/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The issuer describes USDO and cUSDO as two formats of the same yield-bearing product. OpenEden Digital Limited is the underlying USDO issuer; the reviewed wrapper documentation does not separately identify a legal cUSDO issuer or a national-currency redemption obligation. This assessment concerns cUSDO independently of USDO and TBILL. Underlying reserve reports are not cUSDO-specific monthly attestations. Section 4(a)(11) regulates interest paid on payment stablecoins; interest alone is not an exclusion in section 2(22).",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OpenEden cUSDO Token",
+        "url": "https://docs.openeden.com/usdo/cusdo-token",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OpenEden USDO introduction",
+        "url": "https://docs.openeden.com/usdo/introduction",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OpenEden USDO FAQ",
+        "url": "https://docs.openeden.com/usdo/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

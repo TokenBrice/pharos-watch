@@ -4,14 +4,14 @@ import {
   REDEMPTION_BACKSTOP_PROVIDER_IDS,
 } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
-import { buildMissingSupplyResolution, type CapacityResolution, type CapacityResolverContext } from "./profile";
+import { buildBoundedCapacityFields, buildMissingSupplyResolution, type CapacityResolution, type CapacityResolverContext } from "./profile";
 
 type SupplyRatioModel = Extract<RedemptionCapacityModel, { kind: "supply-ratio" }>;
 
-export async function resolveSupplyRatioCapacity(
+export function resolveSupplyRatioCapacity(
   model: SupplyRatioModel,
   context: CapacityResolverContext,
-): Promise<CapacityResolution> {
+): CapacityResolution {
   const { supplyUsd } = context;
   const capacityConfidence = resolveCapacityConfidence(model);
   const capacitySemantics = resolveCapacitySemantics(model);
@@ -34,24 +34,20 @@ export async function resolveSupplyRatioCapacity(
       notes: ["Current supply is non-positive; route retained as configured but unrated"],
     };
   }
-  const immediateUsd = supplyUsd * model.ratio;
-  const dailyLimitCapsCapacity = model.dailyLimitUsd != null && model.dailyLimitUsd < immediateUsd;
-  const scoringUsd = model.dailyLimitUsd != null ? Math.min(immediateUsd, model.dailyLimitUsd) : immediateUsd;
+  const capacityFields = buildBoundedCapacityFields({
+    rawCapacityUsd: supplyUsd * model.ratio,
+    supplyUsd,
+    dailyLimitUsd: model.dailyLimitUsd,
+    capacityProfileConfidence: capacityConfidence,
+    applyDailyLimit: true,
+  });
   return {
-    immediateCapacityUsd: immediateUsd,
+    immediateCapacityUsd: capacityFields.immediateCapacityUsd,
+    // Preserve the authored ratio instead of introducing a USD round-trip.
     immediateCapacityRatio: model.ratio,
-    scoringCapacityUsd: scoringUsd,
-    scoringCapacityRatio:
-      model.dailyLimitUsd != null && supplyUsd > 0
-        ? Math.min(model.ratio, model.dailyLimitUsd / supplyUsd)
-        : model.ratio,
-    capacityProfile: {
-      immediateUsd,
-      ...(model.dailyLimitUsd != null ? { dailyLimitUsd: model.dailyLimitUsd } : {}),
-      scoringUsd,
-      scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
-      capacityProfileConfidence: capacityConfidence,
-    },
+    scoringCapacityUsd: capacityFields.scoringCapacityUsd,
+    scoringCapacityRatio: capacityFields.dailyLimitCapsCapacity ? capacityFields.scoringCapacityRatio : model.ratio,
+    capacityProfile: capacityFields.capacityProfile,
     provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
     sourceMode:
       REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL].defaultSourceMode,

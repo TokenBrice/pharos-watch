@@ -21,6 +21,14 @@ export function describeError(
   error: unknown,
   sanitize: (value: string) => string = (value) => value,
 ): ErrorDescriptor {
+  return buildErrorDescriptor(error, sanitize, true);
+}
+
+function buildErrorDescriptor(
+  error: unknown,
+  sanitize: (value: string) => string,
+  includeStack: boolean,
+): ErrorDescriptor {
   const seen = new Set<object>();
   let nodes = 0;
   const visit = (value: unknown, depth: number): ErrorDescriptor => {
@@ -51,7 +59,7 @@ export function describeError(
     if (object) {
       const code = errorProperty(object, "code", isError);
       if (typeof code === "string" || typeof code === "number") descriptor.code = bounded(String(code), 100);
-      const stack = depth === 0 ? errorProperty(object, "stack", isError) : undefined;
+      const stack = includeStack && depth === 0 ? errorProperty(object, "stack", isError) : undefined;
       if (typeof stack === "string") descriptor.stack = bounded(stack, 800);
       const cause = errorProperty(object, "cause", isError);
       const children = errorProperty(object, "errors", isError);
@@ -80,6 +88,11 @@ export function describeError(
   return visit(error, 0);
 }
 
-export function toErrorMessage(error: unknown): string {
-  return describeError(error).message;
+export function toErrorMessage(
+  error: unknown,
+  sanitize: (value: string) => string = (value) => value,
+): string {
+  // Reading a lazy stack materializes V8's retained script line index, even
+  // when the caller only needs a message. Keep message-only diagnostics lazy.
+  return buildErrorDescriptor(error, sanitize, false).message;
 }

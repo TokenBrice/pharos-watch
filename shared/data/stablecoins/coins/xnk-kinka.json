@@ -79,27 +79,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "xnk-kinka",
-    "display": {
-      "url": "https://kinka-gold.com/",
-      "label": "Kinka"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands)",
-      "risk": "very-low"
-    }
-  },
+
   "launchDate": "2024-02-21",
   "status": "delisted",
   "listingStatusReview": {

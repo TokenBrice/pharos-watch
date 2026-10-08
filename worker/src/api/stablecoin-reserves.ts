@@ -3,8 +3,6 @@ import { WORKER_READABLE_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stab
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves/store-views";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getReserveSyncState } from "../lib/live-reserves/store-read";
-import { matchReserveFeedReview } from "../lib/reserve-feed-reviews";
 
 export function reserveCacheControlForMode(
   mode: ReservePresentationMode,
@@ -32,15 +30,16 @@ export const handleStablecoinReserves = async (
   if (!meta?.liveReservesConfig) {
     return errorResponse(404, "Not found");
   }
+  const lifecycle = meta.status ?? "active";
+  if (lifecycle === "pre-launch" || meta.liveReservesConfig.suspended) {
+    return errorResponse(404, "Not found");
+  }
 
   const resolved = await resolveReserveResult(db, stablecoinId);
   if (!resolved) {
     return errorResponse(404, "Not found");
   }
 
-  const acknowledgedFeed = await matchReserveFeedReview(
-    db, await getReserveSyncState(db, stablecoinId).catch(() => null), Math.floor(Date.now() / 1000),
-  );
   const body: StablecoinReservesResponse = {
     stablecoinId,
     mode: resolved.mode,
@@ -54,7 +53,11 @@ export const handleStablecoinReserves = async (
     ...(resolved.metadata ? { metadata: resolved.metadata } : {}),
     ...(resolved.provenance ? { provenance: resolved.provenance } : {}),
     ...(resolved.sync ? { sync: {
-      ...resolved.sync, ...(acknowledgedFeed ? { acknowledgedFeed } : {}),
+      ...resolved.sync,
+      collectionEligibility: {
+        scheduled: lifecycle === "active",
+        reason: lifecycle,
+      },
     } } : {}),
   };
 

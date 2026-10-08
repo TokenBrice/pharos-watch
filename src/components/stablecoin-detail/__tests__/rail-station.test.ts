@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REDEMPTION_SETTLEMENT_LABELS } from "@shared/lib/redemption-backstop-scoring";
+import { REDEMPTION_SETTLEMENT_LABELS } from "@/lib/redemption-backstop-labels";
 import { isMonoArrowLabel } from "../rail-station";
 
 describe("isMonoArrowLabel", () => {

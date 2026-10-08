@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MATCHED_V9_INVARIANTS, type MatchedV9Invariant } from "@shared/data/safety-score-v9/matched-invariants-v1";
+import { MATCHED_V9_INVARIANTS, type MatchedV9Invariant } from "./safety-score-v9-matched-invariants.test-support";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
 import { evaluateV9Exit, type V9ExitEvaluationRoute } from "../safety-score-v9/exit";
@@ -31,6 +31,7 @@ function evaluationRoute(observation: ExitRouteObservation): V9ExitEvaluationRou
     observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook" ? "dex" : "redemption";
   return {
     routeKey: observation.routeId,
+    routeId: observation.routeId,
     lane,
     routeFamily: observation.routeFamily as V9ExitEvaluationRoute["routeFamily"],
     applicability: "required",

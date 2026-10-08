@@ -1,6 +1,66 @@
 {
   "id": "asusdf-astherus",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Aster: asUSDF staking receipt and net asset value",
+        "url": "https://docs.asterdex.com/earn/overview/mint-asusdf"
+      },
+      {
+        "label": "ESMA MiCA Article 3: token definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "asUSDF is the separate staking receipt minted from USDF. Aster states that funding-fee and delta-neutral strategy yield is reflected in its net asset value. Its appreciating share value and redemption into USDF establish a savings position rather than a token designed to maintain one fixed monetary value for payment or settlement. This is an evidence-backed tracker scope application, not a regulator ruling.",
+      "references": [
+        {
+          "label": "Aster: asUSDF staking receipt and net asset value",
+          "url": "https://docs.asterdex.com/earn/overview/mint-asusdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Enacted GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The underlying USDF is assessed separately. No corporate legal issuer is named in the opened Aster token and platform documentation, so issuerEntity is omitted. This non-payment assessment concerns the NAV-accreting receipt itself and does not infer a securities or deposit exemption, approval of its yield, or an exemption for every Aster service.",
+    "references": [
+      {
+        "label": "Aster: asUSDF staking receipt and net asset value",
+        "url": "https://docs.asterdex.com/earn/overview/mint-asusdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Enacted GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

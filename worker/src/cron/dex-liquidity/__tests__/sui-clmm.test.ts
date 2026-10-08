@@ -175,7 +175,7 @@ describe("Sui retained discovery and shadow scope", () => {
     }
   });
 
-  it("rotates tracked directions independently while deduplicating duplicate source rows", () => {
+  it("rotates Cetus directions independently and excludes retired Bluefin collection", () => {
     const pool = pinned[0].fixture.poolId;
     const other = pinned[1].fixture.poolId;
     const rows = [
@@ -186,7 +186,9 @@ describe("Sui retained discovery and shadow scope", () => {
       { pool_id: `fp:sui:cetus:${pool}`, stablecoin_id: "usdy-ondo-finance", tvl_usd: 1000, project: "cetus" },
     ];
     expect(selectSuiShadowPools(rows, null).selected.map((row) => row.stablecoin_id)).toEqual(["usdy-ondo-finance", "usdc-circle"]);
-    expect(selectSuiShadowPools(rows, "2").selected.map((row) => row.stablecoin_id)).toEqual(["usdsui-sui"]);
+    expect(selectSuiShadowPools(rows, "1").selected.map((row) => row.stablecoin_id)).toEqual(["usdc-circle"]);
+    expect(selectSuiShadowPools(rows, "2").total).toBe(2);
+    expect(selectSuiShadowPools(rows.filter((row) => row.project === "bluefin"), null).selected).toEqual([]);
   });
 
   it("never fetches when the shared request budget is exhausted and consumes responses serially", async () => {

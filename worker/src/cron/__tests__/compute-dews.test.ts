@@ -283,6 +283,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
               snapshot_date: Math.floor(Date.now() / 1000) - 7 * 86400,
               liquidity_score: 73,
               total_tvl_usd: 1_200_000,
+              coverage_confidence: 0.5,
             },
           ] as T[],
         };

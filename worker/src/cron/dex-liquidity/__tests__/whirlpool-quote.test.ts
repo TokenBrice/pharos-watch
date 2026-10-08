@@ -130,18 +130,21 @@ describe("native Whirlpool exact-in quotes", () => {
       return new Response(JSON.stringify({ result: { context: { slot: fixture.slot }, value: body.params[0].map((address: string) => fixture.accounts[address as keyof typeof fixture.accounts] ?? null) } }));
     }));
     const discovery = replay().pool;
-    await expect(fetchWhirlpoolSnapshot(fixture.poolAddress, { ...discovery, tokenMintA: discovery.tokenMintB }, new AbortController().signal)).rejects.toThrow("identity changed");
+    await expect(fetchWhirlpoolSnapshot(fixture.poolAddress, { ...discovery, tokenMintA: discovery.tokenMintB, tokenMintB: discovery.tokenMintA }, new AbortController().signal)).rejects.toThrow("identity changed");
   });
 
   it("fetches one coherent bounded quote batch and carries its returned slot", async () => {
+    const discovery = replay().pool;
+    const mintData = new Uint8Array(82); mintData[44] = 6; mintData[45] = 1;
+    const mintAccount = { owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", executable: false, data: [Buffer.from(mintData).toString("base64"), "base64"] };
     const fetch = vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
       expect(body.method).toBe("getMultipleAccounts");
-      expect(body.params[0].length).toBeLessThanOrEqual(7);
-      return new Response(JSON.stringify({ result: { context: { slot: fixture.slot }, value: body.params[0].map((address: string) => fixture.accounts[address as keyof typeof fixture.accounts] ?? null) } }));
+      expect(body.params[0].length).toBeLessThanOrEqual(8);
+      return new Response(JSON.stringify({ result: { context: { slot: fixture.slot }, value: body.params[0].map((address: string) =>
+        fixture.accounts[address as keyof typeof fixture.accounts] ?? ([discovery.tokenMintA, discovery.tokenMintB].includes(address) ? mintAccount : null)) } }));
     });
     vi.stubGlobal("fetch", fetch);
-    const discovery = replay().pool;
     const snapshot = await fetchWhirlpoolSnapshot(fixture.poolAddress, discovery, new AbortController().signal);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(quoteWhirlpoolExactIn(snapshot, fixture.tokenMintIn, BigInt(fixture.amountIn))).toEqual({ amountOut: 999660000n, slot: fixture.slot });

@@ -18,10 +18,10 @@ const validDirectFetchRegistry = [
     resilience: {
       transport: "direct-fetch",
       timeout: "Uses AbortSignal.timeout().",
-      body: "Drains response body.",
+      body: "Cancels unused response bodies.",
       circuitSources: ["CIRCUIT_SOURCE.DEMO"],
     },
-    requiredMarkers: ["AbortSignal.timeout", "drainResponseBody", "CIRCUIT_SOURCE.DEMO"],
+    requiredMarkers: ["AbortSignal.timeout", "cancelResponseBodyQuietly", "CIRCUIT_SOURCE.DEMO"],
   },
 ];
 
@@ -41,10 +41,10 @@ describe("provider resilience checker", () => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/provider.ts": `
         const marker = "CIRCUIT_SOURCE.DEMO";
-        async function drainResponseBody(_res: Response) {}
+        async function cancelResponseBodyQuietly(res: Response) { await res.body?.cancel(); }
         export async function run() {
           const res = await fetch("https://example.test", { signal: AbortSignal.timeout(1000) });
-          await drainResponseBody(res);
+          await cancelResponseBodyQuietly(res);
         }
       `,
       "worker/src/provider.test.ts": "export {};",

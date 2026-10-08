@@ -1,0 +1,59 @@
+{
+  "id": "stcusd-cap",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Cap token contracts: appreciating stcUSD vault shares",
+        "url": "https://docs.cap.app/developers/contracts/tokens.md"
+      },
+      {
+        "label": "MiCA Article 3 token definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "stcUSD is an ERC-4626 share whose cUSD-per-share exchange rate accrues vested yield. Its redemption unit is underlying cUSD at variable assets per share, not a fixed amount of monetary value. The payment-stablecoin definition in section 2(22) therefore does not fit this token.",
+      "references": [
+        {
+          "label": "Cap token contracts: cUSD basket and stcUSD ERC-4626 shares",
+          "url": "https://docs.cap.app/developers/contracts/tokens.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The payment-stablecoin authorization assessment for the underlying token is not inherited by this variable-value vault share. This scope conclusion does not determine whether other financial-services or securities laws apply.",
+    "references": [
+      {
+        "label": "Cap token contracts: cUSD basket and stcUSD ERC-4626 shares",
+        "url": "https://docs.cap.app/developers/contracts/tokens.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

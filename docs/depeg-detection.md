@@ -6,10 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.32`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
+
+The shared `v6.33` release of 2026-10-08 changes only DEWS weekly DEX-history admission; depeg onset, confirmation, recovery and PegScore rules are unchanged. Its release remains conditional on owner-approved production-history replay described in [DEWS](./dews.md#methodology-versioning).
 
 ## Downstream: Depeg Duration Resolver
 

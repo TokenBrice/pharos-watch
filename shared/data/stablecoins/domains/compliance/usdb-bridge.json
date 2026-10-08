@@ -3,14 +3,36 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge Building Inc."
+      "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge Building Inc.",
+      "references": [
+        {
+          "label": "OCC Corporate Decision 1365: Bridge National Trust Bank",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-12"
+        },
+        {
+          "label": "Bridge Building Inc. stablecoin terms: issuer, reserves and redemption",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act statutory definition, effective date and DASP transition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
-    "issuerPathway": "federal-qualified-nonbank",
+    "issuerPathway": "unknown",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
-    "licensingRegulator": "OCC (conditional national trust bank charter: Bridge National Trust Bank, NY); FinCEN/state MTLs for current MSB operations",
-    "primaryFederalRegulator": "OCC",
+    "licensingRegulator": "FinCEN MSB registration and applicable state money-transmitter regulators for Bridge Building Inc. The OCC preliminary conditional approval applies to proposed Bridge National Trust Bank, not the current USDB issuer.",
+    "primaryFederalRegulator": "Unknown",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -18,55 +40,141 @@
     "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge Building Inc. (BBI), a Stripe subsidiary, received OCC conditional approval Feb 12, 2026 (CD1365) to organize Bridge National Trust Bank: a federal nonbank trust charter that maps to the federal-qualified-nonbank GENIUS pathway. Bridge publicly markets USDB and its Open Issuance platform as 'GENIUS-ready' (per bridge.xyz blog and Stripe Open Issuance announcement). No PPSI approval or official GENIUS application has been filed or granted; the application framework is still in proposed-rules rulemaking. GENIUS Act is not yet effective (effective date: Jan 18, 2027 at latest). Bridge is also a registered MSB with state MTLs for current operations.",
+    "notes": "Bridge Building Inc. is the current USDB issuer under MSB/state money-transmitter permissions. OCC Corporate Decision 1365 granted preliminary conditional organization approval to separate proposed Bridge National Trust Bank, not BBI or USDB under GENIUS; the decision describes a planned transition of USDB to a New York limited-purpose trust company and white-label coins to the national bank. Those plans do not establish a current GENIUS issuer pathway. September 2026 issuer disclosure still calls the proposed bank non-operational. Bridge/Stripe GENIUS-ready Open Issuance marketing supports issuer-announced-intent only, not PPSI approval or an official application. No established GENIUS pathway or primary federal payment-stablecoin regulator for current BBI issuance was found. Quarterly-described attestations and monthly activity reports do not establish monthly independent reserve attestations. Section 20 gives January 18, 2027 as the 18-month date subject to the earlier-final-rule trigger; no earlier trigger was established by the checked proposal/procedural materials. The separate three-year DASP transition does not establish a current offer/sale prohibition. USDB remains pre-launch in the supplied catalogue: no lifecycle metadata change is proposed.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC Corporate Decision 1365: Bridge National Trust Bank",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-12"
       },
       {
         "label": "Bridge receives OCC conditional approval",
         "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-17"
       },
       {
         "label": "Bridge stablecoins FAQ: reserve and compliance disclosure",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Stripe Open Issuance announcement: GENIUS-ready reserve management",
         "url": "https://stripe.com/blog/introducing-open-issuance-from-bridge",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-09-30"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin terms: issuer, reserves and redemption",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge reserve reporting and transparency: quarterly attestations and monthly reports",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge current U.S. licenses and registrations",
+        "url": "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mississippi money-transmitter licensee list: Bridge Building Inc., NMLS 2450917",
+        "url": "https://dbcf.ms.gov/wp-content/uploads/2026/02/Money-Transmitter-List-02102026.pdf",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge September 2026 issuer and non-operational trust-bank clarification",
+        "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory definition, effective date and DASP transition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve September 2026 GENIUS proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and approved assets",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge USDB live reserve disclosure",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/usdb",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin (Bulletin 2026-3) and Federal Register NPRM 2026-04089",
-        "OCC Corporate Decision 1365: Bridge National Trust Bank conditional approval Feb 2026",
-        "bridge.xyz blog: OCC conditional approval announcement",
-        "Bridge stablecoins FAQ (apidocs.bridge.xyz)",
-        "Stripe Open Issuance blog: GENIUS-ready compliance positioning",
-        "Federal Register GENIUS Act tracker (Chapman & Cutler, accessed 2026-06-18)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf : proposed BNTB conditional charter; BBI current issuer identified",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html : GENIUS proposed-rule bulletin, title/date metadata reopened",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm : September 2026 proposals",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm : SCRC procedural rule, not issuer authorization",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses : regulated entities and approved-assets list",
+        "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc : BBI stablecoin terms",
+        "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations : BBI U.S. money-transmitter/MSB disclosure",
+        "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge : September 2026 non-operational BNTB clarification",
+        "Independent scoped public searches on 2026-10-07 for Bridge Building Inc. and separately USDB/pathUSD with GENIUS, permitted-payment-stablecoin and enforcement terms on OCC, FinCEN, Treasury and NYDFS domains."
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application found for Bridge or USDB. Bridge holds a conditional OCC trust bank charter (not a PPSI grant) and self-describes as GENIUS-ready. GENIUS Act rulemaking remains at proposed-rules stage with no approvals granted to any issuer as of 2026-06-18.",
+      "summary": "No token-specific PPSI/state-qualified grant or official GENIUS application for USDB or its current issuer Bridge Building Inc. was located in these checked materials. The opened OCC record approves organization of a separate proposed bank conditionally under existing charter authority, not BBI or USDB under GENIUS. No public GENIUS enforcement action naming the current issuer/token was located in the scoped searches. This is a dated, bounded public-evidence review, not an assertion that no application has been filed, no nonpublic matter exists, or no issuer anywhere has approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Bridge September 2026 issuer and non-operational trust-bank clarification",
+          "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and approved assets",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -89,7 +89,7 @@ export interface DdrCanonicalIncidentEventInput {
   source?: string | null;
   sourceFingerprint?: string | null;
   publicTrackedAtFirstSeen?: boolean;
-  psiShadowAtFirstSeen?: boolean;
+  psiOffCatalogAtFirstSeen?: boolean;
   registrySnapshot?: unknown;
 }
 
@@ -166,7 +166,7 @@ export interface DdrIncidentPolicyMembership {
   stablecoinId: string;
   predictionPolicyVersion: string;
   publicTrackedAtFirstSeen: boolean;
-  psiShadowAtFirstSeen: boolean;
+  psiOffCatalogAtFirstSeen: boolean;
   rolloutActiveAtEnablement: boolean;
   policyUniverseIncluded: boolean;
   policyUniverseReason: DdrPolicyUniverseReason;
@@ -345,13 +345,13 @@ function policyMembershipForEvent(
   const effectiveAt = optionEffectiveAt(options);
   const nowSec = optionNowSec(options);
   const publicTracked = event.publicTrackedAtFirstSeen ?? true;
-  const psiShadow = event.psiShadowAtFirstSeen ?? false;
+  const psiOffCatalog = event.psiOffCatalogAtFirstSeen ?? false;
   const rolloutActive = event.startedAt < effectiveAt && (event.endedAt == null || event.endedAt >= effectiveAt);
   const postEffective = event.startedAt >= effectiveAt;
 
   let policyUniverseReason: DdrPolicyUniverseReason = "not_public_tracked";
   let policyUniverseIncluded = false;
-  if (psiShadow) {
+  if (psiOffCatalog) {
     policyUniverseReason = "psi_shadow_excluded";
   } else if (publicTracked && postEffective) {
     policyUniverseReason = "post_effective_public_tracked";
@@ -366,7 +366,7 @@ function policyMembershipForEvent(
     stablecoinId: event.stablecoinId,
     predictionPolicyVersion: options.predictionPolicyVersion,
     publicTrackedAtFirstSeen: publicTracked,
-    psiShadowAtFirstSeen: psiShadow,
+    psiOffCatalogAtFirstSeen: psiOffCatalog,
     rolloutActiveAtEnablement: rolloutActive,
     policyUniverseIncluded,
     policyUniverseReason,
@@ -425,7 +425,7 @@ function mapIncidentRow(
           stablecoinId: row.membership_stablecoin_id ?? row.stablecoin_id,
           predictionPolicyVersion: row.prediction_policy_version ?? "",
           publicTrackedAtFirstSeen: row.public_tracked_at_first_seen === 1,
-          psiShadowAtFirstSeen: row.psi_shadow_at_first_seen === 1,
+          psiOffCatalogAtFirstSeen: row.psi_shadow_at_first_seen === 1,
           rolloutActiveAtEnablement: row.rollout_active_at_enablement === 1,
           policyUniverseIncluded: row.policy_universe_included === 1,
           policyUniverseReason: row.policy_universe_reason ?? "not_public_tracked",
@@ -649,7 +649,7 @@ async function insertNewIncident(
         policyMembership.stablecoinId,
         policyMembership.predictionPolicyVersion,
         policyMembership.publicTrackedAtFirstSeen ? 1 : 0,
-        policyMembership.psiShadowAtFirstSeen ? 1 : 0,
+        policyMembership.psiOffCatalogAtFirstSeen ? 1 : 0,
         policyMembership.rolloutActiveAtEnablement ? 1 : 0,
         policyMembership.policyUniverseIncluded ? 1 : 0,
         policyMembership.policyUniverseReason,

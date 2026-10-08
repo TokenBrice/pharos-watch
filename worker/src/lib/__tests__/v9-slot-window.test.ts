@@ -19,6 +19,7 @@ import {
   runV9AfterCoreWithinWindow,
   V9_MEMORY_LANE_LEASE_KEY,
   waitForV9MemoryLaneRelease,
+  type V9ExecutionWindow,
 } from "../v9-slot-window";
 
 interface CoreSlotFixture {
@@ -96,7 +97,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       result_status: "ok",
       worker_version: "worker-v2",
     });
-    const run = vi.fn(async (signal: AbortSignal) => ({
+    const run = vi.fn(async (signal: AbortSignal, _window: V9ExecutionWindow) => ({
       status: signal.aborted
         ? ("error" as const)
         : ("ok" as const),
@@ -110,6 +111,11 @@ describe("runV9AfterCoreWithinWindow", () => {
 
     expect(result.status).toBe("ok");
     expect(run).toHaveBeenCalledTimes(1);
+    expect(run.mock.calls[0]?.[1]).toMatchObject({
+      slotStartedAtSec: scheduledTimeMs / 1_000,
+      deadlineMs: scheduledTimeMs + 30_000,
+      minimumRemainingMs: 10_000,
+    });
     expect(fixture.bind).toHaveBeenCalledWith(
       Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000),
     );
@@ -304,6 +310,31 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it("proves absent-core Heavy admission is neutral before the producer callback", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:08:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot(null);
+    const run = vi.fn();
+    const result = await runV9AfterCoreWithinWindow({
+      ...options(fixture.db, scheduledTimeMs),
+      deadlineOffsetMs: 180_000,
+      minimumRemainingMs: 60_000,
+      lane: "sync-v9-supply-attribution",
+      currentSlotKey: "v9SupplyAttributionOffset",
+    }, run);
+    expect(result).toMatchObject({
+      status: "skipped_neutral", itemCount: 0,
+      productivity: { productive: false, reason: "v9-core-slot-not-ready" },
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "v9-core-slot-not-ready", coreState: null, coreResultStatus: null,
+      coreWorkerVersion: null, expectedWorkerVersion: "worker-v2",
+      coreStablecoinsPublicationMatched: false, degradedCorePublicationMatched: false,
+    });
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it("skips neutrally when the core slot never reached a terminal state", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
@@ -328,17 +359,17 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
-  it("admits from publication evidence when a deploy replaced the Worker version mid-quarter", async () => {
+  it.each(["worker-v1", "public-script-version"])("admits heavy V9 from current publication evidence despite core UUID %s", async (coreVersion) => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
-    // The 12:15 core slot finished ok on the previous Worker version; the
-    // publication ledger still proves this slot published the live cache.
+    // Public quarter-hour publication and heavy V9 execution have different
+    // script UUIDs; the publication ledger/time join remains the authority.
     const fixture = dbWithCoreSlot(
       {
         state: "finished",
         result_status: "ok",
-        worker_version: "worker-v1",
+        worker_version: coreVersion,
       },
       {
         published_at: Math.floor(
@@ -352,7 +383,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     }));
 
     const result = await runV9AfterCoreWithinWindow(
-      options(fixture.db, scheduledTimeMs),
+      options(fixture.db, scheduledTimeMs, { workerVersion: "heavy-script-version" }),
       run,
     );
 

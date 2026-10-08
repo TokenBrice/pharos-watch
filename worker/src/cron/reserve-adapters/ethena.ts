@@ -149,16 +149,16 @@ export function adaptEthenaCollateral(
   const timestampSummary = summarizeSourceTimestampsRequiringCoverage(
     materialRows.map((row) => row.timestamp),
   );
-  const lastUpdatedAt = timestampSummary?.latestSourceTimestamp ?? 0;
+  const lastUpdatedAt = timestampSummary.latestSourceTimestamp;
   const warnings: LiveReserveWarning[] = [];
-  if (timestampSummary && timestampSummary.untimestampedCount > 0) {
+  if (timestampSummary.untimestampedCount > 0) {
     warnings.push(reserveDegradedWarning(
       "source-timestamp-coverage",
       `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`,
     ));
   }
   if (
-    timestampSummary
+    timestampSummary.sourceTimestampSpreadSec != null
     && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
   ) {
     warnings.push(reserveDegradedWarning(
@@ -174,8 +174,8 @@ export function adaptEthenaCollateral(
       assetCount,
       computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
-      lastUpdatedAt,
-      ...(timestampSummary && timestampSummary.untimestampedCount === 0
+      ...(lastUpdatedAt != null ? { lastUpdatedAt } : {}),
+      ...(timestampSummary.sourceTimestamp != null && timestampSummary.untimestampedCount === 0
         ? {
             ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
             latestRowUpdatedAt: timestampSummary.latestSourceTimestamp,
@@ -184,7 +184,7 @@ export function adaptEthenaCollateral(
           }
         : unverifiedFreshnessMetadata(
             "issuer-api",
-            timestampSummary
+            materialRows.length > 0
               ? `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`
               : "Ethena collateral rows did not expose a trustworthy source timestamp",
           )),

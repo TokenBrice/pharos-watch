@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import type { StatusResponse } from "@shared/types/status";
+import { loadStablecoinsCache, hasUsableStablecoinsPayload, type StablecoinsCacheLoadResult } from "../../stablecoins-cache";
 
 vi.mock("../../stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "error", reason: "missing", updatedAt: null })),
@@ -13,7 +14,12 @@ vi.mock("../../publication-contract", () => ({
 }));
 vi.mock("../../provider-circuit-health", () => ({ loadProviderCircuitHealth: vi.fn(async () => null) }));
 vi.mock("../../canary-checks", () => ({ loadCanaryStatus: vi.fn(async () => null) }));
-vi.mock("../derived-data", () => ({ getMintBurnReconciliation: vi.fn(async () => null) }));
+vi.mock("../derived-data", () => ({ getMintBurnReconciliation: vi.fn(async (_db: D1Database, now: number) => ({
+  conservationVersion: 1 as const,
+  checkedAt: now,
+  criticalCount: 0,
+  rows: [],
+})) }));
 vi.mock("../../live-reserves/store", () => ({ loadFreshIndependentLiveReserveMap: vi.fn(async () => new Map()) }));
 vi.mock("../../collateral-drift", () => ({
   summarizeCollateralDriftFromLiveReserveMap: vi.fn(() => ({ driftCoins: [] })),
@@ -90,6 +96,26 @@ function cronsWithDexLiquidityRuns(
 
 
 describe("loadStatusSupplements", () => {
+  it("fails the CoinGecko supplement on overflow rather than accepting partial prices", async () => {
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok", updatedAt: NOW, payload: { peggedAssets: [
+        { id: "usdc-circle", geckoId: "usd-coin", price: 1 },
+      ] },
+    } as StablecoinsCacheLoadResult);
+    vi.mocked(hasUsableStablecoinsPayload).mockReturnValue(true);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(256 * 1024 + 1) },
+    }));
+    try {
+      const supplements = await loadStatusSupplements(statusDb(), NOW, {}, "key");
+      expect(supplements.coingeckoPriceDiff).toBeNull();
+      expect(fetchMock).toHaveBeenCalledOnce();
+    } finally {
+      fetchMock.mockRestore();
+      vi.mocked(hasUsableStablecoinsPayload).mockReturnValue(false);
+    }
+  });
+
   it("preserves absent operational dispatch flags as null", () => {
     expect(parseTelegramDispatchCronMetadata({})).toMatchObject({
       cappedAtLimit: null,

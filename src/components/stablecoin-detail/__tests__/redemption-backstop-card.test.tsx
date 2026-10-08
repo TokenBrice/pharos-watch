@@ -9,6 +9,8 @@ import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus } from "@/l
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
+import { composeExitComponentScore } from "@shared/lib/exit-route-scoring";
+import { REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS } from "@shared/lib/redemption-backstop-scoring";
 
 function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEntry }) {
   return <RedemptionRouteSection entry={entry} reportCard={null} coinId={entry.stablecoinId} />;
@@ -95,6 +97,99 @@ afterEach(() => {
 });
 
 describe("RedemptionBackstopCard", () => {
+  it("uses the shared composition total and preserves component contribution order", () => {
+    render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
+    const table = within(moduleRoot()).getByRole("table", { hidden: true });
+    const rows = within(table).getAllByRole("row", { hidden: true });
+    expect(rows.slice(1, 7).map((row) => row.querySelector("th")?.textContent)).toEqual([
+      "Access", "Settlement", "Execution certainty", "Capacity", "Output quality", "Cost",
+    ]);
+    const total = composeExitComponentScore({
+      access: BASE_ENTRY.accessScore!,
+      settlement: BASE_ENTRY.settlementScore!,
+      executionCertainty: BASE_ENTRY.executionCertaintyScore!,
+      capacity: BASE_ENTRY.capacityScore!,
+      outputAssetQuality: BASE_ENTRY.outputAssetQualityScore!,
+      cost: BASE_ENTRY.costScore!,
+    }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
+    expect(rows[7]?.querySelector("td")?.textContent).toBe(total.toFixed(1));
+  });
+
+  it("leaves the displayed total unavailable when a required component is missing", () => {
+    render(<RedemptionBackstopCard entry={{ ...BASE_ENTRY, capacityScore: null, score: null }} />);
+    const table = within(moduleRoot()).getByRole("table", { hidden: true });
+    const weightedRow = within(table).getAllByRole("row", { hidden: true })[7]!;
+    expect(weightedRow.querySelector("td")?.textContent).toBe("–");
+  });
+
+  it("explains a standalone cap using the shared composition delta rather than a separate sum", () => {
+    const entry: RedemptionBackstopEntry = {
+      ...BASE_ENTRY, score: 65, capsApplied: ["offchain-route-cap"],
+      accessScore: 100, settlementScore: 100, executionCertaintyScore: 100,
+      capacityScore: 100, outputAssetQualityScore: 100, costScore: 100,
+    };
+    const card = makeV9Card();
+    const primary = card.breakdowns!.exit.primaryRoute!;
+    const total = composeExitComponentScore({
+      access: 100, settlement: 100, executionCertainty: 100,
+      capacity: 100, outputAssetQuality: 100, cost: 100,
+    }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS);
+    card.breakdowns!.exit.primaryRoute = {
+      ...primary, routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`, lane: "redemption",
+      score: total, supportedComponentCeiling: total, confidenceFactor: 1, eligibilityMultiplier: 1,
+      components: primary.components.map((component) => ({ ...component, score: 100 })),
+      capsApplied: [],
+    };
+    render(<RedemptionRouteSection entry={entry} reportCard={card} coinId={entry.stablecoinId} />);
+    const line = within(moduleRoot()).getByText(
+      (content, element) => element?.tagName === "SPAN" && content.includes(`as ${Math.round(total)}, not 65`),
+    );
+    expect(line.textContent).toContain("standalone score carries");
+  });
+
+  it.each(["old", "new"])("reconciles exact route identity across opaque generation %s", (generation) => {
+    const card = makeV9Card();
+    card.breakdowns!.exit.primaryRoute = {
+      ...card.breakdowns!.exit.primaryRoute!,
+      key: `opaque:${generation}`,
+      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      lane: "redemption", score: BASE_ENTRY.score,
+    };
+    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    expect(within(moduleRoot()).getByText(/counts this route at the same score/)).toBeTruthy();
+  });
+
+  it.each([
+    { name: "suffix collision", routeId: `redemption:other:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption" },
+    { name: "composed route", routeId: `composed:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption" },
+    { name: "specialized route", routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}:specialized`, lane: "redemption" },
+    { name: "different lane", routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "dex" },
+    { name: "missing identity", routeId: undefined, lane: undefined },
+  ] as const)("never guesses this route from an opaque key with $name", ({ routeId, lane }) => {
+    const card = makeV9Card();
+    const exit = card.breakdowns!.exit;
+    // Deliberately model an old/unadmitted response for the defensive consumer boundary.
+    exit.primaryRoute = {
+      ...exit.primaryRoute!, key: `redemption:gen:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      routeId, lane, score: BASE_ENTRY.score,
+    } as unknown as NonNullable<typeof exit.primaryRoute>;
+    exit.alternatives = [{
+      key: exit.primaryRoute.key, routeId, lane, label: "Unrelated route", routeFamily: "issuer-redemption",
+      score: 37, included: true, exclusionReason: null, confidenceDimensions: null,
+      capacityEvidenceTier: "documented", rawSameNotionalCostBps: null, capacity: null,
+    }] as unknown as typeof exit.alternatives;
+    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    expect(within(moduleRoot()).queryByText(/counts this route|scores this route at/)).toBeNull();
+    expect(within(moduleRoot()).getByText(/Exit pillar selects/)).toBeTruthy();
+    exit.primaryRoute.score = null;
+    const noQualifiedRoute = renderToStaticMarkup(
+      <RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />,
+    );
+    expect(noQualifiedRoute).toContain("is not in the Exit evaluation");
+    expect(noQualifiedRoute).not.toContain("Exit cannot score it");
+    expect(noQualifiedRoute).not.toContain("37 in Exit");
+  });
+
   it("presents one standalone route score without the legacy effective exit score", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
 
@@ -168,6 +263,8 @@ describe("RedemptionBackstopCard", () => {
     exit.primaryRoute = {
       ...exit.primaryRoute,
       key: `redemption:gen-1:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      lane: "redemption",
       score: 58,
       supportedComponentCeiling: 64,
       confidenceFactor: 0.9,
@@ -196,6 +293,8 @@ describe("RedemptionBackstopCard", () => {
     exit.primaryRoute = null;
     exit.alternatives = [{
       key: `redemption:gen-1:redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+      lane: "redemption",
       label: "Issuer redemption",
       routeFamily: "issuer-redemption",
       score: null,
@@ -226,6 +325,8 @@ describe("RedemptionBackstopCard", () => {
     function asAlternative(card: SafetyScoreV9CurrentCard, tier: Tier) {
       card.breakdowns!.exit.alternatives = [{
         key: ownKey,
+        routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
+        lane: "redemption",
         label: "Issuer redemption",
         routeFamily: "issuer-redemption",
         score: EXIT_SCORE,
@@ -240,7 +341,10 @@ describe("RedemptionBackstopCard", () => {
 
     function asPrimary(card: SafetyScoreV9CurrentCard, tier: Tier) {
       const exit = card.breakdowns!.exit;
-      exit.primaryRoute = { ...exit.primaryRoute!, key: ownKey, score: EXIT_SCORE, capacityEvidenceTier: tier };
+      exit.primaryRoute = {
+        ...exit.primaryRoute!, key: ownKey, score: EXIT_SCORE, capacityEvidenceTier: tier,
+        routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`, lane: "redemption",
+      };
     }
 
     /** The summary-layer verdict and the reconciliation line naming Exit's score. */

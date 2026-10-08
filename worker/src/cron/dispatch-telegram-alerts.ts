@@ -45,162 +45,6 @@ export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 import type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 
 const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
-// The twelve-table planning pipeline named by the Sep-3 4.1 decision rule.
-// Reads are useful diagnostics, but only rows actually written to these
-// tables count toward the planning-share numerator.
-const TELEGRAM_PLANNING_TABLES = [
-  "telegram_alert_source_events",
-  "telegram_alert_source_resolution_memberships",
-  "telegram_alert_source_resolution_pages",
-  "telegram_alert_source_resolution_targets",
-  "telegram_alert_planning_subscribers",
-  "telegram_alert_target_plans",
-  "telegram_alert_target_plan_pages",
-  "telegram_alert_target_plan_items",
-  "telegram_alert_jobs",
-  "telegram_alert_job_targets",
-  "telegram_alert_job_target_items",
-  "telegram_alert_target_expiry_progress",
-] as const;
-
-
-// Classification has exactly two boundaries: the normalized statement head
-// (INSERT/REPLACE/UPDATE/DELETE and their OR-alternative forms) decides whether
-// the statement writes, and TELEGRAM_PLANNING_TABLES decides whether the written
-// table is part of the planning pipeline. Anything outside either boundary still
-// counts toward `d1RowsWritten`, just not toward `planningRowsWritten`.
-function telegramPlanningWriteTarget(sql: string): string | null {
-  const normalizedSql = sql
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/--[^\n]*/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-  // normalizedSql collapses whitespace to single spaces, so literal spaces keep
-  // these patterns linear (no nested quantifiers).
-  const targetMatch = normalizedSql.match(
-    /^(?:insert(?: or (?:replace|rollback|abort|fail|ignore))?|replace) into ["`]?([a-z0-9_]+)/,
-  ) ?? normalizedSql.match(
-    /^update(?: or (?:replace|rollback|abort|fail|ignore))? ["`]?([a-z0-9_]+)/,
-  ) ?? normalizedSql.match(
-    /^delete from ["`]?([a-z0-9_]+)/,
-  );
-  const target = targetMatch?.[1];
-  return target && TELEGRAM_PLANNING_TABLES.includes(target as (typeof TELEGRAM_PLANNING_TABLES)[number])
-    ? target
-    : null;
-}
-
-type D1ResponseWithRowsWritten = {
-  // D1 rows_written includes index writes; changes only counts affected logical
-  // rows and is intentionally not a substitute for this measurement.
-  meta?: { rows_written?: unknown } | null;
-};
-
-export interface TelegramPlanningWriteCounters {
-  planningRowsWritten: number;
-  d1RowsWritten: number;
-  planningRowsWrittenAvailable: boolean;
-  d1RowsWrittenAvailable: boolean;
-}
-
-interface CountedTelegramStatement {
-  statement: D1PreparedStatement;
-  planningStatement: boolean;
-}
-
-const COUNTED_STATEMENT_ORIGINALS = new WeakMap<object, CountedTelegramStatement>();
-
-function addRowsWritten(
-  counters: TelegramPlanningWriteCounters,
-  planningStatement: boolean,
-  result: D1ResponseWithRowsWritten | null | undefined,
-): void {
-  const rowsWrittenValue = result?.meta?.rows_written;
-  if (typeof rowsWrittenValue !== "number" || !Number.isFinite(rowsWrittenValue) || rowsWrittenValue < 0) {
-    counters.d1RowsWrittenAvailable = false;
-    if (planningStatement) counters.planningRowsWrittenAvailable = false;
-    return;
-  }
-  const rowsWritten = Math.floor(rowsWrittenValue);
-  counters.d1RowsWritten += rowsWritten;
-  if (planningStatement) counters.planningRowsWritten += rowsWritten;
-}
-
-function createTelegramPlanningStatement(
-  statement: D1PreparedStatement,
-  planningStatement: boolean,
-  counters: TelegramPlanningWriteCounters,
-): D1PreparedStatement {
-  const counted = {
-    bind: (...values: unknown[]) =>
-      createTelegramPlanningStatement(statement.bind(...values), planningStatement, counters),
-    first: (...args: unknown[]) =>
-      (statement.first as unknown as (...firstArgs: unknown[]) => Promise<unknown>).apply(statement, args),
-    all: async (...args: unknown[]) => {
-      const result = await (statement.all as unknown as (...allArgs: unknown[]) => Promise<D1ResponseWithRowsWritten>)
-        .apply(statement, args);
-      addRowsWritten(counters, planningStatement, result);
-      return result;
-    },
-    run: async (...args: unknown[]) => {
-      const result = await (statement.run as unknown as (...runArgs: unknown[]) => Promise<D1ResponseWithRowsWritten>)
-        .apply(statement, args);
-      addRowsWritten(counters, planningStatement, result);
-      return result;
-    },
-    raw: (...args: unknown[]) =>
-      (statement.raw as unknown as (...rawArgs: unknown[]) => Promise<unknown>).apply(statement, args),
-  } as unknown as D1PreparedStatement;
-  COUNTED_STATEMENT_ORIGINALS.set(counted, { statement, planningStatement });
-  return counted;
-}
-
-/**
- * Counting handle over the dispatch database.
- *
- * `prepare`/`batch` are overridden so planning writes are measured; every other
- * member is forwarded to the real binding. Spread (`{...db}`) would copy own
- * enumerable properties only and publish D1's prototype members (`exec`,
- * `withSession`, `dump`) as `undefined` behind a cast, so the handle is a proxy
- * that resolves unknown properties on the target instead.
- */
-export function createTelegramPlanningDatabase(
-  db: D1Database,
-  counters: TelegramPlanningWriteCounters,
-): D1Database {
-  const overrides = {
-    prepare(sql: string) {
-      return createTelegramPlanningStatement(
-        db.prepare(sql),
-        telegramPlanningWriteTarget(sql) != null,
-        counters,
-      );
-    },
-    async batch(statements: D1PreparedStatement[]) {
-      const records = statements.map((statement) => COUNTED_STATEMENT_ORIGINALS.get(statement));
-      const originals = statements.map((statement, index) => records[index]?.statement ?? statement);
-      const results = await db.batch(originals);
-      records.forEach((record, index) => {
-        if (record) addRowsWritten(counters, record.planningStatement, results[index]);
-      });
-      return results;
-    },
-  };
-  return new Proxy(db, {
-    get(target, property) {
-      if (Object.prototype.hasOwnProperty.call(overrides, property)) {
-        return Reflect.get(overrides, property, overrides);
-      }
-      const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
-      const member = Reflect.get(target, property, target);
-      // Own members keep their descriptor (and identity); members reached
-      // through the prototype chain are called with the real handle as `this`.
-      if (descriptor || typeof member !== "function") return member;
-      return member.bind(target);
-    },
-  });
-}
 
 /**
  * A gated idle pass (eventless fast path or circuit-open) is a no-work run only
@@ -218,21 +62,14 @@ function isNoWorkRun(result: DispatchResult): boolean {
     && result.eventsDetected.freeze === 0;
 }
 
-function addTelegramDispatchMetadataCounters(
+function serializeTelegramDispatchResult(
   result: DispatchResult,
   itemCount: number,
-  counters: TelegramPlanningWriteCounters,
 ): { itemCount: number; metadata: string } {
   return {
     itemCount,
     metadata: JSON.stringify({
       ...result,
-      planningRowsWritten: counters.planningRowsWrittenAvailable
-        ? Math.max(0, Math.floor(counters.planningRowsWritten))
-        : null,
-      d1RowsWritten: counters.d1RowsWrittenAvailable
-        ? Math.max(0, Math.floor(counters.d1RowsWritten))
-        : null,
       noWorkRun: isNoWorkRun(result),
     }),
   };
@@ -290,18 +127,11 @@ async function dispatchTelegramAlertsImpl(
   });
   const dispatchStartedAtMs = Date.now();
   const dispatchNowSec = Math.floor(dispatchStartedAtMs / 1000);
-  const planningCounters: TelegramPlanningWriteCounters = {
-    planningRowsWritten: 0,
-    d1RowsWritten: 0,
-    planningRowsWrittenAvailable: true,
-    d1RowsWrittenAvailable: true,
-  };
-  const planningDb = createTelegramPlanningDatabase(db, planningCounters);
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     const nowSec = dispatchNowSec;
     const result = await executeCircuitOpenQueuePath({
-      db: planningDb,
+      db,
       botToken,
       nowSec,
       dispatchStartedAtMs,
@@ -323,7 +153,7 @@ async function dispatchTelegramAlertsImpl(
     // The freeze outbox runs after the circuit gate, so a circuit-open run
     // publishes `eventsDetected.freeze: 0` as a measured zero, not as the
     // outbox observation it never took.
-    return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
+    return serializeTelegramDispatchResult(result, result.messagesSent);
   }
 
   let telegramDeliveryStarted = false;
@@ -344,12 +174,12 @@ async function dispatchTelegramAlertsImpl(
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
       },
     });
-    const sourceData = await loadDispatchSourceData(planningDb);
+    const sourceData = await loadDispatchSourceData(db);
     const { chatsWithActiveSnooze } = sourceData;
 
     // Freeze events use a dedicated durable outbox because the historical
     // generic target-plan table is intentionally constrained to five families.
-    const freezeOutbox = await dispatchFreezeAlertOutbox(planningDb, dispatchNowSec);
+    const freezeOutbox = await dispatchFreezeAlertOutbox(db, dispatchNowSec);
 
     throwIfAborted(signal);
 
@@ -364,7 +194,7 @@ async function dispatchTelegramAlertsImpl(
     assignSharedDispatchState(sharedState, { safetySourceAssessment });
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
-    const pendingCapacityBefore = await readTelegramPendingCapacitySnapshot(planningDb, nowSec);
+    const pendingCapacityBefore = await readTelegramPendingCapacitySnapshot(db, nowSec);
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
     await reportCronProgress(reportProgress, {
       stage: "source-loaded",
@@ -399,7 +229,7 @@ async function dispatchTelegramAlertsImpl(
     });
 
     const recovery = await recoverIncompleteTelegramSourceEvent({
-      db: planningDb,
+      db,
       botToken,
       nowSec,
       dispatchStartedAtMs,
@@ -417,14 +247,14 @@ async function dispatchTelegramAlertsImpl(
       // rather than left at the zero its own builder produced.
       const handled = JSON.parse(recovery.metadata) as DispatchResult;
       handled.eventsDetected.freeze = freezeOutbox.observed;
-      return addTelegramDispatchMetadataCounters(handled, recovery.itemCount, planningCounters);
+      return serializeTelegramDispatchResult(handled, recovery.itemCount);
     }
     let sourceEvent = recovery.sourceEvent;
     const resumedSourceEvent = recovery.resumedSourceEvent;
 
     if (mustSeedSnapshots && !sourceEvent) {
       const result = await executeSeedPath({
-        db: planningDb,
+        db,
         currentSnapshots,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveSourceAssessment: snapshotState.reserveSourceAssessment,
@@ -437,7 +267,7 @@ async function dispatchTelegramAlertsImpl(
         reportProgress,
       });
       result.eventsDetected.freeze = freezeOutbox.observed;
-      return addTelegramDispatchMetadataCounters(result, 0, planningCounters);
+      return serializeTelegramDispatchResult(result, 0);
     }
 
     await reportCronProgress(reportProgress, {
@@ -453,7 +283,7 @@ async function dispatchTelegramAlertsImpl(
       },
     });
     const dispatchEvents = sourceEvent?.events ?? await buildTelegramDispatchEvents(
-      planningDb,
+      db,
       sourceData,
       snapshotState,
       getSymbol,
@@ -465,7 +295,7 @@ async function dispatchTelegramAlertsImpl(
     const requiresFullFanoutPath = eventCount > 0 || sourceEvent != null;
     if (!sourceEvent && requiresFullFanoutPath) {
       sourceEvent = await persistTelegramAlertSourceEvent(
-        planningDb,
+        db,
         await buildTelegramAlertSourceEvent({
           events: dispatchEvents,
           baseline: currentSnapshots,
@@ -499,7 +329,7 @@ async function dispatchTelegramAlertsImpl(
 
     if (canUseEventlessFastPath) {
       const result = await executeEventlessFastPath({
-        db: planningDb,
+        db,
         botToken,
         currentSnapshots,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
@@ -518,7 +348,7 @@ async function dispatchTelegramAlertsImpl(
         markTelegramDeliveryStarted,
       });
       result.eventsDetected.freeze = freezeOutbox.observed;
-      return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
+      return serializeTelegramDispatchResult(result, result.messagesSent);
     }
 
     if (!sourceEvent) {
@@ -526,7 +356,7 @@ async function dispatchTelegramAlertsImpl(
     }
 
     const result = await executeFullFanoutPath({
-      db: planningDb,
+      db,
       botToken,
       snapshotState,
       events: dispatchEvents,
@@ -543,7 +373,7 @@ async function dispatchTelegramAlertsImpl(
     });
 
     result.eventsDetected.freeze = freezeOutbox.observed;
-    return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
+    return serializeTelegramDispatchResult(result, result.messagesSent);
   } catch (error) {
     if (shouldRecordTelegramDispatchFailure(error, signal, telegramDeliveryStarted)) {
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);

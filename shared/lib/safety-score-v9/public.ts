@@ -21,6 +21,7 @@ import type { V9EvidenceResponsibility, V1005ProcessDiagnostic, V1005AssetIssuan
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
@@ -382,6 +383,8 @@ function projectExitBreakdown(
             },
           }),
       key: route.routeKey,
+      routeId: route.routeId,
+      lane: route.lane,
       label: routeLabel(input, route),
       routeFamily: route.routeFamily,
       score: route.score,
@@ -416,6 +419,8 @@ function projectExitBreakdown(
         ? null
         : {
             key: completePrimary.routeKey,
+            routeId: completePrimary.routeId,
+            lane: completePrimary.lane,
             label: routeLabel(input, completePrimary),
             routeFamily: completePrimary.routeFamily,
             ...(completePrimary.feeEvidence ? { feeEvidence: completePrimary.feeEvidence } : {}),
@@ -914,8 +919,12 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
     });
     return {
       responsibility,
-      factCount: facts.length,
-      criticalFactCount: facts.filter((fact) => fact.critical).length,
+      ...countV9EvidenceObligations(
+        facts,
+        (fact) => fact.sourceGapId ?? null,
+        (fact) => fact.causeGapIds ?? [],
+        (fact) => fact.critical,
+      ),
       reasonCodes: uniqueSorted(facts.map((fact) => fact.code)),
     };
   });
@@ -1330,7 +1339,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       });
       return responseSchema.parse({
         model: "v9-critical-path",
-        schemaVersion: 6,
+        schemaVersion: 7,
         lifecycle: "active",
         candidateId: args.candidateId,
         policyVersion: args.policyVersion,

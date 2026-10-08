@@ -26,7 +26,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { validateDecimals } from "./slice-math";
 import { decodeAddressArrayWord, decodeStrictBoolWord } from "./abi-decode";
 import { pinnedBlockPlan } from "./evm-observation-plan";

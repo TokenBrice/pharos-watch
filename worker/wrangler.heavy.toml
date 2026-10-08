@@ -1,0 +1,58 @@
+name = "stablecoin-heavy"
+main = "src/index.heavy.ts"
+compatibility_date = "2026-04-18"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+workers_dev = false
+preview_urls = false
+minify = true
+keep_names = true
+
+[alias]
+"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"
+
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf"]
+fallthrough = true
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
+[limits]
+cpu_ms = 300000
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[triggers]
+crons = [
+  "8 * * * *",
+  "23 * * * *",
+  "38 * * * *",
+  "53 * * * *",
+  "16 * * * *",
+  "46 * * * *",
+  "22 * * * *",
+  "52 * * * *",
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "stablecoin-db"
+database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
+
+[[workflows]]
+name = "safety-score-v9-publication"
+binding = "SAFETY_SCORE_V9_WORKFLOW"
+class_name = "SafetyScoreV9PublicationWorkflow"
+

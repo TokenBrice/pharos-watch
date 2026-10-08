@@ -1,6 +1,52 @@
 {
   "id": "stusd-stoneyield",
-  "mica": {
-    "status": "out-of-scope"
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "STUSD represents transferable liquidity over locked StoneYield sUSDC strategy positions. The current token page describes a one-to-one wrapper and PancakeSwap market exits; published issuer code provides wrapping and administrative reserve transfers without a holder unwrap function. The reviewed materials do not establish an issuer obligation to redeem STUSD for fixed national-currency monetary value.",
+      "references": [
+        {
+          "label": "StoneYield STUSD wrapper and deployment identity",
+          "url": "https://stoneyield.io/stusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "StoneYield contract stack and deployment addresses",
+          "url": "https://github.com/stoneyield-org/stoneyield-contracts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "StoneYield published one-way wrapper implementation",
+          "url": "https://raw.githubusercontent.com/stoneyield-org/stoneyield-contracts/main/contracts/STUSDWrapper.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a managed strategy-position wrapper independently from underlying USDC. Current website and public contract sources describe transferable STUSD over locked sUSDC; other public documentation reverses these roles. Public repository code is product-design evidence and was not matched to current deployed bytecode. Exact legal token issuer is unresolved, so issuerEntity and licensing fields are omitted. One-to-one token accounting and AMM swaps do not establish direct fiat redemption. No Circle authorization, issuer intent or monthly attestation is inherited. No securities-law classification or exemption from other financial-services law is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -4,13 +4,65 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "BVI FSC exact Anemoy fund issuer",
-        "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
-      },
-      {
         "label": "Anemoy exact ACRDX feeder-fund disclosure",
         "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "ESMA MiCA Article 2 financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "ACRDX represents a tokenized segregated-portfolio feeder-fund interest investing in Apollo Diversified Credit Fund under a defined diversified-credit strategy. The reviewed fund-interest structure supports the securities exclusion in GENIUS Act section 2(22)(B)(iii).",
+      "references": [
+        {
+          "label": "Anemoy exact ACRDX feeder-fund disclosure",
+          "url": "https://www.anemoy.io/news/acrdx-launched",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-09-16",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Anemoy and Centrifuge identify ACRDX as Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio and a feeder into Apollo diversified credit. Classification is a research application of the fund-interest exclusion, not a regulator determination on this token. The exact legal issuing company could not be independently established: the BVI FSC entity page returned HTTP 403 and a uniquely named browser attempt failed. issuerEntity is omitted rather than inferred from the Anemoy brand or from another Anemoy fund. Chronicle Proof of Asset in the base record is an assets/NAV disclosure, not evidence of GENIUS permission or a monthly payment-stablecoin reserve attestation.",
+    "references": [
+      {
+        "label": "Anemoy exact ACRDX feeder-fund disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-16",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

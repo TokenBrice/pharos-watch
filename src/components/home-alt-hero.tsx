@@ -73,7 +73,7 @@ export function HomeAltHero({
             <div className="flex items-start justify-between gap-3">
               <p
                 className="text-sm font-medium text-muted-foreground"
-                title="Excludes 2 shadow assets used only for PSI continuity"
+                title="Excludes 2 off-catalog PSI historical assets"
               >
                 Total Market Cap
               </p>

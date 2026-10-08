@@ -95,14 +95,14 @@ describe("Safety Score V9 publication runner", () => {
     mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
   });
 
-  it("publishes schema 6 over stored schema 5 without upgrading it at read time", async () => {
+  it("publishes schema 7 over stored schema 6 without inferring route identity at read time", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
     try {
       await store.persistSafetyScoreV9Publication(db, currentInput(prior));
       sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
-        stableJsonStringifyV1({ ...prior, schemaVersion: 5 }), store.SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        stableJsonStringifyV1({ ...prior, schemaVersion: 6 }), store.SAFETY_SCORE_V9_CACHE_KEYS.publication,
       );
       const index = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
         .get(store.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string);
@@ -126,17 +126,17 @@ describe("Safety Score V9 publication runner", () => {
         kind: "error", reason: "publication-schema-cutover-pending", snapshot: null,
       });
       const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
-      expect(result).toMatchObject({ status: "published", schemaCutoverReason: "schema-cutover-5-to-6" });
-      await expect(store.loadSafetyScoreV9Publication(db)).resolves.toMatchObject({ schemaVersion: 6 });
+      expect(result).toMatchObject({ status: "published", schemaCutoverReason: "schema-cutover-6-to-7" });
+      await expect(store.loadSafetyScoreV9Publication(db)).resolves.toMatchObject({ schemaVersion: 7 });
       await expect(store.loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject({ schemaVersion: 2 });
-      await expect(loadPublishedReportCardsV9Snapshot(db)).resolves.toMatchObject({ schemaVersion: 7 });
+      await expect(loadPublishedReportCardsV9Snapshot(db)).resolves.toMatchObject({ schemaVersion: 8 });
       await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({ kind: "v9" });
     } finally {
       sqlite.close();
     }
   });
 
-  it.each([4, 7])("does not bypass an unknown predecessor schema %s", async schema => {
+  it.each([4, 5, 8])("does not bypass an unknown predecessor schema %s", async schema => {
     mocks.loadPublication.mockImplementation(() => parseSafetyScoreV9Publication(
       stableJsonStringifyV1({ ...makeWorkerSafetyScoreV9Publication(), schemaVersion: schema }),
     ));

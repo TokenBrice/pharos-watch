@@ -3,7 +3,6 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
-import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import { round4 } from "@shared/lib/math";
 import { median } from "@shared/lib/stats";
 import {
@@ -290,7 +289,6 @@ export interface DexLiquidityPostScoreAnalysis {
     previousCoverageClasses: CoverageClasses;
     priceObservationCoins: number;
     weakCoverageCoins: number;
-    directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
     measuredBalanceCoveragePct: number;
     syntheticOnlyCoins: number;
     coinsWithoutMeasuredBalances: number;
@@ -337,7 +335,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
   stagedMergedCount: number;
   stagedSkippedCount: number;
   weakCoverageCoinsBeforeFallback: number;
-  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;
   criticalSourceFailures: string[];
@@ -788,7 +785,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
       previousCoverageClasses,
       priceObservationCoins: params.priceObservations.size,
       weakCoverageCoins: params.weakCoverageCoinsBeforeFallback,
-      directCexOrderbookDepth: params.directCexOrderbookDepth,
       measuredBalanceCoveragePct,
       syntheticOnlyCoins,
       coinsWithoutMeasuredBalances,

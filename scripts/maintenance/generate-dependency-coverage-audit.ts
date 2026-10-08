@@ -1,6 +1,8 @@
 #!/usr/bin/env tsx
 
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { z } from "zod";
 import { resolve } from "node:path";
 import {
   buildDependencyGraphEdges,
@@ -17,7 +19,7 @@ import {
 } from "@shared/lib/dependency-derivation";
 import { getL2BeatInfrastructureContext } from "@shared/lib/chains/l2beat-audit";
 import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
-import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type {
   DependencyType,
@@ -243,9 +245,37 @@ export interface L2BeatDeploymentContextRow {
   chainEnvironmentScore: number;
 }
 
+const publicationShape = ReportCardsV9CurrentResponseSchema.shape;
+export const DependencyPublicationProvenanceSchema = z.object({
+  safetyScoreIdentity: publicationShape.safetyScoreIdentity,
+  asOfSec: publicationShape.asOfSec,
+  updatedAt: publicationShape.updatedAt,
+  source: publicationShape.source,
+  publicationHealth: publicationShape.publicationHealth,
+}).strict().refine((publication) => publication.updatedAt >= publication.asOfSec, {
+  path: ["updatedAt"], message: "Publication updatedAt must not precede asOfSec",
+});
+export type DependencyPublicationProvenance = z.output<typeof DependencyPublicationProvenanceSchema>;
+export const DependencyCoverageProvenanceSchema = z.object({
+  publication: DependencyPublicationProvenanceSchema.nullable(),
+  checkoutRevision: z.string().regex(/^[a-f0-9]{40}$/).nullable(),
+}).strict();
+export type DependencyCoverageProvenance = z.output<typeof DependencyCoverageProvenanceSchema>;
+
+/** No Git metadata means unknown revision, never a fabricated publication identity. */
+export function readDependencyCheckoutRevision(cwd = process.cwd()): string | null {
+  try {
+    const revision = execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return /^[a-f0-9]{40}$/.test(revision) ? revision : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface DependencyCoverageAudit {
   generatedAt: string;
   mode: "static" | "input" | "api" | "prod";
+  provenance: DependencyCoverageProvenance;
   summary: {
     publicationComparisonStatus: "not-evaluated" | "matched" | "checkout-production-skew";
     checkoutMethodologyVersion: string;
@@ -331,11 +361,14 @@ export interface DependencyCoverageAudit {
 export interface DependencyCoverageAuditInput {
   activeCoins?: readonly StablecoinMeta[];
   trackedCoins?: readonly StablecoinMeta[];
+  /** Authored bindings before suspension stripping; never consumed as live evidence. */
+  sourceCoins?: readonly StablecoinMeta[];
   targetDispositions?: readonly DependencyTargetDisposition[];
   adapterMappingReviews?: readonly DependencyAdapterMappingReview[];
   reportCards?: unknown;
   stablecoins?: unknown;
   generatedAt?: string;
+  checkoutRevision?: string | null;
   mode?: DependencyCoverageAudit["mode"];
 }
 
@@ -365,6 +398,7 @@ interface ParsedReportCardInput {
   cardsById: Map<string, ReportCard>;
   edges: ParsedReportCardEdge[];
   methodologyVersion: string;
+  publication: DependencyPublicationProvenance;
 }
 
 function malformedReportCard(path: string, expectation: string): never {
@@ -392,6 +426,13 @@ function parseReportCardInput(payload: unknown): ParsedReportCardInput {
 
   return {
     methodologyVersion: parsed.data.safetyScoreIdentity.methodologyVersion,
+    publication: {
+      safetyScoreIdentity: parsed.data.safetyScoreIdentity,
+      asOfSec: parsed.data.asOfSec,
+      updatedAt: parsed.data.updatedAt,
+      source: parsed.data.source,
+      publicationHealth: parsed.data.publicationHealth,
+    },
     cardsById: new Map(parsed.data.cards.map((card) => [card.id, card])),
     edges: parsed.data.dependencyGraph.edges.map((edge) => ({
       from: edge.from,
@@ -999,6 +1040,7 @@ function validateTargetDispositions(input: {
 
 function validateAdapterMappingReviews(input: {
   activeCoins: readonly StablecoinMeta[];
+  sourceCoins: readonly StablecoinMeta[];
   reviews: readonly DependencyAdapterMappingReview[];
   requiredMappings: readonly AdapterMappingRequirement[] | null;
 }): {
@@ -1007,8 +1049,17 @@ function validateAdapterMappingReviews(input: {
 } {
   const gaps: AdapterMappingReviewGapRow[] = [];
   const activeAdapters = new Set<string>(
-    input.activeCoins.flatMap((coin) => coin.liveReservesConfig?.adapter ? [coin.liveReservesConfig.adapter] : []),
+    input.activeCoins.flatMap((coin) => coin.liveReservesConfig && !coin.liveReservesConfig.suspended ? [coin.liveReservesConfig.adapter] : []),
   );
+  const bindingStateByAdapter = new Map<string, { count: number; hasUnsuspendedBinding: boolean }>();
+  for (const coin of input.sourceCoins) {
+    const config = coin.liveReservesConfig;
+    if (!config) continue;
+    const state = bindingStateByAdapter.get(config.adapter) ?? { count: 0, hasUnsuspendedBinding: false };
+    state.count++;
+    state.hasUnsuspendedBinding ||= config.suspended == null;
+    bindingStateByAdapter.set(config.adapter, state);
+  }
   const reviewByAdapter = new Map<string, DependencyAdapterMappingReview>();
   for (const review of input.reviews) {
     if (reviewByAdapter.has(review.adapter)) {
@@ -1020,7 +1071,13 @@ function validateAdapterMappingReviews(input: {
       });
     }
     reviewByAdapter.set(review.adapter, review);
-    if (!activeAdapters.has(review.adapter)) {
+    const retention = review.retainedBinding;
+    const bindings = bindingStateByAdapter.get(review.adapter);
+    const validRetention = retention != null
+      && (retention.status === "suspended" || retention.status === "staged")
+      && typeof retention.reason === "string" && retention.reason.trim().length > 0
+      && bindings != null && bindings.count > 0 && !bindings.hasUnsuspendedBinding;
+    if (!activeAdapters.has(review.adapter) && !validRetention) {
       gaps.push({
         coinId: null,
         adapter: review.adapter,
@@ -1036,12 +1093,13 @@ function validateAdapterMappingReviews(input: {
         !sourceFile.startsWith("worker/src/cron/reserve-adapters/") || !existsSync(sourceFile)
       ))
       || !review.rationale.trim()
+      || (retention != null && !validRetention)
     ) {
       gaps.push({
         coinId: null,
         adapter: review.adapter,
         reason: "invalid-provenance",
-        detail: "Adapter review requires reviewer, ISO review date, rationale, and reserve-adapter source files.",
+        detail: "Adapter review requires reviewer, ISO review date, rationale, reserve-adapter source files, and valid all-suspended binding provenance for any retention marker.",
       });
     }
   }
@@ -1159,6 +1217,7 @@ function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[])
 export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput = {}): DependencyCoverageAudit {
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const trackedCoins = input.trackedCoins ?? (input.activeCoins ? activeCoins : TRACKED_STABLECOINS);
+  const sourceCoins = input.sourceCoins ?? (input.activeCoins ? trackedCoins : TRACKED_SOURCE_COINS);
   const targetDispositions = input.targetDispositions
     ?? (input.activeCoins ? [] : DEPENDENCY_TARGET_DISPOSITIONS);
   const adapterMappingReviews = input.adapterMappingReviews
@@ -1279,6 +1338,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   });
   const adapterMappingReviewValidation = validateAdapterMappingReviews({
     activeCoins,
+    sourceCoins,
     reviews: adapterMappingReviews,
     requiredMappings: requiredAdapterMappings,
   });
@@ -1305,6 +1365,10 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   return {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     mode: input.mode ?? "static",
+    provenance: DependencyCoverageProvenanceSchema.parse({
+      publication: parsedReportCards?.publication ?? null,
+      checkoutRevision: input.checkoutRevision ?? null,
+    }),
     summary: {
       publicationComparisonStatus,
       checkoutMethodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -1565,6 +1629,10 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
     "",
     `Generated: ${audit.generatedAt}`,
     `Mode: ${audit.mode}`,
+    `Audit checkout revision: ${audit.provenance.checkoutRevision ?? "unknown"}`,
+    audit.provenance.publication
+      ? `Publication provenance: \`${JSON.stringify(audit.provenance.publication)}\``
+      : "Publication provenance: unknown / not supplied",
     "",
     "## Summary",
     "",
@@ -1841,7 +1909,9 @@ export async function runCli(
     cwd,
     build: async (options) => {
       const loaded = await loadOptionalInputs(options, cwd, fetchImpl);
-      return buildDependencyCoverageAudit({ ...loaded, generatedAt: resolveGeneratedAt(options) });
+      return buildDependencyCoverageAudit({
+        ...loaded, generatedAt: resolveGeneratedAt(options), checkoutRevision: readDependencyCheckoutRevision(cwd),
+      });
     },
     renderMarkdown: renderDependencyCoverageAuditMarkdown,
     writeMessage: (target) => `Wrote dependency coverage audit to ${target}`,

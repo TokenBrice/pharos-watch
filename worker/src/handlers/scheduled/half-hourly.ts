@@ -22,6 +22,7 @@ export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext) {
         runtime.chainRpcs,
         reportProgress,
         runtime.slotStartedAt,
+        runtime.deadline,
       ),
   });
 }

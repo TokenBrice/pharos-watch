@@ -8,13 +8,12 @@ import {
   decodeHtmlEntities,
   fetchTextWithRetry,
   htmlLayoutChangedError,
-  normalizeSlices,
+  normalizeSlicesWithDiagnostics,
   requireHtmlInput,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
 import { fetchWithBrowserFallback, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
-import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
@@ -25,7 +24,7 @@ import {
 const ADAPTER_NAME = "attestation-pdf-index";
 const COMPOSITION_MODE = "configured-static-slices";
 const COMPOSITION_NOTE =
-  "Reserve composition is emitted from adapter params; the selected PDF is used for report and freshness metadata only until full PDF parsing is implemented.";
+  "Configured reviewed composition; the PDF index validates report identity and date, not the PDF body or reserve composition.";
 const NEUTRAL_FIRST_HTML_HOSTS = new Set(["schuman.io", "www.schuman.io"]);
 
 function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
@@ -113,7 +112,7 @@ function isAttestationReportLink(href: string, text: string): boolean {
   return /(?:^| )(?:attestations?|audits?|reports?)(?: |$)/.test(normalized);
 }
 
-function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
+function readConfiguredSlices(rawSlices: unknown) {
   if (!Array.isArray(rawSlices) || rawSlices.length === 0) {
     throw new Error(`${ADAPTER_NAME} adapter params invalid.slices: expected a non-empty array`);
   }
@@ -143,7 +142,7 @@ function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
     };
   });
 
-  return normalizeSlices(slices);
+  return normalizeSlicesWithDiagnostics(slices);
 }
 
 function betterDate(
@@ -324,10 +323,10 @@ export function adaptAttestationPdfIndex(
   params: AttestationPdfIndexParams,
   options: AttestationPdfIndexAdaptOptions = {},
 ): AdapterResult {
-  const slices = readConfiguredSlices(params.slices);
+  const { slices, rawSumDeviation } = readConfiguredSlices(params.slices);
   // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed static currency token from adapter config; the params schema already rejects non-compiling sources.
   const linkMatch = params.linkMatch ? new RegExp(params.linkMatch) : undefined;
-  const diag = { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) };
+  const diag = { rawSumDeviation };
   const latest = findLatestPdfLink(html, linkMatch);
   if (!latest) {
     if (linkMatch) {
@@ -348,7 +347,6 @@ export function adaptAttestationPdfIndex(
           compositionMode: COMPOSITION_MODE,
           compositionSource: COMPOSITION_MODE,
           compositionNote: COMPOSITION_NOTE,
-          redemption: buildDocumentedRedemptionTelemetry(),
         },
       };
     }
@@ -386,7 +384,6 @@ export function adaptAttestationPdfIndex(
       compositionMode: COMPOSITION_MODE,
       compositionSource: COMPOSITION_MODE,
       compositionNote: COMPOSITION_NOTE,
-      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp),
     },
   };
 }

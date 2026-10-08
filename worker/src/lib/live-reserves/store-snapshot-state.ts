@@ -1,5 +1,6 @@
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { AcceptedReserveSnapshot } from "@shared/types/accepted-reserve-generation";
 import type {
   LiveReserveAdapterValidationPolicy,
   LiveReserveAdmissionRejectionCode,
@@ -7,7 +8,7 @@ import type {
   ReserveFreshnessView,
 } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_FRESHNESS_SEC, selectScoringDegradedWarnings, type ReserveCompositionRecord, type ReserveSyncStateRecord } from "./store-shared";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "../../cron/reserve-adapters/validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 
 export function hasConsistentSnapshotState(
   syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
@@ -78,7 +79,8 @@ export function shouldUseLegacySnapshotFallback(
 
 interface ReserveGeneration {
   fetchedAt: number | null;
-  attemptId: string | null;
+  attemptId?: string | null;
+  metadata?: Pick<LiveReserveSnapshotMetadata, "freshnessMode" | "diag">;
 }
 
 /** The single fetch-age rule; `null` generation (nothing ever fetched) is never stale. */
@@ -88,15 +90,18 @@ export function assessReserveFetchFreshness(
   fetchFreshnessSec: number,
 ): ReserveFreshnessView {
   const fetchAgeSec = generation.fetchedAt == null ? null : now - generation.fetchedAt;
+  const invalidFetchClock = fetchAgeSec != null && fetchAgeSec < 0;
   const fetchStale = fetchAgeSec != null && fetchAgeSec > fetchFreshnessSec;
   return {
-    stale: fetchStale,
-    staleReasons: fetchStale ? ["fetch-age"] : [],
+    stale: fetchStale || invalidFetchClock,
+    staleReasons: invalidFetchClock ? ["invalid-fetch-clock"] : fetchStale ? ["fetch-age"] : [],
     assessedAt: now,
     fetchedAt: generation.fetchedAt,
-    attemptId: generation.attemptId,
+    attemptId: generation.attemptId ?? null,
     fetchAgeSec,
     fetchBudgetSec: fetchFreshnessSec,
+    freshnessMode: generation.metadata?.freshnessMode ?? null,
+    sourceFreshnessInvalid: generation.metadata?.diag?.invalidFreshness === true,
     sourceTimestamp: null,
     sourceAgeSec: null,
     sourceAgeBudgetSec: null,
@@ -117,17 +122,16 @@ export function assessReserveSnapshotFreshness(
   now: number,
   fetchFreshnessSec: number,
 ): ReserveFreshnessView {
-  const fetch = assessReserveFetchFreshness({ fetchedAt: record.fetchedAt, attemptId: record.attemptId ?? null }, now, fetchFreshnessSec);
+  const fetch = assessReserveFetchFreshness(record, now, fetchFreshnessSec);
   if (record.metadata.freshnessMode !== "verified") return fetch;
   const sourceTimestamp = record.metadata.sourceTimestamp;
   if (typeof sourceTimestamp !== "number" || !Number.isFinite(sourceTimestamp)) return fetch;
   const config = coin.liveReservesConfig;
   const adapter = config && getLiveReserveAdapterDefinition(config.adapter);
   const validation: LiveReserveAdapterValidationPolicy | undefined = adapter && "validation" in adapter ? adapter.validation : undefined;
-  const scoringMaxAge = config?.scoring?.maxSourceAgeSec;
-  const cappedMaxAge = Math.min(scoringMaxAge ?? Infinity, validation?.maxSourceAgeSec ?? Infinity);
-  const sourceAgeBudgetSec = Number.isFinite(cappedMaxAge) ? cappedMaxAge : fetchFreshnessSec;
-  const sourceAgeBudgetCap = !Number.isFinite(cappedMaxAge) ? "fetch-budget" : cappedMaxAge === scoringMaxAge ? "scoring" : "adapter";
+  const { sourceAgeBudgetSec, sourceAgeBudgetCap } = resolveLiveReserveSourceAgeBudget(
+    config?.scoring?.maxSourceAgeSec, validation?.maxSourceAgeSec, fetchFreshnessSec,
+  );
   const sourceAgeSec = now - sourceTimestamp;
   const sourceStale = sourceAgeSec > sourceAgeBudgetSec;
   return {
@@ -150,8 +154,8 @@ export interface LiveReserveAdmissionResult {
 
 /** Snapshot admission deliberately does not depend on a later attempt's status. */
 export function evaluateLiveReserveAdmission(
-  record: ReserveCompositionRecord | null,
-  syncState: ReserveSyncStateRecord | null,
+  record: ReserveCompositionRecord | AcceptedReserveSnapshot | null,
+  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null,
   coin: Pick<StablecoinMeta, "liveReservesConfig"> | undefined,
   now: number,
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
@@ -167,17 +171,18 @@ export function evaluateLiveReserveAdmission(
   }
   if (!hasConsistentSnapshotState(syncState, record)) reasons.push("inconsistent-snapshot");
   if (config) {
-    if (record.configFingerprint == null) {
-      console.info("[live-reserves] Legacy snapshot has no config fingerprint", { stablecoinId: record.stablecoinId });
-    } else if (record.configFingerprint !== computeLiveReserveConfigFingerprint(config)) {
+    if (typeof record.configFingerprint !== "string"
+      || !/^[a-f0-9]{64}$/.test(record.configFingerprint)
+      || record.configFingerprint !== computeLiveReserveConfigFingerprint(config)) {
       reasons.push("config-mismatch");
     }
   }
   if (record.adapterEvidenceClass !== "independent") reasons.push("non-independent");
   const freshness = coin ? assessReserveSnapshotFreshness(record, coin, now, freshnessSec) : null;
   if (freshness?.stale) reasons.push("stale");
-  if (!hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
+  if (freshness?.staleReasons.includes("invalid-fetch-clock")
+    || !hasScoringEligibleLiveReserveFreshness(record.metadata, now)) reasons.push("invalid-freshness");
   if (selectScoringDegradedWarnings(record.warnings, config).length > 0) reasons.push("degraded-snapshot");
-  if (record.slices.length < minSlices) reasons.push("insufficient-slices");
+  if (("sliceCount" in record ? record.sliceCount : record.slices.length) < minSlices) reasons.push("insufficient-slices");
   return { eligible: reasons.length === 0, reasons, freshness };
 }

@@ -20,6 +20,20 @@ import { resolveV9EffectiveScoringWeight } from "../safety-score-v9-public-cause
 import { makePublishedIssuanceSummary, makePublishedProcessDiagnostic } from "../../lib/__tests__/safety-score-v9-fixtures.test-support";
 
 describe("Compact public cause contracts", () => {
+  it("validates distinct obligation summaries independently of the retained witness count", () => {
+    const response = boundedResponse();
+    const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;
+    evidence.facts.push(["bounded-mechanism-review", "backing:second-witness", 0, "unresearched", false, "U", [0]]);
+    evidence.facts.push(["bounded-mechanism-review", "backing:causal-alias", null, "unresearched", false, "U", [0]]);
+    evidence.totalFactCount = 3;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    const wrongSummary = structuredClone(response);
+    wrongSummary.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.factCount = 3;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongSummary).success).toBe(false);
+    const wrongWitnessCount = structuredClone(response);
+    wrongWitnessCount.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(wrongWitnessCount).success).toBe(false);
+  });
   it.each([-1, 0.5, 1])("rejects out-of-range/noninteger cause references %s before resolution", (ref) => {
     const response = boundedResponse();
     const card = response.cards[0]!;
@@ -305,6 +319,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     exit.diversification = { routeKey: "dex:backup", routeLabel: "Independent backup", bonus: 2 };
     exit.alternatives = [{
       key: "dex:backup", label: "Independent backup", routeFamily: "dex-amm", score: 80,
+      routeId: "backup", lane: "dex",
       included: true, exclusionReason: null, confidenceFactor: 1,
       confidenceDimensions: structuredClone(primary.confidenceDimensions), capacityEvidenceTier: "live-direct",
       rawSameNotionalCostBps: 0,
@@ -387,6 +402,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
 
   it("rejects old envelopes and proofless legacy trace bytes on the current publication reader", () => {
     expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 5 }).success).toBe(false);
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 6 }).success).toBe(false);
     const current = currentResponse();
     const legacy = { ...current, cards: [{ ...current.cards[0], scoreTrace: { ...current.cards[0]!.scoreTrace, schemaVersion: 3 } }] };
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(legacy).success).toBe(false);

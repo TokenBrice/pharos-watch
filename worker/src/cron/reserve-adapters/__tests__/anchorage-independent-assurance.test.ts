@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { USDPT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance";
+import { USDPT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance-profile";
 import { verifyFixtureIndex } from "./independent-assurance.test-support";
 
 

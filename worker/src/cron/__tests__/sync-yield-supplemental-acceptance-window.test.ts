@@ -29,31 +29,9 @@ import {
   type SupplementalSourceFamilyKey,
 } from "../yield-sync/supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
+import { morphoCandidate } from "./yield-candidate.test-support";
 
 const HOUR_SEC = 3600;
-
-function morphoCandidate(observedAt: number): ResolvedYieldCandidate {
-  return {
-    stablecoinId: "100",
-    symbol: "sDAI",
-    chain: "ethereum",
-    address: null,
-    yield: {
-      currentApy: 6.1,
-      apyBase: 6.1,
-      apyReward: null,
-      sourcePool: "vault-sdai-morpho",
-      sourceTvlUsd: 50_000_000,
-      dataSource: "protocol-api",
-      exchangeRate: null,
-      sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
-      yieldSource: "Morpho: sDAI Vault",
-      yieldType: "lending-vault",
-      sourceObservedAt: observedAt,
-      comparisonAnchorObservedAt: null,
-    },
-  };
-}
 
 function pendleCandidate(observedAt: number): ResolvedYieldCandidate {
   return {
@@ -82,7 +60,6 @@ function pendleCandidate(observedAt: number): ResolvedYieldCandidate {
 function freshRequiredFamilyRows(nowSec: number): Record<string, YieldCacheFixture> {
   return Object.fromEntries(
     SUPPLEMENTAL_SOURCE_FAMILY_KEYS
-      .filter((family) => family !== "vaultsFyi")
       .map((family) => [getYieldSupplementalFamilyCacheKey(family), supplementalFamilyCacheRow([], nowSec)]),
   );
 }
@@ -145,7 +122,6 @@ describe("supplemental family cache acceptance window", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const staleRows = Object.fromEntries(
       SUPPLEMENTAL_SOURCE_FAMILY_KEYS
-        .filter((family) => family !== "vaultsFyi")
         .map((family) => {
           const staleAgeSec = getSupplementalFamilyStaleThresholdSec(family) + 60;
           return [

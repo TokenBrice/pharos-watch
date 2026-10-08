@@ -95,6 +95,8 @@ function buildBreakdowns(
       },
       primaryRoute: pillars.exit.score === null ? null : {
         key: "redemption:reviewed",
+        routeId: "reviewed",
+        lane: "redemption",
         label: "Protocol redemption",
         routeFamily: "protocol-redemption",
         score: pillars.exit.score,

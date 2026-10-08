@@ -1,3 +1,4 @@
+import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
@@ -9,7 +10,7 @@ import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  getCurveCryptoSwapShadowPolicy,
+  getCurveCryptoSwapReviewedPolicy,
   validateCurveCryptoSwapProfileProof,
 } from "./curve-cryptoswap";
 import {
@@ -31,9 +32,8 @@ import {
   CURVE_METAPOOL_ADAPTER_PROFILE_ID,
   CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
   getCurveCompositePolicy,
-  isCurveCompositeAdapterProfileId,
-  validateCurveCompositeProfileProof,
-} from "./curve-composite";
+} from "@shared/lib/curve-composite-policies";
+import { validateCurveCompositeProfileProof } from "./curve-composite";
 import {
   loadLatestPublishedDexMeasuredQuoteEvidence,
   materializeDexMeasuredQuoteProfile,
@@ -41,6 +41,7 @@ import {
 } from "./persistence";
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
+import { isDexMeasuredExecutionTargetScoreEligible } from "./admission";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
@@ -152,15 +153,13 @@ const DEPLOYMENT_ENDPOINT_BINDINGS: ReadonlyMap<string, DeploymentEndpointBindin
   ["pancakeswap-v3-quoter-v2", quoterV2DeploymentBinding],
   ["aerodrome-slipstream-quoter-v2", quoterV2DeploymentBinding],
   ["hyperswap-v3-quoter-v2", quoterV2DeploymentBinding],
-  ["hybra-v3-quoter-v2", quoterV2DeploymentBinding],
   ["kodiak-v3-quoter-v2", quoterV2DeploymentBinding],
-  ["xswap-v3-quoter-v2", quoterV2DeploymentBinding],
   [UNISWAP_V4_ADAPTER_PROFILE_ID, {
     resolve: (profile) => getUniswapV4Deployment(profile.chain),
     validate: validateUniswapV4ProfileProof,
   }],
   [CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID, {
-    resolve: (profile) => getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address),
+    resolve: (profile) => getCurveCryptoSwapReviewedPolicy(profile.chain, profile.executionEndpoint.address),
     validate: validateCurveCryptoSwapProfileProof,
   }],
   [CURVE_STABLESWAP_ADAPTER_PROFILE_ID, {
@@ -231,7 +230,7 @@ function currentPhysicalPoolKeys(poolsByStablecoin: ReadonlyMap<string, readonly
           ...(target ? [target.poolId] : []),
         ].filter((poolId): poolId is string => Boolean(poolId));
         return [...new Set(physicalPoolIds)].map(
-          (poolId) => `${stablecoinId}:${pool.chain.toLowerCase()}:${poolId.toLowerCase()}`,
+          (poolId) => `${stablecoinId}:${pool.chain.toLowerCase()}:${canonicalExitRouteScopedId(pool.chain, poolId)}`,
         );
       }),
     ),
@@ -313,7 +312,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     const key = [
       target.stablecoinId,
       profile.chain.toLowerCase(),
-      profile.poolId.toLowerCase(),
+      canonicalExitRouteScopedId(profile.chain, profile.poolId),
       profile.targetGenerationId,
       profile.quoteGenerationId,
       profile.blockNumber,
@@ -358,7 +357,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     const profile = measuredProfiles[0]!;
     const stablecoinId = targets[0]!.stablecoinId;
     const physicalPoolKey =
-      `${stablecoinId}:${profile.chain.toLowerCase()}:${profile.poolId.toLowerCase()}`;
+      `${stablecoinId}:${profile.chain.toLowerCase()}:${canonicalExitRouteScopedId(profile.chain, profile.poolId)}`;
     if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey)) continue;
     retainedPoolKeys.add(physicalPoolKey);
     const pools = retained.get(stablecoinId) ?? [];
@@ -439,7 +438,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     if (issues.length > 0) continue;
 
     const physicalPoolKey =
-      `${target.stablecoinId}:${profile.chain.toLowerCase()}:${profile.poolId.toLowerCase()}`;
+      `${target.stablecoinId}:${profile.chain.toLowerCase()}:${canonicalExitRouteScopedId(profile.chain, profile.poolId)}`;
     if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey)) continue;
     retainedPoolKeys.add(physicalPoolKey);
     const pools = retained.get(target.stablecoinId) ?? [];
@@ -663,18 +662,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
         quote.resolution === "last-known-good"
           ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
           : undefined;
-      const curveCompositePolicy = isCurveCompositeAdapterProfileId(profile.adapterProfileId)
-        ? getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address)
-        : null;
-      const activationPending =
-        profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID ||
-        profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID ||
-        profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
-        profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-          ? false
-          : isCurveCompositeAdapterProfileId(profile.adapterProfileId)
-            ? !curveCompositePolicy?.scoreEligible
-            : !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain);
+      // Resolve the current exact NG/composite policy as well as shared lifecycle.
+      const activationPending = !isDexMeasuredExecutionTargetScoreEligible(target);
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");
         pool.extra.measuredExecutionDiagnostic = {

@@ -124,6 +124,21 @@ describe("Safety Score v9 chain-maturity registry", () => {
     }
   });
 
+  it("retains TRON's unresolved finality proof and conservative exclusion at the November 24 boundary", () => {
+    const deadline = Date.parse("2026-11-24T00:00:00.000Z") / 1_000;
+    for (const clock of [deadline - 1, deadline, deadline + 1]) {
+      const review = chainMaturityReviewForSlug("tron", clock);
+      expect(review?.reviewedAt).toBe("2026-08-24");
+      expect(review?.nextReviewAt).toBe("2026-11-24");
+      expect(review?.admission).toBe("exclude");
+      expect(review?.state).toBe("pending");
+      expect(review?.gates["block-production-finality"].result).toBe("pending");
+      expect(review?.gates["block-production-finality"].finding).toContain("19 of 27");
+      expect(review?.gates["block-production-finality"].finding).toContain("nine coordinated producers can stall finality");
+      expect(resolveChainMaturityAdmissionsAt(clock).admittedChainSlugs).not.toContain("tron");
+    }
+  });
+
   it("uses the codebase slug klaytn for the pending Kaia continuation", () => {
     expect(chainMaturityReviewForSlug("klaytn")?.displayName).toBe("Kaia (formerly Klaytn)");
     expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).not.toContain("klaytn");

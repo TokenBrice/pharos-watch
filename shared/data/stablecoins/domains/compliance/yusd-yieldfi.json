@@ -12,9 +12,71 @@
         "url": "https://docs.yield.fi/how-it-works"
       },
       {
-        "label": "YieldFi terms: tokenized products issued by Block Labs Limited, BVI",
+        "label": "YieldFi terms: series-limited contractual vault certificates",
         "url": "https://docs.yield.fi/legal-documents/terms-and-conditions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "YieldFi yUSD is a strategy-vault certificate whose redemption value tracks series net asset value after liabilities and losses. The token terms permit USDC or fiat bank-transfer settlement at variable NAV; the reviewed terms establish no obligation to repay a fixed amount of monetary value.",
+      "references": [
+        {
+          "label": "YieldFi yUSD token terms: NAV and redemption",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "YieldFi contractual series and limited-recourse terms",
+          "url": "https://docs.yield.fi/legal-documents/terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment concerns YieldFi yUSD, not its USDC accounting/deposit parent. Current yUSD and general terms use YieldFi as issuer/operator and BVI governing law but do not verify an exact incorporated legal issuer; issuerEntity and issuerDomicile are omitted. No legally established securities exclusion is asserted. Documentation permits loss and limited recourse, consistent with a variable-value vault position.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldFi yUSD token terms: NAV and redemption",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldFi contractual series and limited-recourse terms",
+        "url": "https://docs.yield.fi/legal-documents/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

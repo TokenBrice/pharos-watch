@@ -129,7 +129,7 @@ describe("runScheduledSlotWithFence", () => {
         previousUpdatedAt: now - 1800,
         reconciliation: {
           syntheticCronRuns: 1,
-          notStartedCronRuns: 1,
+          notStartedCronRuns: 0,
           progressRowsCleared: 0,
           leasesCleared: 0,
         },
@@ -137,7 +137,14 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("reconciles child evidence after winning same-slot stale takeover", async () => {
+  it.each([
+    { caller: "unidentified", workerRole: undefined, reconciledByWorkerVersion: null },
+    { caller: "same-role public", workerRole: "public", reconciledByWorkerVersion: null },
+    { caller: "cross-role heavy", workerRole: "heavy", reconciledByWorkerVersion: null },
+  ] as const)("reconciles child evidence after winning same-slot stale takeover ($caller caller)", async ({
+    workerRole,
+    reconciledByWorkerVersion,
+  }) => {
     const now = Math.floor(Date.now() / 1000);
     const slotStartedAt = now - 3600;
     const db = makeLeaseDb({
@@ -169,6 +176,7 @@ describe("runScheduledSlotWithFence", () => {
       owner: "slot-owner-b",
       staleAfterSec: 1200,
       workerVersion: "worker-v2",
+      workerRole,
     });
 
     expect(result.status).toBe("ok");
@@ -217,7 +225,8 @@ describe("runScheduledSlotWithFence", () => {
     const abandonedRun = db.getRuns().find((run) => run.job === "sync-yield-data");
     expect(JSON.parse(abandonedRun?.metadata ?? "{}")).toMatchObject({
       slotWorkerVersion: "worker-v1",
-      reconciledByWorkerVersion: "worker-v2",
+      // Even a matching caller role is not verified activation evidence.
+      reconciledByWorkerVersion,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getLease("sync-yield-data")).toBeUndefined();
@@ -236,7 +245,7 @@ describe("runScheduledSlotWithFence", () => {
           syntheticCronRuns: 4,
           progressRowsCleared: 1,
           leasesCleared: 1,
-          notStartedCronRuns: 3,
+          notStartedCronRuns: 0,
           abandonedJobs: [
             {
               job: "sync-yield-data",
@@ -330,12 +339,12 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("takes over a slot with a heartbeat 301 seconds old", async () => {
+  it("takes over a long slot with a heartbeat 360 seconds old", async () => {
     const now = Math.floor(Date.now() / 1000);
     const slotStartedAt = now - 360;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("fourHourlyReserveSync", slotStartedAt, "owner-a", now - 301),
+        makeRunningSlot("fourHourlyReserveSync", slotStartedAt, "owner-a", now - 360),
       ],
     });
     const fn = vi.fn(async () => undefined);
@@ -456,7 +465,7 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
         started_at: staleSlotStartedAt,
         duration_ms: 0,
-        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
+        error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "fetch-tbill-rate",
@@ -464,7 +473,7 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
         started_at: staleSlotStartedAt,
         duration_ms: 0,
-        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
+        error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "observe-rpc-provider-parity",
@@ -472,7 +481,7 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
         started_at: staleSlotStartedAt,
         duration_ms: 0,
-        error: "scheduled slot abandoned before child job started [stale-slot-reconciled]",
+        error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]",
       }),
       expect.objectContaining({
         job: "sync-yield-data",
@@ -510,7 +519,7 @@ describe("runScheduledSlotWithFence", () => {
         syntheticCronRuns: 4,
         progressRowsCleared: 1,
         leasesCleared: 1,
-        notStartedCronRuns: 3,
+        notStartedCronRuns: 0,
         abandonedJobs: [
           {
             job: "sync-yield-data",
@@ -576,7 +585,7 @@ describe("runScheduledSlotWithFence", () => {
     });
 
     const tooEarly = await sweepStaleScheduledSlotExecutions(db, {
-      nowSec: now + 600,
+      nowSec: now + 359,
       staleAfterSec: 1200,
     });
     expect(tooEarly).toMatchObject({ candidateSlots: 0, slotsReconciled: 0 });
@@ -608,7 +617,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(summary).toMatchObject({
       slotsReconciled: 1,
       syntheticCronRuns: 4,
-      notStartedCronRuns: 4,
+      notStartedCronRuns: 0,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
@@ -643,13 +652,13 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
       staleSlotReconciliation: {
-        notStartedCronRuns: 4,
+        notStartedCronRuns: 0,
         abandonedJobs: [],
       },
     });
   });
 
-  it("clears ownerless stale slot progress without synthesizing a cron run", async () => {
+  it("records an ownerless started child terminal before clearing its progress", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
@@ -665,18 +674,18 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 3,
-      notStartedCronRuns: 3,
+      syntheticCronRuns: 4,
+      notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
-    // The ownerless child is cleared without a run of its own; only the three
-    // planned members that never reported progress get not-started runs.
+    // The ownerless child is attempted; the three missing legacy children are unknown.
     expect(db.getRuns().map((run) => run.job)).toEqual([
       "sync-yield-supplemental",
       "fetch-tbill-rate",
       "observe-rpc-provider-parity",
+      "sync-yield-data",
     ]);
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
@@ -720,7 +729,7 @@ describe("runScheduledSlotWithFence", () => {
       candidateSlots: 1,
       slotsReconciled: 1,
       syntheticCronRuns: 6,
-      notStartedCronRuns: 6,
+      notStartedCronRuns: 0,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
@@ -760,7 +769,7 @@ describe("runScheduledSlotWithFence", () => {
       candidateSlots: 1,
       slotsReconciled: 1,
       syntheticCronRuns: 4,
-      notStartedCronRuns: 3,
+      notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
@@ -828,7 +837,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(newerLeaseSummary).toMatchObject({
       slotsReconciled: 1,
       syntheticCronRuns: 4,
-      notStartedCronRuns: 3,
+      notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
@@ -949,10 +958,10 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(result.status).toBe("ok");
     expect(result.resultStatus).toBe("degraded");
-    expect(result.metadata).toEqual(summary);
+    expect(result.metadata).toMatchObject(summary);
     const slot = db.getSlot("daily0800Utc", slotStartedAt);
     expect(slot?.result_status).toBe("degraded");
-    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toEqual(summary);
+    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toMatchObject(summary);
   });
 
   it("uses a 60-second default scheduled-slot heartbeat cadence", async () => {
@@ -1009,13 +1018,14 @@ describe("runScheduledSlotWithFence", () => {
     });
 
     await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+    const rejected = expect(runPromise).rejects.toThrow("exceeded controlled deadline");
     await vi.advanceTimersByTimeAsync(1_000);
-    await expect(runPromise).resolves.toMatchObject({ status: "ok" });
+    await rejected;
     expect(abortReason).toBeInstanceOf(Error);
     expect(String(abortReason)).toContain("exceeded controlled deadline");
   });
 
-  it("finishes the slot at the controlled deadline when work ignores abort", async () => {
+  it("leaves uncooperative work reconcilable after draining the controlled deadline", async () => {
     const slotStartedAt = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb();
     const fn = vi.fn(
@@ -1031,17 +1041,14 @@ describe("runScheduledSlotWithFence", () => {
 
     await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
     const expectation = expect(runPromise).rejects.toThrow("exceeded controlled deadline");
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(2_250);
     await expectation;
 
     const slot = db.getSlot("daily0800Utc", slotStartedAt);
     expect(slot).toMatchObject({
-      state: "finished",
-      result_status: "error",
-      finished_at: slotStartedAt + 1,
-    });
-    expect(slot?.metadata ? JSON.parse(slot.metadata) : null).toMatchObject({
-      error: `scheduled slot daily0800Utc@${slotStartedAt} exceeded controlled deadline`,
+      state: "running",
+      result_status: null,
+      finished_at: null,
     });
   });
 

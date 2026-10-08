@@ -269,6 +269,7 @@ describe("half-hourly charts scheduling", () => {
       }),
     });
     const scheduledRuntime = runtime();
+    scheduledRuntime.env.CF_VERSION_METADATA = { id: "executing-worker", timestamp: "2026-10-07T20:00:00Z", tag: "" };
 
     await runHalfHourlyChartsSlot(scheduledRuntime);
 
@@ -277,6 +278,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(AbortSignal),
       "dex-liquidity-123",
       scheduledRuntime.chainRpcs,
+      scheduledRuntime.env.CF_VERSION_METADATA,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
@@ -302,6 +304,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
+        deadline: scheduledRuntime.deadline,
         publishShadowTargets: false,
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
         stageRecovery: {
@@ -330,6 +333,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
+        deadline: scheduledRuntime.deadline,
         stageRecovery: {
           graphApiKey: null,
           coingeckoApiKey: scheduledRuntime.coingeckoApiKey,
@@ -342,6 +346,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(AbortSignal),
       "dex-liquidity-current",
       scheduledRuntime.chainRpcs,
+      scheduledRuntime.env.CF_VERSION_METADATA,
     );
     expect(mocks.runCronSentinel).not.toHaveBeenCalled();
   });
@@ -392,6 +397,7 @@ describe("half-hourly charts scheduling", () => {
       expect.any(AbortSignal),
       `dex-liquidity-${960 - 3_600}`,
       scheduledRuntime.chainRpcs,
+      scheduledRuntime.env.CF_VERSION_METADATA,
     );
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",

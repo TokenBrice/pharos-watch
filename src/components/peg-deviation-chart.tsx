@@ -10,13 +10,11 @@ import { CHART_BLUE } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
 import { formatChartDate } from "@shared/lib/format";
 import { PEG_BAND_BPS, PEG_BAND_HEX, PEG_BAND_LABELS } from "@shared/lib/classification";
-import { AnnotationDensityStrip } from "@/components/chart-primitives/annotations";
 import { DateTooltip, MonoYAxis } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
-import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 
 function formatTooltip(value: number): [string, string] {
   const deviationBps = Math.round((value - 1) * 10000);
@@ -81,8 +79,6 @@ function makePriceTickFormatter(step: number): (value: number) => string {
 interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
-  stablecoinId: string;
-  hideAnnotationLegend?: boolean;
   controlledRange?: TimeRangeOption;
   cardClassName?: string;
   /** When true, drop the outer Card chrome so the chart can be embedded in a grouped panel. */
@@ -92,8 +88,6 @@ interface PegDeviationChartProps {
 export function PegDeviationChart({
   data,
   pegCurrency,
-  stablecoinId,
-  hideAnnotationLegend = false,
   controlledRange,
   cardClassName,
   embedded = false,
@@ -109,17 +103,12 @@ export function PegDeviationChart({
     return raw;
   }, [data]);
 
-  const frame = useMarketDataChartFrame({ chartData, controlledRange, stablecoinId });
+  const frame = useMarketDataChartFrame({ chartData, controlledRange });
   const {
-    filteredData,
     options,
-    plotInsetLeft,
-    plotInsetRight,
     range,
     setRange,
     visibleData,
-    width,
-    xDomain,
   } = frame;
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
@@ -137,13 +126,6 @@ export function PegDeviationChart({
   }, [visibleData, range]);
 
   const showSmoothed = range === "all" || range === "1y";
-
-  // D14 — wider annotation set (the full controlled range, not brushed) for
-  // the density strip. The strip reflects *available* events for the active
-  // range, so brushing into a sub-window still surfaces the parent's cadence.
-  const fullRangeFromMs = filteredData[0]?.ts ?? null;
-  const fullRangeToMs = filteredData[filteredData.length - 1]?.ts ?? null;
-  const { data: fullRangeAnnotations } = useChartAnnotations(stablecoinId, fullRangeFromMs, fullRangeToMs);
 
   const yAxis = useMemo(() => computePegYAxis(visibleData.map((d) => d.price)), [visibleData]);
   const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
@@ -167,19 +149,10 @@ export function PegDeviationChart({
     };
   }, [visibleData]);
 
-  // D14 gate: density strip only on full-range view. Reserve ~12px of bottom
-  // padding so the strip sits below the axis without colliding.
-  const showDensityStrip = range === "all" && fullRangeAnnotations.length > 0;
-  const densityStripHeight = 6;
-  const densityStripBottomPad = 6;
-
   if (pegCurrency !== "USD") {
     return null;
   }
 
-  // Available plot-area width inside the chart's left axis + right margin.
-  // Used by the density strip so its bars share the x-pixel domain.
-  const plotAreaWidth = Math.max(0, width - plotInsetLeft - plotInsetRight);
   const pegSeverityBands = [
     {
       id: "drift-above",
@@ -225,26 +198,6 @@ export function PegDeviationChart({
     },
   ] as const;
 
-  const densityStrip =
-    showDensityStrip && xDomain ? (
-      <div
-        aria-label="Annotation event density by quarter"
-        className="absolute"
-        style={{
-          left: plotInsetLeft,
-          bottom: densityStripBottomPad,
-          width: plotAreaWidth,
-          height: densityStripHeight,
-        }}
-      >
-        <AnnotationDensityStrip
-          annotations={fullRangeAnnotations}
-          domain={xDomain}
-          width={plotAreaWidth}
-          height={densityStripHeight}
-        />
-      </div>
-    ) : null;
 
   const renderChart = () => (
     <MarketDataChartFigure
@@ -255,9 +208,7 @@ export function PegDeviationChart({
       emptyMessage="No price history available"
       frame={frame}
       header={header}
-      hideAnnotationLegend={hideAnnotationLegend}
       label="Peg deviation"
-      overlay={densityStrip}
       variant="line"
     >
           <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />

@@ -80,8 +80,9 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     const report = evaluateAtCaptureClock({ cards: passingCards() });
     expect(report.decision).toBe("gate-passed");
     expect(report.verdicts.every((entry) => entry.status === "pass")).toBe(true);
-    expect(report.appliedRulings).toEqual([]);
-    expect(report.pendingRulings).toEqual([]);
+    expect(report.schemaVersion).toBe(2);
+    expect(report).not.toHaveProperty("appliedRulings");
+    expect(report).not.toHaveProperty("pendingRulings");
   });
 
   it("fails an anchor below its policy-derived threshold", () => {
@@ -232,11 +233,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(verdict(below, "anchor:ausd-agora").status).toBe("fail");
   });
 
-  it("rejects an unknown pending-ruling id", () => {
-    expect(() => evaluateAtCaptureClock({ cards: passingCards(), applyRulings: ["D-Z"] })).toThrow(
-      "Unknown anchor-gate pending ruling: D-Z",
-    );
-  });
 
   it("changes the anchor decision when the supplied policy raises its grade threshold", () => {
     const cards = passingCards();
@@ -259,27 +255,6 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     );
   });
 
-  it("applies a declared ruling only when selected, even after its time box expires", () => {
-    const contract: V9AnchorContract = {
-      schemaVersion: 1, relative: [], adverse: [],
-      anchors: [{
-        id: "anchor", minGrade: "B", label: "test anchor",
-        pendingRuling: { decisionId: "D-test", alternativeMinGrade: "B-", note: "easement" },
-        timeBox: { untilSec: 100, restoreMinGrade: "A", note: "expiry" },
-      }],
-    };
-    for (const asOfSec of [99, 100]) {
-      const input = { contract, cards: [card("anchor", 69)], asOfSec };
-      const without = evaluateSafetyScoreV9AnchorGate(input);
-      expect(without.decision).toBe("no-go");
-      expect(verdict(without, "anchor:anchor").required).toBe(
-        asOfSec === 99 ? "score ≥ 70 (B)" : "score ≥ 83 (A)",
-      );
-      const applied = evaluateSafetyScoreV9AnchorGate({ ...input, applyRulings: ["D-test"] });
-      expect(applied.decision).toBe("gate-passed");
-      expect(verdict(applied, "anchor:anchor").status).toBe("pass");
-    }
-  });
 
   it("fails closed for unrated required assets in every rule kind", () => {
     const cases: Array<{ contract: V9AnchorContract; rule: string; cards: V9AnchorGateCard[] }> = [

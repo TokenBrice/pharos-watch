@@ -7,22 +7,24 @@ import type { LiquidityMetrics } from "../types";
 
 describe("pinned retained shadow targets", () => {
   const policy = CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS[0];
-  function fixture() {
-    const pool = { poolId: `etherlink:${policy.poolAddress}`, chain: "etherlink", project: "curve", tvlUsd: 1_000_000, symbol: "mTBILL / USDC", poolType: "cg-amm", source: "cg_onchain", volumeUsd1d: 0 };
+  function fixture(deployment: (typeof CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)[number] = policy) {
+    const pool = { poolId: `${deployment.chain}:${deployment.poolAddress}`, chain: deployment.chain, project: "curve", tvlUsd: 1_000_000, symbol: "yield token / USDC", poolType: "cg-amm", source: "cg_onchain", volumeUsd1d: 0 };
     return {
-      metrics: new Map([[policy.stablecoinId, { topPools: [pool] } as LiquidityMetrics]]),
-      stablecoinPriceById: new Map([[policy.stablecoinId, 1.05], ["usdc-circle", 1]]),
+      metrics: new Map([[deployment.stablecoinId, { topPools: [pool] } as LiquidityMetrics]]),
+      stablecoinPriceById: new Map([[deployment.stablecoinId, 1.05], ["usdc-circle", 1]]),
       capturedAt: 1_800_000_000,
-      chainAddressToId: new Map<string, string>(policy.poolTokens.map((token) => [`etherlink:${token.address}`, token.trackedAssetId])),
+      chainAddressToId: new Map<string, string>(deployment.poolTokens.map((token) => [`${deployment.chain}:${token.address}`, token.trackedAssetId])),
     };
   }
 
-  it("materializes a quotable direction but never admits scoring", () => {
-    const input = fixture();
+  it.each(CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)("materializes $stablecoinId in reviewed order without scoring", (deployment) => {
+    const input = fixture(deployment);
     attachPinnedShadowExecutionTargets(input);
-    const target = input.metrics.get(policy.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget;
+    const target = input.metrics.get(deployment.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget;
     expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
-    expect(target?.tokenIn.trackedAssetId).toBe(policy.stablecoinId);
+    expect(target?.poolTokenAddresses).toEqual(deployment.poolTokens.map((token) => token.address));
+    expect(target?.tokenIn.address).toBe(deployment.poolTokens[deployment.inputIndex].address);
+    expect(target?.tokenIn.trackedAssetId).toBe(deployment.stablecoinId);
     expect(target?.tokenOut.trackedAssetId).toBe("usdc-circle");
     expect(isDexMeasuredExecutionTargetScoreEligible(target!)).toBe(false);
   });
@@ -39,5 +41,12 @@ describe("pinned retained shadow targets", () => {
     input.stablecoinPriceById.delete(policy.stablecoinId);
     attachPinnedShadowExecutionTargets(input);
     expect(input.metrics.get(policy.stablecoinId)!.topPools[0]!.extra?.measuredExecutionTarget).toBeUndefined();
+  });
+
+  it("does not manufacture a missing retained physical row", () => {
+    const input = fixture();
+    input.metrics.get(policy.stablecoinId)!.topPools = [];
+    attachPinnedShadowExecutionTargets(input);
+    expect(input.metrics.get(policy.stablecoinId)!.topPools).toHaveLength(0);
   });
 });

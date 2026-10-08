@@ -47,6 +47,9 @@ describe("runCronSentinel", () => {
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(2);
     expect(mocks.freshness).toHaveBeenCalledTimes(1);
+    expect(mocks.freshness).toHaveBeenCalledWith(expect.anything(), undefined, {
+      operatorTelegramCreds: null,
+    });
     expect(mocks.digest).toHaveBeenCalledTimes(1);
     expect(mocks.duration).not.toHaveBeenCalled();
   });

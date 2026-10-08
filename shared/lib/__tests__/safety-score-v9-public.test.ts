@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
+import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
 import {
   projectV9RoleDependencyPillarLimits,
@@ -242,6 +242,8 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
           ? []
           : [{
               routeKey: "redemption:fixture",
+              routeId: "fixture",
+              lane: "redemption",
               ...knownCause,
               confidenceDimensions: { observation: neutralConfidence, model: neutralConfidence, capacityMethod: neutralConfidence },
               capacityEvidenceTier: "live-direct",
@@ -314,6 +316,95 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("publishes typed identity for the primary and included/excluded alternatives", () => {
+    const input = fixture("identity", { score: 91.8, grade: "A+" });
+    const exit = input.exit!;
+    const primary = exit.routes[0]!;
+    input.exit = {
+      ...exit,
+      routes: [
+        primary,
+        { ...primary, routeKey: "opaque:included", routeId: "distinct-included", lane: "dex", routeFamily: "dex-amm" },
+        {
+          ...primary, routeKey: "opaque:excluded", routeId: "distinct-excluded",
+          score: null, included: false, exclusionReason: "missing-same-notional-route",
+          capacityPoint: null, components: null, confidenceFactor: null, confidenceDimensions: null,
+        },
+      ],
+    };
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.breakdowns!.exit.primaryRoute).toMatchObject({ routeId: "fixture", lane: "redemption" });
+    expect(card.breakdowns!.exit.alternatives).toMatchObject([
+      { key: "opaque:excluded", routeId: "distinct-excluded", lane: "redemption", included: false },
+      { key: "opaque:included", routeId: "distinct-included", lane: "dex", included: true },
+    ]);
+    const legacy = structuredClone(card) as unknown as {
+      breakdowns: { exit: { primaryRoute: Record<string, unknown>; alternatives: Record<string, unknown>[] } };
+    };
+    delete legacy.breakdowns.exit.primaryRoute.routeId;
+    delete legacy.breakdowns.exit.primaryRoute.lane;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(legacy).success).toBe(false);
+    const missingAlternative = structuredClone(card) as unknown as typeof legacy;
+    delete missingAlternative.breakdowns.exit.alternatives[0]!.routeId;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(missingAlternative).success).toBe(false);
+  });
+
+  it.each([
+    ["missing-runtime-route-evidence", "missing-same-notional-route", "exit-routes"],
+    ["missing-oracle-profile", "unresolved-oracle-branch-applicability", "economic-control:oracle"],
+    ["missing-same-notional-route", "unproven-settlement-bound", "settlement"],
+    ["unresolved-exit-output", "unsupported-same-notional-route", "output"],
+    ["missing-reserve-composition", "partial-reserve-review", "reserve-composition"],
+    ["unreviewed-dependency-relationships", "material-dependency-unavailable", "effective-dependencies"],
+  ] as const)("counts %s / %s as one exact obligation while retaining both witnesses", (code, alias, datum) => {
+    const input = fixture("asset", { score: 91.8, grade: "A+" });
+    const baseline = projectSafetyScoreV9Card(input).card;
+    const gapId = `asset:gap:${datum}`;
+    input.trace.unresolvedFacts = [
+      { code, path: "control:source", reason: "Source obligation.", critical: false,
+        responsibility: "unresearched", sourceGapId: gapId, cause: "U", causeGapIds: [gapId],
+        scoringDisposition: "bounded-uncertainty" },
+      { code: alias, path: "control:scoring-witness", reason: "Scoring witness.", critical: false,
+        responsibility: "unresearched",
+        ...(alias === "partial-reserve-review" || alias === "material-dependency-unavailable" ? {} : { sourceGapId: gapId }),
+        cause: "U", causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty" },
+    ];
+    const response = buildSafetyScoreV9Response({
+      candidateId: "safety-score-v9:v1:obligation-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:obligation-test", publishedAtSec: 1_001, results: [input],
+    });
+    const card = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response))).cards[0]!;
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    expect(evidence.totalFactCount).toBe(2);
+    expect([...iterateEvidenceResponsibilityFacts(evidence)].map((row) => [row[0], row[1]]))
+      .toEqual([[code, "control:source"], [alias, "control:scoring-witness"]]);
+    expect(evidence.summaries.find((summary) => summary.responsibility === "unresearched"))
+      .toMatchObject({ factCount: 1, reasonCodes: [code, alias].sort() });
+    expect(card.score).toBe(baseline.score);
+    expect(card.grade).toBe(baseline.grade);
+    expect(card.caps).toEqual(baseline.caps);
+    expect(card.nrReasons).toEqual(baseline.nrReasons);
+    expect(card.scoreTrace.stages).toEqual(baseline.scoreTrace.stages);
+    expect(card.scoreTrace.boundedUncertaintyAttribution).toEqual(baseline.scoreTrace.boundedUncertaintyAttribution);
+  });
+
+  it("counts critical roots once and preserves distinct, foreign, gapless and multi-root obligations", () => {
+    const facts = [
+      { source: "local:gap:first", causes: ["local:gap:first"], critical: false },
+      { source: "local:gap:first", causes: ["local:gap:first"], critical: true },
+      { source: null, causes: ["local:gap:first"], critical: true },
+      { source: "local:gap:second", causes: ["local:gap:second"], critical: false },
+      { source: null, causes: ["foreign:gap:first"], critical: false },
+      { source: null, causes: ["foreign:gap:first"], critical: false },
+      { source: null, causes: [], critical: true },
+      { source: null, causes: [], critical: false },
+      { source: null, causes: ["local:gap:first", "local:gap:second"], critical: false },
+    ];
+    expect(countV9EvidenceObligations(facts, fact => fact.source, fact => fact.causes, fact => fact.critical))
+      .toEqual({ factCount: 7, criticalFactCount: 2 });
+    expect(countV9EvidenceObligations([...facts].reverse(), fact => fact.source, fact => fact.causes, fact => fact.critical))
+      .toEqual({ factCount: 7, criticalFactCount: 2 });
+  });
   it("omits null optional metadata while preserving known empty dependency coverage", () => {
     const input = fixture("frax-frax", { score: 70, grade: "B" });
     const baseline = JSON.stringify(projectSafetyScoreV9Card(input).card);
@@ -668,7 +759,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(6);
+    expect(response.schemaVersion).toBe(7);
     expect(response.lifecycle).toBe("active");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated", "pipeline-gap"]);
     expect(response.completeness).toEqual({

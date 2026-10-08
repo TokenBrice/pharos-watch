@@ -1,5 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { sleep, sleepWithSignal } from "./abort";
+import { sleepWithSignal } from "./abort";
+import { settleAfterAbort, CRON_ABORT_GRACE_MS } from "./cron-abort-settlement";
+import type { SlotDeadline } from "./cron-timeouts";
 import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
@@ -23,6 +25,7 @@ export interface CronLeaseOptions {
   maxRenewFailures?: number;
   abortSignal?: AbortSignal;
   timeoutBudget?: ResolvedCronTimeoutBudget;
+  deadline?: SlotDeadline;
   onLeaseState?: (state: CronLeaseStateUpdate) => Promise<void> | void;
   leaseStateObserverMode?: "best-effort" | "required";
   reserveRecoveryAdmission?: boolean;
@@ -129,7 +132,7 @@ export class CronTimeoutError extends Error {
   }
 }
 
-export const CRON_ABANDONED_JOB_GRACE_MS = 1_000;
+export const CRON_ABANDONED_JOB_GRACE_MS = CRON_ABORT_GRACE_MS;
 
 export interface CronJobAbandonedMetadata {
   reason: "abandoned";
@@ -170,16 +173,6 @@ function normalizeAbortError(reason: unknown, fallback: Error): Error {
   return reason instanceof Error ? reason : fallback;
 }
 
-function createAbortPromise(signal: AbortSignal, fallback: Error): Promise<never> {
-  return new Promise<never>((_resolve, reject) => {
-    const rejectReason = () => reject(normalizeAbortError(signal.reason, fallback));
-    if (signal.aborted) {
-      rejectReason();
-      return;
-    }
-    signal.addEventListener("abort", rejectReason, { once: true });
-  });
-}
 
 function getStopReason(error: unknown): CronJobAbandonedMetadata["stopReason"] {
   if (error instanceof CronLeaseLostError) return "lease_lost";
@@ -268,7 +261,7 @@ export async function runCronWithLease<T>(
   fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
   opts?: CronLeaseOptions,
 ): Promise<CronLeaseRunResult<T>> {
-  const timeoutBudget = opts?.timeoutBudget ?? resolveCronTimeoutBudget(job);
+  const timeoutBudget = opts?.timeoutBudget ?? resolveCronTimeoutBudget(job, { deadline: opts?.deadline });
   const timeoutMs = timeoutBudget.effectiveTimeoutMs;
   const timeoutMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
   const timeoutSec = Math.ceil(timeoutMs / 1000);
@@ -425,16 +418,6 @@ export async function runCronWithLease<T>(
   const combinedSignal = stopSignals.length <= 1
     ? stopSignals[0]!
     : AbortSignal.any(stopSignals);
-  const stopPromise = Promise.race(
-    stopSignals.map((signal) =>
-      createAbortPromise(
-        signal,
-        signal === opts?.abortSignal
-          ? new CronTimeoutError(job, timeoutMs, timeoutMetadata)
-          : new CronLeaseLostError(job, renewFailures),
-      )
-    ),
-  );
 
   let shouldReleaseLease = true;
   let timerCleared = false;
@@ -443,55 +426,27 @@ export async function runCronWithLease<T>(
     clearInterval(timer);
     timerCleared = true;
   };
-
-  type JobOutcome =
-    | { status: "fulfilled"; value: T }
-    | { status: "rejected"; error: unknown };
-
-  const jobOutcomePromise: Promise<JobOutcome> = Promise.resolve()
-    .then(() => fn({ leaseOwner: owner, signal: combinedSignal }))
-    .then(
-      (value) => ({ status: "fulfilled" as const, value }),
-      (error) => ({ status: "rejected" as const, error }),
-    );
+  combinedSignal.addEventListener("abort", clearHeartbeat, { once: true });
 
   try {
-    const race = await Promise.race([
-      jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
-      stopPromise.catch((error) => ({ type: "stop" as const, error })),
-    ]);
-
-    if (race.type === "stop") {
+    const outcome = await settleAfterAbort(
+      () => fn({ leaseOwner: owner, signal: combinedSignal }), combinedSignal,
+      { platformDeadlineMs: opts?.deadline?.platformDeadlineMs },
+    );
+    if (outcome.status === "aborted") {
       clearHeartbeat();
-      const grace = await Promise.race([
-        jobOutcomePromise.then((outcome) => ({ type: "job" as const, outcome })),
-        sleep(CRON_ABANDONED_JOB_GRACE_MS).then(() => ({ type: "abandoned" as const })),
-      ]);
-
-      if (grace.type === "abandoned") {
+      const stopError = normalizeAbortError(outcome.reason, new CronTimeoutError(job, timeoutMs, timeoutMetadata));
+      if (!outcome.settled) {
         shouldReleaseLease = false;
-        throw new CronJobAbandonedError(job, race.error, {
-          stopReason: getStopReason(race.error),
-          leaseOwner: owner,
-          renewFailures,
-          leaseLost,
-          ttlSec,
-          graceMs: CRON_ABANDONED_JOB_GRACE_MS,
-          leaseHeldUntilTtl: true,
+        throw new CronJobAbandonedError(job, stopError, {
+          stopReason: getStopReason(stopError), leaseOwner: owner, renewFailures, leaseLost, ttlSec,
+          graceMs: CRON_ABORT_GRACE_MS, leaseHeldUntilTtl: true,
         });
       }
-
-      if (grace.outcome.status === "rejected") {
-        throw grace.outcome.error;
-      }
-      throw race.error;
+      throw outcome.error ?? stopError;
     }
-
-    if (race.outcome.status === "rejected") {
-      throw race.outcome.error;
-    }
-
-    const result = race.outcome.value;
+    if (outcome.status === "rejected") throw outcome.error;
+    const result = outcome.value;
     return {
       status: "ok",
       leaseOwner: owner,
@@ -509,6 +464,7 @@ export async function runCronWithLease<T>(
       leaseAcquisitionAttempts: attempts,
     };
   } finally {
+    combinedSignal.removeEventListener("abort", clearHeartbeat);
     clearHeartbeat();
     await renewalInFlight;
     if (shouldReleaseLease) {

@@ -6,6 +6,22 @@ describe("safeErrorMessage", () => {
     expect(safeErrorMessage(new TypeError("oops"))).toBe("TypeError: oops");
   });
 
+  it("sanitizes nested error messages without reading lazy stacks", () => {
+    let stackReads = 0;
+    const cause = new Error("contact alice@example.com");
+    const error = Object.assign(new Error("request failed"), { cause });
+    for (const value of [error, cause]) {
+      Object.defineProperty(value, "stack", {
+        get() {
+          stackReads++;
+          return "unused stack";
+        },
+      });
+    }
+    expect(safeErrorMessage(error)).toBe("Error: request failed; cause: contact [email]");
+    expect(stackReads).toBe(0);
+  });
+
   it("returns string inputs sanitized", () => {
     expect(safeErrorMessage("simple message")).toBe("simple message");
   });

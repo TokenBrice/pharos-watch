@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.43",
+    title: "Unconditional pinned native-share admission for JLTXX",
+    date: "2026-10-08",
+    effectiveAt: 1791417600,
+    summary:
+      "JLTXX admission requires a complete pinned native-share evidence pass regardless of a positive CoinGecko market cap; staged bootstrap evidence cannot activate the asset or publish scores.",
+    impact: [
+      "Remove the positive-CoinGecko-market-cap bypass. Native circulating shares require EIP-1898 finalized raw totalSupply, observed decimals, canonical block hash and original block time; issuer class assets remain diagnostic, never token circulation.",
+      "Compare the original dated JPMorgan transaction NAV with the native-share block under a source-reviewed temporal policy and legal tokenized/untokenized share perimeter. Missing approval or mismatched current fingerprint/attempt fails closed.",
+      "The authenticated staged bootstrap captures evidence only and does not mutate active-roster or accepted-generation state. JLTXX remains quarantined with its existing October 10 review deadline until an explicit approved decision and real runtime price/market-cap PASS.",
+      "Ordinary exchange prices, unrelated supplemental assets and generic supply accounting are unchanged. No successful bootstrap, runtime PASS, reactivation or production observation is claimed.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.42",
     title: "Scoped single-source parent inheritance for Sentora pathUSD",
     date: "2026-10-06",

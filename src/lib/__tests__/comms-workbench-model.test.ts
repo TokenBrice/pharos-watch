@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CronStatus } from "@shared/types";
-import { makeCompleteTelegramBotStatus } from "@/test-utils/status-fixtures";
+import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
 import { buildCommsWorkbenchModel } from "../comms-workbench-model";
 
 const NOW_SECONDS = 1_700_001_000;
@@ -20,31 +20,11 @@ function dispatchCron(metadata: Record<string, unknown>, status: "ok" | "degrade
   };
 }
 
-function completeDispatchMetadata(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    subscribersNotified: 0,
-    messagesSent: 0,
-    freshAttempted: 0,
-    freshSent: 0,
-    freshRetryQueued: 0,
-    freshPermanentFailures: 0,
-    pendingAttempted: 0,
-    pendingDrained: 0,
-    pendingRetryQueued: 0,
-    pendingDroppedPermanentFailure: 0,
-    pendingDroppedMaxAttemptsFallback: 0,
-    pendingRateLimited: false,
-    safetyAlertsSuppressed: false,
-    reserveAlertsSuppressed: false,
-    ...overrides,
-  };
-}
-
 describe("buildCommsWorkbenchModel", () => {
   it("keeps the operator priority order stable", () => {
     const model = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(completeDispatchMetadata()),
+      dispatchCron: dispatchCron(makeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
 
@@ -68,7 +48,7 @@ describe("buildCommsWorkbenchModel", () => {
 
     const measuredZero = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(completeDispatchMetadata()),
+      dispatchCron: dispatchCron(makeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
     expect(measuredZero.delivery.pendingDeliveries).toBe(0);
@@ -102,7 +82,7 @@ describe("buildCommsWorkbenchModel", () => {
           nearTtl: 1,
         },
       },
-      dispatchCron: dispatchCron(completeDispatchMetadata()),
+      dispatchCron: dispatchCron(makeDispatchMetadata()),
       nowSeconds: NOW_SECONDS,
     });
 
@@ -124,7 +104,7 @@ describe("buildCommsWorkbenchModel", () => {
         retryErrorClassCounts: { rate_limit: 4, gateway_timeout: 2 },
       },
       dispatchCron: dispatchCron(
-        completeDispatchMetadata({
+        makeDispatchMetadata({
           freshRetryQueued: 2,
           pendingRetryQueued: 3,
           freshPermanentFailures: 1,
@@ -170,7 +150,7 @@ describe("buildCommsWorkbenchModel", () => {
     // than forcing the whole panel Unknown off one absent counter.
     const legacyShape = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(completeDispatchMetadata({ freshRetryQueued: undefined })),
+      dispatchCron: dispatchCron(makeDispatchMetadata({ freshRetryQueued: undefined })),
       nowSeconds: NOW_SECONDS,
     });
     expect(legacyShape.delivery.health).toBe("healthy");
@@ -183,7 +163,7 @@ describe("buildCommsWorkbenchModel", () => {
     const noSibling = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron(
-        completeDispatchMetadata({ freshRetryQueued: undefined, pendingRetryQueued: undefined }),
+        makeDispatchMetadata({ freshRetryQueued: undefined, pendingRetryQueued: undefined }),
       ),
       nowSeconds: NOW_SECONDS,
     });
@@ -192,7 +172,7 @@ describe("buildCommsWorkbenchModel", () => {
 
     const degradedDispatch = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
-      dispatchCron: dispatchCron(completeDispatchMetadata({ freshRetryQueued: undefined }), "degraded"),
+      dispatchCron: dispatchCron(makeDispatchMetadata({ freshRetryQueued: undefined }), "degraded"),
       nowSeconds: NOW_SECONDS,
     });
     expect(degradedDispatch.delivery.health).toBe("degraded");
@@ -203,7 +183,7 @@ describe("buildCommsWorkbenchModel", () => {
     const model = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),
       dispatchCron: dispatchCron(
-        completeDispatchMetadata({
+        makeDispatchMetadata({
           perAlertType: {
             dews: { sent: 3, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: 240 },
           },

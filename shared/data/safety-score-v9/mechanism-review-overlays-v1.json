@@ -19599,7 +19599,7 @@
     {
       "assetId": "brsrv-blackrock",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-03",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -19624,9 +19624,13 @@
         {
           "label": "October 1 primary holdings CSV",
           "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
+        },
+        {
+          "label": "BRSRV OnChain share Statement of Additional Information, dated July 31 2026, II-73 General Information",
+          "url": "https://www.blackrock.com/cash/literature/sai/sai-brsrv.pdf"
         }
       ],
-      "notes": "Refine04 October 3 review: July 31 OnChain prospectus establishes a registered Rule 2a-7 government money-market fund, shared Securitize shareholder register and Treasury/cash/overnight-repo mandate. Native stock pins remain Ethereum block26107703:50293722.47 shares; Tempo42323853 and Solana452748384:zero. Exact monthly N-MFP3 XML filed September8 for August31, seriesS000106600/LEI5299008QG0GNZ85LDG98, records one class, WAM16/WAL16 days,100% daily/weekly liquid assets and dated daily NAV observations, including shadow seriesNAV0.9995 on August18. This specific quarterly-or-better regulatory component disclosure admits adequate navValuation and durationAndLiquidity under the canonical evidence standard. FundClaimAndSeniority remains limited legal/operational evidence; named BNY/Deloitte are not current signed whole-token financial assurance. October1 primary holdings total49853218.07:40853218.07 Treasury bills and9000000 overnight repo (BofA5m,CA2m,JPM2m); October1 issuer WAM/WAL28 days and100% daily/weekly liquidity corroborate current portfolio observations without rewriting the August regulatory date. Neither disclosure reconciles October3 token liabilities, establishes seniority/stress liquidation/sponsor support or removes unavailable lossRecoveryDesign. No latestReport is authored. Class operating launchAugust3 is distinct from implementation creationJuly22.",
+      "notes": "Refine04 October 3 review: July 31 OnChain prospectus establishes a registered Rule 2a-7 government money-market fund, shared Securitize shareholder register and Treasury/cash/overnight-repo mandate. Native stock pins remain Ethereum block26107703:50293722.47 shares; Tempo42323853 and Solana452748384:zero. Exact monthly N-MFP3 XML filed September8 for August31, seriesS000106600/LEI5299008QG0GNZ85LDG98, records one class, WAM16/WAL16 days,100% daily/weekly liquid assets and dated daily NAV observations, including shadow seriesNAV0.9995 on August18. This specific quarterly-or-better regulatory component disclosure admits adequate navValuation and durationAndLiquidity under the canonical evidence standard. FundClaimAndSeniority remains limited legal/operational evidence; named BNY/Deloitte are not current signed whole-token financial assurance. October1 primary holdings total49853218.07:40853218.07 Treasury bills and9000000 overnight repo (BofA5m,CA2m,JPM2m); October1 issuer WAM/WAL28 days and100% daily/weekly liquidity corroborate current portfolio observations without rewriting the August regulatory date. Neither disclosure reconciles October3 token liabilities, establishes seniority/stress liquidation/sponsor support or removes unavailable lossRecoveryDesign. No latestReport is authored. Class operating launchAugust3 is distinct from implementation creationJuly22. October 7 legal wind-up review by Sol unknown-resolver wave 2026-10-07 (MECH_3) supersedes the preceding October 3 unavailable lossRecoveryDesign disposition only. July 31 2026 SAI, incorporated into the exact BRSRV prospectus, identifies RSVXX OnChain Shares and II-73 states each token is a beneficial fund interest entitled to net capital proceeds upon dissolution; the following shares paragraph describes equal participation in liquidation/dissolution net assets after satisfaction of outstanding liabilities. Together with the exact registered token/implementation identity and existing itemized fund holdings/regulatory anchor, this establishes LIMITED residual legal wind-up procedure and scoped post-liability holder priority. It does not establish par recovery, a complete creditor schedule, independently signed current whole-token NAV/liability reconciliation, funded sponsor support or stressed full-book realization. The SAI intro promises financial statements only when available; auditor appointment is not assurance. FundClaimAndSeniority, navValuation, durationAndLiquidity and all historical source dates/observations remain unchanged.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -19639,9 +19643,7 @@
           "quality": "adequate"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "The retrieved disclosure does not provide a current independently signed whole-token reserve/NAV-to-liability reconciliation or a complete holder loss waterfall and liquidation-priority schedule. Named auditors and custody providers are not admitted financial assurance.",
-          "sourceUrl": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
+          "quality": "limited"
         }
       }
     },
@@ -20225,7 +20227,7 @@
     {
       "assetId": "gtusdtp-gauntlet",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
@@ -20250,9 +20252,17 @@
         {
           "label": "Exact current MorphoMarketV1AdapterV2 source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+        },
+        {
+          "label": "Exact immutable Morpho Blue deployment: liquidate recovery and affected-market supplier bad-debt allocation; linked by verified adapter constructor",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"
+        },
+        {
+          "label": "Morpho primary liquidation/default-loss procedure and Vault V2 proportional loss socialization; undated specification, applicability anchored to 2026-10-02 exact vault/adapter census",
+          "url": "https://docs.morpho.org/learn/concepts/liquidation/"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1812811.74, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity.",
+      "notes": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1812811.74, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Review by Sol unknown-resolver wave 2026-10-07 (MECH_4): defaultRecovery is Limited under the native-family recovery rubric, not a guarantee or a measured default event. The exact verified adapter constructor binds parentVault 0xf3557ad5e984211ac8a0874a670344f2c3376471 to immutable Morpho Blue 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb (adapter verification timestamp 2026-06-22T18:47:48.649365Z). At the unchanged 2026-10-02T22:44:52.884200+00:00 pin the complete eight-market adapter inventory plus one raw idle USDT unit reconciles to vault totalAssets. Morpho Blue liquidate permits external liquidators to repay unhealthy borrower debt for seized collateral; after collateral exhaustion, remaining badDebtAssets is subtracted from both affected-market totalBorrowAssets and totalSupplyAssets. Thus recovered liquidity and residual credit losses are scoped to suppliers of the affected market; the adapter realAssets reports expectedSupplyAssets across those positions, and Vault V2 records decreased assets through proportional share-value loss rather than burning holder shares. This establishes a current code-level default/loss procedure and scoped pro-rata allocation with exact deployment anchors, not merely ordinary ERC-4626 withdrawal. External liquidation execution, recovery amounts/timing, legal creditor priority, outside-creditor encumbrance, committed insurance and funded external recapitalization remain unproved; they are not inferred and encumbranceAndAllocation remains unavailable. Parent VaultV2 remains partially source-verified as disclosed above. No current loss is asserted from the zero-borrow/zero-collateral observation. Original block/accounting/selected-route timestamps are unchanged; the specification is undated and no publication date is invented. reviewedAt is the actual 2026-10-07 review date per coordinator ruling; pending admission until first production capture after 2026-10-08T00:00:00Z.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20270,9 +20280,7 @@
           "sourceUrl": "https://api.morpho.org/graphql"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "VaultV2 loss recognition and ordinary withdrawal are documented; enforceable default priority, external recovery resources and stressed full-book recovery remain undisclosed. Happy-path ERC-4626 redemption is insufficient.",
-          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+          "quality": "limited"
         }
       }
     },
@@ -20453,7 +20461,7 @@
     {
       "assetId": "kpkusdcprime-kpk",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
@@ -20486,9 +20494,37 @@
         {
           "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
           "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "KPK exact current direct-market V2 architecture, undated reviewed2026-10-07",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho"
+        },
+        {
+          "label": "Exact KPK product identity, undated reviewed2026-10-07",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime"
+        },
+        {
+          "label": "Morpho V2 bad debt and remaining-shareholder loss socialization, undated reviewed2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho V2 emergency hard-market write-off and phantom-interest safeguards, undated reviewed2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 primary reference code; exact wrapper retains partial verification caveat",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable direct-market adapter primary reference code",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "External Ethereum observation block26107704 (existing source observation date retained)",
+          "url": "https://eth.blockscout.com/block/26107704"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $12770068.09, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
+      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $12770068.09, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged. Review 2026-10-07: exact current KPK VaultV2/direct MorphoMarketV1AdapterV2 route is bound by the existing Ethereum26107704 positions observed2026-10-02T22:44:52.884200+00:00 and official KPK product/architecture pages; no intermediate V1.1 MetaMorpho wrapper is in this path. Newly reviewed primary Morpho V2 bad-debt/emergency guides and c034336f82b0415f786fa15fc61fa81bf5256e31 reference code establish loss recognition: adapter realAssets falls after recognized bad debt; accrueInterest sets newTotalAssets=min(realAssets,maxTotalAssets); receipt-share holders remaining at recognition absorb loss pro rata through lower share value without shares being burned. For a consistently reverting market the documented timelocked adapter burnShares(marketId), followed by vault.deallocate(adapter,data,0), writes off irrecoverable market shares; it abandons assets and is NOT funded asset recovery. Revoking pending cap increases, zeroing caps, staged liquidity-dependent deallocation and allocator maxRate=0 limit additional exposure/phantom upward interest; downward losses still book. Previously accrued phantom interest and pre-recognition exits may disadvantage remaining holders; management fees may continue. Limited operational default/loss procedure and scoped receipt-ledger priority only, not legal insolvency rank, full stressed liquidity or external recovery guarantee, not evidence that bad debt occurred. Existing partial-source-verification/bytecode caveat preserved; reference code/security assessments are not independent financial assurance. External-creditor, legal encumbrance and reuse scope remain unavailable.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20506,16 +20542,14 @@
           "sourceUrl": "https://api.morpho.org/graphql"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "VaultV2 loss recognition and ordinary withdrawal are documented; enforceable default priority, external recovery resources and stressed full-book recovery remain undisclosed. Happy-path ERC-4626 redemption is insufficient.",
-          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "kpkusdcyield-kpk",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
@@ -20548,9 +20582,37 @@
         {
           "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
           "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "KPK exact current direct-market V2 architecture, undated reviewed2026-10-07",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho"
+        },
+        {
+          "label": "Exact KPK product identity, undated reviewed2026-10-07",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield"
+        },
+        {
+          "label": "Morpho V2 bad debt and remaining-shareholder loss socialization, undated reviewed2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho V2 emergency hard-market write-off and phantom-interest safeguards, undated reviewed2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 primary reference code; exact wrapper retains partial verification caveat",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable direct-market adapter primary reference code",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "External Ethereum observation block26107704 (existing source observation date retained)",
+          "url": "https://eth.blockscout.com/block/26107704"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1115988.79, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
+      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1115988.79, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged. Review 2026-10-07: exact current KPK VaultV2/direct MorphoMarketV1AdapterV2 route is bound by the existing Ethereum26107704 positions observed2026-10-02T22:44:52.884200+00:00 and official KPK product/architecture pages; no intermediate V1.1 MetaMorpho wrapper is in this path. Newly reviewed primary Morpho V2 bad-debt/emergency guides and c034336f82b0415f786fa15fc61fa81bf5256e31 reference code establish loss recognition: adapter realAssets falls after recognized bad debt; accrueInterest sets newTotalAssets=min(realAssets,maxTotalAssets); receipt-share holders remaining at recognition absorb loss pro rata through lower share value without shares being burned. For a consistently reverting market the documented timelocked adapter burnShares(marketId), followed by vault.deallocate(adapter,data,0), writes off irrecoverable market shares; it abandons assets and is NOT funded asset recovery. Revoking pending cap increases, zeroing caps, staged liquidity-dependent deallocation and allocator maxRate=0 limit additional exposure/phantom upward interest; downward losses still book. Previously accrued phantom interest and pre-recognition exits may disadvantage remaining holders; management fees may continue. Limited operational default/loss procedure and scoped receipt-ledger priority only, not legal insolvency rank, full stressed liquidity or external recovery guarantee, not evidence that bad debt occurred. Existing partial-source-verification/bytecode caveat preserved; reference code/security assessments are not independent financial assurance. External-creditor, legal encumbrance and reuse scope remain unavailable.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20568,9 +20630,7 @@
           "sourceUrl": "https://api.morpho.org/graphql"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "VaultV2 loss recognition and ordinary withdrawal are documented; enforceable default priority, external recovery resources and stressed full-book recovery remain undisclosed. Happy-path ERC-4626 redemption is insufficient.",
-          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          "quality": "limited"
         }
       }
     },
@@ -20771,7 +20831,7 @@
     {
       "assetId": "pyusdx-moonpay",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -20790,16 +20850,14 @@
           "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
         }
       ],
-      "notes": "MoonPay terms sections 8 and 13 expressly deny holders reserve ownership/trust/custodial interests and direct Paxos rights, and deny downstream holder redemption unless onboarded. This documented deficiency supports weak claimAndSegregation rather than grading weak because information is absent. Issuer-local custody continuity and token-specific reserve-to-liability financial assurance are undisclosed in the reviewed terms/deployment disclosures. No independent local report was retrieved; upstream PYUSD reports are not PYUSDx assurance. All three exact native token identities and current issuer controls were reverified by pinned RPC reads on the evidence date.",
+      "notes": "MoonPay terms sections 8 and 13 expressly deny holders reserve ownership/trust/custodial interests and direct Paxos rights, and deny downstream holder redemption unless onboarded. This documented deficiency supports weak claimAndSegregation rather than grading weak because information is absent. Issuer-local custody continuity and token-specific reserve-to-liability financial assurance are undisclosed in the reviewed terms/deployment disclosures. No independent local report was retrieved; upstream PYUSD reports are not PYUSDx assurance. All three exact native token identities and current issuer controls were reverified by pinned RPC reads on the evidence date. Review 2026-10-07 of binding MoonPay PYUSDx terms last updated 2026-08-05: section10 Service Providers support issuance/minting/burning/management; MoonPay expressly has no obligation to intervene, freeze assets, reverse transactions or take any action in response to Service Provider failures or exploits. Section8 permits infrastructure-caused redemption deferral/decline. This affirmative disclaimed provider-failure response duty is the measured adverse continuity deficiency, not an inference from absent provider names. No provider failure, absent custody provider, or missing reserve is alleged. Existing weak claimAndSegregation retained; PYUSDx-specific assurance remains unavailable, and upstream PYUSD reports are not PYUSDx assurance.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "Issuer-designated receiving wallets do not disclose complete reserve custody, operational continuity, legal safeguards or encumbrance for MoonPay PYUSDx.",
-          "sourceUrl": "https://www.moonpay.com/legal/pyusdx_terms"
+          "quality": "weak"
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
@@ -20853,7 +20911,7 @@
     {
       "assetId": "senpathusd-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact Sentora vault",
@@ -20886,9 +20944,21 @@
         {
           "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1999602 raw pathUSD; a positive-balance holder 0x755b40dc87a1f445301d71e5313fc0f2f3781d14 simulated redeem(1e18,holder,holder) returning 1.9996020000000001 pathUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1999602 raw pathUSD; a positive-balance holder 0x755b40dc87a1f445301d71e5313fc0f2f3781d14 simulated redeem(1e18,holder,holder) returning 1.9996020000000001 pathUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation stays unavailable; scoped operational defaultRecovery is limited as reviewed below. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20906,16 +20976,14 @@
           "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Source code describes loss realization and liquidity-constrained withdrawals, but does not establish funded default resources or enforceable exact-share insolvency priority; ordinary successful redemption is not stressed recovery proof.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "senpyusdmain-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Paypal USD Main exact vault",
@@ -20948,9 +21016,29 @@
         {
           "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
           "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable MorphoMarketV1AdapterV2 irreversible burnShares source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0xb576765fb15505433af24fee2c0325895c559fb2, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=388049489417230 reconciles to idle=24375516077801 plus adapter realAssets=363673973339429; share supply=191836444570611445454375594. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "Exact native Ethereum VaultV2 0xb576765fb15505433af24fee2c0325895c559fb2, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=388049489417230 reconciles to idle=24375516077801 plus adapter realAssets=363673973339429; share supply=191836444570611445454375594. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation remains sourced unavailable; scoped operational defaultRecovery is limited as reviewed below. PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20968,16 +21056,14 @@
           "sourceUrl": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "No exact-vault funded loss backstop, independently signed financial reconciliation, stressed full-supply cash exit or enforceable insolvency recovery waterfall was retrieved. Contract-security audit reports are not financial assurance.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "senpyusdmwin-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact Sentora vault",
@@ -21010,9 +21096,25 @@
         {
           "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1002075 raw PYUSD; a positive-balance holder 0xe16d7bd105b86e6eb1a40d525f57d2ae4bdb1a58 simulated redeem(1e18,holder,holder) returning 1.00207500000000005 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1002075 raw PYUSD; a positive-balance holder 0xe16d7bd105b86e6eb1a40d525f57d2ae4bdb1a58 simulated redeem(1e18,holder,holder) returning 1.00207500000000005 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation stays unavailable; scoped operational defaultRecovery is limited as reviewed below. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21030,16 +21132,14 @@
           "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Source code describes loss realization and liquidity-constrained withdrawals, but does not establish funded default resources or enforceable exact-share insolvency priority; ordinary successful redemption is not stressed recovery proof.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "senpyusdprimev2-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Sentora PRIME Main exact vault",
@@ -21076,9 +21176,29 @@
         {
           "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
           "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable MorphoMarketV1AdapterV2 irreversible burnShares source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0xc21b08c16458202593d4d9b26b9984ee67b38bbd, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=212994583350440 reconciles to idle=4160246119942 plus adapter realAssets=208834337230498; share supply=105190307028681249352539181. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "Exact native Ethereum VaultV2 0xc21b08c16458202593d4d9b26b9984ee67b38bbd, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=212994583350440 reconciles to idle=4160246119942 plus adapter realAssets=208834337230498; share supply=105190307028681249352539181. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation remains sourced unavailable; scoped operational defaultRecovery is limited as reviewed below. PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21096,16 +21216,14 @@
           "sourceUrl": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "No exact-vault funded loss backstop, independently signed financial reconciliation, stressed full-supply cash exit or enforceable insolvency recovery waterfall was retrieved. Contract-security audit reports are not financial assurance.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "senpyusdpst-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact Sentora vault",
@@ -21138,9 +21256,25 @@
         {
           "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1006202 raw PYUSD; a positive-balance holder 0x46c9d333ba42f794ab5162995957f7732fc29d7d simulated redeem(1e18,holder,holder) returning 1.00620200000000004 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1006202 raw PYUSD; a positive-balance holder 0x46c9d333ba42f794ab5162995957f7732fc29d7d simulated redeem(1e18,holder,holder) returning 1.00620200000000004 PYUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation stays unavailable; scoped operational defaultRecovery is limited as reviewed below. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21158,16 +21292,14 @@
           "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Source code describes loss realization and liquidity-constrained withdrawals, but does not establish funded default resources or enforceable exact-share insolvency priority; ordinary successful redemption is not stressed recovery proof.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "senrlusdv2-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Sentora RLUSD Main exact vault",
@@ -21200,9 +21332,29 @@
         {
           "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
           "url": "https://sentora.com/legal/terms-of-use"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable MorphoMarketV1AdapterV2 irreversible burnShares source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "Exact native Ethereum VaultV2 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=451873322385272395066245035 reconciles to idle=49667525480716097356989360 plus adapter realAssets=402205796904556297709255675; share supply=445977774185772181139741691. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation and recovery remain sourced unavailable. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance.",
+      "notes": "Exact native Ethereum VaultV2 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf, block 26107702. Holder claim is the ordinary operational ERC-4626 redemption, independently simulated for one share. Limited conservation: totalAssets=451873322385272395066245035 reconciles to idle=49667525480716097356989360 plus adapter realAssets=402205796904556297709255675; share supply=445977774185772181139741691. This is accounting identity, not independent asset-liability assurance. Limited position custody identifies the exact immutable vault and current lender adapter, without asserting ultimate collateral custody or legal segregation. Allocation remains sourced unavailable; scoped operational defaultRecovery is limited as reviewed below. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. Owner and curator each retain single-EOA 1-of-1 Safe control; fee/redemption-gate actions have zero delay. Parent reserve reports and security audits do not upgrade this receipt. Sentora June 2026 terms describe non-custodial vault configurations and BVI governing law. Those issuer terms and the dated VaultV2/MarketV1AdapterV2 code-security audit inventory do not establish collateral insolvency priority, funded recovery or financial assurance. receiveAssetsGate is withdrawal access; sendAssetsGate is deposit access. The Morpho audit index dates ChainSecurity and Blackthorn Vault V2 security reviews to 2025-09-15; those reports cover code security, not financial reserve-to-liability assurance. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21220,9 +21372,7 @@
           "sourceUrl": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "No exact-vault funded loss backstop, independently signed financial reconciliation, stressed full-supply cash exit or enforceable insolvency recovery waterfall was retrieved. Contract-security audit reports are not financial assurance.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
@@ -21419,7 +21569,7 @@
     {
       "assetId": "sparkusdc-spark",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -21436,9 +21586,13 @@
         {
           "label": "Morpho vault framework and holder exit mechanics",
           "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
+        },
+        {
+          "label": "Morpho V1.1 exact last-exiter loss treatment and voluntary asset-injection procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v1/bad-debt/"
         }
       ],
-      "notes": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Current Morpho API lists only the cbBTC market with nonzero supplied assets; WETH and collateral-free queue entries have zero supplied assets. The immediate USDC balance fraction is derived at the pinned block; the remaining claim is lender exposure, not directly owned cbBTC. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Remaining applicable components are sourced unavailable. Metrics are empty as required for this native family.",
+      "notes": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Current Morpho API lists only the cbBTC market with nonzero supplied assets; WETH and collateral-free queue entries have zero supplied assets. The immediate USDC balance fraction is derived at the pinned block; the remaining claim is lender exposure, not directly owned cbBTC. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Encumbrance/allocation remains sourced unavailable; scoped operational defaultRecovery is limited as reviewed below. Metrics are empty as required for this native family. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): exact Base receipt 0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a is verified MetaMorphoV1_1.sol, not VaultV2. Its existing source-bound October 2 block 52095837 and observation timestamp are retained. The deployed _accruedFeeAndAssets computes actual market assets separately from lostAssets, then includes lostAssets in published totalAssets so a realized market shortfall does not automatically lower the receipt price. Official version-specific bad-debt guidance explicitly says last depositors bear bad debt unless action is taken. It specifies measuring added loss as lostAssets_after minus lostAssets_before and voluntarily supplying assets on behalf of address(1) to absorb that shortfall; no person is obliged to fund it and no funding is asserted. Limited defaultRecovery records this adverse loss/exit ordering and exact optional remediation procedure with deployed-code/existing block anchoring. It is not V2 proportional loss recognition, a funded backstop, an enforceable insolvency claim, an actual loss observation or guaranteed recovery. Unknown complete competing-creditor/encumbrance and legal allocation scope remains unavailable.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21456,16 +21610,14 @@
           "sourceUrl": "https://api.morpho.org/graphql"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Ordinary withdrawals and one-share redemption are evidenced; independently verified funded default resources, enforceable stressed priority and whole-supply recovery are not disclosed for this exact receipt.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited"
         }
       }
     },
     {
       "assetId": "sparkusdtbc-spark",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -21482,9 +21634,29 @@
         {
           "label": "Morpho vault framework and holder exit mechanics",
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Immutable MorphoMarketV1AdapterV2 irreversible burnShares source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Current API itemizes all four supplied positions through adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a. Percentages normalize the contemporaneous API supplyAssets sum, not a different-block vault total or borrower collateral. Exact position raw amounts: {\"0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b\": 5445360952334, \"0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca\": 2471, \"0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99\": 23525978881830, \"0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2\": 60939929633391}. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Remaining applicable components are sourced unavailable. Metrics are empty as required for this native family.",
+      "notes": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Current API itemizes all four supplied positions through adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a. Percentages normalize the contemporaneous API supplyAssets sum, not a different-block vault total or borrower collateral. Exact position raw amounts: {\"0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b\": 5445360952334, \"0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca\": 2471, \"0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99\": 23525978881830, \"0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2\": 60939929633391}. Limited holderClaim rests on primary deployed withdrawal code plus exact on-chain redemption. Limited liabilityConservation rests on dated operational position inventory, matching native share liabilities and reproducible ERC-4626 valuation, not financial assurance. Limited positionCustody identifies the exact immediate receipt/adapter/market contracts, without legal priority or ultimate custodian guarantees. Encumbrance/allocation remains sourced unavailable; scoped operational defaultRecovery is limited as reviewed below. Metrics are empty as required for this native family. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21502,9 +21674,7 @@
           "sourceUrl": "https://api.morpho.org/graphql"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Ordinary withdrawals and one-share redemption are evidenced; independently verified funded default resources, enforceable stressed priority and whole-supply recovery are not disclosed for this exact receipt.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited"
         }
       }
     },
@@ -21573,7 +21743,7 @@
     {
       "assetId": "stbt-matrixdock",
       "archetype": "tbill",
-      "reviewedAt": "2026-10-03",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "STBT January 2025 terms",
@@ -21608,7 +21778,7 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
         }
       ],
-      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. Product terms authenticate native STBT as unsecured Prometheus debt, corroborated by the live native contract and issuer itemized reserve dashboard; fundClaimAndSeniority remains limited without direct holder title. Daily rebasing and issuer NAV disclosures corroborated by on-chain supply/reserve budget support limited NAV, not independent assurance. Treasury mandate <=6 months, displayed <3-month holdings and dated T+0/T+2 rules support limited duration/liquidity. No current signed financial reconciliation was retrieved; Matrixdock gold/silver audits are not STBT assurance. Adjudication observed 90 daily contract-price samples spanning USD 0.952701921 to 1.046536520; no clean-peg, artifact or event-duration inference is made. STBT $1-target rebase semantics mirror BUIDL: navToken omitted, ordinary peg bounds retained. Refine04 block 26110197: getLatestReserve is raw23791487760000000000000000 with no timestamp. Verified selector-delay controller imposes14400seconds on issuance/rebase and86400seconds on implementation replacement, notwithstanding getMinDelay=0. This is known technical control, not dated financial reconciliation or freshness of the reserve dashboard.",
+      "notes": "Evidence observed 2026-10-02; Ethereum pin 26107703. Product terms authenticate native STBT as unsecured Prometheus debt, corroborated by the live native contract and issuer itemized reserve dashboard; fundClaimAndSeniority remains limited without direct holder title. Daily rebasing and issuer NAV disclosures corroborated by on-chain supply/reserve budget support limited NAV, not independent assurance. Treasury mandate <=6 months, displayed <3-month holdings and dated T+0/T+2 rules support limited duration/liquidity. No current signed financial reconciliation was retrieved; Matrixdock gold/silver audits are not STBT assurance. Adjudication observed 90 daily contract-price samples spanning USD 0.952701921 to 1.046536520; no clean-peg, artifact or event-duration inference is made. STBT $1-target rebase semantics mirror BUIDL: navToken omitted, ordinary peg bounds retained. Refine04 block 26110197: getLatestReserve is raw23791487760000000000000000 with no timestamp. Verified selector-delay controller imposes14400seconds on issuance/rebase and86400seconds on implementation replacement, notwithstanding getMinDelay=0. This is known technical control, not dated financial reconciliation or freshness of the reserve dashboard. Evidence-pin review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_1): the issuer-hosted binding terms, last revised 2025-01-20, establish an affirmative loss-recovery deficiency rather than nondisclosure. Sections 3.2/5.2 pass pro-rata trading losses and liquidation costs to holders; 3.3/5.3 retain a stated USD 0.10-per-token contractual floor, not par protection; 8.1 permits affiliate borrowing against/lending underlying assets; 8.3.1 and 9.1 deny holder asset ownership and direct bank/broker rights; 9.3 explicitly says the issuer and affiliates are not obligated to use own funds to cover third-party-product deposit losses. The weak lossRecoveryDesign grade records this explicit unsecured, loss-pass-through recovery design without alleging an incurred loss, zero recovery, an unfunded contractual floor, or a failed issuer. BVI arbitration and the existing intercompany-note security arrangement remain recognized. No financial-assurance grade or current reserve reconciliation is asserted. All other component grades and metrics remain unchanged. This new review is pending date-only admission until 2026-10-08 UTC.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -21621,9 +21791,7 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "Issuer reserve dashboard and legal terms do not supply a dated independently signed STBT reserve-to-liability reconciliation or independently verified holder recovery protections. January 2025 terms leave holders unsecured and allow affiliate reuse.",
-          "sourceUrl": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+          "quality": "weak"
         }
       }
     },
@@ -21688,7 +21856,7 @@
     {
       "assetId": "steakeurcv-steakhouse",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -21709,26 +21877,34 @@
         {
           "label": "Morpho Vault V2 holder exit and adapter mechanics",
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact adapter verified ABI and source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a?fields=all"
+        },
+        {
+          "label": "Pinned archive RPC; block 26107702",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Immutable Morpho Vault V2 accounting implementation",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
         }
       ],
-      "notes": "Reverified 2026-10-02T22:43:52.631492+00:00, ethereum block 26107702, exact vault 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f. RPC totalSupply 127504754742547053655197813 raw 18-decimal shares; totalAssets 130737391629848342297184845 raw 18-decimal EURCV; convertToAssets(1e18) 1025353069333206522 raw. Sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a and current Morpho API corroborate immediate custody. HolderClaim and positionCustody limited: exact primary operational code/terms plus independent chain anchors; no statutory fiat claim, legal segregation or independent financial assurance inferred. Conservation, encumbrance/allocation and default recovery stay sourced unavailable for the explicit scope gaps. Current performance fee 0% and management fee 0%; zero fee-selector delay is not a favorable control assurance. Parent financial reports and code-security audits are not exact-vault financial reports.",
+      "notes": "Reviewed 2026-10-07. Primary on-chain census at ethereum block 26107702, hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6, source state timestamp 2026-10-02T22:43:47.000Z; calls obtained 2026-10-07T15:05:09.406Z. Exact vault 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f, sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a, Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb, loan asset 0x5f7827fdeb7c20b443265fc2f40845b715385ff2. Complete adapter.marketIdsLength roster has 9 positions; all per-market loan assets equal the vault asset, tracked shares equal Morpho lender-position supplyShares, and every adapter position has zero borrowShares and zero posted collateral. Sum expectedSupplyAssets 35987076143799488206010049 plus idle balance 94838942055423451945928586 raw units. Vault totalSupply 127504754742547053655197813; accrued performance/management fee shares zero; virtualShares 1; integer (accrued totalAssets+1)*1e18/(totalSupply+virtualShares) reproduces convertToAssets(1e18)=1025353069333206522. Gross assets 130826018199222940151938635 exceed recognized totalAssets 130737391629848342297184845 by 88626569374597854753790, fully reproduced by VaultV2 max-rate gain recognition: stored _totalAssets 130737257815624284833567918, lastUpdate 1790979935, block timestamp 1790981027, maxRate 937303568, firstTotalAssets zero; min(gross,stored+floor(stored*elapsed*maxRate/1e18)) equals reported totalAssets exactly. This residual is documented undistributed gain, not a missing position. LiabilityConservation and encumbranceAndAllocation limited are operational, itemized issuer-contract evidence with independent chain anchors. Local allocation is idle underlying plus fully enumerated same-asset unsecured lender receipts; adapter source restricts allocation/deallocation to parentVault and the documented caps/loan-asset/IRM path. This is not legal segregation, absence of external creditor claims, independent signed financial assurance, borrower-collateral priority or funded default recovery. DefaultRecovery remains unavailable and the curator terms remain controlling. Raw artifacts and arithmetic: agents/wave5/scratch/MECH_5/STEAKHOUSE-CONSERVATION.json and agents/wave5/scratch/MECH_5/EURCV-GAINCAP-RECONCILIATION.json.",
       "metrics": {},
       "components": {
         "holderClaim": {
           "quality": "limited"
         },
         "liabilityConservation": {
-          "applicability": "unavailable",
-          "rationale": "Current RPC totalAssets/totalSupply and API adapter inventory are readable, but this review does not reproduce a same-time complete market-position valuation joined to the exact liability denominator. Independent signed exact-vault reconciliation and residual accounting scope are not disclosed in the reviewed material.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited"
         },
         "positionCustody": {
           "quality": "limited"
         },
         "encumbranceAndAllocation": {
-          "applicability": "unavailable",
-          "rationale": "The exact vault and sole MorphoMarketV1 adapter are identified, but complete current borrower collateral, other-creditor, reuse, encumbrance and enforceable allocation-priority scope is not established by the public curator terms.",
-          "sourceUrl": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+          "quality": "limited"
         },
         "defaultRecovery": {
           "applicability": "unavailable",
@@ -21740,7 +21916,7 @@
     {
       "assetId": "steakusdg-steakhouse",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Morpho exact Steakhouse USDG deployment",
@@ -21761,26 +21937,34 @@
         {
           "label": "Morpho Vault V2 holder exit and adapter mechanics",
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Exact adapter verified ABI and source",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0x44abc1d6ccff2696d98890b92e2157af242179c2?fields=all"
+        },
+        {
+          "label": "Pinned archive RPC; block 78597801",
+          "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Immutable Morpho Vault V2 accounting implementation",
+          "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
         }
       ],
-      "notes": "Reverified 2026-10-02T22:43:50.286549+00:00, robinhood block 78597801, exact vault 0xbeeff033f34c046626b8d0a041844c5d1a5409dd. RPC totalSupply 518381389725692277117688087 raw 18-decimal shares; totalAssets 522951304059870 raw 6-decimal USDG; convertToAssets(1e18) 1008815 raw. Sole adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2 and current Morpho API corroborate immediate custody. HolderClaim and positionCustody limited: exact primary operational code/terms plus independent chain anchors; no statutory fiat claim, legal segregation or independent financial assurance inferred. Conservation, encumbrance/allocation and default recovery stay sourced unavailable for the explicit scope gaps. Current performance fee 0% and management fee 0%; zero fee-selector delay is not a favorable control assurance. Parent financial reports and code-security audits are not exact-vault financial reports.",
+      "notes": "Reviewed 2026-10-07. Primary on-chain census at robinhood block 78597801, hash 0x0669ab20f25d5343fda6a83da69a4803fcf7929d74c18cbbeb38cc8492be6d39, source state timestamp 2026-10-02T22:43:47.000Z; calls obtained 2026-10-07T15:05:04.947Z. Exact vault 0xbeeff033f34c046626b8d0a041844c5d1a5409dd, sole adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2, Morpho 0x9d53d5e3bd5e8d4cbfa6db1ca238aea02e651010, loan asset 0x5fc5360d0400a0fd4f2af552add042d716f1d168. Complete adapter.marketIdsLength roster has 5 positions; all per-market loan assets equal the vault asset, tracked shares equal Morpho lender-position supplyShares, and every adapter position has zero borrowShares and zero posted collateral. Sum expectedSupplyAssets 521824550977821 plus idle balance 1126753082049 raw units. Vault totalSupply 518381389725692277117688087; accrued performance/management fee shares zero; virtualShares 1000000000000; integer (accrued totalAssets+1)*1e18/(totalSupply+virtualShares) reproduces convertToAssets(1e18)=1008815. Idle plus complete market census equals totalAssets 522951304059870 exactly; accounting residual zero. LiabilityConservation and encumbranceAndAllocation limited are operational, itemized issuer-contract evidence with independent chain anchors. Local allocation is idle underlying plus fully enumerated same-asset unsecured lender receipts; adapter source restricts allocation/deallocation to parentVault and the documented caps/loan-asset/IRM path. This is not legal segregation, absence of external creditor claims, independent signed financial assurance, borrower-collateral priority or funded default recovery. DefaultRecovery remains unavailable and the curator terms remain controlling. Raw artifacts and arithmetic: agents/wave5/scratch/MECH_5/STEAKHOUSE-CONSERVATION.json and steakusdg-*-pin.json.",
       "metrics": {},
       "components": {
         "holderClaim": {
           "quality": "limited"
         },
         "liabilityConservation": {
-          "applicability": "unavailable",
-          "rationale": "Current RPC totalAssets/totalSupply and API adapter inventory are readable, but this review does not reproduce a same-time complete market-position valuation joined to the exact liability denominator. Independent signed exact-vault reconciliation and residual accounting scope are not disclosed in the reviewed material.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited"
         },
         "positionCustody": {
           "quality": "limited"
         },
         "encumbranceAndAllocation": {
-          "applicability": "unavailable",
-          "rationale": "The exact vault and sole MorphoMarketV1 adapter are identified, but complete current borrower collateral, other-creditor, reuse, encumbrance and enforceable allocation-priority scope is not established by the public curator terms.",
-          "sourceUrl": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+          "quality": "limited"
         },
         "defaultRecovery": {
           "applicability": "unavailable",
@@ -21792,7 +21976,7 @@
     {
       "assetId": "strusd-tori",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Tori strUSD staking and unstaking terms",
@@ -21811,7 +21995,7 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6561272e3ebc9f2e07cdb12b7c474db9132b977a"
         },
         {
-          "label": "Tori reserve ownership and holder-rights terms",
+          "label": "Tori holder-binding trUSD and strUSD Terms, last updated 2026-08-08, sections 1A, 3 and 11: no reserve claim or direct economic recourse",
           "url": "https://docs.tori.finance/legal/trusd-terms.md"
         },
         {
@@ -21831,7 +22015,7 @@
           "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
         }
       ],
-      "notes": "At Ethereum block 26107706 the vault has 43340867.809940872216080268 shares, 44539660.969214475465229229 accounted trUSD and 44539892.811952570703324467 actual trUSD. The 231.842738095238095238 difference exactly equals getUnvestedAmount. The 7972983.316441093630475194-share Ethereum CCIP escrow equals 7972979.911468970704952888 Monad plus 3.404972122925522306 Pharos shares at near-synchronous pinned blocks 110016528 and 19213616. These are Limited operational claim/conservation/custody anchors, not financial assurance or extra native supply. Burned cooldown shares become separate silo claims. Current source permits restricted-holder redistribution/seizure and rewarder loss reporting up to 500 bps once per 86400 seconds; these are adverse controls, not funded loss protection. Seven-day happy-path unstaking and parent discretionary repurchase do not establish enforceable insolvency priority or independent recovery resources. Refinement: Sherlock 15–22 Jan 2026 and Nethermind 24–26 Mar 2026 scope includes staking/access/oracle integration; both predate the 30 Sep 2026 implementation activation, so exact current audit-build correspondence is not claimed. $1M critical bounty is code security, not financial reconciliation.",
+      "notes": "At Ethereum block 26107706 the vault has 43340867.809940872216080268 shares, 44539660.969214475465229229 accounted trUSD and 44539892.811952570703324467 actual trUSD. The 231.842738095238095238 difference exactly equals getUnvestedAmount. The 7972983.316441093630475194-share Ethereum CCIP escrow equals 7972979.911468970704952888 Monad plus 3.404972122925522306 Pharos shares at near-synchronous pinned blocks 110016528 and 19213616. These are Limited operational claim/conservation/custody anchors, not financial assurance or extra native supply. Burned cooldown shares become separate silo claims. Current source permits restricted-holder redistribution/seizure and rewarder loss reporting up to 500 bps once per 86400 seconds; these are adverse controls, not funded loss protection. Seven-day happy-path unstaking and parent discretionary repurchase do not establish enforceable insolvency priority or independent recovery resources. Refinement: Sherlock 15–22 Jan 2026 and Nethermind 24–26 Mar 2026 scope includes staking/access/oracle integration; both predate the 30 Sep 2026 implementation activation, so exact current audit-build correspondence is not claimed. $1M critical bounty is code security, not financial reconciliation. Wave-5 review by Sol unknown-resolver wave 2026-10-07 (MECH_4): the holder-binding Terms expressly apply to holding and use of both trUSD and strUSD and are dated 2026-08-08. Section 3 states: 'At no point do holders of either trUSD and strUSD have direct economic recourse to any underlying investments made by Tori Foundation or Tori BVI'. Sections 1A and 11 affirmatively make the reserves general issuer property, deny holder ownership/security interests and make issuer repurchase voluntary and discretionary. defaultRecovery is therefore weak because the exact holder terms deny underlying-investment recourse: this is a sourced measured deficiency, not a claim that an undisclosed facility does not exist and not a grade derived from unsuccessful research. It grants no recovery resources or financial assurance. Main approved this mapping on 2026-10-07; explicit adverse-pin owner review is requested if applicable. Existing operational grades, original block observations and encumbrance/priority uncertainty remain unchanged. The real review date is 2026-10-07; the legal evidence date remains 2026-08-08. Admission awaits the first production capture after 2026-10-08 00:00 UTC.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -21849,9 +22033,7 @@
           "sourceUrl": "https://docs.tori.finance/legal/trusd-terms.md"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Reviewed ordinary share conversion and cooldown/loss-report procedures do not disclose a funded, independently verified default waterfall with enforceable holder priority. Parent bridge/issuer recovery remains inherited, not inferred from a happy-path quote.",
-          "sourceUrl": "https://docs.tori.finance/products/strusd.md"
+          "quality": "weak"
         }
       }
     },
@@ -22058,7 +22240,7 @@
     {
       "assetId": "sxsrlusd-sentora",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-03",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Exact Sentora vault",
@@ -22087,9 +22269,25 @@
         {
           "label": "Morpho VaultV2 security audit roster, code security only",
           "url": "https://docs.morpho.org/get-started/resources/audits/"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Immutable VaultV2 loss-accounting source pin, code tree dated 2026-10-01",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1000024825319142697 raw RLUSD; a positive-balance holder 0x1601843c5e9bc251a3272907010afa41fa18347e simulated redeem(1e18,holder,holder) returning 1.00002482531914261 RLUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation and recovery stay unavailable. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Refinement 2026-10-03 adds Morpho VaultV2 audit roster (ChainSecurity 2025-09-15, Blackthorn 2025-09-15, Spearbit 2025-11-08 as dated by issuer). These are code-security context only and do not provide financial reconciliation, current borrower-book quality or holder insolvency rights; component grades are unchanged.",
+      "notes": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. convertToAssets(1e18) returned 1000024825319142697 raw RLUSD; a positive-balance holder 0x1601843c5e9bc251a3272907010afa41fa18347e simulated redeem(1e18,holder,holder) returning 1.00002482531914261 RLUSD. No transaction was broadcast. Claim, conservation and immediate position custody earn limited quality from exact source plus pinned complete accounting. No independent whole-vault signed reconciliation, legal priority or funded default backstop was established; missing legal allocation stays unavailable; scoped operational defaultRecovery is limited as reviewed below. Raw minted totalSupply excludes any not-yet-accrued fee shares as documented by VaultV2. Parent attestations and security audits are not vault financial assurance. Refinement 2026-10-03 adds Morpho VaultV2 audit roster (ChainSecurity 2025-09-15, Blackthorn 2025-09-15, Spearbit 2025-11-08 as dated by issuer). These are code-security context only and do not provide financial reconciliation, current borrower-book quality or holder insolvency rights; component grades are unchanged. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -22107,9 +22305,7 @@
           "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Source code describes loss realization and liquidity-constrained withdrawals, but does not establish funded default resources or enforceable exact-share insolvency priority; ordinary successful redemption is not stressed recovery proof.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },
@@ -22416,7 +22612,7 @@
     {
       "assetId": "usdfr-forest-road",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Forest Road USDfr and credit-book mechanism",
@@ -22457,9 +22653,25 @@
         {
           "label": "USDfr supply and roles at block 26107707",
           "url": "https://etherscan.io/address/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+        },
+        {
+          "label": "Pinned production DefaultManager direct-exit recovery order, public release de19a679",
+          "url": "https://raw.githubusercontent.com/Forest-Road-Company/forest-road-vault/de19a6799f32694e005085d286d90753c026ee55/contracts/src/DefaultManager.sol"
+        },
+        {
+          "label": "Exact-match DefaultManager implementation deployed September 23 2026; explorer observed October 7 2026 15:10:53 UTC",
+          "url": "https://etherscan.io/address/0x6e925e7dF08A797943885d276cE8FF9b69aD57B7"
+        },
+        {
+          "label": "Current DefaultManager proxy implementation mapping, explorer observed October 7 2026 15:11:09 UTC",
+          "url": "https://etherscan.io/address/0xD08Fa0Dc72232C9cf5C8c6A0C4ED9E0074037263"
+        },
+        {
+          "label": "Issuer operating status updated September 27 2026; coverage observation September 25 2026",
+          "url": "https://forestroadvault.com/docs/status"
         }
       ],
-      "notes": "Exact Ethereum USDfr, not sUSDfr. At block 26107707 supply was 5,142,565.55847783 and onchain backing accounting $5,150,523.219270194, including $5,013,731.736653194 deployed principal/accrual and $136,791.482617 idle USDC. This is attester/operator accounting, not independently confirmed loan market value. Credit quality and maturity/liquidity are limited: identified facilities and specialty-finance model are disclosed and chain-anchored, while borrower identities, credit verification and collectability are not. Current continuous accounting supports limited valuation-cadence component but not a measurable cadence of independent credit revaluation. Exact outstanding-balance WAM cannot be inferred from the earlier 11-facility contractual-face tenor census. Custody/priority/enforcement/default funding remain bounded. Issuer security page retains open LMV-09 and LMV-11 and further Medium/Low economic findings; no unverified clean-audit or remediation claim is used.",
+      "notes": "Exact Ethereum USDfr, not sUSDfr. At block 26107707 supply was 5,142,565.55847783 and onchain backing accounting $5,150,523.219270194, including $5,013,731.736653194 deployed principal/accrual and $136,791.482617 idle USDC. This is attester/operator accounting, not independently confirmed loan market value. Credit quality and maturity/liquidity are limited: identified facilities and specialty-finance model are disclosed and chain-anchored, while borrower identities, credit verification and collectability are not. Current continuous accounting supports limited valuation-cadence component but not a measurable cadence of independent credit revaluation. Exact outstanding-balance WAM cannot be inferred from the earlier 11-facility contractual-face tenor census. Custody/priority/enforcement/default funding remain bounded. Issuer security page retains open LMV-09 and LMV-11 and further Medium/Low economic findings; no unverified clean-audit or remediation claim is used. October 7 recovery-only review by Sol unknown-resolver wave 2026-10-07 (MECH_3), with orchestrator adverse-only approval: RECOVERY weak is a positively documented procedure deficiency, not a grade from missing disclosure. Exact Ethereum USDfr 0xcc07e7c4e5e35affd47b351e420a22c667d7f83d; official address roster binds DefaultManager proxy 0xD08Fa0Dc72232C9cf5C8c6A0C4ED9E0074037263 to implementation 0x6e925e7dF08A797943885d276cE8FF9b69aD57B7, marked Exact Match by Etherscan, deployed September 23 2026 at block 26041772 (17:49:59 UTC), current explorer mapping observed October 7 2026 15:11:09 UTC. Pinned DefaultManager.sol drawForSeniorExit lines 551-600 expressly states LAYER 3 IS NOT REACHED HERE: after curator and sGROVE capital is exhausted the exiting unstaked USDfr holder takes a haircut while sUSDfr principal remains intact, inverting the documented layers 3 and 4. The body draws only curator.absorbGlobalLoss then DefaultLossLib.coverFromBackstop, returns partial coverage without reverting, and does not draw the vault. This is not proof of an actual realized holder loss or its amount. September 27 issuer status reports sGROVE unfunded as of September 25, a historical capacity observation, not an October 7 balance. LegalEnforceability, seniority, custody, all numeric metrics, source snapshot clocks and existing measurements remain unchanged; no financial assurance, legal enforcement or whole-book recovery guarantee is asserted.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": null
@@ -22502,9 +22714,7 @@
           "quality": "limited"
         },
         "recovery": {
-          "applicability": "unavailable",
-          "rationale": "The issuer discloses a programmed waterfall and governance professional impairment process, but complete currently funded recovery resources and legally enforceable USDfr-holder default recovery are unavailable. The separate sUSDfr top-up distributor is not deployed and no top-up is promised.",
-          "sourceUrl": "https://forestroadvault.com/docs/recovery"
+          "quality": "weak"
         }
       }
     },
@@ -22906,7 +23116,7 @@
     {
       "assetId": "zaru-blocktower",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Issuer holder and reserve terms",
@@ -22915,6 +23125,14 @@
         {
           "label": "Retrieved independent reserve report",
           "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf"
+        },
+        {
+          "label": "Moore AUP2026-10-01, reserve snapshot2026-08-31T14:00UTC; not assurance",
+          "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"
+        },
+        {
+          "label": "Binding ZARU reserve account terms last updated2026-09-16",
+          "url": "https://blocktower.tech/legal/zaru-terms-of-use"
         }
       ],
       "metrics": {},
@@ -22923,12 +23141,10 @@
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "Named historical providers do not establish replacement continuity, whole-book safeguards or enforceable holder access upon provider or issuer failure.",
-          "sourceUrl": "https://zaru.network/blog/zar-universal-white-paper"
+          "quality": "limited"
         }
       },
-      "notes": "Historical July 31 book only: ZAR 23,314,336.68 bank deposits and 30,402,618.53 money-market funds total 53,716,955.21 against 52,946,200.1241 circulating ZARU. Percentages are rounded from those amounts and do not assert current weights. Moore obtained supporting documents directly from Standard Bank and Sanlam; segregation and lack of encumbrance primarily rely on management representations. No assurance opinion is expressed. Claim grade for the rand tokens is limited because specific redemption/reserve terms are corroborated by a named independent report, but legal insolvency priority remains unproved. Custody continuity stays unavailable. Assurance is intentionally left to the structured latestReport fallback, preserving AUP and aggregate-scope qualifications. No current collateralization measurement is asserted from the historical reserve coverage ratio."
+      "notes": "Historical July 31 book only: ZAR 23,314,336.68 bank deposits and 30,402,618.53 money-market funds total 53,716,955.21 against 52,946,200.1241 circulating ZARU. Percentages are rounded from those amounts and do not assert current weights. Moore obtained supporting documents directly from Standard Bank and Sanlam; segregation and lack of encumbrance primarily rely on management representations. No assurance opinion is expressed. Claim grade for the rand tokens is limited because specific redemption/reserve terms are corroborated by a named independent report, but legal insolvency priority remains unproved. Custody continuity stays unavailable. Assurance is intentionally left to the structured latestReport fallback, preserving AUP and aggregate-scope qualifications. No current collateralization measurement is asserted from the historical reserve coverage ratio. Review 2026-10-07: newer Moore ISRS4400(Revised) AUP dated2026-10-01 covers2026-08-31T14:00:00Z and exact Solana mint2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN at slot443168748. Procedures2-3 identify all management-listed immediate reserve institutions, Standard Bank of South Africa Limited and Sanlam Investment Management(Pty)Ltd, and independently obtain supporting bank/investment documents directly from both: cash/bank26763587.22ZAR and money-market35911611.64ZAR, total62675198.86ZAR; statements identify Loop South Africa(Pty)Ltd as account holder/investor. Circulation61576130.774140ZAR is matched to all retrieved token accounts, no noncirculating exclusion. Current binding ZARU terms last updated2026-09-16 (page published2026-10-06), sections2-3, require reserve accounts kept apart from corporate funds on behalf of users; direct redemption requires an eligible BlockTower account. This supports limited identified externally corroborated custody, not adequate/strong continuity or perfected insolvency protections. AUP expressly is not assurance and independently verifies neither segregation nor nonencumbrance beyond inquiry/document inspection; report supplies no replacement-custodian/failure procedure. Whitepaper partner-redemption fallback is not custody-provider succession. Historical July figures above remain historical only; newer August figures are custody-source observations, not current normalized reserve weights. Assurance remains compiler latestReport fallback; no AUP-to-assurance upgrade."
     },
     {
       "assetId": "susdat-saturn",
@@ -23120,7 +23336,7 @@
     {
       "assetId": "pendleusdc-pendle",
       "archetype": "protocol-position",
-      "reviewedAt": "2026-10-02",
+      "reviewedAt": "2026-10-07",
       "sources": [
         {
           "label": "Pendle Ecosystem USDC exact vault identity and accounting",
@@ -23157,9 +23373,21 @@
         {
           "label": "Cantina Managed adapter review, report 2025-12-15; final code tag 2025-12-04 (not exact-vault assurance)",
           "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+        },
+        {
+          "label": "Morpho Vault V2 actual loss socialization; reviewed 2026-10-07, no guide publication date claimed",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/bad-debt/"
+        },
+        {
+          "label": "Morpho Vault V2 hard-market write-off and phantom-interest emergency procedure; reviewed 2026-10-07",
+          "url": "https://docs.morpho.org/curate/tutorials-v2/emergency/"
+        },
+        {
+          "label": "Morpho immutable source-tree commit date 2026-10-01T16:21:56Z",
+          "url": "https://github.com/morpho-org/vault-v2/commit/c034336f82b0415f786fa15fc61fa81bf5256e31"
         }
       ],
-      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. Complete inventory: [{\"address\": \"0xa2f362079dbc570a6df5bd04ad91002d17c0db9a\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0x55c1b6e461a6334b567baf0feb5d728715446f05\", \"realAssets\": 57750429995940, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 33848863077322661882, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 34620350748645}, {\"marketId\": \"0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdc169abe56461a2e0c034da431ac2a3ebf596094\", \"oracle\": \"0x3464a61a68c486241fe07201c913f055bdce35bf\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 15343483352575785149, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 15454826109602}, {\"marketId\": \"0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb195b618ea52b77cb2a58846f452f59f8dfa9390\", \"oracle\": \"0xf8b29e7e9c00ce531434775f7923cc9fbca01b08\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 7647734340045359012, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 7675253137693}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY unavailable: losses reduce share NAV, but legal creditor priority and stressed collateral recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged.",
+      "notes": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. Complete inventory: [{\"address\": \"0xa2f362079dbc570a6df5bd04ad91002d17c0db9a\", \"morpho\": \"0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb\", \"parentVault\": \"0x55c1b6e461a6334b567baf0feb5d728715446f05\", \"realAssets\": 57750429995940, \"forcePenaltyWad\": 0, \"markets\": [{\"marketId\": \"0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xecfafdc7741323a945a163ed068b5a3c43483957\", \"oracle\": \"0x217d6ddcdb95112c51657f6270e8c079cfdb51f0\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 33848863077322661882, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 34620350748645}, {\"marketId\": \"0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdc169abe56461a2e0c034da431ac2a3ebf596094\", \"oracle\": \"0x3464a61a68c486241fe07201c913f055bdce35bf\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 15343483352575785149, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 15454826109602}, {\"marketId\": \"0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05\", \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb195b618ea52b77cb2a58846f452f59f8dfa9390\", \"oracle\": \"0xf8b29e7e9c00ce531434775f7923cc9fbca01b08\", \"irm\": \"0x870ac11d48b15db9a138cf899d20f13f79ba00bc\", \"lltv\": 915000000000000000, \"supplyShares\": 7647734340045359012, \"borrowShares\": 0, \"postedCollateral\": 0, \"expectedSupplyAssets\": 7675253137693}]}]. HOLDER CLAIM limited: operational ERC4626 pro-rata claim supported by primary code, identity-bound API and pinned RPC. CONSERVATION limited: complete assets sum, minted liabilities and pending fee shares reconciled at the same block with reproducible asset units; no independent financial assurance. CUSTODY limited: exact current vault/adapter/Morpho position locations pinned. ALLOCATION limited: complete lender inventory and caps/role documentation, with zero adapter borrower shares/posted collateral in the enumerated markets; no favorable legal segregation or borrower-collateral custody inference. DEFAULT RECOVERY limited: the scoped loss/write-off procedure is evidenced below, while legal creditor priority and funded stressed recovery remain unproven. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=259200 sec; fee-setting delays=0. Fee rates performance=0.05, management=0.0. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged. Recovery review 2026-10-07 by Sol unknown-resolver wave 2026-10-07 (MECH_2): limited defaultRecovery is established for this exact immutable receipt and its previously pinned October 2 MorphoMarketV1AdapterV2 inventory, not for ultimate borrower-collateral legal claims. Primary code tree c034336f82b0415f786fa15fc61fa81bf5256e31 is dated 2026-10-01T16:21:56Z; the existing chain/accounting observations keep their original source dates and blocks. VaultV2 accrueInterestView aggregates adapter realAssets and books the lower actual totalAssets; after recognized market losses, surviving receipt shares bear the NAV reduction proportionally without burning share balances. The exact scoped priority is equal receipt-share incidence after recognition, not equal realized outcomes through time or enforceable insolvency seniority. For an irrecoverably reverting Morpho market, the documented hard-deprecation procedure zeroes caps, submits and executes adapter burnShares after its configured timelock, then deallocates zero to synchronize accounting: written-off supply shares are lost forever, not recovered. Phantom interest before recognition can favor early exiters and leave remaining holders a larger loss; management fees can continue during losses. Emergency deallocation remains role/configuration/liquidity dependent; forceDeallocate is not bad-debt recovery and grants no guaranteed cash exit. This establishes only the existing limited operational procedure rung, not independently verified funded resources, sponsor support, legal priority, financial assurance or stressed realization value. No default occurrence or recovered amount is asserted. All other component grades and unresolved allocation/encumbrance rights are unchanged.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -23175,9 +23403,7 @@
           "quality": "limited"
         },
         "defaultRecovery": {
-          "applicability": "unavailable",
-          "rationale": "Primary framework code describes pro-rata loss realization and liquidity-dependent withdrawal, but exact-holder legal default priority, funded loss recovery and independently reconciled stressed realization are not disclosed.",
-          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          "quality": "limited"
         }
       }
     },

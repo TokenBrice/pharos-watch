@@ -44,6 +44,22 @@ afterEach(() => {
 });
 
 describe("public incident history availability", () => {
+  it("renders heavy delivery loss while the public scheduler remains healthy", () => {
+    const health = makeHealthyHealthResponse();
+    health.status = "degraded";
+    health.warnings = ["heavy_scheduled_delivery_stalled"];
+    health.schedulerLiveness!.heavy = {
+      ...health.schedulerLiveness!.heavy, status: "degraded", ageSeconds: 1801,
+      lastStartedAt: health.timestamp - 1801,
+    };
+    useHealthMock.mockReturnValue({ data: health, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now() });
+    useHistoryMock.mockReturnValue({ data: emptyHistory, isLoading: false, error: null });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("Heavy Worker delivery")).toBeTruthy();
+    expect(screen.getByText("v9SupplyAttributionOffset")).toBeTruthy();
+    expect(screen.getByText(/warning >1800s · stale >2700s/)).toBeTruthy();
+    expect(screen.getByText(/· healthy/)).toBeTruthy();
+  });
   it.each(["loading", "failed"] as const)("does not turn %s history into an empty observation", (state) => {
     useHistoryMock.mockReturnValue({
       data: undefined,

@@ -3,7 +3,7 @@ import { coerceNonNegativeNumber } from "@shared/lib/type-guards";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { chunkArray } from "../collections";
 import { USER_AGENT } from "../constants";
-import { fetchWithRetry } from "../fetch-retry";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchWithRetry } from "../fetch-retry";
 import { parsePositiveNumber } from "../number-utils";
 import {
   createPricingAssetAttempt,
@@ -23,7 +23,7 @@ import type {
   AddressPriceQuote,
   AddressPriceTarget,
 } from "./types";
-import { readResponseSnippetWithTimeout, readResponseTextWithTimeout } from "../response-body";
+import { readResponseSnippetWithTimeout, readResponseTextWithinLimitWithTimeout } from "../response-body";
 
 export const ADDRESS_PROVIDER_MIN_LIQUIDITY_USD = 50_000;
 export const ADDRESS_PROVIDER_RUN_BUDGET_MS = 90_000;
@@ -44,7 +44,10 @@ function parseRetryAfterSec(response: Response, nowMs = Date.now()): number | un
 }
 
 async function readProviderResponseText(response: Response, signal?: AbortSignal): Promise<string> {
-  return readResponseTextWithTimeout(response, ADDRESS_PROVIDER_TIMEOUT_MS, signal);
+  return readResponseTextWithinLimitWithTimeout(response, {
+    timeoutMs: ADDRESS_PROVIDER_TIMEOUT_MS,
+    maxBytes: DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+  }, signal);
 }
 
 async function readProviderResponseSnippet(response: Response, signal?: AbortSignal): Promise<string | undefined> {

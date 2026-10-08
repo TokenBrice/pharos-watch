@@ -1,0 +1,72 @@
+{
+  "id": "eearn-ember",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Ember vault receipt shares and changing exchange rates",
+        "url": "https://learn.ember.so/ember-protocol/core-concepts"
+      },
+      {
+        "label": "Current eEARN EmberVault verified implementation: variable-rate shares",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2Eef7ffe1b15ca8C61E65538b51cA8977c7E"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "eEARN is a variable-value strategy-vault receipt. Ember's primary disclosure says deposits create shares, an initial 1:1 ratio changes with yield, and redemptions use the current exchange rate. The exact Ethereum proxy at 0x9be9294722f8aad37b11a9792be2c782182cafa2 initializes Ember Earn/eEARN with USDC collateral and resolves to a verified EmberVault implementation that converts assets and shares with a variable rate and queues redemptions. It does not represent an issuer obligation to redeem each share for fixed monetary value under section 2(22).",
+      "references": [
+        {
+          "label": "Ember primary vault share and exchange-rate disclosure",
+          "url": "https://learn.ember.so/ember-protocol/core-concepts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Exact Ember Earn eEARN verified Ethereum proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9be9294722f8aad37b11a9792be2c782182cafa2",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Current EmberVault source: variable share rate and queued redemption",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2Eef7ffe1b15ca8C61E65538b51cA8977c7E",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The assessment applies to the eEARN strategy-vault receipt, not the USDC underlying or separately structured Royco tranches. Current-rate USDC redemption is a variable-value vault claim, not fixed-dollar payment-stablecoin redemption. Circle authorization is not inherited. Ember Protocol Inc. is disclosed as website operator and code copyright owner; those roles do not alone establish a legal issuer of this exact vault, so issuerEntity and domicile are omitted. This is a tracker scope assessment, not a regulator-issued exemption or an assertion that securities/fund law cannot apply.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22) payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Ember website terms distinguish service operator and protocol",
+        "url": "https://learn.ember.so/ember-protocol/legal/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-29",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

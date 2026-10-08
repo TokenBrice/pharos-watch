@@ -16,6 +16,8 @@ import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { buildReserves } from "../safety-score-v9/fact-set-backing";
+import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 import type { ReserveSlice } from "@shared/types/reserves";
 import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
@@ -93,10 +95,15 @@ function compileWithEmptyLiveReserves(
   const extension = buildSafetyScoreV9BaselineExtension(fixed, {
     metaById: new Map([[ASSET_ID, meta]]),
   });
+  const context = factBuilderContext(fixed, extension);
   return {
     fixed,
     extension,
-    asset: compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!,
+    asset: {
+      ...buildReserves(context),
+      gaps: [...context.gaps.values()],
+      evidence: [...context.evidence.values()],
+    },
   };
 }
 
@@ -554,4 +561,57 @@ describe("v10.01 scoped authored reserve causes", () => {
       expect(evidence.causeBinding).toMatchObject({ assetId, scope: gap.causeScope });
     },
   );
+});
+
+describe("direct backing reserve builder", () => {
+  it.each([100, 70])("preserves a %s percent holding and leaves unidentified notional explicit", (pct) => {
+    const fixed = makeV9FixedInput();
+    const cash = { ...fixed.liveReserveMap.alpha![0]!, pct };
+    const context = factBuilderContext(makeV9FixedInput({ reserves: [cash] }));
+    const result = buildReserves(context);
+    expect(result.reserveExposures).toHaveLength(1);
+    expect(result.reserveExposures[0]).toMatchObject({
+      name: "Custodied cash", weight: pct / 100,
+      status: { observationState: "known" },
+    });
+    if (pct === 100) {
+      expect(result.reserveStatus.observationState).toBe("known");
+      expect(result.reserveResiduals).toEqual([]);
+    } else {
+      expect(result.reserveStatus.observationState).toBe("bounded-unknown");
+      expect(result.reserveResiduals).toHaveLength(1);
+      expect(result.reserveResiduals[0]).toMatchObject({ residualId: "unidentified" });
+      expect(result.reserveResiduals[0]!.weight).toBeCloseTo(0.3);
+    }
+    const evidence = context.evidence.get(result.reserveExposures[0]!.status.evidenceRefIds[0]!);
+    expect(evidence).toMatchObject({
+      sourceId: "fixture-reserve-api",
+      sourceGenerationId: context.extension.sources.liveReserves.generationId,
+      freshness: { state: "current" },
+    });
+  });
+
+  it("retains a stale holding but does not label its composition current", () => {
+    const fixed = makeV9FixedInput();
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    extension.sources.liveReserves.maxAgeSec = 99;
+    const context = factBuilderContext(fixed, extension);
+    const result = buildReserves(context);
+    expect(result.reserveExposures[0]).toMatchObject({ weight: 1, status: { observationState: "stale" } });
+    expect(result.reserveStatus.observationState).toBe("bounded-unknown");
+    expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
+      reasonCode: "partial-reserve-review", observationState: "stale",
+    }));
+    expect(result.reserveCompositionProvenance).toBeUndefined();
+  });
+
+  it("rejects reserve weights exceeding the whole-asset denominator", () => {
+    const fixed = makeV9FixedInput();
+    const rows = [
+      { ...fixed.liveReserveMap.alpha![0]!, name: "Cash A", pct: 60 },
+      { ...fixed.liveReserveMap.alpha![0]!, name: "Cash B", pct: 60 },
+    ];
+    expect(() => buildReserves(factBuilderContext(makeV9FixedInput({ reserves: rows }))))
+      .toThrow(/exceed the whole-asset denominator/);
+  });
 });

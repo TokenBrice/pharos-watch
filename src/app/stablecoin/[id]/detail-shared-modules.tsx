@@ -13,7 +13,7 @@ import {
 } from "@/components/stablecoin-detail/bridging-card";
 import type { EvidenceState } from "@/components/stablecoin-detail/evidence-module";
 import { hasMintAuthorityModuleData } from "@/components/stablecoin-detail/mint-authority-section";
-import { hasRedemptionRouteModule, isEntryRouteKey } from "@/components/stablecoin-detail/redemption-backstop-card";
+import { hasRedemptionRouteModule, isEntryRoute } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { formatReserveSnapshotLabel } from "@/components/stablecoin-detail/reserve-presentation";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildControlPostureView, type ControlPostureView } from "@/lib/control-posture";
@@ -163,9 +163,10 @@ function resolveRedemptionExitNote(
   if (!exit) return null;
   const primary = exit.primaryRoute;
   if (primary === null || primary.score === null) return "not counted";
-  if (isEntryRouteKey(primary.key, entry)) return entry.score == null ? `counted as ${Math.round(primary.score)}` : null;
+  if (isEntryRoute(primary, entry)) return entry.score == null ? `counted as ${Math.round(primary.score)}` : null;
   const backup = exit.diversification;
-  if (backup && backup.bonus > 0 && isEntryRouteKey(backup.routeKey, entry)) return "backup";
+  const backupRoute = backup ? exit.alternatives.find((route) => route.key === backup.routeKey) : null;
+  if (backup && backup.bonus > 0 && backupRoute && isEntryRoute(backupRoute, entry)) return "backup";
   return "not selected";
 }
 
@@ -200,6 +201,7 @@ export function buildDetailSharedModules({
     liveBalanceSheetScope: liveScopeMetadata?.balanceSheetScope,
     liveSharedBookAssetIds: liveScopeMetadata?.sharedBookAssetIds,
     liveRatioBasis: resolveLiveRatioBasis(viewModel.reserves?.metadata),
+    liveMetadata: liveScopeMetadata,
     liveStale: viewModel.reserves?.mode === "live-stale",
     oracle: coin.oracleRiskSummary ?? null,
     parent: backingParent,

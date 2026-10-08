@@ -1,3 +1,4 @@
+import { defineConfigFamily } from "../factory";
 import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
@@ -383,29 +384,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement"],
       rationale:
-        "The July 17, 2026 Final Terms specify USDC settlement and a 7 bps instant fee, but instant capacity is not guaranteed. Standard redemption has a one-business-day realisation period plus up to five business days under base-prospectus condition 8.3c, subject to a 25% daily gate and market-disruption postponements; no unconditional calendar-day bound or measured executable capacity is established.",
-      reviewedAt: "2026-10-02",
+        "The modeled instant USDC branch retains its 7 bps issuer fee and heuristic 2% hot buffer; neither the dynamic 50% atomic-capacity target nor shared liquidity establishes a funded bound. Standard redemption is a separate branch at up to 5 bps, with one-business-day realisation plus up to five business days, a 25% daily gate and disruption postponements; those terms do not guarantee completion or capacity for the instant branch.",
+      reviewedAt: "2026-10-07",
       docs: [
         sourceRef("Midas atomic redemption targets and shared liquidity", "https://midas-docs.gitbook.io/midas-docs/defi-integration/atomic-redemption.md", [
           "route",
-          "capacity",
+          "access",
           "settlement",
         ]),
-        sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
         sourceRef("mTBILL Final Terms dated July 17, 2026", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8", ["route", "access", "fees", "settlement"]),
-        sourceRef("Midas 2026 base prospectus conditions 8.3c and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["access", "capacity", "settlement"]),
+        sourceRef("Midas 2026 base prospectus conditions 8.3c and 12 (standard branch context)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["route", "access", "settlement"]),
       ],
     },
-    reviewedAt: "2026-10-02",
+    reviewedAt: "2026-10-07",
     docs: [
       sourceRef("Midas atomic redemption targets and shared liquidity", "https://midas-docs.gitbook.io/midas-docs/defi-integration/atomic-redemption.md", [
         "route",
-        "capacity",
+        "access",
         "settlement",
       ]),
       sourceRef("mTBILL Final Terms dated July 17, 2026", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8", ["route", "access", "fees", "settlement"]),
-      sourceRef("Midas 2026 base prospectus conditions 8.3c and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["access", "capacity", "settlement"]),
-      sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
+      sourceRef("Midas 2026 base prospectus conditions 8.3c and 12 (standard branch context)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f", ["route", "access", "settlement"]),
     ],
     notes: [
       "Reviewed USDC payout: instant fee 0.07%; standard fee up to 0.05%, one-business-day realisation plus up to five business days, subject to the 25% daily gate and disruption clauses; instant Deferred Price Method may retain up to 5% holdback.",
@@ -428,20 +427,20 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     v9RouteReviewTerms: {
       settlementModel: "atomic",
       settlementDelaySec: 0,
-      reviewedAt: "2026-08-24",
+      minRedeemUsd: 1,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost"],
+      rationale:
+        "The exact USDY InstantManager enforces minimumRedemptionUSD of $1 and atomic USDC payout. Registered-holder compliance, receiver eligibility, user-specific router sources, actual user/global limits and fee overrides remain prerequisites. Public default liquidity, zero-ID limits and default zero fees do not establish eligible-holder capacity or an all-user fee ceiling; the 5% ratio remains heuristic.",
+      reviewedAt: "2026-10-07",
       docs: [
-        sourceRef(
-          "USDY InstantManager verified source",
-          "https://eth.blockscout.com/address/0xa42613c243b67bf6194ac327795b926b4b491f15?tab=contract",
-          ["route", "settlement"],
-        ),
-        sourceRef("Ethereum block 25825933", "https://eth.blockscout.com/block/25825933", [
-          "route",
-          "settlement",
-        ]),
+        sourceRef("USDY InstantManager integration guide (reviewed 2026-10-07)", "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration", ["route", "access", "settlement", "fees"]),
+        sourceRef("USDY deployed addresses (reviewed 2026-10-07)", "https://docs.ondo.finance/addresses", ["route"]),
+        sourceRef("USDY InstantManager verified source (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0xa42613c243b67bf6194ac327795b926b4b491f15", ["route", "access", "settlement", "fees"]),
+        sourceRef("Ethereum pinned block 26143090", "https://eth.blockscout.com/block/26143090", ["route"]),
       ],
     },
-    reviewedAt: "2026-05-17",
+    reviewedAt: "2026-10-07",
     docs: [
       sourceRefRouteCapacity("Ondo USDY", "https://ondo.finance/usdy"),
       sourceRefRouteCapacity("Ondo docs", "https://docs.ondo.finance/"),
@@ -455,30 +454,30 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "https://eth.blockscout.com/address/0xe1cb24077d77d2fe763fcac63e5653d97dc8d20c?tab=contract",
         ["fees"],
       ),
+      sourceRef("USDY InstantManager integration guide (reviewed 2026-10-07)", "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration", ["route", "access", "settlement", "fees"]),
+      sourceRef("USDY InstantManager verified source (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0xa42613c243b67bf6194ac327795b926b4b491f15", ["route", "access", "settlement", "fees"]),
     ],
     notes: [
       "The 5% hot-buffer ratio is a conservative modeling heuristic, not a documented lower bound; current Ondo materials do not publish a durable bank-demand-deposit allocation or instant-redemption floor.",
+      "At Ethereum block 26143090 (2026-10-07), public defaults showed 27,220,717.712216 USDC router liquidity, $15M global headroom, a $10M/86400s new-user limit and zero default flat/bps fees. These are separate diagnostics, not additive inventory or actual-holder entitlement. Zero user ID is not registered; active user sources, instantiated limits and fee overrides take precedence.",
     ],
   },
   /** iauon-ondo and slvon-ondo share the Ondo GM shape; they differ only in ticker,
    *  asset page URL, Final Terms document, and the underlying-fund name in the notes. */
-  ...Object.fromEntries(
-    (
-      [
-        [
-          "iauon-ondo", "IAUon", "iauon", "IAU", "iShares Gold Trust",
-          "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
-        ],
-        [
-          "slvon-ondo", "SLVon", "slvon", "SLV", "iShares Silver Trust",
-          "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
-        ],
-      ] as const
-    ).map(([id, label, slug, underlyingTicker, fundName, finalTermsUrl]) => [
-      id,
+  ...defineConfigFamily(
+    [
       {
+        id: "iauon-ondo", label: "IAUon", slug: "iauon", underlyingTicker: "IAU", fundName: "iShares Gold Trust",
+        finalTermsUrl: "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+      },
+      {
+        id: "slvon-ondo", label: "SLVon", slug: "slvon", underlyingTicker: "SLV", fundName: "iShares Silver Trust",
+        finalTermsUrl: "https://cdn.sanity.io/files/8k2tqa6n/production/1e83310304939f644ad250b298c14f2a2ac6449c.pdf",
+      },
+    ],
+    ({ label, slug, underlyingTicker, fundName, finalTermsUrl }) => ({
         ...issuerBase,
-        reviewedAt: "2026-10-05",
+        reviewedAt: "2026-10-07",
         capacityModel: { kind: "unquantified" },
         settlementModel: "immediate",
         executionModel: "rules-based-nav",
@@ -488,8 +487,15 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
           settlementModel: "atomic",
           settlementDelaySec: 0,
           minRedeemUsd: 1,
-          reviewedAt: "2026-10-05",
-          docs: [sourceRef("Ondo Stocks investing and redeeming", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "settlement"])],
+          scoringDisposition: "bounded-terms-gap",
+          missingScoringFields: ["capacity"],
+          rationale:
+            "The modeled atomic USDon endpoint has a $1 minimum but no published funded holder capacity. The legal standard USDC/USDT put is a separate potentially postponed branch and does not quantify instantaneous USDon payout; conditional USDC swapper inventory and underlying ETF assets are not USDon capacity.",
+          reviewedAt: "2026-10-07",
+          docs: [
+            sourceRef("Ondo Stocks investing and redeeming (reviewed 2026-10-07)", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
+            sourceRef("Ondo Global Markets base prospectus (2025-11-11; standard put context)", "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf", ["route", "access"]),
+          ],
         },
         costModel: {
           ...documentedVariableFee(
@@ -499,7 +505,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         },
         docs: [
           sourceRef("Ondo Stocks investing and redeeming", "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md", ["route", "access", "settlement"]),
-          sourceRefRouteCapacity(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`),
+          sourceRef(`${label} asset page`, `https://app.ondo.finance/assets/${slug}`, ["route"]),
           sourceRef("Ondo Global Markets overview", "https://docs.ondo.finance/ondo-global-markets/overview", [
             "route",
             "access",
@@ -510,19 +516,14 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
             "https://docs.ondo.finance/ondo-global-markets/important-notes",
             ["access", "fees", "settlement"],
           ),
-          sourceRef(
-            "Ondo Global Markets trust and transparency",
-            "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-            ["capacity"],
-          ),
           sourceRef(`${label} Final Terms (dated 2025-11-11; reviewed 2026-10-03)`, finalTermsUrl, ["fees"]),
+          sourceRef("Ondo Global Markets base prospectus (2025-11-11; standard put context)", "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf", ["route", "access"]),
         ],
         notes: [
           `${label} is modeled as an eligible-investor NAV redemption route to Ondo GM value, not as direct holder ownership or delivery of underlying ${fundName} shares.`,
           "The instant endpoint is USDon. USDC is a separate liquidity-conditioned, whitelist-gated swapper conversion, not an unconditional full-supply payout. Market hours, eligible-investor restrictions, live quotes and same-notional USDon valuation remain required; no static funded capacity is inferred.",
         ],
-      } satisfies RedemptionBackstopConfig,
-    ]),
+    }),
   ),
   "thbill-theo": {
     ...issuerBase,
@@ -550,9 +551,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
-      "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
+    costModel: undisclosedReviewedFee(
+      "No rwaUSDi-specific numeric redemption schedule published in reviewed Multipli docs",
     ),
+    reviewedAt: "2026-10-07",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale:
+        "Multipli isolates scheduled, periodic-NAV or bespoke-settlement assets into liquidity classes such as rwaUSDi. Current primary docs establish liquidity-class dependence, not an rwaUSDi-specific numeric fee or maximum completion time; no quarterly schedule is inferred.",
+      reviewedAt: "2026-10-07",
+      docs: [
+        sourceRef("Multipli liquidity and redemption risk (reviewed 2026-10-07)", "https://docs.multipli.fi/risks/liquidity-and-redemption-risk", ["route", "settlement"]),
+        sourceRef("Multipli how rwaUSD works (general liquidity-class context; reviewed 2026-10-07)", "https://docs.multipli.fi/rwausd/how-rwausd-works", ["route", "settlement"]),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity(
         "Multipli unwind and peg module",
@@ -564,6 +577,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         ["access", "settlement", "capacity"],
       ),
       sourceRef("AFI verification", "https://verification.afiprotocol.xyz/multipli", ["capacity"]),
+      sourceRef("Multipli liquidity and redemption risk (reviewed 2026-10-07)", "https://docs.multipli.fi/risks/liquidity-and-redemption-risk", ["route", "settlement"]),
     ],
     notes: [
       "Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp",
@@ -623,12 +637,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ),
     docs: [
       sourceRefRouteCapacity("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/"),
-      sourceRefRouteCapacity(
-        "EURCV white paper",
-        "https://www.sgforge.com/wp-content/uploads/2025/06/EURCV-White-Paper_iXBRL-2.html",
+      sourceRef(
+        "EURCV white paper (notification date 2024-05-30; reviewed 2026-10-07)",
+        "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-White-Paper_iXBRL_202510.html",
+        ["route", "capacity", "access", "settlement"],
       ),
     ],
-    notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
+    notes: [
+      "White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks.",
+      "The five-business-day deadline is acknowledgement, not payout. Transfer is due no later than the last Business Day of the month following successful compliance controls; those controls are not time-bounded. No guessed elapsed-second or fixed-business-day completion scalar is asserted.",
+    ],
   },
   "eure-monerium": {
     ...issuerBase,
@@ -642,10 +660,26 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "eurr-stablr": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    routeStatus: "suspended",
+    reviewedAt: "2026-10-07",
+    routeSuspension: {
+      routeId: "redemption:eurr-stablr:offchain-issuer",
+      channel: "StablR direct issuer minting and redemption",
+      suspendedAt: "2026-06-24",
+      reason:
+        "Issuer notice confirms EURR minting and redemption remained suspended as of 24 June 2026 following the security incident. This is the source-confirmed suspension-as-of date, not a claim about its original onset; no newer issuer reopening evidence was established in the 2026-10-07 review.",
+      reviewer: "Pharos",
+      reviewedAt: "2026-10-07",
+      sources: [{
+        url: "https://www.stablr.com/insights/notification-update-24-06-2025",
+        quote: "Minting and redemption of EURR and USDR remain suspended as a precaution, and there has been no further unauthorised issuance.",
+      }],
+    },
     costModel: fixedFee(0, "StablR docs state qualified businesses can onramp and offramp EURR at no additional cost"),
     docs: [
       sourceRefRouteCapacityFees("What is EURR", "https://docs.stablr.com/docs/what-is-eurr"),
       sourceRefRouteCapacity("StablR overview", "https://docs.stablr.com/docs/overview"),
+      sourceRef("StablR suspension update (rendered 24 June 2026; reviewed 2026-10-07)", "https://www.stablr.com/insights/notification-update-24-06-2025", ["route", "access"]),
     ],
   },
   "emxn-telcoin": {
@@ -703,8 +737,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "fees",
       ]),
       sourceRef(
-        "SBI Shinsei Trust JPYSC terms PDF",
-        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260624.pdf",
+        "SBI Shinsei Trust JPYSC terms (updated 2026-09-30; reviewed 2026-10-07)",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
         ["route", "access", "settlement", "fees", "capacity"],
       ),
       sourceRef("SBI VC Trade token manual", "https://www.sbivc.co.jp/assets/docs/manual_tt.pdf", ["route", "settlement"]),
@@ -721,7 +755,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "The primary modeled route is direct 1:1 JPY redemption from SBI Shinsei Trust after the holder transfers JPYSC to the issuer-designated wallet; the separate SBI VC Trade account route is not required.",
       "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; JPY remains an unresolved fiat output rather than a tracked stablecoin.",
       "supply-full is the documented legal redemption bound, not a claim that same-day bank liquidity equals current token supply; requests can lapse or be delayed under the terms' wallet-designation and transfer windows.",
-      "The 3,000 JPY plus consumption-tax issuer fee and holder-borne bank transfer fee are documented flat-currency charges, so the cost is retained as a documented variable/unclear model rather than converted into fabricated bps.",
+      "Fee review 2026-10-07: the 2026-09-30 terms, sections 4(3)(ro) and 4(11)(ni), charge 3,000 JPY plus applicable consumption tax per direct redemption procedure; holder-borne bank transfer and network fees are separate. V9 has no fixed-maximum-in-JPY term, so no bps ceiling or invented USD conversion is added.",
     ],
   },
   "hlusd-hela": {
@@ -731,13 +765,24 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     executionModel: "opaque",
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
-    capacityModel: { kind: "supply-full", confidence: "heuristic", basis: "issuer-term-redemption" },
+    capacityModel: { kind: "unquantified" },
     costModel: fixedFee(100, "StableHodl documents a 1% OTC fee for selling HLUSD"),
     holderEligibility: "unknown",
-    reviewedAt: "2026-08-13",
+    reviewedAt: "2026-10-07",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "HeLa's backing and 1:1 product claims do not establish StableHodl OTC inventory or a full-supply redemption obligation. The manual sell/claim rail publishes a 1% OTC fee but no executable size, completion maximum or all-in deductions; eligibility remains unknown.",
+      reviewedAt: "2026-10-07",
+      docs: [
+        sourceRef("HeLa HLUSD minting/redemption (reviewed 2026-10-07)", "https://docs.helalabs.com/hlusd/minting-redemption-of-hlusd", ["route", "access"]),
+        sourceRef("StableHodl HLUSD sell and claim guide (reviewed 2026-10-07)", "https://docs.stablehodl.com/product/trade-hlusd", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("HeLa HLUSD documentation", "https://docs.helalabs.com/hlusd/editor", ["route", "access"]),
-      sourceRefRouteCapacity("HeLa HLUSD benefits", "https://docs.helalabs.com/hlusd/markdown"),
+      sourceRef("HeLa HLUSD benefits", "https://docs.helalabs.com/hlusd/markdown", ["route"]),
       sourceRef("StableHodl HLUSD trading guide", "https://docs.stablehodl.com/product/trade-hlusd", [
         "route",
         "fees",
@@ -751,7 +796,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "The modeled backstop is a manual third-party StableHodl OTC rail under HeLa's 1:1 redemption promise: HLUSD is sold for USDT or USDC and the output is claimed after processing.",
-      "supply-full is a heuristic eventual-capacity model, not an immediate-reserve claim; StableHodl publishes no capacity, processing-time SLA, geographic eligibility, or current reserve availability, so days is conservative.",
+      "Capacity is unquantified: neither HeLa collateral nor the 1:1 promise proves StableHodl cash-out inventory. StableHodl publishes no funded amount, processing-time SLA, geographic eligibility or current availability; days is diagnostic only.",
       "The documented OTC fee is 1%; wallet connection and a separate claim step remain part of the opaque execution flow, while DEX trading is excluded.",
     ],
   },

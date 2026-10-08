@@ -133,6 +133,20 @@ export function compareCloudflareAccountState(manifest, liveState) {
     }
     addValueDrift(drift, `workerCustomDomains.${hostname}.service`, manifest.workerCustomDomains.service, actual.service);
   }
+  const heavy = isRecord(liveState?.heavyWorker) ? liveState.heavyWorker : {};
+  for (const field of ["exists", "sharedDatabase"]) {
+    addValueDrift(drift, `heavyWorker.${field}`, true, heavy[field]);
+  }
+  for (const field of ["workersDev", "previewUrls"]) {
+    addValueDrift(drift, `heavyWorker.${field}`, false, heavy[field]);
+  }
+  addValueDrift(drift, "heavyWorker.workflowAbsent", manifest.heavyWorker.workflowAbsent, heavy.workflowAbsent);
+  addValueDrift(drift, "heavyWorker.workflowBinding", false, heavy.workflowBinding);
+  addValueDrift(drift, "heavyWorker.publicWorkflowBinding", false, heavy.publicWorkflowBinding);
+  if (asArray(heavy.routes).length > 0) drift.push("heavyWorker.routes: expected none");
+  if (workerDomains.some((domain) => domain?.service === manifest.heavyWorker.scriptName)) {
+    drift.push("heavyWorker.customDomains: expected none");
+  }
 
   const rateLimitRules = asArray(liveState?.rateLimitRules);
   for (const expected of manifest.rateLimitRules) {
@@ -192,7 +206,7 @@ export function compareCloudflareAccountState(manifest, liveState) {
   return drift;
 }
 
-async function readCloudflareResult(fetchImpl, apiToken, path, operation, { allowNotFound = false } = {}) {
+async function readCloudflareResult(fetchImpl, apiToken, path, operation, { allowNotFound = false, allowWorkflowNotFound = false } = {}) {
   const response = await fetchImpl(new URL(path.replace(/^\//, ""), `${API_BASE_URL}/`), {
     method: "GET",
     headers: { Authorization: `Bearer ${apiToken}` },
@@ -206,12 +220,21 @@ async function readCloudflareResult(fetchImpl, apiToken, path, operation, { allo
   } catch {
     throw new Error(`${operation} returned an unparseable response (HTTP ${response.status})`);
   }
+  if (allowWorkflowNotFound && response.status === 404 && payload?.success === false
+    && Array.isArray(payload.errors) && payload.errors.length > 0
+    && payload.errors.every((error) => isRecord(error) && Number.isFinite(error.code)
+      && typeof error.message === "string" && /workflow.*(?:not found|does not exist)/i.test(error.message))) {
+    return null;
+  }
   const errors = asArray(payload?.errors)
     .map((error) => (isRecord(error) ? normalizeString(error.message) : ""))
     .filter(Boolean)
     .join("; ");
   if (!response.ok || payload?.success !== true) {
     throw new Error(`${operation} failed (HTTP ${response.status})${errors ? `: ${errors}` : ""}`);
+  }
+  if (allowWorkflowNotFound && !isRecord(payload.result)) {
+    throw new Error(`${operation} returned a malformed named resource.`);
   }
   return payload.result;
 }
@@ -351,6 +374,29 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
   ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
   const unified = normalizeUnifiedPagesBindings(production);
+  const heavyConfig = manifest.heavyWorker;
+  const scriptBase = `/accounts/${encodeURIComponent(accountId)}/workers/scripts`;
+  const [heavySettings, publicSettings, heavySubdomain, workflow, routes] = await Promise.all([
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.scriptName)}/settings`, "Cloudflare heavy Worker settings lookup", { allowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.publicScriptName)}/settings`, "Cloudflare public Worker settings lookup"),
+    readCloudflareResult(fetchImpl, apiToken, `${scriptBase}/${encodeURIComponent(heavyConfig.scriptName)}/subdomain`, "Cloudflare heavy Worker subdomain lookup", { allowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `/accounts/${encodeURIComponent(accountId)}/workflows/${encodeURIComponent(heavyConfig.workflowName)}`, "Cloudflare Workflow lookup", { allowWorkflowNotFound: true }),
+    readCloudflareResult(fetchImpl, apiToken, `/zones/${encodeURIComponent(zoneId)}/workers/routes`, "Cloudflare Worker route lookup"),
+  ]);
+  if (!Array.isArray(routes)) throw new Error("Cloudflare Worker route lookup returned a malformed route list.");
+  if (!isRecord(publicSettings) || !Array.isArray(publicSettings.bindings)
+    || (heavySettings !== null && (!isRecord(heavySettings) || !Array.isArray(heavySettings.bindings)))) {
+    throw new Error("Cloudflare Worker settings lookup returned malformed bindings.");
+  }
+  if (workflow !== null && (!isRecord(workflow) || workflow.name !== heavyConfig.workflowName
+    || typeof workflow.script_name !== "string" || !workflow.script_name
+    || typeof workflow.class_name !== "string" || !workflow.class_name)) {
+    throw new Error("Cloudflare Workflow lookup returned a malformed named resource.");
+  }
+  const heavyBindings = asArray(heavySettings?.bindings);
+  const publicBindings = asArray(publicSettings?.bindings);
+  const heavyDb = heavyBindings.filter((binding) => binding?.type === "d1" && binding.name === "DB");
+  const publicDb = publicBindings.filter((binding) => binding?.type === "d1" && binding.name === "DB");
 
   return {
     zone: {
@@ -377,6 +423,20 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
     },
     accessApplications: normalizeAccessApplications(accessApplications),
     workerDomains: normalizeWorkerDomains(workerDomains),
+    heavyWorker: {
+      exists: isRecord(heavySettings),
+      sharedDatabase: heavyDb.length === 1 && publicDb.length === 1
+        && heavyDb[0].id === heavyConfig.databaseId && publicDb[0].id === heavyConfig.databaseId,
+      workflowAbsent: workflow === null,
+      workflowBinding: heavyBindings.some((binding) => binding?.type === "workflow"
+        && (binding.name === heavyConfig.workflowBinding || binding.workflow_name === heavyConfig.workflowName)),
+      publicWorkflowBinding: publicBindings.some((binding) => binding?.type === "workflow"
+        && (binding.name === heavyConfig.workflowBinding || binding.workflow_name === heavyConfig.workflowName)),
+      workersDev: heavySubdomain?.enabled ?? null,
+      previewUrls: heavySubdomain?.previews_enabled ?? null,
+      routes: asArray(routes).filter((route) => route?.script === heavyConfig.scriptName)
+        .map((route) => normalizeString(route.pattern)),
+    },
     rateLimitRules: normalizeRateLimitRules(rateLimitRuleset?.rules),
   };
 }

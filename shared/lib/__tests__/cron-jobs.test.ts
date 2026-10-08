@@ -16,6 +16,21 @@ function isHourlyCpuTrigger(schedule: string): boolean {
 }
 
 describe("cron job schedule metadata", () => {
+  it("excludes the retired Workflow observer from the registered cohort", () => {
+    expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
+    expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");
+  });
+  it("accounts for redemption's serial RPC observers", () => {
+    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({ maxConnections: 1 });
+  });
+
+  it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
+    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
+    expect(CRON_TRIGGER_SCHEDULES.statusSelfCheckOffset).toEqual(["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"]);
+  });
+
   it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
     expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
     expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual(["10 * * * *"]);
@@ -32,27 +47,6 @@ describe("cron job schedule metadata", () => {
     });
   });
 
-  it("registers the V9 shadow workflow with its real cadence and connection pressure", () => {
-    expect(
-      CRON_JOB_DEFINITIONS.find(
-        (definition) =>
-          definition.job === "compute-safety-score-v9-workflow",
-      ),
-    ).toMatchObject({
-      intervalSec: 30 * 60,
-      statusImpact: "watch",
-      maxConnections: 0,
-    });
-    expect(CRON_INTERVALS["compute-safety-score-v9-workflow"]).toBe(30 * 60);
-    expect(
-      CRON_CONNECTION_BUDGET_ENTRIES.find(
-        (entry) => entry.job === "compute-safety-score-v9-workflow",
-      ),
-    ).toMatchObject({
-      maxConnections: 0,
-      statusTracked: true,
-    });
-  });
 
   // Cloudflare caps Cron expressions with an interval below one hour at 30
   // seconds of CPU time, and 15 minutes at hourly or longer. These lanes carry
@@ -72,6 +66,7 @@ describe("cron job schedule metadata", () => {
       halfHourlyMintBurnCritical: ["4 * * * *", "34 * * * *"],
       halfHourlyMintBurnExtended: ["18 * * * *", "48 * * * *"],
       halfHourlyMeasuredExecution: ["5 * * * *", "35 * * * *"],
+      halfHourlyMeasuredExecutionSupplemental: ["20 * * * *", "50 * * * *"],
     } as const;
 
     for (const [scheduleKey, triggerSchedules] of Object.entries(hourlyCpuClassLanes)) {
@@ -94,6 +89,12 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18,48 * * * *");
 
     expect(CRON_SCHEDULES.halfHourlyMeasuredExecution).toBe("0,30 * * * *");
+    expect(CRON_SCHEDULES.halfHourlyMeasuredExecutionSupplemental).toBe("15,45 * * * *");
+    for (const [minute, logicalMinute] of [["20", "15"], ["50", "45"]] as const) {
+      expect(getCronSlotStartedAtForSchedule(
+        "halfHourlyMeasuredExecutionSupplemental", Date.parse(`2026-10-08T19:${minute}:03Z`),
+      )).toBe(Date.parse(`2026-10-08T19:${logicalMinute}:00Z`) / 1000);
+    }
 
     // Every physical alias must normalize to the logical slot it fired in.
     for (const [key, minute, second] of [
@@ -108,8 +109,8 @@ describe("cron job schedule metadata", () => {
     }
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(41);
-    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(41);
+    expect(physicalTriggers).toHaveLength(43);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
@@ -138,16 +139,10 @@ describe("cron job schedule metadata", () => {
     expect(slot("2028-03") - slot("2028-02")).toBe(29 * 86400);
   });
 
-  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
-  // captureClockSec <= fixedInput.clockSec: a publication must not depend on an
-  // observation taken after its own input snapshot. prepare-safety-score-v9-input
-  // stamps that clock, so a capture must precede the prepare slot it will be
-  // consumed against — NOT sit between prepare and the publication. A capture in
-  // that gap is rejected as capture-clock-after-consumer, and
-  // isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred then skips the
-  // publication on every subsequent cycle. Proven in production on 2026-08-09:
-  // moving the grid to 5,20,35,50 froze publications at the 10:22 slot with
-  // reason supply-attribution-generation-cadence-deferred.
+  // Packets must precede the scoring clock and retain the 45-minute consumer
+  // freshness window. The grid supplies older :08/:38 packets to :22/:52;
+  // missing or temporally incompatible packets can instead be bounded pending
+  // provenance under an exact prepare-owned :23/:53 request, never future data.
   //
   // The capture must also stay inside the 45-minute consumer acceptance window,
   // or the publication rejects it as generation-stale and xaut-tether falls to

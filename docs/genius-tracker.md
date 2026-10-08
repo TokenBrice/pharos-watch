@@ -8,7 +8,7 @@ GENIUS = the **Guiding and Establishing National Innovation for U.S. Stablecoins
 
 ## Architectural keystone
 
-GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's long-form evidence.
+GENIUS status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, and projected at build into the slim global client registry for authorization-status labels and into `shared/data/stablecoins/coins.compliance.generated.json` for the `/compliance/` table's bundled summary. Full evidence remains in `shared/data/stablecoins/coins.client.detail/<id>.generated.json`: opening a GENIUS row fold dynamically loads that coin through `loadClientStablecoinDetail(id)`, caches evidence for the session, and combines and de-duplicates top-level and nested references. The summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`; MiCA and canonical reserve-report projection are unchanged.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** One field does leave the presentation surface: `genius.issuerEntity` seeds the Safety Score V9 issuer key (`worker/src/lib/safety-score-v9/extension.ts`, run by the `compute-safety-score-v9` cron), so edit it with that issuer join in mind; `authorizationStatus` and the rest stay presentation-only. Missing `genius` metadata means **"not assessed"** — not "out of scope" and not "non-compliant". This is deliberate: the page distinguishes an unassessed coin (no row) from an explicitly reviewed one.
 
@@ -75,7 +75,7 @@ The threshold question: is the asset a GENIUS-scope **payment stablecoin** at al
 | `non-payment-token` | A yield/savings wrapper, CDP/over-collateralized DeFi unit, governance or algorithmic unit not offered as a payment instrument. |
 | `unclear` | Genuinely ambiguous after review. |
 
-**Do not bulk-assess.** Leave `genius` undefined for the long tail of DeFi-native, savings-wrapper, and tokenized-fund assets. Use an explicit non-`apparent-payment-stablecoin` row **sparingly** — only for prominent tokens (e.g. a large tokenized Treasury fund or wrapper) that are likely to be **confused** with a payment stablecoin and where clarifying the exclusion has real value. Missing metadata already means "not assessed".
+**Assess every active coin, publish only at high confidence.** Every active tracked coin is in scope for research, including the long tail of DeFi-native, savings-wrapper, vault, commodity, and tokenized-fund assets. A row ships only when the classification and every asserted field are supported at high confidence; exclusions state their basis with a sourced `applicabilityBasis` (`non-payment-token`, `excluded-security`, `excluded-deposit`, or `excluded-national-currency` paired with `not-applicable`), or `unclear` when the ambiguity itself is well documented. When the legal issuer, redemption obligation, or scope stays unresolved, leave the row absent. Missing metadata means "not assessed" and marks a research gap, not an implicit exclusion.
 
 ---
 
@@ -170,9 +170,11 @@ Always include `sourceDate` / `accessedAt` where available so the review is date
 
 ## Regime state & effective date
 
-GENIUS effective-date and rulemaking-phase state is centralized in `shared/lib/compliance-regime-state.ts` (`GENIUS_REGIME_STATE`), **not** per coin. Update that object when primary-regulator final rules are issued or the statutory fallback effective date changes. `rulemakingPhase` ∈ `pre-rulemaking` | `proposed-rules` | `final-rules-issued` | `effective`.
+GENIUS effective-date and rulemaking-phase state is centralized in `shared/lib/compliance-regime-state.ts` (`GENIUS_REGIME_STATE`), **not** per coin. `rulemakingPhase` ∈ `pre-rulemaking` | `proposed-rules` | `final-rules-issued` | `effective`. [Public Law 119-27, section 20](https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf) sets the earlier of 120 days after qualifying final implementing regulations or 18 months after enactment on July 18, 2025 (the January 18, 2027 statutory fallback, unless enacted law changes it). A proposal or procedural interim rule does not by itself establish that final-regulations trigger.
 
-The compliance page renders **Implementation Watch** (separate from the main authorization table) while `rulemakingPhase !== "effective"`, and for pre-launch coins even after the regime is live — those rows never graduate to the main authorization table. GENIUS rows are forward-looking until the regime is effective. `sourceReferences` lets the effective-date posture cite multiple regulator rulemaking sources (OCC, FDIC, NCUA, FinCEN/OFAC, Treasury), not just one. Keep `reviewedAt` current when re-verified.
+Effectiveness requires an explicitly reviewed state update and Pages release on January 18, 2027 or a verified earlier legal effective date. Record the exact qualifying issuance, source dates and statutory calculation before changing `finalRulesIssuedAt` or `effectiveDate`; final issuance first selects `final-rules-issued`, never immediate `effective`. Calendar time alone cannot move rows in the shipped static bundle. Retain the current sourced state until that release is authorized.
+
+The compliance page renders **Implementation Watch** separately from the main authorization table while `rulemakingPhase !== "effective"`. Pre-launch coins remain in Watch even after effectiveness. That is a permanent lifecycle boundary: a coin becomes eligible for the main table only after normal catalog activation **and** regime effectiveness. Neither condition upgrades issuer authorization statuses, and issuer-specific approval evidence cannot bypass the phase gate. Frozen, quarantined and delisted assets remain excluded. `sourceReferences` cites the reviewed regulator sources; keep `reviewedAt` current when re-verified. Legal and catalog approvals remain separate.
 
 ---
 
@@ -196,5 +198,5 @@ Ongoing refresh runs through the `compliance-research` skill (`genius` regime fo
 
 - The tracker is **informational and sourced**, explicitly **not legal advice**; the page surfaces this.
 - Never fabricate an approval. Official statuses (`ppsi-approved`, `state-qualified`, `official-application-pending`) require regulator-grade references that name *this* token's issuer.
-- "Not assessed" (no `genius` row) is the default; do not bulk-stamp the long tail. Explicit exclusions are reserved for prominent confusable tokens.
+- "Not assessed" (no `genius` row) is a research gap, never an implicit exclusion. Every active coin is researched, but a row ships only at high confidence; exclusions state their applicability basis.
 - **Non-goals:** no automated regulatory scraping; no per-coin compliance scoring; no implication that the regime is effective while it is in rulemaking.

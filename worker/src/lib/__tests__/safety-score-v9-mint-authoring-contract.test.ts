@@ -10,6 +10,7 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-publication-input.test-support";
 
 const AS_OF_SEC = 1_785_456_000;
 // Derived, never hardcoded: the extension rejects a reviewedAt later than the
@@ -139,49 +140,18 @@ function fixedInput(
     pegDataById: Object.fromEntries(
       activeAssetIds.map((assetId) => [
         assetId,
-        {
+        makePublicationPegRow({
           id: assetId,
           symbol: "EXMPL",
           name: "Authoring Example",
-          pegType: "peggedUSD",
-          pegCurrency: "USD",
-          governance: "centralized",
-          currentDeviationBps: 1,
-          pegScore: 99,
-          priceSource: "fixture-price",
-          priceObservedAt: observedAtSec,
-          pegPct: 99,
-          severityScore: 0,
-          spreadPenalty: 0,
-          eventCount: 0,
-          worstDeviationBps: 1,
-          activeDepeg: false,
-          lastEventAt: null,
-          trackingSpanDays: 365,
-          methodologyVersion: "peg:fixture-v1",
-        },
+        }, observedAtSec),
       ]),
     ),
     activeDepegPeakBpsById: {},
     dexLiqMap: Object.fromEntries(
       activeAssetIds.map((assetId) => [
         assetId,
-        {
-          liquidityScore: 12,
-          concentrationHhi: 0.5,
-          poolCount: 1,
-          chainCount: 1,
-          coverageClass: "primary",
-          coverageConfidence: 1,
-          liquidityEvidenceClass: "measured",
-          hasMeasuredLiquidityEvidence: true,
-          effectiveTvlUsd: 1_000_000,
-          balanceMeasuredTvlUsd: 1_000_000,
-          organicMeasuredTvlUsd: 1_000_000,
-          exitRouteObservations: [],
-          methodologyVersion: "dex:fixture-v1",
-          updatedAt: observedAtSec,
-        },
+        makePublicationDexRow(observedAtSec),
       ]),
     ),
     redemptionBackstopMap: {},

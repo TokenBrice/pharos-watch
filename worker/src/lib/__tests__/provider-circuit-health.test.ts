@@ -88,7 +88,7 @@ describe("provider-circuit-health", () => {
     expect(health.halfOpenCount).toBe(1);
   });
 
-  it("reports authoritative open rows even when the aggregate provider index is stale", async () => {
+  it("reads authoritative rows without an aggregate-index query", async () => {
     const now = 2_000;
     const db = mockD1([
       {
@@ -112,6 +112,18 @@ describe("provider-circuit-health", () => {
     expect(health.status).toBe("degraded");
     expect(health.openCount).toBe(1);
     expect(health.openProviders.map((entry) => entry.providerId)).toContain(CIRCUIT_SOURCE.BALANCER_API);
+    expect(db.getHistory().some((entry) => entry.binds.includes("provider:circuit:index"))).toBe(false);
   });
 
+
+  it("distinguishes malformed stored evidence from absent initial closed state", async () => {
+    const health = await loadProviderCircuitHealth(mockD1([{
+      match: "FROM cache WHERE key IN",
+      rows: [{ key: `circuit:${CIRCUIT_SOURCE.BALANCER_API}`, value: "{" }],
+    }]), 2_000);
+    expect(health.status).toBe("unknown");
+    expect(health.invalidCount).toBe(1);
+    expect(health.closedCount).toBe(health.totalTracked - 1);
+    expect(health.invalidProviders).toEqual([{ providerId: CIRCUIT_SOURCE.BALANCER_API, reason: "malformed-circuit-record" }]);
+  });
 });

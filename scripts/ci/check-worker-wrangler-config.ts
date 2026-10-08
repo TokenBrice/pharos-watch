@@ -2,6 +2,7 @@ import { assignmentKey, buildAssignmentMap, parseAssignments, unquote } from "..
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import type { ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
 const EXPECTED_RULE_TYPES = ["CompiledWasm", "Data"] as const;
@@ -33,6 +34,7 @@ export interface WorkerWranglerConfigReport {
 }
 
 interface RuntimeDocsCheckOptions {
+  workerRole?: ScheduledWorkerRole;
   workerInfrastructureDoc?: string;
 }
 
@@ -85,6 +87,42 @@ export function evaluateWorkerWranglerConfig(
 ): WorkerWranglerConfigReport {
   const assignments = parseAssignments(toml);
   const issues: string[] = [];
+  const role = options.workerRole ?? "public";
+  const values = buildAssignmentMap(assignments);
+  const expectValue = (section: string, key: string, expected: string) => {
+    if (values.get(assignmentKey(section, key)) !== expected) {
+      issues.push(`${role} [${section}].${key} must be ${expected}.`);
+    }
+  };
+  expectValue("root", "name", role === "public" ? '"stablecoin-api"' : '"stablecoin-heavy"');
+  expectValue("root", "main", role === "public" ? '"src/index.ts"' : '"src/index.heavy.ts"');
+  expectValue("version_metadata", "binding", '"CF_VERSION_METADATA"');
+  expectValue("d1_databases", "binding", '"DB"');
+  expectValue("d1_databases", "database_id", '"8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"');
+  expectValue("limits", "cpu_ms", "300000");
+  expectValue("observability", "head_sampling_rate", role === "public" ? "0.1" : "1");
+  expectValue("observability", "enabled", "true");
+  expectValue("observability.logs", "enabled", "true");
+  expectValue("observability.logs", "invocation_logs", "true");
+  if (values.has(assignmentKey("vars", "WORKER_V9_WORKFLOW_MODE"))) {
+    issues.push(`${role} must not declare retired WORKER_V9_WORKFLOW_MODE.`);
+  }
+  const workflows = assignments.filter(({ section }) => section === "workflows");
+  if (role === "heavy") {
+    expectValue("root", "workers_dev", "false");
+    expectValue("root", "preview_urls", "false");
+    // The named resource still references this class. Remove these requirements
+    // only after the reviewed history export and resource deletion.
+    expectValue("workflows", "name", '"safety-score-v9-publication"');
+    expectValue("workflows", "binding", '"SAFETY_SCORE_V9_WORKFLOW"');
+    expectValue("workflows", "class_name", '"SafetyScoreV9PublicationWorkflow"');
+    if (workflows.length !== 3) issues.push("Heavy must own exactly the V9 publication Workflow.");
+    if (assignments.some(({ section, key }) => section.startsWith("ratelimits") || key === "CORS_ORIGIN")) {
+      issues.push("Heavy must not declare HTTP rate-limit or CORS bindings.");
+    }
+  } else if (workflows.length > 0) {
+    issues.push("Public must not own the V9 publication Workflow.");
+  }
   const catalogAliases = assignments.filter(({ section, key }) => section === "alias" && key === "#pharos-full-catalog");
   if (catalogAliases.length !== 1 || unquote(catalogAliases[0]?.value) !== "./src/lib/full-stablecoin-catalog.ts") {
     issues.push("Worker full catalog alias must resolve to ./src/lib/full-stablecoin-catalog.ts.");
@@ -93,14 +131,16 @@ export function evaluateWorkerWranglerConfig(
   const rootRoutes = routes.filter(({ section }) => section === "root");
   const nestedRoutes = routes.filter(({ section }) => section !== "root");
 
-  if (rootRoutes.length !== 1) {
+  if (role === "heavy" && routes.length > 0) {
+    issues.push("Heavy must not declare routes.");
+  } else if (role === "public" && rootRoutes.length !== 1) {
     issues.push(`Expected exactly one root routes assignment before any table; found ${rootRoutes.length}.`);
   }
   for (const route of nestedRoutes) {
     issues.push(`routes is owned by [${route.section}] instead of the Wrangler root.`);
   }
 
-  if (rootRoutes.length === 1) {
+  if (role === "public" && rootRoutes.length === 1) {
     const routeEntries = [...rootRoutes[0].value.matchAll(/\{([^{}]+)\}/g)].map((match) => match[1]);
     const customDomains: string[] = [];
     for (const entry of routeEntries) {
@@ -160,8 +200,10 @@ export function evaluateWorkerWranglerConfig(
   );
   const configuredAddressPriceProviderSetting = unquote(addressPriceProviderVars[0]?.value)?.trim();
   if (
-    addressPriceProviderVars.length !== 1 ||
-    configuredAddressPriceProviderSetting !== EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING
+    role === "public" && (
+      addressPriceProviderVars.length !== 1 ||
+      configuredAddressPriceProviderSetting !== EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING
+    )
   ) {
     issues.push(
       `Production address-price providers must be exactly ADDRESS_PRICE_PROVIDERS_ENABLED="${EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING}"; ` +
@@ -169,7 +211,7 @@ export function evaluateWorkerWranglerConfig(
     );
   }
 
-  if (options.workerInfrastructureDoc !== undefined) {
+  if (role === "public" && options.workerInfrastructureDoc !== undefined) {
     addRuntimeDocsIssues(issues, assignments, options.workerInfrastructureDoc);
   }
 
@@ -179,7 +221,7 @@ export function evaluateWorkerWranglerConfig(
 export function printWorkerWranglerConfigReport(report: WorkerWranglerConfigReport): void {
   if (!report.failed) {
     console.log(
-      "Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, address-price providers pinned to coingecko-onchain-address, runtime docs aligned).",
+      "Worker Wrangler configuration check passed (public/heavy ownership, bindings, runtime limits and docs aligned).",
     );
     return;
   }
@@ -189,11 +231,24 @@ export function printWorkerWranglerConfigReport(report: WorkerWranglerConfigRepo
 }
 
 export function checkWorkerWranglerConfig(
-  path = resolve(process.cwd(), "worker/wrangler.toml"),
+  publicPath = resolve(process.cwd(), "worker/wrangler.toml"),
+  heavyPath = resolve(process.cwd(), "worker/wrangler.heavy.toml"),
 ): WorkerWranglerConfigReport {
-  return evaluateWorkerWranglerConfig(readFileSync(path, "utf8"), {
+  const publicToml = readFileSync(publicPath, "utf8");
+  const heavyToml = readFileSync(heavyPath, "utf8");
+  const publicReport = evaluateWorkerWranglerConfig(publicToml, {
     workerInfrastructureDoc: readFileSync(resolve(process.cwd(), WORKER_INFRASTRUCTURE_DOC_PATH), "utf8"),
   });
+  const heavyReport = evaluateWorkerWranglerConfig(heavyToml, { workerRole: "heavy" });
+  const issues = [...publicReport.issues, ...heavyReport.issues];
+  const publicValues = buildAssignmentMap(parseAssignments(publicToml));
+  const heavyValues = buildAssignmentMap(parseAssignments(heavyToml));
+  for (const { section, key } of RUNTIME_DOCUMENTED_FIELDS) {
+    if (key === "preview_urls" || key === "head_sampling_rate") continue;
+    const field = assignmentKey(section, key);
+    if (publicValues.get(field) !== heavyValues.get(field)) issues.push(`Paired runtime configuration differs at ${field}.`);
+  }
+  return { failed: issues.length > 0, issues };
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

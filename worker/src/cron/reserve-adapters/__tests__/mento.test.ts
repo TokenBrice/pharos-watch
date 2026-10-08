@@ -148,6 +148,7 @@ interface MentoNetworkOptions {
   reserveJson?: unknown;
   dashboardHtml?: string;
   rpc?: Record<string, AdapterRpcValue>;
+  block?: AdapterNetworkSpec["block"];
 }
 
 function mentoNetwork(options: MentoNetworkOptions = {}): AdapterNetworkSpec {
@@ -155,6 +156,7 @@ function mentoNetwork(options: MentoNetworkOptions = {}): AdapterNetworkSpec {
     json: { [CATALOG_RESERVE_URL]: options.reserveJson ?? SAMPLE_PAYLOAD },
     html: { [MENTO_DASHBOARD_URL]: options.dashboardHtml ?? CURRENT_DASHBOARD_HTML },
     ...(options.rpc ? { rpc: options.rpc } : {}),
+    ...(options.block ? { block: options.block } : {}),
   };
 }
 
@@ -382,6 +384,16 @@ describe("mento adapter", () => {
     expectValidAdapterOutput("mento", result);
   });
 
+  it("retains a raw percentage census deviation without changing unrounded positive dust", () => {
+    const result = adaptMentoReserveComposition({ collateral: { assets: [
+      { symbol: "USDC", chain: "ethereum", percentage: 99.49 },
+      { symbol: "CELO", chain: "celo", percentage: 0.01 },
+    ] } });
+    expect(result.metadata?.diag?.rawSumDeviation).toBeCloseTo(0.5, 12);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(99.5);
+    expect(result.slices.some((slice) => slice.pct === 0.01)).toBe(true);
+  });
+
   it("produces CDP reserve output that passes adapter validation", () => {
     const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "GBPm");
     expectValidAdapterOutput("mento", result);
@@ -599,6 +611,7 @@ describe("mento redemption telemetry", () => {
   it("computes broker-pool capacity from the catalog-bound pool and converts a 5 bps spread", async () => {
     const { result, network } = await runAdapter("mento", "brlm-mento", {
       network: mentoNetwork({
+        block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
         rpc: {
           [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
           [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
@@ -645,6 +658,7 @@ describe("mento redemption telemetry", () => {
   it("sums matched counter-asset buckets and takes the max spread as the fee", async () => {
     const { result } = await runAdapter("mento", "brlm-mento", {
       network: mentoNetwork({
+        block: { number: 12345, timestamp: CURRENT_DASHBOARD_NOW_SEC - 60 },
         rpc: {
           [exchangeIdsKey]: encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]),
           [poolExchangeKey(EXCHANGE_ID_1)]: encodePoolExchange({
@@ -829,7 +843,7 @@ describe("mento redemption telemetry", () => {
     expect(network.rpcCalls).toHaveLength(1);
   });
 
-  it("retains a failed exchange-id read for the run instead of retrying it per coin", async () => {
+  it("does not retain a failed exchange-id promise as a successful cache entry", async () => {
     const network = installAdapterNetwork({
       json: { [CATALOG_RESERVE_URL]: SAMPLE_PAYLOAD },
       html: { [MENTO_DASHBOARD_URL]: MENTO_DASHBOARD_HTML_FIXTURE },
@@ -859,9 +873,8 @@ describe("mento redemption telemetry", () => {
 
     expectWarnings(first, ["mento-redemption-telemetry-failed"]);
     expectWarnings(second, ["mento-redemption-telemetry-failed"]);
-    // The rejected census read is cached for the whole run: the second coin
-    // adds no further RPC traffic.
-    expect(network.rpcCalls).toHaveLength(callsAfterFirstCoin);
+    // A rejected load releases single-flight admission; the second coin may retry.
+    expect(network.rpcCalls).toHaveLength(callsAfterFirstCoin * 2);
   });
 
   it("bounds optional redemption telemetry without discarding reserve composition", async () => {
@@ -924,6 +937,7 @@ describe("mento redemption telemetry", () => {
 
     const { result } = await runAdapter("mento", "gbpm-mento", {
       network: mentoNetwork({
+        block: { number: 12345, timestamp: OVERRIDE_DASHBOARD_NOW_SEC - 60 },
         dashboardHtml: sampleMatchingDashboardHtml("GBPm"),
         rpc: {
           [`celo:${liquity.activePoolAddress.toLowerCase()}:${LIQUITY_V2_DEBT_SELECTOR}`]: 500n * 10n ** 18n,

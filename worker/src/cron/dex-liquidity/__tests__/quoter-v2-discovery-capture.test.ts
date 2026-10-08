@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
-import { captureQuoterV2Pools, QUOTER_V2_CAPTURE_XDC_MAX_POOLS } from "../quoter-v2-pool-capture";
+import { captureQuoterV2Pools } from "../quoter-v2-pool-capture";
 import { enrichQuoterV2ExecutionTargets } from "../enrich-quoter-v2-targets";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
-import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool, quoteQuoterV2Requests, resolveQuoterV2PoolBindings } from "../../measured-execution/quoter-v2";
+import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool } from "../../measured-execution/quoter-v2";
 import type { LiquidityMetrics, PoolEntry } from "../types";
+import { createSlotDeadline, type SlotDeadline } from "../../../lib/cron-timeouts";
 
 const rpc = vi.hoisted(() => ({ fetchEvmBlockNumber: vi.fn(), fetchEvmBlockHeader: vi.fn(), fetchEvmMulticall3Aggregate3AtBlock: vi.fn() }));
 vi.mock("../../../lib/evm-rpc", () => rpc);
@@ -41,11 +42,11 @@ function input(profile = "uniswap-v3-quoter-v2", chain = "ethereum"): Parameters
 function row(project: string, chain: string, poolType: string, poolId = `${chain}:${POOL}`): PoolEntry {
   return { poolId, project, chain, poolType, symbol: "USDC / USDT", tvlUsd: 500_000, source: "cg_onchain", volumeUsd1d: 500, extra: {} } as PoolEntry;
 }
-async function enrich(pools: PoolEntry[]) {
+async function enrich(pools: PoolEntry[], deadline?: SlotDeadline) {
   const options = input("uniswap-v3-quoter-v2", pools[0]!.chain);
   return enrichQuoterV2ExecutionTargets({ metrics: new Map([["usdc-circle", { topPools: pools } as LiquidityMetrics]]),
     chainAddressToId: options.chainAddressToId, stablecoinPriceById: options.trackedStablecoinPrices, capturedAt: 1_791_184_659,
-    pancakeMeasuredTargets: new Map(), slipstreamMeasuredTargets: new Map() });
+    pancakeMeasuredTargets: new Map(), slipstreamMeasuredTargets: new Map(), deadline });
 }
 
 beforeEach(() => {
@@ -93,23 +94,37 @@ describe("address-bound discovered QuoterV2 capture", () => {
     expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
     expect(isDexMeasuredExecutionDeploymentScoreEligible("unverified-v3-quoter-v2", "hyperevm")).toBe(false);
   });
-  it("fails closed when XDC canonical block identity is unavailable", async () => {
-    rpc.fetchEvmBlockHeader.mockResolvedValue(null);
-    const result = await captureQuoterV2Pools(input("xswap-v3-quoter-v2", "xdc"));
-    expect(result).toMatchObject({ pools: [], degraded: true, errors: ["quoter-v2-block-identity-unavailable"] });
-    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  it.each([
+    ["hybra-v3-quoter-v2", "hyperevm"],
+    ["xswap-v3-quoter-v2", "xdc"],
+  ])("refuses retired %s capture before opening transport", async (profile, chain) => {
+    expect(await captureQuoterV2Pools(input(profile, chain))).toMatchObject({
+      ok: false, errors: ["quoter-v2-deployment-unreviewed"], pools: [],
+    });
+    expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
   });
 });
 
 describe("retained discovered rows enter actual target production", () => {
-  it("selects a bounded XDC subset instead of failing an oversized discovery group", async () => {
-    answers("xswap-v3-quoter-v2", "xdc");
-    const pools = Array.from({ length: 128 }, (_, index) => row("xswap-v3", "xdc", "cg-concentrated",
-      `xdc:0x${(index + 1).toString(16).padStart(40, "0")}`));
-    await enrich(pools);
-    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![1]).toHaveLength(5 * QUOTER_V2_CAPTURE_XDC_MAX_POOLS);
-    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![3]).toMatchObject({ beforeRequest: expect.any(Function), deadlineMs: expect.any(Number) });
+  it("clips capture to the original event deadline after a readiness wait", async () => {
+    const nowMs = Date.now();
+    const deadline = createSlotDeadline(nowMs);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(deadline.platformDeadlineMs - 10_000);
+    try {
+      answers();
+      await enrich([row("uniswap-v3", "ethereum", "cg-concentrated")], deadline);
+      expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls[0]![3].deadlineMs).toBe(deadline.platformDeadlineMs);
+    } finally {
+      clock.mockRestore();
+    }
   });
+  it("does not issue capture requests after the executing event expires", async () => {
+    const deadline = createSlotDeadline(Date.now() - 3_600_000);
+    expect(await enrich([row("uniswap-v3", "ethereum", "cg-concentrated")], deadline))
+      .toEqual({ exactPoolCount: 0, exactCapableAssets: [] });
+    expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
+  });
+
   it.each(["cg-concentrated", "cg-cl-1bp", "cg-cl-5bp"])("resolves Pancake %s using factory identity, not display fee", async (poolType) => {
     answers("pancakeswap-v3-quoter-v2", "bsc", 2500);
     const pool = row("pancakeswap", "bsc", poolType);
@@ -124,10 +139,9 @@ describe("retained discovered rows enter actual target production", () => {
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "base")).toBe(false);
   });
   it.each([
+    ["uniswap-v3-quoter-v2", "uniswap-v3", "xlayer"],
     ["hyperswap-v3-quoter-v2", "hyperswap-v3", "hyperevm"],
-    ["hybra-v3-quoter-v2", "hybra-finance-v3", "hyperevm"],
     ["kodiak-v3-quoter-v2", "kodiak-v3", "berachain"],
-    ["xswap-v3-quoter-v2", "xswap-v3", "xdc"],
   ])("collects %s without admitting new forks to scoring", async (profile, project, chain) => {
     answers(profile, chain, 100);
     const pool = row(project, chain, "cg-concentrated");
@@ -135,41 +149,13 @@ describe("retained discovered rows enter actual target production", () => {
     const target = pool.extra?.measuredExecutionTarget;
     expect(target).toMatchObject({ adapterProfileId: profile, protocol: project, chain });
     expect(isDexMeasuredExecutionDeploymentScoreEligible(profile, chain)).toBe(false);
-    if (profile === "hybra-v3-quoter-v2") {
+    if (profile === "hyperswap-v3-quoter-v2") {
       expect(target?.feePips).toBe(100);
       expect(target?.tickSpacing).toBeUndefined();
       expect(decodeFunctionData({ abi: ABI, data: encodeV3FactoryGetPool(target!) }).args?.[2]).toBe(100);
       const quoteAbi = parseAbi(["function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256,uint160,uint32,uint256)"]);
       expect(decodeFunctionData({ abi: quoteAbi, data: encodeQuoterV2ExactInputSingle(target!, 1_000_000n) }).args?.[0]).toMatchObject({ fee: 100 });
     }
-  });
-  it("uses hash-bound explicit-absence transport for XDC discovery, factory proof and quotes", async () => {
-    answers("xswap-v3-quoter-v2", "xdc", 500);
-    const pool = row("xswap-v3", "xdc", "cg-cl-5bp");
-    await enrich([pool]);
-    const target = pool.extra!.measuredExecutionTarget!;
-    const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain)!;
-    rpc.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValueOnce([
-      receipt(`0:${target.targetId}`, "getPool", POOL),
-    ]);
-    const binding = await resolveQuoterV2PoolBindings({
-      requests: [{ target, factoryAddress: deployment.factoryAddress, factoryCodeHash: deployment.expectedFactoryCodeHash }],
-      blockNumber: 25_000_000, chainRpcs: new Map(),
-    });
-    expect(binding[0]?.proof?.resolvedPoolAddress).toBe(POOL);
-    const quoteAbi = parseAbi(["function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256,uint160,uint32,uint256)"]);
-    rpc.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValueOnce([{
-      label: `0:${target.targetId}`, success: true,
-      returnData: encodeFunctionResult({ abi: quoteAbi, functionName: "quoteExactInputSingle", result: [1_000_000n, 1n << 96n, 0, 90_000n] }),
-    }]);
-    const quotes = await quoteQuoterV2Requests({
-      requests: [{ target, inputUsd: 1, endpointAddress: deployment.endpointAddress }],
-      blockNumber: 25_000_000, chainRpcs: new Map(),
-    });
-    expect(quotes[0]?.point).toMatchObject({ amountOutRaw: "1000000" });
-    expect(rpc.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.every((call) =>
-      call[2] === 25_000_000 && call[3].multicallFallbackBlockHash === `0x${"11".repeat(32)}`,
-    )).toBe(true);
   });
   it("keeps a fingerprint with multiple possible physical pools unresolved", async () => {
     const pool = row("uniswap-v3", "ethereum", "cg-concentrated", `fp:ethereum:uniswap-v3:${TOKEN0}:${TOKEN1}`);

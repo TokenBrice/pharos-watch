@@ -315,12 +315,33 @@ export async function aggregateScopedLiabilitySupply(options: {
 }): Promise<ScopedLiabilitySupply> {
   const { coin, scope, adapterKey, signal } = options;
   const contracts = coin.contracts ?? [];
-  const classified = new Set([...scope.included, ...scope.excluded].map((entry) => entry.chain));
-  const unclassifiedChains = [...new Set(
-    contracts.map((contract) => contract.chain).filter((chain) => !classified.has(chain)),
-  )];
+  const catalogChains = new Set(contracts.map((contract) => contract.chain));
+  const classified = new Set<string>();
+  const invalidScopeChains = new Set<string>();
+  const includedChains = new Set(scope.included.map((entry) => entry.chain));
+  for (const entry of [...scope.included, ...scope.excluded]) {
+    if (classified.has(entry.chain) || !catalogChains.has(entry.chain)) invalidScopeChains.add(entry.chain);
+    classified.add(entry.chain);
+  }
+  for (const entry of scope.excluded) {
+    if (contracts.filter((contract) => contract.chain === entry.chain).length !== 1
+      || (entry.relation === "lock-mint-representation"
+        && (!entry.backedBy || !includedChains.has(entry.backedBy)))) {
+      invalidScopeChains.add(entry.chain);
+    }
+  }
+  const unclassifiedChains = [...new Set([
+    ...contracts.map((contract) => contract.chain).filter((chain) => !classified.has(chain)),
+    ...invalidScopeChains,
+  ])];
 
-  const reads = await Promise.all(scope.included.map(async (entry): Promise<IncludedRead> => {
+  const seenIncluded = new Set<string>();
+  const uniqueIncluded = scope.included.filter((entry) => {
+    if (seenIncluded.has(entry.chain)) return false;
+    seenIncluded.add(entry.chain);
+    return true;
+  });
+  const reads = await Promise.all(uniqueIncluded.map(async (entry): Promise<IncludedRead> => {
     const deployments = contracts.filter((contract) => contract.chain === entry.chain);
     if (deployments.length !== 1) {
       return {
@@ -445,7 +466,8 @@ export function evaluateLiabilityCoverage(input: {
     const ratioUnavailableReason: LiabilityRatioUnavailableReason | undefined =
       supply.omittedNonEvmChains.length > 0 || supply.omittedNoRpcChains.length > 0
         ? "liability-scope-unclassified-chain"
-        : !supplyReadComplete ? "included-supply-read-failed" : undefined;
+        : !supplyReadComplete ? "included-supply-read-failed"
+        : supply.contributions.every((row) => row.raw === 0n) ? "zero-liability-denominator" : undefined;
     return {
       supplyReadComplete,
       supplyCoverageComplete,
@@ -497,6 +519,8 @@ export function evaluateLiabilityCoverage(input: {
       "reserve-supply-time-skew",
       `Reserve observation and liability supply reads are ${ratioSkewSec ?? "an unknown number of"}s apart (bound ${maxReserveSupplySkewSec}s); ratio withheld`,
     ));
+  } else if (supply.contributions.every((row) => row.raw === 0n)) {
+    ratioUnavailableReason = "zero-liability-denominator";
   }
 
   const liabilityScope: LiveReserveLiabilityScopeMetadata = {

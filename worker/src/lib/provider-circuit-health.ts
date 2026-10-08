@@ -23,6 +23,7 @@ function emptyFamilySummary(): ProviderCircuitHealthFamilySummary {
     closed: 0,
     halfOpen: 0,
     open: 0,
+    invalid: 0,
   };
 }
 
@@ -69,12 +70,15 @@ export async function loadProviderCircuitHealth(
       closedCount: 0,
       halfOpenCount: 0,
       openCount: 0,
+      invalidCount: 0,
+      invalidProviders: [],
       openProviders: [],
       byFamily: {},
     };
   }
 
-  const indexedRecords = await getCircuitRecordsForSources(db, sources);
+  const { records: indexedRecords, invalidSources } = await getCircuitRecordsForSources(db, sources);
+  const invalidSourceSet = new Set(invalidSources);
 
   let closedCount = 0;
   let halfOpenCount = 0;
@@ -82,6 +86,14 @@ export async function loadProviderCircuitHealth(
   const byFamily: Record<string, ProviderCircuitHealthFamilySummary> = {};
   const openProviders: ProviderCircuitHealthEntry[] = [];
   for (const source of sources) {
+    if (invalidSourceSet.has(source)) {
+      const family = providerFamily(source);
+      const summary = byFamily[family] ?? emptyFamilySummary();
+      summary.total++;
+      summary.invalid = (summary.invalid ?? 0) + 1;
+      byFamily[family] = summary;
+      continue;
+    }
     const record = indexedRecords[source] ?? {
       state: "closed",
       consecutiveFailures: 0,
@@ -109,11 +121,13 @@ export async function loadProviderCircuitHealth(
 
   return {
     checkedAt: now,
-    status: openCount > 0 || halfOpenCount > 0 ? "degraded" : "healthy",
+    status: openCount > 0 || halfOpenCount > 0 ? "degraded" : invalidSources.length > 0 ? "unknown" : "healthy",
     totalTracked: sources.length,
     closedCount,
     halfOpenCount,
     openCount,
+    invalidCount: invalidSources.length,
+    invalidProviders: invalidSources.slice(0, 25).map((providerId) => ({ providerId, reason: "malformed-circuit-record" })),
     openProviders: openProviders.slice(0, 25),
     byFamily,
   };

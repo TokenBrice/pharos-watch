@@ -45,7 +45,7 @@
     "compositionBasis": "September 10, 2026 issuer-prepared mRe7YIELD weekly report, re-verified as an unresolved whole-portfolio NAV envelope; live row identity remains owned by the Midas Chainlink NAV adapter",
     "compositionAsOf": "2026-09-10",
     "scope": "full-composition",
-    "knownUnknownExposure": "The September 10 issuer report discloses aggregate strategy and settlement categories, but underlying strategy positions, liabilities, venue weights and settlement-asset custody remain unverified. Its broad categories do not provide a complete classified portfolio.",
+    "knownUnknownExposure": "The historical September 10 report provides broad strategy/settlement categories without complete positions, liabilities, venue weights or custody. Source-maintenance check 2026-10-07: accepted transparency argument mRE7 returns reports={} without date; mRE7YIELD returns HTTP 400 enum validation, not a valid empty portfolio. No usable current composition packet exists. Preserve the 7-day scoring/14-day NAV transport distinction; a source accepted for transport can still be expired for scoring. Weekly publication is not dated underlying composition, and neither access time nor historical report categories justify suppressing the portfolio warning or renewing curated dates.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

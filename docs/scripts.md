@@ -4,7 +4,7 @@
 
 ## Overview
 
-Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.
+CI/operational helpers in `scripts/` and Worker-bound tools importing `worker/src/**` in `worker/scripts/` support build integrity, smoke checks, data sync and targeted maintenance.
 
 Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries for 5xx and caller-declared transient statuses. Before retrying they cancel the failed response body. One 30-second `AbortSignal.timeout` deadline (caller-overridable with `timeoutMs`, composed with caller cancellation) covers attempts, waits, and returned-body reads; aborts are not retried.
 
@@ -26,7 +26,7 @@ The [daily social pipeline](./daily-social.md) owns the seven-topic calendar, so
 
 ## Operator CLI Contract
 
-State-changing and release-control scripts use `scripts/lib/cli-args.mjs`, a strict wrapper around Node's `util.parseArgs`. These entrypoints reject unknown options, missing values, accidental duplicate options, unexpected positionals, and declared option conflicts before network or filesystem effects. Every migrated command supports `-h` / `--help`; usage errors exit `2`, runtime failures exit `1`, and help exits `0`.
+State-changing/release-control entrypoints use `scripts/lib/cli-args.mjs`, a strict Node `util.parseArgs` wrapper. Before network/filesystem effects they reject unknown options, missing values, duplicate options, unexpected positionals and declared conflicts. Migrated commands support `-h` / `--help`; exits: usage `2`, runtime failure `1`, help `0`.
 
 Every committed source file that reads `process.argv` is enrolled by exact path in `scripts/lib/cli-argv-policy.mjs`. Operator and production-mutating entrypoints must reach a parser that imports and calls the shared strict wrapper; read-only, build/local-artifact, and test/dev entrypoints require an explicit categorized exemption and audit reason. `npm run check:cli-args-policy` rejects unclassified additions, stale or duplicate declarations, strict/exempt overlaps, and strict-parser claims that are not reachable from the entrypoint. Add or remove entries in the source-owned policy with the corresponding script change; there is no count baseline to update.
 
@@ -48,6 +48,8 @@ exports a registry-bound wrapper with normalized `fixedInput` and a verified `re
 
 `npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
 replays against the capture-time registry.
+
+`npm run safety-score-v9:movers` resolves to `worker/scripts/diff-safety-score-v9-movers.ts`. Like replay and diff, this is Worker-bound tooling because full-artifact admission uses the native/legacy capture contracts. Keep its implementation under `worker/scripts/`, outside the root TypeScript program; the npm alias and flags remain unchanged.
 
 Use `jq '(.fixedInput // .).clockSec'` to read either export shape. The [equivalence harness](./process/safety-score-equivalence-harness.md#capture-time-registry-replay) owns snapshot admission, trusted-Git execution, production-digest limitations, and the `--registry-ref`, `--normalized-only`, and `--allow-registry-mismatch` mode contracts.
 
@@ -86,11 +88,11 @@ Compare captures before and after an infrastructure change by `period`, `sortBy`
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/maintenance/report-telegram-adoption.ts` | Read remote D1 adoption and the complete 14-day Telegram dispatch capture, reduce rows-written share and real-event first-enqueue latency, refresh the generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print the report JSON. Incomplete windows, missing write denominators, or missing real-event samples remain explicitly undecided. |
+| `scripts/maintenance/report-telegram-adoption.ts` | Build-category reporter: read remote D1 subscriber, lifecycle, usage, and confirmed-delivery adoption telemetry, refresh the local generated block in [`telegram-alerts.md`](./telegram-alerts.md), and print report JSON. No production mutation. Planning-cost/4.1 decision reporting is retired without a measured go/no-go conclusion. |
 
 ## Routing Index
 
-The command name, composition, and default invocation are owned by the root [`package.json`](../package.json). Run the selected npm command with `-- --help`, or invoke a direct entrypoint with `--help`, for its current flags and defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not copy its roster into documentation.
+Root [`package.json`](../package.json) owns command names, composition and default invocations. Use npm `-- --help` or direct-entrypoint `--help` for current flags/defaults. `scripts/lib/cli-argv-policy.mjs` owns argument-safety classification; do not duplicate its roster.
 
 ### Validation Command Index
 
@@ -137,11 +139,17 @@ Use `npm run check:pr -- --base=<ref>` for the adaptive local contract; [Testing
 
 `node --import tsx scripts/maintenance/refresh-pr-test-timings.ts --runs=5` refreshes committed scheduling weights: [when, provenance, and review](./testing.md#ci-pipeline).
 
+Plain-test and critical-coverage runners supply an explicit timing lane; headings and overflow artifact links use the same lane. Timing rows remain scheduling telemetry, never test or coverage correctness gates.
+
 Critical ownership reads base-revision Git blobs using their declared byte lengths; embedded NULs and multibyte text cannot shift later file records. Frontend-to-Worker import checks cover literal dynamic imports as well as static imports, retaining the documented waiver.
 
 For `check:focused` selection and preview behavior, use the [smallest adequate check matrix](./testing.md#smallest-adequate-check-per-area).
 
 `check:unused-code` credits namespace property reads, literal-key reads and literal `vi.spyOn`/`jest.spyOn` members individually; default imports consume only `default`, and side-effect imports preserve reachability without consuming named exports. Computed or escaping namespace uses retain conservative whole-module consumption and print their source/target in the audit. Dynamic import results and unqualified import types remain conservative, with aggregate audit counts. Newly exposed exports require individual review, not a blanket allowlist. Scanner fixtures must use external temporary workspace roots, never the repository root.
+
+Useful test-only evidence belongs in recognized `*.test-support.ts` files, not production module DEBT or external-consumer blind spots. The matched Safety Score invariant corpus lives beside its importing shared test and remains outside the product evaluation-build manifest. Preserve its evidence when relocating it.
+
+`check:cron-console-usage` reports missing baseline paths separately from extant zero-call files and keeps its blocking growth ratchet. Structured-log conversions must preserve console-only versus durable-event semantics; no date or stored-budget decrease authorizes strict-zero enforcement without a measured current-root zero scan and persistence parity.
 
 `check:script-entrypoints` includes `.mts` files in forward command scanning, reverse candidates and reverse references; declaration files are not runnable candidates. Markdown still receives stale-command checks but cannot retain an otherwise unreferenced script. The reverse check remains a textual-reference audit, not an executable import graph: policy-retained operator tools remain valid, and mutually referring disconnected scripts are not proven reachable.
 
@@ -155,15 +163,36 @@ Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` c
 
 Use `package.json`'s `audit:*`, `candidates:*`, and `calibrate:*` commands; reports are advisory unless owner docs or CI enforce them. [Stablecoin Data](./stablecoin-data.md) owns curation; feature docs own interpretation. Keep research/queues in `agents/`, durable changes in owner docs. Refresh contracts: [protocol APIs](./process/protocol-api-mechanism-refresh.md) and [CDP shocks](./process/shock-coverage-refresh.md).
 
+These are permanent human review tools, not latent scoring engines. Dispositions do not admit a provider, route, dependency edge, or yield source. DIA price-provider probing and the mint-authority scanner POC are retired; use primary-source native-control review with `audit:mint-authority-review` and `audit:mint-bridge-ownership` instead of generated unknown scanner output.
+
+The shadow-era replay summary and fixed July B1 historical DEX root-ledger entrypoints are retired (2026-10-08), including direct current-tree support for archived runbooks. Historical reproduction uses the source checkout and exact input/registry/census/clock/output pins of the archived investigation; Git source alone does not guarantee an exact rerun. Permanent replay/diff/movers remain supported, but worklist/expiry tools are not replacements for the retired renderer.
+
+- `audit:price-source-depth` proposes conditional coverage lifts, not measured new sources or independent trust. Retain both report-card and stablecoin input identities/clocks with the next audit; independent snapshots need not share a publication generation.
+- `audit:coverage -- --domain=redemption-coverage` always evaluates reviewed-disposition findings. `--check` changes presentation only: a reviewed nonzero backlog can pass either mode, while missing/invalid/stale dispositions fail either mode. `--strict-active-gaps` separately escalates inferred active gaps; a disposition never configures a redemption route.
+- `audit:coverage -- --domain=reserve-coverage` is advisory and has no `--check` evaluator (the child rejects that option). `--prod` supplies report-card/stablecoin catalog snapshots, not reserve-sync telemetry; use explicit `--reserve-states <file>` for state evidence. Absent state stays unknown.
+- L2BEAT snapshot audits distinguish alias-only validation, saved observed input, and explicit `--live` drift checks; see [Chain Health](./chain-health.md#l2beat-snapshot). None imports live data into the authoritative static snapshot automatically.
+
 `npm run audit:live-reserve-config-changes -- --base <ref>` compares working-tree semantic fingerprints to an explicit deployed/PR base offline, printing changed IDs and both digests as JSON; missing recovery fetchers fail. New/removed bindings and display/scoring edits are excluded. It shares runtime's pure selector; tests are git-independent. Bounds/acceptance: [config recovery](./live-reserves.md#deploy-time-configuration-recovery).
+
+`scripts/maintenance/refresh-independent-assurance-reports.ts` registers MYRC's offline extraction via `scripts/lib/independent-assurance-profiles/myrc.ts`. [MYRC reserve verification](./live-reserves.md#fund-and-issuer-transparency-feeds) owns distinct cash/fund rows, shared reconciliation tolerances, excluded circulation, exact-PDF/extraction provenance and examined-balance clocks.
 
 `npm run audit:mint-burn-conservation-admission -- --ids <csv> --out <dir>` runs the production raw-token conservation audit over a frozen per-chain window (timestamp-driven by default; `--window-blocks` overrides) for every config of the requested stablecoin ids; semantics and the reviewed-identity sidecar are owned by [Mint/Burn Flows: Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation). It journals every JSON-RPC exchange to `<out>/journal.jsonl` with URLs redacted to origin and chain path (never the API key), reproduces records offline with `--replay <journal.jsonl>`, and — given reviewer semantic files via `--semantic-dir` — emits `sidecar-draft.json` entries (`--emit-sidecar-draft`) that `--merge-into-sidecar` merges into the committed sidecar. The command exits 1 when any audited window is not `ok`; journals and drafts stay under `agents/`.
 
+Audit and draft modes do not mutate admission authority. Only explicit `--merge-into-sidecar` changes the reviewed sidecar and regenerates its runtime projection; retain the journal and restore the exact sidecar/projection pair on rollback, never disable the ingestion fence.
+
 V9 typed queue: `safety-score-v9:missing-data-registry`; `safety-score-v9:curation-worklist` renders Markdown; `safety-score-v9:expiry-queue` adds preventive production-admission expiry checks. Direct evidence-gap/mint-posture compatibility tools have no aliases or routing role.
 
-The V9 calibration analyzer consumes normalized replay artifacts, rebuilds them through the shared replay primitive, and reads its pinned distribution and binding expectations from `scripts/__tests__/fixtures/safety-score-v9-calibration-baseline.json`. It does not read measurement capture bodies. The retired replay-summary and B1 root-ledger aliases remain available as direct one-time entrypoints where an archived runbook names them.
+Worklist and pre-expiry supply come from the exact replay's retained nullable supply state, not a fresh market-cap lookup. Missing supply stays unavailable with a reason; observed zero stays zero. Reports disclose known-supply subtotals/unavailable counts and qualify known-only ratios, with deterministic unknown-first ordering rather than assigning unknown assets the smallest weight.
+
+USDe/USDf manual capture and reviewed weekly protocol-API automation are permanent non-publishing evidence tooling. Strict replay reports canonical V2 / original-byte hash-verified normalized-only V1 / unavailable separately; unavailable access or bodies fail. Replay may perform signed R2 GETs and cache verified bytes; network-free use requires local original bytes/cache. fxSAVE's standalone local capture stays incomplete/N/A; its reviewed dossier already attaches parent evidence at a separate immutable clock/block, not new local CDP credit.
+
+The real-A distribution calibration analyzer and aggregation-rescore wrapper are retired (2026-10-08). Historical source/fixture lineage remains in Git; authored reports remain archival evidence, not current approval. Operators lose distribution, uncertainty-ledger, capture-stability, causal-attribution, histogram/pileup and stale-trace-rescore formats; replay/diff/movers are not format-equivalent replacements.
+
+Replay, diff, movers, sensitivity, anchor calibration, live-withheld and DDRR calibration are permanent operator tools for the active model under stable V9 namespaces, never alternate publishers. Replay defaults to captured redemption bytes; `--rederive-current-redemption` is an explicit current-curation scenario. Diff proves normalized score-output equality only, with malformed/duplicate cards rejected and activation identity checked separately. Anchor report schema 2 removes unused pending-ruling fields/option while preserving failed diagnostic exits. Sensitivity perturbations stay research-only; golden baseline invariants remain authoritative tests.
 
 Annotation and AI-summary candidate request deadlines remain active through JSON body consumption. Annotation collection uses fixed 14-day windows and serial cursor pagination, bounded to 25 pages and 30 seconds per source with a 6-second request/body timeout. Partial results retain explicit incomplete coverage. Full queues, digest, and logs are immutable Actions artifacts retained for 90 days; issue excerpts link to those artifacts.
+
+Annotation intake, corpus, reviewer decisions, and deferrals remain after chart-overlay retirement; no candidate publishes automatically. AI-summary QA reads four endpoint families (report cards, stress signals, peg summary, stablecoins), uses heuristic detectors, and skips summaries without a current card. An empty candidate report is not affirmative validation of all prose; exact-text human review and registered claim tokens remain authoritative.
 
 `npm run candidates:annotations -- --replay agents/annotation-history` recursively reads downloaded `annotation-candidates.json` snapshots and merges them with local unresolved rows offline. Reviewer-owned `agents/annotation-review.json` dispositions suppress only explicitly promoted or dropped IDs, preserve deferrals, and admit distinct same-day events. Generation never advances legacy `last_swept_at`, writes review decisions, or edits product annotations. AI-summary liquidity findings assert retirement only with explicit legacy Safety Score context; current or ambiguous DEX claims receive neutral review without an invented comparison. `npm run candidates:ai-summaries` also emits medium-severity `weakest-pillar` findings when prose names a weakest pillar other than the card's published `weakestPillar`, and `retired-methodology-version` findings when a Safety Score sentence cites a major version from v9 up to but excluding the current one (pre-v9 claims stay with the retired-dimension findings; protocol versions such as Aave v3 are ignored outside Safety Score sentences).
 
@@ -201,7 +230,7 @@ In the standard local npm setup, `package.json` runs `scripts/maintenance/prepar
 git config core.hooksPath .githooks
 ```
 
-The pre-commit hook runs `npm run sync:staged-artifacts` and regenerates and stages the committed generated artifacts affected by the staged sources, so a source commit and its derived artifacts land together. Its auto-stage path is strictly offline: no `autoStage` entry may be `network-derived`, so outputs such as `public-datasets` require manual regeneration with `npm run generate:public-datasets`. Staged selection includes deletions, and the sync preflights all selected generators and source state before running them; it stages outputs in one all-or-nothing operation only after every generator succeeds. The execution plan uses the same registry phase planner as prebuild, including declared offline prerequisites before their dependents: a changed canonical catalog regenerates its packed Worker bytes before the evaluation manifest hashes them. Only `autoStage` outputs are added to the index. Network-derived prerequisites are refused. The source guard includes unstaged and untracked inputs throughout that dependency closure; dirty output files are rejected before any generator runs. On failure, clean tracked outputs are restored from the index, newly created files matching registered output globs are removed, and existing ignored prerequisite files regain their original bytes. Rollback preserves pre-existing glob members; empty directories may remain. The evaluation manifest and registry share the authored fixed hash-input inventory; recursive capture summaries and their parser also trigger regeneration without broadening the score identity to unrelated operational code. `PHAROS_SKIP_ARTIFACT_HOOK=1` is an explicit bypass, not evidence that generated outputs are current.
+The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating/staging committed artifacts affected by staged sources, including deletions. Auto-stage is offline: `autoStage` cannot be `network-derived`; regenerate `public-datasets` manually with `npm run generate:public-datasets`. All selected generators and source state are preflighted; outputs stage atomically only after every generator succeeds. The shared prebuild phase planner orders offline prerequisites before dependents (canonical catalog → packed Worker bytes → evaluation manifest). Only `autoStage` outputs enter the index; network-derived prerequisites are refused. The source guard covers unstaged/untracked inputs throughout the dependency closure and rejects dirty outputs before generation. Failure restores clean tracked outputs from the index, removes newly created registered-glob files, and restores existing ignored prerequisites' bytes; pre-existing glob members survive, though empty directories may remain. Manifest and registry share authored fixed hash inputs; recursive capture summaries/their parser trigger regeneration without adding unrelated operational code to score identity. `PHAROS_SKIP_ARTIFACT_HOOK=1` bypasses the hook, not artifact freshness proof.
 
 The hook does not run a local test/build gate; [Testing](./testing.md#commands) owns local validation behavior.
 

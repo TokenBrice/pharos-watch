@@ -1,19 +1,15 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *), two chains:
- *   sync-live-reserves (2) → sync-redemption-backstops (0) → cron-sentinel (1)
+ *   sync-live-reserves (2) → sync-redemption-backstops (1) → cron-sentinel (1)
  *   sync-kinesis-supply (1)
  *
- * Both consumers of the generation the head writes stay serialized behind it:
- * the backstop computation reads the live-reserve snapshot metadata, and the
- * reserve watchdog publishes a drift envelope stamped with the current time,
- * so it must observe a completed queue rather than racing the producer and
- * re-publishing the previous generation as current. Kinesis supply reads no
- * reserve output and runs beside the head; a stalled head is replayed in chain
- * order by the five-minute reserve-recovery lane, so the watchdog is delayed,
- * never lost.
+ * Redemption consumes a sealed accepted reserve view after the producer settles,
+ * even when the current cohort is incomplete. Only the sentinel requires this
+ * slot's successful queue exhaustion. Recovery completing the producer forces
+ * another redemption pass; consumer-only replay remains idempotent.
  *
- * Reserve adapters run sequentially; backstops are DB-only.
+ * Reserve adapters and redemption RPC observers run sequentially.
  * Recovery serializes Kinesis behind the head to retain its separate 2/6 budget.
  * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
  */
@@ -31,6 +27,7 @@ import {
   beginLiveReserveCheckpoint,
   finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
+  releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
   type ScheduledCheckpointIdentity,
   type ScheduledRecoveryCheckpoint,
@@ -184,6 +181,7 @@ function buildReserveSyncSlotGroups(
       if (!taskCompleted || !durableFrontierCompleted) shouldRunJobs.add(task.job);
     }
   }
+  if (shouldRunJobs.has("sync-live-reserves")) shouldRunJobs.add("sync-redemption-backstops");
   return groups.map((group) => ({
     ...group,
     tasks: group.tasks
@@ -229,9 +227,16 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   if (runtime.recoveryCheckpoint) {
     const priority = await getReserveProducerPriority(runtime.db);
     if (priority) {
+      const checkpoint = runtime.recoveryCheckpoint;
+      const recoveryClaimRelease = runtime.invocationId === checkpoint.invocationId
+        && runtime.invocationId === checkpoint.recoveryOwner
+        ? await releaseUnstartedLiveReserveRecoveryClaim(runtime.db, checkpoint)
+        : { disposition: "not-owned" };
       const jobs = buildReserveSyncSlotGroups(runtime, runtime.recoveryCheckpoint)
         .flatMap((group) => group.tasks.map((task) => task.job));
-      return recordPriorityDeferredReserveTasks(runtime, jobs, priority.reason, { producerPriority: priority });
+      return recordPriorityDeferredReserveTasks(runtime, jobs, priority.reason, {
+        producerPriority: priority, recoveryClaimRelease,
+      });
     }
   }
   const checkpoint =
@@ -248,14 +253,8 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const redemptionTasks = redemptionGroup?.tasks ?? [];
   const kinesisTasks = kinesisGroup?.tasks ?? [];
   const postSyncTasks = postSyncGroup?.tasks ?? [];
-  // Kinesis supply reads no reserve output, so it runs beside the head instead
-  // of queueing behind it. The two reserve consumers stay ordered behind the
-  // head: the backstop computation reads the live-reserve snapshot metadata,
-  // and the post-sync watchdog publishes a reserve-drift envelope stamped with
-  // the current time, so running it beside the producer let it observe and
-  // re-publish the previous generation before this slot's rows were written.
-  // An abandoned head delays the watchdog rather than losing it: the
-  // five-minute reserve-recovery lane replays the checkpoint in chain order.
+  // Kinesis is independent. Redemption reads only sealed acceptance after the
+  // head settles, while the sentinel still requires this slot's full cohort.
   const main = syncTask
     ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
     : Promise.resolve(buildScheduledSlotSummary([]));
@@ -285,16 +284,17 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     isReserveQueueExhausted(checkpointAfterMain)
     && mainSummary.jobsErrored === 0
     && mainSummary.jobsSkipped === 0;
+  if (redemptionTasks.length > 0 && redemptionGroup) {
+    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
+    const redemptionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
+      job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
+    if (runtime.recoveryCheckpoint && redemptionSkip) {
+      summaries.push(await recordPriorityDeferredReserveTasks(runtime,
+        postSyncTasks.map((task) => task.job), redemptionSkip.reason!, {}));
+      return mergeScheduledSlotSummaries(summaries);
+    }
+  }
   if (!reserveStageCompleted) {
-    summaries.push(
-      await recordBlockedReserveTasks(
-        runtime,
-        identity,
-        redemptionTasks,
-        "sync-live-reserves",
-      ),
-    );
-    // The watchdog validates the generation this slot was supposed to write, so
     // an unfinished or failed reserve stage must not refresh the drift envelope
     // from the previous one. It re-runs with the replayed suffix.
     summaries.push(
@@ -306,16 +306,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
       ),
     );
   } else {
-    if (redemptionTasks.length > 0 && redemptionGroup) {
-      summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
-      const redemptionSkip = summaries[summaries.length - 1]?.jobs.find((job) =>
-        job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy");
-      if (runtime.recoveryCheckpoint && redemptionSkip) {
-        summaries.push(await recordPriorityDeferredReserveTasks(runtime,
-          postSyncTasks.map((task) => task.job), redemptionSkip.reason!, {}));
-        return mergeScheduledSlotSummaries(summaries);
-      }
-    }
+    // Redemption has already settled before the sentinel starts.
     if (postSyncTasks.length > 0 && postSyncGroup) {
       summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));
     }

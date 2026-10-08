@@ -1,4 +1,3 @@
-import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
@@ -7,7 +6,6 @@ import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
   CanaryStatus,
-  ClassificationWarning,
   CoinGeckoPriceDiff,
   CronRun,
   LiquidityHealth,
@@ -26,7 +24,7 @@ import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../coingecko";
 import { USER_AGENT } from "../constants";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
-import { cancelResponseBodyQuietly } from "../response-body";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../response-body";
 import {
   hasAnyCloudflareD1StatusBinding,
   resolveCloudflareD1StatusConfig,
@@ -153,6 +151,9 @@ function coverageClasses(raw: unknown): CoverageClassCounts {
   };
 }
 
+// 250 IDs × a 1 KiB source envelope; overflow fails the supplement, never partial prices.
+const STATUS_COINGECKO_MAX_RESPONSE_BYTES = 256 * 1024;
+
 async function fetchCoinGeckoUsdPrices(
   geckoIds: string[],
   coingeckoApiKey: string,
@@ -168,33 +169,26 @@ async function fetchCoinGeckoUsdPrices(
       vs_currencies: "usd",
       include_last_updated_at: "true",
     });
+    const signal = AbortSignal.timeout(5_000);
     const response = await fetch(cgUrl(cgSimplePricePath(params), coingeckoApiKey), {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
-      signal: AbortSignal.timeout(5_000),
+      signal,
     });
     if (!response.ok) {
       await cancelResponseBodyQuietly(response);
       throw new Error(`CoinGecko simple price fetch failed (${response.status})`);
     }
 
-    let payload: Record<string, { usd?: number; last_updated_at?: number }> | null;
-    try {
-      payload = await response.json();
-    } catch {
-      logWorkerEvent({
-        scope: "status",
-        level: "warn",
-        event: "coingecko_price_response_parse_failed",
-        route: "status",
-        provider: "coingecko",
-        message: "CoinGecko price response parse failed; skipping batch",
-        metadata: { batchSize: batch.length },
-      });
-      continue;
+    const payload = await readResponseJsonWithinLimitWithSignal<unknown>(response, STATUS_COINGECKO_MAX_RESPONSE_BYTES, signal);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("CoinGecko simple price response is malformed");
     }
-    if (!payload || typeof payload !== "object") continue;
-    for (const [geckoId, quote] of Object.entries(payload)) {
-      if (typeof quote?.usd !== "number" || !Number.isFinite(quote.usd) || quote.usd <= 0) continue;
+    for (const [geckoId, value] of Object.entries(payload)) {
+      if (value == null || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("CoinGecko simple price quote is malformed");
+      }
+      const quote = value as { usd?: unknown; last_updated_at?: number };
+      if (typeof quote.usd !== "number" || !Number.isFinite(quote.usd) || quote.usd <= 0) continue;
       const freshness = validatePricingSourceFreshness({
         source: "coingecko",
         observedAt: quote.last_updated_at,
@@ -325,11 +319,10 @@ export async function loadStatusSupplements(
   const sectionErrors: StatusSectionErrors = {};
   const telegramSummary = await loadTelegramHealthSummary(db, now);
 
-  // Load the large stablecoins cache blob once per request; loadCoinGeckoPriceDiff,
-  // loadSourceDepthDistribution, and getMintBurnReconciliation all consume it, so a
-  // single read avoids three D1 round-trips for the same row (audit S-018). Keep
-  // read/runtime failures contained so optional status supplements preserve the
-  // endpoint's partial-failure behavior.
+  // Load the stablecoins cache once for CoinGecko comparison and source depth.
+  // Native conservation is deliberately independent of supply-cache availability.
+  // Keep read/runtime failures contained so optional supplements preserve
+  // the endpoint's partial-failure behavior.
   let stablecoinsCache: StablecoinsCacheLoadResult;
   try {
     stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
@@ -521,7 +514,7 @@ export async function loadStatusSupplements(
 
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
-    mintBurnReconciliation = await getMintBurnReconciliation(db, now, stablecoinsCache);
+    mintBurnReconciliation = await getMintBurnReconciliation(db, now);
   } catch (err) {
     logStatusSupplementWarning(
       "mint_burn_reconciliation_query_failed",
@@ -557,33 +550,6 @@ export async function loadStatusSupplements(
     );
   }
 
-  let classificationWarnings: ClassificationWarning[] | undefined;
-  try {
-    const threshold = 0.50;
-    const warnings: ClassificationWarning[] = [];
-    const defiCoins = ACTIVE_STABLECOINS.filter((c) => c.flags.governance === "decentralized");
-    for (const coin of defiCoins) {
-      const fraction = computeCentralizedCustodyFraction(coin.id, ACTIVE_STABLECOINS);
-      if (fraction > threshold) {
-        warnings.push({
-          coinId: coin.id,
-          governance: coin.flags.governance,
-          centralizedCustodyPct: Math.round(fraction * 100),
-          threshold: threshold * 100,
-        });
-      }
-    }
-    classificationWarnings = warnings;
-  } catch (err) {
-    logStatusSupplementWarning(
-      "classification_warnings_computation_failed",
-      "Classification warnings computation failed",
-      err,
-    );
-    sectionErrors.classificationWarnings = createStatusSectionError(
-      "classification_warnings_computation_failed",
-    );
-  }
 
   return {
     liquidityHealth,
@@ -596,7 +562,6 @@ export async function loadStatusSupplements(
     d1Usage,
     mintBurnReconciliation,
     reserveDrift,
-    classificationWarnings,
     telegramSummary,
     sectionErrors,
   };

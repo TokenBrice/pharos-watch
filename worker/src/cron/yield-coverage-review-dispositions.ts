@@ -63,6 +63,7 @@ export interface YieldCoverageReviewDispositionSummary {
   visibleRecommendationCandidateCount: number;
   publishedItemCount: number;
   truncatedItemCount: number;
+  visibleByKind: Record<string, number>;
   noDispositionCount: number;
   evidenceChangedCount: number;
   kindChangedCount: number;
@@ -232,6 +233,7 @@ function emptySummary(): YieldCoverageReviewDispositionSummary {
     visibleRecommendationCandidateCount: 0,
     publishedItemCount: 0,
     truncatedItemCount: 0,
+    visibleByKind: {},
     noDispositionCount: 0,
     evidenceChangedCount: 0,
     kindChangedCount: 0,
@@ -290,6 +292,9 @@ export async function applyYieldCoverageReviewDispositions<
   summary.visibleItemCount = visibleHeadlineGaps.length + visibleRecommendationCandidates.length;
   summary.visibleHeadlineGapCount = visibleHeadlineGaps.length;
   summary.visibleRecommendationCandidateCount = visibleRecommendationCandidates.length;
+  for (const item of [...visibleHeadlineGaps, ...visibleRecommendationCandidates]) {
+    summary.visibleByKind[item.kind] = (summary.visibleByKind[item.kind] ?? 0) + 1;
+  }
   const headlineGaps = visibleHeadlineGaps.slice(0, publishedItemLimit);
   const recommendationCandidates = visibleRecommendationCandidates.slice(0, publishedItemLimit);
   summary.publishedItemCount = headlineGaps.length + recommendationCandidates.length;

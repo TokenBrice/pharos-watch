@@ -19,7 +19,7 @@ Keep policy and incident detail in the owner docs; this skill coordinates the ch
 - `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `shared/lib/scheduled-runner-registry.ts`
 - `worker/src/handlers/scheduled.ts`, `worker/src/lib/scheduled-slot-fence.ts`, `worker/src/lib/scheduled-slot-reconciliation.ts`, and `worker/src/lib/cron-lease-primitives.ts`
 - [Cron Slot Abandonment](../../../docs/runbooks/cron-slot-abandonment.md) and [Lease And Breaker Recovery](../../../docs/runbooks/lease-and-breaker-recovery.md)
-- [Worker Runtime Experiments](../../../docs/process/worker-runtime-experiments.md#compatibility-date-experiment) and [read replication](../../../docs/process/worker-runtime-experiments.md#read-replication-experiment)
+- [Permanent paired-role compatibility qualification](../../../docs/process/worker-runtime-experiments.md#compatibility-date-experiment) and [retired replication benchmark / future separately approved evaluation](../../../docs/process/worker-runtime-experiments.md#read-replication-experiment)
 
 ## Procedure
 
@@ -27,7 +27,7 @@ Keep policy and incident detail in the owner docs; this skill coordinates the ch
 2. **Plan in `shared/lib/scheduled-runner-registry.ts`.** Fit work into an audited slot. Treat a 5/6 slot as full, and add a trigger only after the growth gate and consolidation/rebalance review in the cron policy.
 3. **Wire `worker/src/handlers/scheduled.ts`.** Keep dispatch parity, serial/parallel ordering, and the correct runner entrypoint. For fetch-heavy work, consume or cancel each response body before later fetches.
 4. **Preserve `worker/src/lib/scheduled-slot-fence.ts` and `worker/src/lib/cron-lease-primitives.ts`.** Check takeover, heartbeat, lease, cancellation, terminal fencing, and stale-artifact reconciliation in `worker/src/lib/scheduled-slot-reconciliation.ts`; never clear a live lease.
-5. **Run the focused commands** `npm run check:cron-connections`, `npm run check:cron-console-usage`, and `npm run check:fetch-body-timeouts`. Keep compatibility-date or read-replication experiments isolated and clean up their temporary surface per the runtime-experiments process.
+5. **Run the focused commands** `npm run check:cron-connections`, `npm run check:cron-console-usage`, and `npm run check:fetch-body-timeouts`. Compatibility qualification covers Public/Heavy × baseline/candidate; isolated Heavy neutral admission is not producer success. The retired replication harness has no supported restore/deploy shortcut; future evaluation requires separate approval and a reviewed Access-only copied-dataset harness.
 6. **Observe with `npm run ops:watch-worker-cron` and the status endpoint.** After a cron, scheduler, memory, or ingestion-risk deployment, inspect the first relevant production execution before claiming operational success; use the abandonment and lease runbooks for anomalies.
 
 ## Verification

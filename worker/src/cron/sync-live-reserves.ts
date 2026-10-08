@@ -1,8 +1,10 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { sealAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { throwIfAborted } from "../lib/abort";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
+import { getRequestResourceSnapshot } from "./reserve-adapters/request";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
@@ -89,90 +91,6 @@ async function reportLiveReserveProgress(
       ...(update.currentBreakerKey ? { currentBreakerKey: update.currentBreakerKey } : {}),
     },
   });
-}
-
-interface RequestCachePromiseState {
-  unsettledReorders: number;
-  settled: boolean;
-}
-
-/**
- * Observes the existing request-cache Map protocol without changing request
- * labels or adding work to adapters. A miss is a newly inserted promise. A
- * hit is the delete/reinsert LRU move performed for an existing promise; the
- * one success-settlement reorder is excluded from the hit total.
- */
-class InstrumentedRequestCache extends Map<string, Promise<unknown>> {
-  private readonly backing: Map<string, Promise<unknown>>;
-  private readonly collector: AdapterLatencyCollector;
-  private readonly promiseStates = new WeakMap<Promise<unknown>, RequestCachePromiseState>();
-  private lastDeleted: { key: string; promises: WeakSet<Promise<unknown>> } | null = null;
-
-  constructor(backing: Map<string, Promise<unknown>>, collector: AdapterLatencyCollector) {
-    super();
-    this.backing = backing;
-    this.collector = collector;
-    for (const [key, promise] of backing) {
-      super.set(key, promise);
-      this.observePromise(promise, false);
-    }
-  }
-
-  private observePromise(promise: Promise<unknown>, countMiss: boolean): RequestCachePromiseState {
-    const existing = this.promiseStates.get(promise);
-    if (existing) return existing;
-
-    const state: RequestCachePromiseState = { unsettledReorders: 0, settled: false };
-    this.promiseStates.set(promise, state);
-    if (countMiss) this.collector.recordRequestCacheMiss();
-    void promise.then(
-      () => {
-        state.settled = true;
-        for (let index = 1; index < state.unsettledReorders; index++) {
-          this.collector.recordRequestCacheHit();
-        }
-      },
-      () => {
-        state.settled = true;
-        for (let index = 0; index < state.unsettledReorders; index++) {
-          this.collector.recordRequestCacheHit();
-        }
-      },
-    );
-    return state;
-  }
-
-  override set(key: string, promise: Promise<unknown>): this {
-    const state = this.observePromise(promise, !this.promiseStates.has(promise));
-    const deleted = this.lastDeleted;
-    this.lastDeleted = null;
-    if (deleted?.key === key && deleted.promises.has(promise)) {
-      if (state.settled) {
-        this.collector.recordRequestCacheHit();
-      } else {
-        state.unsettledReorders += 1;
-      }
-    }
-    super.set(key, promise);
-    this.backing.set(key, promise);
-    return this;
-  }
-
-  override delete(key: string): boolean {
-    const promise = super.get(key);
-    const deleted = super.delete(key);
-    this.backing.delete(key);
-    // Only the immediately following delete/set pair is an LRU move. A weak
-    // identity marker must not retain evicted or oversized response payloads.
-    this.lastDeleted = deleted && promise ? { key, promises: new WeakSet([promise]) } : null;
-    return deleted;
-  }
-
-  override clear(): void {
-    super.clear();
-    this.backing.clear();
-    this.lastDeleted = null;
-  }
 }
 
 async function runReserveCoinQueue(args: {
@@ -468,18 +386,29 @@ export async function syncLiveReserves(
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const setupPhaseMs = Date.now() - runStartedMs;
   const telemetry = createAdapterLatencyCollector();
-  const requestCache = new InstrumentedRequestCache(
-    adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
-    telemetry,
-  );
+  const requestCache = adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>();
+  const previousRequestCacheObserver = adapterCtx?.onRequestCache;
   const effectiveAdapterCtx: AdapterContext = {
     db,
     ...(adapterCtx ?? {}),
     requestCache,
+    onRequestCache: (event) => {
+      if (event.hit) telemetry.recordRequestCacheHit();
+      else telemetry.recordRequestCacheMiss();
+      previousRequestCacheObserver?.(event);
+    },
   };
+  const resourceAwareReporter: CronProgressReporter | undefined = reportProgress
+    ? (update) => reportProgress({
+      ...update,
+      metadata: {
+        ...(update.metadata ?? {}),
+        resourcePressure: getRequestResourceSnapshot(effectiveAdapterCtx, update.stage ?? "reserve-sync"),
+      },
+    }) : undefined;
   const cohortTotal = orderedCoins.length;
 
-  await reportLiveReserveProgress(reportProgress, {
+  await reportLiveReserveProgress(resourceAwareReporter, {
     stage: "setup",
     message: effectiveResumeId
       ? `Loaded live reserve sync state (resuming at ${effectiveResumeId})`
@@ -506,20 +435,20 @@ export async function syncLiveReserves(
     runAdapter,
     syncStates,
     budgetConfig,
-    reportProgress,
+    reportProgress: resourceAwareReporter,
     checkpoint: checkpointIdentity,
     startIndex: Math.max(0, startIndex),
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
     telemetry,
   });
 
-  return finalizeReserveSyncRun({
+  const result = await finalizeReserveSyncRun({
     db,
     signal,
     total: cohortTotal,
     runStartedAt,
     runStartedMs,
-    reportProgress,
+    reportProgress: resourceAwareReporter,
     budgetConfig,
     ...queueResult,
     phaseTimings: {
@@ -532,4 +461,17 @@ export async function syncLiveReserves(
     adapterLatency: telemetry.finalize(),
     adapterTelemetryProgress: telemetry.progress(),
   });
+  if (checkpointIdentity && queueResult.counts.deferredCoins === 0) {
+    const accepted = await sealAcceptedReserveGeneration(db, checkpointIdentity, LIVE_RESERVE_QUEUE_HASH, CONFIGURED_COINS.map((coin) => coin.id), result);
+    if (accepted) {
+      result.metadata = JSON.stringify({ ...JSON.parse(result.metadata ?? "{}"), acceptedReserveGenerationId: accepted.generationId, acceptedReserveContentSha256: accepted.contentSha256 });
+    }
+  }
+  return {
+    ...result,
+    metadata: JSON.stringify({
+      ...JSON.parse(result.metadata ?? "{}"),
+      resourcePressure: getRequestResourceSnapshot(effectiveAdapterCtx, "terminal"),
+    }),
+  };
 }

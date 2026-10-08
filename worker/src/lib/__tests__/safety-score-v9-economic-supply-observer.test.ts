@@ -6,9 +6,13 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPendingRead, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
-import { observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
+import { ECONOMIC_SUPPLY_BODY_CAPS, observeCurveLzPending, observeEconomicSolanaMint, observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedEconomicDeploymentAttributionValidationError } from "../safety-score-v9/supply-attribution-contract";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { admissionCodeForSupplyAttributionRejection, computeSupplyAttributionJournalIdV1, createSupplyAttributionJournalV1, SupplyAttributionJournalV1Schema, withSupplyAttributionJournalDiagnosticV1, type SupplyAttributionJournalV1Payload } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-capture-budget";
+import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 
 const CLOCK = 1790850000;
 const HASH: `0x${string}` = `0x${"a".repeat(64)}`;
@@ -52,6 +56,24 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("reviewed economic supply observation", () => {
+  it("journals typed body rejection and bounded exact leaf provenance without changing old IDs", () => {
+    const payload: SupplyAttributionJournalV1Payload = { schemaVersion: 1, lane: "supply-attribution", assetId: "alpha", attemptId: "attempt", sourceId: "reviewed.economic-deployment-partition.v1", sourceOriginClass: "issuer-disclosure-plus-onchain", baseInputGenerationId: "input", sourceGeneration: "source", registryFingerprint: "a".repeat(64), routeInventoryDigest: null, attemptCode: "supply-attribution.collector.attempted", admissionCode: admissionCodeForSupplyAttributionRejection("observer-body-over-cap"), fallbackCode: "supply-attribution.fallback.aggregate-only", rejectionCode: "observer-body-over-cap", attemptedAtSec: CLOCK, completedAtSec: CLOCK, scoringClockSec: CLOCK, sourceObservedAtSec: null, failedRouteId: "route", contentSha256: null };
+    let diagnostic: SupplyAttributionAttemptDiagnostic | undefined;
+    emitSupplyAttributionDiagnostic(value => { diagnostic = value; }, { observer: "economic-deployment", sourceId: "reference", hardEvidenceFailure: true, failurePredicate: "observer-body-over-cap", operands: { maxBytes: 262144, observedBytes: 262145 } });
+    const original = createSupplyAttributionJournalV1(payload), enriched = withSupplyAttributionJournalDiagnosticV1(payload, diagnostic);
+    expect(enriched.diagnosticLeaf).toEqual({ predicate: "observer-body-over-cap", evidenceSha256: sha256Hex(stableJsonStringifyV1(diagnostic)) });
+    expect(SupplyAttributionJournalV1Schema.safeParse(createSupplyAttributionJournalV1(enriched)).success).toBe(true);
+    expect(createSupplyAttributionJournalV1(withSupplyAttributionJournalDiagnosticV1(payload, undefined)).journalId).toBe(original.journalId);
+    let saturated = payload;
+    for (const field of ["attemptId", "baseInputGenerationId", "sourceGeneration", "failedRouteId"] as const) {
+      for (let length = 1; length <= 192; length++) {
+        const candidate = { ...saturated, [field]: "x".repeat(length) };
+        if (SupplyAttributionJournalV1Schema.safeParse({ ...candidate, journalId: computeSupplyAttributionJournalIdV1(candidate) }).success) saturated = candidate;
+      }
+    }
+    expect(withSupplyAttributionJournalDiagnosticV1(saturated, diagnostic)).toBe(saturated);
+    expect(new TextEncoder().encode(JSON.stringify(createSupplyAttributionJournalV1(withSupplyAttributionJournalDiagnosticV1(saturated, diagnostic)))).byteLength).toBeLessThanOrEqual(1152);
+  });
   it("admits a pinned EVM supply with its rechecked block identity and conserved allocation", async () => {
     const f = fixture();
     const result = await f.run();
@@ -178,6 +200,34 @@ describe("reviewed economic supply observation", () => {
     vi.mocked(fetch).mockResolvedValue(failure === "malformed JSON" ? new Response("{") : new Response(JSON.stringify(apiBody()), { status: 503 }));
     expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: failure === "malformed JSON" ? "deployment-state-unavailable" : "packet-reconciliation-failed" });
   });
+  it("accepts an API body exactly at its UTF-8 ceiling without changing its hash", async () => {
+    const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
+    const body = JSON.stringify(apiBody()), text = body + " ".repeat(ECONOMIC_SUPPLY_BODY_CAPS.conversion - body.length);
+    vi.mocked(fetch).mockResolvedValue(new Response(text));
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status === "accepted") expect(result.attribution.referencePrice.responseSha256).toBe(sha256Hex(text));
+  });
+
+  it.each(["declared", "streamed"])("rejects %s API overflow with cancellation and typed provenance", async mode => {
+    const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
+    const cancel = vi.fn(), onDiagnostic = vi.fn();
+    const body = new ReadableStream<Uint8Array>({ start(controller) { if (mode === "streamed") controller.enqueue(new TextEncoder().encode("é".repeat(ECONOMIC_SUPPLY_BODY_CAPS.conversion / 2 + 1))); }, cancel });
+    const response = new Response(body, { headers: mode === "declared" ? { "Content-Length": String(ECONOMIC_SUPPLY_BODY_CAPS.conversion + 1) } : { "Content-Length": "1" } });
+    const parse = vi.spyOn(response, "json"), text = vi.spyOn(response, "text");
+    vi.mocked(fetch).mockResolvedValue(response);
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic })).toMatchObject({ status: "rejected", rejectionCode: "observer-body-over-cap", failedRouteId: "reference" });
+    expect(cancel).toHaveBeenCalledOnce(); expect(parse).not.toHaveBeenCalled(); expect(text).not.toHaveBeenCalled();
+    expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ hardEvidenceFailure: true, failurePredicate: "observer-body-over-cap", providerOrigin: "https://issuer.example", operands: expect.objectContaining({ maxBytes: ECONOMIC_SUPPLY_BODY_CAPS.conversion }) }));
+  });
+
+  it("cancels an API HTTP error before decoding its body", async () => {
+    const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
+    const cancel = vi.fn(), response = new Response(new ReadableStream({ cancel }), { status: 503 });
+    const text = vi.spyOn(response, "text"); vi.mocked(fetch).mockResolvedValue(response);
+    expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+    expect(cancel).toHaveBeenCalledOnce(); expect(text).not.toHaveBeenCalled();
+  });
 
   it("reads balance exclusions and pending liabilities without counting excluded holdings", async () => {
     const f = fixture();
@@ -250,7 +300,9 @@ describe("reviewed economic supply observation", () => {
   });
 
   it("does not turn escrow surplus into pending supply", async () => {
-    expect(await pendingFixture(0n).run()).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+    const f = pendingFixture(0n), onDiagnostic = vi.fn();
+    expect(await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, onDiagnostic })).toMatchObject({ status: "rejected", rejectionCode: "packet-reconciliation-failed" });
+    expect(onDiagnostic).toHaveBeenCalledWith(expect.objectContaining({ failurePredicate: "escrow-represented-equals-backing", laneId: "bridge", hardEvidenceFailure: true, operands: { representedNumerator: "19000000", representedDenominator: "1000000", backingNumerator: "20000000", backingDenominator: "1000000", pendingNumerator: "0", pendingDenominator: "1000000" } }));
   });
 
   it("uses reviewed receipt subsets and API pending amounts to conserve the escrow rather than its gross receipt supply", async () => {
@@ -593,9 +645,25 @@ describe("validated XRPL issued-currency observations", () => {
     if (result.status !== "accepted") throw new Error("Expected accepted partition");
     expect(result.attribution.observations[0]).toMatchObject({ amount: "100", anchor: "100", anchorHash: "a".repeat(64), observedAtSec: CLOCK - 60 });
     expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
+    const hash = "A".repeat(64);
+    const gatewayText = JSON.stringify({ result: { validated: true, ledger_index: 100, ledger_hash: hash, obligations: { USD: "1.00e2" } } });
+    const ledgerText = JSON.stringify({ result: { ledger: { ledger_hash: hash, close_time: CLOCK - 60 - 946684800 } } });
+    expect(result.attribution.observations[0]!.responseSha256).toBe(sha256Hex(gatewayText + ledgerText));
   });
   it.each(["malformed", "negative", "unvalidated", "hash mismatch", "missing time", "stale time"])("rejects XRPL %s", async failure => {
     expect(await xrplFixture(failure).run()).toMatchObject({ status: "rejected", rejectionCode: failure === "stale time" ? "packet-reconciliation-failed" : "deployment-state-unavailable" });
+  });
+  it.each(["gateway_balances", "ledger"])("rejects capped XRPL %s bodies and cancels HTTP errors before parsing", async method => {
+    for (const failure of ["overflow", "http-error"]) {
+      const f = xrplFixture(), original = vi.mocked(fetch).getMockImplementation()!, cancel = vi.fn();
+      vi.mocked(fetch).mockImplementation(async (url, init) => {
+        if (JSON.parse(String(init?.body)).method !== method) return original(url, init);
+        const cap = method === "ledger" ? ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger : ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances;
+        return new Response(new ReadableStream({ cancel }), { status: failure === "http-error" ? 503 : 200, headers: { "Content-Length": String(cap + 1) } });
+      });
+      expect(await f.run()).toMatchObject({ status: "rejected", rejectionCode: failure === "overflow" ? "observer-body-over-cap" : "deployment-state-unavailable" });
+      expect(cancel).toHaveBeenCalledOnce();
+    }
   });
 });
 

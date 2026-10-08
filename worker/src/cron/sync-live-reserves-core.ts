@@ -2,6 +2,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../lib/live-reserves/store-shared";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
@@ -329,17 +331,6 @@ export type ReserveAdapterRunner = (
   deadlineMs?: number,
 ) => Promise<AdapterResult>;
 
-function getEffectiveScoringMaxSourceAgeSec(config: LiveReserveConfig, adapter: ReserveAdapterDefinition): number | undefined {
-  const adapterMaxSourceAgeSec = adapter.validation?.maxSourceAgeSec;
-  const scoringMaxSourceAgeSec = config.scoring?.maxSourceAgeSec;
-  if (adapterMaxSourceAgeSec == null) {
-    return scoringMaxSourceAgeSec;
-  }
-  if (scoringMaxSourceAgeSec == null) {
-    return undefined;
-  }
-  return Math.min(scoringMaxSourceAgeSec, adapterMaxSourceAgeSec);
-}
 
 export async function syncReserveCoin(args: {
   db: D1Database;
@@ -434,6 +425,7 @@ export async function syncReserveCoin(args: {
       breakerKey,
       attemptedAt: attemptStartedAt,
       attemptId,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
       deadlineMs: args.deadlineMs,
       checkpoint: args.checkpoint,
     }));
@@ -464,10 +456,13 @@ export async function syncReserveCoin(args: {
     failureStage = "storage-exception";
     const durationMs = Date.now() - adapterStartMs;
     adapterDurationMs += durationMs;
+    const sourceBudget = resolveLiveReserveSourceAgeBudget(
+      config.scoring?.maxSourceAgeSec, adapter.validation?.maxSourceAgeSec, LIVE_RESERVE_FRESHNESS_SEC,
+    );
     const validation = validateAdapterOutput(result, {
       adapter,
       now: attemptStartedAt,
-      maxSourceAgeSec: getEffectiveScoringMaxSourceAgeSec(config, adapter),
+      maxSourceAgeSec: sourceBudget.sourceAgeBudgetCap === "fetch-budget" ? undefined : sourceBudget.sourceAgeBudgetSec,
       subjectId: coin.id,
       knownStablecoinIds: TRACKED_STABLECOIN_IDS,
     });
@@ -522,6 +517,7 @@ export async function syncReserveCoin(args: {
       fetchedAt: attemptStartedAt,
       source: config.adapter,
       attemptId,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
       metadata: snapshotMetadata,
       warningCount: warnings.length,
       warnings,

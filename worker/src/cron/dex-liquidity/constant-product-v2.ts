@@ -7,7 +7,7 @@ import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/t
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { getScheduledSlotControlledDeadlineMs } from "../../lib/cron-timeouts";
+import type { SlotDeadline } from "../../lib/cron-timeouts";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -503,12 +503,10 @@ async function enrichDeployment(input: {
  */
 export const V2_ENRICHMENT_MAX_WALL_MS = 5 * 60_000;
 
-/** Enrichment deadline: the earlier of the stage slot's budget and the loop cap. */
-export function resolveV2EnrichmentDeadlineMs(slotStartedAtSec?: number): number {
-  const slotControlledDeadlineMs = slotStartedAtSec != null
-    ? getScheduledSlotControlledDeadlineMs(slotStartedAtSec * 1_000)
-    : Number.POSITIVE_INFINITY;
-  return Math.min(slotControlledDeadlineMs, Date.now() + V2_ENRICHMENT_MAX_WALL_MS);
+/** Clip the local verification cap to the executing event's remaining budget. */
+export function resolveV2EnrichmentDeadlineMs(deadline?: SlotDeadline): number {
+  const nowMs = Date.now();
+  return nowMs + (deadline?.childCeilingMs(V2_ENRICHMENT_MAX_WALL_MS, nowMs) ?? V2_ENRICHMENT_MAX_WALL_MS);
 }
 
 export async function enrichEvmV2ExecutionModels(input: {
@@ -516,13 +514,15 @@ export async function enrichEvmV2ExecutionModels(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
+  stablecoinPriceProvenanceById?: ReadonlyMap<string, Required<Pick<DexAmmExecutionModel["tokens"][number], "referencePriceSourceId" | "referencePriceObservedAt">>>;
+  nowSec?: number;
+  sourceGenerationId?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   dependencies?: EvmV2ExecutionDependencies;
-  /** Source-stage slot start, bounding verification against the stage budget. */
-  slotStartedAtSec?: number;
+  deadline?: SlotDeadline;
 }): Promise<void> {
-  const deadlineMs = resolveV2EnrichmentDeadlineMs(input.slotStartedAtSec);
+  const deadlineMs = resolveV2EnrichmentDeadlineMs(input.deadline);
   await enrichSolidlyV2ExecutionModels({ ...input, deadlineMs });
   await enrichRaydiumStandardDiscoveryExecutionModels({ ...input, deadlineMs });
   const references: CandidateReference[] = [];

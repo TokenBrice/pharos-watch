@@ -141,7 +141,7 @@ export const DATA_DEPENDENCY_REGISTRY = [
     impactLayer: "availability",
     criticality: "watch",
     dependsOn: ["dews", "depeg-events"],
-    consumers: ["psi", "shadow-assets"],
+    consumers: ["psi", "psi-historical-assets"],
     runbookPath: null,
   },
   {

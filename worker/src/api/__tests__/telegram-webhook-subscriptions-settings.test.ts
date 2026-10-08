@@ -1,4 +1,4 @@
-import { pendingDisambiguationTable } from "./telegram-rows.test-support";
+import { makeBulkPendingRow, makeSubscriptionRow, pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
@@ -14,7 +14,7 @@ import {
   makeWebhookRequest,
   makeCallbackRequest,
   sentMessageBody,
-  makeStablecoinsCacheValue,
+  makeStablecoinsCacheTable,
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
   mockTelegramMembership,
@@ -23,14 +23,10 @@ import {
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
+// Vitest hoists this factory before static imports initialize.
 vi.mock("../../lib/safety-score-index", async () => {
-  const { makeWorkerReportCardsV9Response, makeWorkerV9Card } = await import(
-    "../../test-helpers/report-cards-v9"
-  );
-  const snapshot = makeWorkerReportCardsV9Response({
-    updatedAt: 1_700_000_000,
-    cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
-  });
+  const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support");
+  const snapshot = makeTelegramSafetySnapshot();
   return {
     loadActiveSafetyScoreIndex: vi.fn(async () => ({
       kind: "v9",
@@ -141,18 +137,16 @@ describe("handleTelegramWebhook", () => {
   it("subscribe reserve all (after Confirm) writes the global reserve flag", async () => {
     const db = makeTelegramWebhookDb([
       { match: "INSERT INTO telegram_subscribers", rows: [] },
-      pendingDisambiguationTable({
-        action_type: "confirm-bulk",
-        action_payload: JSON.stringify({
-          kind: "subscribe",
-          alertTypes: ["reserve"],
-          coinIds: [],
-          presetIds: [],
-          subscribeAll: true,
-        }),
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "subscribe",
+        alertTypes: ["reserve"],
+        coinIds: [],
+        presetIds: [],
+        subscribeAll: true,
+      }, {
         expires_at: Math.floor(Date.now() / 1000) + 60,
         initiator_user_id: "999",
-      }),
+      })),
     ]);
 
     await handleTelegramWebhook(
@@ -172,19 +166,11 @@ describe("handleTelegramWebhook", () => {
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: makeStablecoinsCacheValue({
-            "usdt-tether": 100_000_000_000,
-            "usdc-circle": 90_000_000_000,
-            "dai-makerdao": 5_000_000_000,
-          }),
-          updated_at: 1_700_000_000,
-        },
-      },
+      makeStablecoinsCacheTable({
+        "usdt-tether": 100_000_000_000,
+        "usdc-circle": 90_000_000_000,
+        "dai-makerdao": 5_000_000_000,
+      }, 1_700_000_000),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews usd-top25"), "test-secret", "bot-token");
 
@@ -302,25 +288,17 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("exports the maximum current subscribable registry as one copyable pw3 token", async () => {
-    const subscriptions = TELEGRAM_SUBSCRIBABLE_STABLECOINS.map(({ id: stablecoinId }) => ({
-      stablecoin_id: stablecoinId,
-      alert_dews: 1,
+    const subscriptions = TELEGRAM_SUBSCRIBABLE_STABLECOINS.map(({ id: stablecoinId }) => makeSubscriptionRow(stablecoinId, {
       alert_depeg: 1,
-      alert_safety: 0,
-      alert_launch: 0,
-      alert_reserve: 0,
       alert_dews_override: 1,
       alert_depeg_override: 1,
       alert_safety_override: 1,
       alert_launch_override: 1,
       alert_reserve_override: 1,
-      dews_min_band: null,
-      safety_mode: null,
-      depeg_worsening_bps_step: null,
       alert_snooze_until_ts: null,
     }));
     const db = makeTelegramWebhookDb([
-      { match: "FROM telegram_subscriptions", rows: subscriptions },
+      { match: "FROM telegram_subscriptions", rows: subscriptions.map((row) => ({ ...row })) },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
     ]);
 
@@ -337,18 +315,7 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       {
         match: "FROM telegram_subscriptions",
-        rows: [{
-          stablecoin_id: stablecoinId,
-          alert_dews: 1,
-          alert_depeg: 0,
-          alert_safety: 0,
-          alert_launch: 0,
-          alert_reserve: 0,
-          dews_min_band: null,
-          safety_mode: null,
-          depeg_worsening_bps_step: null,
-          alert_snooze_until_ts: null,
-        }],
+        rows: [{ ...makeSubscriptionRow(stablecoinId, { alert_snooze_until_ts: null }) }],
       },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
     ]);
@@ -364,19 +331,11 @@ describe("handleTelegramWebhook", () => {
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: makeStablecoinsCacheValue({
-            "usdt-tether": 100_000_000_000,
-            "usdc-circle": 90_000_000_000,
-            "dai-makerdao": 5_000_000_000,
-          }),
-          updated_at: 1_700_000_000,
-        },
-      },
+      makeStablecoinsCacheTable({
+        "usdt-tether": 100_000_000_000,
+        "usdc-circle": 90_000_000_000,
+        "dai-makerdao": 5_000_000_000,
+      }, 1_700_000_000),
     ]);
     await handleTelegramWebhook(
       db,
@@ -404,19 +363,11 @@ describe("handleTelegramWebhook", () => {
   it("handles /subscribe with a dashed preset alias (still gated above threshold)", async () => {
     const db = makeTelegramWebhookDb([
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: makeStablecoinsCacheValue({
-            "usdt-tether": 100_000_000_000,
-            "usdc-circle": 90_000_000_000,
-            "dai-makerdao": 5_000_000_000,
-          }),
-          updated_at: 1_700_000_000,
-        },
-      },
+      makeStablecoinsCacheTable({
+        "usdt-tether": 100_000_000_000,
+        "usdc-circle": 90_000_000_000,
+        "dai-makerdao": 5_000_000_000,
+      }, 1_700_000_000),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews usd-top-25"), "test-secret", "bot-token");
@@ -831,19 +782,11 @@ describe("handleTelegramWebhook", () => {
   it("gates /unsubscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
       { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: makeStablecoinsCacheValue({
-            "usdt-tether": 100_000_000_000,
-            "usdc-circle": 90_000_000_000,
-            "dai-makerdao": 5_000_000_000,
-          }),
-          updated_at: 1_700_000_000,
-        },
-      },
+      makeStablecoinsCacheTable({
+        "usdt-tether": 100_000_000_000,
+        "usdc-circle": 90_000_000_000,
+        "dai-makerdao": 5_000_000_000,
+      }, 1_700_000_000),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe usd-top25"), "test-secret", "bot-token");
@@ -917,17 +860,15 @@ describe("handleTelegramWebhook", () => {
 
   it("unsubscribe all (after Confirm) clears launch alert flags", async () => {
     const db = makeTelegramWebhookDb([
-      pendingDisambiguationTable({
-        action_type: "confirm-bulk",
-        action_payload: JSON.stringify({
-          kind: "unsubscribe",
-          presetIds: [],
-          coinIds: [],
-          unsubscribeAll: true,
-        }),
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "unsubscribe",
+        presetIds: [],
+        coinIds: [],
+        unsubscribeAll: true,
+      }, {
         expires_at: Math.floor(Date.now() / 1000) + 60,
         initiator_user_id: "999",
-      }),
+      })),
     ]);
 
     const request = makeCallbackRequest("confirm:bulk");

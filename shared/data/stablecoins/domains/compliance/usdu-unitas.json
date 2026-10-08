@@ -3,19 +3,26 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDu is marketed as a dollar-referenced stablecoin and can be minted or redeemed against collateral, but direct access is whitelist-restricted and the backing is a delta-neutral JLP/perpetual strategy rather than GENIUS-style reserve assets. The payment-stablecoin classification is therefore unresolved.",
+      "summary": "USDu is marketed as a dollar-referenced stablecoin, but the current terms provide redemption for a pro-rata share of underlying collateral, subject to protocol rules and throttles, and disclaim a guaranteed USD 1 value. Direct minting and redemption are restricted to whitelisted participants. These terms leave the statutory issuer obligation to redeem for a fixed amount of monetary value unresolved; strategy-backed collateral alone does not decide payment-stablecoin applicability.",
       "references": [
         {
           "label": "Unitas minting USDu: issuance, whitelist and delta-neutral collateral mechanics",
           "url": "https://docs.unitas.so/solution-design/minting-usdu",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin fixed-value and reserve framework",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Unitas current terms: operator, pro-rata collateral redemption and peg disclaimer",
+          "url": "https://docs.unitas.so/resources/terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-27",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -23,68 +30,103 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Unipay Pte. Ltd. (Unitas)",
     "issuerDomicile": "Singapore",
-    "licensingRegulator": "No U.S. GENIUS regulator identified; public Unitas materials identify Unipay Pte. Ltd. in Singapore",
+    "licensingRegulator": "No U.S. GENIUS regulator identified",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://accountable.unitas.so/",
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Unitas is treated as unclear rather than as an official GENIUS pathway: issuer materials use stablecoin/digital-dollar language and describe mint/redemption, but the strategy-backed design, whitelist restrictions, secondary-market access, and no-guarantee language do not resolve whether it meets the statutory payment-stablecoin test. No public U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. The GENIUS rulemaking phase remains proposed-rules.",
+    "notes": "The pre-sweep issuerEntity and associated issuerDomicile are retained under the strict adjudication rule; they are legacy metadata, not independently reconfirmed legal-issuer findings. Current terms identify Unipay Labs Limited as the Unitas module operator and smart-contract deployer, and its privacy policy identifies BVI company number 2082929. ESMA OTHER names Unipay Labs Limited with LEI 8755001I0N7CML4A3B92, while GLEIF records the same company number and LEI as Unipay Limited Labs, trading as Unitas Labs, in the British Virgin Islands. These sources establish the current operator but do not unambiguously establish that this company replaces Unipay Pte. Ltd. as the legal issuer of this USDu; the OTHER entry does not name USDu. No corporate succession or separate legal token-issuer obligation was verified. Singapore governing law does not establish corporate domicile. Applicability remains unclear because contractual redemption is pro-rata collateral and no peg is guaranteed. No token-specific public PPSI approval, state qualification, official application, or registered foreign-issuer exception was found in the reviewed public sources. Federal issuer rules remain proposed; the SCRC interim procedural rule does not approve this issuer. Accountable publishes reserve data and technical proofs, which do not establish a monthly independent accountant attestation. Public pro-rata collateral redemption is documented, but no fixed 1:1 national-currency redemption policy was established; redemptionPolicyPresent is false under the tracker field definition.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register 91 FR 10202: payment stablecoin definition and proposed framework",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Unitas Terms of Service: Unipay Pte. Ltd. and USDu/sUSDu legal terms",
-        "url": "https://docs.unitas.so/resources",
+        "label": "Unitas Terms of Service: Unipay Labs Limited and USDu/sUSDu legal terms",
+        "url": "https://docs.unitas.so/resources/terms-of-service.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-27"
       },
       {
         "label": "Unitas minting USDu documentation",
         "url": "https://docs.unitas.so/solution-design/minting-usdu",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Unitas Accountable proof-of-solvency dashboard",
         "url": "https://accountable.unitas.so/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ESMA other crypto-asset whitepaper inventory: Unipay Labs Limited identity, not EMT/ART authorization",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve September 2026 GENIUS proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GLEIF current Unipay LEI identity and British Virgin Islands jurisdiction",
+        "url": "https://api.gleif.org/api/v1/lei-records/8755001I0N7CML4A3B92",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "Federal Register 91 FR 10202 OCC GENIUS proposed rules",
-        "OCC Digital Assets Licensing Applications table and Corporate Applications Search",
-        "GENIUS Act Public Law 119-27",
-        "Treasury proposed state-regime comparability rule",
-        "Unitas Terms of Service, minting/redemption documentation, and proof-of-solvency dashboard",
-        "Federal Register and regulator searches for Unipay, Unitas, USDu, and a U.S. GENIUS filing"
+        "OCC Bulletin 2026-3 substantive body and 91 FR 10202 proposed GENIUS rules",
+        "OCC current digital-assets pending charter application table: no Unipay or Unitas entry; this is not a PPSI register",
+        "Federal Reserve September 24, 2026 GENIUS proposal announcement",
+        "FDIC April 7, 2026 proposed GENIUS requirements and NCUA Financial Technology and Digital Assets GENIUS FAQs",
+        "NYDFS regulated virtual-currency entity table: no Unipay or Unitas entry",
+        "Treasury SCRC September 30, 2026 procedural rule",
+        "Unitas August 27, 2026 terms, USDu minting documentation, Accountable dashboard and public reserve API",
+        "Official-domain indexed authorization search for Unipay, Unitas and USDu across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
+        "Official-domain enforcement search for Unipay Labs, Unipay Limited Labs and Unitas across SEC, CFTC, OFAC and FinCEN"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for USDu or Unipay Pte. Ltd. Singapore domicile and public reserve disclosures do not substitute for a U.S. GENIUS authorization.",
+      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official application or registered foreign-issuer exception was located for USDu or the current operator Unipay Labs Limited in the sources checked on 2026-10-07. General proposed rules, the SCRC procedural rule and existing trust/virtual-currency licenses do not constitute such an approval. This is a bounded public-evidence finding, not proof that no nonpublic application exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

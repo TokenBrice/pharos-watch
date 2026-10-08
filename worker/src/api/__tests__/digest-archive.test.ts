@@ -6,6 +6,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { EDITORIAL_STYLE_HASH, EDITORIAL_STYLE_VERSION } from "@shared/lib/editorial-style";
 import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
 import { handleDigestArchive } from "../digest-archive";
+import { handleDailyDigest } from "../daily-digest";
 
 describe("handleDigestArchive", () => {
   it("returns 200 with empty digests when no data", async () => {
@@ -148,6 +149,37 @@ describe("handleDigestArchive", () => {
     // weekly keeps its published number 3.
     expect(body.digests.map((d) => d.editionNumber)).toEqual([3, 1]);
     expect(body.digests[0]).not.toHaveProperty("isInternal");
+  });
+
+  it("excludes enforced blocked rows from archive, latest reads and both kinds' edition numbers", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`CREATE TABLE daily_digest (
+        digest_text TEXT NOT NULL, digest_title TEXT, generated_at INTEGER NOT NULL,
+        digest_extended TEXT, input_data TEXT, digest_meta TEXT
+      )`);
+      const insert = sqlite.prepare("INSERT INTO daily_digest VALUES (?, ?, ?, NULL, '{}', ?)");
+      for (const kind of ["daily", "weekly"]) {
+        insert.run(`${kind} first`, `${kind} first`, 1, JSON.stringify({ type: kind }));
+        insert.run(`${kind} blocked`, `${kind} blocked`, 2, JSON.stringify({
+          type: kind, qualityGate: "blocked", styleGateMode: "enforce",
+          editorialStyleGate: { mode: "enforce", firstPassWouldBlock: true },
+        }));
+        insert.run(`${kind} second`, `${kind} second`, 3, JSON.stringify({ type: kind }));
+      }
+      const db = createSqliteD1(sqlite);
+      const archive = await (await handleDigestArchive(db)).json() as {
+        digests: Array<{ digestText: string; editionNumber: number }>;
+      };
+      expect(archive.digests).toHaveLength(4);
+      expect(archive.digests.map((row) => row.digestText)).not.toContain("daily blocked");
+      expect(archive.digests.map((row) => row.digestText)).not.toContain("weekly blocked");
+      expect(archive.digests.filter((row) => row.digestText.endsWith("second")).map((row) => row.editionNumber)).toEqual([2, 2]);
+      const latest = await (await handleDailyDigest(db)).json();
+      expect(latest).toMatchObject({ digest: "daily second", editionNumber: 2 });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("keeps published edition numbers stable after the archive exceeds its response window", async () => {

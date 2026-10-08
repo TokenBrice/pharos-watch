@@ -1,19 +1,19 @@
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "./psi-eligible";
-import { SHADOW_STABLECOINS } from "./shadow-stablecoins";
+import { PSI_HISTORICAL_ASSETS } from "./psi-historical-assets";
 import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins/registry";
 import type { StablecoinMeta } from "../types";
 
-/** Cross-provider metadata seed: every tracked lifecycle plus PSI-only shadow assets. Excludes dead assets. */
-const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
+/** Cross-provider metadata seed: every tracked lifecycle plus PSI historical assets. Excludes cemetery assets. */
+const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS];
 
-/** Lookup of every live coin (tracked + shadow) by canonical id. Includes shadow assets that are NOT in the public readback. */
+/** Lookup of tracked and PSI historical metadata by canonical ID, including off-catalog assets excluded from public readback. */
 const registryById = new Map<string, StablecoinMeta>();
-/** Tracked-only registry: every catalog lifecycle, no shadow assets. */
+/** Tracked-only registry: every catalog lifecycle, no PSI historical assets. */
 export const TRACKED_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID;
-/** Public-readback registry: all post-launch tracked records. Excludes pre-launch and shadow-only ids. */
+/** Public-readback registry: all post-launch tracked records; excludes pre-launch and historical off-catalog IDs. */
 export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READABLE_META_BY_ID;
-/** PSI universe: active tracked coins plus PSI-only shadow assets (used for systemic-importance calculations). */
+/** PSI universe: active tracked coins plus historical assets used for systemic-importance calculations. */
 export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
 /** Reverse index: DefiLlama numeric id → meta. Guaranteed unique (throws at module load on collision). */
 const registryByLlamaId = new Map<string, StablecoinMeta>();
@@ -80,9 +80,9 @@ for (const [llamaId, meta] of registryByLlamaId) {
   }
 }
 
-for (const shadow of SHADOW_STABLECOINS) {
-  if (!PSI_INCLUSIVE_REGISTRY_BY_ID.has(shadow.id)) {
-    throw new Error(`[stablecoin-id-registry] Shadow id missing from PSI-inclusive registry: ${shadow.id}`);
+for (const historical of PSI_HISTORICAL_ASSETS) {
+  if (!PSI_INCLUSIVE_REGISTRY_BY_ID.has(historical.id)) {
+    throw new Error(`[stablecoin-id-registry] Historical id missing from PSI-inclusive registry: ${historical.id}`);
   }
 }
 
@@ -115,25 +115,25 @@ export function resolveTrackedStablecoinId(input: string): StablecoinIdResolutio
   return resolveFromRegistry(TRACKED_REGISTRY_BY_ID, input);
 }
 
-/** Resolve public readback IDs: all post-launch tracked records, excluding pre-launch and shadow-only IDs. */
+/** Resolve public readback IDs: post-launch tracked records, excluding pre-launch and historical assets. */
 export function resolveReadableStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveFromRegistry(READABLE_REGISTRY_BY_ID, input);
 }
 
-/** Resolve the PSI universe: active tracked coins plus PSI-only shadow assets. */
+/** Resolve the PSI universe: active tracked coins plus PSI historical assets. */
 export function resolvePsiInclusiveStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveFromRegistry(PSI_INCLUSIVE_REGISTRY_BY_ID, input);
 }
 
-/** Resolve a public readback stablecoin ID. Returns null for unknown, pre-launch, and shadow-only IDs. */
+/** Resolve a public readback ID; unknown, pre-launch and historical off-catalog IDs return null. */
 export function resolveStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveReadableStablecoinId(input);
 }
 
-/** Historical PSI stablecoin id aliases. Maps legacy/post-collapse ids to the canonical id used in PSI supply/shadow coverage. */
+/** Historical PSI aliases mapping legacy/post-collapse IDs onto canonical supply/history coverage. */
 const PSI_STABLECOIN_ID_ALIASES = new Map<string, string>([
   // UST historical depeg rows were recorded under the post-collapse legacy id,
-  // while PSI supply/shadow coverage now keys the asset as `ust-terra`.
+  // while PSI supply/history coverage now keys the asset as `ust-terra`.
   ["ust-terra-classic", "ust-terra"],
 ]);
 

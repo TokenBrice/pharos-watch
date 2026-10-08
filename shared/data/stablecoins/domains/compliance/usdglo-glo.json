@@ -1,31 +1,9 @@
 {
   "id": "usdglo-glo",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA interim MiCA register: ART/EMT register page reviewed; no USDGLO/Brale issuer entry located on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Glo Dollar availability: USDGLO is offered through OTC desks including Keyrock for non-U.S. users",
-        "url": "https://www.glodollar.org/articles/glo-dollar-availability"
-      },
-      {
-        "label": "Brale USDGLO: USDGLO is a 1:1 redeemable U.S. dollar token issued by Brale",
-        "url": "https://brale.xyz/stablecoins/USDGLO"
-      },
-      {
-        "label": "AMF DASP register: Keyrock FR SAS registration was withdrawn after its MiCA license was granted",
-        "url": "https://www.amf-france.org/sites/institutionnel/files/pdf/61000/en/Obtaining_a_DASP_registration_optional_licensing.pdf?1732509066="
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDGLO is a Brale-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly attestations."
+      "summary": "USDGLO is a Brale Inc.-issued U.S. dollar payment stablecoin. Brale discloses 1:1 dollar redemption and reserves of cash/cash equivalents and U.S. government-backed debt. The August 31, 2026 reserve report is an assertion of Brale management, not an independent accountant opinion."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -39,44 +17,127 @@
     "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Brale Inc. remains the issuerEntity, consistent with Brale SBC and Real MXN sidecars. Its public licensing disclosures identify FinCEN/MSB and state money-transmitter coverage, which do not establish GENIUS PPSI authorization. Brale security materials describe alignment with emerging GENIUS frameworks without an explicit PPSI qualification announcement. The August 31 USDGLO reserve report, signed September 11, is solely a management assertion; monthlyAttestationPresent remains false despite generic Brale marketing about independent CPA attestations. Brale also mentions an EU regulatory application without naming an NCA, applicant entity or USDGLO scope. Federal GENIUS issuer rules remain proposed in the reviewed October 7 record; Treasury expects January 18, 2027 effectiveness and a July 18, 2028 general DASP offer-sale deadline.",
     "references": [
       {
         "label": "Brale USDGLO",
         "url": "https://brale.xyz/stablecoins/USDGLO",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Brale terms",
         "url": "https://brale.xyz/legal/terms",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Brale disclosures",
         "url": "https://brale.xyz/legal/disclosures",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC GENIUS issuer requirements proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Treasury GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "NCUA GENIUS implementation and proposed application framework",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brale USDGLO August 2026 management reserve assertion",
+        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-11"
+      },
+      {
+        "label": "Brale security and regulatory posture",
+        "url": "https://brale.xyz/security",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Brale USDGLO reserve, terms, and disclosure pages",
-        "state money-transmitter public licensing context",
-        "Brale blog (brale.xyz/blog): no GENIUS Act / PPSI filing announcements found as of 2026-06-18",
-        "Web searches for Brale PPSI authorization, OCC charter, and GENIUS Act intent: no public filing or announced intent found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Opened OCC Bulletin 2026-3 and searched OCC public regulator records for the token and issuer names",
+        "Opened Federal Reserve September 24, 2026 GENIUS issuer and application proposals",
+        "Opened FDIC April 7, 2026 GENIUS issuer requirements proposal",
+        "Opened NCUA GENIUS implementation and application FAQ",
+        "Opened Treasury September 30, 2026 SCRC procedural rule and August 17 issuance/offer-sale proposal",
+        "Targeted searches of OCC, Federal Reserve, FDIC, NCUA and NYDFS domains for token/issuer GENIUS approvals, applications and enforcement",
+        "Opened Brale USDGLO reserve hub, August 2026 management assertion, terms and licensing disclosures",
+        "Opened Brale security page and searched Brale GENIUS/PPSI statements; only general alignment wording found",
+        "Opened NYDFS regulated-entity register; no Brale GENIUS qualification evidence found"
       ],
-      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO. Brale operates as a FinCEN-registered MSB with state money-transmitter licenses; no OCC charter application or PPSI announcement found as of 2026-06-18.",
+      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state qualification or named official pending application was located for Brale Inc. in the checked regulator materials and targeted searches. The reviewed federal documents describe proposed issuer frameworks; Treasury's September 30 interim final rule concerns state certification procedures and states that certifications await PRA approval. Ordinary licenses and reserve disclosures do not establish PPSI approval. No token-specific GENIUS warning or prohibition was located. This is a bounded public-evidence finding, not proof about nonpublic filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "FDIC GENIUS issuer requirements proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Treasury GENIUS issuance and offer-sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NCUA GENIUS implementation and proposed application framework",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -1,3 +1,4 @@
+import { DexRetiredSolidlyLegacyModelSchema } from "@shared/types/market";
 import {
   DexMeasuredExecutionTargetSchema,
   type DexMeasuredExecutionTarget,
@@ -565,6 +566,10 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         throw new Error(
           `DEX liquidity scoring stage pool precedes missing metric "${record.stablecoinId}"`,
         );
+      }
+      if (record.pool.extra?.ammExecutionModel?.source === "solidly-v2") {
+        const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(record.pool.extra.ammExecutionModel);
+        if (retired.success) record.pool.extra.ammExecutionModel = retired.data;
       }
       metric.topPools.push(record.pool);
       return;

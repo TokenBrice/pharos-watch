@@ -1,22 +1,22 @@
 {
   "id": "frnt-wyoming",
   "reserves": [
-    { "name": "U.S. Treasury bills in FBO trust accounts", "pct": 35.29, "risk": "very-low", "assetClass": "treasury-bill", "issuerOrObligor": "United States Treasury", "riskFactors": ["duration", "liquidity", "custody"], "liquidityHorizon": "one-day", "maturityDaysMax": 46 },
-    { "name": "Treasury-collateralized overnight repurchase agreements in FBO trust accounts", "pct": 59.62, "risk": "low", "assetClass": "repo", "issuerOrObligor": "Undisclosed repo counterparties", "riskFactors": ["counterparty", "liquidity", "custody"], "liquidityHorizon": "one-day" },
-    { "name": "USD cash in FBO trust accounts", "pct": 5.09, "risk": "very-low", "assetClass": "bank-deposit", "issuerOrObligor": "Custody-account cash counterparties not itemized", "riskFactors": ["counterparty", "custody"], "liquidityHorizon": "immediate" }
+    { "sourceKey": "ledgerlens:frnt:treasury-bills", "name": "U.S. Treasury bills in FBO trust accounts", "pct": 35.37, "risk": "very-low", "assetClass": "treasury-bill", "issuerOrObligor": "United States Treasury", "riskFactors": ["duration", "liquidity", "custody"], "liquidityHorizon": "unknown" },
+    { "sourceKey": "ledgerlens:frnt:repurchase-agreements", "name": "Treasury-collateralized overnight repurchase agreements in FBO trust accounts", "pct": 59.59, "risk": "low", "assetClass": "repo", "issuerOrObligor": "Undisclosed repo counterparties", "riskFactors": ["counterparty", "liquidity", "custody"], "liquidityHorizon": "unknown" },
+    { "sourceKey": "ledgerlens:frnt:cash", "name": "USD cash in FBO trust accounts", "pct": 5.04, "risk": "very-low", "assetClass": "bank-deposit", "issuerOrObligor": "Custody-account cash counterparties not itemized", "riskFactors": ["counterparty", "custody"], "liquidityHorizon": "unknown" }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_3)",
+    "confidence": "verified",
     "sources": [
       { "label": "LedgerLens FRNT supplemental dashboard", "url": "https://dashboard.ledgerlens.io/c/wystc" },
       { "label": "Wyoming reserve rules effective September 23, 2026", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf" },
       { "label": "Commission reserve-manager and custodian disclosure", "url": "https://stabletoken.wyo.gov/assets/ReservesPage-c2b9M3VC.js" }
     ],
-    "rationale": "Dashboard HTML retrieved on October 2, 2026 exposes snapshot 6abf9cebdec63063af894ba9 at 2026-10-02T12:00:44.629Z. Gross FBO assets are $1,006,340.74: Treasury bills $355,109.96, repos $600,000 and cash $51,230.78. Percentages use that gross inventory, rounded to two decimals; they do not silently allocate the $38,288.89 due-to-administration deduction to an asset class. Net trust reserves $968,051.85 match displayed liabilities $968,051.85; the liquidity-fund balance is zero. Latest listed Treasury maturity is November 17, 2026, 46 days after the snapshot. All metrics outside separately issued AT-C 205 reports are expressly non-assured. No signed current financial report was retrieved, and the statutory 102% target is not current measured backing.",
+    "rationale": "The October 7 dashboard SSR exposes complete snapshot 6ac6346c75d8eb627b88b6a1 at 2026-10-07T12:00:44.746Z. Gross FBO assets are $1,006,852.76: nine positive Treasury-bill CUSIPs sum to $356,091.65, two repo positions sum to $600,000 and cash is $50,761.11; the category totals and full positive position roster reconcile exactly. Percentages use the gross inventory, rounded to two decimals. The separately disclosed $38,800.91 due-to-administration deduction yields net trust reserves $968,051.85, matching displayed liabilities, and is not silently assigned to an asset category. Verified means the complete public inventory and arithmetic were independently checked, not that financial assurance was obtained. The dashboard expressly describes all metrics outside issued AT-C 205 reports as supplemental, non-assured and not FRNT's system of record. No signed current financial report was retrieved and the statutory 102% target is not asserted as measured coverage. Latest observed bill maturity is November 24, 48 days after the snapshot, carried separately as an observed-portfolio bound rather than a contractual maximum. Previous one-day/immediate liquidity labels are not renewed: this source proves holdings, not whole-position stressed access or final-cash deadlines. Existing custody review is unchanged.",
     "compositionBasis": "Non-assured gross FBO fair-market-value inventory; net reserves separately deduct due-to-administration",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-07",
     "scope": "full-composition",
     "knownUnknownExposure": "Asset classes are itemized; repo counterparties, cash-account counterparties and the allocation of the administration payable across assets are not. Dashboard figures have no independent financial-assurance credit.",
     "knownUnknownExposurePct": 0

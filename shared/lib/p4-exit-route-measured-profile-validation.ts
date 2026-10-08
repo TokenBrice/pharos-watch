@@ -14,7 +14,7 @@ import {
   CURVE_STABLESWAP_NG_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
-  UNISWAP_V4_SHADOW_DEPLOYMENTS,
+  getReviewedUniswapV4Deployment,
   CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "./measured-execution-deployment-policies";
@@ -28,6 +28,7 @@ import {
   type P4DexRoutePoolInput,
   type P4MeasuredExecutionPublicProfile,
 } from "./p4-exit-route-capability-policy";
+import { getCurveCompositePolicy, isCurveCompositeAdapterProfileId } from "./curve-composite-policies";
 
 const CURVE_3POOL_ADDRESS = CURVE_STABLESWAP_DEPLOYMENT.poolAddress;
 const CURVE_MAIN_REGISTRY_ADDRESS = CURVE_STABLESWAP_DEPLOYMENT.registryAddress;
@@ -90,7 +91,8 @@ export function validateMeasuredExecutionProfile(
     !isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId) &&
     profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
     profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
-    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID &&
+    !isCurveCompositeAdapterProfileId(profile.adapterProfileId)
   ) {
     issues.push("adapter-not-score-eligible");
   }
@@ -117,9 +119,7 @@ export function validateMeasuredExecutionProfile(
   if (isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId)) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     const provenance = evmProfile.uniswapV4PoolProvenance;
-    const deployment = evmProfile.chain === "ethereum"
-      ? UNISWAP_V4_DEPLOYMENT
-      : UNISWAP_V4_SHADOW_DEPLOYMENTS.find((entry) => entry.chain === evmProfile.chain);
+    const deployment = getReviewedUniswapV4Deployment(evmProfile.chain);
     if (
       !deployment ||
       evmProfile.protocol !== "uniswap-v4" ||
@@ -193,6 +193,56 @@ export function validateMeasuredExecutionProfile(
         (address, index) => address !== policy.poolTokenAddresses[index],
       )
     ) issues.push("physical-pool-provenance-mismatch");
+  } else if (isCurveCompositeAdapterProfileId(profile.adapterProfileId)) {
+    const evmProfile = profile as DexMeasuredExecutionPublicProfile;
+    const policy = getCurveCompositePolicy(evmProfile.chain, evmProfile.executionEndpoint.address);
+    const input = policy?.executionTokens[policy.inputIndex];
+    const output = policy?.executionTokens[policy.outputIndex];
+    if (
+      !policy || policy.adapterProfileId !== evmProfile.adapterProfileId ||
+      evmProfile.protocol !== "curve" ||
+      evmProfile.poolId !== canonicalExitRouteAssetKey(policy.chain, policy.poolAddress) ||
+      evmProfile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash ||
+      evmProfile.poolTokenAddresses?.length !== policy.executionTokens.length ||
+      evmProfile.poolTokenAddresses.some((address, index) => address !== policy.executionTokens[index]!.address) ||
+      evmProfile.tokenIn.address !== input?.address || evmProfile.tokenIn.decimals !== input?.decimals ||
+      evmProfile.tokenIn.trackedAssetId !== policy.stablecoinId ||
+      evmProfile.tokenOut.address !== output?.address || evmProfile.tokenOut.decimals !== output?.decimals ||
+      evmProfile.tokenOut.trackedAssetId !== output?.trackedAssetId
+    ) issues.push("invalid-curve-composite-identity");
+    if (!policy || policy.chain !== "ethereum" || policy.mode !== "active" || !policy.scoreEligible) {
+      issues.push("adapter-not-score-eligible");
+    }
+    const provenance = evmProfile.curveCompositeProvenance;
+    if (
+      !policy || !provenance ||
+      provenance.blockNumber !== evmProfile.blockNumber || provenance.blockCommitment !== "finalized" ||
+      provenance.poolIndex !== policy.factoryPoolIndex ||
+      provenance.factoryAddress !== policy.factoryAddress ||
+      provenance.factoryCodeHash !== policy.expectedFactoryCodeHash ||
+      provenance.registeredPoolAddress !== policy.poolAddress ||
+      provenance.implementationAddress !== policy.implementationAddress ||
+      provenance.implementationCodeHash !== policy.expectedImplementationCodeHash ||
+      provenance.quoteFunction !== policy.quoteFunction ||
+      provenance.poolTokenAddresses.length !== policy.poolTokens.length ||
+      provenance.poolTokenAddresses.some((address, index) => address !== policy.poolTokens[index]!.address) ||
+      provenance.executionTokenAddresses.length !== policy.executionTokens.length ||
+      provenance.executionTokenAddresses.some((address, index) => address !== policy.executionTokens[index]!.address)
+    ) issues.push("physical-pool-provenance-mismatch");
+    if (policy && provenance) {
+      if (policy.quoteFunction === "get_dy") {
+        if (provenance.rateProviderAddress !== policy.rateProvider.providerAddress ||
+          provenance.rateProviderCodeHash !== policy.rateProvider.expectedProviderCodeHash ||
+          provenance.rateProviderUnderlyingAddress !== policy.rateProvider.underlyingAddress ||
+          provenance.basePoolAddress != null) issues.push("curve-rate-provider-mismatch");
+      } else if (
+        provenance.basePoolAddress !== policy.metapool.basePoolAddress ||
+        provenance.basePoolCodeHash !== policy.metapool.expectedBasePoolCodeHash ||
+        provenance.basePoolTokenAddresses?.length !== policy.metapool.basePoolTokens.length ||
+        provenance.basePoolTokenAddresses.some((address, index) => address !== policy.metapool.basePoolTokens[index]!.address) ||
+        provenance.rateProviderAddress != null
+      ) issues.push("curve-base-pool-mismatch");
+    }
   } else if (profile.adapterProfileId === "curve-cryptoswap-get-dy-v1") {
     // CryptoSwap quotes call get_dy on the physical pool itself, not a CL
     // quoter resolved through getPool. The producer validates the reviewed

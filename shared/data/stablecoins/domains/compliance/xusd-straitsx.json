@@ -1,9 +1,47 @@
 {
   "id": "xusd-straitsx",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Binance EEA XUSD trading-pair delisting notice, 31 March 2025",
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=bcaa1f68d6a6450099056ff694ad6c46"
+      },
+      {
+        "label": "Binance XUSD listing notice: StraitsX USD issuer identity",
+        "url": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode=65af5039eae04563b47e424b9cae77ed"
+      },
+      {
+        "label": "ESMA Interim MiCA Register: EMT issuer file reviewed 7 October 2026",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "StraitsX token terms",
+        "url": "https://www.straitsx.com/legal/token"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "XUSD is a U.S. dollar stablecoin issued by StraitsX with 1:1 USD redemption and monthly reserve attestations."
+      "summary": "XUSD is represented as a payment and settlement token maintaining a 1:1 USD value. The July 2026 token and redemption terms identify its legal issuer and provide conditional fiat USD redemption for holders, subject to onboarding, restrictions, fees, and processing requirements. These features support apparent-payment-stablecoin applicability under GENIUS Act section 2(22); they do not establish U.S. authorization.",
+      "references": [
+        {
+          "label": "StraitsX token terms",
+          "url": "https://www.straitsx.com/legal/token",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "KK Yap & Associates XUSD reserve examination, 31 August 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-09-28",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -17,48 +55,112 @@
     "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception. Under the GENIUS Act, StraitsX would need to register with the OCC as a foreign payment stablecoin issuer (FPSI) to offer XUSD to U.S. persons. No such application has been filed or announced as of 2026-06-18. StraitsX's own blog positions XUSD as B2B/Asia-focused; no US-market authorisation is claimed. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. Current token terms name StraitsX USD Issuance Pte. Ltd. as XUSD issuer and distinguish StraitsX Payment Services Pte Ltd as distributor. Holders have conditional 1:1 fiat USD redemption. The opened KK Yap & Associates report provides reasonable assurance over reserves and circulation at 31 August 2026 and is dated 28 September 2026. MAS licensing and issuer-reported Singapore SCS substantive-compliance acknowledgement do not establish GENIUS approval, Treasury comparability, or OCC foreign registration. No such token-specific authorization or announced U.S. application was found within the reviewed evidence; issuer pathway and foreign-exception status remain unknown. Treasury's 17 August 2026 proposal identifies 18 January 2027 as the expected Act effective date and 18 July 2028 for the broader DASP licensed-issuer offer/sale restriction. The 30 September 2026 SCRC interim rule establishes procedural forms and does not authorize an issuer or certify a state regime; certifications await Paperwork Reduction Act approval. These general materials support pre-effective not-yet-restricted posture, subject to final-rule developments.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StraitsX XUSD product page",
         "url": "https://www.straitsx.com/xusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StraitsX token terms",
         "url": "https://www.straitsx.com/legal/token",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-18",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "StraitsX USDT vs USDC vs XUSD blog post",
         "url": "https://www.straitsx.com/blog-post/usdt-vs-usdc-vs-xusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "StraitsX purchasing and redemption terms",
+        "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KK Yap & Associates XUSD reserve examination, 31 August 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6abb483d1de79f8ca93f1c67_XUSD%20SCS%20Reserve%20Account%20Report%20(31%20August%202026).pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-09-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury payment stablecoin issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "https://www.straitsx.com/xusd",
+        "https://www.straitsx.com/legal/token",
         "https://www.straitsx.com/blog-post/usdt-vs-usdc-vs-xusd",
-        "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the-issuance-of-stablecoins-by-entities-subject-to-the-jurisdiction-of-the-office-of-the-comptroller-of-the-currency",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "2026-10-07 indexed search: StraitsX, XSGD, StraitsX USD Issuance; occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, dfs.ny.gov, dfpi.ca.gov; GENIUS authorization and enforcement",
+        "2026-10-07 indexed search: (StraitsX OR GAIB) AND (GENIUS Act OR OCC application OR US stablecoin license)"
       ],
-      "summary": "MAS licensing and XUSD reserve disclosures confirmed, but no token-specific U.S. GENIUS approval, OCC foreign-issuer registration, or FPSI application was found for StraitsX or XUSD across OCC bulletins, Federal Register NPRMs, and StraitsX's own public disclosures.",
+      "summary": "No public GENIUS approval, token-specific official application, issuer-announced U.S. application, registered foreign exception, or enforcement action naming StraitsX, XSGD, StraitsX USD Issuance was found in the reviewed issuer material, public OCC pending digital-asset licensing table, NYDFS directory, and indexed agency-domain searches. These search-bounded findings do not establish that a private or unindexed filing or action does not exist. General licensing and rulemaking are distinct from issuer-specific GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC pending digital-asset licensing applications; limited to listed bank applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

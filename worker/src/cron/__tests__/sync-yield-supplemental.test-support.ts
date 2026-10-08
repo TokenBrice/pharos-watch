@@ -1,19 +1,5 @@
-import type { OptionalRpcFamilyTelemetry, VaultsFyiSourceResult } from "../yield-sync/sources";
+import type { OptionalRpcFamilyTelemetry } from "../yield-sync/sources";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
-import { emptyTelemetry } from "../yield-sync/vaults-fyi";
-
-export function emptyVaultsFyiResult(
-  overrides: Partial<VaultsFyiSourceResult["telemetry"]> = {},
-): VaultsFyiSourceResult {
-  return {
-    candidates: [],
-    telemetry: {
-      ...emptyTelemetry(overrides),
-      consumptionMode: overrides.consumptionMode ?? "disabled",
-      consumptionReason: overrides.consumptionReason ?? "source-disabled",
-    },
-  };
-}
 
 export function emptyRpcTelemetry(): OptionalRpcFamilyTelemetry {
   return {

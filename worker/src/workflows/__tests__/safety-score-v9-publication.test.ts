@@ -3,6 +3,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication, SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publication-store";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY } from "../../lib/safety-score-v9/capture-control";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -13,16 +15,7 @@ import type {
 } from "cloudflare:workers";
 
 const { computeSafetyScoreV9, parseNativeV9InputCacheArtifact } = vi.hoisted(
-  () => ({
-    computeSafetyScoreV9: vi.fn(),
-    parseNativeV9InputCacheArtifact: vi.fn(async () => ({
-      input: {
-        sourceGeneration: "report-cards:v9:1788433200",
-        baseInputGenerationId: "report-cards-input:v1:1788433200",
-        clockSec: 1788433200,
-      },
-    })),
-  }),
+  () => ({ computeSafetyScoreV9: vi.fn(), parseNativeV9InputCacheArtifact: vi.fn() }),
 );
 
 vi.mock("cloudflare:workers", () => ({
@@ -50,6 +43,8 @@ import {
   writeSafetyScoreV9ShadowPublication,
 } from "../safety-score-v9-publication";
 
+const WORKER_VERSION = "12345678-1234-1234-1234-123456789abc";
+
 function d1Result(changes = 0): D1Result {
   return {
     success: true,
@@ -58,10 +53,39 @@ function d1Result(changes = 0): D1Result {
   } as unknown as D1Result;
 }
 
+const BASE_INPUT_ID = `report-cards-input:v1:${"a".repeat(64)}`;
+const INPUT_IDENTITY = buildSafetyScoreV9InputIdentity({
+  methodologyVersion: "9.0",
+  baseInputGenerationId: BASE_INPUT_ID,
+  publicationGenerationId: "report-cards:v9:1788433200",
+});
+
 function createWorkflowDb() {
   const fixture = fixtures.open();
   fixture.sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
-    "report-cards:fixed-input:exact", "fixed-input-envelope", 1788433200,
+    "report-cards:fixed-input:exact", JSON.stringify({
+      schemaVersion: 2, kind: "report-cards-fixed-input-exact", encoding: "gzip-base64",
+      sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+      safetyScoreIdentity: INPUT_IDENTITY,
+      // Deliberately not a valid compressed capture: identity loading must not decode it.
+      payload: "must-not-transfer-or-decompress".repeat(50_000),
+    }), 1788433200,
+  );
+  fixture.sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+    SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify({
+      schemaVersion: 1,
+      capture: {
+        safetyScoreIdentity: INPUT_IDENTITY, baseInputGenerationId: BASE_INPUT_ID,
+        sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+        clockSec: 1788433200, registryFingerprint: "b".repeat(64),
+        workerVersion: null, workerUploadedAtSec: null,
+      },
+      recaptureRequest: null,
+      attribution: {
+        status: "settled", dueSlotStartedAtSec: 1788433200, pendingUntilSec: 1788433200,
+        generationId: null, outcome: "ok",
+      },
+    }), 1788433200,
   );
   return fixture;
 }
@@ -122,7 +146,7 @@ async function compileCanonicalPublication(compilerDb: D1Database) {
     itemCount: 200,
     metadata: JSON.stringify({
       sourceGenerationId: "report-cards:v9:1788433200",
-      baseInputGenerationId: "report-cards-input:v1:1788433200",
+      baseInputGenerationId: BASE_INPUT_ID,
       publication: { status: "published" },
     }),
   };
@@ -182,7 +206,7 @@ describe("Safety Score V9 publication Workflow", () => {
     } as unknown as typeof EVENT;
 
     await expect(
-      runSafetyScoreV9PublicationWorkflow({ DB: db }, runtimeEvent, step as unknown as WorkflowStep),
+      runSafetyScoreV9PublicationWorkflow({ DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } }, runtimeEvent, step as unknown as WorkflowStep),
     ).resolves.toMatchObject({
       status: "complete",
       instanceId: "v9-publication-1788433200",
@@ -197,24 +221,29 @@ describe("Safety Score V9 publication Workflow", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     const first = await runSafetyScoreV9PublicationWorkflow(
-      { DB: db },
+      { DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } },
       EVENT,
       step as unknown as WorkflowStep,
     );
     const second = await runSafetyScoreV9PublicationWorkflow(
-      { DB: db },
+      { DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } },
       EVENT,
       step as unknown as WorkflowStep,
     );
 
     expect(first).toEqual(second);
-    expect(parseNativeV9InputCacheArtifact).toHaveBeenCalledTimes(1);
+    expect(parseNativeV9InputCacheArtifact).not.toHaveBeenCalled();
+    expect(step.results.get("load fixed input")).toEqual({
+      sourceGeneration: INPUT_IDENTITY.publicationGenerationId,
+      baseInputGenerationId: BASE_INPUT_ID, clockSec: 1788433200,
+    });
     expect(computeSafetyScoreV9).toHaveBeenCalledTimes(1);
     expect(computeSafetyScoreV9.mock.calls[0].slice(1)).toEqual([
       undefined, undefined, { retainAcceptedReplay: false },
     ]);
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
       { key: "report-cards:fixed-input:exact" },
+      { key: SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY },
       { key: "safety-score-v9:shadow:report-cards:v9:1788433200" },
     ]);
     expect(sqlite.prepare("SELECT job, status FROM cron_runs").all()).toEqual([
@@ -315,12 +344,13 @@ describe("Safety Score V9 publication Workflow", () => {
       cronMetadata: "{\"publicationStatus\":\"published\"}",
     };
     const write = (value = gated, instanceId = EVENT.instanceId as string) =>
-      writeSafetyScoreV9ShadowPublication(db, instanceId, 1788433200, EVENT.timestamp.getTime(), value);
+      writeSafetyScoreV9ShadowPublication(db, instanceId, 1788433200, EVENT.timestamp.getTime(), value, WORKER_VERSION);
     await write();
     const rows = sqlite.prepare("SELECT * FROM cron_runs").all();
     expect(rows).toMatchObject([{
       job: SAFETY_SCORE_V9_WORKFLOW_JOB, status: "ok", item_count: 200,
       slot_started_at: 1788433200, error: null,
+      worker_version: WORKER_VERSION,
       degraded_reason: null,
       idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`,
     }]);
@@ -343,13 +373,14 @@ describe("Safety Score V9 publication Workflow", () => {
       status: "skipped_neutral",
       reason: "v9-core-slot-not-ready",
       stage: null,
-    });
+    }, WORKER_VERSION);
     const rows = sqlite.prepare("SELECT * FROM cron_runs").all();
     expect(rows).toMatchObject([{
       job: SAFETY_SCORE_V9_WORKFLOW_JOB,
       status: "skipped_neutral",
       item_count: 0,
       slot_started_at: 1788433200,
+      worker_version: WORKER_VERSION,
       error: null,
       degraded_reason: "upstream-compute-publication-absent",
       idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${instanceId}:upstream-absent`,
@@ -366,7 +397,7 @@ describe("Safety Score V9 publication Workflow", () => {
       status: "skipped_neutral",
       reason: "v9-core-slot-not-ready",
       stage: null,
-    });
+    }, WORKER_VERSION);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs").get()).toEqual({ count: 1 });
 
     // A duplicate delivery that does publish this slot writes the real terminal
@@ -379,7 +410,7 @@ describe("Safety Score V9 publication Workflow", () => {
       itemCount: 200,
       error: null,
       cronMetadata: "{\"publicationStatus\":\"published\"}",
-    });
+    }, WORKER_VERSION);
     expect(
       sqlite.prepare("SELECT status FROM cron_runs ORDER BY id").all(),
     ).toEqual([{ status: "skipped_neutral" }, { status: "ok" }]);
@@ -397,21 +428,9 @@ describe("Safety Score V9 publication Workflow", () => {
       cronMetadata: `{"sourceGeneration":"report-cards:v9:${generation}"}`,
     });
 
-    await writeSafetyScoreV9ShadowPublication(
-      db,
-      "newer-instance",
-      1788434100,
-      EVENT.timestamp.getTime(),
-      shadow(1788434100),
-    );
+    await writeSafetyScoreV9ShadowPublication(db, "newer-instance", 1788434100, EVENT.timestamp.getTime(), shadow(1788434100), WORKER_VERSION);
     await expect(
-      writeSafetyScoreV9ShadowPublication(
-        db,
-        "older-instance",
-        1788433200,
-        EVENT.timestamp.getTime(),
-        shadow(1788433200),
-      ),
+      writeSafetyScoreV9ShadowPublication(db, "older-instance", 1788433200, EVENT.timestamp.getTime(), shadow(1788433200), WORKER_VERSION),
     ).rejects.toThrow("conflicts with an existing value");
 
     expect(
@@ -445,10 +464,10 @@ describe("Safety Score V9 publication Workflow", () => {
       itemCount: 200,
       error: null,
       cronMetadata: "{\"sourceGeneration\":\"report-cards:v9:1788434100\"}",
-    });
+    }, WORKER_VERSION);
 
     const result = await runSafetyScoreV9PublicationWorkflow(
-      { DB: db },
+      { DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } },
       EVENT,
       step as unknown as WorkflowStep,
     );
@@ -482,9 +501,8 @@ describe("Safety Score V9 publication Workflow", () => {
       const { db, sqlite } = createWorkflowDb();
       if (failure === "missing") sqlite.exec("DELETE FROM cache");
       if (failure === "newer") {
-        parseNativeV9InputCacheArtifact.mockResolvedValueOnce({
-          input: { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433201 },
-        });
+        sqlite.prepare("UPDATE cache SET value = json_set(value, '$.capture.clockSec', ?) WHERE key = ?")
+          .run(1788433201, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
       }
       computeSafetyScoreV9.mockImplementation(async (compilerDb: D1Database) => {
         const result = await compileCanonicalPublication(compilerDb);
@@ -492,15 +510,45 @@ describe("Safety Score V9 publication Workflow", () => {
           ...JSON.parse(result.metadata), sourceGenerationId: "report-cards:v9:1788433201",
         }) };
       });
-      const result = await runSafetyScoreV9PublicationWorkflow({ DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep);
+      const result = await runSafetyScoreV9PublicationWorkflow({ DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep);
       expect(result).toEqual({ instanceId: EVENT.instanceId, shadowKey: null, sourceGeneration: null, status: "error" });
-      expect(sqlite.prepare("SELECT key FROM cache WHERE key != 'report-cards:fixed-input:exact'").all()).toEqual([]);
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key NOT IN (?, ?)").all(
+        "report-cards:fixed-input:exact", SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
+      )).toEqual([]);
       expect(sqlite.prepare("SELECT status, error, degraded_reason FROM cron_runs").all()).toEqual([{
         status: "error", error: expect.stringContaining(failure === "missing" ? "missing" : failure === "newer" ? "newer" : "advanced"),
         degraded_reason: "workflow-execution-failed",
       }]);
     }
   });
+
+  it.each(["missing-control", "source", "base", "evaluator", "methodology"] as const)(
+    "rejects %s projected references before compilation without recapture writes",
+    async failure => {
+      const { db, sqlite } = createWorkflowDb();
+      if (failure === "missing-control") {
+        sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
+      } else {
+        const path = failure === "source" ? "$.sourceGeneration"
+          : failure === "base" ? "$.safetyScoreIdentity.baseInputGenerationId"
+          : failure === "evaluator" ? "$.safetyScoreIdentity.evaluationBuildDigest"
+          : "$.safetyScoreIdentity.methodologyVersion";
+        const value = failure === "source" ? "report-cards:v9:other"
+          : failure === "base" ? `report-cards-input:v1:${"c".repeat(64)}`
+          : failure === "evaluator" ? "c".repeat(64) : "9.1";
+        sqlite.prepare("UPDATE cache SET value = json_set(value, ?, ?) WHERE key = ?")
+          .run(path, value, "report-cards:fixed-input:exact");
+      }
+      const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
+      const step = new ReplayFakeStep();
+      const result = await runSafetyScoreV9PublicationWorkflow({ DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } }, EVENT, step as unknown as WorkflowStep);
+      expect(result.status).toBe("error");
+      expect(computeSafetyScoreV9).not.toHaveBeenCalled();
+      expect(parseNativeV9InputCacheArtifact).not.toHaveBeenCalled();
+      expect(step.calls.map(call => call.name)).not.toContain("compile publication");
+      expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
+    },
+  );
 
   it("rejects identity mismatches and publication-envelope inconsistencies independently", async () => {
     const fixed = { sourceGeneration: "report-cards:v9:1788433200", baseInputGenerationId: "report-cards-input:v1:1788433200", clockSec: 1788433200 };
@@ -573,7 +621,7 @@ describe("Safety Score V9 publication Workflow", () => {
     expect(gated.error).toBe("redemption-stale");
     expect(JSON.parse(gated.cronMetadata)).toMatchObject({ reason: "redemption-stale" });
     const { db, sqlite } = fixtures.open();
-    await writeSafetyScoreV9ShadowPublication(db, EVENT.instanceId, 1788433200, EVENT.timestamp.getTime(), gated);
+    await writeSafetyScoreV9ShadowPublication(db, EVENT.instanceId, 1788433200, EVENT.timestamp.getTime(), gated, WORKER_VERSION);
     expect(sqlite.prepare("SELECT status, error, degraded_reason FROM cron_runs").get()).toEqual({
       status: "degraded", error: "redemption-stale", degraded_reason: "redemption-stale",
     });
@@ -586,10 +634,11 @@ describe("Safety Score V9 publication Workflow", () => {
       message: "failed Bearer credential", cause: { message: "owner@example.com" },
     });
     const result = await runSafetyScoreV9PublicationWorkflow(
-      { DB: db }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep,
+      { DB: db, CF_VERSION_METADATA: { id: WORKER_VERSION, tag: "", timestamp: "" } }, EVENT, new ReplayFakeStep() as unknown as WorkflowStep,
     );
     expect(result.status).toBe("error");
-    const row = sqlite.prepare("SELECT error, metadata, degraded_reason FROM cron_runs").get()!;
+    expect(sqlite.prepare("SELECT worker_version FROM cron_runs").get()).toEqual({ worker_version: WORKER_VERSION });
+    const row = sqlite.prepare("SELECT error, metadata, degraded_reason, worker_version FROM cron_runs").get()!;
     expect(row.degraded_reason).toBe("v9-publication-write-failed");
     expect(row.error).toBe("v9-publication-write-failed: failed Bearer [redacted]; cause: [email]");
     expect(JSON.parse(String(row.metadata))).toMatchObject({

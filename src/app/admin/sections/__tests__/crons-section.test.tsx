@@ -362,8 +362,18 @@ describe("CronsSection", () => {
   });
 
   it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
+    const pressure = {
+      phase: "current-intake", observedAt: 1_699_999_900, bodyCapBytes: 4096, cacheCapBytes: null,
+      cacheEntryCapBytes: null, maxConcurrentDecodes: null, inputCapBytes: null, catalogMaxAssets: null,
+      intakeBytes: 0, cacheBytes: null, rejectedBodies: 0, inputBytes: null, catalogAssets: null,
+      intakeBasis: "actual-stream" as const, cacheBasis: "unavailable" as const, guard: "within-policy" as const,
+      platformOutcome: null, platformOutcomeSource: null, heapUsedBytes: null,
+      heapUnavailableReason: "workers-runtime-no-heap-api" as const,
+    };
     const cron = makeCronStatus({
       healthy: false,
+      lastRun: { startedAt: 1_699_999_700, durationMs: 100, status: "ok",
+        metadata: { resourcePressure: { ...pressure, phase: "last-publication", observedAt: 1_699_999_700, intakeBytes: 123 } } },
       inFlight: {
         startedAt: 1_699_999_800,
         updatedAt: 1_699_999_900,
@@ -371,7 +381,7 @@ describe("CronsSection", () => {
         leaseOwner: "lease-owner-a",
         itemsDone: 4,
         itemsTotal: 10,
-        metadata: { cursor: "coin-a" },
+        metadata: { cursor: "coin-a", resourcePressure: pressure },
         stale: true,
       },
       staleArtifacts: [
@@ -400,6 +410,14 @@ describe("CronsSection", () => {
     expect(screen.getByText("reserve-fetch")).toBeTruthy();
     expect(screen.getByText("Full progress metadata")).toBeTruthy();
     expect(screen.getAllByText("Scheduled slot")).toHaveLength(2);
+    const current = screen.getByRole("region", { name: "Current progress resource evidence" });
+    const terminal = screen.getByRole("region", { name: "Last terminal resource evidence" });
+    expect(within(current).getByText(/current-intake/)).toBeTruthy();
+    expect(within(current).getByText("0 bytes · actual-stream")).toBeTruthy();
+    expect(within(terminal).getByText(/last-publication/)).toBeTruthy();
+    expect(within(terminal).getByText("123 bytes · actual-stream")).toBeTruthy();
+    expect(within(current).getByText("Heap unavailable")).toBeTruthy();
+    expect(within(current).getByText("Unavailable (not inferred)")).toBeTruthy();
   });
 
   it.each([undefined, 0])("distinguishes an item count of %s from unavailable", (itemCount) => {

@@ -193,6 +193,18 @@ describe("yield coverage review dispositions", () => {
       visibleRecommendationCandidateCount: 0,
       publishedItemCount: 20,
       truncatedItemCount: 2,
+      visibleByKind: { "lending-allowlist": 22 },
+    });
+  });
+
+  it("counts all 146 visible candidates and kinds before publishing forty", async () => {
+    const { db } = createDispositionDb();
+    const headline = Array.from({ length: 54 }, (_, index) => item(`gap-${index}`, { kind: "manifest-missing" }));
+    const recommendations = Array.from({ length: 92 }, (_, index) => item(`recommendation-${index}`));
+    const result = await applyYieldCoverageReviewDispositions(db, queue(headline, recommendations), { nowSec: 2_000 });
+    expect(result.summary).toMatchObject({
+      candidateItemCount: 146, visibleItemCount: 146, publishedItemCount: 40, truncatedItemCount: 106,
+      suppressedItemCount: 0, visibleByKind: { "manifest-missing": 54, "lending-allowlist": 92 },
     });
   });
 

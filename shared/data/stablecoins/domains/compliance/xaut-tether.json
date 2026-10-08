@@ -2,36 +2,39 @@
   "id": "xaut-tether",
   "mica": {
     "status": "non-compliant",
-    "tokenType": "ART",
     "references": [
       {
-        "label": "ESMA MiCA interim register: ART white papers",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+        "label": "Bit2Me MiCA restriction notice naming XAUT",
+        "url": "https://blog.bit2me.com/es/actualizacion-sobre-stablecoins-y-mica/"
       },
       {
-        "label": "Tether Gold FAQ",
-        "url": "https://gold.tether.to/faq"
+        "label": "Bit2Me current asset status: Tether Gold XAUT delisted",
+        "url": "https://bit2me.com/es/criptomonedas-soportadas"
       },
       {
-        "label": "OKX Europe XAUT spot listing",
-        "url": "https://www.okx.com/de/help/okx-to-list-xaut-tether-gold-for-spot-trading"
+        "label": "Tether Gold June 30, 2026 reserve assurance and token ownership report",
+        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
       }
     ]
   },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "XAUt represents one fine troy ounce of physical gold and is not a fixed-value U.S.-dollar payment stablecoin.",
+      "summary": "XAUt represents undivided ownership of one fine troy ounce of physical gold on specified bars. Its reference value follows gold, rather than a fixed amount of national currency or a national-currency-denominated deposit under GENIUS sections 2(17) and 2(22).",
       "references": [
         {
-          "label": "Tether Gold FAQ",
-          "url": "https://gold.tether.to/faq",
-          "sourceKind": "issuer-disclosure"
+          "label": "BDO Tether Gold June 30, 2026 reserve assurance report",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-07-31",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act Public Law 119-27",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-          "sourceKind": "statute"
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -41,20 +44,31 @@
     "issuerDomicile": "El Salvador",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "XAUt is a gold-backed commodity token, not a payment stablecoin within the GENIUS tracker. No GENIUS payment-stablecoin authorization is asserted.",
+    "notes": "XAUt represents ownership of physical gold and is classified as a non-payment token for the GENIUS tracker. The dated reserve report confirms TG Commodities, S.A. de C.V. as issuer. GENIUS section 2 defines monetary value by national currency or a currency-denominated deposit; this gold ownership claim has no fixed national-currency redemption obligation. No GENIUS payment-stablecoin authorization is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Tether Gold FAQ",
-        "url": "https://gold.tether.to/faq",
-        "sourceKind": "issuer-disclosure"
+        "label": "BDO Tether Gold June 30, 2026 reserve assurance report",
+        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-07-31",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

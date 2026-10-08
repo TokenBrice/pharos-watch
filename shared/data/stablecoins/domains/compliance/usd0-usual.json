@@ -1,102 +1,203 @@
 {
   "id": "usd0-usual",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register: EMTWP.csv (EMT issuers)",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      },
-      {
-        "label": "ESMA MiCA register landing page: authorized EMT issuer register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Cryptonomist: France launch of USD0, Usual Protocol",
-        "url": "https://en.cryptonomist.ch/2024/02/29/france-the-usual-protocol-launches-usd0-the-stablecoin-that-rewards-the-community/"
-      },
-      {
-        "label": "ChainArgos: USD as Usual, a MiCA analysis",
-        "url": "https://www.chainargos.com/usd-as-usual/"
-      }
-    ]
-  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USD0 is a 1:1 USD-pegged, RWA-backed token redeemable on-chain: token-level characteristics fit \"payment stablecoin\" under the GENIUS Act. However, the issuer is Usual DAO, a France-domiciled decentralized autonomous organization with no US legal entity. Whether and how the GENIUS Act's issuer-level obligations reach a DAO issuer domiciled in France is genuinely unclear, especially while foreign-issuer comparability rules remain in proposed-rulemaking phase.",
+      "summary": "USD0 is marketed as a dollar payment/settlement stablecoin, but its primary redemption route exchanges the token for tokenized Treasury collateral and its indirect USDC route depends on counterparties and liquidity. GENIUS section 2(22) requires an issuer obligation to convert, redeem or repurchase for fixed monetary value, not merely a fixed-denomination digital asset. Usual terms disclaim ADDU participation in protocol transactions and do not establish an enforceable USD-redemption obligation. The public evidence leaves that obligation unresolved. DAO organization and France-based service providers alone are not a statutory exclusion.",
       "references": [
         {
           "label": "GENIUS Act statutory text (S.1582)",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-          "sourceKind": "statute"
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Treasury GENIUS Act state-level regulatory regimes NPRM",
           "url": "https://home.treasury.gov/news/press-releases/sb0428",
-          "sourceKind": "federal-regulator"
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "USD0 factsheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/usd0",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-16",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Usual USD0 product and redemption documentation",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Usual protocol terms of use and services",
+          "url": "https://docs.usual.money/resources-and-ecosystem/legal-documentation/terms-of-services",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-03-21",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Usual DAO",
-    "issuerDomicile": "France",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://app.rwa.xyz/assets/USD0",
+    "reserveDisclosureUrl": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USD0 is DAO-issued (Usual DAO holds 100% protocol asset ownership per UIP-15, Dec 2025) with Usual Labs SAS (France) acting as service provider, not issuer. No public GENIUS authorization, state-qualified approval, official application, or foreign-exception registration was located. Applicability marked unclear because GENIUS Act issuer-level obligations on a France-domiciled DAO with no US legal entity remain unresolved while foreign-issuer comparability rulemaking is still at NPRM stage.",
+    "notes": "Reviewed 2026-10-07. The USD0 factsheet identifies Usual DAO as issuer and describes DAO protocol ownership under UIP-15, with Usual Labs as a service provider. ADDU is the French interface co-contracting association and Up Only Co is the developer. These identities do not establish the DAO legal domicile, so the former France issuerDomicile assertion is omitted. Direct redemption delivers tokenized Treasury collateral; the indirect USDC route depends on counterparties and liquidity. The opened terms do not resolve a legally enforceable national-currency redemption obligation. U.S. persons are excluded from interface use, which does not establish a GENIUS foreign exception or blanket secondary ownership prohibition. Official collateral and redemption disclosures are public; no monthly token-level reserve attestation was located, and the issuer describes on-chain transparency instead of periodic token attestations. No named public authorization, officially pending application, foreign registration or enforcement action was located in the consulted sources. The Act remains pre-effective; the September 30 state-certification procedural rule does not activate the issuer and distribution framework.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD0 factsheet",
         "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/usd0",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-16",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USD0 RWA collateral",
         "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "RWA.xyz USD0 asset page",
-        "url": "https://app.rwa.xyz/assets/USD0",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "Usual DAO governance: UIP-15 protocol ownership",
+        "label": "Usual USD0 product and redemption documentation",
         "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Usual protocol terms of use and services",
+        "url": "https://docs.usual.money/resources-and-ecosystem/legal-documentation/terms-of-services",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS Virtual Currency Business Licensing",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act U.S. issuance and distribution NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification review interim procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation (usual.money/docs)",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Web search for Usual/USD0 + GENIUS Act compliance announcements (June 2026)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3: main body recovered from raw official HTML; official 91 FR 10202 PDF opened 2026-10-07.",
+        "OCC Digital Assets Licensing Applications: complete raw HTML table inspected, including nine active pending bank applications; no Usual entry, opened 2026-10-07. This bank-licensing table is not a GENIUS PPSI register.",
+        "NYDFS Virtual Currency Business Licensing regulated-entity directory and Greenlist, opened 2026-10-07; these existing licenses are not GENIUS qualifications.",
+        "Treasury April 1 state-comparability proposal, April 8 AML/sanctions proposal, August 17 issuance/distribution proposal and September 30 SCRC procedural interim rule, opened 2026-10-07.",
+        "Federal Reserve September 24 GENIUS standards/application proposals, opened 2026-10-07.",
+        "Scoped official-domain search across OCC, Treasury, Federal Reserve, FDIC, NYDFS, SEC and CFTC for Usual DAO, USD0, EUR0, Up Only Co and ADDU with stablecoin/GENIUS/enforcement terms, performed 2026-10-07; no indexed named match located.",
+        "Usual USD0 and EUR0 factsheets, product/redemption documentation, USD0 collateral disclosure, terms and regulatory-risk disclosure, opened 2026-10-07."
       ],
-      "summary": "USD0 is DAO-issued and redeemable against RWA collateral; re-verification confirms no public GENIUS authorization, state-qualified approval, official application, or foreign registration source was located as of 2026-06-18.",
+      "summary": "As of 2026-10-07, no source in this consulted set names Usual DAO or USD0 as a permitted payment stablecoin issuer, state-qualified issuer, officially pending GENIUS applicant or registered foreign issuer. No named public enforcement action was located in the scoped official-domain searches. General regulator proposals, regulated reserve assets, and Monerium fiat-rail licensing do not establish token authorization. These are negative findings limited to the opened materials and searches, not a certification of universal absence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register: OCC GENIUS Act proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS Virtual Currency Business Licensing",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Act U.S. issuance and distribution NPRM",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act standards and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-certification review interim procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

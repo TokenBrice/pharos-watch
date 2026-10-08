@@ -1,6 +1,7 @@
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import {
   DEX_DISCOVERY_PROVIDER_REGISTRY,
   getDexDiscoveryProviders,
@@ -14,7 +15,6 @@ import {
   isStoredDexCensusEvidenceStale,
 } from "../dex-discovery/census-state-machine";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 const DEX_DISCOVERY_PROVIDER_IDS = new Set<string>(
   DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => provider.providerId),
 );
@@ -180,9 +180,6 @@ function resolveDexDeploymentAttemptFence(
   return row.deployment_last_attempt_at ?? row.observed_at;
 }
 
-export function buildDexKnownEmptyRouteCoverage(): ExitRouteObservationCoverage {
-  return buildCoverage("populated", {});
-}
 
 /**
  * Classify a zero-scoring-pool publication row against the exact active

@@ -128,6 +128,7 @@ describe("adaptCircleTransparency", () => {
       freshnessMode: "verified",
       sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
     });
+    expect(result.metadata?.diag).not.toHaveProperty("rawSumDeviation");
     expect(result.slices).toEqual([
       { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 71.9, risk: "very-low" },
       { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 15.6, risk: "very-low" },
@@ -137,6 +138,7 @@ describe("adaptCircleTransparency", () => {
 
   it("normalizes current absolute-value EURC disclosures into percentages", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
+    expect(result.metadata?.diag).not.toHaveProperty("rawSumDeviation");
     expect(result.slices).toEqual([
       { sourceKey: "circle:eurc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 100, risk: "very-low" },
     ]);

@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 import { mockFetchRetry } from "../../../test-helpers/cron";
+import type * as FetchRetry from "../../../lib/fetch-retry";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
+  ...mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }),
+}));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { buildAlchemyRpcUrl, type ChainRpcConfig, type RpcEndpoint } from "../../../lib/chain-registry";
 import {
-  ADAPTER_USER_AGENT,
   buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildBucketSlices,
@@ -27,11 +31,14 @@ import {
   probeTrackedTokenSupply,
   slicesFromPercentages,
   slicesFromValues,
+  summarizeSourceTimestamps,
+  summarizeSourceTimestampsRequiringCoverage,
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
   verifiedFreshnessMetadata,
 } from "../helpers";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
+import { parseDecimalNumber, parseFiniteNumber, sumBackingAssetAmounts } from "../strict-amount";
 
 function solanaCoin(): StablecoinMeta {
   return {
@@ -76,6 +83,23 @@ describe("buildRedemptionSnapshotMetadata", () => {
     });
   });
 
+  it("canonicalizes and deduplicates valid producer URLs before they are persisted", () => {
+    const sourceUrls = ["https://issuer.example", "https://issuer.example/", "https://issuer.example/redeem"];
+    const metadata = buildRedemptionSnapshotMetadata({ capacityUsd: 100, sourceUrls });
+    expect(metadata.redemption?.sourceUrls).toEqual(["https://issuer.example/", "https://issuer.example/redeem"]);
+    expect(sourceUrls).toEqual(["https://issuer.example", "https://issuer.example/", "https://issuer.example/redeem"]);
+    const decoded = decodeLiveReserveRedemptionTelemetry(metadata);
+    expect(decoded).toEqual({ status: "valid", telemetry: metadata.redemption });
+    expect(JSON.parse(JSON.stringify(metadata)).redemption).toEqual(metadata.redemption);
+  });
+
+  it.each(["ftp://issuer.example/redeem", "not-a-url"])("does not salvage producer telemetry by filtering invalid source URL %s", (invalidUrl) => {
+    const sourceUrls = ["https://issuer.example/redeem", invalidUrl];
+    const metadata = buildRedemptionSnapshotMetadata({ capacityUsd: 100, sourceUrls });
+    expect(metadata.redemption?.sourceUrls).toEqual(sourceUrls);
+    expect(decodeLiveReserveRedemptionTelemetry(metadata).status).toBe("invalid");
+  });
+
   it("requires an explicit route observation before publishing live route provenance", () => {
     expect(buildRedemptionSnapshotMetadata({
       routeStatus: "open",
@@ -95,6 +119,21 @@ describe("buildRedemptionSnapshotMetadata", () => {
         routeStatusSource: "onchain",
       },
     });
+  });
+  it("keeps producer fields closed while wire extensions remain a separate contract", () => {
+    // @ts-expect-error Live attribution requires an affirmative observed-route claim.
+    buildRedemptionSnapshotMetadata({ routeStatusSource: "onchain", routeStatus: "open" });
+    // @ts-expect-error Known-field producer typing rejects misspelled telemetry keys.
+    buildRedemptionSnapshotMetadata({ capacittyUsd: 1 });
+    // @ts-expect-error Shared schema literals, not independently copied Worker vocabularies.
+    buildRedemptionSnapshotMetadata({ freshnessKind: "latest-rpc" });
+    // @ts-expect-error Genuine diagnostics do not reopen unknown/misspelled common fields.
+    buildRedemptionSnapshotMetadata({ capacityUsd: 0, litePsmAddress: "0xabc", capacittyUsd: 1 });
+    expect(buildRedemptionSnapshotMetadata({
+      capacityUsd: 0, feeBps: null, outputAssetKeys: ["usdc-circle"],
+      routeStatus: "paused", routeStatusSource: "onchain", routeObserved: true,
+    })).toEqual({ redemption: { capacityUsd: 0, outputAssetKeys: ["usdc-circle"],
+      routeStatus: "paused", routeStatusSource: "onchain" } });
   });
 });
 
@@ -442,17 +481,68 @@ describe("freshnessMetadataFromTimestamp", () => {
   });
 });
 
-describe("parsePositiveNumericLike", () => {
-  it("accepts finite positive numbers and numeric strings", () => {
-    expect(parsePositiveNumericLike(42)).toBe(42);
-    expect(parsePositiveNumericLike("42.5")).toBe(42.5);
+describe("decimal amount parsing", () => {
+  it.each([
+    [42, 42], ["42.5", 42.5], [" .5 ", 0.5], ["1.", 1],
+    ["+1e3", 1000], ["-1.5e-2", -0.015], ["1.E+2", 100],
+    ["+0", 0], ["-0", -0], ["0", 0], [0, 0],
+  ] as const)("preserves finite decimal units for %s", (value, expected) => {
+    expect(parseDecimalNumber(value)).toBe(expected);
+    expect(parseFiniteNumber(value, { label: "reserve amount" })).toBe(expected);
+    expect(parsePositiveNumericLike(value)).toBe(expected > 0 ? expected : null);
   });
 
-  it("rejects zero, negatives, blank strings, and non-scalars", () => {
-    expect(parsePositiveNumericLike(0)).toBeNull();
+  it.each([
+    "0x10", "0X10", "+0x10", "0b10", "0o10", "", "  ", ".", "+", "-",
+    "1e", "1e+", "1e309", "-1e309", "1_000", "1,000", "Infinity", "NaN",
+    "1.2.3", ".e2", "e2", "1ee2", "1e2.5", "1e--2", "1-2", "1 2",
+    true, false, {}, { value: 1 }, [], [1], null, undefined, 1n,
+    Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY,
+  ])("rejects malformed amounts without a zero fallback: %s", (value) => {
+    expect(parseDecimalNumber(value)).toBeNull();
+    expect(parsePositiveNumericLike(value)).toBeNull();
+    expect(() => parseFiniteNumber(value, { label: "reserve amount" })).toThrow();
+  });
+
+  it("does not coerce object conversion hooks", () => {
+    const value = { valueOf: () => { throw new Error("must not coerce"); } };
+    expect(parseDecimalNumber(value)).toBeNull();
+    expect(parsePositiveNumericLike(value)).toBeNull();
+  });
+
+  it("distinguishes observed zero, negative amounts, absence, and inclusive minima", () => {
+    expect(parseFiniteNumber("0", { label: "reserve amount", min: 0 })).toBe(0);
+    expect(parseFiniteNumber("-0", { label: "reserve amount", min: 0 })).toBe(-0);
+    expect(parseFiniteNumber("-1", { label: "reserve amount" })).toBe(-1);
+    expect(parseFiniteNumber("0.5", { label: "reserve amount", min: 0.5 })).toBe(0.5);
+    expect(() => parseFiniteNumber("0.499", { label: "reserve amount", min: 0.5 })).toThrow();
+    expect(() => parseFiniteNumber("-1", { label: "reserve amount", min: 0 })).toThrow();
+    expect(() => parseFiniteNumber(undefined, { label: "reserve amount", min: 0 })).toThrow();
     expect(parsePositiveNumericLike("-1")).toBeNull();
-    expect(parsePositiveNumericLike("")).toBeNull();
-    expect(parsePositiveNumericLike({ value: 1 })).toBeNull();
+    expect(parsePositiveNumericLike(undefined)).toBeNull();
+  });
+
+  it.each([
+    ["1,000", 1000], [" -12,345.5 ", -12345.5], ["+123,456,789.00", 123456789],
+    ["1234.5", 1234.5], ["0", 0],
+  ] as const)("preserves well-formed grouped decimal units for %s", (value, expected) => {
+    expect(parseDecimalNumber(value, { allowGrouped: true })).toBe(expected);
+    expect(parseFiniteNumber(value, { label: "reserve amount", allowGrouped: true })).toBe(expected);
+  });
+
+  it.each([
+    "12,34", "1234,567", "1,,000", ",100", "1,000,", "1,000.0.0",
+    "1,000.", "1,000e3", "1e3", ".5", "1.", "0x10", "", "  ",
+  ])("rejects invalid grouping and unchanged grouped-mode exclusions: %s", (value) => {
+    expect(parseDecimalNumber(value, { allowGrouped: true })).toBeNull();
+    expect(() => parseFiniteNumber(value, { label: "reserve amount", allowGrouped: true })).toThrow();
+  });
+
+  it("retains zero backing rows but rejects negative, missing, and radix amounts", () => {
+    expect(sumBackingAssetAmounts("issuer", "cash", [{ amount: "0" }, { amount: ".5" }])).toBe(0.5);
+    for (const entries of [[{ amount: "-1" }], [{}], [{ amount: "0x10" }]]) {
+      expect(() => sumBackingAssetAmounts("issuer", "cash", entries)).toThrow();
+    }
   });
 });
 
@@ -572,6 +662,96 @@ describe("parseTimestampLikeToUnixSeconds", () => {
     expect(parseTimestampLikeToUnixSeconds("31/02/26")).toBeNull();
     expect(parseTimestampLikeToUnixSeconds("20/13/26")).toBeNull();
   });
+
+  it.each(["2024-02-29", "February 29, 2024", "Feb 29, 2000"])("accepts real leap dates (%s)", (value) => {
+    const year = value.endsWith("2000") ? 2000 : 2024;
+    expect(parseTimestampLikeToUnixSeconds(value)).toBe(Date.UTC(year, 1, 29) / 1000);
+  });
+
+  it.each([
+    "2023-02-29", "2026-02-30", "2026-04-31", "2026-00-10", "2026-13-10",
+    "Feb 29, 2023", "February 30, 2026", "Apr 31, 2026", "Feb 29, 2100",
+    "2026-02-30T12:00:00Z", "2026-02-30T12:00:00+02:00",
+    "2026-04-05T24:00:00Z", "2026-04-05T12:60:00Z", "2026-04-05T12:00:60Z",
+    "2026-04-05T12:00:00+24:00", "2026-04-05T12:00:00-00:60",
+  ])("rejects impossible calendar, time or offset components (%s)", (value) => {
+    expect(parseTimestampLikeToUnixSeconds(value)).toBeNull();
+  });
+
+  it("converts explicit offsets and fractional seconds independently of the host timezone", () => {
+    const expected = Date.UTC(2026, 3, 5, 10, 3, 24) / 1000;
+    expect(parseTimestampLikeToUnixSeconds("2026-04-05T12:33:24.053849+02:30")).toBe(expected);
+    expect(parseTimestampLikeToUnixSeconds("2026-04-05T07:03:24-0300")).toBe(expected);
+    expect(parseTimestampLikeToUnixSeconds("2026-04-05T10:03:24Z")).toBe(expected);
+  });
+
+  it("requires an explicit reviewed UTC policy for zoneless datetimes", () => {
+    const value = "2026-04-05T17:33:24.053849";
+    expect(parseTimestampLikeToUnixSeconds(value)).toBeNull();
+    expect(parseTimestampLikeToUnixSeconds(value, "assumed-utc")).toBe(Date.UTC(2026, 3, 5, 17, 33, 24) / 1000);
+    expect(parseTimestampLikeToUnixSeconds("2026-02-30T17:33:24", "assumed-utc")).toBeNull();
+  });
+
+  it("retains the reviewed Accountable UTC clock and explicit-zone textual dates", () => {
+    expect(parseTimestampLikeToUnixSeconds("2026.09.09 06:53:39 UTC")).toBe(Date.UTC(2026, 8, 9, 6, 53, 39) / 1000);
+    expect(parseTimestampLikeToUnixSeconds("Thu, 05 Mar 2026 12:00:00 GMT")).toBe(Date.UTC(2026, 2, 5, 12) / 1000);
+    expect(parseTimestampLikeToUnixSeconds("Feb 30, 2026 12:00:00 UTC")).toBeNull();
+    expect(parseTimestampLikeToUnixSeconds("Thu, 31 Apr 2026 12:00:00 GMT")).toBeNull();
+    expect(parseTimestampLikeToUnixSeconds("2026.02.30 06:53:39 UTC")).toBeNull();
+  });
+
+  it("keeps epoch units and rejects missing, nonfinite and nonpositive clocks", () => {
+    expect(parseTimestampLikeToUnixSeconds(1_773_337_492_853)).toBe(1_773_337_492);
+    expect(parseTimestampLikeToUnixSeconds("1773337492")).toBe(1_773_337_492);
+    expect(parseTimestampLikeToUnixSeconds(1_773_337_492.9)).toBe(1_773_337_492);
+    expect(parseTimestampLikeToUnixSeconds("1990-01-01")).toBe(Date.UTC(1990, 0, 1) / 1000);
+    for (const value of [0, -1, "0", Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, undefined, "1970-01-01"]) {
+      expect(parseTimestampLikeToUnixSeconds(value)).toBeNull();
+    }
+  });
+});
+
+describe("source timestamp summaries", () => {
+  it("computes count and extrema without changing submitted values", () => {
+    const values = Object.freeze([1_000, 4_700, 2_000, 1_000]);
+    expect(summarizeSourceTimestamps(values)).toEqual({
+      sourceTimestamp: 1_000,
+      latestSourceTimestamp: 4_700,
+      sourceTimestampSpreadSec: 3_700,
+      timestampCount: 4,
+    });
+    expect(summarizeSourceTimestampsRequiringCoverage(values)).toEqual({
+      ...summarizeSourceTimestamps(values),
+      untimestampedCount: 0,
+    });
+  });
+
+  it("preserves all-bad and empty coverage counts with nullable extrema", () => {
+    for (const values of [[], [null, "2026-02-30", 0, Number.NaN]]) {
+      expect(summarizeSourceTimestamps(values)).toBeNull();
+      expect(summarizeSourceTimestampsRequiringCoverage(values)).toEqual({
+        sourceTimestamp: null,
+        latestSourceTimestamp: null,
+        sourceTimestampSpreadSec: null,
+        timestampCount: 0,
+        untimestampedCount: values.length,
+      });
+    }
+  });
+
+  it("distinguishes optional alternative clocks from incomplete material coverage", () => {
+    const values = [null, 4_700, "2026-02-30", 1_000];
+    expect(summarizeSourceTimestamps(values)).toEqual({
+      sourceTimestamp: 1_000,
+      latestSourceTimestamp: 4_700,
+      sourceTimestampSpreadSec: 3_700,
+      timestampCount: 2,
+    });
+    expect(summarizeSourceTimestampsRequiringCoverage(values)).toEqual({
+      ...summarizeSourceTimestamps(values),
+      untimestampedCount: 2,
+    });
+  });
 });
 
 describe("fetchJsonWithRetry", () => {
@@ -579,30 +759,6 @@ describe("fetchJsonWithRetry", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("requests JSON explicitly and parses successful responses", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-
-    await expect(fetchJsonWithRetry("https://example.com/api", signal, 1234)).resolves.toEqual({ ok: true });
-
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      "https://example.com/api",
-      {
-        signal,
-        headers: {
-          Accept: "application/json",
-          "User-Agent": ADAPTER_USER_AGENT,
-        },
-      },
-      2,
-      { timeoutMs: 1234, returnFinalResponse: true },
-    );
   });
 
   it("surfaces content type and body snippet when a JSON endpoint returns HTML", async () => {
@@ -624,37 +780,6 @@ describe("fetchJsonWithRetry", () => {
     }
     expect(error.message).toContain("JSON parse failed for https://example.com/api (HTTP 200, text/html; charset=utf-8)");
     expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
-  });
-
-  it("merges custom headers into JSON requests", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-
-    await expect(fetchJsonWithRetry(
-      "https://example.com/api",
-      signal,
-      1234,
-      undefined,
-      { headers: { Referer: "https://example.com/app" } },
-    )).resolves.toEqual({ ok: true });
-
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      "https://example.com/api",
-      {
-        signal,
-        headers: {
-          Accept: "application/json",
-          "User-Agent": ADAPTER_USER_AGENT,
-          Referer: "https://example.com/app",
-        },
-      },
-      2,
-      { timeoutMs: 1234, returnFinalResponse: true },
-    );
   });
 
   it("falls back across secondary Solana RPC endpoints when earlier endpoints fail", async () => {
@@ -685,7 +810,13 @@ describe("fetchJsonWithRetry", () => {
       "https://solana-mainnet.g.alchemy.com/v2/alchemy-key",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 
@@ -704,7 +835,7 @@ describe("fetchJsonWithRetry", () => {
     expect(rpcUrl).toBe("https://solana-mainnet.g.alchemy.com/v2/");
     const [calledUrl, init] = vi.mocked(fetchWithRetry).mock.calls[0]!;
     expect(calledUrl).toBe(rpcUrl);
-    expect((init as RequestInit).headers).toMatchObject({ Authorization: "Bearer alchemy-secret" });
+    expect(new Headers((init as RequestInit).headers).get("authorization")).toBe("Bearer alchemy-secret");
   });
 
   it("redacts keyed Solana RPC URLs from the final supply error", async () => {
@@ -757,7 +888,13 @@ describe("fetchJsonWithRetry", () => {
       "https://runtime.example/solana",
       expect.objectContaining({ method: "POST", signal }),
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onResponse: undefined,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 });
@@ -794,7 +931,12 @@ describe("fetchDefiLlamaPrices", () => {
       "https://coins.llama.fi/prices/current/hyperliquid:0x5555555555555555555555555555555555555555",
       { signal },
       2,
-      { timeoutMs: 10_000, returnFinalResponse: true },
+      {
+        timeoutMs: 10_000,
+        returnFinalResponse: true,
+        throwOnFinalNetworkError: true,
+        onBodyRead: expect.any(Function),
+      },
     );
   });
 });

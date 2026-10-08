@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import bc3mSource from "@shared/data/stablecoins/coins/bc3m-backed.json";
 
 import {
   adaptBackedCirculationResponse,
@@ -539,8 +540,8 @@ describe("fetchChainlinkPorReserves", () => {
 
   const config: LiveReservesConfig = {
     adapter: "chainlink-por",
-    version: 1,
-    semantics: "collateral-mix",
+    version: 3,
+    semantics: "attestation-mix",
     inputs: {
       primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
     },
@@ -1030,10 +1031,14 @@ function backedFixture() {
     id: "bc3m-backed", symbol: "bC3M",
     contracts: BACKED_CHAINS.map((chain) => ({ chain, address: BACKED_TOKEN, decimals: 18 })),
     liveReservesConfig: {
-      adapter: "chainlink-por", version: 1, semantics: "attestation-mix",
+      adapter: "chainlink-por", version: 3, semantics: "attestation-mix",
       inputs: { primary: { kind: "onchain-evm", chain: "polygon", rpcMode: "public-rpc" } },
       params: { porFeedAddress: BACKED_FEED, assetLabel: "Fund shares", assetRisk: "very-low", reserveUnit: "SHARES",
-        issuerCirculationProbe: { kind: "backed-graphql", url: POR_FEED_ENDPOINT, reserveSymbol: "C3M.MI" } },
+        issuerCirculationProbe: {
+          kind: "backed-graphql", url: POR_FEED_ENDPOINT, reserveSymbol: "C3M.MI",
+          maxReserveSupplySkewSec: 50,
+          temporalReview: { reviewedAt: "2026-09-01", evidenceRef: "https://example.com/test-only-temporal-policy" },
+        } },
     },
   });
   const deployments = BACKED_CHAIN_IDS.map((chainId, index) => ({ chainId: String(chainId), address: BACKED_TOKEN,
@@ -1061,6 +1066,88 @@ describe("reviewed Backed inventory circulation", () => {
     expect(result.metadata?.circulatingSupplyTokens).toBeCloseTo(0.700000000002299947);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1);
     expect(result.warnings?.some((warning) => warning.code === "por-circulation-freshness-unverified")).not.toBe(true);
+  });
+
+  it("withholds a verified ratio when the dated temporal policy is absent", async () => {
+    const fixture = backedFixture();
+    const probe = fixture.coin.liveReservesConfig!.params!.issuerCirculationProbe as ChainlinkPorIssuerCirculationProbe;
+    delete probe.maxReserveSupplySkewSec;
+    delete probe.temporalReview;
+    const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+    expect(result.metadata).toMatchObject({
+      ratioUnavailableReason: "reserve-supply-temporal-policy-unreviewed",
+      reserveObservedAt: BACKED_NOW - 60,
+      supplyObservedAt: { min: BACKED_NOW - 10, max: BACKED_NOW - 10 },
+      ratioSkewSec: 50, supplyTokens: 60000,
+    });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.liabilityBasis).toBeUndefined();
+    expectWarningEffect(result, "reserve-supply-temporal-policy-unreviewed", "info");
+    expect(result.warnings?.find((row) => row.code === "reserve-supply-temporal-policy-unreviewed")?.severity).toBe("info");
+    expect(result.warnings?.some((row) => row.effect === "degraded")).toBe(false);
+  });
+
+  it("checks every pinned circulation clock at the inclusive skew boundary", async () => {
+    const fixture = backedFixture();
+    const probe = fixture.coin.liveReservesConfig!.params!.issuerCirculationProbe as ChainlinkPorIssuerCirculationProbe;
+    probe.maxReserveSupplySkewSec = 49;
+    const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+    expect(result.metadata?.ratioUnavailableReason).toBe("reserve-supply-time-skew");
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.circulatingSupplyTokens).toBeCloseTo(0.7);
+    expectWarningEffect(result, "reserve-supply-time-skew", "info");
+    expect(result.warnings?.find((row) => row.code === "reserve-supply-time-skew")?.severity).toBe("info");
+  });
+
+  it.each([
+    { skewSec: 86_399, publishes: true },
+    { skewSec: 86_400, publishes: true },
+    { skewSec: 86_401, publishes: false },
+  ])("applies BC3M's authored temporal policy at $skewSec seconds", async ({ skewSec, publishes }) => {
+    const fixture = backedFixture();
+    fixture.coin.liveReservesConfig!.params = structuredClone(bc3mSource.liveReservesConfig.params);
+    const probe = bc3mSource.liveReservesConfig.params.issuerCirculationProbe;
+    expect(probe.maxReserveSupplySkewSec).toBe(86_400);
+    expect(probe.temporalReview).toEqual({
+      reviewedAt: "2026-10-08",
+      evidenceRef: "https://reference-data-directory.vercel.app/feeds-matic-mainnet.json",
+    });
+    const reserveObservedAt = fixture.network.block!.timestamp! - skewSec;
+    fixture.network.rpc![`${BACKED_FEED}:0xfeaf968c`] = encodeLatestRoundData(
+      700000000000000000n,
+      reserveObservedAt,
+    );
+
+    const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+    expect(result.metadata).toMatchObject({
+      reserveObservedAt,
+      sourceTimestamp: reserveObservedAt,
+      supplyObservedAt: { min: BACKED_NOW - 10, max: BACKED_NOW - 10 },
+      ratioSkewSec: skewSec,
+      circulationTemporalReview: probe.temporalReview,
+      supplyCoverageComplete: true,
+    });
+    if (publishes) {
+      expect(result.metadata?.liabilityBasis).toBe("onchain-verified-issuer-circulation");
+      expect(result.metadata?.collateralizationRatio).toBeCloseTo(1);
+      expect(result.metadata?.ratioUnavailableReason).toBeUndefined();
+      expect(result.warnings?.some((row) => row.code === "reserve-supply-time-skew")).not.toBe(true);
+    } else {
+      expect(result.metadata?.ratioUnavailableReason).toBe("reserve-supply-time-skew");
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.metadata?.liabilityBasis).toBeUndefined();
+      expect(result.slices).toHaveLength(1);
+      expectWarningEffect(result, "reserve-supply-time-skew", "info");
+    }
+  });
+
+  it("retains genuine zero net circulation with a typed unavailable denominator", async () => {
+    const fixture = backedFixture();
+    fixture.deployments[0].circulatingSupply = "0";
+    fixture.network.rpc![encodeBalanceOfCallData(BACKED_OWNERS[1])] = (call) => call.chain === "ethereum" ? 10000n * 10n ** 18n : 0n;
+    const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+    expect(result.metadata).toMatchObject({ circulatingSupplyTokens: 0, ratioUnavailableReason: "zero-liability-denominator" });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 
   for (const scenario of ["one-wei-net", "one-wei-gross", "missing-funded", "duplicate", "wrong-address", "extra-zero", "wrong-token", "missing-chain", "stale-block", "inventory-overflow", "partial-read", "wrong-reserve-unit", "wrong-feed", "wrong-feed-chain"] as const) {

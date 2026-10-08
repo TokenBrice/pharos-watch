@@ -88,13 +88,16 @@ function gbpCanaryCacheRows(options: {
   freshRuns?: number;
   fallback?: boolean;
   usdRecordDateMissing?: boolean;
+  recordDate?: string;
+  fetchedAt?: number;
+  streakValue?: string;
 } = {}) {
-  const recordDate = new Date((NOW - 24 * 3600) * 1000).toISOString().slice(0, 10);
+  const recordDate = options.recordDate ?? new Date((NOW - 24 * 3600) * 1000).toISOString().slice(0, 10);
   const benchmark = (key: "USD" | "GBP", source: string) => ({
     key,
     rate: 4.1,
     recordDate,
-    fetchedAt: NOW - 60,
+    fetchedAt: options.fetchedAt ?? NOW - 60,
     source,
     isFallback: false,
     fallbackMode: null,
@@ -125,13 +128,13 @@ function gbpCanaryCacheRows(options: {
     },
     {
       key: "fetch-tbill-rate:gbp-retained-fallback-streak",
-      value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      value: options.streakValue ?? JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
       updatedAt: NOW - 60,
       updated_at: NOW - 60,
     },
     {
       key: "fetch-tbill-rate:usd-fresh-streak",
-      value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      value: options.streakValue ?? JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
       updatedAt: NOW - 60,
       updated_at: NOW - 60,
     },
@@ -333,6 +336,8 @@ describe("worker data invariant canaries", () => {
       status: "error",
       severity: "error",
       error: "blacklist identity invariant failed: 1 blacklist_events and 0 blacklist_current_balances rows have null config_key and contract_address",
+      executionStatus: "completed",
+      executionFailureReason: null,
       metadata: {
         eventRows: 1,
         balanceRows: 0,
@@ -381,6 +386,7 @@ describe("worker data invariant canaries", () => {
       status: "error",
       severity: "error",
       error: "active Safety Score source v9-snapshot-unavailable",
+      executionStatus: "failed",
       metadata: {
         reason: "v9-snapshot-unavailable",
       },
@@ -467,6 +473,35 @@ describe("worker data invariant canaries", () => {
     });
   });
 
+  it.each([-1, 0, 1])("uses the shared five-day GBP/USD record budget (offset=%s)", async (offset) => {
+    const recordDate = new Date(NOW * 1000).toISOString().slice(0, 10);
+    const recordAt = Date.parse(`${recordDate}T00:00:00Z`) / 1000;
+    const observedAt = recordAt + 5 * 86_400 + offset;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(observedAt * 1000));
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: gbpCanaryCacheRows({ recordDate, fetchedAt: observedAt }) }]);
+    const summary = await runCanaryChecks(db, { mode: "status", observedAt });
+    for (const currency of ["gbp", "usd"]) {
+      expect(summary.results.find((result) => result.checkId === `yield-${currency}-benchmark-current`)).toMatchObject({
+        status: offset <= 0 ? "ok" : "degraded", executionStatus: "completed",
+        metadata: { maxRecordAgeSec: 5 * 86_400, maxFetchAgeSec: 48 * 3600 },
+      });
+    }
+  });
+
+  it.each(["{}", "{", '{"consecutiveFreshRuns":-1}', '{"consecutiveFreshRuns":1.5}'])(
+    "keeps malformed benchmark publication streak unknown (%s)", async (streakValue) => {
+      const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: gbpCanaryCacheRows({ streakValue }) }]);
+      const summary = await runCanaryChecks(db, { mode: "status", observedAt: NOW });
+      for (const currency of ["gbp", "usd"]) {
+        expect(summary.results.find((result) => result.checkId === `yield-${currency}-benchmark-current`)).toMatchObject({
+          executionStatus: "failed", executionFailureReason: "benchmark-fresh-streak-unavailable",
+          metadata: { consecutiveFreshRuns: null },
+        });
+      }
+    },
+  );
+
   it("degrades USD when its benchmark record date is missing", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
@@ -525,6 +560,7 @@ describe("worker data invariant canaries", () => {
       status: "error",
       severity: "error",
       error: "1 current DEX liquidity rows are not published",
+      executionStatus: "completed",
     });
   });
 
@@ -545,6 +581,7 @@ describe("worker data invariant canaries", () => {
       status: "error",
       severity: "error",
       error: "DEX latest-generation rows 367 differ from latest published generation 368",
+      executionStatus: "completed",
       metadata: expect.objectContaining({
         rowCount: 368,
         latestPublishedRows: 368,
@@ -558,6 +595,9 @@ describe("worker data invariant canaries", () => {
     sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
       (generation_id, started_at, state, expected_row_count, current_row_count, metadata_json, created_at, published_at)
       VALUES ('current', ?, 'published', 2, 2, '{"activeStablecoinCount":1}', ?, ?)`).run(NOW, NOW, NOW);
+    sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+      (generation_id, started_at, state, expected_row_count, written_row_count, created_at)
+      VALUES ('candidate', ?, 'staged', 2, 2, ?)`).run(NOW, NOW);
     const insert = sqlite.prepare(`INSERT INTO dex_liquidity
       (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state)
       VALUES (?, 'TEST', ?, ?, 'published')`);
@@ -673,7 +713,7 @@ describe("worker data invariant canaries", () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(`INSERT INTO worker_canary_runs
       (id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode)
-      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{}', NULL, 'status')`);
+      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{"executionStatus":"completed"}', NULL, 'status')`);
     for (const id of EXPECTED_CANARY_CHECK_IDS) insert.run(id, id, id, NOW);
     expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("healthy");
 
@@ -684,13 +724,17 @@ describe("worker data invariant canaries", () => {
     expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("degraded");
     update.run("ok", EXPECTED_CANARY_CHECK_IDS[0]);
     expect((await loadCanaryStatus(db, NOW + 60, "status")).status).toBe("healthy");
+    sqlite.prepare("UPDATE worker_canary_runs SET metadata_json = '{}'").run();
+    expect(await loadCanaryStatus(db, NOW + 60, "status")).toMatchObject({
+      status: "degraded", unknownExecutionCount: EXPECTED_CANARY_CHECK_IDS.length,
+    });
   });
 
   it("requires every active ID and fresh usable observations rather than just the returned count", async () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(`INSERT INTO worker_canary_runs
       (id, check_id, idempotency_key, status, severity, observed_at, duration_ms, metadata_json, error, mode)
-      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{}', NULL, 'status')`);
+      VALUES (?, ?, ?, 'ok', 'info', ?, 1, '{"executionStatus":"completed"}', NULL, 'status')`);
     const empty = await loadCanaryStatus(db, NOW, "status");
     expect(empty.status).toBe("unknown");
     expect(empty.missingCheckIds).toEqual(expect.arrayContaining(EXPECTED_CANARY_CHECK_IDS));
@@ -707,6 +751,26 @@ describe("worker data invariant canaries", () => {
     expect((await loadCanaryStatus(db, NOW, "status")).status).toBe("degraded");
     sqlite.prepare("UPDATE worker_canary_runs SET check_id = 'retired' WHERE check_id = ?").run(first);
     expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({ status: "degraded", missingCheckIds: [first] });
+  });
+
+  it("rejects materially future observation clocks without discarding hard findings", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const { db } = fixtures.open();
+    await runAndPersistCanaryChecks(db, { observedAt: NOW + 86_400, mode: "status" });
+    expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({
+      status: "stale", staleCount: EXPECTED_CANARY_CHECK_IDS.length,
+    });
+  });
+
+  it("does not turn absent required aggregates into measured zero findings", async () => {
+    const db = mockD1([], { requireMatch: false });
+    const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    for (const checkId of ["blacklist-null-identity", "dex-liquidity-current-publication"]) {
+      expect(summary.results.find((result) => result.checkId === checkId)).toMatchObject({
+        status: "error", executionStatus: "failed",
+      });
+    }
   });
   it.each(["off", "shadow"] as const)(
     "returns the empty compatibility shape without querying retained rows in %s mode",

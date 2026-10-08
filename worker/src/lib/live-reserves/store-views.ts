@@ -14,6 +14,7 @@ import type {
   ReserveSyncStateView,
 } from "@shared/types/live-reserves";
 import { getReserveCompositionRow, getReserveSyncState } from "./store-read";
+import { matchReserveFeedReview } from "../reserve-feed-reviews";
 import { parseReserveCompositionRow } from "./store-row-decoding";
 import {
   LIVE_RESERVE_FRESHNESS_SEC,
@@ -83,6 +84,7 @@ function buildSyncView(
     statusOverride?: ReserveSyncStatus;
     extraWarnings?: string[];
     lastErrorOverride?: string | null;
+    acknowledgedFeed: ReserveSyncStateView["acknowledgedFeed"] | null;
   },
 ): ReserveSyncStateView {
   const warningMessages = [
@@ -105,6 +107,7 @@ function buildSyncView(
     ...(lastError ? { lastError: lastError.slice(0, 200) } : {}),
     ...(failureCategory ? { failureCategory } : {}),
     ...(uncertainWrite ? { uncertainWrite: true } : {}),
+    ...(overrides.acknowledgedFeed ? { acknowledgedFeed: overrides.acknowledgedFeed } : {}),
     freshness,
   };
 }
@@ -140,6 +143,7 @@ export async function resolveReserveResult(
     getReserveCompositionRow(db, stablecoinId),
     getReserveSyncState(db, stablecoinId),
   ]);
+  const acknowledgedFeed = await matchReserveFeedReview(db, syncState, now);
 
   const displayUrl = meta.liveReservesConfig?.display?.url;
   const consistentRow = compositionRow && hasConsistentSnapshotState(syncState, {
@@ -192,6 +196,7 @@ export async function resolveReserveResult(
         enabled: !!meta.liveReservesConfig,
         defaultStatus: "ok",
         bootstrap: false,
+        acknowledgedFeed,
       }),
     };
   }
@@ -224,6 +229,7 @@ export async function resolveReserveResult(
             statusOverride,
             extraWarnings: snapshotIntegrityWarning ? [snapshotIntegrityWarning] : undefined,
             lastErrorOverride,
+            acknowledgedFeed,
           })
         : undefined,
     };
@@ -242,6 +248,7 @@ export async function resolveReserveResult(
           statusOverride,
           extraWarnings: snapshotIntegrityWarning ? [snapshotIntegrityWarning] : undefined,
           lastErrorOverride,
+          acknowledgedFeed,
         }),
       }
     : null;

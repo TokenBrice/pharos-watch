@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DEPENDENCY_TYPE_VALUES } from "./dependency-types";
-import { LIVE_RESERVE_RPC_MODE_VALUES } from "./live-reserve-core";
+import { LIVE_RESERVE_RPC_MODE_VALUES, NativeReserveQuantityBasisSchema } from "./live-reserve-core";
 import type {
   LiveReserveAdapterValidationPolicy,
   LiveReserveEvidenceClass,
@@ -13,6 +13,7 @@ import type {
 import { RedemptionHolderEligibilitySchema } from "./redemption";
 import type { ReserveEvidenceSourceOriginClass } from "./report-card-evidence-journal";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { ReserveNavSupplyAdmissionReviewSchema } from "./reserve-nav-supply";
 import {
   ReserveAssetClassSchema,
   ReserveRiskFactorSchema,
@@ -22,8 +23,10 @@ import {
 import {
   ANY_FRESHNESS,
   BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+  BUSINESS_DAY_VERIFIED_VALIDATION,
   DASHBOARD_SOURCE_MAX_AGE_SEC,
   DASHBOARD_VALIDATION,
+  DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION,
   DASHBOARD_VERIFIED_VALIDATION,
   DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -65,6 +68,7 @@ const CONFIG_COLLATERAL_V1_V2 = configPolicy(["collateral-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
 const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
+const CONFIG_ATTESTATION_V3 = configPolicy(["attestation-mix"], [3]);
 const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
 const CONFIG_PROTOCOL_V1_V2 = configPolicy(["protocol-reserve"], [1, 2]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
@@ -127,6 +131,25 @@ export type LiveReserveAdapterDescriptor = {
 
 type AdapterProfile = Omit<LiveReserveAdapterDescriptor, "paramsSchema">;
 
+// Share only exact capability combinations; params-gated telemetry stays explicit
+// at its declaration so an ungated profile never grants it accidentally.
+const NO_REDEMPTION_TELEMETRY = Object.freeze({
+  capacity: "none",
+  fee: "none",
+} as const satisfies LiveReserveAdapterDescriptor["redemptionTelemetry"]);
+const DIRECT_CAPACITY_TELEMETRY = Object.freeze({
+  capacity: "direct",
+  fee: "none",
+} as const satisfies LiveReserveAdapterDescriptor["redemptionTelemetry"]);
+const DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY = Object.freeze({
+  capacity: "direct",
+  fee: "current-bps",
+} as const satisfies LiveReserveAdapterDescriptor["redemptionTelemetry"]);
+const PROXY_CAPACITY_TELEMETRY = Object.freeze({
+  capacity: "proxy",
+  fee: "none",
+} as const satisfies LiveReserveAdapterDescriptor["redemptionTelemetry"]);
+
 function declareAdapter<
   const Schema extends z.ZodTypeAny,
   const Profile extends AdapterProfile,
@@ -145,14 +168,43 @@ const ONCHAIN_SINGLE_ASSET_V1 = {
   evidenceClass: "independent",
   sharedSourceMode: "none",
   configValidation: CONFIG_SINGLE_ASSET_V1,
-  redemptionTelemetry: { capacity: "direct", fee: "none" },
+  redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
   validation: LATEST_STATE_VALIDATION,
 } as const satisfies AdapterProfile;
 
 const ONCHAIN_SINGLE_ASSET_V2 = {
   ...ONCHAIN_SINGLE_ASSET_V1,
   configValidation: CONFIG_SINGLE_ASSET_V2,
-  redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+  redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
+} as const satisfies AdapterProfile;
+
+// Backing-only wrappers must select this profile, not inherit direct capacity.
+const ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1 = {
+  ...ONCHAIN_SINGLE_ASSET_V1,
+  redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+} as const satisfies AdapterProfile;
+
+// Origin is explicitly reviewed for the adapters selecting this profile; it is
+// not inferred from their input kind. Unreviewed declarations keep unknown origin.
+const ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1 = {
+  primaryInputKinds: ["onchain-evm"],
+  sourceModel: "dynamic-mix",
+  evidenceClass: "independent",
+  sourceOriginClass: "onchain-observation",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_COLLATERAL_V1,
+  redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+  validation: LATEST_STATE_VALIDATION,
+} as const satisfies AdapterProfile;
+
+const ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1 = {
+  primaryInputKinds: ["onchain-evm"],
+  sourceModel: "dynamic-mix",
+  evidenceClass: "independent",
+  sharedSourceMode: "none",
+  configValidation: CONFIG_COLLATERAL_V1,
+  redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
+  validation: LATEST_STATE_VALIDATION,
 } as const satisfies AdapterProfile;
 
 const HTTP_DASHBOARD_COLLATERAL_V1 = {
@@ -162,7 +214,7 @@ const HTTP_DASHBOARD_COLLATERAL_V1 = {
   preferredFreshnessMode: "verified",
   sharedSourceMode: "none",
   configValidation: CONFIG_COLLATERAL_V1,
-  redemptionTelemetry: { capacity: "none", fee: "none" },
+  redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
   validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
 } as const satisfies AdapterProfile;
 
@@ -172,7 +224,7 @@ const HTTP_DISCLOSURE_ATTESTATION_V1 = {
   evidenceClass: "independent",
   sharedSourceMode: "none",
   configValidation: CONFIG_ATTESTATION_V1,
-  redemptionTelemetry: { capacity: "none", fee: "none" },
+  redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
   validation: MONTHLY_VERIFIED_VALIDATION,
 } as const satisfies AdapterProfile;
 
@@ -198,7 +250,7 @@ const HTTP_PROTOCOL_V1 = {
   evidenceClass: "weak-live-probe",
   sharedSourceMode: "none",
   configValidation: CONFIG_PROTOCOL_V1,
-  redemptionTelemetry: { capacity: "none", fee: "none" },
+  redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
   validation: DASHBOARD_VALIDATION,
 } as const satisfies AdapterProfile;
 
@@ -242,6 +294,22 @@ const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
 const depTypeRecordSchema = z.record(z.string(), LiveReserveDependencyTypeSchema);
 
 const noParamsSchema = z.object({}).strict();
+
+const forestRoadReserveManagerParamsSchema = z.object({
+  managerAddress: z.literal("0x8317736611b542ddb4a820fe344b621a904bdd48"),
+  managerImplementation: z.literal("0x99b4dfa4e1344273d5335bd90de1dea3a02b9c3a"),
+  usdcAddress: z.literal("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+  tokenAddress: z.literal("0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"),
+  rpcUrl: AbsoluteUrlSchema.refine((url) => url.startsWith("https://"), "HTTPS RPC URL required").optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.refine((url) => url.startsWith("https://"), "HTTPS RPC URL required").optional(),
+}).strict();
+
+const myrcAssuranceParamsSchema = z.object({
+  product: z.literal("MYRC"),
+  profile: z.literal("myrc-v1"),
+  indexHost: z.literal("api.blox.my").default("api.blox.my"),
+  reportHosts: z.array(z.literal("cdn.blox.my")).min(1).default(["cdn.blox.my"]),
+}).strict();
 
 const hyloAddressSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 const hyloSolanaParamsSchema = z.object({
@@ -682,13 +750,27 @@ const capVaultParamsSchema = z
   })
   .strict();
 
+/**
+ * Largest reserve-vs-supply observation skew any reviewed scope may accept.
+ * Equal to chainlink-por's default oracle age cap: no reviewed perimeter
+ * compares totals observed more than two days apart.
+ */
+const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
 const chainlinkPorIssuerCirculationProbeSchema = z
   .object({
     kind: z.literal("backed-graphql"),
     url: AbsoluteUrlSchema,
     reserveSymbol: z.string().trim().min(1),
+    maxReserveSupplySkewSec: z.number().int().positive().max(MAX_RESERVE_SUPPLY_SKEW_CAP_SEC).optional(),
+    temporalReview: z.object({
+      reviewedAt: StrictIsoDateSchema,
+      evidenceRef: AbsoluteUrlSchema,
+    }).strict().optional(),
   })
-  .strict();
+  .strict()
+  .refine((probe) => (probe.maxReserveSupplySkewSec == null) === (probe.temporalReview == null), {
+    message: "Circulation skew bound and dated source review must be supplied together",
+  });
 
 const LIABILITY_SUPPLY_READER_VALUES = [
   "evm-erc20",
@@ -702,12 +784,6 @@ const LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES = [
   "third-party-bridge-representation",
 ] as const;
 
-/**
- * Largest reserve-vs-supply observation skew any reviewed scope may accept.
- * Equal to chainlink-por's default oracle age cap: no reviewed perimeter
- * compares totals observed more than two days apart.
- */
-const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
 
 /**
  * Default reserve/supply time-skew bound for a reviewed issuer-native scope
@@ -1732,6 +1808,14 @@ const singleAssetParamsSchema = z
     supplyProbe: singleAssetProbeSchema.optional(),
     timestampProbe: singleAssetProbeSchema.optional(),
     reserveSourceLabel: z.string().optional(),
+    nativeQuantityBasis: NativeReserveQuantityBasisSchema.optional(),
+    reserveUnit: z.literal("CAD").optional(),
+    liabilityTimestampComponents: z.object({
+      path: z.array(z.string()).min(1),
+      identityField: z.string().min(1),
+      timestampField: z.string().min(1),
+      quantityField: z.string().min(1),
+    }).strict().optional(),
   })
   .strict();
 
@@ -1764,28 +1848,6 @@ const parallelizerBalancesParamsSchema = z
   })
   .strict();
 
-const abracadabraCauldronSchema = z
-  .object({
-    ...EvmAddressFields,
-    collateralSymbol: z.string(),
-    collateralAddress: EvmAddressSchema,
-    collateralDecimals: z.number().int().nonnegative(),
-    ...TrackedExposureFields,
-    // Reserved for future V2/V3/V4 selector nuance; currently unused by the adapter.
-    version: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
-  })
-  .strict();
-
-const abracadabraParamsSchema = z
-  .object({
-    ...OptionalEvmRpcFields,
-    // BentoBox / DegenBox contract that backs the configured cauldrons. Used to
-    // convert per-cauldron `totalCollateralShare` into underlying token amounts
-    // via `toAmount(token, share, false)`.
-    bentoBoxAddress: EvmAddressSchema,
-    cauldrons: z.array(abracadabraCauldronSchema).min(1),
-  })
-  .strict();
 
 const astherusEarnWrapperParamsSchema = z
   .object({
@@ -1816,18 +1878,6 @@ const initiaWrapperVaultParamsSchema = z
   })
   .strict();
 
-const stoneyieldRouterPoolParamsSchema = z
-  .object({
-    slice: reserveSliceDescriptorSchema,
-    stusdAddress: EvmAddressSchema,
-    usdcAddress: EvmAddressSchema,
-    susdcAddress: EvmAddressSchema,
-    routerAddress: EvmAddressSchema,
-    venusVaultAddress: EvmAddressSchema,
-    venusVTokenAddress: EvmAddressSchema,
-    ...OptionalEvmRpcFields,
-  })
-  .strict();
 
 // XPR Network (Antelope) account reads: token supply from one contract's
 // currency stats plus the treasury account's balances on the balance contract.
@@ -2078,6 +2128,14 @@ const afiProofParamsSchema = z
   .strict();
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+  "spark-usdc-v1-inventory": declareAdapter(noParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
+    preferredFreshnessMode: "verified",
+    validation: VERIFIED_ONLY_VALIDATION,
+  }),
+  "forest-road-reserve-manager": declareAdapter(forestRoadReserveManagerParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
+    preferredFreshnessMode: "verified",
+    validation: VERIFIED_ONLY_VALIDATION,
+  }),
   "leverup-lvusd": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: noParamsSchema,
@@ -2087,7 +2145,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
     provenance: {
       status: "active",
@@ -2103,7 +2161,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "3jane-usd3": {
@@ -2113,25 +2171,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
-  },
-  abracadabra: {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: abracadabraParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "retired",
-      rationale:
-        "MIM entered the frozen archive on 2026-07-26 after its terminal depeg; retain the adapter only for historical review and re-evaluate if the protocol resumes active issuance.",
-      parkedSince: "2026-07-26",
-      nextReview: "2027-01-26",
-    },
-    validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "anchorage-independent-assurance": declareAdapter(
     anchorageAssuranceParamsSchema,
@@ -2145,7 +2186,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_ACCOUNTABLE,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       // Ceiling only: every live-dashboard Accountable coin pins the 3-day
       // dashboard budget via `scoring.maxSourceAgeSec`. Yuzu's timestamped
@@ -2172,14 +2213,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
-  "astherus-earn-wrapper": declareAdapter(astherusEarnWrapperParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
-    // asUSDF withdrawals are delayed rather than provably immediate, so the
-    // net USDF balance backing the shares is composition evidence, not capacity.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-  }),
+  // asUSDF withdrawals are delayed rather than provably immediate, so the
+  // net USDF balance backing the shares is composition evidence, not capacity.
+  "astherus-earn-wrapper": declareAdapter(
+    astherusEarnWrapperParamsSchema,
+    ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1,
+  ),
   "attestation-pdf-index": {
     primaryInputKinds: ["http-html"],
     paramsSchema: attestationPdfIndexParamsSchema,
@@ -2187,24 +2229,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: MONTHLY_VERIFIED_VALIDATION,
   },
-  "blox-attestation-index": {
+  "myrc-independent-assurance": declareAdapter(myrcAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V1, {
     primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "validated-static",
-    evidenceClass: "static-validated",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: MONTHLY_VERIFIED_VALIDATION,
-    provenance: {
-      status: "active",
-      rationale: "Bound to myrc-blox: the issuer JSON index validates the unique reviewed August 2026 period, report URL and MYR breakdown total before publishing static-validated 66.68% bank cash and 33.32% Halogen fund slices. Freshness uses the examined August 31 balances under the 33-day monthly cap, not upload time; newer reports require composition review. The MYR 0.03 assertion/breakdown discrepancy is retained, with no inferred USD total or coverage ratio.",
-    },
-  },
+    sourceOriginClass: "independent-assurance",
+    sharedSourceMode: "source-invariant",
+    preferredFreshnessMode: "verified",
+  }),
   "audd-independent-assurance": declareAdapter(
     auddAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -2223,16 +2256,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     audxAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
-  "blast-usdb-yield-manager": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: blastUsdbYieldManagerParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: LATEST_STATE_VALIDATION,
-  },
+  "blast-usdb-yield-manager": declareAdapter(blastUsdbYieldManagerParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1),
   // BRLA's official report index is the Notion transparency page fetched as
   // HTML (host/reachability gate); the pinned evidence is the Notion
   // loadPageChunk/getSignedFileUrls record maps plus the reviewed PDF bytes.
@@ -2252,7 +2276,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   btcfi: {
@@ -2262,7 +2286,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "cap-vault": {
@@ -2272,7 +2296,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "chainlink-nav": {
@@ -2292,24 +2316,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "jpmorgan-nav": {
     primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
+    paramsSchema: z.object({ supplyAdmissionReview: ReserveNavSupplyAdmissionReviewSchema.optional() }).strict(),
     sourceModel: "single-bucket",
     evidenceClass: "static-validated",
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     provenance: {
       status: "staged",
-      rationale: "bound to jltxx-jpmorgan, quarantined until its first class-assets snapshot; reactivates when the asset is re-admitted",
+      rationale: "quarantined JLTXX evidence capture only; catalog admission requires pinned native shares, reviewed temporal/legal class perimeter, current fingerprint/runtime price-mcap PASS and explicit approval",
       parkedSince: "2026-10-03",
       nextReview: "2026-10-10",
     },
-    validation: {
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-    },
+    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
   "ondo-ousg": {
     primaryInputKinds: ["onchain-evm"],
@@ -2335,7 +2356,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "chronicle-nav": {
@@ -2348,7 +2369,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "independent-assurance",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: VERIFIED_ONLY_VALIDATION,
   },
   "chainlink-por": {
@@ -2357,11 +2378,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    // v2: a reviewed `liabilityScope` (issuer-native perimeter or declared
-    // not-comparable basis) replaces `incompleteSupplyScope`; v1 bindings keep
-    // the unscoped roster, whose ratio now requires complete supply coverage.
-    configValidation: CONFIG_ATTESTATION_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // v3 clean cutover: exact liability roster and source-reviewed circulation
+    // clock admission. Missing circulation temporal review withholds the ratio.
+    configValidation: CONFIG_ATTESTATION_V3,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: VERIFIED_ONLY_VALIDATION,
   },
   "circle-transparency": declareAdapter(
@@ -2403,7 +2423,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2_V3_V4,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "curated-validated": {
@@ -2413,7 +2433,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
     configValidation: CONFIG_CURATED_VALIDATED,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     // Curated composition is reviewer-owned and does not age; the same-run
     // supply/redemption reads are latest-state, so no source timestamp exists.
     validation: LATEST_STATE_VALIDATION,
@@ -2427,12 +2447,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "usdai-hub": declareAdapter(usdaiHubParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     sourceOriginClass: "onchain-observation",
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   "dola-inverse": {
     primaryInputKinds: ["http-json"],
@@ -2445,23 +2465,23 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // The adapter reads the Inverse PSM's own supply() and the sUSDS vault's
     // maxWithdraw() for it, which the DOLA -> USDS sell is paid out of, so
     // capacity is a direct measurement rather than a proxy for FiRM collateral.
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "erc4626-single-asset": declareAdapter(erc4626SingleAssetParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   "escrow-balance": declareAdapter(escrowBalanceParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
     // The single read or bounded all-or-nothing sum measures the escrow or
     // issuance state the redemption is actually paid against, so the result is
     // direct capacity rather than a backing proxy.
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
   }),
   ethena: declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     // The adapter reads the EthenaMinting contract's own USDT/USDC balances,
     // which redemptions are paid out of, so capacity is a direct measurement
     // rather than a proxy for the collateral basket.
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
   }),
   "ethena-whitelabel": {
     primaryInputKinds: ["http-json"],
@@ -2473,7 +2493,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "evm-branch-balances": {
@@ -2493,7 +2513,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "europ-independent-assurance": declareAdapter(
@@ -2511,17 +2531,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       },
     },
   ),
-  "xdai-bridge": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: xdaiBridgeParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: LATEST_STATE_VALIDATION,
-  },
+  "xdai-bridge": declareAdapter(xdaiBridgeParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1),
   "xpr-account-balances": {
     primaryInputKinds: ["http-json"],
     paramsSchema: xprAccountBalancesParamsSchema,
@@ -2531,11 +2541,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   falcon: declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
   }),
   "fdusd-independent-assurance": declareAdapter(fdusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "fidd-independent-assurance": declareAdapter(fiddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
@@ -2547,12 +2557,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: 0,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION,
   },
   "frax-balance-sheet": {
     primaryInputKinds: ["http-json"],
@@ -2564,7 +2570,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: configPolicy(["attestation-mix"], [3]),
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "frax-fpi-collateral": {
@@ -2577,7 +2583,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   fx: {
@@ -2588,7 +2594,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "gemini-independent-assurance": declareAdapter(noParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
@@ -2609,8 +2615,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+    provenance: {
+      status: "staged",
+      rationale: "The Sonic borrower census describes new bnUSD, not the tracked legacy ICON bnUSD(old) liability. The legacy binding is suspended pending an identity-bound source review; any new-token activation also requires complete Stability Fund and issuance/bridge scope.",
+    },
   },
   gho: {
     primaryInputKinds: ["onchain-evm"],
@@ -2619,7 +2629,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: configPolicy(["protocol-reserve"], [3]),
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "hive-hbd-protocol": {
@@ -2630,24 +2640,14 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
-  "idle-cdo-epoch-variant": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: idleCdoEpochVariantParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sourceOriginClass: "onchain-observation",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    // The vault's exit is a monthly epoch redemption whose stressed depth is
-    // not observable on-chain; publishing capacity from NAV would fabricate it.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: LATEST_STATE_VALIDATION,
-  },
+  // The vault's exit is a monthly epoch redemption whose stressed depth is
+  // not observable on-chain; publishing capacity from NAV would fabricate it.
+  "idle-cdo-epoch-variant": declareAdapter(idleCdoEpochVariantParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1),
   infinifi: declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: {
       // The transparency dashboard's siUSD rate-history snapshotter writes on
       // a 2-hour cadence (I2); 6h admits three missed writes before the
@@ -2667,7 +2667,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_SINGLE_ASSET_V1,
     // Initia has no EVM read path, so the vault balance is read over the chain's
     // LCD; the wrapper has no published redemption terms, so no capacity.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "issuer-attested-report": declareAdapter(
@@ -2692,7 +2692,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "kava-cdp": {
@@ -2706,7 +2706,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_COLLATERAL_V1,
     // The legacy CDP's exit is borrower repay-only (no holder-facing
     // redemption route), so capacity/fee telemetry would fabricate a route.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "hliquity-hedera": {
@@ -2718,9 +2718,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    // Holder-facing Liquity-style redemptions exist, but the redemption fee
-    // (baseRate + 0.5%) is not read, so fee telemetry is omitted.
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    // System debt/TCR is not an eligible-trove redemption census. Neither
+    // redeemable capacity nor the unread baseRate + 0.5% fee is measured.
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "kerne-signed-por": {
@@ -2732,10 +2732,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     provenance: {
       status: "staged",
-      rationale: "bound to pre-launch kusd-kerne; activates at launch",
+      rationale: "Bound to pre-launch kusd-kerne; retained through 2027-03-09 pending reviewed Pharos active transition with runtime-price PASS and separately proven exhaustive PSM assets/native liabilities/legal-book scope. Signature verification and selected holdings do not establish independent whole-book coverage.",
       parkedSince: "2026-09-09",
       nextReview: "2027-03-09",
     },
@@ -2753,7 +2753,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "liquity-v1": declareAdapter(liquityV1ParamsSchema, ONCHAIN_SINGLE_ASSET_V2),
@@ -2764,7 +2764,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "liquity-v2-branches": {
@@ -2774,7 +2774,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   m0: {
@@ -2785,7 +2785,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "m0-wrapper-underlying": declareAdapter(m0WrapperUnderlyingParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
@@ -2803,7 +2803,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // v3: pinned Machine AUM takes precedence over the issuer API anchors,
     // with global-accounting time also bounding source freshness.
     configValidation: configPolicy(["collateral-mix"], [1, 2, 3]),
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    redemptionTelemetry: PROXY_CAPACITY_TELEMETRY,
     validation: {
       maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -2819,7 +2819,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   mento: {
@@ -2835,7 +2835,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // v3: keyed collateral identities preserve native/bridge contributions;
     // dashboard-vs-CDP coherence and collateral-mix semantics are unchanged.
     configValidation: configPolicy(["collateral-mix"], [3]),
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "money-llamma": {
@@ -2846,7 +2846,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "nest-vault-positions": {
@@ -2856,37 +2856,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
   },
-  "openeden-usdo": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "Re-enable probe (2026-08-13) confirmed the issuer gateway serves ordinary clients, but the first production cron (2026-08-14) received HTTP 500 on every Worker fetch strategy; re-parked until OpenEden unblocks Cloudflare Worker egress.",
-      parkedSince: "2026-08-14",
-      nextReview: "2027-02-14",
-    },
-    validation: DASHBOARD_VALIDATION,
-  },
-  "origin-vault-balances": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: originVaultBalancesParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: LATEST_STATE_VALIDATION,
-  },
+  "origin-vault-balances": declareAdapter(originVaultBalancesParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1),
   "quantoz-transparency": declareAdapter(
     quantozTransparencyParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V1,
@@ -2899,19 +2872,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: configPolicy(["collateral-mix"], [3]),
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
-  "resupply-pairs": {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: resupplyPairsParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    validation: LATEST_STATE_VALIDATION,
-  },
+  "resupply-pairs": declareAdapter(resupplyPairsParamsSchema, ONCHAIN_DYNAMIC_MIX_DIRECT_CAPACITY_V1),
   "reserve-protocol-dtf": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: reserveProtocolDtfParamsSchema,
@@ -2920,7 +2884,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   reservoir: {
@@ -2939,7 +2903,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // block entirely when that read fails. The fee is the SavingModule's
     // MANAGER-settable redeemFee(), read in the same run because no static
     // bound is defensible.
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     // The balance-sheet payload carries no accounting timestamp and the
     // adapter can therefore only ever attest `unverified` freshness (see
     // freshnessLimitation above). Allowing `verified` alongside it made
@@ -2965,7 +2929,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DISCLOSURE_VALIDATION,
   },
   "saturn-pyusdx": declareAdapter(saturnPyusdxParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
@@ -2988,10 +2952,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    // The http-json probe emits verified or unverified depending on whether the
-    // upstream carries a timestamp; the on-chain probe is latest-state.
+    configValidation: CONFIG_SINGLE_ASSET_V2,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    // HTTP quantities remain unverified whole-reserve observations: a chain
+    // supply clock is not a bank-reserve clock. On-chain reads prove liveness only.
     validation: { allowedFreshnessModes: ANY_FRESHNESS },
   },
   "sky-makercore": {
@@ -3002,7 +2966,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   "solomon-chancery": {
@@ -3013,30 +2977,11 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
-  },
-  "solomon-protocol": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "The protocol-data endpoint stopped describing the legacy beta mint: from the 2026-09-20 data cut its protocolTvl equals the replacement Chancery USDv mint's on-chain supply (6,059,987.4834 by getTokenSupply on USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk; 6,072,504.4834 at the 2026-09-27 probe) while the legacy itemized buckets are vestigial (custody $76.25, empty vault and reserve fund), and the adapter fails closed above the issuer-documented $3,000,000 legacy beta cap. The usdv-solomon liveReservesConfig was removed on 2026-09-27 to stop the error loop; the curated September composition is served instead and the replacement mint is tracked separately as usdv-solomon-v2. Review after the 2026-10-16 legacy wind-down endpoint: re-enable only if the issuer republishes a legacy-mint reserve envelope.",
-      parkedSince: "2026-09-27",
-      nextReview: "2026-10-31",
-    },
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
 
   "spiko-api": {
@@ -3048,24 +2993,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
-  "stoneyield-router-pool": declareAdapter(stoneyieldRouterPoolParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
-    // stUSD's exit is `needs-research`/`capacity-unpublished` and there is no
-    // public unwrap, so no capacity may be published from the pool read.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "staged",
-      rationale:
-        "On-chain evidence contradicts the reviewed 100% USDC sidecar row, so the adapter must not publish yet. At BSC block 119927831 SUSDC.getProtocolStats reported totalSupply 10,020,010, totalUSDCDeposited 10, totalRewardsDistributed 10,020,000 and contractUSDCBalance 0.05; the only observed USDC egress is 4.95 (block 69663673) plus 5 (block 69664002), both to StrategyRouter 0x563f48aAD50a75Ef3662827a4d536dbd46aBb5a2, which is the sole active full-weight strategy, and the Venus look-through adds 5.098725768562729 to 4.95 idle. Against STUSD supply 2,894,743.271428093 that is coverage 0.0000034886429716375584. Park until reserve-composition curation resolves the contradiction; review when verified backing or corrected supply evidence exists.",
-      parkedSince: "2026-09-04",
-      nextReview: "2026-12-04",
-    },
-  }),
 
   "superstate-liquidity": {
     primaryInputKinds: ["onchain-evm"],
@@ -3076,7 +3006,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    redemptionTelemetry: DIRECT_CAPACITY_TELEMETRY,
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
   "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
@@ -3091,7 +3021,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
   "river-protocol-info": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   // NOTE(owner-review): evidenceClass "independent" mirrors the frax-balance-sheet
   // issuer-balance-sheet precedent (live total assets/liabilities + freshness,
@@ -3108,7 +3038,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_ATTESTATION_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     // Measured 2026-08-25: 24 upstream publications in the retained 30-day
     // window (last 2026-08-21T23:30:02Z; the breach was detected at
     // 2026-08-25T00:11:34Z when warning_count rose from 1 to 2), with a
@@ -3130,33 +3060,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
   },
   "usdgo-transparency": declareAdapter(usdgoAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
     configValidation: configPolicy(["attestation-mix"], [3]),
   }),
-  "usdh-native-markets": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "retired",
-      rationale:
-        "Native Markets USDH entered the frozen archive on 2026-07-11 after its USDC migration; retain the adapter only for historical review and re-evaluate if the issuer resumes the product.",
-      parkedSince: "2026-07-11",
-      nextReview: "2026-10-11",
-    },
-    validation: {
-      // Native Markets USDH publishes attestation PDFs monthly; use the 33-day window.
-      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
+
   "usdai-proof-of-reserves": {
     primaryInputKinds: ["http-json"],
     paramsSchema: usdaiProofOfReservesParamsSchema,
@@ -3167,7 +3077,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
@@ -3183,7 +3093,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // v3: required reviewed issuer-native `liabilityScope`; the ratio is
     // published as `collateralizationRatio` only within the skew bound.
     configValidation: CONFIG_SINGLE_ASSET_V3,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
@@ -3199,7 +3109,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // v2: collateral rows dropping `lockedValue` fail the sync closed instead
     // of being silently summed as zero.
     configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   "usdtb-transparency": {
@@ -3210,7 +3120,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VALIDATION,
   },
   yamato: declareAdapter(yamatoParamsSchema, ONCHAIN_SINGLE_ASSET_V1),
@@ -3226,7 +3136,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // The legacy CDP's exit is borrower repay-only (no holder-facing
     // redemption route on a long-depegged token), so capacity/fee telemetry
     // would fabricate a route.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
   },
   // v2: a snapshot carrying none of the four ZSD circulating-supply encodings
@@ -3234,28 +3144,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
     configValidation: CONFIG_PROTOCOL_V1_V2,
   }),
-  "usdy-holdings-report": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "validated-static",
-    evidenceClass: "static-validated",
-    sourceOriginClass: "independent-assurance",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale: "USDY is suspended until the daily Ankura archive has proven newest-report discovery. The pinned September 3 manifest remains reviewed static evidence only.",
-      parkedSince: "2026-09-09",
-      nextReview: "2026-10-09",
-    },
-    validation: {
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-    },
-  },
+
   "djed-cardano": {
     primaryInputKinds: ["http-json"],
     paramsSchema: djedCardanoParamsSchema,
@@ -3265,7 +3154,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "dgld-gold-mapper": {
@@ -3276,12 +3165,8 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: 0,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION,
   },
   "matrixdock-frs": {
     primaryInputKinds: ["onchain-evm"],
@@ -3291,7 +3176,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "icp-gldt": {
@@ -3303,7 +3188,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "not-applicable",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_VALIDATION,
   },
   "onre-holdings-csv": {
@@ -3318,7 +3203,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       // Dated Schedule of Assets snapshots; the observed 2026-08-14 snapshot
       // was 26 days old at implementation, so use the monthly disclosure tier.
@@ -3338,7 +3223,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: configPolicy(["collateral-mix"], [2]),
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       // Weekly Tuesday reserve snapshots (2026-08-25, 2026-09-01) with grace
       // for one missed period; the yield-refresh clock is not reserve freshness.
@@ -3357,7 +3242,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     freshnessLimitation:
       "The AFI proof carries a generation timestamp, but proof generation does not establish the as-of dates of the underlying assets; ratio telemetry publishes as unverified.",
     validation: {
@@ -3377,7 +3262,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
     provenance: {
       status: "active",
@@ -3393,7 +3278,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
     provenance: {
       status: "active",
@@ -3409,26 +3294,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: BUSINESS_DAY_VERIFIED_VALIDATION,
   },
-  "matrixdock-stbt": {
-    primaryInputKinds: ["http-json", "http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: ["unverified"],
-    },
-  },
+
 } as const satisfies Record<string, LiveReserveAdapterDescriptor>;
 
 export type LiveReserveAdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS;

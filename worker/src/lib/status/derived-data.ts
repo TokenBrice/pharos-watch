@@ -1,6 +1,4 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
-import { resolveChainId } from "@shared/types/chain-identity";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
@@ -8,11 +6,6 @@ import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
-import {
-  hasUsableStablecoinsPayload,
-  loadStablecoinsCache,
-  type StablecoinsCacheLoadResult,
-} from "../stablecoins-cache";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
@@ -224,23 +217,6 @@ export async function getDatasetFreshness(db: D1Database): Promise<StatusRespons
   };
 }
 
-// Reviewed upstream definitions, not exceptions based on the size of a gap.
-// Evidence and restoration criteria: docs/status-dashboard.md#mintburn-reconciliation-card.
-const DEFILLAMA_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = {
-  "dai-makerdao": "Upstream supply includes internal DSR balances that ERC-20 mint/burn events do not measure.",
-  "usdd-tron-dao-reserve": "Upstream supply includes internal savings balances and legacy USDD outside the tracked token.",
-  "crvusd-curve": "Upstream supply measures circulating protocol debt, not the pre-minted token supply.",
-  "jpyc-jpyc": "Upstream supply excludes issuer and redemption wallet balances; ordinary transfers change circulation.",
-  "eurcv-societe-generale-forge": "Upstream supply excludes unreleased wallet balances; ordinary transfers change circulation.",
-  "alusd-alchemix": "Upstream supply excludes an unreleased wallet balance; ordinary transfers change circulation.",
-  "tryb-bilira": "Upstream supply excludes an unreleased wallet balance; ordinary transfers change circulation.",
-  "frxusd-frax": "Upstream supply excludes a treasury balance; ordinary transfers change circulation.",
-  "fxusd-f-x-protocol": "Upstream supply combines fxUSD with fstETH and ffrxETH; tracked events cover fxUSD only.",
-};
-const REBASING_RECONCILIATION_SCOPE_ISSUES: Readonly<Record<string, string>> = {
-  "m-m0": "Earning-index accrual changes token supply without mint/burn events.",
-  "ousd-origin-protocol": "Rebases change token supply without mint/burn events.",
-};
 
 const CONSERVATION_PASS_MAX_AGE_SEC = 75 * 60;
 
@@ -297,59 +273,20 @@ function validateConservationRecord(
 export async function getMintBurnReconciliation(
   db: D1Database,
   now: number,
-  preloadedCache?: StablecoinsCacheLoadResult,
-): Promise<MintBurnReconciliationSummary | null> {
-  const stablecoinsCacheResult =
-    preloadedCache ?? (await loadStablecoinsCache(db, { mode: "lenient" }));
-  if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
-    return null;
-  }
-
-  const configChainsByStablecoin = new Map<string, Set<string>>();
+): Promise<MintBurnReconciliationSummary> {
+  const configsByStablecoin = new Map<string, MintBurnContractConfig[]>();
   for (const config of MINT_BURN_CONFIGS) {
-    const chains = configChainsByStablecoin.get(config.stablecoinId) ?? new Set<string>();
-    chains.add(config.chain.chainId);
-    configChainsByStablecoin.set(config.stablecoinId, chains);
+    const configs = configsByStablecoin.get(config.stablecoinId) ?? [];
+    configs.push(config);
+    configsByStablecoin.set(config.stablecoinId, configs);
   }
-  const trackedIds = new Set(configChainsByStablecoin.keys());
-  const assets = (
-    stablecoinsCacheResult.payload.peggedAssets as Array<{
-      id: string;
-      symbol: string;
-      supplySource?: string;
-      circulating?: Record<string, number>;
-      chainCirculating?: Record<
-        string,
-        {
-          chainId?: string;
-          // `null` = unavailable chain observation (CR-13); the delta below requires finite numbers.
-          current?: number | null;
-          circulatingPrevDay?: number | null;
-        }
-      >;
-    }>
-  ).filter((asset) => trackedIds.has(asset.id));
-
-  const windowEnd = Math.floor(now / 3600) * 3600;
-  const windowStart = windowEnd - 24 * 3600;
   let lastBlocks: Map<string, number>;
   let cronSnapshot: MintBurnCronSnapshot;
   let extendedSnapshot: MintBurnCronSnapshot;
-  let flowRows: D1Result<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>;
   let firstSeenRows: Array<{ stablecoin_id: string; chain_id: string; first_hour_ts: number }>;
   let conservationRecords: Map<string, unknown>;
   try {
-    [flowRows, firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
-      db
-        .prepare(
-          `SELECT /* pharos:status-derived:mint-burn-24h */
-             stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE hour_ts >= ? AND hour_ts < ?
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .bind(windowStart, windowEnd)
-        .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
+    [firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
       loadMintBurnFirstHourRows(
         db,
         MINT_BURN_CONFIGS.map((config) => ({
@@ -379,9 +316,6 @@ export async function getMintBurnReconciliation(
     throw err;
   }
 
-  const flowMap = new Map(
-    (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
-  );
   const freshHeads = new Map<string, number>();
   for (const snapshot of [cronSnapshot, extendedSnapshot]) {
     if (snapshot.startedAt == null || now - snapshot.startedAt > MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) continue;
@@ -391,34 +325,9 @@ export async function getMintBurnReconciliation(
   }
   const coverageMap = buildCoinCoverageMap(now, firstSeenRows, lastBlocks, freshHeads);
 
-  const rows = assets
-    .map<MintBurnReconciliationRow>((asset) => {
-      const canonicalChains = configChainsByStablecoin.get(asset.id) ?? new Set<string>();
-      const canonicalChainId = canonicalChains.size === 1 ? [...canonicalChains][0]! : null;
-      const flowNet24hUsd = canonicalChainId ? (flowMap.get(`${asset.id}|${canonicalChainId}`) ?? 0) : 0;
-      const coverageStatus = coverageMap.get(asset.id)?.status ?? "unknown";
-
-      const matchingSupply = canonicalChainId
-        ? Object.entries(asset.chainCirculating ?? {}).filter(([label, data]) =>
-          data && ((typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
-            ?? resolveChainId(label)) === canonicalChainId)
-        : [];
-      // Ambiguous aliases must not double-count supply or invent missing history.
-      const chainSupply = matchingSupply.length === 1 ? matchingSupply[0]![1] : undefined;
-      const current = chainSupply?.current;
-      // These producers only observe current supply. Legacy cache versions used
-      // synthetic zero histories; provenance, not a zero-value heuristic, rejects them.
-      const currentOnlySupply = asset.supplySource === "onchain-total-supply"
-        || asset.supplySource === "onchain-circulating-supply";
-      const prevDay = currentOnlySupply ? undefined : chainSupply?.circulatingPrevDay;
-      const contextIssue = REBASING_RECONCILIATION_SCOPE_ISSUES[asset.id]
-        ?? (asset.supplySource === "defillama" ? DEFILLAMA_RECONCILIATION_SCOPE_ISSUES[asset.id] : undefined);
-      const chainSupplyDelta24hUsd = typeof current === "number" && Number.isFinite(current) && current >= 0
-        && typeof prevDay === "number" && Number.isFinite(prevDay) && prevDay >= 0 ? current - prevDay : null;
-      const absoluteDiffUsd = chainSupplyDelta24hUsd == null ? null : Math.abs(flowNet24hUsd - chainSupplyDelta24hUsd);
-      const denominator = Math.max(Math.abs(chainSupplyDelta24hUsd ?? 0), Math.abs(flowNet24hUsd), Math.max(getCirculatingRaw(asset), 1) * 0.005);
-      const diffRatio = absoluteDiffUsd == null ? null : absoluteDiffUsd / denominator;
-      const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === asset.id);
+  const rows = [...configsByStablecoin.entries()]
+    .map<MintBurnReconciliationRow>(([stablecoinId, configs]) => {
+      const coverageStatus = coverageMap.get(stablecoinId)?.status ?? "unknown";
       const conservation = configs.map((config) => {
         const record = validateConservationRecord(config, conservationRecords.get(mintBurnConservationCacheKey(config)), now);
         if (record.status !== "ok") return record;
@@ -438,22 +347,15 @@ export async function getMintBurnReconciliation(
       const status: MintBurnReconciliationRow["status"] = conservation.some((record) => record.status === "mismatch")
         ? "critical" : conservation.length > 0 && conservation.every((record) => record.status === "ok")
           ? "ok" : "insufficient-source";
-      const comparisonIssue = [
-        status === "insufficient-source" ? conservation.find((record) => record.status !== "ok")?.reason ?? "Conservation evidence is incomplete." : undefined,
-        contextIssue,
-        "USD flow and source-supply differences are indicative only; their observation windows and scopes may differ.",
-      ].filter(Boolean).join(" ");
+      const conservationIssue = status === "ok" ? undefined
+        : conservation.find((record) => record.status !== "ok")?.reason ?? "Conservation evidence is incomplete.";
 
       return {
-        stablecoinId: asset.id,
-        symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
-        flowNet24hUsd,
-        chainSupplyDelta24hUsd,
-        absoluteDiffUsd,
-        diffRatio,
+        stablecoinId,
+        symbol: TRACKED_META_BY_ID.get(stablecoinId)?.symbol ?? stablecoinId,
         status,
         coverageStatus,
-        comparisonIssue,
+        conservationIssue,
         conservation,
       };
     })
@@ -463,16 +365,13 @@ export async function getMintBurnReconciliation(
         "insufficient-source": 2,
         ok: 3,
       };
-      return severityOrder[a.status] - severityOrder[b.status]
-        || (b.absoluteDiffUsd ?? 0) - (a.absoluteDiffUsd ?? 0);
+      return severityOrder[a.status] - severityOrder[b.status];
     });
 
   return {
     conservationVersion: 1,
     checkedAt: now,
-    comparedCoins: rows.filter((row) => row.status !== "insufficient-source").length,
     criticalCount: rows.filter((row) => row.status === "critical").length,
-    insufficientCount: rows.filter((row) => row.status === "insufficient-source").length,
     rows,
   };
 }

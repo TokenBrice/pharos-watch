@@ -29,7 +29,7 @@ export const FEATURE_FLAGS = {
   heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
   // owner: tokenbrice; evidence: 2026-07-29 CLI contrast review passes AA (min 4.78:1 light, 7.23:1 dark).
   // retirementCriterion: remove once human visual review passes on USDC, USDe, and an active depeg.
-  // expiresAt: 2026-11-01 — awaiting human visual review on USDC, USDe, and an active depeg
+  // expiresAt: 2026-11-15 — exact-build visual review required by the 2026-10-08 operator decision
   quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
   // owner: tokenbrice; evidence: 2026-07-29 sticky summary and scrollspy tests pass.
   // retirementCriterion: remove once real-device iOS Safari and Android Chrome scrollspy review passes.
@@ -37,17 +37,12 @@ export const FEATURE_FLAGS = {
   mobileStickySummary:
     process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
   // owner: tokenbrice
-  // retirementCriterion: remove once chart-annotation curation has a named owner and cadence.
-  // expiresAt: 2026-12-01 — pending curation owner + cadence
-  chartAnnotations:
-    process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
-  // owner: tokenbrice
-  // retirementCriterion: remove once DDR v2 has 30 days without rollback.
-  // expiresAt: 2026-12-15 — DDR emergency rollback, retained through the 4.3 continuity release
+  // retirementCriterion: remove with DDRR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence.
+  // expiresAt: 2026-12-15 — DDR emergency rollback, awaiting deployed stability and populated reviewer evidence
   depegResolver: process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER !== "false",
   // owner: tokenbrice
-  // retirementCriterion: remove once DDRR v2 has 30 days without rollback.
-  // expiresAt: 2027-01-05 — DDRR emergency rollback, retained through the 4.3 continuity release
+  // retirementCriterion: remove with DDR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence.
+  // expiresAt: 2027-01-05 — DDRR emergency rollback, awaiting shared deployed stability and populated reviewer evidence
   depegResolverReviewer:
     process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER !== "false",
 } as const;
@@ -65,7 +60,7 @@ export const FEATURE_FLAG_LIFECYCLE = {
   },
   quietDeviations: {
     owner: "tokenbrice",
-    expiresAt: "2026-11-01",
+    expiresAt: "2026-11-15",
     retirementCriterion: "remove once human visual review passes on USDC, USDe, and an active depeg",
   },
   mobileStickySummary: {
@@ -73,20 +68,15 @@ export const FEATURE_FLAG_LIFECYCLE = {
     expiresAt: "2026-11-15",
     retirementCriterion: "remove once real-device iOS Safari and Android Chrome scrollspy review passes",
   },
-  chartAnnotations: {
-    owner: "tokenbrice",
-    expiresAt: "2026-12-01",
-    retirementCriterion: "remove once chart-annotation curation has a named owner and cadence",
-  },
   depegResolver: {
     owner: "tokenbrice",
     expiresAt: "2026-12-15",
-    retirementCriterion: "remove once DDR v2 has 30 days without rollback",
+    retirementCriterion: "remove with DDRR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence",
   },
   depegResolverReviewer: {
     owner: "tokenbrice",
     expiresAt: "2027-01-05",
-    retirementCriterion: "remove once DDRR v2 has 30 days without rollback",
+    retirementCriterion: "remove with DDR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence",
   },
 } satisfies Record<keyof typeof FEATURE_FLAGS, FeatureFlagLifecycle>;
 
@@ -102,9 +92,6 @@ export function isMobileStickySummaryEnabled(): boolean {
   return FEATURE_FLAGS.mobileStickySummary;
 }
 
-export function isChartAnnotationsEnabled(): boolean {
-  return FEATURE_FLAGS.chartAnnotations;
-}
 
 export function isDepegResolverEnabled(): boolean {
   return FEATURE_FLAGS.depegResolver;

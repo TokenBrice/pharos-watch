@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import { reviewedReserve } from "./generate-reserve-coverage-audit.test-support";
 import {
@@ -67,6 +68,82 @@ const stablecoinsPayload = {
 };
 
 describe("generate-reserve-coverage-audit", () => {
+  it("keeps source-quality dispositions on active effective-unconfigured assets and propagates their evidence", () => {
+    const audit = buildReserveCoverageAudit({ activeCoins: ACTIVE_STABLECOINS });
+    const candidates = [...audit.curatedOnlyActiveCandidates, ...audit.unconfiguredWithoutCuratedReserves];
+    for (const [id, note] of Object.entries(REVIEWED_LIVE_RESERVE_SOURCE_NOTES)) {
+      const meta = ACTIVE_META_BY_ID.get(id);
+      expect(meta, id).toBeDefined();
+      expect(meta?.liveReservesConfig, id).toBeUndefined();
+      const candidate = candidates.find((row) => row.coinId === id);
+      expect(candidate, id).toMatchObject({
+        sourceUrl: note.sourceUrl, sourceQuality: note.sourceQuality,
+        scoreGradePlausible: note.scoreGradePlausible,
+      });
+      expect(candidate?.scoreGradePlausible, id).toBe(id === "usdo-openeden");
+    }
+  });
+
+  it("reconciles authored census disjointly without changing effective active coverage", () => {
+    const config = liveConfig("m0");
+    const suspended = { ...config, suspended: { since: "2026-09-01", reason: "incomplete book", reviewBy: "2026-10-01" } };
+    const sources = [
+      coin({ id: "active", liveReservesConfig: config }),
+      coin({ id: "suspended", liveReservesConfig: suspended }),
+      ...(["quarantined", "pre-launch", "frozen", "delisted"] as const).map((status) =>
+        coin({ id: status, status, liveReservesConfig: status === "quarantined" ? suspended : config })),
+    ];
+    const audit = buildReserveCoverageAudit({
+      trackedCoins: sources, sourceCoins: sources,
+      activeCoins: [sources[0], coin({ id: "suspended" })],
+      generatedAt: "2026-10-08T00:00:00Z",
+    });
+    expect(audit.configCensus).toMatchObject({
+      authoredConfigCount: 6, activeExecutableCount: 1, activeSuspendedCount: 1, nonActiveConfiguredCount: 4,
+      nonActiveConfiguredByLifecycle: { quarantined: 1, "pre-launch": 1, frozen: 1, delisted: 1 },
+    });
+    const census = audit.configCensus;
+    expect(census.authoredConfigCount).toBe(census.activeExecutableCount + census.activeSuspendedCount + census.nonActiveConfiguredCount);
+    expect(census.dormantConfigs).toHaveLength(5);
+    expect(census.dormantConfigs.find((row) => row.coinId === "quarantined")).toMatchObject({
+      suspensionReason: "incomplete book", reviewBy: "2026-10-01", reviewDue: true,
+    });
+    expect(audit.summary.liveEnabledActiveCount).toBe(1);
+  });
+
+  it("keeps missing-curation queues separate, complete and null-safe", () => {
+    const missing = [
+      coin({ id: "absent", reserves: undefined }),
+      coin({ id: "empty", reserves: [] }),
+      coin({ id: "configured", reserves: undefined, liveReservesConfig: liveConfig("m0") }),
+      coin({ id: "inalpha-nest", reserves: undefined }),
+      coin({ id: "unknown-adapter", reserves: undefined, liveReservesConfig: { ...liveConfig("m0"), adapter: "unknown" as LiveReserveAdapterKey } }),
+    ];
+    const audit = buildReserveCoverageAudit({
+      trackedCoins: [...activeCoins, ...missing, coin({ id: "pre", status: "pre-launch" }), coin({ id: "frozen", status: "frozen" })],
+      activeCoins: [...activeCoins, ...missing], stablecoins: stablecoinsPayload,
+    });
+    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "usdo-openeden"]);
+    expect(audit.activeWithoutCuratedReserves.map((row) => row.coinId)).toEqual(missing.map((row) => row.id));
+    expect(audit.unconfiguredWithoutCuratedReserves.map((row) => row.coinId)).toEqual(["absent", "empty", "inalpha-nest"]);
+    expect(audit.activeWithoutCuratedReserves.every((row) => row.marketCapUsd === null)).toBe(true);
+    expect(audit.activeWithoutCuratedReserves.find((row) => row.coinId === "configured")?.effectiveLiveAdapter).toBe("m0");
+    expect(audit.warnings.filter((warning) => warning.includes("unknown-adapter"))).toHaveLength(1);
+    expect(JSON.parse(JSON.stringify(audit)).activeWithoutCuratedReserves).toHaveLength(5);
+    const markdown = renderReserveCoverageAuditMarkdown(audit);
+    for (const row of missing) expect(markdown).toContain(row.id);
+    expect(audit.activeWithoutCuratedReserves.find((row) => row.coinId === "inalpha-nest")?.scoreGradePlausible).toBe(false);
+  });
+
+  it("does not mistake reviewed unknown composition for absent curation or clip missing-curation rows", () => {
+    const missing = Array.from({ length: 60 }, (_, index) => coin({ id: `no-curation-${index}`, reserves: undefined }));
+    const reviewedUnknown = coin({ id: "unknown", reserves: [{ name: "Unknown reserve composition", pct: 100, risk: "high" }] });
+    const audit = buildReserveCoverageAudit({ trackedCoins: [...missing, reviewedUnknown], activeCoins: [...missing, reviewedUnknown] });
+    expect(audit.activeWithoutCuratedReserves).toHaveLength(60);
+    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["unknown"]);
+    expect(renderReserveCoverageAuditMarkdown(audit)).toContain("no-curation-59");
+  });
+
   it("counts reserve coverage, evidence buckets, and score-grade gaps", () => {
     const audit = buildReserveCoverageAudit({
       trackedCoins: [...activeCoins, coin({ id: "pre" }), coin({ id: "frozen" })],

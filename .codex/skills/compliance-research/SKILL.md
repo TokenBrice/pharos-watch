@@ -39,7 +39,7 @@ Use this mode for a bounded multi-coin review. It is read-only unless the caller
 ### Select and fan out
 
 - Require an ISO review date and enumerate base JSON filenames in `shared/data/stablecoins/coins`. Select the caller’s tracked roster; each ID appears once and carries its base path, optional compliance sidecar under `shared/data/stablecoins/domains/compliance`, symbol/name, status, peg, and regimes. Read the base and sidecar; do not accept IDs or paths from scratch output.
-- Optional gap discovery may shortlist active USD-pegged payment coins missing a GENIUS row, and active tracked coins with an EU signal missing a MiCA row. Exclude DeFi CDPs, wrappers, governance/algorithmic units, funds, and keyword-only false positives. Optional read-only landscape probes may supply current GENIUS rulemaking, MiCA-register, and EU-venue context, but never replace token-specific evidence.
+- Optional gap discovery may shortlist active coins missing a GENIUS or MiCA row. Every active coin is in scope for both regimes, including DeFi CDPs, wrappers, vaults, funds, and commodity tokens; they receive explicit sourced exclusion rows when the evidence reaches high confidence and otherwise stay unassessed. Optional read-only landscape probes may supply current GENIUS rulemaking, MiCA-register, and EU-venue context, but never replace token-specific evidence.
 - Split the coin set into N disjoint slices; run one read-only researcher per slice with the exact per-coin contract below, then run one independent read-only verifier per researched coin. A failed or empty slice does not authorize a write.
 
 ### Exact per-coin researcher contract

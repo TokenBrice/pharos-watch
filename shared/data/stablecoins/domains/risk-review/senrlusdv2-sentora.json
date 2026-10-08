@@ -110,12 +110,12 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "privileged-internal-pricing",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned block 26107702: 10 funded Morpho markets have exact oracle/LLTV identities and all six BASE/QUOTE feed/vault getter values. Vault accounting is verified price-feed-independent; borrower liquidation pricing remains applicable. Upstream feed administrator, heartbeat and mutable NAV-controller closure remain incomplete, so no standard-external or redundant tier is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "summary": "A positively evidenced funded syrupUSDC borrower branch establishes internal-NAV pricing: exact oracle 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 multiplies MaplePool.convertToAssets, whose totalAssets forwards to an upgradeable MaplePoolManager and strategy AUM reports rather than independently marked loan values. At Ethereum block 26115263 (2026-10-04T00:00:35Z), the exact current adapter has nonzero supplyShares in market 0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394; MaplePool.manager is 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f and its implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. Published manager source gives pool-delegate/protocol-admin default and strategy discretion and delegate/security-admin upgrade authority. This is a measured internal accounting authority, not an arbitrary numerical price setter; unrealizedLosses affects exit conversion separately. Other feed administrators, heartbeats and mutable input safeguards remain unresolved, so no external-feed or redundancy credit is asserted.",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
     "confidence": "probable",
     "sources": [
       {
@@ -189,6 +189,18 @@
       {
         "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7"
+      },
+      {
+        "label": "Exact embedded MaplePool source: convertToAssets lines 1226-1230, totalAssets lines 1262-1264",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+      },
+      {
+        "label": "MaplePoolManager implementation pinned at block 26115263: totalAssets strategy AUM, upgrade and default authority",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+      },
+      {
+        "label": "Pinned funded adapter position, MaplePool manager and implementation: block 26115263, 2026-10-04T00:00:35Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "branchApplicability": {
@@ -951,8 +963,8 @@
       {
         "id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
         "label": "Morpho market 0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x8fffffd4afb6115b954bd326cbe7b4ba576818f6\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Exact immutable MorphoChainlinkOracleV2 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 embeds BASE_VAULT syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, BASE_FEED_1 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 and QUOTE_FEED_1 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a; second feed slots and quote vault are zero. Its price() calls convertToAssets, which is shares * MaplePool.totalAssets / totalSupply; totalAssets forwards to manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f. At block 26115263 (2026-10-04T00:00:35Z), this vault's adapter has nonzero market supplyShares and manager implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. The verified manager sums strategy assetsUnderManagement and grants pool-delegate/protocol-admin default and strategy discretion, with delegate/security-admin upgrades. This positively establishes internal ledger pricing without claiming arbitrary NAV submission. Upstream feed heartbeat/admin guarantees remain unresolved.",
         "collateralAssets": [
           "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
         ],
@@ -1042,6 +1054,18 @@
           {
             "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5"
+          },
+          {
+            "label": "Exact embedded MaplePool source: convertToAssets and manager-derived totalAssets",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
+          },
+          {
+            "label": "MaplePoolManager implementation pinned at block 26115263: strategy AUM, upgrade/default authorities",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
+          },
+          {
+            "label": "Funded adapter position and embedded NAV implementation at block 26115263, 2026-10-04T00:00:35Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },

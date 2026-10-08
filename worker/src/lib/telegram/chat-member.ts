@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../structured-log";
 import { getCache, setCache } from "../db-cache";
-import { drainResponseBody } from "../response-body";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../response-body";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../fetch-retry";
 import { postTelegramBotApi } from "../telegram";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -103,14 +104,14 @@ export async function getCachedChatAdministrators(
   }
 
   if (!response.ok) {
-    await drainResponseBody(response);
+    await cancelResponseBodyQuietly(response);
     logWorkerEventArgs("lib", "warn", `[telegram-chat-member] getChatAdministrators returned ${response.status} for chat ${chatId}`);
     return null;
   }
 
   let body: TelegramApiResponse<TelegramChatMemberResult[]>;
   try {
-    body = (await response.json()) as TelegramApiResponse<TelegramChatMemberResult[]>;
+    body = await readResponseJsonWithinLimitWithSignal(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
   } catch {
     return null;
   }

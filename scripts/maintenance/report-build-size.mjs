@@ -88,8 +88,14 @@ const DEFAULT_BUDGETS = {
   // census to 12 rendered rows plus counts (905 KiB -> 667 KiB in a release
   // build); the remaining DAI growth is the census disclosure and its larger
   // process summary. 700,000 keeps ~2.5% headroom over the measured route.
-  representativeDetailHtmlBytes: 700_000,
-  representativeDetailPageTxtBytes: 122_000,
+  // Re-ratcheted 2026-10-07 for the always-open dossier redesign: source rows
+  // moved to one shared CSS class (-30 to -45 KiB HTML per route) and bridge
+  // route rows shrank to client-derivable fields (-4.5 to -6.3 KB page TXT).
+  // The release build measured 584,585-668,092 B HTML and 94,868-123,549 B
+  // page TXT (USDT carries 40 drawn bridge routes for the deployment strip),
+  // so HTML tightens and page TXT rises, each with ~2.5% headroom.
+  representativeDetailHtmlBytes: 685_000,
+  representativeDetailPageTxtBytes: 127_000,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
   // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)

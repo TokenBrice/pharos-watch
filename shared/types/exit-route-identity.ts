@@ -7,6 +7,10 @@ export function canonicalExitRouteChain(chain: string): string {
 export function canonicalExitRouteScopedId(chain: string, identifier: string): string {
   const canonicalChain = canonicalExitRouteChain(chain);
   const trimmed = identifier.trim();
+  if (canonicalChain === "sui") {
+    // Move module/type names are case-sensitive; only address bytes normalize.
+    return trimmed.replace(/^(sui:)?0x([0-9a-fA-F]{1,64})(?=::|$)/i, (_address, prefix: string | undefined, hex: string) => `${prefix ? "sui:" : ""}0x${hex.toLowerCase().padStart(64, "0")}`);
+  }
   if (CHAIN_META[canonicalChain]?.nativeDenomRail && !/^0x[0-9a-fA-F]{40}$/.test(trimmed)) return trimmed;
   return CHAIN_META[canonicalChain]?.type === "evm" ? trimmed.toLowerCase() : trimmed;
 }

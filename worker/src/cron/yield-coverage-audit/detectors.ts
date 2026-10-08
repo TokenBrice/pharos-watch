@@ -18,7 +18,6 @@ import {
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
-import type { QuarantineRestoreCandidate } from "../yield-coverage-audit-quarantine";
 import { resolveYieldSourceKeyRoute } from "../yield-sync/yield-source-key-routing";
 import {
   explainDeterministicAutoLendingEligibility,
@@ -591,7 +590,6 @@ export function buildCoverageAuditOperatorQueue({
   yieldBearingMissingFromRankings,
   staleAutoLendingOverrides = [],
   deadCuratedPins = [],
-  quarantineReadyToRestore = [],
   nowMs = Date.now(),
   staleVenueRiskScores = findStaleVenueRiskScores(nowMs),
 }: {
@@ -600,7 +598,6 @@ export function buildCoverageAuditOperatorQueue({
   yieldBearingMissingFromRankings: string[];
   staleAutoLendingOverrides?: StaleAutoLendingOverride[];
   deadCuratedPins?: DeadCuratedPin[];
-  quarantineReadyToRestore?: QuarantineRestoreCandidate[];
   nowMs?: number;
   staleVenueRiskScores?: StaleVenueRiskScore[];
 }): CoverageAuditOperatorQueue {
@@ -650,17 +647,6 @@ export function buildCoverageAuditOperatorQueue({
       buildProtocolQueueItem("lending-allowlist", recommendation),
     ),
     ...gaps.venueRiskConfigMissing.map(buildVenueRiskConfigMissingQueueItem),
-    ...quarantineReadyToRestore.map((candidate) => ({
-      id: queueId("quarantine-ready-to-restore", candidate.stablecoinId),
-      kind: "quarantine-ready-to-restore" as const,
-      title: candidate.stablecoinId,
-      detail: `${candidate.chain} ${candidate.sourceKey} probe returned ${candidate.exchangeRate}`,
-      actionHint: "accept" as const,
-      stablecoinIds: [candidate.stablecoinId],
-      chain: candidate.chain,
-      sourceKey: candidate.sourceKey,
-      reasonCodes: [candidate.code],
-    })),
     ...staleVenueRiskScores.map((stale) => ({
       id: queueId("stale-venue-risk-score", stale.protocol),
       kind: "stale-venue-risk-score" as const,

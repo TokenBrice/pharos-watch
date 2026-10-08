@@ -1,0 +1,627 @@
+{
+  "provenance": {
+    "url": "https://api-prod.midas.app/api/transparency?token=<product>",
+    "accessedAt": "2026-10-07T20:45:24Z..20:47:01Z",
+    "note": "Verbatim JSON payloads from agents/lrr/evidence/RS1. Historical checkpoint is a dated request without publisher updatedAt."
+  },
+  "products": {
+    "mTBILL": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mTBILL",
+      "accessedAt": "2026-10-07T20:45:24.547057+00:00",
+      "payload": {
+        "reports": {
+          "main_positions": {
+            "pv_usd": {
+              "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.501,
+              "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.806
+            },
+            "delta_usd": {
+              "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.501,
+              "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.806
+            }
+          },
+          "assets_by_protocol_chain": {
+            "equity": {
+              "('wallet', 'ethereum')": 76.3083898248,
+              "('total', '')": 76.3091221907
+            }
+          },
+          "assets_by_protocol": {
+            "assets": {
+              "wallet": 76.3091221907,
+              "total": 76.3091221907
+            },
+            "equity": {
+              "wallet": 76.3091221907,
+              "total": 76.3091221907
+            },
+            "equity_pct_nav": {
+              "wallet": 100,
+              "total": 100
+            },
+            "protocol_type": {
+              "wallet": "custody",
+              "total": null
+            }
+          },
+          "asset_values": {
+            "pv_usd": {
+              "ethereum": 76.308,
+              "total": 76.309
+            },
+            "pv_pct_nav": {
+              "ethereum": 100,
+              "total": 100
+            }
+          },
+          "assets_by_wallet": {
+            "pv_usd": {
+              "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 71.501,
+              "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 4.806,
+              "('total', '')": 76.309
+            },
+            "pv_pct_nav": {
+              "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 93.7,
+              "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 6.3,
+              "('total', '')": 100
+            }
+          }
+        },
+        "updatedAt": "2026-09-18T12:06:10.121Z"
+      }
+    },
+    "mAPOLLO": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mAPOLLO",
+      "accessedAt": "2026-10-07T20:45:24.754902+00:00",
+      "payload": {
+        "reports": {
+          "main_positions": {
+            "pv_usd": {
+              "('USDE', 'CASH', 'morpho', 'hood', 'USDE')": 13.938,
+              "('PT-AUSD-8OCT2026', 'CASH', 'aave', 'monad', 'AUSD')": 10.38,
+              "('SYRUPUSDC', 'CASH', 'aave', 'monad', 'USDC')": 5.825,
+              "('USDE', 'CASH', 'kamino', 'solana', 'USDE')": 3.4,
+              "('SYRUPUSDT', 'CASH', 'aave', 'mantle', 'USDT')": 3.306,
+              "('HASTRA_PRIME', 'CASH', 'morpho', 'ethereum', 'PRIME')": 2.315,
+              "('PT-REUSD-10DEC2026', 'CASH', 'pendle', 'ethereum', 'unmapped')": 1.764,
+              "('SYRUPUSDG', 'CASH', 'morpho', 'hood', 'unmapped')": 1.138,
+              "('PT-AUSD-8OCT2026', 'CASH', 'euler', 'monad', 'AUSD')": 1.038,
+              "('PT-USDAT-14JAN2027', 'CASH', 'euler', 'monad', 'USDAT')": 1.011,
+              "('USDE', 'CASH', 'aave', 'mantle', 'USDE')": 0.878,
+              "('PT-REUSD-10DEC2026', 'CASH', 'morpho', 'ethereum', 'unmapped')": 0.199,
+              "('USDC', 'CASH', 'morpho', 'monad', 'USDC')": 0.124,
+              "('USDC', 'CASH', 'morpho', 'ethereum', 'USDC')": -0.111,
+              "('USDC', 'CASH', 'euler', 'monad', 'USDC')": -0.415,
+              "('AUSD', 'CASH', 'aave', 'monad', 'AUSD')": -0.496,
+              "('AUSD', 'CASH', 'euler', 'monad', 'AUSD')": -0.931,
+              "('PYUSD', 'CASH', 'morpho', 'ethereum', 'PYUSD')": -1.894,
+              "('PYUSD', 'CASH', 'kamino', 'solana', 'PYUSD')": -3.123,
+              "('USDT0', 'CASH', 'aave', 'mantle', 'USDT')": -3.748,
+              "('USDG', 'CASH', 'morpho', 'hood', 'USDG')": -13.511,
+              "('USDC', 'CASH', 'aave', 'monad', 'USDC')": -14.359
+            },
+            "delta_usd": {
+              "('USDE', 'CASH', 'morpho', 'hood', 'USDE')": 13.938,
+              "('PT-AUSD-8OCT2026', 'CASH', 'aave', 'monad', 'AUSD')": 10.38,
+              "('SYRUPUSDC', 'CASH', 'aave', 'monad', 'USDC')": 5.825,
+              "('USDE', 'CASH', 'kamino', 'solana', 'USDE')": 3.4,
+              "('SYRUPUSDT', 'CASH', 'aave', 'mantle', 'USDT')": 3.306,
+              "('HASTRA_PRIME', 'CASH', 'morpho', 'ethereum', 'PRIME')": 2.315,
+              "('PT-REUSD-10DEC2026', 'CASH', 'pendle', 'ethereum', 'unmapped')": 1.764,
+              "('SYRUPUSDG', 'CASH', 'morpho', 'hood', 'unmapped')": 1.138,
+              "('PT-AUSD-8OCT2026', 'CASH', 'euler', 'monad', 'AUSD')": 1.038,
+              "('PT-USDAT-14JAN2027', 'CASH', 'euler', 'monad', 'USDAT')": 1.011,
+              "('USDE', 'CASH', 'aave', 'mantle', 'USDE')": 0.878,
+              "('PT-REUSD-10DEC2026', 'CASH', 'morpho', 'ethereum', 'unmapped')": 0.199,
+              "('USDC', 'CASH', 'morpho', 'monad', 'USDC')": 0.124,
+              "('USDC', 'CASH', 'morpho', 'ethereum', 'USDC')": -0.111,
+              "('USDC', 'CASH', 'euler', 'monad', 'USDC')": -0.415,
+              "('AUSD', 'CASH', 'aave', 'monad', 'AUSD')": -0.496,
+              "('AUSD', 'CASH', 'euler', 'monad', 'AUSD')": -0.931,
+              "('PYUSD', 'CASH', 'morpho', 'ethereum', 'PYUSD')": -1.894,
+              "('PYUSD', 'CASH', 'kamino', 'solana', 'PYUSD')": -3.123,
+              "('USDT0', 'CASH', 'aave', 'mantle', 'USDT')": -3.748,
+              "('USDG', 'CASH', 'morpho', 'hood', 'USDG')": -13.511,
+              "('USDC', 'CASH', 'aave', 'monad', 'USDC')": -14.359
+            }
+          },
+          "assets_by_protocol_chain": {
+            "equity": {
+              "('aave', 'mantle')": 0.4362219781,
+              "('aave', 'monad')": 1.3503138663,
+              "('cex_1', 'cex_1')": 0.0033606404,
+              "('ethena', 'ethereum')": 0.0013652191,
+              "('euler', 'monad')": 0.7015767635,
+              "('kamino', 'solana')": 0.2772914665,
+              "('merkl', 'hood')": 0.0041704756,
+              "('morpho', 'ethereum')": 0.5089624834,
+              "('morpho', 'hood')": 1.5641166464,
+              "('morpho', 'monad')": 0.1243720487,
+              "('pendle', 'ethereum')": 1.7640427301,
+              "('pendle', 'monad')": 0.0120819306,
+              "('wallet', 'ethereum')": 0.0062148444,
+              "('total', '')": 6.756932598
+            }
+          },
+          "assets_by_protocol": {
+            "assets": {
+              "morpho": 17.7146984927,
+              "aave": 20.3893830967,
+              "pendle": 1.7761246709,
+              "euler": 2.0483514143,
+              "kamino": 3.3998165026,
+              "wallet": 0.0071738571,
+              "merkl": 0.0055773857,
+              "cex_1": 0.0033606404,
+              "ethena": 0.0013652191,
+              "total": 45.3463268514
+            },
+            "liabilities": {
+              "morpho": -15.5172473143,
+              "aave": -18.6028472523,
+              "pendle": 0,
+              "euler": -1.3467746508,
+              "kamino": -3.1225250361,
+              "wallet": 0,
+              "merkl": 0,
+              "cex_1": 0,
+              "ethena": 0,
+              "total": -38.5893942534
+            },
+            "equity": {
+              "morpho": 2.1974511785,
+              "aave": 1.7865358444,
+              "pendle": 1.7761246709,
+              "euler": 0.7015767635,
+              "kamino": 0.2772914665,
+              "wallet": 0.0071738571,
+              "merkl": 0.0055773857,
+              "cex_1": 0.0033606404,
+              "ethena": 0.0013652191,
+              "total": 6.756932598
+            },
+            "equity_pct_nav": {
+              "morpho": 32.52,
+              "aave": 26.44,
+              "pendle": 26.29,
+              "euler": 10.38,
+              "kamino": 4.1,
+              "wallet": 0.11,
+              "merkl": 0.08,
+              "cex_1": 0.05,
+              "ethena": 0.02,
+              "total": 100
+            },
+            "protocol_type": {
+              "morpho": "borrow_lend",
+              "aave": "borrow_lend",
+              "pendle": "deposit",
+              "euler": "borrow_lend",
+              "kamino": "borrow_lend",
+              "wallet": "custody",
+              "merkl": "rewards",
+              "cex_1": "cex/dex",
+              "ethena": "staking",
+              "total": null
+            }
+          },
+          "asset_values": {
+            "pv_usd": {
+              "ethereum": 2.281,
+              "monad": 2.19,
+              "hood": 1.568,
+              "mantle": 0.437,
+              "solana": 0.277,
+              "cex_1": 0.003,
+              "total": 6.756
+            },
+            "pv_pct_nav": {
+              "ethereum": 33.8,
+              "monad": 32.4,
+              "hood": 23.2,
+              "mantle": 6.5,
+              "solana": 4.1,
+              "cex_1": 0,
+              "total": 100
+            }
+          },
+          "assets_by_wallet": {
+            "pv_usd": {
+              "('0xd6c757043e7d59088969b188923c62fa960afe9b', 'mAPOLLO_1')": 5.635,
+              "('0x278aa16c5c8e1d68938a302e809f126863d81daa', 'mAPOLLO_4')": 0.749,
+              "('G1yDP3JtgJPFCUPf56sa1ikz2fkN2SsKEnbEBwQSQkiA', 'mAPOLLO_Solana')": 0.277,
+              "('0x0fe15b65136ab92a3f9ce83cceb9e0663f1efaa6', 'mAPOLLO_2')": 0.089,
+              "('0x1d021d11829b133b0de574a8669474f6b5ce4f9e', 'mAPOLLO_Proceeds_Recipient')": 0.003,
+              "('cex_1', 'mAPOLLO_cex_1')": 0.003,
+              "('total', '')": 6.756
+            },
+            "pv_pct_nav": {
+              "('0xd6c757043e7d59088969b188923c62fa960afe9b', 'mAPOLLO_1')": 83.4,
+              "('0x278aa16c5c8e1d68938a302e809f126863d81daa', 'mAPOLLO_4')": 11.1,
+              "('G1yDP3JtgJPFCUPf56sa1ikz2fkN2SsKEnbEBwQSQkiA', 'mAPOLLO_Solana')": 4.1,
+              "('0x0fe15b65136ab92a3f9ce83cceb9e0663f1efaa6', 'mAPOLLO_2')": 1.3,
+              "('0x1d021d11829b133b0de574a8669474f6b5ce4f9e', 'mAPOLLO_Proceeds_Recipient')": 0,
+              "('cex_1', 'mAPOLLO_cex_1')": 0,
+              "('total', '')": 99.9
+            }
+          }
+        },
+        "updatedAt": "2026-10-07T20:06:42.859Z"
+      }
+    },
+    "mFONE": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mFONE",
+      "accessedAt": "2026-10-07T20:46:10.141389+00:00",
+      "payload": {
+        "reports": {
+          "main_positions": {
+            "pv_usd": {
+              "('M_MFONE', 'CASH', 'general_wallet', 'general_wallet', 'unmapped')": 65.45,
+              "('USDC', 'CASH', 'midas', 'ethereum', 'USDC')": 0.281
+            },
+            "delta_usd": {
+              "('M_MFONE', 'CASH', 'general_wallet', 'general_wallet', 'unmapped')": 65.45,
+              "('USDC', 'CASH', 'midas', 'ethereum', 'USDC')": 0.281
+            }
+          },
+          "assets_by_protocol_chain": {
+            "equity": {
+              "('general_wallet', 'general_wallet')": 65.4497604344,
+              "('midas', 'ethereum')": 0.2807705343,
+              "('wallet', 'ethereum')": 0.040159466,
+              "('total', '')": 65.7707
+            }
+          },
+          "assets_by_protocol": {
+            "assets": {
+              "general_wallet": 65.4497604344,
+              "midas": 0.2807705343,
+              "wallet": 0.0401690313,
+              "total": 65.7707
+            },
+            "equity": {
+              "general_wallet": 65.4497604344,
+              "midas": 0.2807705343,
+              "wallet": 0.0401690313,
+              "total": 65.7707
+            },
+            "equity_pct_nav": {
+              "general_wallet": 99.51,
+              "midas": 0.43,
+              "wallet": 0.06,
+              "total": 100
+            },
+            "protocol_type": {
+              "general_wallet": "unmapped",
+              "midas": "yield",
+              "wallet": "custody",
+              "total": null
+            }
+          },
+          "asset_values": {
+            "pv_usd": {
+              "general_wallet": 65.45,
+              "ethereum": 0.321,
+              "total": 65.771
+            },
+            "pv_pct_nav": {
+              "general_wallet": 99.5,
+              "ethereum": 0.5,
+              "total": 100
+            }
+          },
+          "assets_by_wallet": {
+            "pv_usd": {
+              "('general_wallet', 'mFONE_FundShares')": 65.45,
+              "('0x86b16681e21e857a9a71a8fdfc33ab1eb8213b74', 'mFONE_Proceeds_Recipient_EVM')": 0.161,
+              "('0x82fb69dd7f31ed9ff8a44579d674e5032a4adc9c', 'mFONE_Request_Redeemer_EVM')": 0.159,
+              "('total', '')": 65.77
+            },
+            "pv_pct_nav": {
+              "('general_wallet', 'mFONE_FundShares')": 99.5,
+              "('0x86b16681e21e857a9a71a8fdfc33ab1eb8213b74', 'mFONE_Proceeds_Recipient_EVM')": 0.2,
+              "('0x82fb69dd7f31ed9ff8a44579d674e5032a4adc9c', 'mFONE_Request_Redeemer_EVM')": 0.2,
+              "('total', '')": 99.9
+            }
+          }
+        },
+        "updatedAt": "2026-10-07T20:06:29.166Z"
+      }
+    },
+    "mGLOBAL": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mGLOBAL",
+      "accessedAt": "2026-10-07T20:45:25.367347+00:00",
+      "payload": {
+        "reports": {
+          "main_positions": {
+            "pv_usd": {
+              "('USDT', 'CASH', 'general_wallet', 'general_wallet', 'USDT')": 31.962,
+              "('USDC', 'CASH', 'aave', 'ethereum', 'USDC')": 2.102
+            },
+            "delta_usd": {
+              "('USDT', 'CASH', 'general_wallet', 'general_wallet', 'USDT')": 31.962,
+              "('USDC', 'CASH', 'aave', 'ethereum', 'USDC')": 2.102
+            }
+          },
+          "assets_by_protocol_chain": {
+            "equity": {
+              "('aave', 'ethereum')": 2.1019192907,
+              "('general_wallet', 'general_wallet')": 31.9622198039,
+              "('total', '')": 34.064146
+            }
+          },
+          "assets_by_protocol": {
+            "assets": {
+              "general_wallet": 31.9622198039,
+              "aave": 2.1019192907,
+              "total": 34.064146
+            },
+            "equity": {
+              "general_wallet": 31.9622198039,
+              "aave": 2.1019192907,
+              "total": 34.064146
+            },
+            "equity_pct_nav": {
+              "general_wallet": 93.83,
+              "aave": 6.17,
+              "total": 100
+            },
+            "protocol_type": {
+              "general_wallet": "unmapped",
+              "aave": "borrow_lend",
+              "total": null
+            }
+          },
+          "asset_values": {
+            "pv_usd": {
+              "general_wallet": 31.962,
+              "ethereum": 2.102,
+              "total": 34.064
+            },
+            "pv_pct_nav": {
+              "general_wallet": 93.8,
+              "ethereum": 6.2,
+              "total": 100
+            }
+          },
+          "assets_by_wallet": {
+            "pv_usd": {
+              "('general_wallet', 'mGLOBAL_FundShares')": 31.962,
+              "('0xa0fc8bdfb1e6a705c1375810989b1d70a982b01b', 'mGLOBAL_Redemption_Vault_ETH')": 2.07,
+              "('0xb38c71199d7b480a8febadeeff59e5516338bcf6', 'mGLOBAL_Proceeds_Recipient_EVM')": 0.032,
+              "('total', '')": 34.064
+            },
+            "pv_pct_nav": {
+              "('general_wallet', 'mGLOBAL_FundShares')": 93.8,
+              "('0xa0fc8bdfb1e6a705c1375810989b1d70a982b01b', 'mGLOBAL_Redemption_Vault_ETH')": 6.1,
+              "('0xb38c71199d7b480a8febadeeff59e5516338bcf6', 'mGLOBAL_Proceeds_Recipient_EVM')": 0.1,
+              "('total', '')": 100
+            }
+          }
+        },
+        "updatedAt": "2026-10-07T20:08:00.124Z"
+      }
+    },
+    "mHYPER": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mHYPER",
+      "accessedAt": "2026-10-07T20:45:26.303276+00:00",
+      "payload": {
+        "reports": {
+          "assets_by_protocol_chain": {
+            "equity": {
+              "('aave', 'megaeth')": 0.0018150579,
+              "('cex_1', 'cex_1')": 3.2341457704,
+              "('cex_2', 'cex_2')": 1.0960737588,
+              "('cex_3', 'cex_3')": 4.5594481551,
+              "('kamino', 'solana')": 0.0087382485,
+              "('merkl', 'ethereum')": 0.0064113359,
+              "('midas', 'ethereum')": 0.0220073249,
+              "('midas', 'plasma')": 0.002862442,
+              "('morpho', 'ethereum')": 1.5570437325,
+              "('morpho', 'monad')": 8.8310012562,
+              "('pendle', 'ethereum')": 9.8273925293,
+              "('pendle', 'monad')": 1.9597244472,
+              "('wallet', 'ethereum')": 0.335899486,
+              "('wallet', 'plasma')": 0.0705855867,
+              "('total', '')": 31.5150554006
+            }
+          },
+          "assets_by_protocol": {
+            "assets": {
+              "pendle": 11.7871211899,
+              "morpho": 10.388045004,
+              "cex_3": 4.5594481551,
+              "cex_1": 3.2341457704,
+              "cex_2": 1.0960737588,
+              "wallet": 0.4077142605,
+              "midas": 0.0248697669,
+              "kamino": 0.0087382485,
+              "merkl": 0.0069425484,
+              "aave": 0.0018150679,
+              "total": 31.5150740928
+            },
+            "liabilities": {
+              "pendle": 0,
+              "morpho": 0,
+              "cex_3": 0,
+              "cex_1": 0,
+              "cex_2": 0,
+              "wallet": 0,
+              "midas": 0,
+              "kamino": 0,
+              "merkl": 0,
+              "aave": 0,
+              "total": -0.0000186922
+            },
+            "equity": {
+              "pendle": 11.7871211899,
+              "morpho": 10.388045004,
+              "cex_3": 4.5594481551,
+              "cex_1": 3.2341457704,
+              "cex_2": 1.0960737588,
+              "wallet": 0.4077142605,
+              "midas": 0.0248697669,
+              "kamino": 0.0087382485,
+              "merkl": 0.0069425484,
+              "aave": 0.0018150679,
+              "total": 31.5150554006
+            },
+            "equity_pct_nav": {
+              "pendle": 37.4,
+              "morpho": 32.96,
+              "cex_3": 14.47,
+              "cex_1": 10.26,
+              "cex_2": 3.48,
+              "wallet": 1.29,
+              "midas": 0.08,
+              "kamino": 0.03,
+              "merkl": 0.02,
+              "aave": 0.01,
+              "total": 100
+            },
+            "protocol_type": {
+              "pendle": "deposit",
+              "morpho": "borrow_lend",
+              "cex_3": "cex/dex",
+              "cex_1": "cex/dex",
+              "cex_2": "cex/dex",
+              "wallet": "custody",
+              "midas": "yield",
+              "kamino": "borrow_lend",
+              "merkl": "rewards",
+              "aave": "borrow_lend",
+              "total": null
+            }
+          },
+          "asset_values": {
+            "pv_usd": {
+              "ethereum": 11.749,
+              "monad": 10.792,
+              "cex_3": 4.559,
+              "cex_1": 3.234,
+              "cex_2": 1.096,
+              "plasma": 0.074,
+              "solana": 0.009,
+              "megaeth": 0.002,
+              "total": 31.515
+            },
+            "pv_pct_nav": {
+              "ethereum": 37.3,
+              "monad": 34.2,
+              "cex_3": 14.5,
+              "cex_1": 10.3,
+              "cex_2": 3.5,
+              "plasma": 0.2,
+              "solana": 0,
+              "megaeth": 0,
+              "total": 100
+            }
+          },
+          "assets_by_wallet": {
+            "pv_usd": {
+              "('0x68e7e72938db36a5cbbca7b52c71dbbaadfb8264', 'mHYPER_SMA1_EVM')": 22.179,
+              "('cex_3', 'mHYPER_cex_3')": 4.559,
+              "('cex_1', 'mHYPER_cex_1')": 3.234,
+              "('cex_2', 'mHYPER_cex_2')": 1.096,
+              "('0x6be2f55816efd0d91f52720f096006d63c366e98', 'mHYPER_Redemption_Vault_ETH')": 0.291,
+              "('0x880661f9b412065d616890ca458dccd0146cb77c', 'mHYPER_Redemption_Vault_Plasma')": 0.061,
+              "('0xf356c5e9f69dadb332bb098c7ed960db1d3376dd', 'mHYPER_Proceeds_Recipient')": 0.044,
+              "('0x5278dc8b75063efda4760d7db71328ee74d527e5', 'mHYPER_SMA_Instant_Redemption_Fee')": 0.025,
+              "('0xa4fc2c65643b67ffdbf5cb0b528a10e771f1f159', 'mHYPER_Request_Redeemer')": 0.01,
+              "('J1ChJ8gTCrNG9H4SKYdhWUaxSaayMkUGSojKudqToRfL', 'mHYPER_SMA2_Solana')": 0.009,
+              "('0x4dba22abb7da26cca7b55161e733591522bc82dd', 'mHYPER_SMA6_EVM')": 0.007,
+              "('total', '')": 31.515
+            },
+            "pv_pct_nav": {
+              "('0x68e7e72938db36a5cbbca7b52c71dbbaadfb8264', 'mHYPER_SMA1_EVM')": 70.4,
+              "('cex_3', 'mHYPER_cex_3')": 14.5,
+              "('cex_1', 'mHYPER_cex_1')": 10.3,
+              "('cex_2', 'mHYPER_cex_2')": 3.5,
+              "('0x6be2f55816efd0d91f52720f096006d63c366e98', 'mHYPER_Redemption_Vault_ETH')": 0.9,
+              "('0x880661f9b412065d616890ca458dccd0146cb77c', 'mHYPER_Redemption_Vault_Plasma')": 0.2,
+              "('0xf356c5e9f69dadb332bb098c7ed960db1d3376dd', 'mHYPER_Proceeds_Recipient')": 0.1,
+              "('0x5278dc8b75063efda4760d7db71328ee74d527e5', 'mHYPER_SMA_Instant_Redemption_Fee')": 0.1,
+              "('0xa4fc2c65643b67ffdbf5cb0b528a10e771f1f159', 'mHYPER_Request_Redeemer')": 0,
+              "('J1ChJ8gTCrNG9H4SKYdhWUaxSaayMkUGSojKudqToRfL', 'mHYPER_SMA2_Solana')": 0,
+              "('0x4dba22abb7da26cca7b55161e733591522bc82dd', 'mHYPER_SMA6_EVM')": 0,
+              "('total', '')": 100
+            }
+          }
+        },
+        "updatedAt": "2026-10-07T20:06:50.144Z"
+      }
+    },
+    "mRE7": {
+      "url": "https://api-prod.midas.app/api/transparency?token=mRE7",
+      "accessedAt": "2026-10-07T20:47:01.947557+00:00",
+      "payload": {
+        "reports": {}
+      }
+    }
+  },
+  "historical": {
+    "reports": {
+      "main_positions": {
+        "pv_usd": {
+          "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.638,
+          "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.812
+        },
+        "delta_usd": {
+          "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')": 71.638,
+          "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')": 4.812
+        }
+      },
+      "assets_by_protocol_chain": {
+        "equity": {
+          "('wallet', 'base')": 0.0020949785,
+          "('wallet', 'ethereum')": 76.4510933333,
+          "('total', '')": 76.4537698558
+        }
+      },
+      "assets_by_protocol": {
+        "assets": {
+          "wallet": 76.4537698558,
+          "total": 76.4537698558
+        },
+        "equity": {
+          "wallet": 76.4537698558,
+          "total": 76.4537698558
+        },
+        "equity_pct_nav": {
+          "wallet": 100,
+          "total": 100
+        },
+        "protocol_type": {
+          "wallet": "custody",
+          "total": null
+        }
+      },
+      "asset_values": {
+        "pv_usd": {
+          "ethereum": 76.451,
+          "base": 0.002,
+          "total": 76.454
+        },
+        "pv_pct_nav": {
+          "ethereum": 100,
+          "base": 0,
+          "total": 100
+        }
+      },
+      "assets_by_wallet": {
+        "pv_usd": {
+          "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 71.638,
+          "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 4.812,
+          "('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')": 0.002,
+          "('total', '')": 76.454
+        },
+        "pv_pct_nav": {
+          "('0x569d7dccbf6923350521ecbc28a555a500c4f0ec', 'mTBILL_Redemption_Vault_Ethereum')": 93.7,
+          "('0x225c19beb8f6ad683b1d3a091dca0fcfc603ecde', 'mTBILL_Fireblocks1')": 6.3,
+          "('0x63e000c7ed1e2036ef7a5297acfdfe6d79606a34', 'mTBILL_Proceeds_Recipient1')": 0,
+          "('total', '')": 100
+        }
+      }
+    }
+  }
+}

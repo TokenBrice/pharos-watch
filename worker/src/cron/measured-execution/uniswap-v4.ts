@@ -13,7 +13,7 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
-import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
+import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_REVIEWED_DEPLOYMENTS, type ReviewedUniswapV4Deployment } from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCodeAtBlock,
@@ -62,7 +62,7 @@ const uniswapV4QuoteMulticallExecutor = createEvmQuotePlanMulticallExecutor({
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
   protocol: "uniswap-v4";
-  chain: "ethereum" | "bsc" | "base" | "arbitrum" | "polygon" | "unichain" | "tempo";
+  chain: ReviewedUniswapV4Deployment["chain"];
   mode: "active" | "shadow";
   scoreEligible: boolean;
   poolManagerAddress: `0x${string}`;
@@ -82,34 +82,20 @@ export interface UniswapV4Deployment {
  * production shadow generations and a 129/130 successful latest generation on
  * 2026-08-13. Other pinned deployments collect shadow evidence only; hooks remain excluded.
  */
-const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] = [
-  {
-    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
-    protocol: "uniswap-v4",
-    chain: "ethereum",
-    mode: "active",
-    scoreEligible: true,
-    poolManagerAddress: UNISWAP_V4_DEPLOYMENT.poolManagerAddress,
-    expectedPoolManagerCodeHash: UNISWAP_V4_DEPLOYMENT.poolManagerCodeHash,
-    stateViewAddress: UNISWAP_V4_DEPLOYMENT.stateViewAddress,
-    expectedStateViewCodeHash: UNISWAP_V4_DEPLOYMENT.stateViewCodeHash,
-    endpointAddress: UNISWAP_V4_DEPLOYMENT.quoterAddress,
-    expectedCodeHash: UNISWAP_V4_DEPLOYMENT.quoterCodeHash,
-  },
-  ...UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment): UniswapV4Deployment => ({
+const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] =
+  UNISWAP_V4_REVIEWED_DEPLOYMENTS.map((deployment): UniswapV4Deployment => ({
     adapterProfileId: deployment.adapterProfileId,
     protocol: deployment.protocol,
     chain: deployment.chain,
-    mode: "shadow",
-    scoreEligible: false,
+    mode: deployment.mode,
+    scoreEligible: deployment.scoreEligible,
     poolManagerAddress: deployment.poolManagerAddress,
     expectedPoolManagerCodeHash: deployment.poolManagerCodeHash,
     stateViewAddress: deployment.stateViewAddress,
     expectedStateViewCodeHash: deployment.stateViewCodeHash,
     endpointAddress: deployment.quoterAddress,
     expectedCodeHash: deployment.quoterCodeHash,
-  })),
-] as const;
+  }));
 
 export function getUniswapV4Deployment(
   chain: string,

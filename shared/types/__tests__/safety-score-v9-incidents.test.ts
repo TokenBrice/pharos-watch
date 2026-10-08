@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   V9ReviewedIncidentRegistrySchema,
   V9ReviewedIncidentSchema,
+  V9NegativeIncidentReviewSchema,
 } from "../safety-score-v9-incidents";
 import {
   V9_WRAPPER_LOCAL_FACT_KEYS,
@@ -47,6 +48,74 @@ const BASE_INCIDENT = {
     ],
   },
 } as const;
+
+const NEGATIVE_REVIEW = {
+  reviewId: "fixture-negative-review",
+  assetId: "fixture-asset",
+  scope: { kind: "control", controlKey: "mint-meta:fixture-asset:controller" },
+  reviewedAt: "2026-10-07T14:00:00Z",
+  reviewer: "Fixture incident researcher",
+  windowStartSec: Date.parse("2026-09-01T00:00:00Z") / 1_000,
+  windowEndSec: Date.parse("2026-10-07T13:00:00Z") / 1_000,
+  conclusion: "no-known-incident",
+  searchedSurfaces: [
+    { kind: "issuer-announcements", url: "https://example.com/news", finding: "No control incident disclosed in the specified search window." },
+    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact deployment event census completed through the pinned window end." },
+    { kind: "incident-tracker", url: "https://example.com/tracker", finding: "Exact issuer/deployment searched in incident tracker." },
+  ],
+  sources: [{ label: "Primary announcement archive", url: "https://example.com/news", observedAt: "2026-10-07T13:30:00Z", location: "Dated announcements archive", excerpt: "Operational status" }],
+} as const;
+
+describe("Safety Score v9 researched-negative incident schema", () => {
+  it("admits exact control and deployment scope without inventing an incident", () => {
+    expect(V9NegativeIncidentReviewSchema.safeParse(NEGATIVE_REVIEW).success).toBe(true);
+    expect(V9NegativeIncidentReviewSchema.safeParse({
+      ...NEGATIVE_REVIEW,
+      scope: { kind: "deployment", deploymentKey: "ethereum:0x1111111111111111111111111111111111111111", controlKinds: ["mint"] },
+    }).success).toBe(true);
+    const registry = V9ReviewedIncidentRegistrySchema.parse({ schemaVersion: 1, incidents: [], negativeReviews: [NEGATIVE_REVIEW] });
+    expect(registry.incidents).toEqual([]);
+    expect(registry.negativeReviews).toHaveLength(1);
+  });
+
+  it("compares source and review timestamps without truncating fractional seconds", () => {
+    const reviewedAt = "2026-10-07T14:52:14.754Z";
+    for (const observedAt of ["2026-10-07T14:50:33.371Z", reviewedAt]) {
+      expect(V9NegativeIncidentReviewSchema.safeParse({
+        ...NEGATIVE_REVIEW, reviewedAt, sources: [{ ...NEGATIVE_REVIEW.sources[0], observedAt }],
+      }).success).toBe(true);
+    }
+    expect(V9NegativeIncidentReviewSchema.safeParse({
+      ...NEGATIVE_REVIEW, reviewedAt, sources: [{ ...NEGATIVE_REVIEW.sources[0], observedAt: "2026-10-07T14:52:14.755Z" }],
+    }).success).toBe(false);
+  });
+
+  it("requires finite ordered windows, actual observation dates, and all search classes", () => {
+    for (const overrides of [
+      { windowStartSec: NEGATIVE_REVIEW.windowEndSec + 1 },
+      { windowEndSec: Date.parse("2026-10-08T00:00:00Z") / 1_000 },
+      { windowEndSec: Infinity },
+      { reviewedAt: "not-a-date" },
+      { conclusion: "unknown" },
+      { searchedSurfaces: NEGATIVE_REVIEW.searchedSurfaces.slice(1) },
+      { searchedSurfaces: NEGATIVE_REVIEW.searchedSurfaces.slice(0, 2) },
+      { searchedSurfaces: NEGATIVE_REVIEW.searchedSurfaces.filter((surface) => surface.kind !== "explorer-events") },
+      { sources: [] },
+      { sources: [{ ...NEGATIVE_REVIEW.sources[0], observedAt: "2026-10-07T15:00:00Z" }] },
+      { scope: { kind: "control", controlKey: "mint-meta:another-asset:controller" } },
+      { scope: { kind: "deployment", deploymentKey: "ethereum:0x1111111111111111111111111111111111111111", controlKinds: [] } },
+    ]) {
+      expect(V9NegativeIncidentReviewSchema.safeParse({ ...NEGATIVE_REVIEW, ...overrides }).success).toBe(false);
+    }
+  });
+
+  it("rejects duplicate negative-review IDs and preserves the legacy envelope", () => {
+    expect(V9ReviewedIncidentRegistrySchema.safeParse(incidentReviewsAsset).success).toBe(true);
+    expect(V9ReviewedIncidentRegistrySchema.safeParse({
+      schemaVersion: 1, incidents: [], negativeReviews: [NEGATIVE_REVIEW, NEGATIVE_REVIEW],
+    }).success).toBe(false);
+  });
+});
 
 describe("Safety Score v9 reviewed incident schema", () => {
 

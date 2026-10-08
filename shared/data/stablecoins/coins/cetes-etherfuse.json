@@ -96,7 +96,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "cetes-etherfuse",
     "display": {
@@ -122,8 +122,12 @@
   "launchDate": "2024-04-12",
   "status": "quarantined",
   "listingStatusReview": {
-    "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+    "changedAt": "2026-10-08",
+    "reviewBy": "2026-11-07",
+    "reason": "September 29 issuer CETES totals and positive CoinGecko data leave MXN/USD denomination and circulating/native/represented supply scope unreconciled. Keep quarantined until fresh identity-bound pricing and a double-count-safe multichain circulating census agree.",
+    "source": {
+      "label": "Etherfuse attestation history: September 29 exact CETES mint totals, reviewed October 8",
+      "url": "https://api.etherfuse.com/statement/attestation"
+    }
   }
 }

@@ -8,7 +8,7 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-08-14)",
+        "label": "ESMA interim MiCA register: EMT issuers (checked 2026-10-07)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -22,63 +22,169 @@
     ]
   },
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "rUSD is a USD-pegged, 1:1 mintable/redeemable stablecoin that structurally meets the GENIUS Act definition of a payment stablecoin. However, the issuer explicitly excludes US persons from the protocol and interface via its Terms of Service, and the ToS is governed by Cayman Islands law, indicating the issuer has not sought any US regulatory pathway."
+      "summary": "rUSD is marketed as a dollar stablecoin and is mintable and redeemable 1:1 for USDC, USDT and USD1. Its published rights describe protocol redemption into other digital assets, subject to liquidity, without identifying a legal issuer obligated to pay a fixed amount of national currency or bank deposits. GENIUS section 2(22) excludes digital assets denominated in monetary value from the redemption limb, leaving the payment-stablecoin applicability unresolved.",
+      "references": [
+        {
+          "label": "Reservoir rUSD docs",
+          "url": "https://docs.reservoir.xyz/products/stablecoin-rusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reservoir Terms of Service (US person exclusion, Cayman Islands governing law)",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-08-23",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reservoir risk factors: redemption and legal relationships",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/risk-factors.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-08-23",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Reservoir Protocol (incubated by Fortunafi)",
-    "issuerDomicile": "Cayman Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://app.reservoir.xyz/reserves",
+    "reserveDisclosureUrl": "https://docs.reservoir.xyz/products/proof-of-reserves.md",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The Reservoir Terms of Service explicitly state that rUSD is not offered to US persons and that US persons are not permitted to use the Interface or Protocol. The ToS is governed by Cayman Islands law. No named legal issuer entity is disclosed; the protocol is operated by Reservoir Protocol, incubated by Fortunafi. No GENIUS Act pathway, PPSI application, or foreign exception engagement was identified.",
+    "notes": "issuerEntity retains the pre-sweep protocol descriptor, Reservoir Protocol (incubated by Fortunafi), supported by Reservoir's June 12, 2024 inception disclosure and current protocol documentation. It identifies the protocol associated with rUSD and does not identify an incorporated legal issuer, a fiat-redemption obligor or a GENIUS authorization. The public terms name Reservoir Protocol without identifying a legal token issuer and bar U.S. persons from using the Interface or Protocol. Cayman Islands governing law does not establish issuer domicile. Risk factors identify Reservoir Foundation as the nominal subscriber to underlying investment funds but expressly disclaim its legal or contractual relationship with token holders; Fortunafi Capital Management LLC is identified as an initial asset manager, not the token issuer. The reserve documentation is a protocol self-disclosure of assets, liabilities and allocation categories. The dashboard fetch displayed jurisdictional restrictions rather than reserve balances, so the verified public documentation replaces the dashboard as reserveDisclosureUrl. No current reserve quantities or independent monthly attestation were verified. redemptionPolicyPresent records the published 1:1 protocol conversion policy, not an unconditional issuer obligation to redeem into fiat. No qualifying public GENIUS approval, pending application, announced route or foreign-exception registration was located in the sources checked. The pre-effective DASP status describes GENIUS restrictions only and does not override the issuer terms.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Reservoir Terms of Service (US person exclusion, Cayman Islands governing law)",
         "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-08-23"
       },
       {
         "label": "Reservoir rUSD docs",
         "url": "https://docs.reservoir.xyz/products/stablecoin-rusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Reservoir reserves",
-        "url": "https://app.reservoir.xyz/reserves",
-        "sourceKind": "issuer-disclosure"
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir risk factors: redemption and legal relationships",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/risk-factors.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-08-23",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir protocol reserve disclosure",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency entity directory and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury section 3 issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir inception: Fortunafi incubation and rUSD protocol identity",
+        "url": "https://reservoir.beehiiv.com/p/the-reservoir-inception",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-06-12",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service): confirmed US person exclusion and Cayman Islands governing law",
-        "Reservoir rUSD docs and protocol documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "Reservoir rUSD product documentation, terms dated 2024-08-23, risk factors, reserve documentation and reserve-dashboard jurisdiction restriction page",
+        "OCC Bulletin 2026-3 proposed-rule metadata and complete pending digital asset licensing application table inspected in raw official HTML",
+        "NYDFS regulated virtual currency entities and issuance-approved Greenlist",
+        "Treasury August 17 section 3 proposal and September 30 SCRC procedural rule",
+        "Federal Reserve September 24 GENIUS implementation proposals",
+        "Official-domain search: (Reservoir OR Fortunafi OR rUSD) (GENIUS OR stablecoin) on OCC, FDIC, NCUA, Federal Reserve, NYDFS and Treasury domains",
+        "Reservoir-domain search for GENIUS, PPSI, OCC and legal issuer on docs.reservoir.xyz, reservoir.xyz and reservoir.beehiiv.com",
+        "Named-token and issuer searches on SEC, CFTC, OFAC and FinCEN domains; no token-specific enforcement match found"
       ],
-      "summary": "Reservoir's ToS explicitly bars US persons from rUSD; Cayman Islands governing law and absence of any named US legal entity confirm the issuer has not engaged with GENIUS Act compliance. No PPSI approval, state-qualified approval, official application, or foreign exception registration was found.",
+      "summary": "No qualifying public rUSD issuer approval, state-qualified designation, token-specific pending application, GENIUS issuance-pathway announcement or registered foreign-issuer exception was found. Reservoir and Fortunafi were absent from the opened OCC pending digital-asset charter table and NYDFS entity list; those lists are ordinary licensing context, not exhaustive GENIUS issuer registers. The named legal issuer remains unresolved. The U.S.-person exclusion and Cayman governing-law clause do not prove that no confidential regulatory engagement exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entity directory and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state certification procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Reservoir Protocol (incubated by Fortunafi)"
   }
 }

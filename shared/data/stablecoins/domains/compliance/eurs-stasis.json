@@ -1,23 +1,5 @@
 {
   "id": "eurs-stasis",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA interim MiCA EMT white-paper register; STASIS, STSS and EURS entries not found in the 2026-10-01 retrieval (portal last updated 30 September 2026)",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      },
-      {
-        "label": "ESMA MiCA register portal (weekly-updated interim CSV files)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "MiCA-compliant stablecoins 2026 full list (eco.com): EURS absent",
-        "url": "https://eco.com/support/en/articles/15192006-mica-compliant-stablecoins-2026-full-list-with-issuers"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -27,7 +9,7 @@
           "label": "STASIS Terms of Business: EURS is referenced to the euro and redeemable at par",
           "url": "https://stasis.net/terms",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -35,84 +17,176 @@
     "issuerPathway": "unknown",
     "issuerEntity": "STSS (Malta) Limited",
     "issuerDomicile": "Malta",
-    "licensingRegulator": "Malta jurisdiction context; no qualifying U.S. GENIUS authorization found",
+    "licensingRegulator": "MFSA Financial Services Register: STSS (MALTA) LIMITED legacy whitepaper deregistered; no other authorisations shown",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://stasis.net/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "EURS is a foreign, euro-referenced payment stablecoin. STASIS describes EU use and U.S. legal opinions, so applicability is retained, but no token-specific U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. The foreign pathway remains unknown rather than inferred from Malta or MiCA context. GENIUS rulemaking is still in the proposed-rules phase.",
+    "notes": "EURS is a foreign, euro-referenced payment stablecoin. STASIS describes EU use and U.S. legal opinions; no token-specific U.S. PPSI approval, state-qualified approval, official application or registered foreign-issuer exception was located as of 2026-10-07. The foreign pathway remains unknown. The MFSA public register identifies the exact issuer with a deregistered legacy whitepaper and no other authorisations; that is foreign licensing context, not U.S. GENIUS enforcement. STASIS publishes daily reserve information and describes quarterly verification and annual audits, not a publicly located monthly attestation. The FAQ licensing-update statement referring to later 2023 is stale and does not evidence a pending current application. Federal issuer implementation rules remain proposed; the September SCRC procedural rule does not qualify an issuer or bring the Act into force. Expected Act effective date remains January 18, 2027.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule and foreign issuer framework",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Federal Register 91 FR 37234: GENIUS Act permitted payment stablecoin issuer CIP proposal",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
         "sourceKind": "federal-register",
-        "sourceDate": "2026-06-22",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-22"
       },
       {
         "label": "Federal Reserve R-1885: joint GENIUS Act customer identification proposal",
         "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-06-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-18"
       },
       {
         "label": "STASIS Terms of Business: issuer entity and EURS redemption terms",
         "url": "https://stasis.net/terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "STASIS FAQ: public statement on EU regulation and U.S. legal opinions",
         "url": "https://stasis.net/faq",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "STASIS reserve transparency and verification disclosures",
+        "url": "https://stasis.net/transparency/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MFSA Financial Services Register: STSS (MALTA) LIMITED authorisation record",
+        "url": "https://fsr.mfsa.mt/Licences/searchLicencesByLicenceHolder?filter=STSS",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act enacted statutory text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "U.S. Treasury: expected GENIUS effective date and foreign issuer lawful-order requirements",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Federal Reserve: GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC digital-assets licensing applications inventory",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency businesses and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and Bulletin 2026-3",
-        "Federal Register 91 FR 37234 permitted payment stablecoin issuer CIP proposal",
-        "Federal Reserve R-1885 joint GENIUS Act customer identification proposal",
-        "STASIS Terms of Business, FAQ, legal pages, and transparency page",
-        "Public searches for STSS (Malta) Limited or EURS GENIUS approval, application, or foreign-issuer registration"
+        "OCC Bulletin 2026-3 and the March 2 OCC GENIUS proposed rule, 91 FR 10202",
+        "OCC pending digital-assets licensing applications inventory (bank-charter scope only)",
+        "Treasury August 17 GENIUS effective-date and foreign issuer statement",
+        "Federal Reserve September 24 GENIUS implementation proposals",
+        "September 30 Stablecoin Certification Review Committee procedures rule",
+        "NYDFS virtual-currency businesses directory and Greenlist",
+        "Federal Register June 22 joint permitted-issuer CIP proposal and Federal Reserve R-1885 proposal",
+        "STASIS Terms of Business, FAQ, about-us and reserve-transparency disclosures",
+        "MFSA exact STSS (MALTA) LIMITED issuer authorisation search and detail page",
+        "Independent exact issuer/token domain searches across OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS on 2026-10-07",
+        "Independent public searches for this issuer/token paired with GENIUS, PPSI, U.S. application and foreign-issuer registration on 2026-10-07"
       ],
-      "summary": "No token-specific U.S. PPSI approval, state-qualified approval, regulator-confirmed application, or registered foreign-issuer exception was located for STSS (Malta) Limited or EURS. The federal materials reviewed are proposed rules, not issuer authorizations.",
+      "summary": "No public token-specific PPSI approval, state-qualified approval, regulator-confirmed pending application, registered foreign-issuer exception, or U.S. GENIUS enforcement action was located for STSS (Malta) Limited or EURS in these reviewed sources as of 2026-10-07. Exact-name searches produced no matching official authorization. Proposed federal implementation rules and the SCRC procedural rule do not establish issuer approval or an earlier Act effective date. The public-source review is not a claim that no private application exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
         },
         {
           "label": "Federal Register 91 FR 37234: GENIUS Act CIP proposal",
           "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
           "sourceKind": "federal-register",
-          "sourceDate": "2026-06-22",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-22"
         },
         {
           "label": "STASIS Terms of Business: EURS issuer and redemption disclosure",
           "url": "https://stasis.net/terms",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "U.S. Treasury: expected GENIUS effective date and foreign issuer lawful-order requirements",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Federal Reserve: GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedures interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC digital-assets licensing applications inventory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
         }
       ]
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    }
   }
 }

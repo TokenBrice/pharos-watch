@@ -26,13 +26,20 @@
           "label": "Circle USYC",
           "url": "https://www.circle.com/usyc",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-18"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "USYC Docs: Introduction",
           "url": "https://usyc.docs.hashnote.com/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-18"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
@@ -42,22 +49,36 @@
     "issuerDomicile": "Bermuda / Cayman Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "USYC is a tokenized fund share in the Hashnote International Short Duration Fund Ltd. (Cayman Islands registered mutual fund), not a payment stablecoin. The GENIUS Act payment-stablecoin framework does not apply: USYC is yield-bearing via NAV appreciation, not fixed-value, and represents a securities interest. Circle acquired Hashnote in January 2025; the token administrator is Circle International Bermuda Limited, regulated by the Bermuda Monetary Authority (BMA) under its DABA License.",
+    "notes": "USYC represents shares in the Hashnote International Short Duration Fund Ltd., identified by Circle as a Cayman Islands registered mutual fund. Circle International Bermuda Limited is its token administrator and a BMA-licensed digital asset business. The fund-share rights support the GENIUS Act section 2(22)(B)(iii) securities exclusion; NAV appreciation and yield alone do not determine the exclusion. Circle acquired Hashnote in January 2025. No USDC or EURC affiliate authorization is attributed to USYC.",
     "references": [
       {
         "label": "Circle USYC",
         "url": "https://www.circle.com/usyc",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "USYC Docs: Introduction",
         "url": "https://usyc.docs.hashnote.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Circle announces acquisition of Hashnote",
+        "url": "https://www.circle.com/es/pressroom/circle-announces-acquisition-of-hashnote-and-usyc-tokenized-money-market-fund-alongside-strategic-partnership-with-global-trading-firm-drw",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-01-21"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

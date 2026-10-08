@@ -57,6 +57,20 @@ paths = [
   '''(?:^|/)scripts/ci/check-cron-connection-budget\.test\.ts$''',
 ]
 
+# This reviewed slot key names the public cron-slot row used by the Heavy smoke
+# query and V9 admission fixture. Pair its exact value with only those owners:
+# unrelated credentials remain detectable, and the exception survives rebases.
+[[allowlists]]
+description = "Reviewed V9 supply-attribution cron slot key is a public scheduler identifier"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^v9SupplyAttributionOffset$''']
+paths = [
+  '''(?:^|/)scripts/maintenance/run-worker-smoke\.mjs$''',
+  '''(?:^|/)worker/src/lib/__tests__/v9-slot-window\.test\.ts$''',
+]
+
 [[allowlists]]
 description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
@@ -232,23 +246,6 @@ paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/(?:whirlpool
 
 # Wave-4 finalized-account and same-slot simulation fixtures retain public
 # input mints. Exact values and paths only; never exempt arbitrary base58 keys.
-[[allowlists]]
-description = "Reviewed input mint pubkeys in the Meteora DLMM pinned-account fixture"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "secret"
-regexes = [
-  '''^JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD$''',
-  '''^EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v$''',
-  '''^Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C$''',
-  '''^3uZLfBgY9XaLXG7C2DDdVjQWgS9x9kEb9VLpfe4yED4P$''',
-  '''^6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG$''',
-  '''^GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq$''',
-  '''^USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX$''',
-  '''^A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6$''',
-]
-paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/meteora-dlmm-pinned\.json$''']
-
 [[allowlists]]
 description = "Reviewed USDC input mint in the wave-4 Raydium simulation and Solana CLMM fixtures"
 targetRules = ["generic-api-key"]
@@ -472,3 +469,48 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH$''']
 paths = ['''(?:^|/)worker/src/lib/__tests__/fixtures/usdv-jupiter-quotes\.json$''']
+
+# Reviewed wave-5 public document links cited in the missing-data ledger:
+# Saturn's Certora/Three Sigma audit PDFs (3131394583-files.gitbook.io), Cap's
+# whitepaper and Matrixdock's STBT terms/gold report. The Matrixdock gold-report
+# token is also matched with the sentence period that follows it in prose.
+[[allowlists]]
+description = "Reviewed wave-5 GitBook public download tokens in missing-data ledger evidence"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:1249bd80-ea7f-4447-a7f3-ba2b5e21fd9d|923bdc63-98c3-49d7-92cc-f9e7c760d575|27dc0f4e-6882-4188-b46b-6f0b65f8ef9c|a2fe3d9b-b81f-4e23-b40d-0b3aa3178646|937d6687-03b4-4c9b-a525-5f180793a6a2|79d5fd49-deae-41b4-a809-9e1afaa02f32|19d915b4-356f-4abd-a4b2-d331515adc22|54e9714e-c65f-4b0c-8bcf-c7869956dd20)\.?$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+
+# Slash-joined prose terms in reviewed ledger rationales ("Token Terms:
+# funding/basis/leverage", "API books, supply/borrow/idle counters") are not keys.
+[[allowlists]]
+description = "Reviewed slash-joined prose terms in missing-data ledger rationales"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:funding/basis/leverage|supply/borrow/idle)$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+
+# Reviewed public GitBook download links cited in compliance sidecars
+# (2026-10-07 MiCA/GENIUS sweep): Midas product terms and KIDs, Matrixdock STBT
+# terms, OpenEden USDO terms, Mu Digital AZND, Apyx and Sonic USSD disclaimers.
+# Each token is a public CDN capability for an issuer document; any other
+# high-entropy value in a compliance sidecar still fails the scan.
+[[allowlists]]
+description = "Reviewed GitBook public download tokens in compliance sidecar references"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:d80ceabb-07a6-4dc4-9020-70ec86b4f42f|bf215cdc-f549-474d-8ca9-5a1810fabeb8|0386fd1d-2316-4320-b799-96ec6c4e827e|a14472d0-79d6-41bf-89e7-82cb699e77ed|b06233b0-229f-47ce-b622-127fb63f231f|79d5fd49-deae-41b4-a809-9e1afaa02f32|f8496498-5cb4-4fef-bc4e-417919b00eb1|234509c8-e339-4a05-8ac9-a101c5963313|b41923ad-1f3b-42af-9ef3-625a1a029e21|cad709b6-47f1-427d-ad14-443fa5cd76e1|3cad87ae-7846-4bfe-ba2e-411fbf166f60|54e9714e-c65f-4b0c-8bcf-c7869956dd20)$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/compliance/[a-z0-9-]+\.json$''']
+
+# Matrixdock STBT terms (same reviewed public GitBook download token as the
+# compliance sidecar entry above), cited by the STBT redemption route config.
+[[allowlists]]
+description = "Reviewed Matrixdock STBT terms GitBook download token in its redemption route config"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^79d5fd49-deae-41b4-a809-9e1afaa02f32$''']
+paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/discovery\.ts$''']

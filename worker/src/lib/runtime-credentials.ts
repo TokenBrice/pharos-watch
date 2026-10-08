@@ -54,7 +54,7 @@ export function buildTelegramCreds(env: TelegramCredentialEnv): TelegramCreds | 
  * `TELEGRAM_OPERATOR_CHAT_ID` unset the alert is suppressed rather than
  * falling back to `TELEGRAM_CHAT_ID`.
  */
-export function buildTelegramOperatorCreds(env: Env): TelegramCreds | null {
+export function buildTelegramOperatorCreds(env: Pick<Env, "TELEGRAM_BOT_TOKEN" | "TELEGRAM_OPERATOR_CHAT_ID">): TelegramCreds | null {
   return env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_OPERATOR_CHAT_ID
     ? {
         botToken: env.TELEGRAM_BOT_TOKEN,

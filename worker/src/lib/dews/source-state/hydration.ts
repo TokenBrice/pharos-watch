@@ -15,6 +15,8 @@ import { decodeJsonString } from "../../cache-json";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
+import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../../dex-liquidity-response";
+import type { DexHistoryRow } from "../../dex-liquidity-response";
 import {
   CONTRACT_CONFIGS,
   getBlacklistConfigByContract,
@@ -309,15 +311,16 @@ export interface DexLiquidityHistoryHydration {
 }
 
 export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise<DexLiquidityHistoryHydration> {
-  const liqHistCutoff = ctx.nowSec - 8 * DAY_SECONDS;
   const target7d = ctx.nowSec - 7 * DAY_SECONDS;
+  const tolerance = getDexLiquidityTrendTolerances().week;
+  const liqHistCutoff = target7d - tolerance;
   const liqHist7dMap = new Map<string, LiquidityHistorySnapshot>();
   let liqHistRowsRead = 0;
   try {
     const liqHistRows = await ctx.db
       .prepare(
         `SELECT /* pharos:dews:dex-liquidity-history */
-           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd
+           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_confidence
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
          ORDER BY snapshot_date ASC`,
@@ -328,16 +331,23 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
         snapshot_date: number;
         liquidity_score: number | null;
         total_tvl_usd: number | null;
+        coverage_confidence: number | null;
       }>();
     liqHistRowsRead = liqHistRows.results.length;
 
+    const byId = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
     for (const row of liqHistRows.results) {
-      const existing = liqHist7dMap.get(row.stablecoin_id);
-      if (!existing || Math.abs(row.snapshot_date - target7d) < Math.abs(existing.date - target7d)) {
-        liqHist7dMap.set(row.stablecoin_id, {
-          score: row.liquidity_score ?? null,
-          tvl: row.total_tvl_usd ?? null,
-          date: row.snapshot_date,
+      const history = byId.get(row.stablecoin_id) ?? [];
+      history.push({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0, coverage_class: null });
+      byId.set(row.stablecoin_id, history);
+    }
+    for (const [id, history] of byId) {
+      const baseline = selectTrendBaseline(history, target7d, tolerance);
+      if (baseline) {
+        liqHist7dMap.set(id, {
+          score: baseline.liquidity_score ?? null,
+          tvl: baseline.total_tvl_usd,
+          date: baseline.snapshot_date,
         });
       }
     }

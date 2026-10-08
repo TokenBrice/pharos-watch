@@ -5,6 +5,7 @@ import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   DexExitRouteObservationsSchema,
   DexPoolVolumeObservationSchema,
+  DexRetiredSolidlyLegacyModelSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
@@ -267,7 +268,10 @@ export function normalizeTopPools(
       cleaned.chain = toChainDisplay(poolRecord.chain);
     }
     if (poolRecord.extra && typeof poolRecord.extra === "object" && !Array.isArray(poolRecord.extra)) {
-      cleaned.extra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+      const cleanedExtra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
+      const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(cleanedExtra.ammExecutionModel);
+      if (retired.success) cleanedExtra.ammExecutionModel = retired.data;
+      cleaned.extra = cleanedExtra;
     }
     // Absent = legacy row whose volume eligibility was never recorded; a
     // malformed observation is dropped rather than published as measured.
@@ -287,15 +291,14 @@ export function normalizeTopPools(
   return pools;
 }
 
-// M7: Wide tolerance windows (24h for 24h baseline, 48h for 7d baseline) handle
-// missed cron runs gracefully. The dex-liquidity cron runs every 30 min, but if
-// several runs are missed, we still find a usable baseline within the tolerance.
-export function selectTrendBaseline(
-  history: DexHistoryRow[],
+// Select the nearest eligible daily observation within the caller's tolerance
+// (12h daily / 36h weekly). Keep extra fields paired with that exact row.
+export function selectTrendBaseline<T extends DexHistoryRow>(
+  history: T[],
   targetSec: number,
   toleranceSec: number,
-): DexHistoryRow | null {
-  let best: DexHistoryRow | null = null;
+): T | null {
+  let best: T | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const row of history) {
@@ -328,7 +331,9 @@ export type DexLiquidityWarningSurface =
 const GLOBAL_WARNING_SURFACE: DexLiquidityWarningSurface = { scope: "global" };
 
 // Flags that name exactly one stablecoin. Everything else (failed sources, guard
-// proximity, pipeline-wide drift counters) is dataset-wide.
+// proximity, pipeline-wide drift counters, run-level outcomes) is dataset-wide and
+// an operator concern: it surfaces on the global header and /liquidity, never on a
+// coin page, whose freshness banner already covers an aging dataset.
 const COIN_SCOPED_DRIFT_FLAG = /^(major-tvl-cliff|watchlist-pool-drop):.+$/;
 
 export function buildDexLiquidityWarning(
@@ -358,20 +363,24 @@ export function buildDexLiquidityWarning(
     }
   }
 
+  if (surface.scope === "coin") {
+    const coinFlags = qualityDriftFlags.filter(
+      (flag) => COIN_SCOPED_DRIFT_FLAG.test(flag) && flag.endsWith(`:${surface.stablecoinId}`),
+    );
+    if (coinFlags.length === 0) return null;
+    return `199 - "Latest sync-dex-liquidity run flagged this asset (qualityDriftFlags=${coinFlags.join(",")})"`;
+  }
+
   if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
 
   // A successful run whose only quality findings name individual coins does not
-  // warrant a page-level advisory: the global surface never banners for another
-  // coin's cliff, and a coin page reacts only to a flag naming that coin.
+  // warrant a dataset-wide advisory.
   const coinScopedOnly =
     failedSources.length === 0
     && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard
     && qualityDriftFlags.length > 0
     && qualityDriftFlags.every((flag) => COIN_SCOPED_DRIFT_FLAG.test(flag));
-  if (latestCron.status === "ok" && coinScopedOnly) {
-    if (surface.scope === "global") return null;
-    if (!qualityDriftFlags.some((flag) => flag.endsWith(`:${surface.stablecoinId}`))) return null;
-  }
+  if (latestCron.status === "ok" && coinScopedOnly) return null;
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);

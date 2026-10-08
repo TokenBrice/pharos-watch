@@ -100,13 +100,13 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/totalFactCount/);
   });
 
-  it("fails closed explicitly for authenticated schema 5 until cutover", async () => {
+  it("fails closed explicitly for authenticated schema 6 until typed-identity cutover", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
-    const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion: 5 }));
+    const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion: 6 }));
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
   });
 
-  it.each([4, 7])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
+  it.each([4, 5, 8])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion }));
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(`Unsupported Safety Score publication schema ${schemaVersion}`);

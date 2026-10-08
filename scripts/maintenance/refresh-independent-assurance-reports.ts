@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseArgs } from "node:util";
 import {
   getIndependentAssuranceManifest,
   IndependentAssuranceManifestSchema,
@@ -30,6 +31,10 @@ const TOLERANCE_OVERRIDES: Partial<Record<
   EUROP: {
     reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
     reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
+  },
+  MYRC: {
+    // August 2026 cash/fund schedule exceeds the asserted account total by MYR 0.03.
+    reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 },
   },
 };
 
@@ -110,6 +115,7 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
     engagement: config.engagement,
     conclusion: config.conclusion,
     unit: config.unit,
+    ...(config.nativeQuantityBasis ? { nativeQuantityBasis: config.nativeQuantityBasis } : {}),
     assets,
     liabilities,
     ...(adjustments.length > 0 ? { adjustments } : {}),
@@ -127,22 +133,29 @@ function compile(pdfPath: string, config: CompilerProfile): IndependentAssurance
   return manifest;
 }
 
-function parseFlag(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
+const { values } = parseArgs({
+  options: {
+    check: { type: "boolean", default: false },
+    write: { type: "boolean", default: false },
+    product: { type: "string" },
+    pdf: { type: "string" },
+    out: { type: "string" },
+  },
+  strict: true,
+  allowPositionals: false,
+});
 
 function requireProduct(): IndependentAssuranceProduct {
-  const value = parseFlag("--product");
+  const value = values.product;
   if (!value || !(PRODUCTS as readonly string[]).includes(value)) {
     throw new Error(`Use --product ${PRODUCTS.join("|")}`);
   }
   return value as IndependentAssuranceProduct;
 }
 
-const checkOnly = process.argv.includes("--check");
-const pdfPath = parseFlag("--pdf");
-if (checkOnly && !parseFlag("--product") && !pdfPath) {
+const checkOnly = values.check;
+const pdfPath = values.pdf;
+if (checkOnly && !values.product && !pdfPath) {
   for (const product of Object.keys(MANIFEST_SOURCES) as IndependentAssuranceProduct[]) {
     if (!COMPILER_PROFILES[product]) throw new Error(`No offline compiler profile for ${product}`);
   }
@@ -156,6 +169,9 @@ if (checkOnly && !parseFlag("--product") && !pdfPath) {
     }
     if (JSON.stringify(config.attestorIdentification ?? null) !== JSON.stringify(manifest.attestorIdentification ?? null)) {
       throw new Error(`Offline profile ${product}.attestorIdentification differs from reviewed manifest`);
+    }
+    if (JSON.stringify(config.nativeQuantityBasis ?? null) !== JSON.stringify(manifest.nativeQuantityBasis ?? null)) {
+      throw new Error(`Offline profile ${product}.nativeQuantityBasis differs from reviewed manifest`);
     }
     for (const [rows, amounts] of [[config.assetRows, manifest.assets], [config.liabilityRows, manifest.liabilities]] as const) {
       if (rows.length !== amounts.length || rows.some((row, index) => row.code !== amounts[index].code || row.label !== amounts[index].label)) {
@@ -181,14 +197,14 @@ if (checkOnly && !parseFlag("--product") && !pdfPath) {
   const product = requireProduct();
   if (!pdfPath) throw new Error("Use --pdf /path/to/official-report.pdf");
   const compiled = compile(resolve(pdfPath), COMPILER_PROFILES[product]!);
-  const outputPath = parseFlag("--out") ?? resolve(MANIFEST_DIR, `${product.toLowerCase()}.json`);
+  const outputPath = values.out ?? resolve(MANIFEST_DIR, `${product.toLowerCase()}.json`);
   if (checkOnly) {
     const reviewed = getIndependentAssuranceManifest(product);
     if (JSON.stringify(compiled) !== JSON.stringify(reviewed)) {
       throw new Error(`Offline compilation differs from reviewed ${outputPath}; stop for review before writing`);
     }
     console.log(`Verified ${product}: ${compiled.reportSha256.slice(0, 12)}… ${compiled.reportByteLength} bytes`);
-  } else if (process.argv.includes("--write")) {
+  } else if (values.write) {
     writeFileSync(outputPath, `${JSON.stringify(compiled, null, 2)}\n`);
     console.log(`Wrote ${outputPath}`);
   } else {

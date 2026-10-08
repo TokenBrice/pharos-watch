@@ -109,7 +109,11 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
   }
 }
 
-export async function computeRawStatus(db: D1Database, now: number, schedulerLiveness?: SchedulerLiveness) {
+export async function computeRawStatus(
+  db: D1Database,
+  now: number,
+  schedulerLiveness?: SchedulerLiveness,
+) {
   const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status", schedulerLiveness });
   if (!publicHealth.dbHealthy) {
     return { ...buildDbUnavailableRawStatus(), schedulerLiveness: publicHealth.schedulerLiveness };
@@ -168,6 +172,10 @@ export async function computeRawStatus(db: D1Database, now: number, schedulerLiv
     code: "scheduler_liveness_unavailable",
     message: `Scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.unavailableReason}).`,
   };
+  else if (publicHealth.schedulerLiveness.heavy.status === "unavailable") sectionErrors.schedulerLiveness = {
+    code: "heavy_scheduler_liveness_unavailable",
+    message: `Heavy scheduler delivery evidence unavailable (${publicHealth.schedulerLiveness.heavy.unavailableReason}; warning >${publicHealth.schedulerLiveness.heavy.warningAfterSec}s; stale >${publicHealth.schedulerLiveness.heavy.staleAfterSec}s).`,
+  };
 
   const availabilityEvaluation = evaluateAvailabilityStatus({
     publicHealth,
@@ -182,6 +190,7 @@ export async function computeRawStatus(db: D1Database, now: number, schedulerLiv
     cronLeaseQueryFailed,
   });
   const dataQualityEvaluation = evaluateDataQualityStatus({
+    nowSec: now,
     dataQuality,
     missingPriceRatio,
     blacklistMissingRatio,

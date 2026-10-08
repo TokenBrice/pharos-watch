@@ -63,6 +63,9 @@ import {
 } from "./extension-operational-resilience";
 import {
   addSafetyScoreV9IncidentEvidence,
+  addSafetyScoreV9NegativeIncidentEvidence,
+  getSafetyScoreV9NegativeIncidentReviews,
+  routeSafetyScoreV9NegativeIncidentReviews,
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   routeSafetyScoreV9OperationalIncidents,
@@ -103,7 +106,7 @@ import {
   safetyScoreV9ChainSupplySourceGenerationId,
 } from "./supply-attribution";
 import { adaptBridgeReview } from "./extension-bridge";
-import { adaptOracleReview, deriveOracleBranchMateriality } from "./extension-oracle";
+import { adaptOracleReview } from "./extension-oracle";
 import {
   addReserveClassificationEvidence,
   addReviewedStaticReserveEvidence,
@@ -136,7 +139,6 @@ import {
 
 // The registry-meta projection now lives beside the adapters that read it.
 export type { V9ExtensionRegistryMeta } from "./extension-shared";
-export { deriveOracleBranchMateriality };
 export {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,
@@ -2436,6 +2438,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
+        const negativeIncidentReviews = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews);
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2578,9 +2582,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           mint.review,
           reviewedIncidents,
         );
-        const controls = [...incidentControlRoute.controls, ...bridge.controls].sort((left, right) =>
-          compareText(left.controlKey, right.controlKey),
-        );
+        const controls = routeSafetyScoreV9NegativeIncidentReviews(
+          [...incidentControlRoute.controls, ...bridge.controls],
+          assetId,
+          clockSec,
+          negativeIncidentReviews,
+          reviewedIncidents,
+        ).sort((left, right) => compareText(left.controlKey, right.controlKey));
         admissionPath = "accessReview";
         const reviewedTransferFact = reviewedTransferFacts
           ? reviewedTransferFacts.get(assetId)

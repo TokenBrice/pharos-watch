@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
+import type * as FetchRetry from "../../../../lib/fetch-retry";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -61,7 +62,8 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   ],
 }));
 
-vi.mock("../../../../lib/fetch-retry", () => ({
+vi.mock("../../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
   fetchTextWithRetry: async (...args: unknown[]) => {
     const response = await fetchWithRetryMock(...args);

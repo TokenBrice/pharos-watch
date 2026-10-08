@@ -2,9 +2,11 @@ import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
   EvmRpcOptions,
+  EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import {
   fetchEvmBlockNumber,
+  fetchEvmBlockHeader,
   fetchEvmBlockTimestamp,
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
@@ -43,13 +45,18 @@ import type {
   EvmObservationSnapshot,
 } from "./evm-observation-plan";
 import { implementationAddressFromSlot, runtimeCodeHash } from "./onchain-identity";
+import { EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS, type ExecutableRedemptionObserverId } from "@shared/types/redemption";
+import type { LiveReserveRedemptionTelemetryKnownFields } from "@shared/types/live-reserves";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
+import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";
+import { FOREST_ROAD_USDFR_OBSERVER } from "./forest-road-usdfr-observer";
+import { MONETRIX_FUNDED_QUEUE_OBSERVER } from "./monetrix-funded-queue-observer";
+import { SATURN_V2_QUEUE_OBSERVER } from "./saturn-v2-queue-observer";
+import { APYUSD_UNLOCK_RECEIPT_OBSERVER } from "./apyusd-unlock-receipt-observer";
 
 type Hex = `0x${string}`;
 
-const CHAIN = "ethereum";
 const RPC_DEADLINE_MS = 10_000;
-const BLOCK_MAX_AGE_SEC = 10 * 60;
-const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
 
 
@@ -227,6 +234,7 @@ const NOON_SUSN = {
 export interface ExecutableRedemptionReadClient {
   blockNumber(options: EvmRpcOptions): Promise<number | null>;
   blockTimestamp(blockNumber: number, options: EvmRpcOptions): Promise<number | null>;
+  blockHeader?(blockNumber: number, options: EvmRpcOptions): Promise<EvmBlockHeader | null>;
   codeHash(address: string, blockNumber: number, options: EvmRpcOptions): Promise<string | null>;
   storage(
     address: string,
@@ -241,31 +249,44 @@ export interface ExecutableRedemptionReadClient {
   ): Promise<EvmMulticall3Result[] | null>;
 }
 
-export interface ExecutableRedemptionObservation {
+type ObserverWireFields = Required<Pick<LiveReserveRedemptionTelemetryKnownFields,
+  "routeStatus" | "routeStatusReason" | "holderEligibility" |
+  "blockNumber" | "sourceTimestamp" | "sourceUrls" | "outputAssetKeys"
+>>;
+
+export interface ExecutableRedemptionObservation extends ObserverWireFields {
   capacityRaw: bigint;
-  capacitySource:
-    | "eearn-operator-batched-no-immediate-capacity"
-    | "dtrinity-dlend-max-withdraw"
-    | "noon-susn-withdrawal-handler-idle-usn"
-    | "lido-earnusd-unquantified-queue";
-  settlementBoundUnproven?: true;
-  /** Measured settlement completion bound in seconds, read on-chain this run. */
-  settlementDelaySec?: number;
+  capacitySource: string;
+  /** A placeholder zero is never a measured zero. */
+  capacityState: "measured" | "closed" | "unquantified";
+  settlementBoundUnproven?: LiveReserveRedemptionTelemetryKnownFields["settlementBoundUnproven"];
+  settlementDelaySec?: LiveReserveRedemptionTelemetryKnownFields["settlementDelaySec"];
   underlyingDecimals: number;
-  capacityKind: "live-direct-bounded";
-  freshnessKind: "same-run-onchain";
-  routeStatusSource: "onchain";
-  routeStatus: "open" | "paused" | "degraded";
-  routeStatusReason: string;
-  feeBps: number;
-  holderEligibility: "any-holder";
-  blockNumber: number;
-  sourceTimestamp: number;
-  sourceUrls: string[];
+  capacityKind: Extract<NonNullable<LiveReserveRedemptionTelemetryKnownFields["capacityKind"]>, "live-direct-bounded">;
+  /** Explicit execution cost proof; protocol fee alone does not include gas. */
+  allInFeeBps?: NonNullable<LiveReserveRedemptionTelemetryKnownFields["feeBps"]> | null;
+  freshnessKind: Extract<NonNullable<LiveReserveRedemptionTelemetryKnownFields["freshnessKind"]>, "same-run-onchain">;
+  routeStatusSource: Extract<NonNullable<LiveReserveRedemptionTelemetryKnownFields["routeStatusSource"]>, "onchain">;
+  feeBps: NonNullable<LiveReserveRedemptionTelemetryKnownFields["feeBps"]> | null;
   diagnostics: Record<string, unknown>;
 }
 
-interface ObserverOptions {
+export interface ExecutableRedemptionObserverDescriptor {
+  observerId: ExecutableRedemptionObserverId;
+  coinId: string;
+  chain: string;
+  inputContract: string;
+  outputAssetKeys: readonly string[];
+  capacityCapability: "diagnostic-only" | "measured";
+  /** Reserve adapters retain their own lane and must not trigger duplicate direct reads. */
+  sourceLane: "reserve-backed" | "direct";
+  observe(
+    blockNumber: number, blockTimestamp: number, rpcOptions: EvmRpcOptions,
+    client: ExecutableRedemptionReadClient, ctx: AdapterContext | undefined, signal: AbortSignal,
+  ): Promise<ExecutableRedemptionObservation>;
+}
+
+export interface ObserverOptions {
   client?: ExecutableRedemptionReadClient;
   nowSec?: number;
   extraRpcUrls?: string[];
@@ -285,18 +306,18 @@ export function getStableObservationBlockNumber(
   return latestBlockNumber - OBSERVATION_BLOCK_LAG;
 }
 
-const DEFAULT_CLIENT: ExecutableRedemptionReadClient = {
-  blockNumber: async (options) =>
-    getStableObservationBlockNumber(await fetchEvmBlockNumber(CHAIN, options)),
-  blockTimestamp: (blockNumber, options) =>
-    fetchEvmBlockTimestamp(CHAIN, blockNumber, options),
-  codeHash: async (address, blockNumber, options) =>
-    runtimeCodeHash(await fetchEvmCodeAtBlock(CHAIN, address, blockNumber, options)),
-  storage: (address, position, blockNumber, options) =>
-    fetchEvmStorageAtBlock(CHAIN, address, position, blockNumber, options),
-  multicall: (calls, blockNumber, options) =>
-    fetchEvmMulticall3Aggregate3AtBlock(CHAIN, calls, blockNumber, options),
-};
+function createDefaultClient(chain: string): ExecutableRedemptionReadClient {
+  return {
+    blockNumber: async (options) =>
+      getStableObservationBlockNumber(await fetchEvmBlockNumber(chain, options)),
+    blockTimestamp: (blockNumber, options) => fetchEvmBlockTimestamp(chain, blockNumber, options),
+    blockHeader: (blockNumber, options) => fetchEvmBlockHeader(chain, blockNumber, options),
+    codeHash: async (address, blockNumber, options) =>
+      runtimeCodeHash(await fetchEvmCodeAtBlock(chain, address, blockNumber, options)),
+    storage: (address, position, blockNumber, options) => fetchEvmStorageAtBlock(chain, address, position, blockNumber, options),
+    multicall: (calls, blockNumber, options) => fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, options),
+  };
+}
 
 function fail(coinId: string, reason: string): never {
   throw new Error(`${coinId} executable redemption observer failed closed: ${reason}`);
@@ -331,7 +352,7 @@ function verifyExpectedAddress(coinId: string, label: string, expected: string) 
   };
 }
 
-async function readStateWithPlan<Fields extends readonly AnyEvmObservationField[]>(
+export async function readStateWithPlan<Fields extends readonly AnyEvmObservationField[]>(
   coinId: string,
   stateLabel: string,
   fields: Fields,
@@ -521,6 +542,8 @@ async function observeEarn(
     // fact — so the marker is withheld and the zero stays a measured zero.
     capacityRaw: 0n,
     capacitySource: "eearn-operator-batched-no-immediate-capacity",
+    capacityState: queueOpen ? "unquantified" : "closed",
+    outputAssetKeys: ["usdc-circle"],
     ...(queueOpen ? { settlementBoundUnproven: true as const } : {}),
     underlyingDecimals: EARN.assetDecimals,
     capacityKind: "live-direct-bounded",
@@ -712,6 +735,8 @@ async function observeDStake(
   return {
     capacityRaw: routeOpen ? cappedBound : 0n,
     capacitySource: "dtrinity-dlend-max-withdraw",
+    capacityState: routeOpen ? "measured" : "closed",
+    outputAssetKeys: ["dusd-dtrinity"],
     underlyingDecimals: DSTAKE.assetDecimals,
     capacityKind: "live-direct-bounded",
     freshnessKind: "same-run-onchain",
@@ -838,6 +863,8 @@ async function observeSusnNoon(
     // immediate same-notional one.
     capacityRaw: routeStatus === "open" ? boundedIdleRaw : 0n,
     capacitySource: "noon-susn-withdrawal-handler-idle-usn",
+    capacityState: routeStatus === "paused" ? "closed" : "measured",
+    outputAssetKeys: ["usn-noon"],
     settlementDelaySec,
     underlyingDecimals: NOON_SUSN.assetDecimals,
     capacityKind: "live-direct-bounded",
@@ -952,6 +979,8 @@ async function observeLidoEarn(
   return {
     capacityRaw: 0n,
     capacitySource: "lido-earnusd-unquantified-queue",
+    capacityState: "unquantified",
+    outputAssetKeys: ["usdc-circle"],
     settlementBoundUnproven: true,
     underlyingDecimals: 6,
     capacityKind: "live-direct-bounded",
@@ -991,8 +1020,50 @@ async function observeLidoEarn(
   };
 }
 
+export const EXECUTABLE_REDEMPTION_OBSERVERS = {
+  "ember-eearn-batched": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["ember-eearn-batched"],
+    observerId: "ember-eearn-batched", observe: observeEarn,
+  },
+  "dtrinity-dusd-withdrawal": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["dtrinity-dusd-withdrawal"],
+    observerId: "dtrinity-dusd-withdrawal", observe: observeDStake,
+  },
+  "noon-susn-withdrawal": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["noon-susn-withdrawal"],
+    observerId: "noon-susn-withdrawal", observe: observeSusnNoon,
+  },
+  "lido-earnusd-queue": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["lido-earnusd-queue"],
+    observerId: "lido-earnusd-queue", observe: observeLidoEarn,
+  },
+  "usdfr-par-controller": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["usdfr-par-controller"],
+    observerId: "usdfr-par-controller", observe: FOREST_ROAD_USDFR_OBSERVER.observe,
+  },
+  "apyusd-unlock-receipt": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["apyusd-unlock-receipt"],
+    observerId: "apyusd-unlock-receipt", observe: APYUSD_UNLOCK_RECEIPT_OBSERVER.observe,
+  },
+  "monetrix-funded-queue": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["monetrix-funded-queue"],
+    observerId: "monetrix-funded-queue", observe: MONETRIX_FUNDED_QUEUE_OBSERVER.observe,
+  },
+  "saturn-v2-queue": {
+    ...EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS["saturn-v2-queue"],
+    observerId: "saturn-v2-queue", observe: SATURN_V2_QUEUE_OBSERVER.observe,
+  },
+} satisfies Record<ExecutableRedemptionObserverId, ExecutableRedemptionObserverDescriptor>;
+
+export function getExecutableRedemptionObserver(id: ExecutableRedemptionObserverId): ExecutableRedemptionObserverDescriptor | null {
+  return Object.prototype.hasOwnProperty.call(EXECUTABLE_REDEMPTION_OBSERVERS, id)
+    ? EXECUTABLE_REDEMPTION_OBSERVERS[id as keyof typeof EXECUTABLE_REDEMPTION_OBSERVERS]
+    : null;
+}
+
 export function hasExecutableRedemptionObserver(coinId: string): boolean {
-  return coinId === EARN.coinId || coinId === LIDO_EARN.coinId || coinId === DSTAKE.coinId || coinId === NOON_SUSN.coinId;
+  return Object.values(EXECUTABLE_REDEMPTION_OBSERVERS).some((descriptor) =>
+    descriptor.coinId === coinId && descriptor.sourceLane === "reserve-backed");
 }
 
 export async function observeExecutableRedemptionRoute(
@@ -1001,22 +1072,20 @@ export async function observeExecutableRedemptionRoute(
   signal: AbortSignal,
   ctx?: AdapterContext,
   options: ObserverOptions = {},
+  observerId?: ExecutableRedemptionObserverId,
 ): Promise<ExecutableRedemptionObservation | null> {
-  if (!hasExecutableRedemptionObserver(coinId)) return null;
-
-  const expectedContractAddress =
-    coinId === EARN.coinId
-      ? EARN.vault.address
-      : coinId === LIDO_EARN.coinId
-        ? LIDO_EARN.shares.address
-        : coinId === NOON_SUSN.coinId
-          ? NOON_SUSN.vault.address
-          : DSTAKE.token.address;
-  if (contractAddress.toLowerCase() !== expectedContractAddress) {
+  const descriptor = observerId
+    ? getExecutableRedemptionObserver(observerId)
+    : Object.values(EXECUTABLE_REDEMPTION_OBSERVERS).find((entry) => entry.coinId === coinId);
+  if (!descriptor) {
+    if (observerId) fail(coinId, `unknown observer ${observerId}`);
+    return null;
+  }
+  if (descriptor.coinId !== coinId || contractAddress.toLowerCase() !== descriptor.inputContract.toLowerCase()) {
     fail(coinId, `tracked contract identity drift (${contractAddress})`);
   }
-
-  const client = options.client ?? DEFAULT_CLIENT;
+  if (signal.aborted) throw signal.reason ?? new Error("Executable observer aborted");
+  const client = options.client ?? createDefaultClient(descriptor.chain);
   // This observer reads a current chain head late in a long sequential reserve
   // run. The run-scoped context clock can be several minutes old by then, so
   // compare the block against the wall clock unless a test explicitly pins it.
@@ -1036,7 +1105,7 @@ export async function observeExecutableRedemptionRoute(
     () => client.blockNumber(rpcOptions),
     { signal },
   );
-  if (blockNumber == null) fail(coinId, "block number unavailable");
+  if (blockNumber == null || !Number.isSafeInteger(blockNumber) || blockNumber <= 0) fail(coinId, "block number unavailable");
   const blockTimestamp = await runAdapterIo(
     ctx,
     `${coinId}-redemption-block-timestamp`,
@@ -1044,17 +1113,31 @@ export async function observeExecutableRedemptionRoute(
     { signal },
   );
   if (
-    blockTimestamp == null ||
-    blockTimestamp < nowSec - BLOCK_MAX_AGE_SEC ||
-    blockTimestamp > nowSec + BLOCK_FUTURE_SKEW_SEC
+    blockTimestamp == null || !Number.isSafeInteger(blockTimestamp) || blockTimestamp <= 0 ||
+    blockTimestamp < nowSec - EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC ||
+    blockTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC
   ) {
     fail(coinId, "block timestamp is unavailable or out of range");
   }
-  return coinId === EARN.coinId
-    ? observeEarn(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal)
-    : coinId === LIDO_EARN.coinId
-      ? observeLidoEarn(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal)
-      : coinId === NOON_SUSN.coinId
-        ? observeSusnNoon(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal)
-        : observeDStake(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal);
+  let observedBlockHash: string | undefined;
+  if (descriptor.sourceLane === "direct" && descriptor.capacityCapability === "measured") {
+    if (!client.blockHeader) fail(coinId, "block header transport unavailable");
+    const header = await runAdapterIo(ctx, `${coinId}-redemption-block-header`,
+      () => client.blockHeader!(blockNumber, rpcOptions), { signal });
+    if (!header || header.number !== blockNumber || header.timestamp !== blockTimestamp || !/^0x[0-9a-f]{64}$/i.test(header.hash)) {
+      fail(coinId, "block header identity unavailable");
+    }
+    observedBlockHash = header.hash;
+    rpcOptions.stateBlockHash = header.hash;
+    rpcOptions.multicallFallbackBlockHash = header.hash;
+  }
+  const observation = await descriptor.observe(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal);
+  if (signal.aborted) throw signal.reason ?? new Error("Executable observer aborted");
+  if (observation.outputAssetKeys.length !== descriptor.outputAssetKeys.length ||
+      !descriptor.outputAssetKeys.every((key) => observation.outputAssetKeys.includes(key))) {
+    fail(coinId, "output asset identity drift");
+  }
+  return observedBlockHash
+    ? { ...observation, diagnostics: { ...observation.diagnostics, observedBlockHash } }
+    : observation;
 }

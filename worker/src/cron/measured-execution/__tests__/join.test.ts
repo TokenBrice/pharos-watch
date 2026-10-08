@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
+import { capabilityForPool, requiresP4DexScoreEligibleCapabilityCoverage } from "@shared/lib/p4-exit-route-capability-policy";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 
 vi.mock("../quoter-v2", async () => {
   const actual = await vi.importActual<typeof import("../quoter-v2")>("../quoter-v2");
@@ -38,7 +41,7 @@ import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
 import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-  CURVE_CRYPTOSWAP_SHADOW_COHORT,
+  CURVE_CRYPTOSWAP_REVIEWED_COHORT,
   encodeCurveCryptoSwapGetDy,
 } from "../curve-cryptoswap";
 import * as curveCryptoSwap from "../curve-cryptoswap";
@@ -48,12 +51,13 @@ import {
 import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+  getCurveStableSwapNgPolicy,
 } from "../curve-stableswap-ng";
 import {
   CURVE_NXUSD_METAPOOL_POLICY,
   CURVE_R3_METAPOOL_POLICIES,
   CURVE_USD1_METAPOOL_POLICY,
-} from "../curve-composite";
+} from "@shared/lib/curve-composite-policies";
 import { UNISWAP_V4_ADAPTER_PROFILE_ID } from "../uniswap-v4";
 import {
   makeCurve3PoolPacket,
@@ -688,7 +692,7 @@ describe("measured execution join activation", () => {
     { description: "a reviewed deployment family", poolAddress: "0x384ca8992f955009bdd94849488e580559590157", missingPin: false },
     { description: "a pinned policy missing its hash", poolAddress: "0x6e5492f8ea2370844ee098a56dd88e1717e4a9c2", missingPin: true },
   ])("preserves endpoint admission for $description", ({ poolAddress, missingPin }) => {
-    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.poolAddress === poolAddress);
+    const policy = CURVE_CRYPTOSWAP_REVIEWED_COHORT.find((entry) => entry.poolAddress === poolAddress);
     if (!policy) throw new Error("missing active Curve policy");
     const familyAnchored = policy.identityAnchor === "reviewed-deployment-family";
     const endpointCodeHash = familyAnchored
@@ -813,8 +817,8 @@ describe("measured execution join activation", () => {
 
     let diagnostics: DexMeasuredExecutionJoinDiagnostics;
     if (missingPin) {
-      const originalResolver = curveCryptoSwap.getCurveCryptoSwapShadowPolicy;
-      const resolver = vi.spyOn(curveCryptoSwap, "getCurveCryptoSwapShadowPolicy").mockImplementation(
+      const originalResolver = curveCryptoSwap.getCurveCryptoSwapReviewedPolicy;
+      const resolver = vi.spyOn(curveCryptoSwap, "getCurveCryptoSwapReviewedPolicy").mockImplementation(
         (chain, address) => {
           const resolved = originalResolver(chain, address);
           return resolved ? { ...resolved, expectedPoolCodeHash: undefined } : null;
@@ -918,6 +922,32 @@ describe("measured execution join AMM invariants", () => {
       gatedCount: 1,
       failuresByReason: { "uniswap-v3-quoter-v2:quote-failed": 1 },
     });
+  });
+
+  it.each(CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS)("keeps $stablecoinId NG evidence activation-pending through coverage assembly", (deployment) => {
+    const policy = getCurveStableSwapNgPolicy(deployment.chain, deployment.poolAddress)!;
+    const { measuredTarget, profile } = makeCurveStableSwapNgRoute(policy);
+    const pool = makeJoinPool(measuredTarget, { project: "curve", chain: deployment.chain });
+    joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+      evidence: {
+        quoteGenerationId: "curve-ng-quote-generation", targetGenerationId: "curve-ng-target-generation",
+        publishedAt: 1_060, byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
+      },
+      nowSec: 1_060,
+    });
+    expect(pool.extra?.executionCapabilityGate?.reason).toBe("activation-pending");
+    expect(capabilityForPool(pool).id).toBe("measured-adapter-shadow");
+    expect(requiresP4DexScoreEligibleCapabilityCoverage(pool)).toBe(true);
+    expect(buildP4DexExitRouteObservations({
+      stablecoinId: measuredTarget.stablecoinId, retainedPools: [pool], observedAt: 1_060,
+    }).observations).toHaveLength(0);
+    delete pool.extra!.executionCapabilityGate;
+    expect(capabilityForPool(pool).id).toBe("measured-adapter-shadow");
+    expect(requiresP4DexScoreEligibleCapabilityCoverage(pool)).toBe(true);
+    expect(buildP4DexExitRouteObservations({
+      stablecoinId: measuredTarget.stablecoinId, retainedPools: [pool], observedAt: 1_060,
+    }).observations).toHaveLength(0);
   });
 
   it("joins USDG NG evidence without displacing reserves before consumer-side 3/3 maturity", () => {

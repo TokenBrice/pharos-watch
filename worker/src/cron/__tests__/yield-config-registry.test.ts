@@ -19,7 +19,6 @@ import {
 } from "../../lib/yield-config/yield-config";
 import {
   INTENTIONAL_GAP_REASONS,
-  QUARANTINED_DETERMINISTIC_PROBE_CONFIGS,
   YIELD_ADAPTER_LIFECYCLE,
 } from "../../lib/yield-config/yield-config-rate-sources";
 import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
@@ -332,34 +331,24 @@ describe("yield config registry", () => {
     }
   });
 
-  it("documents the quarantined deterministic adapters in the manifest", () => {
-    const quarantined = YIELD_ADAPTER_MANIFEST
-      .filter((entry) => entry.deterministicQuarantineReason)
-      .map((entry) => entry.stablecoinId)
-      .sort();
-
-    expect(quarantined).toEqual(["scrvusd-curve", "ustb-superstate"]);
+  it("excludes incompatible generic readers without obsolete quarantine prospects", () => {
+    for (const stablecoinId of ["scrvusd-curve", "ustb-superstate"]) {
+      expect(onChainIds.has(stablecoinId)).toBe(false);
+      expect(YIELD_ADAPTER_LIFECYCLE[stablecoinId]).toBeUndefined();
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)
+        ?.strategies.some((strategy) => strategy.kind === "quarantined")).toBe(false);
+    }
+    expect(YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "scrvusd-curve"))
+      .toMatchObject({ directProtocolApiSourceKey: "onchain:scrvusd-curve:scrvusd-current-rate" });
+    expect(YIELD_POOL_MAP["ustb-superstate"]).toBe("1910847a-f8b5-40ce-a1ab-1dafdded5fbb");
   });
 
-  it("keeps quarantined deterministic probe configs inactive until manually restored", () => {
-    const probeIds = QUARANTINED_DETERMINISTIC_PROBE_CONFIGS.map((config) => config.stablecoinId);
-
-    expect(probeIds).toEqual([]);
-    expect(onChainIds.has("reusd-re-protocol")).toBe(false);
-    expect(onChainIds.has("ustb-superstate")).toBe(false);
-    expect(probeIds).not.toContain("ustb-superstate");
-  });
-
-  it("tracks current quarantine review windows in typed lifecycle metadata", () => {
-    expect(YIELD_ADAPTER_LIFECYCLE["scrvusd-curve"]).toMatchObject({
-      lifecycle: "quarantined",
-      reason: expect.objectContaining({ nextReviewAt: "2026-10-09" }),
-    });
-    expect(YIELD_ADAPTER_LIFECYCLE["reusd-re-protocol"]).toBeUndefined();
-    expect(YIELD_ADAPTER_LIFECYCLE["ustb-superstate"]).toMatchObject({
-      lifecycle: "quarantined",
-      reason: expect.objectContaining({ code: "token-not-erc4626", nextReviewAt: "2026-10-15" }),
-    });
+  it("keeps rejected gross holder-yield pins absent and the HedgeCore gap effective", () => {
+    expect(YIELD_POOL_MAP["sbold-k3-capital"]).toBeUndefined();
+    expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["sbold-k3-capital"]).toBeUndefined();
+    expect(YIELD_POOL_MAP["susd-hedgecore"]).toBeUndefined();
+    expect(YIELD_ADAPTER_LIFECYCLE["susd-hedgecore"]?.lifecycle).toBe("intentional-gap");
+    expect(isPriceDerivedYieldEligible("susd-hedgecore", INTENTIONAL_GAP_REASONS["susd-hedgecore"])).toBe(false);
   });
 
   it("wires Re Protocol yield to reUSD itself and the official price API", () => {

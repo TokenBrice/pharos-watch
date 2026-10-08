@@ -1,117 +1,106 @@
 {
   "id": "ousd-open-standard",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "Bridge supported assets: only USDC and EURC are supported for EEA users",
-        "url": "https://apidocs.bridge.xyz/get-started/introduction/what-we-support/payment-routes"
-      },
-      {
-        "label": "ESMA MiCA register, updated September 30 2026",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "ESMA EMT register: Bridge Building S.A. EURR record; no Open USD or OUSD record matched on September 30 2026",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      },
-      {
-        "label": "Bridge EU authorisations announcement: Luxembourg licensing and custom EUR-backed stablecoins",
-        "url": "https://www.bridge.xyz/blog/bridge-secures-mica-and-emi-authorisations-across-all-27-eu-member-states"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Open USD is a U.S.-issued, dollar-pegged payment stablecoin issued by Bridge Building Inc. for payments, settlement and treasury use. Open Standard's launch disclosure specifies 1:1 USD mint and burn; Bridge's binding stablecoin terms provide redemption for one U.S. dollar, subject to user eligibility and compliance conditions."
+      "summary": "Open USD is a U.S.-issued, dollar-pegged payment stablecoin issued by Bridge Building Inc. for payments, settlement and treasury use. Open Standard's launch disclosure specifies 1:1 USD mint and burn; Bridge's binding stablecoin terms provide redemption for one U.S. dollar, subject to user eligibility and compliance conditions.",
+      "references": [
+        {
+          "label": "Bridge OUSD launch: current BBI issuer and explicit national trust bank limitation",
+          "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Bridge Building Inc binding stablecoin terms: reserves and conditional redemption rights",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
     "issuerEntity": "Bridge Building Inc.",
     "issuerDomicile": "United States",
     "licensingRegulator": "FinCEN MSB registration and applicable state money transmitter regulators for Bridge Building Inc. (NMLS #2450917). OCC preliminary conditional approval applies to the separate Bridge National Trust Bank in organization, not the current OUSD issuer.",
-    "primaryFederalRegulator": "Unknown",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://reserves.bridge.xyz/ousd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Reviewed September 30 2026. Bridge's OUSD launch announcement expressly identifies Bridge Building Inc. as the current issuer and says Bridge National Trust Bank is a separate entity in organization, is not operational and does not issue OUSD. OCC Corporate Decision 1365 grants preliminary conditional charter approval to the proposed bank under Bridge Ventures LLC; it does not grant BBI a GENIUS payment-stablecoin issuer authorization. Bridge describes its compliance framework as GENIUS ready. The fetched Open Standard materials describe reserves maintained in compliance with U.S. regulatory requirements; a token-specific primary claim of GENIUS Act-compliant authorization was not verified. Issuer-announced-intent records Bridge's public positioning, with issuerPathway unknown rather than transferring the proposed bank's future federal pathway to BBI. No token-specific PPSI approval, state-qualified authorization or official GENIUS application was located. The broader DASP effective-date and offer/sale posture was not established by this token review, so it remains unknown. Bridge's live dashboard publishes OUSD supply, reserves and cash/Treasury allocation and identifies issuance from the US. Open Standard's September 30 launch announcement names BlackRock, Lead Bank and BNY and promises monthly reserve attestations at that dashboard; Bridge's OUSD FAQ separately promises quarterly independently verified transparency reports. No OUSD independent report was available on the reviewed dashboard. These commitments do not establish a published monthly attestation. Bridge's binding terms require an eligible Bridge User for redemption, provide processing within two business days after compliance acceptance subject to factors outside Bridge's reasonable control, and deny holders a property interest in reserve assets. The launch announcement says Bridge charges no OUSD mint/redeem fees and imposes no liquidity restrictions delaying those transactions. MiCA out-of-scope is an issuer-distribution assessment based on Bridge's explicit EEA asset restriction and the absence of an OUSD EMT record or white paper in the reviewed register. Bridge Building S.A.'s EURR register entry and EU service-provider/EMI licensing do not authorize OUSD issued by BBI. Open Standard announces exchange distribution without regional eligibility details; EEA exchange admission remains an unresolved question and triggers reassessment if confirmed. No OUSD/BBI-specific public enforcement action was found in the dated, limited regulator-site searches; CD1365 discusses affiliate enforcement history and third-party allegations without identifying an OUSD action.",
+    "notes": "Reviewed 2026-10-07. Bridge's token-specific OUSD overview states that OUSD reserves are maintained in compliance with U.S. regulatory requirements and expressly names the GENIUS Act. Issuer-announced-intent records this issuer-stated GENIUS posture, not verified statutory compliance or official authorization. Bridge's September 30 launch names Bridge Building Inc. as the current issuer and expressly states that Bridge National Trust Bank is a separate entity in organization, is not operational and does not issue OUSD. OCC Corporate Decision 1365 is preliminary conditional charter approval of that proposed bank, not a GENIUS PPSI approval of the current issuer. The issuer pathway remains unknown. Binding BBI terms provide eligible-user redemption for one U.S. dollar, subject to onboarding, compliance and stated processing conditions. The public OUSD dashboard itemizes reserve assets but links no independent reserve attestation. Open Standard promises monthly attestations; Bridge's FAQ describes future quarterly transparency reports. MonthlyAttestationPresent is false because a published monthly OUSD attestation was not located on the opened disclosure pages. DASP posture records the pre-effective GENIUS timing described by Treasury, not general legality under all U.S. laws. No enforcement-history conclusion or primary federal regulator assignment is asserted.",
     "references": [
       {
         "label": "Bridge OUSD launch: current BBI issuer and explicit national trust bank limitation",
         "url": "https://www.bridge.xyz/blog/ousd-is-live-issued-by-bridge",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-30",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Open Standard OUSD launch: 1:1 issuance, named reserve institutions and monthly attestation commitment",
         "url": "https://joinopenstandard.com/blog/ousd-is-live",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-30",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge Building Inc binding stablecoin terms: reserves and conditional redemption rights",
         "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge US licenses: Bridge Building Inc, NMLS #2450917",
         "url": "https://www.bridge.xyz/legal/licenses/us-licenses-and-registrations",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-12-08",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Corporate Decision 1365: preliminary conditional approval for proposed Bridge National Trust Bank",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge conditional approval announcement: GENIUS-ready positioning, subject to final approval",
         "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-02-17",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge OUSD live reserve dashboard",
         "url": "https://reserves.bridge.xyz/ousd",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge stablecoin FAQ: MSB/MTL disclosure and quarterly OUSD transparency-report commitment",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-09-30"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge OUSD overview: token-specific issuer GENIUS reserve-compliance statement",
+        "url": "https://apidocs.bridge.xyz/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS issuance/offer proposal and implementation timeline",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
       }
     ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC Corporate Decision 1365 and regulator-site search for subsequent Bridge final approval",
-        "Bridge September 30 2026 OUSD launch disclosure, including its explicit BBI/current-issuer and non-operational-bank footnote",
-        "Bridge conditional OCC approval announcement",
-        "Bridge Building Inc stablecoin terms and US licensing disclosure",
-        "Bridge OUSD reserve dashboard and stablecoin FAQ",
-        "Open Standard OUSD launch and original announcement; site search for GENIUS positioning",
-        "ESMA MiCA page and EMTWP.csv, reviewed September 30 2026",
-        "Bridge EEA supported-asset restriction and EU licensing announcement",
-        "Exact-name Bridge Building Inc enforcement searches on OCC, FinCEN, OFAC, NYDFS and California DFPI public websites"
-      ],
-      "summary": "No OUSD/BBI-specific GENIUS PPSI approval, state-qualified authorization or official GENIUS application was located. Bridge's September 30 disclosure expressly rules out current OUSD issuance or GENIUS authorization through the proposed national trust bank. No OUSD-specific public enforcement action was located in the stated regulator-site searches; this is a bounded negative search, not a finding that no affiliate enforcement history exists. The reviewed ESMA EMT register contains Bridge Building S.A.'s EURR entry but no Open USD/OUSD record or white paper; Bridge explicitly restricts EEA stablecoin support to USDC and EURC. Announced exchange availability does not establish EEA admission.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-09-30"
-    },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-30"
+    "reviewedAt": "2026-10-07"
   }
 }

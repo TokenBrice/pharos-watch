@@ -41,8 +41,9 @@ const ReplaySchema = z
                   stressState: z
                     .object({
                       exitPortfolio: z
-                        .object({ circulatingUsd: z.number().nullable().optional() })
+                        .object({ circulatingUsd: z.number().finite().nonnegative().nullable().optional() })
                         .loose()
+                        .nullable()
                         .optional(),
                     })
                     .loose()
@@ -61,7 +62,9 @@ interface QueueRow {
   assetId: string;
   compositionAsOf: string;
   ageDays: number;
-  supplyUsd: number;
+  supplyUsd: number | null;
+  supplyAvailability: "known" | "unavailable";
+  supplyUnavailableReason: "missing-captured-supply" | null;
   hasCollateralLinks: boolean;
   adapterState: "none" | "silent-this-cycle";
 }
@@ -75,7 +78,7 @@ export function buildCurationExpiryQueue(
   const supplyByAssetId = new Map(
     evaluatedSet.assets.map((asset) => [
       asset.assetId,
-      asset.stressState?.exitPortfolio?.circulatingUsd ?? 0,
+      asset.stressState?.exitPortfolio?.circulatingUsd ?? null,
     ]),
   );
   const futureClockSec = fixedInput.clockSec + lookaheadDays * 86_400;
@@ -104,32 +107,38 @@ export function buildCurationExpiryQueue(
       assetId,
       compositionAsOf: review.compositionAsOf,
       ageDays: Math.round(((fixedInput.clockSec - compositionSec) / 86_400) * 10) / 10,
-      supplyUsd: supplyByAssetId.get(assetId) ?? 0,
+      supplyUsd: supplyByAssetId.get(assetId) ?? null,
+      supplyAvailability: supplyByAssetId.get(assetId) == null ? "unavailable" : "known",
+      supplyUnavailableReason: supplyByAssetId.get(assetId) == null ? "missing-captured-supply" : null,
       hasCollateralLinks: reserves.some(
         (slice) => slice.coinId != null && (slice.depType ?? "collateral") === "collateral",
       ),
       adapterState: meta.liveReservesConfig != null ? "silent-this-cycle" : "none",
     });
   }
-  // Largest supply first, matching the worklist generator's drain priority.
-  return rows.sort(
-    (left, right) => right.supplyUsd - left.supplyUsd || left.assetId.localeCompare(right.assetId),
-  );
+  // Unknowns require review, not a fabricated zero/smallest-supply ranking.
+  return rows.sort((left, right) => {
+    if (left.supplyUsd === null && right.supplyUsd !== null) return -1;
+    if (right.supplyUsd === null && left.supplyUsd !== null) return 1;
+    return (right.supplyUsd ?? 0) - (left.supplyUsd ?? 0) || left.assetId.localeCompare(right.assetId);
+  });
 }
 
 export function renderCurationExpiryQueue(rows: readonly QueueRow[], lookaheadDays: number): string {
   const lines = [
     `# Curated reserve pre-expiry queue (lookahead ${lookaheadDays}d)`,
     "",
+    `Queue supply: ${rows.filter((row) => row.supplyUsd !== null).length} known, ${rows.filter((row) => row.supplyUsd === null).length} unavailable; known-supply subtotal USD ${rows.reduce((sum, row) => sum + (row.supplyUsd ?? 0), 0).toLocaleString("en-US")} (not a full-cohort total).`,
+    "",
     rows.length === 0
       ? "No admitted curated composition expires within the lookahead window."
-      : `| Asset | Supply (USD) | compositionAsOf | Age (d) | Dependency links | Adapter |`,
+      : `| Asset | Supply (USD) | Supply availability | compositionAsOf | Age (d) | Dependency links | Adapter |`,
   ];
   if (rows.length > 0) {
-    lines.push("|---|---|---|---|---|---|");
+    lines.push("|---|---|---|---|---|---|---|");
     for (const row of rows) {
       lines.push(
-        `| ${row.assetId} | ${Math.round(row.supplyUsd).toLocaleString("en-US")} | ${row.compositionAsOf} | ${row.ageDays} | ${row.hasCollateralLinks ? "yes" : "no"} | ${row.adapterState} |`,
+        `| ${row.assetId} | ${row.supplyUsd === null ? "unavailable" : Math.round(row.supplyUsd).toLocaleString("en-US")} | ${row.supplyUnavailableReason ?? row.supplyAvailability} | ${row.compositionAsOf} | ${row.ageDays} | ${row.hasCollateralLinks ? "yes" : "no"} | ${row.adapterState} |`,
       );
     }
   }

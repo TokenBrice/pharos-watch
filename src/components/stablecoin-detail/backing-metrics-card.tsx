@@ -12,6 +12,7 @@ import {
   type RailMetricSubMetric,
 } from "@/components/stablecoin-detail/rail-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import { SourceLinkList } from "@/components/stablecoin-detail/source-link-list";
 import {
   getCollateralCoverageTone,
   ShareMeter,
@@ -146,6 +147,7 @@ export interface BackingMetricsInput {
   liveSharedBookAssetIds?: readonly string[];
   /** Denominator of the live ratio (`resolveLiveRatioBasis`). */
   liveRatioBasis?: string | null;
+  liveMetadata?: LiveReserveSnapshotMetadata;
   /** Live snapshot is stale; derived from the freshness label when omitted. */
   liveStale?: boolean;
   oracle?: BackingMetricsOracleInput | null;
@@ -189,6 +191,10 @@ const HEDGE_COVERAGE_LABELS: Record<CollateralCoverageTone, string> = {
 export function resolveLiveRatioBasis(metadata: LiveReserveSnapshotMetadata | null | undefined): string {
   if (!metadata) return UNKNOWN_LIVE_BASIS;
   if (metadata.balanceSheetScope === "shared-sky-maker") return SHARED_BOOK_BASIS;
+  const native = metadata.nativeQuantityBasis;
+  if (native?.nominalValuePerToken != null) {
+    return `${native.reserveUnit.unit}-native vs ${native.supplyToken} (nominal)`;
+  }
   if (typeof metadata.totalDebtUsd === "number") return "vs debt";
   if (typeof metadata.totalLiabilitiesUsd === "number") return "vs liabilities";
   if (
@@ -473,6 +479,8 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     const lead = facts[0]!;
     headlineFactKey = lead.key;
     headline = { source: "protocol-fact", value: lead.value, basis: asCaption(lead.label) };
+  } else if (input.liveMetadata?.ratioUnavailableReason || input.liveMetadata?.nativeQuantityBasis) {
+    headline = { source: "protocol-fact", value: "Unavailable", basis: "reserve coverage ratio" };
   } else {
     return null;
   }
@@ -483,6 +491,83 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   const ratioHeadline = headline.source === "live-ratio" || headline.source === "reviewed-ratio";
 
   const details: BackingMetricsDetailRow[] = [];
+  const metadata = input.liveMetadata;
+  const native = metadata?.nativeQuantityBasis;
+  if (native && metadata?.totalReserveQuantity != null) {
+    details.push({
+      key: "native-reserves",
+      label: `Reported reserves (${native.reserveUnit.unit})`,
+      value: `${metadata.totalReserveQuantity.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${native.reserveUnit.unit}`,
+      note: `Native denomination reviewed ${native.reviewedAt}; this amount is not USD. Denomination alone makes no assurance claim.`,
+    });
+  }
+  if (native && metadata?.supplyTokens != null) {
+    details.push({
+      key: "native-supply",
+      label: `Reported supply (${native.supplyToken})`,
+      value: `${metadata.supplyTokens.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${native.supplyToken}`,
+      note: "Source-reported token quantity; does not override canonical circulating supply.",
+    });
+  }
+  if (native?.nominalValuePerToken != null) {
+    details.push({
+      key: "native-nominal-basis", label: "Reviewed nominal unit basis",
+      value: `1 ${native.supplyToken} = ${native.nominalValuePerToken} ${native.reserveUnit.unit}`,
+      note: `Reviewed ${native.reviewedAt}; not an observed market price or canonical supply override.`,
+    });
+  }
+  const assuranceValue = metadata?.details?.assurance;
+  const assurance = assuranceValue && typeof assuranceValue === "object" && !Array.isArray(assuranceValue)
+    ? assuranceValue as Record<string, unknown> : null;
+  if (typeof assurance?.reportAsOf === "string") {
+    details.push({
+      key: "assurance-report-asof", label: "Original report as-of",
+      value: assurance.reportAsOf,
+      note: "Original report clock, not the time this page or report was fetched.",
+    });
+  }
+  if (native && typeof assurance?.reportedAssetDifference === "string") {
+    details.push({
+      key: "native-report-discrepancy", label: "Reported asset reconciliation difference",
+      value: `${assurance.reportedAssetDifference} ${native.reserveUnit.unit}`,
+      note: "Original reported-versus-itemized asset difference; not a USD adjustment or invented reserve residual.",
+    });
+  }
+  if (typeof metadata?.details?.chainSupplyObservedAt === "number") {
+    details.push({
+      key: "chain-supply-clock", label: "Chain supply observation",
+      value: new Date(metadata.details.chainSupplyObservedAt * 1000).toISOString(),
+      note: "Dates token supply only, not the whole reserve book.",
+    });
+  }
+  if (metadata?.ratioUnavailableReason) {
+    details.push({
+      key: "ratio-unavailable",
+      label: "Coverage unavailable",
+      value: metadata.ratioUnavailableReason,
+      note: metadata.liabilityScope?.basis === "not-comparable"
+        ? metadata.liabilityScope.reason
+        : "No compatible, complete and time-admitted liability denominator.",
+    });
+  }
+  if (metadata?.liabilityScope?.basis === "issuer-native-supply") {
+    const scope = metadata.liabilityScope;
+    details.push({
+      key: "liability-scope", label: "Liability perimeter",
+      value: scope.includedChains.join(", "),
+      note: `Reviewed ${scope.reviewedAt}. Excluded: ${scope.excludedChains.map((row) => row.chain).join(", ") || "none"}. Unclassified: ${scope.unclassifiedChains.join(", ") || "none"}.`,
+    });
+  }
+  if (metadata?.reserveObservedAt != null || metadata?.supplyObservedAt) {
+    const stamp = (value: number) => new Date(value * 1000).toISOString();
+    details.push({
+      key: "ratio-observation-clocks", label: "Ratio source clocks",
+      value: metadata.reserveObservedAt != null ? stamp(metadata.reserveObservedAt) : "Reserve time unavailable",
+      note: metadata.supplyObservedAt
+        ? `Supply ${stamp(metadata.supplyObservedAt.min)} to ${stamp(metadata.supplyObservedAt.max)}; maximum skew ${metadata.ratioSkewSec ?? "unavailable"} seconds.`
+        : "Supply observation time unavailable.",
+    });
+  }
   if (headline.source === "live-ratio" && collateralization?.ratio != null) {
     details.push({
       key: "reviewed-ratio",
@@ -558,7 +643,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   );
   const parentShown = parentBacking != null && details.some((row) => row.key.startsWith("parent:"));
 
-  const liveShown = live != null || liveBackstop != null;
+  const liveShown = live != null || liveBackstop != null || metadata != null;
   const labelParts = input.liveFreshnessLabel?.split(" · ") ?? null;
   const stale = liveShown && (input.liveStale ?? labelParts?.includes("Stale") ?? false);
   // "Source date unavailable · Checked …": the check time already dates the
@@ -574,7 +659,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   // The stamp dates the reviewed figures on the summary layer, preferring the
   // headline's own review.
   const reviewedAt = backingHeadline
-    ? backing!.reviewedAt
+    ? backing?.reviewedAt ?? null
     : collateralShown
       ? collateralization!.reviewedAt
       : backingRowShown
@@ -603,6 +688,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
       collateralShown ? { label: collateralization!.sourceLabel, url: collateralization!.sourceUrl } : null,
       backingShown ? { label: backing!.sourceLabel, url: backing!.sourceUrl } : null,
       parentShown && parentBacking ? { label: parentBacking.sourceLabel, url: parentBacking.sourceUrl } : null,
+      native ? { label: `${native.reserveUnit.unit} quantity basis`, url: native.evidenceRef } : null,
     ]),
     freshness: { live: liveStamp, stale, reviewedAt },
   };
@@ -796,21 +882,7 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
         </div>
       ) : null}
       {withSources && view.sources.length > 0 ? (
-        <ul aria-label="Sources" className="space-y-1.5 border-t border-border/40 pt-2">
-          {view.sources.map((source) => (
-            <li key={source.url} className="flex min-w-0 gap-2">
-              <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring min-w-0 break-words rounded-sm underline underline-offset-2 transition-colors motion-reduce:transition-none hover:text-foreground"
-              >
-                {source.label}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <SourceLinkList aria-label="Sources" sources={view.sources} className="space-y-1.5 border-t border-border/40 pt-2" />
       ) : null}
     </>
   );

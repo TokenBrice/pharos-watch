@@ -3,6 +3,7 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  calculateRawPercentageSumDeviation,
   fetchPrimaryHtmlInput,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
@@ -155,7 +156,7 @@ export function adaptQuantozTransparency(html: string, token: string): AdapterRe
 
   const allocationPcts = [cashPct, governmentBondPct];
   const publishedAllocationSumPct = cashPct + governmentBondPct;
-  const rawSumDeviation = Math.abs(publishedAllocationSumPct - 100);
+  const rawSumDeviation = calculateRawPercentageSumDeviation(allocationPcts);
   const roundingEnvelopePct = allocationPcts.length * INTEGER_PERCENT_ROUNDING_PCT;
   const withinRoundingEnvelope = rawSumDeviation <= roundingEnvelopePct;
 

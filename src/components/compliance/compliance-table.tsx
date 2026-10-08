@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   TableFrame,
@@ -11,7 +11,12 @@ import {
   TableRow,
 } from "@/components/table";
 import { cn } from "@/lib/utils";
-import { groupComplianceRowsIntoBands, type ComplianceRow } from "@/lib/compliance-model";
+import {
+  groupComplianceRowsIntoBands,
+  loadGeniusComplianceEvidence,
+  type ComplianceRow,
+  type GeniusComplianceEvidence,
+} from "@/lib/compliance-model";
 import {
   GeniusAuthorityCell,
   GeniusPathwayCell,
@@ -217,7 +222,7 @@ function ComplianceTableRow({
   );
 }
 
-function hasGeniusReviewDetails(row: Extract<ComplianceRow, { regime: "genius" }>): boolean {
+function hasGeniusReviewDetails(row: GeniusComplianceEvidence): boolean {
   return Boolean(
     row.notes ||
       row.applicabilitySummary ||
@@ -230,12 +235,12 @@ function hasGeniusReviewDetails(row: Extract<ComplianceRow, { regime: "genius" }
 }
 
 function hasComplianceRowDetails(row: ComplianceRow): boolean {
-  if (row.references.length > 0) return true;
-  return row.regime === "genius" && (row.hasAnyDisclosure || hasGeniusReviewDetails(row));
+  // GENIUS evidence is lazy, so its presence cannot be decided from the summary.
+  return row.regime === "genius" || row.references.length > 0;
 }
 
 function ComplianceRowDetails({ row }: { row: ComplianceRow }) {
-  const hasReviewDetails = row.regime === "genius" && hasGeniusReviewDetails(row);
+  if (row.regime === "genius") return <GeniusRowDetails row={row} />;
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {row.references.length > 0 ? (
@@ -244,8 +249,62 @@ function ComplianceRowDetails({ row }: { row: ComplianceRow }) {
           <SourceLinks references={row.references} />
         </div>
       ) : null}
-      {hasReviewDetails ? <GeniusReviewDetails row={row} /> : null}
-      {row.regime === "genius" && row.hasAnyDisclosure ? (
+    </div>
+  );
+}
+
+type EvidenceState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "loaded"; evidence: GeniusComplianceEvidence };
+
+function GeniusRowDetails({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
+  const [state, setState] = useState<EvidenceState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    loadGeniusComplianceEvidence(row.id).then(
+      (evidence) => {
+        if (active) setState({ status: "loaded", evidence });
+      },
+      () => {
+        if (active) setState({ status: "error" });
+      },
+    );
+    return () => { active = false; };
+  }, [row.id, attempt]);
+
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {state.status === "loading" ? (
+        <p role="status" className="text-sm text-muted-foreground">Loading evidence…</p>
+      ) : state.status === "error" ? (
+        <div className="space-y-2 text-sm">
+          <p role="alert" className="text-muted-foreground">Evidence could not be loaded. Please try again.</p>
+          <button
+            type="button"
+            className="pharos-focus-ring min-h-8 rounded-sm px-2 text-sm font-medium hover:bg-muted"
+            onClick={() => {
+              setState({ status: "loading" });
+              setAttempt((current) => current + 1);
+            }}
+          >
+            Retry loading evidence
+          </button>
+        </div>
+      ) : (
+        <>
+          {state.evidence.references.length > 0 ? (
+            <div className="min-w-0 space-y-2">
+              <p className="pharos-kicker">Sources</p>
+              <SourceLinks references={state.evidence.references} />
+            </div>
+          ) : null}
+          {hasGeniusReviewDetails(state.evidence) ? <GeniusReviewDetails evidence={state.evidence} /> : null}
+        </>
+      )}
+      {row.hasAnyDisclosure ? (
         <div className="min-w-0 space-y-2">
           <p className="pharos-kicker">Reserve Disclosure</p>
           <GeniusReserveCell row={row} />

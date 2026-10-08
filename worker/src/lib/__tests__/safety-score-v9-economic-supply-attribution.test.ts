@@ -23,6 +23,8 @@ import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { ReviewedProviderChainPartitionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, deriveReviewedProviderChainPartition } from "../safety-score-v9/supply-attribution-contract";
 import { createSafetyScoreV9TransferMaterialityGeneration, exactInputBoundTransferMaterialityPacket, type SafetyScoreV9TransferMaterialityObservation } from "../safety-score-v9/transfer-materiality";
+import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
+import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 const CLOCK = 1790850000;
 const CANONICAL = `ethereum:0x${"1".repeat(40)}`;
@@ -84,6 +86,53 @@ describe("reviewed economic supply accounting", () => {
     expect(packet.deployments.map(row => row.currentSupplyUsd)).toEqual([80, 20]);
     expect(packet.aggregate.supplyUsd).toBe(100);
     expect(packet.unattributedSupplyUsd).toBe(0);
+  });
+  it("preserves economic reference-price provenance in published supply facts", () => {
+    const fixed = makeV9FixedInput({
+      clockSec: CLOCK,
+      chainSupplyByChain: {
+        ethereum: { current: 80, circulatingPrevDay: 80, circulatingPrevWeek: 80, circulatingPrevMonth: 80 },
+        base: { current: 20, circulatingPrevDay: 20, circulatingPrevWeek: 20, circulatingPrevMonth: 20 },
+      },
+      aggregateCirculating: { peggedUSD: 100 },
+      supplyObservedAtSec: CLOCK - 60,
+    });
+    const normalized = normalizeFixedInput(fixed);
+    const economic = fixture();
+    economic.plan.referencePriceSource = { ...pendingSource, sourceId: "reference" };
+    const input = {
+      ...economic,
+      baseInputGenerationId: normalized.baseInputGenerationId,
+      sourceGeneration: normalized.sourceGeneration,
+      registryFingerprint: normalized.registryFingerprint,
+      aggregate: { supplyUsd: 100, sourceGeneration: normalized.sourceGeneration, observedAtSec: CLOCK - 60 },
+    };
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet).not.toBeNull();
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "has").mockImplementation(assetId => assetId === "alpha");
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
+    const attributedFixed = {
+      ...fixed, safetyScoreV9SupplyAttributionById: { alpha: packet },
+    };
+    const context = factBuilderContext(attributedFixed);
+    const result = buildSupply(context);
+    expect(result).toMatchObject({
+      circulatingUsd: 100, status: { observationState: "known" },
+      chainDistribution: { chains: [
+        { chainId: "base", supplyUsd: 20, supplyShare: 0.2 },
+        { chainId: "ethereum", supplyUsd: 80, supplyShare: 0.8 },
+      ] },
+    });
+    const referenceId = "alpha:economic-supply-reference:0";
+    expect(result.status.evidenceRefIds).toContain(referenceId);
+    expect(context.evidence.get(referenceId)).toMatchObject({
+      sourceId: packet.referencePrice.sourceId,
+      sourceGenerationId: packet.referencePrice.sourceGeneration,
+      observedAtSec: packet.referencePrice.observedAtSec,
+      contentSha256: packet.referencePrice.responseSha256,
+      disposition: "observed", freshness: { state: "current" },
+    });
   });
   it("retains independently issued remote liability without subtracting it as a receipt", () => {
     const input = independentFixture();

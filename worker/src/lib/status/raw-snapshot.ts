@@ -1,7 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   CanaryStatusSchema,
-  ClassificationWarningSchema,
   CoinGeckoPriceDiffSchema,
   D1UsageSummarySchema,
   HealthResponseSchema,
@@ -12,7 +12,6 @@ import {
   ReserveDriftEntrySchema,
   YieldHealthSummarySchema,
   type CanaryStatus,
-  type ClassificationWarning,
   type CoinGeckoPriceDiff,
   type HealthResponse,
   type LiquidityHealth,
@@ -44,6 +43,7 @@ import { assessFreshnessTimestamp } from "../api-freshness-age";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
+const EXPECTED_CRON_JOBS = Object.keys(CRON_INTERVALS);
 const SNAPSHOT_RECENT_RUN_LIMIT = 10;
 const SNAPSHOT_STALE_ARTIFACT_LIMIT = 8;
 const SNAPSHOT_METADATA_DEPTH_LIMIT = 5;
@@ -62,7 +62,6 @@ interface StatusSupplements {
   d1Usage: D1UsageSummaryWithTableGrowth | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
-  classificationWarnings?: ClassificationWarning[];
   telegramSummary: TelegramHealthSummary | null;
   sectionErrors: StatusSectionErrors;
 }
@@ -242,7 +241,6 @@ const StatusSupplementsSchema = z.object({
   d1Usage: D1UsageSummaryWithTableGrowthSchema.nullable(),
   mintBurnReconciliation: MintBurnReconciliationSummarySchema.nullable(),
   reserveDrift: z.array(ReserveDriftEntrySchema).optional(),
-  classificationWarnings: z.array(ClassificationWarningSchema).optional(),
   telegramSummary: HealthResponseSchema.shape.telegramSummary.unwrap(),
   sectionErrors: StatusSectionErrorsSchema,
 });
@@ -306,6 +304,19 @@ export async function loadStatusRawSnapshot(
         ageSec,
         maxAgeSec,
         error: "invalid status raw snapshot payload",
+      };
+    }
+    // Membership changes invalidate the entire assessment, including its severity
+    // floor. Filtering stale producers would leave their cached causes/status behind.
+    const cronJobs = Object.keys(payload.raw.crons);
+    if (cronJobs.length !== EXPECTED_CRON_JOBS.length
+      || EXPECTED_CRON_JOBS.some((job) => !Object.prototype.hasOwnProperty.call(payload.raw.crons, job))) {
+      return {
+        kind: "unreadable",
+        updatedAt: cached.updatedAt,
+        ageSec,
+        maxAgeSec,
+        error: "status raw snapshot cron cohort mismatch",
       };
     }
     const generationTimestamp = assessFreshnessTimestamp(now, payload.producedAt);

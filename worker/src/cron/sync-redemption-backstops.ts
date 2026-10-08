@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -12,12 +13,14 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import type { RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createCronResult, type CronMetadataRecord } from "../lib/cron-result";
 import { loadDexLiquidityScores } from "../lib/dex-liquidity";
-import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves/store";
+import { AcceptedReserveViewError, acceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
 import {
+  applyOutputDependencyResolution,
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
   resolveRedemptionBackstopEntry,
@@ -106,6 +109,14 @@ export async function syncRedemptionBackstops(
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const now = Math.floor(Date.now() / 1000);
+  await reportProgress?.({ stage: "loading-redemption-reserves" });
+  let acceptedReserveGeneration;
+  try {
+    acceptedReserveGeneration = await loadAcceptedReserveGeneration(db);
+  } catch (error) {
+    return createCronResult({ status: "error", metadata: { reason: error instanceof AcceptedReserveViewError ? error.reason : "accepted-reserve-view-unavailable" } });
+  }
 
   await reportProgress?.({ stage: "loading-redemption-stablecoins" });
   const stablecoinsCache = await loadStablecoinsCache(db, {
@@ -117,13 +128,26 @@ export async function syncRedemptionBackstops(
       metadata: { reason: `stablecoins-cache:${stablecoinsCache.reason}` },
     });
   }
+  const supplyMaxAgeSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
+  const supplyUpdatedAt = stablecoinsCache.updatedAt;
+  if (
+    supplyUpdatedAt == null ||
+    !Number.isSafeInteger(supplyUpdatedAt) ||
+    supplyUpdatedAt <= 0 ||
+    supplyUpdatedAt > now ||
+    now - supplyUpdatedAt > supplyMaxAgeSec
+  ) {
+    return createCronResult({
+      status: "error",
+      metadata: { reason: "stablecoins-cache:invalid-supply-generation" },
+    });
+  }
 
   const configuredIds = getConfiguredRedemptionBackstopIds();
   const configById = new Map(
     configuredIds.map((stablecoinId) => [stablecoinId, getRedemptionBackstopConfig(stablecoinId)]),
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
-  const now = Math.floor(Date.now() / 1000);
   const exitExecutionEnvelope = loadV9CandidateMethodologyPolicy(now);
   const exitExecutionReviews = validateExitExecutionModelReviews(exitExecutionModelReviews, exitExecutionEnvelope);
   const currentDepegObservationsById = buildRedemptionCurrentDepegObservationMap({
@@ -146,18 +170,7 @@ export async function syncRedemptionBackstops(
     preloadWarnings.push(`dex-liquidity:${message}`);
   }
 
-  let reserveSnapshotMetadataById = new Map<string, ReserveSnapshotMetadataRecord>();
-  await reportProgress?.({ stage: "loading-redemption-reserves" });
-  try {
-    reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
-  } catch (error) {
-    const message = toErrorMessage(error);
-    logWorkerEventArgs("handler", "warn",
-      "[sync-redemption-backstops] Reserve metadata preload failed; live capacity will fail closed to static/fallback rows:",
-      error,
-    );
-    preloadWarnings.push(`reserve-metadata:${message}`);
-  }
+  const reserveSnapshotMetadataById = acceptedReserveMetadataMap(acceptedReserveGeneration, now);
 
   await reportProgress?.({ stage: "loading-redemption-availability" });
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(
@@ -183,7 +196,7 @@ export async function syncRedemptionBackstops(
     }
   }
 
-  const snapshots = [];
+  const collectedSnapshots = [];
   const failedIds: string[] = [];
 
   await reportProgress?.({ stage: "resolving-redemption-backstops", itemsDone: 0, itemsTotal: configuredIds.length });
@@ -200,6 +213,7 @@ export async function syncRedemptionBackstops(
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           signal,
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
+          ...(reserveSnapshotMetadataById.has(stablecoinId) ? { reserveInput: consumedReserveInput(acceptedReserveGeneration, stablecoinId, reserveSnapshotMetadataById.get(stablecoinId)!) } : {}),
           routeAvailability,
           rpcOptions,
           stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
@@ -210,6 +224,7 @@ export async function syncRedemptionBackstops(
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             signal,
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
+            ...(reserveSnapshotMetadataById.has(stablecoinId) ? { reserveInput: consumedReserveInput(acceptedReserveGeneration, stablecoinId, reserveSnapshotMetadataById.get(stablecoinId)!) } : {}),
             routeAvailability,
             rpcOptions,
             stablecoinsCache, exitExecutionEnvelope, exitExecutionReviews,
@@ -217,17 +232,18 @@ export async function syncRedemptionBackstops(
         }
       }
 
-      if (resolved) snapshots.push(resolved);
+      if (resolved) collectedSnapshots.push(resolved);
     } catch (error) {
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failedIds.push(stablecoinId);
       const config = configById.get(stablecoinId);
       if (config) {
-        snapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
+        collectedSnapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
       }
     }
   }
   throwIfAborted(signal);
+  const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
@@ -272,7 +288,15 @@ export async function syncRedemptionBackstops(
   // every snapshot it could resolve, so it travels as quality, not a degraded run.
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
-  const runMetadata: CronMetadataRecord = {
+  const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
+    reserveViewSchemaVersion: 2,
+    reserveGenerationId: acceptedReserveGeneration.generationId,
+    reserveContentSha256: acceptedReserveGeneration.contentSha256,
+    runClockSec: now,
+    stablecoinsInput: { updatedAt: supplyUpdatedAt, assessedAt: now, maxAgeSec: supplyMaxAgeSec },
+    consumedReserveInputs: Object.fromEntries(
+      snapshots.flatMap((entry) => entry.reserveInput ? [[entry.stablecoinId, entry.reserveInput]] : []),
+    ),
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,

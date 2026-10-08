@@ -2,7 +2,6 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { getCaches, setCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
-import type { VaultsFyiRuntimeConfig } from "../lib/env";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import {
   buildYieldSupplementalFamilyCache,
@@ -127,7 +126,6 @@ export async function syncYieldSupplemental(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
-  vaultsFyi?: VaultsFyiRuntimeConfig,
   options?: SyncYieldSupplementalOptions,
 ): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
@@ -195,7 +193,6 @@ export async function syncYieldSupplemental(
       startSec,
       signal,
       chainRpcs,
-      vaultsFyi,
     });
   await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
     itemsDone: familyResults.length,

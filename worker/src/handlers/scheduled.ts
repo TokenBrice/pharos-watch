@@ -1,14 +1,8 @@
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
-import type { Env } from "../lib/env";
-import {
-  getScheduledSlotControlledDeadlineMs,
-} from "../lib/cron-timeouts";
-import {
-  runScheduledSlotWithFence,
-  type ScheduledSlotExecutionOptions,
-} from "../lib/scheduled-slot-fence";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey, type ScheduledWorkerRole } from "@shared/lib/scheduled-runner-registry";
+import type { ScheduledEnv } from "../lib/env";
+import { runScheduledSlotWithFence } from "../lib/scheduled-slot-fence";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { recordScheduledWorkerVersionFirstSeen } from "../lib/worker-version-first-seen";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
@@ -35,6 +29,8 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
     import("./scheduled/twenty-minute-mint-burn-extended").then((mod) => mod.runHalfHourlyMintBurnExtendedSlot),
   halfHourlyMeasuredExecution: () =>
     import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runHalfHourlyMeasuredExecutionSlot),
+  halfHourlyMeasuredExecutionSupplemental: () =>
+    import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runSupplementalMeasuredExecutionSlot),
   halfHourlyOffset: () => import("./scheduled/half-hourly").then((mod) => mod.runHalfHourlySlot),
   halfHourlyChartsOffset: () =>
     import("./scheduled/half-hourly-charts").then((mod) => mod.runHalfHourlyChartsSlot),
@@ -55,36 +51,6 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
   daily0810Utc: () => import("./scheduled/daily-0810").then((mod) => mod.runDaily0810Slot),
   monthlyYieldAudit: () => import("./scheduled/monthly-yield-audit").then((mod) => mod.runMonthlyYieldAuditSlot),
 } satisfies Record<ScheduledRunnerKey, SlotRunnerLoader>;
-
-type SlotFencePolicy = Pick<ScheduledSlotExecutionOptions, "staleAfterSec">;
-
-// staleAfterSec measures consecutive missed slot heartbeats, not job length:
-// the fence heartbeat timer runs for the whole slot regardless of how long a
-// child job takes, so even the longest lanes tolerate a tight window. Five to
-// six minutes of heartbeat silence means the isolate was killed (OOM kills
-// write no terminal row), and every extra minute here extends the outage of
-// each lane that gates on the dead slot. Only lanes that need the sixth
-// minute of takeover slack are listed below; every other slot runs on the
-// fence defaults (heartbeatSec 60, staleAfterSec 5*60, preSweepLimit 5).
-const LONG_SLOT_FENCE_POLICY = {
-  staleAfterSec: 6 * 60,
-} satisfies SlotFencePolicy;
-
-const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFencePolicy>> = {
-  fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
-  sixHourlyBlacklist: LONG_SLOT_FENCE_POLICY,
-  halfHourlyMintBurnCritical: LONG_SLOT_FENCE_POLICY,
-  twoHourlyDexDiscovery: LONG_SLOT_FENCE_POLICY,
-  halfHourlyMintBurnExtended: LONG_SLOT_FENCE_POLICY,
-  fourHourlyReserveSync: LONG_SLOT_FENCE_POLICY,
-  hourlyYieldSync: LONG_SLOT_FENCE_POLICY,
-  fourHourlyYieldSupplemental: LONG_SLOT_FENCE_POLICY,
-  daily0300Utc: LONG_SLOT_FENCE_POLICY,
-  daily0800Utc: LONG_SLOT_FENCE_POLICY,
-  daily0805Utc: LONG_SLOT_FENCE_POLICY,
-  daily0810Utc: LONG_SLOT_FENCE_POLICY,
-  monthlyYieldAudit: LONG_SLOT_FENCE_POLICY,
-};
 
 function buildUnknownScheduleError(cron: string): Error {
   return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
@@ -107,8 +73,9 @@ export class ScheduledSlotAggregateError extends Error {
 
 export async function handleScheduledEvent(
   event: ScheduledEvent,
-  env: Env,
+  env: ScheduledEnv,
   ctx: ExecutionContext,
+  workerRole: ScheduledWorkerRole,
 ): Promise<void> {
   const slotBudgetStartedAtMs = Date.now();
   const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
@@ -118,6 +85,17 @@ export async function handleScheduledEvent(
     logWorkerEventArgs("handler", "error", error.message);
     throw error;
   }
+  if (slotPlan.worker !== workerRole) {
+    logWorkerEvent({
+      scope: "handler",
+      level: "info",
+      event: "scheduled-worker-not-owner",
+      message: "Skipping scheduled trigger owned by another Worker",
+      status: "skipped_neutral",
+      metadata: { status: "skipped_neutral", reason: "scheduled-worker-not-owner", workerRole, owner: slotPlan.worker, cron: event.cron },
+    });
+    return;
+  }
 
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
   const scheduleKey = slotPlan.scheduleKey;
@@ -125,6 +103,7 @@ export async function handleScheduledEvent(
   const runtime = createScheduledRuntimeContext(env, ctx, {
     cron: event.cron,
     scheduleKey,
+    workerRole,
     scheduledTimeMs,
     slotStartedAt,
     slotBudgetStartedAtMs,
@@ -144,9 +123,11 @@ export async function handleScheduledEvent(
     slotResult = await runScheduledSlotWithFence(
       env.DB,
       scheduleKey,
-      async (slotSignal) => {
+      async (slotSignal, executionFence) => {
         runtime.slotSignal = slotSignal;
+        runtime.executionFence = executionFence;
         if (
+          workerRole === "heavy" &&
           slotPlan.runnerKey !== "v9SupplyAttributionOffset" &&
           slotPlan.runnerKey !== "v9PublicationOffset"
         ) {
@@ -166,8 +147,8 @@ export async function handleScheduledEvent(
         slotStartedAt,
         invocationId: runtime.invocationId ?? null,
         workerVersion: runtime.workerVersion ?? null,
-        deadlineMs: getScheduledSlotControlledDeadlineMs(slotBudgetStartedAtMs),
-        ...(SLOT_FENCE_POLICY_BY_RUNNER_KEY[slotPlan.runnerKey] ?? {}),
+        workerRole,
+        deadline: runtime.deadline,
       },
     );
   } catch (error) {

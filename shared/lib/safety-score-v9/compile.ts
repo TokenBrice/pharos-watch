@@ -14,6 +14,8 @@ import { computeValidatedV9FactSetDigest } from "./facts";
 import { createV9ValueInterner, deepFreeze, V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import { findV9CauseEvidenceBindingIssues, requiredV9Applicability } from "./evidence";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
+import { findV9ReserveBoundFactorStatusIssues } from "./reserve-bound-facts";
+import { V9_CANDIDATE_RESERVE_BOUND_POLICY } from "./reserve-bound-policy";
 
 const COMMON_REQUIRED_APPLICABILITY = new Map([
   "v9.control.review",
@@ -66,12 +68,22 @@ const admittedAssetSchema = V9AssetFactsV3Schema.superRefine((asset, ctx) => {
   for (const { gapIndex, message } of findV9CauseEvidenceBindingIssues(asset)) {
     ctx.addIssue({ code: "custom", path: ["gaps", gapIndex, "causeProof"], message });
   }
+  const boundClockSec = (asset.reserveBoundFacts ?? V9_EMPTY_ARRAY).reduce((latest, row) => Math.max(latest, row.fact.asOfSec), 0);
+  for (const { exposureIndex, factor, message } of findV9ReserveBoundFactorStatusIssues(asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, boundClockSec)) {
+    ctx.addIssue({ code: "custom", path: ["reserveExposures", exposureIndex, "factorStatuses", factor], message });
+  }
 }).transform(internCompiledAssetFacts);
 const inProcessFactSetSchema = createV9FactSetCoreV3Schema(z.union([
   z.custom<V9AssetFactsV3>((value) =>
     value !== null && typeof value === "object" && validatedAssetFacts.has(value)),
   admittedAssetSchema,
-]));
+])).superRefine((core, ctx) => {
+  for (const [assetIndex, asset] of core.assets.entries()) {
+    for (const { exposureIndex, factor, message } of findV9ReserveBoundFactorStatusIssues(asset, V9_CANDIDATE_RESERVE_BOUND_POLICY.backing, core.asOfSec)) {
+      ctx.addIssue({ code: "custom", path: ["assets", assetIndex, "reserveExposures", exposureIndex, "factorStatuses", factor], message });
+    }
+  }
+});
 
 /** Admit once, then retain only immutable identity proof, never an extra fact graph. */
 export function safeParseV9AssetFactsV3(input: unknown) {

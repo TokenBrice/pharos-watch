@@ -1,0 +1,80 @@
+{
+  "id": "scrvusd-curve",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Curve scrvUSD ERC-4626 share mechanics and profit distribution",
+        "url": "https://docs.curve.finance/developer/scrvusd/overview.md"
+      },
+      {
+        "label": "Curve introduction of interest-bearing Savings crvUSD",
+        "url": "https://news.curve.finance/introducing-scrvusd/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "scrvUSD is an ERC-4626 savings-vault share redeemable for an accrued amount of underlying crvUSD. Borrower-interest profit distributions increase the value attributable to shares, so it represents a value-accruing vault position rather than a token maintained at a fixed monetary redemption value. This is distinct from the separate GENIUS assessment of the dollar-targeted crvUSD underlying.",
+      "references": [
+        {
+          "label": "Curve Savings crvUSD: ERC-4626 vault and interest accumulation",
+          "url": "https://docs.curve.finance/developer/scrvusd/overview.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Curve introduces interest-bearing Savings crvUSD",
+          "url": "https://news.curve.finance/introducing-scrvusd/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2024-11-13",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed 2026-10-07. The official documentation describes an ERC-4626 vault holding crvUSD without rehypothecation or external strategies and receiving crvUSD borrowing-interest profits through the RewardsHandler. Withdrawals deliver the share entitlement to underlying crypto assets, not a legal issuer promise to pay a fixed amount of national currency or currency-denominated bank deposits. The savings share is independently assessed and does not inherit parent authorization. This non-payment-token assessment does not resolve securities, investment-product or intermediary-service regulation. No exact legal issuerEntity was identified or added.",
+    "references": [
+      {
+        "label": "Curve Savings crvUSD: ERC-4626 vault and interest accumulation",
+        "url": "https://docs.curve.finance/developer/scrvusd/overview.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Curve introduces interest-bearing Savings crvUSD",
+        "url": "https://news.curve.finance/introducing-scrvusd/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-11-13",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -13,8 +13,24 @@ function cause(overrides: Partial<StatusCause> = {}): StatusCause {
 }
 
 describe("transitionHasPublicImpact", () => {
+  it.each(["heavy_scheduled_delivery_stalled", "heavy_scheduler_liveness_unavailable"])(
+    "retains %s in public incident history at warning/critical severity", (code) => {
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "warning" })])).toBe(true);
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "critical" })])).toBe(true);
+      expect(transitionHasPublicImpact([cause({ code, layer: "availability", severity: "info" })])).toBe(false);
+    },
+  );
   it("keeps incomplete active-price coverage warning-only", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
+  });
+
+  it.each([
+    ["price_gap_reviews_expiring", "info"],
+    ["price_gap_reviews_expiring", "warning"],
+    ["reserve_feed_reviews_expiring", "info"],
+    ["reserve_feed_reviews_expiring", "warning"],
+  ] as const)("keeps %s at %s severity admin-only", (code, severity) => {
+    expect(transitionHasPublicImpact([cause({ code, severity })])).toBe(false);
   });
 
   it("treats a duration-degraded persistent price gap as public impact", () => {

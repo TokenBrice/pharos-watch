@@ -12,6 +12,8 @@ import {
   type ExecutableRedemptionReadClient,
 } from "../executable-redemption-observers";
 import { EIP1967_IMPLEMENTATION_SLOT } from "../onchain-identity";
+import { EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/redemption-backstop-capacity";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import {
   DSTAKE_ROUTER_ABI,
   DSTAKE_TOKEN_ABI,
@@ -487,6 +489,41 @@ const observeLido = (overrides: Record<string, Hex | null> = {}) => observeExecu
 );
 
 describe("Lido earnUSD queue observation", () => {
+  it("fails closed on a pre-aborted run without accepting route facts", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("scheduled run aborted"));
+    await expect(observeExecutableRedemptionRoute(
+      "earnusd-lido", lidoPin.identities.shares.address, controller.signal, undefined,
+      { client: lidoClient(), nowSec: lidoPin.blockTimestamp }, "lido-earnusd-queue",
+    )).rejects.toThrow("scheduled run aborted");
+  });
+  it("withholds observations when the block transport fails", async () => {
+    const client = lidoClient();
+    client.blockNumber = async () => null;
+    await expect(observeExecutableRedemptionRoute(
+      "earnusd-lido", lidoPin.identities.shares.address, new AbortController().signal, undefined,
+      { client, nowSec: lidoPin.blockTimestamp }, "lido-earnusd-queue",
+    )).rejects.toThrow(/block number unavailable/);
+  });
+  it.each([
+    { delta: -EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC, admitted: true },
+    { delta: -EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC - 1, admitted: false },
+    { delta: MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, admitted: true },
+    { delta: MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC + 1, admitted: false },
+  ])("uses the same shared pinned-clock boundaries as capacity admission ($delta)", async ({ delta, admitted }) => {
+    const client = lidoClient();
+    const timestamp = lidoPin.blockTimestamp + delta;
+    client.blockTimestamp = async () => timestamp;
+    const result = observeExecutableRedemptionRoute(
+      "earnusd-lido", lidoPin.identities.shares.address, new AbortController().signal, undefined,
+      { client, nowSec: lidoPin.blockTimestamp }, "lido-earnusd-queue",
+    );
+    if (admitted) {
+      await expect(result).resolves.toMatchObject({ sourceTimestamp: timestamp, capacityState: "unquantified" });
+    } else {
+      await expect(result).rejects.toThrow(/block timestamp is unavailable or out of range/);
+    }
+  });
   it("passes the cron RPC transport and request guard through every direct queue read", async () => {
     const client = lidoClient();
     const chainRpcs = buildChainRpcs();
@@ -512,6 +549,7 @@ describe("Lido earnUSD queue observation", () => {
     const observation = await observeLido();
     expect(observation).toMatchObject({
       capacityRaw: 0n, capacitySource: "lido-earnusd-unquantified-queue",
+      capacityState: "unquantified", outputAssetKeys: ["usdc-circle"],
       settlementBoundUnproven: true, routeStatus: "open", feeBps: 0,
       blockNumber: 26122344, sourceTimestamp: 1791157259,
       diagnostics: {

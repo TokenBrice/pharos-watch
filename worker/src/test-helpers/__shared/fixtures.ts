@@ -21,7 +21,6 @@ type BlacklistRow = {
   chain_name: string;
   event_type: "blacklist" | "unblacklist" | "destroy";
   address: string;
-  amount: number | null;
   amount_native: number | null;
   amount_usd_at_event: number | null;
   amount_source: BlacklistAmountSource;
@@ -197,7 +196,6 @@ export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): Blackli
     chain_name: "Ethereum",
     event_type: "blacklist",
     address: "0xabc123",
-    amount: 1000,
     amount_native: 1000,
     amount_usd_at_event: 1000,
     amount_source: "historical_balance",

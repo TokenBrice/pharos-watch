@@ -57,6 +57,30 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
 
+  it("excludes retired Workflow history from current health", async () => {
+    const job = "compute-safety-score-v9-workflow";
+    const rows = seedWithOverrides(NOW, [
+      { job, status: "error", ageSec: 30 },
+      { job, status: "degraded", ageSec: 60 },
+      { job, status: "ok", ageSec: 30 * 60 * 3 },
+    ]);
+    const db = makeDb(NOW, rows);
+    const snapshot = await loadCronHealth(db, NOW);
+    expect(snapshot.crons).not.toHaveProperty(job);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+    expect(snapshot.cronErrorCount).toBe(0);
+    expect(snapshot.degradedCronRuns).toBe(0);
+    expect(db.getHistory().some((entry) => entry.binds.includes(job))).toBe(false);
+  });
+
+
+  it("does not expect absent retired Workflow runs", async () => {
+    const rows = seedWithOverrides(NOW, []).filter((row) => row.job !== "compute-safety-score-v9-workflow");
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons).not.toHaveProperty("compute-safety-score-v9-workflow");
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+  });
+
   it("projects reasons for all retained rows and ignores ok quality-only findings", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "status-self-check", status: "ok", ageSec: 30 },
@@ -901,5 +925,29 @@ describe("corroboration event visibility and chronology", () => {
   it.each([{ ...corroboration, job: "sync-yield-data" }, { ...corroboration, eventType: "other" }, { broken: true }])("ignores mismatched or malformed event records", async (event) => {
     const result = await snapshot([{ key, event }]);
     expect(result.crons["sync-stablecoins"].latestEvent).toBeUndefined();
+  });
+});
+
+describe("recap availability metadata projection", () => {
+  it.each(["off", "public"] as const)("retains %s mode and pendingEffects in history and progress", async (mode) => {
+    const now = 1_775_890_000;
+    const job = "telegram-personalized-recap-planner";
+    const rollout = { mode, pendingEffects: mode === "public" };
+    const rows = seedWithOverrides(now, []);
+    rows.find((row) => row.job === job)!.metadata = JSON.stringify({ rollout });
+    const db = mockD1([
+      { match: "UNION ALL", rows },
+      { match: "SELECT MAX(output_at)", rows: [] },
+      { match: "FROM cron_leases", rows: [{ job, lease_owner: "recap-owner", lease_until: now + 60 }] },
+      { match: "FROM cron_run_progress", rows: [{
+        job, started_at: now - 10, updated_at: now - 1, stage: "planning",
+        items_done: 0, items_total: 1, message: "Planning",
+        lease_owner: "recap-owner", metadata: JSON.stringify({ rollout }), slot_started_at: now - 10,
+      }] },
+    ]);
+    const snapshot = await loadCronHealth(db, now);
+    expect(snapshot.crons[job].lastRun?.metadata).toMatchObject({ rollout });
+    expect(snapshot.crons[job].recentRuns[0].metadata).toMatchObject({ rollout });
+    expect(snapshot.crons[job].inFlight?.metadata).toMatchObject({ rollout });
   });
 });

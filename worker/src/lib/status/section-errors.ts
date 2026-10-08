@@ -18,7 +18,6 @@ const STATUS_SECTION_MESSAGES: Record<string, string> = {
   d1_usage_query_failed: "D1 usage metrics unavailable.",
   mint_burn_reconciliation_query_failed: "Mint/burn reconciliation unavailable.",
   reserve_drift_computation_failed: "Reserve drift diagnostics unavailable.",
-  classification_warnings_computation_failed: "Classification warnings unavailable.",
 };
 const STATUS_SECTION_FALLBACK_MESSAGE = "Status section unavailable.";
 

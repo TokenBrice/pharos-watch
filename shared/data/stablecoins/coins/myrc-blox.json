@@ -109,7 +109,7 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
-    "adapter": "blox-attestation-index",
+    "adapter": "myrc-independent-assurance",
     "version": 1,
     "semantics": "attestation-mix",
     "display": {
@@ -121,7 +121,8 @@
         "kind": "http-json",
         "url": "https://api.blox.my/blox-admin/attestations"
       }
-    }
+    },
+    "params": { "product": "MYRC", "profile": "myrc-v1" }
   },
   "notices": [
     {

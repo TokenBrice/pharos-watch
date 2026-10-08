@@ -1,0 +1,47 @@
+{
+  "id": "spusd-soulpeg",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "spUSD is a transferable 1:1 wrapper over sUSDC, which represents a USDC-funded Venus lending position. SoulPeg describes the wrapper as providing liquidity without unstaking. The reviewed terms and protocol introduction do not establish a separate spUSD issuer obligation to redeem a fixed amount of national currency or bank-deposit monetary value.",
+      "references": [
+        {
+          "label": "SoulPeg protocol introduction: sUSDC staking position and spUSD wrapper",
+          "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SoulPeg terms: USDC staking service",
+          "url": "https://soulpeg.io/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as a protocol-position wrapper under the tracker rubric, not as an independently issued fiat payment stablecoin. Tradability and a USDC-denominated 1:1 wrapper ratio do not establish fiat redemption. This does not attribute any USDC issuer authorization to spUSD. SoulPeg Labs is the operator branding in the terms, but its exact legal entity and domicile are not disclosed; no fabricated issuerEntity is assigned.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

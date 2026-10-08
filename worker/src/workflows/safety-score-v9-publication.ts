@@ -1,5 +1,10 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { describeError } from "@shared/lib/error-utils";
+import { z } from "zod";
+import { SafetyScoreV9InputIdentitySchema } from "@shared/types/safety-score-publication";
+import { safetyScoreV9InputIdentitiesMatch } from "@shared/lib/safety-score-v9-input-identity";
+import { FixedInputCacheEnvelopeFields } from "../lib/report-cards-fixed-input-cache-codec";
+import { SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, parseSafetyScoreV9CaptureControl } from "../lib/safety-score-v9/capture-control";
 import type {
   WorkflowEvent,
   WorkflowStep,
@@ -8,11 +13,8 @@ import { getCache } from "../lib/db-cache";
 import { resolveCronDegradedReason, type CronResult } from "../lib/cron-logger";
 import { stripSensitive } from "../lib/safe-error-message";
 import { parseJsonObject } from "../lib/json-parse";
-import type { Env } from "../lib/env";
-import {
-  NATIVE_V9_INPUT_CACHE_KEY,
-  parseNativeV9InputCacheArtifact,
-} from "../lib/safety-score-v9/native-input";
+import type { ScheduledEnv } from "../lib/env";
+import { NATIVE_V9_INPUT_CACHE_KEY } from "../lib/safety-score-v9/native-input";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9/publication-store";
 
 export const SAFETY_SCORE_V9_WORKFLOW_JOB =
@@ -28,6 +30,14 @@ const WORKFLOW_STEP_CONFIG = {
   },
   timeout: "14 minutes",
 } as const;
+
+const FixedInputReferenceEnvelopeSchema = z.object({
+  schemaVersion: z.literal(2),
+  kind: FixedInputCacheEnvelopeFields.kind,
+  encoding: FixedInputCacheEnvelopeFields.encoding,
+  sourceGeneration: FixedInputCacheEnvelopeFields.sourceGeneration,
+  safetyScoreIdentity: SafetyScoreV9InputIdentitySchema,
+});
 
 interface FixedInputReference {
   sourceGeneration: string;
@@ -242,15 +252,38 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
 async function loadFixedInputReference(
   db: D1Database,
 ): Promise<FixedInputReference> {
-  const row = await getCache(db, NATIVE_V9_INPUT_CACHE_KEY);
+  // Project only the envelope identity and small capture-control sidecar in one
+  // SQL snapshot. The compile step alone decompresses and admits the payload.
+  const row = await db.prepare(`
+    SELECT json_object(
+      'schemaVersion', json_extract(input.value, '$.schemaVersion'),
+      'kind', json_extract(input.value, '$.kind'),
+      'encoding', json_extract(input.value, '$.encoding'),
+      'sourceGeneration', json_extract(input.value, '$.sourceGeneration'),
+      'safetyScoreIdentity', json_extract(input.value, '$.safetyScoreIdentity')
+    ) AS reference, control.value AS capture_control
+    FROM cache input LEFT JOIN cache control ON control.key = ?
+    WHERE input.key = ?
+  `).bind(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, NATIVE_V9_INPUT_CACHE_KEY)
+    .first<{ reference: string; capture_control: string | null }>();
   if (row === null) {
     throw new Error("Safety Score V9 Workflow fixed input is missing");
   }
-  const artifact = await parseNativeV9InputCacheArtifact(row.value);
+  if (row.capture_control === null) {
+    throw new Error("Safety Score V9 Workflow capture control is missing");
+  }
+  const reference = FixedInputReferenceEnvelopeSchema.parse(parseJsonObject(row.reference));
+  const { capture } = parseSafetyScoreV9CaptureControl(row.capture_control);
+  if (!safetyScoreV9InputIdentitiesMatch(reference.safetyScoreIdentity, capture.safetyScoreIdentity) ||
+    reference.sourceGeneration !== capture.sourceGeneration ||
+    reference.safetyScoreIdentity.baseInputGenerationId !== capture.baseInputGenerationId ||
+    reference.safetyScoreIdentity.publicationGenerationId !== capture.sourceGeneration) {
+    throw new Error("Safety Score V9 Workflow fixed input reference does not match capture control");
+  }
   return {
-    sourceGeneration: artifact.input.sourceGeneration,
-    baseInputGenerationId: artifact.input.baseInputGenerationId,
-    clockSec: artifact.input.clockSec,
+    sourceGeneration: capture.sourceGeneration,
+    baseInputGenerationId: capture.baseInputGenerationId,
+    clockSec: capture.clockSec,
   };
 }
 
@@ -417,6 +450,7 @@ export async function writeSafetyScoreV9ShadowPublication(
   slotStartedAt: number,
   startedAtMs: number,
   gated: GatedShadowPublication,
+  workerVersion: string | null,
 ): Promise<void> {
   await db.batch([
     db.prepare(
@@ -461,8 +495,8 @@ export async function writeSafetyScoreV9ShadowPublication(
     db.prepare(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
-          slot_started_at, error, idempotency_key, degraded_reason)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         WHERE EXISTS (
           SELECT 1
             FROM cache
@@ -482,6 +516,7 @@ export async function writeSafetyScoreV9ShadowPublication(
       gated.error,
       terminalIdempotencyKey(instanceId),
       resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, gated.cronStatus, undefined, parseJsonObject(gated.cronMetadata)),
+      workerVersion,
       gated.shadowKey,
       gated.shadowValue,
       gated.updatedAt,
@@ -506,6 +541,7 @@ async function writeTerminalFailure(
   startedAtMs: number,
   error: unknown,
   capturedReason: string | null,
+  workerVersion: string | null,
 ): Promise<void> {
   const descriptor = describeError(error, stripSensitive);
   const reason = capturedReason || descriptor.code || "workflow-execution-failed";
@@ -513,6 +549,7 @@ async function writeTerminalFailure(
     workflow: "safety-score-v9-publication",
     instanceId,
     slotStartedAt,
+    workerVersion,
     stage: "workflow",
     reason,
     errorDescriptor: descriptor,
@@ -521,8 +558,8 @@ async function writeTerminalFailure(
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key, degraded_reason)
-     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?, ?)
+        slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+     VALUES (?, ?, ?, 'error', NULL, ?, ?, ?, ?, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -533,6 +570,7 @@ async function writeTerminalFailure(
     message,
     terminalIdempotencyKey(instanceId),
     resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "error", undefined, metadata),
+    workerVersion,
   ).run();
 }
 
@@ -555,12 +593,13 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
     reason: string | null;
     stage: string | null;
   },
+  workerVersion: string | null,
 ): Promise<void> {
   await db.prepare(
     `INSERT INTO cron_runs
        (job, started_at, duration_ms, status, item_count, metadata,
-        slot_started_at, error, idempotency_key, degraded_reason)
-     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?, ?)
+        slot_started_at, error, idempotency_key, degraded_reason, worker_version)
+     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?, ?, ?)
      ON CONFLICT DO NOTHING`,
   ).bind(
     SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -570,6 +609,7 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
       workflow: "safety-score-v9-publication",
       instanceId,
       slotStartedAt,
+      workerVersion,
       reason: "upstream-compute-publication-absent",
       upstreamJob: "compute-safety-score-v9",
       upstreamStatus: upstream.status,
@@ -580,6 +620,7 @@ export async function recordSkippedSafetyScoreV9WorkflowRun(
     `${terminalIdempotencyKey(instanceId)}:upstream-absent`,
     resolveCronDegradedReason(SAFETY_SCORE_V9_WORKFLOW_JOB, "skipped_neutral", undefined,
       { reason: "upstream-compute-publication-absent" }),
+    workerVersion,
   ).run();
 }
 
@@ -622,7 +663,7 @@ export function resolveSafetyScoreV9WorkflowSlot(
 }
 
 export async function runSafetyScoreV9PublicationWorkflow(
-  env: Pick<Env, "DB">,
+  env: Pick<ScheduledEnv, "DB" | "CF_VERSION_METADATA">,
   event: Readonly<WorkflowEvent<unknown>>,
   step: WorkflowStep,
 ): Promise<SafetyScoreV9WorkflowResult> {
@@ -633,6 +674,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
   const instanceId = safetyScoreV9WorkflowInstanceId(slotStartedAt);
   const startedAtMs = event.timestamp.getTime();
   let capturedReason: string | null = null;
+  const workerVersion = env.CF_VERSION_METADATA?.id || null;
 
   try {
     const fixedInput = await step.do(
@@ -673,6 +715,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
           slotStartedAt,
           startedAtMs,
           gated,
+          workerVersion,
         );
         return { shadowKey: gated.shadowKey };
       },
@@ -695,6 +738,7 @@ export async function runSafetyScoreV9PublicationWorkflow(
           startedAtMs,
           error,
           capturedReason,
+          workerVersion,
         );
         return { recorded: true };
       },

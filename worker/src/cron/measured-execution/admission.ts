@@ -19,10 +19,10 @@ import {
   isDexMeasuredExecutionDeploymentScoreEligible,
   type DexMeasuredExecutionDeployment,
 } from "./registry";
-import { getCurveCryptoSwapShadowPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
+import { getCurveCryptoSwapReviewedPolicy, type CurveCryptoSwapPoolPolicy } from "./curve-cryptoswap";
 import { CURVE_STABLESWAP_ADAPTER_PROFILE_ID, getCurveStableSwapPolicy, type CurveStableSwapPoolPolicy } from "./curve-stableswap";
 import { getCurveStableSwapNgPolicy, type CurveStableSwapNgPoolPolicy } from "./curve-stableswap-ng";
-import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite";
+import { getCurveCompositePolicy, matchesCurveCompositeTarget, type CurveCompositePoolPolicy } from "@shared/lib/curve-composite-policies";
 import { getUniswapV4Deployment, type UniswapV4Deployment } from "./uniswap-v4";
 
 export const MEASURED_EXECUTION_RPC_REQUEST_LIMIT = 1_300;
@@ -30,6 +30,9 @@ const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
 const MAX_ADMISSION_RPC_REQUESTS = MEASURED_EXECUTION_RPC_REQUEST_LIMIT - RPC_ADMISSION_FRAGMENTATION_HEADROOM;
 export const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
 export const MAX_ADMISSION_ROTATION_CYCLES = 2;
+// Four interleaved active opportunities retain the original one-hour rotation
+// ceiling without increasing any per-invocation resource budget.
+export const MAX_ACTIVE_ADMISSION_ROTATION_CYCLES = 4;
 export const MAX_EXPIRING_PRIORITY_RPC_REQUESTS = 20;
 export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
   admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
@@ -147,7 +150,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
     const prefix = `${target.chain.trim().toLowerCase()}:`;
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
-    const policy = getCurveCryptoSwapShadowPolicy(target.chain, endpointAddress);
+    const policy = getCurveCryptoSwapReviewedPolicy(target.chain, endpointAddress);
     return policy
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
@@ -188,7 +191,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
 export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExecutionTarget): boolean {
   const registration = getDexExecutionCapabilityRegistration(target.adapterProfileId);
   if (!registration || !isDexExecutionProfileAdmittedForScoring(
-    { adapterProfileId: target.adapterProfileId, chain: target.chain },
+    target,
     registration,
   )) return false;
   const deployment = resolveTargetDeployment(target);
@@ -203,9 +206,30 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
     case "quoter-v2":
       return isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain);
     case "curve-composite":
+      return matchesCurveCompositeTarget(target) &&
+        deployment.config.mode === "active" && deployment.config.scoreEligible === true;
     case undefined:
       return false;
   }
+}
+
+/** Published catalogs are historical; current reviewed membership owns each quote lane. */
+export function isDexMeasuredExecutionTargetInLane(
+  target: DexMeasuredExecutionTarget,
+  lane: "active" | "shadow",
+): boolean {
+  const deployment = resolveTargetDeployment(target);
+  if (!deployment) return false;
+  if ((deployment.kind === "quoter-v2" || deployment.kind === "uniswap-v4") &&
+    target.protocol !== deployment.config.protocol) return false;
+  if (lane === "active") return isDexMeasuredExecutionTargetScoreEligible(target);
+  if (deployment.kind === "quoter-v2") {
+    return !isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain);
+  }
+  if (deployment.kind === "curve-cryptoswap") {
+    return false; // Reviewed CryptoSwap policies have no shadow mode.
+  }
+  return deployment.config.mode === "shadow";
 }
 
 export function isDiagnosticDexMeasuredQuoteFailure(outcome: Pick<DexMeasuredQuoteOutcome, "status" | "failureReason" | "target">): boolean {
@@ -777,11 +801,12 @@ export function resolveMeasuredExecutionCronStatus(input: {
   deferredCount: number;
   admissionRotationCycles: number | null;
   cursorWriteStatus: "not-needed" | "written" | "write-failed";
+  maxAdmissionRotationCycles?: number;
 }): "ok" | "degraded" {
   return (
     input.attemptedFailureCount > 0 ||
     input.admissionRotationCycles === null ||
-    input.admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES ||
+    input.admissionRotationCycles > (input.maxAdmissionRotationCycles ?? MAX_ADMISSION_ROTATION_CYCLES) ||
     input.cursorWriteStatus === "write-failed" ||
     (input.deferredCount > 0 && input.cursorWriteStatus !== "written")
   )

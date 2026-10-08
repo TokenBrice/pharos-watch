@@ -36,15 +36,12 @@ const CRON_SCHEDULE_DEFINITIONS = {
     triggerSchedules: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
     ...CRON_SCHEDULE_CADENCES.quarterHourly,
   },
-  // The capture must land BEFORE the fixed input it will be consumed against.
-  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
-  // captureClockSec <= fixedInput.clockSec, because a publication must not depend
-  // on an observation taken after its own input snapshot. prepare-safety-score-v9-input
-  // stamps that clock at :17-:18, so :08/:38 are the captures the :22/:52 publications
-  // actually consume. A capture placed in the prepare->publish gap is after the clock
-  // by construction: it is never admitted, and isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred
-  // then skips the publication every cycle. Verified in production on 2026-08-09 (see
-  // the 10:22 skip); do not move this grid later without changing that admission rule.
+  // A packet must precede the scoring clock: capture/completion clocks after
+  // that clock are never admitted. The :08/:38 opportunities normally provide
+  // the :22/:52 publications with an older packet that can be re-derived.
+  // Fresh :16/:46 preparation also requests the following :23/:53 opportunity;
+  // compilation may report bounded attribution-pending without applying packets
+  // while that exact-source request remains unexpired. Keep this grid unchanged.
   // Paired hourly physical triggers preserve the :08/:23/:38/:53 grid above while
   // qualifying each invocation for the 15-minute hourly Cron CPU class. Under the
   // single sub-hourly expression the 30-second class killed the isolate on ~29% of
@@ -109,6 +106,13 @@ const CRON_SCHEDULE_DEFINITIONS = {
     // the same warm Worker isolate.
     triggerSchedules: ["5 * * * *", "35 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
+  },
+  // U-DEX-CAPACITY: a second bounded active EVM opportunity between the
+  // original slots. Hourly aliases retain the CPU class and 3/6 peak.
+  halfHourlyMeasuredExecutionSupplemental: {
+    schedule: "15,45 * * * *",
+    triggerSchedules: ["20 * * * *", "50 * * * *"],
+    ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecutionSupplemental,
   },
   halfHourlyOffset: {
     schedule: "10 * * * *",
@@ -191,11 +195,18 @@ export const CRON_CONNECTION_BUDGET = {
  * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */
 export const CRON_GROWTH_HEADROOM_POLICY = {
-  maxPhysicalTriggersBeforeRebalance: 41,
+  maxPhysicalTriggersBeforeRebalance: 43,
   // The digest publication watchdog is a one-connection serial sidecar on the
   // existing status lane; admit that reviewed entry without changing trigger
-  // topology or the per-trigger peak.
-  maxFetchCapableEntriesBeforeRebalance: 33,
+  // topology or the per-trigger peak (33). The 2026-10-07 redemption review
+  // corrected `sync-redemption-backstops` from a declared weight of 0 to its
+  // measured serial RPC peak of 1 (earnUSD queue observation); that is an
+  // accounting correction of existing work, not new fetch surface, so the
+  // reviewed count moves to 34 with per-trigger peaks unchanged (3/6, 2/6).
+  // U-DEX-CAPACITY adds two hourly expressions and another schedule-bound
+  // 3/6 entry for the existing shared job. Fetch-capable jobs are deduplicated,
+  // so the ceiling remains 34. Neither existing 5/6 DEX slot gains work.
+  maxFetchCapableEntriesBeforeRebalance: 34,
   maxHeadroomFullTriggersBeforeRebalance: 2,
   queuesOrWorkflowsReview: {
     p95DurationMs: 10 * 60 * 1000,
@@ -219,7 +230,7 @@ export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],
   "snapshot-psi": ["quarterHourly", "daily0800Utc"],
   "snapshot-public-dataset": ["quarterHourly", "daily0800Utc"],
-  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
+  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "halfHourlyMeasuredExecutionSupplemental", "daily0810Utc"],
   "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
   "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
 } as const satisfies Record<string, readonly CronScheduleKey[]>;
@@ -424,7 +435,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // Sequential internal/external status probes
+    maxConnections: 2, // Optional D1 REST + GraphQL phase; monitor/status probes remain serial
     connectionGroup: "status-self-check-chain",
   },
   {
@@ -535,7 +546,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyMeasuredExecution",
     triggerMode: "isolated",
-    maxConnections: 3, // Three EVM lanes; native Solana/Sui follow serially here, while daily shadow EVM/Tron keep the same peak.
+    maxConnections: 3, // Three EVM lanes; native Solana/Sui follow serially on the base slot. Supplemental/daily EVM keep the same peak.
   },
   {
     job: "sync-dex-liquidity-stage",
@@ -617,17 +628,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "v9PublicationOffset",
     triggerMode: "isolated",
     maxConnections: 0,
-    connectionGroup: "v9-publication-chain",
-  },
-  {
-    job: "compute-safety-score-v9-workflow",
-    label: "V9 shadow Workflow compiler",
-    group: "quarter-hourly",
-    intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
-    scheduleKey: "v9PublicationOffset",
-    triggerMode: "isolated",
-    statusImpact: "watch",
-    maxConnections: 0, // Reuses the D1-only publication compiler against a write-capturing facade.
     connectionGroup: "v9-publication-chain",
   },
   {
@@ -714,7 +714,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
+    maxConnections: 1, // Serial direct RPC observers plus sealed accepted reserve inputs
     connectionGroup: "reserve-sync-chain",
   },
   {
@@ -927,6 +927,7 @@ const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [de
 export function getCronJobMeta(job: string): CronJobMeta | null {
   return CRON_JOB_META_BY_ID.get(job) ?? null;
 }
+
 
 export function getCronStatusImpact(job: string): CronStatusImpact {
   return getCronJobMeta(job)?.statusImpact ?? "watch";

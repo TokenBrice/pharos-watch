@@ -1,6 +1,7 @@
 import { stripSensitive } from "./safe-error-message";
 import { parseJsonObject } from "./json-parse";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import { ResourcePressureSchema } from "@shared/types/status/cron";
 
 export const MAX_PERSISTED_CRON_METADATA_BYTES = 64 * 1_024 - 1;
 // The scheduled wrapper appends bounded lease and slot identity after a producer returns.
@@ -75,7 +76,9 @@ export function compactCronMetadataForPersistence(
   // and at most a handful of parts, so preserving them cannot re-breach the byte cap.
   const preservedLedgerScalars: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of entries) {
-    if (!key.startsWith("mxLedger") && key !== "outputPublishedAt") continue;
+    if (!key.startsWith("mxLedger") && key !== "outputPublishedAt"
+      && key !== "schedulerAttemptKey" && key !== "schedulerTerminalSource"
+      && key !== "schedulerTerminalToken" && key !== "childDisposition") continue;
     const scalar = boundedScalar(value);
     if (scalar !== undefined) preservedLedgerScalars[key] = scalar;
   }
@@ -84,6 +87,8 @@ export function compactCronMetadataForPersistence(
     .slice(0, MAX_NESTED_SCALARS)
     .map((reason) => stripSensitive(reason).slice(0, MAX_DIAGNOSTIC_STRING_CHARS));
   const preservedQuality = qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {};
+  const pressure = ResourcePressureSchema.safeParse(parsed?.resourcePressure);
+  const preservedPressure = pressure.success ? { resourcePressure: pressure.data } : {};
   for (const [key, value] of entries.slice(0, MAX_TOP_LEVEL_DIAGNOSTICS)) {
     const summary = summarizeDiagnostic(value);
     if (summary !== undefined) diagnostics[key] = summary;
@@ -95,6 +100,7 @@ export function compactCronMetadataForPersistence(
     reason,
     ...preservedLedgerScalars,
     ...preservedQuality,
+    ...preservedPressure,
     persistenceCompaction: {
       schemaVersion: 1,
       originalBytes,
@@ -122,6 +128,7 @@ export function compactCronMetadataForPersistence(
       reason: "cron-metadata-over-64-kib",
       ...preservedLedgerScalars,
       ...preservedQuality,
+      ...preservedPressure,
       persistenceCompaction: { schemaVersion: 1, originalBytes, diagnosticsDropped: true },
     });
   }

@@ -378,9 +378,9 @@ function buildSidecarEntry(review: SemanticReview, config: MintBurnContractConfi
   return entry;
 }
 
-function mergeEntriesIntoSidecar(entries: readonly ReviewedConservationEntry[]): void {
+function mergeEntriesIntoSidecar(entries: readonly ReviewedConservationEntry[], sidecarPath: string, runtimePath: string): void {
   assertCliUsage(entries.length > 0, "no sidecar entries to merge");
-  const existing: unknown = JSON.parse(readFileSync(SIDECAR_PATH, "utf8"));
+  const existing: unknown = JSON.parse(readFileSync(sidecarPath, "utf8"));
   const previous = Array.isArray((existing as { entries?: unknown }).entries)
     ? ((existing as { entries: ReviewedConservationEntry[] }).entries) : [];
   // Same chain + stablecoin + address is one identity: a decimals change replaces, never duplicates.
@@ -394,12 +394,17 @@ function mergeEntriesIntoSidecar(entries: readonly ReviewedConservationEntry[]):
       a.stablecoinId < b.stablecoinId ? -1 : a.stablecoinId > b.stablecoinId ? 1 :
         a.address < b.address ? -1 : a.address > b.address ? 1 : 0);
   const sidecar = { version: 1, entries: merged };
-  writeFileSync(SIDECAR_PATH, `${JSON.stringify(sidecar, null, 2)}\n`);
+  writeFileSync(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`);
   // The Worker runtime lookup is a projection of the sidecar; keep the two from drifting.
-  writeFileSync(RUNTIME_PATH, renderMintBurnConservationRuntime(sidecar));
+  writeFileSync(runtimePath, renderMintBurnConservationRuntime(sidecar));
 }
 
-async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
+export async function runAdmissionAuditCli(
+  argv: readonly string[],
+  destinations: { sidecarPath?: string; runtimePath?: string } = {},
+): Promise<void> {
+  const sidecarPath = destinations.sidecarPath ?? SIDECAR_PATH;
+  const runtimePath = destinations.runtimePath ?? RUNTIME_PATH;
   const { values } = parseStrictCliArgs(argv, {
     options: {
       ids: { type: "string" },
@@ -636,9 +641,9 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
       `${entries.filter((entry) => entry.disposition === "unsupported").length} unsupported, ${pending.length} pending\n`);
     for (const item of pending) process.stdout.write(`pending: ${item}\n`);
     if (mergeIntoSidecar) {
-      mergeEntriesIntoSidecar(entries);
-      process.stdout.write(`merged ${entries.length} entr${entries.length === 1 ? "y" : "ies"} into ${SIDECAR_PATH}\n`
-        + `regenerated ${RUNTIME_PATH}\n`);
+      mergeEntriesIntoSidecar(entries, sidecarPath, runtimePath);
+      process.stdout.write(`merged ${entries.length} entr${entries.length === 1 ? "y" : "ies"} into ${sidecarPath}\n`
+        + `regenerated ${runtimePath}\n`);
     }
   }
 

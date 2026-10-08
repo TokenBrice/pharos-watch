@@ -6,11 +6,13 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.32`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.33`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
 Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
+
+The 2026-10-08 `v6.33` release repairs Liquidity Erosion's weekly DEX-history admission: nearest positive TVL, confidence >=0.5 and inclusive 36-hour tolerance, with the selected row's original score/TVL/date retained. Missing eligible evidence leaves both historical anchors unavailable. Live DEX history reaches back 8.5 days; historical reconstruction reaches back 15.5 days from the earliest event UTC day, without changing supply-history bounds. Input availability, scores and bands may change. Release requires owner-approved U-C20-16 production-history replay; no replay result is recorded here.
 
 ---
 
@@ -99,6 +101,10 @@ Smoothed (averaged) with the previous cycle's reading only when that reading was
 ### S_liq — Liquidity Erosion
 
 7-day change in liquidity score and TVL from `dex_liquidity_history`.
+
+Both live hydration and historical reconstruction use the shared trend-baseline selector: the nearest row to the seven-day target with positive TVL and `coverage_confidence >= 0.5`, within an inclusive 36-hour tolerance. A closer ineligible row cannot mask an older eligible row. Score, TVL and date come from that same admitted row; without one, both historical anchors are null and S_liq is unavailable. This is a purpose-specific admission rule, not removal or reclassification of weak public DEX history; durability/digest retain their stricter ≥0.75 gates.
+
+Live DEX history reads start at `now − 7 days − 36 hours` (8.5 days). Historical reconstruction's DEX-only read starts at `min(event UTC days) − 14 days − 36 hours` (15.5 days), covering the earliest seven-day evaluation's weekly anchor. Supply-history bounds and event/current-day buckets remain unchanged. Code, next-free Depeg/DEWS methodology version and approved replay evidence must release together; rollback restores an approved code/version pair, never retags archived scores.
 
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`

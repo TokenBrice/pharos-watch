@@ -55,7 +55,7 @@ jobs:
             --input agents/sweep/capture.json \
             --output agents/sweep/replay.json \
             --published-at "$CLOCK_SEC" \
-            --allow-registry-mismatch 2>&1 | tee agents/sweep/replay-command.log
+            --allow-registry-mismatch --rederive-current-redemption 2>&1 | tee agents/sweep/replay-command.log
           replay_status=${PIPESTATUS[0]}
           npm run safety-score-v9:curation-worklist -- \
             --replay agents/sweep/replay.json \
@@ -74,6 +74,7 @@ jobs:
             --policy shared/data/safety-score-v9/methodology-policy-candidate-v1.json \
             --output agents/sweep/missing-data-registry.json 2>&1 | tee agents/sweep/missing-data-registry-command.log
           registry_status=${PIPESTATUS[0]}
+          projection_status=1
           if [ "$registry_status" = 0 ]; then
             jq '{
               schemaVersion: 1,
@@ -99,12 +100,14 @@ jobs:
               }
             }' agents/sweep/missing-data-registry.json \
               > .github/artifacts/safety-score-missing-data-registry-summary.json
+            projection_status=$?
           fi
           echo "replay_status=$replay_status" >> "$GITHUB_OUTPUT"
           echo "worklist_status=$worklist_status" >> "$GITHUB_OUTPUT"
           echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
           echo "live_withheld_status=$live_withheld_status" >> "$GITHUB_OUTPUT"
           echo "registry_status=$registry_status" >> "$GITHUB_OUTPUT"
+          echo "projection_status=$projection_status" >> "$GITHUB_OUTPUT"
       - name: Upload the full missing-data registry
         if: steps.generate.outputs.registry_status == '0'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -121,6 +124,7 @@ jobs:
           QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
           LIVE_WITHHELD_STATUS: ${{ steps.generate.outputs.live_withheld_status }}
           REGISTRY_STATUS: ${{ steps.generate.outputs.registry_status }}
+          PROJECTION_STATUS: ${{ steps.generate.outputs.projection_status }}
         shell: bash
         run: |
           set -euo pipefail
@@ -131,7 +135,7 @@ jobs:
             echo
             echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). Read-only review queues; no product data was changed. Drain per docs/process/safety-score-curation-expiry-sweep.md."
             echo
-            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}."
+            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}, summary projection=${PROJECTION_STATUS}."
             echo
             echo "## Missing-data registry"
             if [ -f agents/sweep/missing-data-registry.json ]; then
@@ -175,7 +179,7 @@ jobs:
             fi
             echo '```'
             echo
-            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
+            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ] || [ "$PROJECTION_STATUS" != 0 ]; then
               echo "## Generation failures"
               for spec in \
                 "replay:$REPLAY_STATUS:agents/sweep/replay-command.log" \
@@ -206,7 +210,7 @@ jobs:
           # Fail the run, not just the issue body, when any generator broke —
           # same rationale as agent-maintenance-candidates: a green run must
           # mean the queues are trustworthy.
-          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
+          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ] || [ "$PROJECTION_STATUS" != 0 ]; then
             echo "::error title=Curation sweep incomplete::See the sweep issue for command status and available output."
             exit 1
           fi
@@ -222,7 +226,7 @@ jobs:
             git diff --stat -- .github/artifacts/safety-score-missing-data-registry-summary.json
           fi
       - name: Open or update missing-data registry snapshot PR
-        if: steps.registry_diff.outputs.has_diff == 'true'
+        if: steps.registry_diff.outputs.has_diff == 'true' && steps.generate.outputs.projection_status == '0'
         env:
           AUTOMATION_GITHUB_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
           PR_BODY: |

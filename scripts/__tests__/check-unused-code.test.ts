@@ -382,6 +382,18 @@ describe("check-unused-code production reachability", () => {
     expect(output).not.toContain("src/test-utils/importer-side.ts");
     expect(output).toContain("src/lib/test-only.ts (only referenced by tests or test fixtures)");
   });
+
+  it("preserves a shared matched-invariant test-support corpus without production debt", () => {
+    const { output } = runChecker({
+      "shared/lib/matched.test-support.ts":
+        'import { value } from "./test-only";\nexport const corpus = [value];\n',
+      "shared/lib/__tests__/matched.test.ts":
+        'import { corpus } from "../matched.test-support";\ntest("matched", () => corpus);\n',
+      "shared/lib/test-only.ts": "export const value = 1;\n",
+    }, skipAudit, minimalScaffold);
+    expect(output).not.toContain("shared/lib/matched.test-support.ts");
+    expect(output).toContain("shared/lib/test-only.ts (only referenced by tests or test fixtures)");
+  });
 });
 
 describe("check-unused-code string-reference recognition", () => {

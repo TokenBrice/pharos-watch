@@ -1,0 +1,16 @@
+{
+  "id": "hchf-hedera-swiss-franc",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "HLiquity official repository: no operator, control or holder claim against Swisscoast AG or another entity",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md"
+      },
+      {
+        "label": "European Commission MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

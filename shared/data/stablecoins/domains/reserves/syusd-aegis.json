@@ -7,14 +7,17 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "yusd-aegis",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map evidence review",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_4)",
     "confidence": "verified",
     "sources": [
+      {"label": "Dwellir pinned Ethereum block 26088256, 2026-09-30T05:38:47Z: asset YUSD and cooldownDuration 604800; observed 2026-10-07T14:39:30.915Z", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"},
+      {"label": "Verified sYUSD implementation: cooldownShares, unstake and sYUSDSilo.withdraw transfer native YUSD", "url": "https://sourcify.dev/server/v2/contract/1/0xb0c63bb1667b6e9215aee562af2957739b2676fe?fields=sources"},
       {"label": "Ethereum asset() and cooldownDuration() at block 26088256 (2026-09-30)", "url": "https://ethereum-rpc.publicnode.com"},
       {
         "label": "Aegis sYUSD documentation",
@@ -25,10 +28,10 @@
         "url": "https://aegis.accountable.capital/"
       }
     ],
-    "rationale": "At Ethereum block 26088256 on 2026-09-30, asset() on the tracked sYUSD vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned tracked YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a and cooldownDuration() returned 604800 seconds. This independently confirms the exact wrapper parent and seven-day redemption cooldown. Reward accrual changes the exchange rate rather than the backing identity.",
+    "rationale": "At Ethereum block 26088256 (2026-09-30T05:38:47Z), independently re-read on 2026-10-07T14:39:30.915Z, asset() on tracked sYUSD vault 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned tracked YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a and cooldownDuration() returned 604800 seconds. Verified contracts/sYUSD.sol cooldownShares redeems shares into the cooldown silo; unstake calls silo.withdraw after cooldownEnd, and contracts/sYUSDSilo.sol withdraw transfers _YUSD to the receiver. The conservative seven-days horizon therefore measures wrapper-local realization in the holder claim's native settlement asset, YUSD, not fiat. Under the 2026-10-07 owner ruling, this supersedes the earlier gap classification's demand for final-fiat realization: YUSD's fiat realizability and strategy risk are inherited through the existing YUSD parent dependency rather than asserted or scored twice here. CompositionAsOf and historical weights are unchanged; this classification-only review does not certify a new reserve denominator.",
     "compositionBasis": "Exact Ethereum vault asset() and cooldownDuration() reads at block 26088256",
     "compositionAsOf": "2026-09-30",
-    "scope": "dependency-relationships",
+    "scope": "classification-only",
     "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
     "knownUnknownExposurePct": 0
   },

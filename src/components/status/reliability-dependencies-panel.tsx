@@ -93,7 +93,7 @@ export function ReliabilityDependenciesPanel({ model }: { model: ReliabilityDepe
             </h3>
             <span className="text-xs text-muted-foreground">
               {model.providerSummary
-                ? `${model.providerSummary.openCount} open · ${model.providerSummary.halfOpenCount} half-open · ${model.providerSummary.closedCount} closed`
+                ? `${model.providerSummary.openCount} open · ${model.providerSummary.halfOpenCount} half-open · ${model.providerSummary.closedCount} closed · ${model.providerSummary.invalidCount ?? "unknown"} invalid`
                 : "Unknown"}
             </span>
           </div>

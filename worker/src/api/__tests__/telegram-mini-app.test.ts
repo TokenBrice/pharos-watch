@@ -138,7 +138,7 @@ describe("handleTelegramMiniAppSession", () => {
 
   it("marks recap unavailable in an off rollout and rejects its mutation before a preference write", async () => {
     const initData = await privateInitData();
-    const offPolicy = { mode: "off" as const, allowedChatIds: new Set<string>() };
+    const offPolicy = { mode: "off" as const };
     const sessionDb = makeMiniAppDb(stateReadTables());
 
     const session = await handleTelegramMiniAppSession(

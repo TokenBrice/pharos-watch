@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.09",
+  "releaseVersion": "10.12",
   "semantic": {
     "accessLookthrough": {
       "edgeKinds": ["reserve-position", "receipt", "bridge-representation"],
@@ -827,14 +827,14 @@
     "exit": {
       "executionModels": {
         "orderbook": {
-          "admission": "enabled",
+          "admission": "research-only",
           "requiredGates": ["market-identity", "account", "deposit", "withdrawal", "fees", "settlement"],
           "exactRequestRequired": true,
           "sourceMaxAgeSec": 300,
           "priceMaxAgeSec": 300,
           "futureSkewSec": 60,
           "permittedBases": ["exhaustive-book-walk", "observed-prefix-book-walk"],
-          "maximumCertification": "exact-complete"
+          "maximumCertification": "diagnostic"
         },
         "securitize-offramp": {
           "admission": "enabled",

@@ -1,0 +1,90 @@
+{
+  "id": "usg-tangent",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USG is a protocol debt unit for leverage farming, leverage trading and DeFi yield positions. Tangent expressly states that USG cannot be redeemed for collateral and is issued solely through smart contracts without an intermediary. Peg Keepers and price-dependent borrowing/reward terms support its USD target. The reviewed use cases do not offer USG as a general payment instrument or identify a fixed monetary-value issuer redemption obligation. This supports non-payment-token for the tracked GENIUS authorization model.",
+      "references": [
+        {
+          "label": "Tangent USG purpose, issuance and no-redemption design",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Tangent governance",
+          "url": "https://docs.tangent.finance/docs/dao/governance.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Tangent DAO treasury Safe wallets",
+          "url": "https://docs.tangent.finance/docs/dao/dao_wallets.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "No exact legal issuer was established; issuerEntity is omitted. USG is assessed separately from sUSG, which is an appreciating savings share. This non-payment-token conclusion concerns documented USG leverage/yield use and absent holder redemption, not an automatic exclusion of every CDP or every USD-referencing token. GENIUS review is informational and does not assert a current approval, violation, or exemption from other laws. The regime remains in primary-regulator rulemaking; the September Treasury procedural rule is separate from Act-wide effectiveness.",
+    "references": [
+      {
+        "label": "Tangent USG purpose, issuance and no-redemption design",
+        "url": "https://docs.tangent.finance/docs/usg/overview_usg",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Tangent governance",
+        "url": "https://docs.tangent.finance/docs/dao/governance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Tangent DAO treasury Safe wallets",
+        "url": "https://docs.tangent.finance/docs/dao/dao_wallets.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, sections 2 and 20",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated entities and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -36,16 +36,17 @@ export function resolveMoreConservativeRedemptionSettlement(
   return isRedemptionSettlementAtLeastAsConservative(right, left) ? right : left;
 }
 
-/** Calendar terms never fall back to a scalar, target or conditional normal window. */
+/** Completed settlement bounds require current settlement-scoped sources, never target/process gaps. */
 export function resolveReviewedRedemptionSettlementDelay(
   reviewed: RedemptionV9RouteReviewTerms | undefined,
   clockSec: number,
 ): number | undefined {
-  if (!reviewed?.businessDayTerms) return reviewed?.settlementDelaySec;
+  if (!reviewed || reviewed.missingScoringFields?.includes("settlement")) return undefined;
   const reviewSec = reviewed.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : Number.NaN;
   if (!Number.isFinite(reviewSec) || reviewSec > clockSec ||
       clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC ||
       !(reviewed.docs ?? []).some((doc) => doc.supports?.includes("settlement"))) return undefined;
+  if (!reviewed.businessDayTerms) return reviewed.settlementDelaySec;
   const bound = maximumBusinessDaySettlement(reviewed.businessDayTerms, clockSec);
   return bound.state === "known" ? bound.maximumElapsedSec : undefined;
 }

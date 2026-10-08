@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MANIFEST_SOURCES } from "../data/live-reserves/independent-assurance";
+import { NativeReserveQuantityBasisSchema } from "../types/live-reserve-core";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/i;
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
@@ -19,6 +20,7 @@ const INDEPENDENT_ASSURANCE_PRODUCTS = [
   "XUSD",
   "AUDD", "USAT", "USDPT", "BRLA", "AUSD", "FIDD", "SBC", "TRYB", "TGBP",
   "PGOLD", "CADD", "BRLV", "AUDM", "USX", "FDUSD",
+  "MYRC",
 ] as const;
 
 export type IndependentAssuranceProduct = (typeof INDEPENDENT_ASSURANCE_PRODUCTS)[number];
@@ -79,7 +81,8 @@ export const IndependentAssuranceManifestSchema = z
     engagement: z.string().trim().min(1),
     conclusion: z.enum(["unmodified", "unqualified", "nothing-came-to-attention", "agreed-upon-procedures", "issuer-attested"]),
     assuranceTier: z.enum(["independent-assurance", "agreed-upon-procedures", "issuer-attested"]).optional(),
-    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce", "GBP", "TRY", "BRL", "CAD", "ZAR"]),
+    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce", "GBP", "TRY", "BRL", "CAD", "ZAR", "MYR"]),
+    nativeQuantityBasis: NativeReserveQuantityBasisSchema.optional(),
     assets: z.array(ReportAmountSchema).min(1),
     liabilities: z.array(ReportAmountSchema).min(1),
     adjustments: z.array(ReportAdjustmentSchema).optional(),
@@ -103,6 +106,20 @@ export const IndependentAssuranceManifestSchema = z
       : "independent-assurance";
     if (declaredTier !== undefined && declaredTier !== assuranceTier) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["assuranceTier"], message: "assuranceTier contradicts the report conclusion" });
+      return z.NEVER;
+    }
+    if (manifest.nativeQuantityBasis && (
+      manifest.nativeQuantityBasis.reserveUnit.kind !== "currency"
+      || manifest.nativeQuantityBasis.reserveUnit.unit !== manifest.unit
+      || manifest.nativeQuantityBasis.supplyToken !== manifest.product
+      || manifest.nativeQuantityBasis.nominalValuePerToken !== 1
+    )) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nativeQuantityBasis"], message: "native nominal basis must match the report currency and product" });
+      return z.NEVER;
+    }
+    if (manifest.product === "MYRC" && (manifest.unit !== "MYR"
+      || (manifest.nativeQuantityBasis && manifest.nativeQuantityBasis.nominalValuePerToken !== 1))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nativeQuantityBasis"], message: "MYRC requires MYR assets and a reviewed 1 MYRC = 1 MYR nominal basis" });
       return z.NEVER;
     }
     return { ...report, assuranceTier };

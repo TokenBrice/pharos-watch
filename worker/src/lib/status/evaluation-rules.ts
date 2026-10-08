@@ -2,6 +2,7 @@ import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
+  STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
   assessActivePriceGapDuration,
   getCacheRatioThresholds,
 } from "@shared/lib/status-thresholds";
@@ -13,6 +14,7 @@ import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import { getSourceFailureMessage } from "./section-errors";
+import { maxStatus } from "./evaluation-state";
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {
   healthy: 0,
@@ -130,6 +132,7 @@ export interface AvailabilityEvaluationInput {
 }
 
 export interface DataQualityEvaluationInput {
+  nowSec: number;
   dataQuality: DataQuality;
   repairRunnerAutoRepairCount: number | null;
   reserveCompositionQueryFailed: boolean;
@@ -146,6 +149,13 @@ export interface DataQualityEvaluationInput {
 
 function ruleResult(status: StatusLevel, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
   return status === "healthy" && causes.length === 0 ? null : { status, causes };
+}
+
+function expiringReviews(entries: readonly { id: string; expiresAt: number }[], nowSec: number) {
+  return entries
+    .map((entry) => ({ ...entry, remainingSec: entry.expiresAt - nowSec }))
+    .filter((entry) => entry.remainingSec > 0 && entry.remainingSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC)
+    .sort((a, b) => a.expiresAt - b.expiresAt || a.id.localeCompare(b.id));
 }
 
 function evaluateCacheDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
@@ -367,16 +377,33 @@ export function rebuildCronDerivedAvailabilityCauses(
 }
 
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
-  if (scheduler.status === "healthy") return { status: "healthy", causes: [] };
-  const unavailable = scheduler.status === "unavailable";
-  const status: StatusLevel = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
-  return { status, causes: [makeCause(
-    "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
-    status === "stale" ? "critical" : "warning",
-    unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}).`
-      : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
-    { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
-  )] };
+  const causes: StatusCause[] = [];
+  let status: StatusLevel = "healthy";
+  if (scheduler.status !== "healthy") {
+    const unavailable = scheduler.status === "unavailable";
+    status = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
+    causes.push(makeCause(
+      "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
+      status === "stale" ? "critical" : "warning",
+      unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}; warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`
+        : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
+      { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
+    ));
+  }
+  const heavy = scheduler.heavy;
+  if (heavy.status !== "healthy") {
+    const unavailable = heavy.status === "unavailable";
+    const heavyStatus: StatusLevel = heavy.status === "unavailable" ? "degraded" : heavy.status;
+    status = maxStatus(status, heavyStatus);
+    causes.push(makeCause(
+      "availability", unavailable ? "heavy_scheduler_liveness_unavailable" : "heavy_scheduled_delivery_stalled",
+      heavyStatus === "stale" ? "critical" : "warning",
+      unavailable ? `Heavy scheduler delivery evidence unavailable (${heavy.unavailableReason}; warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`
+        : `Heavy lane ${heavy.scheduleKey} has not started for ${heavy.ageSeconds}s (warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`,
+      { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
+    ));
+  }
+  return { status, causes };
 }
 
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
@@ -670,6 +697,17 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
           { metric: `${kind}GapReviews`, value: ids.length, threshold: 1 },
         ));
       }
+      const expiring = expiringReviews(coverage.missingActiveAssets.flatMap((asset) => asset.acknowledgedGap
+        ? [{ id: asset.stablecoinId, expiresAt: asset.acknowledgedGap.expiresAt }]
+        : []), input.nowSec);
+      if (expiring.length > 0) causes.push(makeCause(
+        "data-quality",
+        "price_gap_reviews_expiring",
+        "info",
+        `Price-gap review(s) currently acknowledging a missing price expire within 48h: ${expiring.map((review) =>
+          `${review.id} (expires ${new Date(review.expiresAt * 1000).toISOString()}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let the gap re-alert; expiry re-arms alerts automatically.`,
+        { metric: "priceGapReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC },
+      ));
       return ruleResult(input.activePriceCoverageImpactStatus, causes);
   },
   (input) => {
@@ -791,6 +829,17 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
     ] as const) {
       if (ids?.length) causes.push(makeCause("data-quality", code, "info", `${label} reserve feed reviews: ${ids.join(", ")}; health gates re-armed.`));
     }
+    const expiring = expiringReviews((reserve.acknowledgedFeeds ?? []).map((review) => ({
+      id: review.stablecoinId, expiresAt: review.expiresAt,
+    })), input.nowSec);
+    if (expiring.length > 0) causes.push(makeCause(
+      "data-quality",
+      "reserve_feed_reviews_expiring",
+      "info",
+      `Reserve-feed review(s) currently acknowledging a stale or erroring feed expire within 48h: ${expiring.map((review) =>
+        `${review.id} (expires ${new Date(review.expiresAt * 1000).toISOString()}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let the feed re-alert; expiry re-arms health gates automatically.`,
+      { metric: "reserveFeedReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC },
+    ));
     return ruleResult("healthy", causes);
   },
   DATA_QUALITY_STATUS_RULES_CORE[6],
@@ -812,6 +861,8 @@ const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/
 const RUNBOOK_BY_CODE: Record<string, string> = {
   scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  heavy_scheduled_delivery_stalled: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
+  heavy_scheduler_liveness_unavailable: `${RUNBOOK_BASE}/cron-delivery-stall.md`,
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
@@ -821,8 +872,12 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_duration_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
-  price_gap_reviews_expired: `${RUNBOOK_BASE}/stablecoins-cache.md`,
-  price_gap_reviews_invalid: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  price_gap_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
+  price_gap_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
+  reserve_feed_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  reserve_feed_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
+  reserve_feed_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_recent: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,

@@ -11,6 +11,11 @@ describe("check-cron-connection-budget", () => {
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
   });
 
+  it("preserves the four-connection status trigger after the D1 two-request correction", () => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "status-self-check")?.maxConnections).toBe(2);
+    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "statusSelfCheckOffset")?.totalConnections).toBe(4);
+  });
+
   it.each([
     // P2-03 registers the same-day PSI and public-dataset catch-ups in the declared quarter-hourly chain.
     ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
@@ -28,7 +33,7 @@ describe("check-cron-connection-budget", () => {
 
   it.each([
     ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
-    ["compute-safety-score-v9-workflow", 0], ["sync-dex-liquidity-stage", 5],
+    ["sync-dex-liquidity-stage", 5],
     ["sync-dex-liquidity", 5],
     ["prepare-safety-score-v9-input", 3],
   ] as const)("preserves reviewed %s job pressure", (job, peak) => {
@@ -61,6 +66,7 @@ describe("check-cron-connection-budget", () => {
       schedules: { testParallel: "* * * * *" },
       slotPlans: {
         testParallel: {
+          worker: "public",
           jobChains: [["chain-a"], ["chain-b"]],
         },
       },
@@ -91,6 +97,7 @@ describe("check-cron-connection-budget", () => {
       schedules: { testSerial: "* * * * *" },
       slotPlans: {
         testSerial: {
+          worker: "public",
           jobChains: [["first", "second"]],
         },
       },
@@ -105,7 +112,7 @@ describe("check-cron-connection-budget", () => {
     const missingPlan = evaluateCronConnectionBudget({ entries: [], schedules: { slot: "*" }, slotPlans: {} });
     expect(missingPlan).toMatchObject({ failed: true, missingBudgetScheduleKeys: ["slot"], missingBudgetJobs: [] });
     const missingJob = evaluateCronConnectionBudget({
-      entries: [], schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["absent"]] } },
+      entries: [], schedules: { slot: "*" }, slotPlans: { slot: { worker: "public", jobChains: [["absent"]] } },
     });
     expect(missingJob).toMatchObject({ failed: true, missingBudgetScheduleKeys: [], missingBudgetJobs: ["slot:absent"] });
   });
@@ -113,7 +120,7 @@ describe("check-cron-connection-budget", () => {
   it("requires an exact schedule budget entry", () => {
     const entry = (scheduleKey: string, maxConnections: number) => ({ job: "job", scheduleKey, maxConnections, statusTracked: true });
     const evaluate = (entries: { job: string; scheduleKey: string; maxConnections: number; statusTracked: boolean }[]) => evaluateCronConnectionBudget({
-      entries, schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+      entries, schedules: { slot: "*" }, slotPlans: { slot: { worker: "public", jobChains: [["job"]] } },
     });
     const local = evaluate([entry("other", 5), entry("slot", 2)]);
     expect(local.failed).toBe(false);
@@ -141,7 +148,7 @@ describe("check-cron-connection-budget", () => {
           { job: "budget", scheduleKey: "slot", maxConnections: budgetOnlyPeak, statusTracked: false },
         ],
         schedules: { slot: "*" },
-        slotPlans: { slot: { jobChains: [["a"], ["b"]], budgetOnlyJobs: ["budget"] } },
+        slotPlans: { slot: { worker: "public", jobChains: [["a"], ["b"]], budgetOnlyJobs: ["budget"] } },
       });
       expect(report.triggerReports[0]).toMatchObject({
         parallelConnections: 3, totalConnections: budgetOnlyPeak === 1 ? 3 : 4,
@@ -155,7 +162,7 @@ describe("check-cron-connection-budget", () => {
       const report = evaluateCronConnectionBudget({
         budget: { maxPerTrigger: 6, failAt: 6, fullForNewFetchHeavyWorkAt: 5 },
         entries: [{ job: "job", scheduleKey: "slot", maxConnections: peak, statusTracked: true }],
-        schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+        schedules: { slot: "*" }, slotPlans: { slot: { worker: "public", jobChains: [["job"]] } },
       });
       expect(report.failed).toBe(failed);
       expect(report.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toEqual(warnings);
@@ -174,7 +181,7 @@ describe("check-cron-connection-budget", () => {
           queuesOrWorkflowsReview: { connectionPressureAt: 5, fanoutPerRun: 100, p95DurationMs: 60_000 },
         },
         entries: [{ job: "job", scheduleKey: "slot", maxConnections: 5, statusTracked: true }],
-        schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
+        schedules: { slot: "*" }, slotPlans: { slot: { worker: "public", jobChains: [["job"]] } },
       });
       expect(report).toMatchObject({
         fetchCapableEntryLimitExceeded: entryExceeded, headroomFullTriggerLimitExceeded: triggerExceeded,

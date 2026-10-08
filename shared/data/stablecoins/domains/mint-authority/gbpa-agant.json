@@ -281,44 +281,48 @@
       "scopedQuestions": [
         {
           "controlRef": "GBPA EVM fiat minter",
-          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM fiat-minter EOA?",
+          "question": "DFNS's February 17, 2025 provider announcement names Agant's MPC wallet-management platform and GBPA mint/burn automation, but does not bind that architecture to current fiat-minter EOA 0x5c32ec946062109c61260c738e2fd794b18499d8. What current controller-specific signing quorum, beneficial operator identities and independence, and recovery/replacement policy govern this key?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (KEY_CUSTODY_2)",
           "sources": [
+            { "label": "DFNS provider announcement, February 17, 2025: Agant MPC platform and GBPA mint/burn workflows; no exact-controller signing policy", "url": "https://dfns.co/article/announcing-agant/" },
             { "label": "Exact EVM native mint permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0" },
             { "label": "Official GBPA native deployment roster", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md" }
           ]
         },
         {
           "controlRef": "GBPA EVM ProxyAdmin owner",
-          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified EVM mint-logic owner EOA?",
+          "question": "DFNS's February 17, 2025 provider announcement names Agant's MPC wallet-management platform and GBPA mint/burn automation, but does not identify current mint-logic owner EOA 0xbecf04e2348d00885c62d97d9629c99e581fe00f or cover its upgrade-key policy. What current controller-specific signing quorum, beneficial operator identities and independence, and recovery/replacement policy govern this key?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (KEY_CUSTODY_2)",
           "sources": [
+            { "label": "DFNS provider announcement, February 17, 2025: Agant MPC platform and GBPA mint/burn workflows; no exact-controller signing policy", "url": "https://dfns.co/article/announcing-agant/" },
             { "label": "Exact EVM owner and upgrade permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0" },
             { "label": "Official GBPA native deployment roster", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md" }
           ]
         },
         {
           "controlRef": "GBPA Tempo native issuance role inventory",
-          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo issuer EOA? Its complete role census does not establish human or key-custody independence.",
+          "question": "DFNS's February 17, 2025 provider announcement describes Agant's multichain MPC wallet-management platform and GBPA mint/burn automation, but does not bind it to current Tempo issuer EOA 0x5c32ec946062109c61260c738e2fd794b18499d8. What current controller-specific signing quorum, beneficial operator identities and independence, and recovery/replacement policy govern this key? Complete on-chain role membership does not answer these off-chain questions.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (KEY_CUSTODY_2)",
           "sources": [
+            { "label": "DFNS provider announcement, February 17, 2025: Agant MPC platform and GBPA mint/burn workflows; no exact-controller signing policy", "url": "https://dfns.co/article/announcing-agant/" },
             { "label": "Exact Tempo native GBPA token", "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3" },
             { "label": "TIP-20 issuer-role semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec" }
           ]
         },
         {
           "controlRef": "GBPA Tempo native role and supply-cap administrator",
-          "question": "What independently evidenced signing policy, key custody, operator independence and recovery/replacement process governs this identified Tempo role/cap-admin EOA?",
+          "question": "DFNS's February 17, 2025 provider announcement describes Agant's multichain MPC wallet-management platform and GBPA mint/burn automation, but does not identify current Tempo role/cap-admin EOA 0xbecf04e2348d00885c62d97d9629c99e581fe00f or cover its privileged-key policy. What current controller-specific signing quorum, beneficial operator identities and independence, and recovery/replacement policy govern this key?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)",
+          "reviewedAt": "2026-10-07",
+          "reviewer": "Sol unknown-resolver wave 2026-10-07 (KEY_CUSTODY_2)",
           "sources": [
+            { "label": "DFNS provider announcement, February 17, 2025: Agant MPC platform and GBPA mint/burn workflows; no exact-controller signing policy", "url": "https://dfns.co/article/announcing-agant/" },
             { "label": "Exact Tempo native GBPA token", "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000000a6da882d075a4c3" },
             { "label": "TIP-20 role/cap administration semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec" }
           ]

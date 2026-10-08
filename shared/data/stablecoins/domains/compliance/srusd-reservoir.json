@@ -1,0 +1,90 @@
+{
+  "id": "srusd-reservoir",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Reservoir savings documentation: srUSD and wsrUSD",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+      },
+      {
+        "label": "Reservoir savings rate and price calculations",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd/srusd-and-wsrusd-calculations.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "srUSD is Reservoir's yield-accruing savings position minted from rUSD. The public savings documentation describes governance-set interest accruing daily, while reserve documentation describes conversion into rUSD subject to PSM liquidity. The token represents a value-accruing protocol position rather than a fixed-monetary-value payment or settlement instrument.",
+      "references": [
+        {
+          "label": "Reservoir savings documentation: srUSD and wsrUSD",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reservoir savings rate and price calculations",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd/srusd-and-wsrusd-calculations.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Reservoir protocol reserve disclosure",
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "srUSD is assessed independently from base rUSD as a yield-accruing savings position. This exclusion is a research application of the GENIUS payment-stablecoin definition, not a regulator decision on the named token or an exemption for the underlying rUSD. The legal token issuer is not identified in the opened protocol documents; Reservoir Foundation and Fortunafi Capital Management LLC are not substituted as issuer. Public protocol reserve disclosures and smart-contract audits do not establish independent monthly stablecoin reserve attestations. No official payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir savings documentation: srUSD and wsrUSD",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir savings rate and price calculations",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd/srusd-and-wsrusd-calculations.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir protocol reserve disclosure",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Reservoir Terms of Service (US person exclusion, Cayman Islands governing law)",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-08-23",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

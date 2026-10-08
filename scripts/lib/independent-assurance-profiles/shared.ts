@@ -15,6 +15,7 @@ export interface CompilerProfile {
   engagement: string;
   conclusion: IndependentAssuranceManifest["conclusion"];
   unit: IndependentAssuranceManifest["unit"];
+  nativeQuantityBasis?: IndependentAssuranceManifest["nativeQuantityBasis"];
   assetRows: Array<{ code: string; label: string; pattern: RegExp }>;
   liabilityRows: Array<{ code: string; label: string; pattern: RegExp }>;
   adjustments?: Array<{ code: string; label: string; pattern: RegExp; treatment: string } & (

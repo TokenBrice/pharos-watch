@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
@@ -242,7 +243,7 @@ export function makeV9FixedInput(options: V9FixedInputOptions = {}) {
       : {
           exitRouteObservationCoverage: {
             status: "populated",
-            capabilityMatrixVersion: options.dexCapabilityMatrixVersion ?? "p4a.9",
+            capabilityMatrixVersion: options.dexCapabilityMatrixVersion ?? DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
             retainedPoolCount: 1,
             observationCount: 1,
             scoreEligibleObservationCount: 1,

@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
-import type { ActivePriceCoverageHealth, StatusHealthValue } from "../types/status";
+import type { ActivePriceCoverageHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "../types/api-meta";
 
@@ -31,6 +31,38 @@ export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
   if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
   if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
   return "stale";
+}
+
+/** Admin-only pending-candidate budget; never changes publication acceptance or public health. */
+export const STATUS_PUBLICATION_PENDING_MAX_AGE_SEC = 2 * 3600;
+
+export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth | undefined): {
+  status: StatusHealthOrUnknown;
+  reason: string | null;
+  maxAgeSec: number | null;
+  updatedAt: number | null;
+} {
+  if (!surface) return { status: "unknown", reason: "Publication health surface unavailable.", maxAgeSec: null, updatedAt: null };
+  const published = surface.lastPublishedGeneration;
+  const attempt = surface.lastAttemptedGeneration;
+  if (!published) return { status: "stale", reason: "No published generation recorded.", maxAgeSec: null, updatedAt: attempt?.startedAt ?? null };
+  if ((attempt?.state === "failed" || attempt?.state === "rejected") && attempt.startedAt > published.startedAt) {
+    return {
+      status: "degraded",
+      reason: attempt.failureReason ?? surface.lastFailureReason ?? `Latest generation ${attempt.state}.`,
+      maxAgeSec: null,
+      updatedAt: attempt.failedAt ?? attempt.startedAt,
+    };
+  }
+  if (surface.candidateAgeSec != null && surface.candidateAgeSec > STATUS_PUBLICATION_PENDING_MAX_AGE_SEC) {
+    return {
+      status: "degraded",
+      reason: `Candidate generation has been pending for ${surface.candidateAgeSec}s.`,
+      maxAgeSec: STATUS_PUBLICATION_PENDING_MAX_AGE_SEC,
+      updatedAt: attempt?.startedAt ?? null,
+    };
+  }
+  return { status: "healthy", reason: null, maxAgeSec: null, updatedAt: published.publishedAt ?? published.validatedAt ?? published.startedAt };
 }
 
 // --- Blacklist gap thresholds ---
@@ -304,9 +336,18 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 /** Reviews suppress only matched operational health gates, never evidence admission. */
 export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
 
+/** Reminder lead time before a currently acknowledging review lapses (price-gap and reserve-feed lanes). */
+export const STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC = 48 * 3600;
+
 export const STATUS_SCHEDULER_LIVENESS_THRESHOLDS = {
   warningAfterSec: 600,
   staleAfterSec: 1200,
+} as const;
+
+/** Heavy delivery: warn after two missed 15-minute slots; stale after three. */
+export const STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS = {
+  warningAfterSec: 1800,
+  staleAfterSec: 2700,
 } as const;
 
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */

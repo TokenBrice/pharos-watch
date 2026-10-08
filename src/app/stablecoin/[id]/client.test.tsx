@@ -630,13 +630,19 @@ describe("StablecoinDetailClient", () => {
     { name: "no route qualifies", primaryRoute: null, note: "not counted" },
     { name: "Exit scores this route", primaryRoute: "usds-sky", note: null },
     { name: "Exit scores another coin's route of the same family", primaryRoute: "usdc-circle", note: "not selected" },
+    { name: "Exit selects a colliding route suffix", primaryRoute: "other:usds-sky", note: "not selected" },
+    { name: "Exit selects a composed route suffix", primaryRoute: "composed:usds-sky", note: "not selected" },
   ])("qualifies the indexed redemption score when $name", ({ primaryRoute, note }) => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const routeFamily = "offchain-issuer";
     const reportCard = structuredClone(makeV9Card({ id: coin.id }));
     const exit = reportCard.breakdowns!.exit;
     if (primaryRoute === null) exit.primaryRoute = null;
-    else exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+    else {
+      exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+      exit.primaryRoute!.routeId = `redemption:${primaryRoute}:${routeFamily}`;
+      exit.primaryRoute!.lane = "redemption";
+    }
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       reportCard,
       reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
@@ -652,6 +658,30 @@ describe("StablecoinDetailClient", () => {
   });
 
   it.each([
+    { routeId: "redemption:usds-sky:offchain-issuer", lane: "redemption", expected: "backup" },
+    { routeId: "redemption:other:usds-sky:offchain-issuer", lane: "redemption", expected: "not selected" },
+    { routeId: "redemption:usds-sky:offchain-issuer", lane: "dex", expected: "not selected" },
+  ] as const)("joins the indexed backup by typed identity ($routeId, $lane)", ({ routeId, lane, expected }) => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = structuredClone(makeV9Card({ id: coin.id }));
+    const exit = reportCard.breakdowns!.exit;
+    const key = "redemption:generation:redemption:usds-sky:offchain-issuer";
+    exit.diversification = { routeKey: key, routeLabel: "Backup", bonus: 2 };
+    exit.alternatives = [{
+      key, routeId, lane, label: "Backup", routeFamily: "issuer-redemption", score: 70,
+      included: true, exclusionReason: null, confidenceDimensions: null,
+      capacityEvidenceTier: "documented", rawSameNotionalCostBps: null,
+    }];
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reportCard, reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),
+      redemptionBackstop: { stablecoinId: coin.id, score: 79, routeFamily: "offchain-issuer" },
+    }));
+    const { container } = renderDetail(coin);
+    const row = container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')!;
+    expect(row.textContent).toContain(expected);
+  });
+
+  it.each([
     { name: "Exit selects another route", primaryRoute: "usdc-circle", expected: "NR · not selected" },
     { name: "no route qualifies", primaryRoute: null, expected: "NR · not counted" },
   ])("indexes an unrated redemption route as NR, never a blank row, when $name", ({ primaryRoute, expected }) => {
@@ -660,7 +690,11 @@ describe("StablecoinDetailClient", () => {
     const reportCard = structuredClone(makeV9Card({ id: coin.id }));
     const exit = reportCard.breakdowns!.exit;
     if (primaryRoute === null) exit.primaryRoute = null;
-    else exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+    else {
+      exit.primaryRoute!.key = `redemption:generation:redemption:${primaryRoute}:${routeFamily}`;
+      exit.primaryRoute!.routeId = `redemption:${primaryRoute}:${routeFamily}`;
+      exit.primaryRoute!.lane = "redemption";
+    }
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       reportCard,
       reportCardsResponse: makeReportCardsV9Response({ cards: [reportCard] }),

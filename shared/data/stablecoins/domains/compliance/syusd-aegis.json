@@ -12,9 +12,78 @@
         "url": "https://aegis.im/yield-as-a-service"
       },
       {
-        "label": "Aegis sYUSD token documentation",
-        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        "label": "Aegis sYUSD token documentation (archived 2025-10-30)",
+        "url": "https://web.archive.org/web/20251030224701/https://docs.aegis.im/tokens/syusd-yield-bearing-token"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sYUSD represents ERC-4626 shares in a YUSD staking pool. Its exchange rate against YUSD increases as yield accrues, and withdrawal returns underlying YUSD. The share does not provide a fixed monetary-value redemption obligation of its own.",
+      "references": [
+        {
+          "label": "Aegis sYUSD token documentation (archived 2025-10-30)",
+          "url": "https://web.archive.org/web/20251030224701/https://docs.aegis.im/tokens/syusd-yield-bearing-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Aegis current YUSD and staked sYUSD product presentation",
+          "url": "https://aegis.im/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This classification covers the value-accruing staking share only; the parent YUSD has a separately reviewed unclear payment-stablecoin classification. The current sYUSD documentation returned HTTP 403 and the same issuer page was recovered from its October 30, 2025 Wayback snapshot. No current staking fee or cooldown claim is inferred from that historical snapshot. Archived generic Aegis terms identify Aegis Vault Ltd. in the British Virgin Islands, but current token-specific legal attribution was not independently established, so issuerEntity is omitted.",
+    "references": [
+      {
+        "label": "Aegis sYUSD token documentation (archived 2025-10-30)",
+        "url": "https://web.archive.org/web/20251030224701/https://docs.aegis.im/tokens/syusd-yield-bearing-token",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis current YUSD and staked sYUSD product presentation",
+        "url": "https://aegis.im/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Aegis service terms (archived 2025-06-13)",
+        "url": "https://web.archive.org/web/20250613164141/https://legal.aegis.im/knowledge-base/terms-of-service-of-aegis-dao-foundation/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-12-10"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -12,7 +12,7 @@ Every later task that says "verified against the harness runbook" means the proc
 
 | Situation                                                     | Gate                                      | Expected result                                  |
 | ------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
-| Score-neutral refactor, dedup, or extraction                   | `--assert-empty`                          | `EMPTY DIFF — bit-identical`                      |
+| Score-neutral refactor, dedup, or extraction                   | `--assert-empty`                          | `EMPTY DIFF — normalized score-output equality`   |
 | Intentional score change that must not change a grade          | `--assert-grade-stable`                   | Reported drift entries, zero grade flips          |
 | Intentional release with reviewed grade changes                | `safety-score-v9:movers --assert-declared` | Every grade flip is declared with the observed direction |
 | Before activating a score-neutral candidate stack in production | Pre-activation sweep                    | Both captures empty at both commits               |
@@ -25,11 +25,19 @@ Every later task that says "verified against the harness runbook" means the proc
 Two properties make the replay equal to production:
 
 - The producer compiles the publication with `publishedAtSec = fixedInput.clockSec` in `worker/src/lib/safety-score-v9/publication-runner.ts`, which `worker/src/cron/compute-safety-score-v9.ts` invokes. Replaying with `--published-at <capture clockSec>` therefore reproduces the exact publication clock, not an approximation; use the symbol rather than a brittle source line as the maintenance anchor.
-- `worker/scripts/replay-safety-score-v9.ts` compiles without network, D1, or wall-clock reads. Capture-time replay freezes the registry snapshot as well as the input and publication clock; current evaluator code, policy, and non-transfer V9 overlays still come from the checkout. Two replays with the same inputs are byte-identical; this alone does not prove equality with a historical production publication.
+- Compilation is offline, with no network, D1, or wall-clock reads. SHA-addressed capture acquisition may read R2 and cache verified bytes locally. Capture-time replay freezes registry and input clocks, not checkout evaluator, policy or non-transfer overlays. Determinism is not historical production equivalence; frozen V3 parsing likewise preserves format/bytes, not historical evaluator output.
 
-The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, evidence journals, peg provenance, and transfer materiality. A deterministic replay of that base alone is therefore not accepted-publication equivalence. For accepted-generation replay, export the atomically retained accepted base and enrichment delta using `--accepted-cache-export` below, or use dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow). Both paths fail closed if either retained row is absent or mismatched. The prepare-time export remains suitable for base-input/current-curation comparisons only.
+The prepare-time `report-cards:fixed-input:exact` row excludes compute-time supply attribution, both reserve and supply evidence journals, peg provenance, and transfer materiality. A deterministic base-only replay is not accepted-publication equivalence. Export the atomically retained accepted base and enrichment delta using `--accepted-cache-export` below, or use dependency-scenario `--mode plan` from [the offline scenario runbook](../runbooks/dependency-network.md#offline-scenario-workflow). Both paths fail closed on missing/mismatched retained rows. Preserve both journals' cause, responsibility and rejection metadata even though excluded from the base digest; explicit null transfer enrichment is not permission to load current observations.
+
+Private peg provenance uses the historical `verifiedOnlyDiagnostic` field as a legacy-backfill-excluded scenario, not an all-verified score or a numerical upper bound. Low-provenance and unprovenanced live events remain included; only `legacy-backfill-unprovenanced` is omitted. Preserve exact seed/generation/clock binding and inclusive-result equality; the scenario never replaces the score-bearing inclusive peg row or exposes private event bytes.
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops two separately-owned key families at every depth — `VOLATILE_KEYS` (per-run publication identity and capture timing) and `VERSION_ACTIVATION_KEYS` (pinned-build and methodology-identity digests plus `policyVersion`, which move only on a deliberate version activation) — and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
+
+Comparators reject missing card arrays, empty/duplicate IDs and inconsistent score/grade/status projections before normalization. Full replay artifacts additionally undergo pure schema, asset-set, generation, fact/result-digest and identity-coherence validation in `worker/scripts/lib/safety-score-v9-replay-validation.ts`. That layer does not compile or pin either artifact's policy/build to the current checkout.
+
+The movers CLI lives at `worker/scripts/diff-safety-score-v9-movers.ts` behind the unchanged `safety-score-v9:movers` alias. Full-artifact validation parses the retained capture through its native v4 or legacy v3 schema before deriving the matching base-input digest; the compiler's narrower common projection is not an artifact admission contract.
+
+Exact reproduction is a separate intended-revision operation: use a trusted checkout at the recorded source SHA, recorded policy/build, verified frozen registry, capture input/clock, expected output and accepted enrichment (both journals and explicit null transfer materiality). `reproduceSafetyScoreV9Replay` requires that context and verifies rebuilt pipeline equality. A normalized empty diff is not bit-identical artifact equality or expected-activation proof; independently check intended release identities.
 
 > **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**
 > The redemption payload fingerprint hashes the *whole* stored row, not a V9-relevant projection of it.
@@ -206,9 +214,10 @@ present, registry fingerprints and transfer-review digests must agree.
 Malformed snapshots, missing refs, and capture/snapshot mismatches fail closed.
 The NAV validator and baseline extension use snapshot classifications and
 metadata, never today's classifications. No NAV rows are discarded.
-Capture-time replay also preserves captured redemption observations rather
-than applying the legacy current-curation SIM-EXIT-L2 rederivation, so the
-capture's base-input generation remains unchanged.
+Every ordinary replay preserves captured redemption observations and base generation.
+Only `--rederive-current-redemption` requests the current-producer scenario for
+undisclosed-reviewed fee rows; it reseals changed bytes and records the source generation.
+The option is rejected with accepted captures, embedded registry wrappers or `--registry-ref`.
 
 The registry fingerprint does **not** identify every V9 overlay or the evaluator.
 Transfer reviews are loaded from the same ref and separately digest-bound to
@@ -225,11 +234,11 @@ workflows such as the expiry sweep. It cannot be combined with `--registry-ref`.
 A capture records the registry fingerprint of the tree it was taken from, and the replay refuses to score it against a different registry. That refusal is what makes an ordinary replay a clean code-only measurement, so it must stay on by default. A frozen capture stops replaying after any change to the fully merged stablecoin registries—including base files, domain sidecars, lifecycle/listing inputs, or the dead registry—that rotates the fingerprint. `--allow-registry-mismatch` is the operator's explicit acceptance of that mismatch: the replay proceeds against the local registry rows and adopts the capture's registry identity so the pipeline's internal identity checks stay coherent. The resulting diff no longer isolates the code change — it measures **code and curation together**, and it must be partitioned by attribution (which drift entries belong to a methodology change, which to each curation commit, which to neither) before any of it is read as an equivalence result. An entry that lands in no attribution class is a finding, not noise. The flag is replay-only; the production publication path never sets it and its fingerprint check is unchanged.
 
 With a registry-bound wrapper, `--allow-registry-mismatch` explicitly selects the
-local registry instead of the embedded snapshot (the snapshot's integrity is
-still checked). It remains a code-plus-current-curation comparison, including
-the existing NAV validation and replay-lane redemption rederivation. Combining
-it with `--registry-ref` is rejected because the requested registry modes
-contradict one another.
+local registry instead of the embedded snapshot (snapshot integrity remains checked).
+It remains a code-plus-current-curation comparison with existing NAV validation,
+but does not implicitly rederive redemption. To request that scenario, use a plain
+normalized capture with `--allow-registry-mismatch --rederive-current-redemption`.
+Combining mismatch with `--registry-ref` is rejected.
 
 ## (c) Diff a baseline replay against a candidate replay
 
@@ -242,7 +251,7 @@ npm run safety-score-v9:diff -- \
 
 | Mode                    | Passes when                                    | Stdout                                        | Exit |
 | ----------------------- | ---------------------------------------------- | --------------------------------------------- | ---- |
-| `--assert-empty`        | Every field matches after volatile-key removal | `EMPTY DIFF — bit-identical`                   | 0    |
+| `--assert-empty`        | Every field matches after identity-key removal | `EMPTY DIFF — normalized score-output equality` | 0 |
 | `--assert-empty`        | Anything moved                                 | `DIFF: N entries` plus up to 50 entries (stderr) | 1  |
 | `--assert-grade-stable` | No card changes grade                          | `drift entries: N; grade flips: 0`             | 0    |
 | `--assert-grade-stable` | A card changed grade, disappeared, or appeared | the same counts, plus one `FLIP <id>` line per card (stderr) | 1 |
@@ -281,6 +290,8 @@ The manifest declares grade transitions, not score targets:
 ```
 
 `--assert-declared` fails when an observed grade flip has no manifest row or when its observed `from`/`to` direction differs from the declaration. The report also shows same-grade score moves, pillar deltas, binding-cap changes, assets present on only one side, and manifest rows that did not flip. Those remain review findings, but the gate itself is deliberately limited to undeclared or misdirected grade flips; a declared-but-absent transition does not fail automatically and must be resolved before release.
+
+Manifest IDs must be unique/nonempty, grade/status transitions supported/coherent, and rationale/workstream nonempty. Malformed declarations fail before mapping; this does not strengthen `--assert-declared` into an exact-manifest/census gate. Manually close absent declarations, appeared/disappeared assets and same-grade findings.
 
 Use this mode only after the expected set is derived from reviewed behavior and before looking at the candidate output. Do not turn an unexpected flip into a declaration merely to make the gate green. Multi-grade releases keep the same capture identity, fixed-clock replay, two-capture sampling, and artifact-hygiene rules as the equivalence harness; replace the empty-diff assertion with the declared-movers gate for each capture.
 

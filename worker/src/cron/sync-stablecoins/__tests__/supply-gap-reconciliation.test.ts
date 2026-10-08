@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
+import type * as FetchRetry from "../../../lib/fetch-retry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../lib/fetch-retry", () => ({
+vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
+  ...(await importOriginal<typeof FetchRetry>()),
   fetchTextWithRetry: fetchTextWithRetryMock,
 }));
 

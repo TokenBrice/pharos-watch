@@ -8,6 +8,7 @@ import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
@@ -89,6 +90,11 @@ function makeMintBurnAssessmentDb(
     { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
     { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
     ...fxRatesCacheRows(nowSec - 60),
+    {
+      key: "ops:d1-capacity:v1",
+      updated_at: nowSec,
+      value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: nowSec, databaseSizeBytes: 1_000_000_000 }) }),
+    },
     { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
     {
       key: "freshness:dex-liquidity",
@@ -142,7 +148,7 @@ function makeMintBurnAssessmentDb(
   };
 
   return mockD1([
-    { match: "AS last_any", rows: [], first: { last_any: nowSec - 30, reserve: nowSec - 30, telegram: nowSec - 30, digest: nowSec - 30 } },
+    { match: "AS last_any", rows: [], first: { last_any: nowSec - 30, reserve: nowSec - 30, telegram: nowSec - 30, digest: nowSec - 30, heavy: nowSec - 30 } },
     {
       match: "job = 'sync-stablecoins'", rows: [],
       ...(options.publicationQueryError
@@ -155,6 +161,12 @@ function makeMintBurnAssessmentDb(
     },
     { match: "SELECT 1", rows: [], first: { value: 1 } },
     { match: "cache WHERE key IN", rows: cacheRows },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["ops:d1-capacity:v1"],
+      rows: [],
+      first: cacheRows.find((row) => row.key === "ops:d1-capacity:v1"),
+    },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     {
       match: "stamped_identity",
@@ -263,6 +275,42 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.overallStatus).not.toBe("healthy");
     expect(result.warnings).toContain("d1-capacity-warning");
     expect(result.warnings.join(" ")).not.toContain("75");
+  });
+
+  it.each([
+    [undefined, "missing"],
+    [{ observedAt: 1 }, "malformed"],
+  ] as const)("degrades unavailable D1 capacity (%s) with a sanitized reason", async (capacity, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await assessPublicHealth(makeMinimalDb(nowSec, capacity), nowSec, { logPrefix: "test" });
+    expect(result.d1Capacity).toBeNull();
+    expect(result.d1CapacityImpactStatus).toBe("degraded");
+    expect(result.d1CapacityQueryError).toBe("D1 capacity assessment unavailable.");
+    expect(result.warnings).toContain(`d1-capacity-${reason}`);
+  });
+
+  it.each([
+    [-26 * 3600 - 1, "expired"],
+    [1, "future-clock"],
+  ] as const)("rejects unavailable capacity observation clocks (%s)", async (offset, reason) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const capacity = assessD1Capacity({ observedAt: nowSec + offset, databaseSizeBytes: 1_000_000_000 });
+    const result = await assessPublicHealth(makeMinimalDb(nowSec, capacity), nowSec, { logPrefix: "test" });
+    expect(result.d1CapacityImpactStatus).toBe("degraded");
+    expect(result.warnings).toContain(`d1-capacity-${reason}`);
+  });
+
+  it.each([
+    [6_000_000_000, "healthy", "watch"],
+    [7_500_000_000, "degraded", "warning"],
+    [9_000_000_000, "stale", "critical"],
+  ] as const)("retains the utilization floor with a null forecast (%s)", async (size, impact, threshold) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const capacity = assessD1Capacity({ observedAt: nowSec, databaseSizeBytes: size });
+    const result = await assessPublicHealth(makeMinimalDb(nowSec, capacity), nowSec, { logPrefix: "test" });
+    expect(result.d1Capacity?.daysUntilExhaustion).toBeNull();
+    expect(result.d1CapacityImpactStatus).toBe(impact);
+    expect(result.warnings).toContain(`d1-capacity-${threshold}`);
   });
 
   it("names unwaived active-universe omissions and degrades public health", async () => {

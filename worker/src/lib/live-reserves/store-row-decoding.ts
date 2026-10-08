@@ -1,19 +1,19 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
-  LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS,
-  parseLiveReserveRedemptionTelemetryNumber,
+  decodeLiveReserveRedemptionTelemetry,
+  LiveReserveDiagnosticsSchema,
+  LIVE_RESERVE_SOURCE_MODEL_VALUES,
+  LIVE_RESERVE_EVIDENCE_CLASS_VALUES,
+  LIVE_RESERVE_WARNING_EFFECT_VALUES,
+  LIVE_RESERVE_FRESHNESS_MODE_VALUES,
+  MALFORMED_REDEMPTION_TELEMETRY,
   type LiveReserveEvidenceClass,
   type LiveReserveFreshnessMode,
-  type LiveReserveRedemptionCapacityKind,
-  type LiveReserveRedemptionFreshnessKind,
-  type LiveReserveRedemptionRouteStatus,
-  type LiveReserveRedemptionRouteStatusSource,
   type LiveReserveSnapshotMetadata,
   type LiveReserveSourceModel,
   type LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
 import { decodeJsonString } from "../cache-json";
 import { shouldUseLegacySnapshotFallback } from "./store-snapshot-state";
@@ -24,45 +24,6 @@ import type {
   SnapshotIntegrityIssue,
 } from "./store-shared";
 
-const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);
-const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>([
-  "independent",
-  "static-validated",
-  "weak-live-probe",
-]);
-const VALID_WARNING_EFFECTS = new Set(["info", "degraded", "fatal"]);
-const VALID_FRESHNESS_MODES = new Set<LiveReserveFreshnessMode>(["verified", "unverified", "not-applicable"]);
-const VALID_REDEMPTION_CAPACITY_KINDS = new Set<LiveReserveRedemptionCapacityKind>([
-  "live-direct",
-  "live-direct-bounded",
-  "live-queue",
-  "live-proxy-validated",
-  "documented-bound",
-  "documented-eventual",
-  "heuristic",
-]);
-const VALID_REDEMPTION_FRESHNESS_KINDS = new Set<LiveReserveRedemptionFreshnessKind>([
-  "verified-source-timestamp",
-  "same-run-onchain",
-  "same-run-api",
-  "reviewed-static",
-  "unverified",
-]);
-const VALID_REDEMPTION_ROUTE_STATUSES = new Set<LiveReserveRedemptionRouteStatus>([
-  "open",
-  "degraded",
-  "paused",
-  "cohort-limited",
-  "unknown",
-]);
-const VALID_REDEMPTION_ROUTE_STATUS_SOURCES = new Set<LiveReserveRedemptionRouteStatusSource>([
-  "static-config",
-  "market-implied",
-  "operator-notice",
-  "protocol-api",
-  "onchain",
-]);
-export const MALFORMED_REDEMPTION_TELEMETRY = Symbol.for("pharos.malformedRedemptionTelemetry");
 const STORED_SLICE_SUM_TOLERANCE = 2;
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -100,10 +61,13 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
   const normalized: LiveReserveSnapshotMetadata = { ...metadata };
   const invalidFreshness =
     (hasOwnMetadataKey(metadata, "freshnessMode")
-      && !VALID_FRESHNESS_MODES.has(metadata.freshnessMode as LiveReserveFreshnessMode))
+      && !LIVE_RESERVE_FRESHNESS_MODE_VALUES.includes(metadata.freshnessMode as LiveReserveFreshnessMode))
     || (hasOwnMetadataKey(metadata, "sourceTimestamp")
       && (isMalformedMetadataNumber(metadata.sourceTimestamp) || (metadata.sourceTimestamp as number) <= 0));
-  if (invalidFreshness) {
+  if (invalidFreshness && (
+    !hasOwnMetadataKey(metadata, "diag") ||
+    (metadata.diag && typeof metadata.diag === "object" && !Array.isArray(metadata.diag))
+  )) {
     normalized.diag = {
       ...(metadata.diag && typeof metadata.diag === "object" && !Array.isArray(metadata.diag) ? metadata.diag : {}),
       invalidFreshness: true,
@@ -136,7 +100,7 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
   }
 
   const freshnessMode = metadata.freshnessMode;
-  if (typeof freshnessMode === "string" && VALID_FRESHNESS_MODES.has(freshnessMode as LiveReserveFreshnessMode)) {
+  if (typeof freshnessMode === "string" && LIVE_RESERVE_FRESHNESS_MODE_VALUES.includes(freshnessMode as LiveReserveFreshnessMode)) {
     normalized.freshnessMode = freshnessMode as LiveReserveFreshnessMode;
   } else {
     delete normalized.freshnessMode;
@@ -148,132 +112,25 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     delete normalized.details;
   }
 
-  if (metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)) {
-    const rawRedemption = metadata.redemption as Record<string, unknown>;
-    const redemption: NonNullable<LiveReserveSnapshotMetadata["redemption"]> = { ...rawRedemption };
-    const knownRedemptionNumberKeys = LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS;
-    let hasMalformedRedemptionTelemetry = false;
-    for (const key of knownRedemptionNumberKeys) {
-      const value = parseLiveReserveRedemptionTelemetryNumber(key, rawRedemption[key]);
-      if (value == null) {
-        hasMalformedRedemptionTelemetry ||= hasOwnMetadataKey(rawRedemption, key);
-        delete redemption[key];
-      } else {
-        redemption[key] = value;
-      }
-    }
-
-    if (
-      typeof rawRedemption.capacityKind === "string" &&
-      VALID_REDEMPTION_CAPACITY_KINDS.has(rawRedemption.capacityKind as LiveReserveRedemptionCapacityKind)
-    ) {
-      redemption.capacityKind = rawRedemption.capacityKind as LiveReserveRedemptionCapacityKind;
-    } else {
-      delete redemption.capacityKind;
-    }
-    if (
-      typeof rawRedemption.freshnessKind === "string" &&
-      VALID_REDEMPTION_FRESHNESS_KINDS.has(rawRedemption.freshnessKind as LiveReserveRedemptionFreshnessKind)
-    ) {
-      redemption.freshnessKind = rawRedemption.freshnessKind as LiveReserveRedemptionFreshnessKind;
-    } else {
-      delete redemption.freshnessKind;
-    }
-    if (
-      typeof rawRedemption.routeStatus === "string" &&
-      VALID_REDEMPTION_ROUTE_STATUSES.has(rawRedemption.routeStatus as LiveReserveRedemptionRouteStatus)
-    ) {
-      redemption.routeStatus = rawRedemption.routeStatus as LiveReserveRedemptionRouteStatus;
-    } else {
-      delete redemption.routeStatus;
-    }
-    if (
-      typeof rawRedemption.routeStatusSource === "string" &&
-      VALID_REDEMPTION_ROUTE_STATUS_SOURCES.has(
-        rawRedemption.routeStatusSource as LiveReserveRedemptionRouteStatusSource,
-      )
-    ) {
-      redemption.routeStatusSource = rawRedemption.routeStatusSource as LiveReserveRedemptionRouteStatusSource;
-    } else {
-      delete redemption.routeStatusSource;
-    }
-    if (typeof rawRedemption.routeStatusReason === "string") {
-      redemption.routeStatusReason = rawRedemption.routeStatusReason;
-    } else {
-      delete redemption.routeStatusReason;
-    }
-    if (typeof rawRedemption.routeStatusReviewedAt === "string") {
-      redemption.routeStatusReviewedAt = rawRedemption.routeStatusReviewedAt;
-    } else {
-      delete redemption.routeStatusReviewedAt;
-    }
-    const holderEligibility = RedemptionHolderEligibilitySchema.safeParse(rawRedemption.holderEligibility);
-    if (holderEligibility.success) {
-      redemption.holderEligibility = holderEligibility.data;
-    } else {
-      delete redemption.holderEligibility;
-    }
-    if (Array.isArray(rawRedemption.sourceUrls)) {
-      const seen = new Set<string>();
-      redemption.sourceUrls = rawRedemption.sourceUrls.flatMap((url) => {
-        if (typeof url !== "string") return [];
-        let parsed: URL;
-        try {
-          parsed = new URL(url);
-        } catch {
-          return [];
-        }
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return [];
-        const normalizedUrl = parsed.toString();
-        if (seen.has(normalizedUrl)) return [];
-        seen.add(normalizedUrl);
-        return [normalizedUrl];
-      });
-    } else {
-      delete redemption.sourceUrls;
-    }
-    if (hasMalformedRedemptionTelemetry) {
-      markMalformedRedemptionTelemetry(redemption);
-    }
-    normalized.redemption = redemption;
-  } else if (Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
-    const redemption = {};
-    markMalformedRedemptionTelemetry(redemption);
-    normalized.redemption = redemption;
+  // Normalize legacy fields only here. A present nested block wins even when invalid.
+  let telemetryMetadata = metadata;
+  if (!hasOwnMetadataKey(metadata, "redemption")) {
+    const legacy: Record<string, unknown> = {};
+    if (metadata.immediateRedeemableUsd != null) legacy.capacityUsd = metadata.immediateRedeemableUsd;
+    if (metadata.immediateRedeemableRatio != null) legacy.capacityRatioOfSupply = metadata.immediateRedeemableRatio;
+    if (metadata.redemptionFeeBps != null) legacy.feeBps = metadata.redemptionFeeBps;
+    if (Object.keys(legacy).length > 0) telemetryMetadata = { redemption: legacy };
+  }
+  const decoded = decodeLiveReserveRedemptionTelemetry(telemetryMetadata);
+  if (decoded.status === "valid") {
+    normalized.redemption = decoded.telemetry;
+  } else if (decoded.status === "invalid") {
+    // Quarantine the entire claim, not just its invalid constraint. In particular
+    // a positive capacity cannot survive a malformed daily limit after JSON.
+    normalized.redemption = {};
+    markMalformedRedemptionTelemetry(normalized.redemption);
   } else {
     delete normalized.redemption;
-  }
-
-  // Legacy flat capacity/fee fields: rows persisted before the nested
-  // `metadata.redemption` contract could carry redeemable capacity and fee
-  // at the top level. Historical D1 rows still can (30-day retention), so the
-  // decoder maps them into the nested shape here and drops the flat keys.
-  // A nested `redemption` block, when present, always wins.
-  if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
-    const legacyCapacityUsd = coerceFiniteMetadataNumber(metadata.immediateRedeemableUsd);
-    const rawLegacyCapacityRatio = coerceFiniteMetadataNumber(metadata.immediateRedeemableRatio);
-    const legacyCapacityRatio =
-      rawLegacyCapacityRatio != null && rawLegacyCapacityRatio >= 0 && rawLegacyCapacityRatio <= 1
-        ? rawLegacyCapacityRatio
-        : undefined;
-    const rawLegacyFeeBps = coerceFiniteMetadataNumber(metadata.redemptionFeeBps);
-    const legacyFeeBps =
-      rawLegacyFeeBps != null && rawLegacyFeeBps >= 0 && rawLegacyFeeBps <= 10_000
-        ? rawLegacyFeeBps
-        : undefined;
-    if (legacyCapacityUsd != null || legacyCapacityRatio != null || legacyFeeBps != null) {
-      normalized.redemption = {
-        ...(legacyCapacityUsd != null ? { capacityUsd: legacyCapacityUsd } : {}),
-        ...(legacyCapacityRatio != null ? { capacityRatioOfSupply: legacyCapacityRatio } : {}),
-        ...(legacyFeeBps != null ? { feeBps: legacyFeeBps } : {}),
-      };
-      if (
-        (rawLegacyCapacityRatio != null && legacyCapacityRatio == null)
-        || (rawLegacyFeeBps != null && legacyFeeBps == null)
-      ) {
-        markMalformedRedemptionTelemetry(normalized.redemption);
-      }
-    }
   }
   delete normalized.immediateRedeemableUsd;
   delete normalized.immediateRedeemableRatio;
@@ -300,7 +157,7 @@ export function parseWarnings(value: string | null): LiveReserveWarning[] {
             if (!code || !message) return [];
             const severity = item.severity === "info" ? "info" : "warning";
             const effect =
-              typeof item.effect === "string" && VALID_WARNING_EFFECTS.has(item.effect)
+              typeof item.effect === "string" && LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect as LiveReserveWarning["effect"])
                 ? (item.effect as LiveReserveWarning["effect"])
                 : severity === "info"
                   ? "info"
@@ -388,7 +245,7 @@ function resolveSnapshotSourceModel(
   row: ReserveCompositionRow,
   fallbackAdapterKey: string,
 ): LiveReserveSourceModel | null {
-  if (row.adapter_source_model && VALID_SOURCE_MODELS.has(row.adapter_source_model as LiveReserveSourceModel)) {
+  if (row.adapter_source_model && LIVE_RESERVE_SOURCE_MODEL_VALUES.includes(row.adapter_source_model as LiveReserveSourceModel)) {
     return row.adapter_source_model as LiveReserveSourceModel;
   }
   return getLiveReserveAdapterDefinition(fallbackAdapterKey)?.sourceModel ?? null;
@@ -400,7 +257,7 @@ function resolveSnapshotEvidenceClass(
 ): LiveReserveEvidenceClass | null {
   if (
     row.adapter_evidence_class &&
-    VALID_EVIDENCE_CLASSES.has(row.adapter_evidence_class as LiveReserveEvidenceClass)
+    LIVE_RESERVE_EVIDENCE_CLASS_VALUES.includes(row.adapter_evidence_class as LiveReserveEvidenceClass)
   ) {
     return row.adapter_evidence_class as LiveReserveEvidenceClass;
   }
@@ -432,6 +289,18 @@ export function parseReserveCompositionRow(
     typeof row.warning_count === "number" && Number.isFinite(row.warning_count)
       ? row.warning_count
       : finalWarnings.length;
+
+  const diagnostics = LiveReserveDiagnosticsSchema.safeParse(finalMetadata.diag);
+  if (hasOwnMetadataKey(finalMetadata, "diag") && (
+    !diagnostics.success ||
+    (finalMetadata.diag && hasOwnMetadataKey(finalMetadata.diag, "rawSumDeviation") &&
+      !LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(finalMetadata.diag.rawSumDeviation).success)
+  )) {
+    return {
+      record: null,
+      issue: { code: "invalid-payload", message: "stored reserve snapshot diagnostics are malformed" },
+    };
+  }
 
   const adapterSourceModel = resolveSnapshotSourceModel(row, fallbackAdapterKey);
   const adapterEvidenceClass = resolveSnapshotEvidenceClass(row, fallbackAdapterKey);

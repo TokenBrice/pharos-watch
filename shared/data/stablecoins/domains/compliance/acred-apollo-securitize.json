@@ -4,21 +4,81 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Securitize ACRED launch: tokenized feeder fund and daily NAV redemption",
+        "url": "https://investors.securitize.io/news/news-details/2025/Apollo-and-Securitize-Announce-Partnership-and-Launch-Tokenized-Access-to-Credit-Fund-on-Aptos-Avalanche-Ethereum-Ink-Polygon-and-Solana-Networks-01-30-2025/default.aspx"
       },
       {
-        "label": "ESMA MiCA Article 2 scope: funds and financial instruments excluded",
+        "label": "MiCA Article 2(4)(a): financial-instrument exclusion",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
-      },
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "ACRED is a tokenized feeder-fund security. Securitize identifies Securitize Tokenized Apollo Diversified Credit Fund, Ltd. as the fund investing substantially all its assets in Apollo Diversified Credit Fund, with native redemptions at daily NAV. This supports the securities exclusion in GENIUS Act section 2(22)(B)(iii).",
+      "references": [
+        {
+          "label": "Securitize ACRED tokenized feeder-fund disclosure",
+          "url": "https://investors.securitize.io/news/news-details/2025/Apollo-and-Securitize-Announce-Partnership-and-Launch-Tokenized-Access-to-Credit-Fund-on-Aptos-Avalanche-Ethereum-Ink-Polygon-and-Solana-Networks-01-30-2025/default.aspx",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-01-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SEC Form D: Securitize Tokenized Apollo Diversified Credit Fund, Ltd.",
+          "url": "https://www.sec.gov/Archives/edgar/data/0002056038/000205603825000001/0002056038-25-000001-index.htm",
+          "sourceKind": "issuer-filing",
+          "sourceDate": "2025-02-12",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Securitize Tokenized Apollo Diversified Credit Fund, Ltd.",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "ACRED is a fund interest with NAV-based redemptions and qualifying-investor distribution through Securitize Markets. Apollo supplies the underlying credit strategy; Securitize transfer-agent, fund-administrator and broker-dealer roles do not make those entities the issuing fund or a permitted payment stablecoin issuer. The SEC EDGAR API fallback confirms the exact fund name, BVI incorporation code D8, and Form D/D-A dates, but did not expose the full filing text; no particular securities-exemption subsection is asserted from that fallback. Fund NAV disclosure in the base record is not a payment-stablecoin reserve attestation.",
+    "references": [
       {
-        "label": "Securitize ACRED product page",
-        "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        "label": "Securitize ACRED tokenized feeder-fund disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/Apollo-and-Securitize-Announce-Partnership-and-Launch-Tokenized-Access-to-Credit-Fund-on-Aptos-Avalanche-Ethereum-Ink-Polygon-and-Solana-Networks-01-30-2025/default.aspx",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-01-30",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "SEC Form D: Securitize Tokenized Apollo Diversified Credit Fund, Ltd.",
-        "url": "https://www.sec.gov/Archives/edgar/data/0002056038/000205603825000001/0002056038-25-000001-index.htm"
+        "url": "https://www.sec.gov/Archives/edgar/data/0002056038/000205603825000001/0002056038-25-000001-index.htm",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2025-02-12",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       }
-    ]
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

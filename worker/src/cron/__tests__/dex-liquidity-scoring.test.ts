@@ -53,6 +53,8 @@ vi.mock("../../lib/db", async (importOriginal) => {
 import { batchExecute } from "../../lib/db";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY } from "@shared/lib/curve-composite-policies";
+import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
 import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
@@ -1477,6 +1479,52 @@ describe("dex-liquidity scoring", () => {
 
     expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
     expect(slipstreamTargets).toHaveLength(0);
+  });
+
+  it.each([
+    ["LUSD four-token", CURVE_R3_METAPOOL_POLICIES.find((policy) => policy.stablecoinId === "lusd-liquity")!],
+    ["MUSD three-token", CURVE_R3_METAPOOL_POLICIES.find((policy) => policy.stablecoinId === "meusd-mezo")!],
+    ["USD1 three-token", CURVE_USD1_METAPOOL_POLICY],
+    ["depegged msUSD", CURVE_R3_METAPOOL_POLICIES.find((policy) => policy.stablecoinId === "msusd-metronome")!],
+  ] as const)("publishes the ordered %s underlying target only to shadow", async (_label, policy) => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const referencePrice = policy.stablecoinId === "msusd-metronome" ? 0.883 : 1;
+    const target = buildCurveCompositeMeasuredExecutionTarget({
+      curveData: {
+        poolAddress: policy.poolAddress, registryId: policy.expectedRegistryId, isMetaPool: true,
+        basePoolAddress: policy.metapool.basePoolAddress,
+        poolCoins: policy.poolTokens.map((token, index) => ({
+          ...token, usdPrice: index === 0 ? referencePrice : 1.02, isBasePoolLpToken: index === 1,
+        })),
+        underlyingCoins: policy.executionTokens.map((token, index) => ({
+          ...token, usdPrice: index === 0 ? referencePrice : 1,
+        })),
+      },
+      chain: policy.chain, stablecoinId: policy.stablecoinId,
+      chainAddressToId: new Map(policy.executionTokens.filter((token) => token.trackedAssetId)
+        .map((token) => [`${policy.chain}:${token.address}`, token.trackedAssetId!])),
+      stablecoinPriceById: new Map([[policy.stablecoinId, referencePrice], ["usdc-circle", 0.999]]),
+      retainedTvlUsd: 2_000_000, capturedAt: SCORING_CLOCK_SEC,
+    });
+    expect(target).not.toBeNull();
+    const metrics = initMetrics(policy.stablecoinId, policy.executionTokens[0]!.symbol);
+    metrics.topPools = withReadings([{
+      poolId: target!.poolId, project: "curve", chain: policy.chain,
+      symbol: policy.poolTokens.map((token) => token.symbol).join("-"),
+      tvlUsd: 2_000_000, volumeUsd1d: 1_000, poolType: "curve-stableswap", source: "dl",
+      extra: { measuredExecutionTarget: target! },
+    }]);
+    const result = await computeStablecoinScores(db, new Map([[policy.stablecoinId, metrics]]), new Map(),
+      undefined, SCORING_CLOCK_SEC);
+    expect(result.measuredTargetInventory.active).toHaveLength(0);
+    expect(result.measuredTargetInventory.shadow).toHaveLength(1);
+    expect(result.measuredTargetInventory.shadow[0]!.poolTokenAddresses)
+      .toEqual(policy.executionTokens.map((token) => token.address));
+    expect(result.measuredTargetInventory.shadow[0]!.tokenIn.referencePriceUsd).toBe(referencePrice);
+    expect(result.measuredTargetInventory.shadow[0]!.tokenOut.referencePriceUsd).toBe(0.999);
+    await publishStablecoinScoreTargets(db, result.measuredTargetInventory, result.diagnostics, SCORING_CLOCK_SEC);
+    expect(result.diagnostics.measuredExecution.shadowTargetPublication).toMatchObject({ status: "published", rowCount: 1 });
+    expect(db.scoringTestState.measuredTargetRows).toBe(1);
   });
 
   it("publishes target-only BSC Uniswap V3 rows without admitting them to active scoring", async () => {

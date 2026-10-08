@@ -18,10 +18,10 @@
  * token therefore closes value-only drift here, while malformed registrations
  * remain candidates for evidence review.
  *
- * Live data comes from three authenticated public API endpoints
- * (report-cards/v9, stress-signals, peg-summary). Override the production API
- * with PHAROS_API_BASE and authenticate with PHAROS_API_KEY. Pass `--fixtures
- * <dir>` to read pre-fetched `<endpoint>.json` files instead of hitting the network.
+ * Live data comes from four authenticated public API endpoint families
+ * (report-cards/v9, stress-signals, peg-summary, stablecoins). Override the
+ * production API with PHAROS_API_BASE and authenticate with PHAROS_API_KEY.
+ * Pass `--fixtures <dir>` to read pre-fetched `<endpoint>.json` files instead.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import qcadSnapshot from "./fixtures/qcad-balances-2026-10-07.json";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
+import { getReserveAdapter } from "../index";
 
 const TGBP_URL = "https://api.tgbp.io/api/v1/public/data/tgbp";
 const QCAD_URL = "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json";
@@ -46,6 +50,9 @@ describe("fetchSingleAssetReserves", () => {
         reserveSourceLabel: "ETH collateral",
       },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.supplyUsd).toBeUndefined();
   });
 
   it("preserves optional coinId and depType in the slice", async () => {
@@ -93,52 +100,127 @@ describe("fetchSingleAssetReserves", () => {
       { name: "CNH cash reserves", pct: 100, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
+      freshnessMode: "unverified",
       details: {
         proofKind: "erc20-total-supply-liveness",
+        compositionMeasured: false,
+        observationScope: "configured-chain-token-liveness",
+        tokenFreshnessMode: "not-applicable",
+        scopedTokenChain: "ethereum",
+        scopedTokenQuantityRaw: "1000000",
       },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
   });
 
-  it("computes reserve and supply metadata when richer json probes are configured", async () => {
-    const { result } = await runJson("qcad-stablecorp", {
-      totalFiatReserves: "105000000",
-      totalSupply: "100000000",
-      chains: [{ lastSyncedAt: "2026-03-20T12:00:00Z" }],
-    }, {
-      label: "Treasury reserve",
-      risk: "very-low",
-      reserveSourceLabel: "Issuer reserve dashboard",
-    });
+  it("keeps the pinned CAD book native and diagnoses ARC/missing Solana without a reserve clock", async () => {
+    const { result } = await runJson("qcad-stablecorp", qcadSnapshot);
     expect(result.metadata).toMatchObject({
-      totalReserveUsd: 105000000,
-      supplyUsd: 100000000,
-      collateralizationRatio: 1.05,
-      sourceTimestamp: Date.parse("2026-03-20T12:00:00Z") / 1000,
-      freshnessMode: "verified",
+      freshnessMode: "unverified",
       details: {
-        proofKind: "reserve-and-supply-probe",
-        reserveSourceLabel: "Issuer reserve dashboard",
+        reserveUnit: "CAD",
+        nativeReserveQuantity: 2474672.34,
+        nativeSupplyQuantity: 2474672.34,
+        reportedNativeReserveToSupplyRatio: 1,
+        liabilitySourceTimestamp: Math.floor(Date.parse(qcadSnapshot.chains[0].lastSyncedAt) / 1000),
+        liabilityScopeComplete: false,
+        missingLiabilityChains: ["solana"],
+        unreviewedLiabilityChains: ["arc"],
       },
     });
+    for (const field of ["totalReserveUsd", "supplyUsd", "collateralizationRatio", "sourceTimestamp", "redemption"]) {
+      expect(result.metadata).not.toHaveProperty(field);
+    }
+    expect(result.metadata?.details?.liabilityComponents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ chain: "base", quantity: 0 }),
+    ]));
   });
 
-  it("emits a degraded warning when meaningful reserve/supply probes are undercollateralized", async () => {
-    const { result } = await runJson("qcad-stablecorp", {
-      totalFiatReserves: "99000000",
-      totalSupply: "100000000",
-      chains: [{ lastSyncedAt: "2026-03-20T12:00:00Z" }],
-    });
-    expect(result.metadata?.collateralizationRatio).toBe(0.99);
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
-        code: "reserve-undercollateralized",
-        effect: "degraded",
-      }),
-    ]);
+  function completeNativePayload() {
+    return {
+      totalFiatReserves: "100",
+      totalSupply: "100",
+      chains: [
+        { chain: "ETH", totalSupply: "60", lastSyncedAt: "2026-10-07T21:00:00Z" },
+        { chain: "BASE", totalSupply: "40", lastSyncedAt: "2026-10-07T19:00:00Z" },
+        { chain: "SOLANA", totalSupply: "0", lastSyncedAt: "2026-10-07T20:00:00Z" },
+      ],
+    };
+  }
+
+  it("uses the oldest contributing liability clock independent of order, never as a fiat reserve clock", async () => {
+    const payload = completeNativePayload();
+    const first = (await runJson("qcad-stablecorp", payload)).result;
+    const reordered = (await runJson("qcad-stablecorp", { ...payload, chains: [...payload.chains].reverse() })).result;
+    expect(first.metadata?.details?.liabilitySourceTimestamp).toBe(Date.parse("2026-10-07T19:00:00Z") / 1000);
+    expect(reordered.metadata?.details?.liabilitySourceTimestamp).toBe(first.metadata?.details?.liabilitySourceTimestamp);
+    expect(first.metadata?.details?.liabilityScopeComplete).toBe(true);
+    expect(first.metadata?.freshnessMode).toBe("unverified");
+    expect(first.metadata).not.toHaveProperty("sourceTimestamp");
+    expect(first.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
-  it("marks timestamp-backed liveness probes as freshness-verified even without reserve totals", async () => {
+  it.each([undefined, null, "bad-clock"])("rejects a missing/malformed clock on a positive liability contributor: %s", async (lastSyncedAt) => {
+    const payload = completeNativePayload();
+    await expect(runJson("qcad-stablecorp", {
+      ...payload, chains: [{ ...payload.chains[0], lastSyncedAt }, ...payload.chains.slice(1)],
+    })).rejects.toThrow();
+  });
+
+  it.each([undefined, null, "-1", "NaN", "Infinity", "0x10"])("rejects missing or invalid native component quantities: %s", async (totalSupply) => {
+    const payload = completeNativePayload();
+    await expect(runJson("qcad-stablecorp", {
+      ...payload, chains: [{ ...payload.chains[0], totalSupply }, ...payload.chains.slice(1)],
+    })).rejects.toThrow();
+  });
+
+  it.each([-1, "-0.01", null, "NaN", "Infinity", "0x10"])("rejects invalid native reserve quantities independently of liability reconciliation: %s", async (totalFiatReserves) => {
+    await expect(runJson("qcad-stablecorp", { ...completeNativePayload(), totalFiatReserves })).rejects.toThrow();
+  });
+
+  it("rejects a balanced aggregate containing a negative liability component", async () => {
+    const payload = completeNativePayload();
+    await expect(runJson("qcad-stablecorp", {
+      ...payload,
+      chains: [
+        { ...payload.chains[0], totalSupply: "101" },
+        { ...payload.chains[1], totalSupply: "-1" },
+        payload.chains[2],
+      ],
+    })).rejects.toThrow();
+  });
+
+  it("preserves an observed zero reserve quantity without inventing USD coverage", async () => {
+    const { result } = await runJson("qcad-stablecorp", { ...completeNativePayload(), totalFiatReserves: "0" });
+    expect(result.metadata?.details?.nativeReserveQuantity).toBe(0);
+    expect(result.metadata?.details?.reportedNativeReserveToSupplyRatio).toBe(0);
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+  });
+
+  it("rejects duplicate identities including observed zero rows before aggregate admission", async () => {
+    const payload = completeNativePayload();
+    await expect(runJson("qcad-stablecorp", {
+      ...payload, chains: [...payload.chains, { ...payload.chains[2], chain: "solana" }],
+    })).rejects.toThrow();
+  });
+
+  it("rejects incompatible aggregate amounts and missing component identities", async () => {
+    const payload = completeNativePayload();
+    await expect(runJson("qcad-stablecorp", { ...payload, totalSupply: "101" })).rejects.toThrow();
+    await expect(runJson("qcad-stablecorp", {
+      ...payload, chains: [{ ...payload.chains[0], chain: "" }, ...payload.chains.slice(1)],
+    })).rejects.toThrow();
+  });
+
+  it("retains a measured native shortfall as diagnostics rather than USD coverage or capacity", async () => {
+    const { result } = await runJson("qcad-stablecorp", { ...completeNativePayload(), totalFiatReserves: "99" });
+    expect(result.metadata?.details?.reportedNativeReserveToSupplyRatio).toBe(0.99);
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("redemption");
+  });
+
+  it("keeps a chain timestamp diagnostic instead of certifying whole-reserve freshness", async () => {
     const { result } = await runJson("tgbp-tokenised", {
       data: {
         price: "1.120735576038699094",
@@ -153,13 +235,89 @@ describe("fetchSingleAssetReserves", () => {
       reserveSourceLabel: "Treasury reserve",
     }, 1_774_874_255);
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: 1_774_874_195,
-      freshnessMode: "verified",
+      freshnessMode: "unverified",
       details: {
         proofKind: "single-asset-liveness-probe",
         reserveSourceLabel: "Treasury reserve",
+        chainSupplyObservedAt: 1_774_874_195,
       },
     });
+  });
+
+  it.each([undefined, {
+    reserveUnit: { kind: "token", unit: "ETH" },
+    supplyToken: "unrelated",
+    nominalValuePerToken: 1,
+    reviewedAt: "2026-03-19",
+    evidenceRef: "https://example.com/units",
+  }])("withholds a ratio without a supported matching native relation", async (nativeQuantityBasis) => {
+    const { result } = await runJson("tgbp-tokenised", {
+      result: { collateral: "105", total_supply: "100" },
+    }, { nativeQuantityBasis });
+    expect(result.metadata?.totalReserveQuantity).toBe(105);
+    expect(result.metadata?.supplyTokens).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
+
+  it("retains reviewed GBP-native quantities while the binding remains suspended", async () => {
+    const { result } = await runJson("tgbp-tokenised", {
+      result: { collateral: "101", total_supply: "100" },
+    });
+    expect(result.metadata).toMatchObject({
+      totalReserveQuantity: 101,
+      supplyTokens: 100,
+      nativeQuantityBasis: { reserveUnit: { kind: "currency", unit: "GBP" } },
+      collateralizationRatio: 1.01,
+      freshnessMode: "unverified",
+    });
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
+
+  it.each([null, "unreadable", "0"])("rejects a malformed configured chain clock: %j", async (lastSyncedAt) => {
+    await expect(runJson("tgbp-tokenised", {
+      result: { collateral: "100", total_supply: "100" }, lastSyncedAt,
+    }, { timestampProbe: { kind: "json-path", path: ["lastSyncedAt"] } })).rejects.toThrow("unreadable timestamp");
+  });
+
+  it.each([0n, null])("fails closed on missing/nonpositive scoped token reads: %s", async (quantity) => {
+    await expect(runOnchain(installAdapterNetwork({
+      chains: { ethereum: "https://rpc.example" }, rpc: { "ethereum:0x18160ddd": quantity },
+    }))).rejects.toThrow();
+  });
+
+  it("never fetches the display page or turns a multi-contract roster into global reserves/supply", async () => {
+    const network = installAdapterNetwork({
+      chains: { ethereum: "https://rpc.example" }, rpc: { "ethereum:0x18160ddd": 123n },
+    });
+    const { result } = await runOnchain(network);
+    expect(network.requests.every((request) => request.url === "https://rpc.example/")).toBe(true);
+    expect(result.metadata?.details?.scopedTokenQuantityRaw).toBe("123");
+    expect(result.metadata).not.toHaveProperty("supplyUsd");
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+  });
+
+  it.each(["onchain", "native-json"])("keeps a successful %s weak probe out of score-grade admission", async (mode) => {
+    const { result, coin, config } = mode === "onchain"
+      ? await runOnchain()
+      : await runJson("qcad-stablecorp", qcadSnapshot);
+    const now = Date.parse("2026-10-07T21:06:00Z") / 1000;
+    const descriptor = getReserveAdapter("single-asset")!;
+    const snapshot = {
+      stablecoinId: coin.id, slices: result.slices,
+      fetchedAt: now, attemptId: "weak-probe-success", source: config.adapter,
+      metadata: result.metadata ?? {}, warnings: result.warnings ?? [],
+      warningCount: result.warnings?.length ?? 0,
+      adapterSourceModel: descriptor.sourceModel, adapterEvidenceClass: descriptor.evidenceClass,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    };
+    const admission = evaluateLiveReserveAdmission(snapshot, {
+      lastSuccessAt: now, lastSuccessAttemptId: snapshot.attemptId,
+    }, { liveReservesConfig: config }, now);
+    expect(admission.eligible).toBe(false);
+    expect(admission.reasons).toContain("non-independent");
   });
 
   it("propagates a failed on-chain supply probe", async () => {

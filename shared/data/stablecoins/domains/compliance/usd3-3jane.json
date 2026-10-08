@@ -1,5 +1,18 @@
 {
   "id": "usd3-3jane",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "3Jane USD3 senior tranche supplier rights",
+        "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
+      },
+      {
+        "label": "3Jane Terms of Use",
+        "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -9,60 +22,71 @@
           "label": "3Jane Terms of Use",
           "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-09-01",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "3Jane official site",
           "url": "https://www.3jane.xyz/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "3Jane USD3 senior tranche supplier rights",
+          "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Tulkum Assets Corp. / 3Jane Protocol",
-    "issuerDomicile": "Panama",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "USD3 is a credit-backed yieldcoin/vault share, not a fixed-dollar payment stablecoin. The issuer's terms identify Tulkum Assets Corp., a Panamanian corporation, and describe USD3 as a yieldcoin backed by credit lines. No GENIUS payment-stablecoin authorization posture applies.",
+    "notes": "USD3 is the senior credit-pool yield share with variable native pool interest and a subordinate sUSD3 first-loss tranche. The terms name Tulkum Assets Corp., a Panamanian corporation, as website/platform operator; they do not independently establish that company as the legal issuer of USD3, so issuerEntity and issuerDomicile are omitted. The USDC parent is a separate payment token and its authorizations/disclosures are not inherited. This GENIUS payment-stablecoin scope assessment does not resolve separate securities or collective-investment rules.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "3Jane Terms of Use",
         "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2025-09-01",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "3Jane official site",
         "url": "https://www.3jane.xyz/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "3Jane USD3 senior tranche supplier rights",
+        "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -9,7 +9,6 @@ import {
   fetchJsonWithRetry,
   fetchOnchainMulticall3,
   freshnessMetadataFromTimestamp,
-  notApplicableFreshnessMetadata,
   summarizeSourceTimestampsRequiringCoverage,
   normalizeSlices,
   parseBoundedDecimals,
@@ -21,7 +20,7 @@ import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from
 import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { rethrowIfAborted } from "../../lib/abort";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 const BRIDGE_EUR_SELECTOR = "0x7439ae59";
 const BRIDGE_DEURO_SELECTOR = "0xd395d24b";
@@ -387,7 +386,8 @@ export function adaptCollateralPositions(
   // this latest-state adapter has no dated-source age tier.
   const debtTimestampSummary = summarizeSourceTimestampsRequiringCoverage(debtPriceTimestamps);
   const debtPricesFresh = debtPriceTimestamps.length === 0 || (
-    debtTimestampSummary != null &&
+    debtTimestampSummary.sourceTimestamp != null &&
+    debtTimestampSummary.latestSourceTimestamp != null &&
     debtTimestampSummary.untimestampedCount === 0 &&
     nowSec - debtTimestampSummary.sourceTimestamp <= LIVE_RESERVE_FRESHNESS_SEC &&
     debtTimestampSummary.latestSourceTimestamp <= nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC
@@ -438,7 +438,7 @@ export function adaptCollateralPositions(
   }
 
   const timestampSummary = summarizeSourceTimestampsRequiringCoverage(priceTimestamps);
-  if (timestampSummary && timestampSummary.untimestampedCount > 0) {
+  if (timestampSummary.untimestampedCount > 0) {
     warnings.push(reserveDegradedWarning("price-timestamp-coverage", "Only part of the active collateral price basket has source timestamps"));
   }
   return {
@@ -478,13 +478,11 @@ export function adaptCollateralPositions(
             },
           }
         : {}),
-      ...(timestampSummary == null
-        ? notApplicableFreshnessMetadata({ freshnessSource: "position-price-api-without-timestamps" })
-        : freshnessMetadataFromTimestamp(
-            timestampSummary.untimestampedCount === 0 ? timestampSummary.sourceTimestamp : null,
-            "position-price-timestamps",
-            "One or more active collateral prices lack a valid source timestamp",
-          )),
+      ...freshnessMetadataFromTimestamp(
+        timestampSummary.untimestampedCount === 0 ? timestampSummary.sourceTimestamp : null,
+        "position-price-timestamps",
+        "One or more active collateral prices lack a valid source timestamp",
+      ),
     },
   };
 }

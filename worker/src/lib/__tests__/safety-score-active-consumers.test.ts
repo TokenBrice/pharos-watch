@@ -3,13 +3,15 @@ import type { ActiveSafetyScoreSource } from "../safety-score-active-source";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
-const mockLoadActiveSafetyScoreSource = vi.fn();
+const { mockLoadActiveSafetyScoreSource } = vi.hoisted(() => ({
+  mockLoadActiveSafetyScoreSource: vi.fn(),
+}));
 
 vi.mock("../safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
 }));
 
-const { checkReportCardCacheMethodology } = await import("../canary-checks");
+import { checkSafetyScoreV9Publication } from "../canary-checks";
 const { loadPublicationHealth } = await import("../publication-contract");
 
 const NOW = 1_775_900_000;
@@ -33,7 +35,7 @@ describe("canonical V9 Safety Score consumers", () => {
 
   it("validates V9 identity and freshness in the canary", async () => {
     await expect(
-      checkReportCardCacheMethodology(mockD1()),
+      checkSafetyScoreV9Publication(mockD1()),
     ).resolves.toMatchObject({
       status: "ok",
       severity: "info",

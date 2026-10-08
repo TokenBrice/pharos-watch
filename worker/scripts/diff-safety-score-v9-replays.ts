@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { validateReplayCardProjection } from "./lib/safety-score-v9-replay-validation";
 import {
   assertCliUsage,
   parseStrictCliArgs,
@@ -88,6 +89,8 @@ export type ReplayChangeCategory = "unknown-credit-raises" | "cap-removal" | "re
 
 /** Diagnostic attribution only: categories do not assert independent marginal point effects. */
 export function categorizeReplayChanges(baseline: unknown, candidate: unknown): Record<ReplayChangeCategory, ReplayDiffEntry[]> {
+  validateReplayCardProjection(baseline);
+  validateReplayCardProjection(candidate);
   const categories: Record<ReplayChangeCategory, ReplayDiffEntry[]> = {
     "unknown-credit-raises": [], "cap-removal": [], "reserve-admission": [],
     "route-selection": [], "cause-classification": [], availability: [], schema: [],
@@ -222,15 +225,14 @@ function walkDiff(
  * reordered or resized card array reports real drift instead of an index shift.
  */
 export function diffReplayArtifacts(baseline: unknown, candidate: unknown): ReplayDiffResult {
+  validateReplayCardProjection(baseline);
+  validateReplayCardProjection(candidate);
   const a = stripVolatile(baseline);
   const b = stripVolatile(candidate);
   const cardsA = resolvePath(a, CARD_ARRAY_PATH);
   const cardsB = resolvePath(b, CARD_ARRAY_PATH);
   const entries: ReplayDiffEntry[] = [];
-  if (!Array.isArray(cardsA) || !Array.isArray(cardsB)) {
-    walkDiff(null, "$", a, b, entries);
-    return { equal: entries.length === 0, entries };
-  }
+  if (!Array.isArray(cardsA) || !Array.isArray(cardsB)) throw new Error("Validated card projection disappeared");
   const byId = (cards: readonly unknown[]): Map<string, unknown> =>
     new Map(cards.map((card) => [String((card as Record<string, unknown>)[CARD_ID_FIELD]), card]));
   const mapA = byId(cardsA);
@@ -251,9 +253,8 @@ export function diffReplayArtifacts(baseline: unknown, candidate: unknown): Repl
 export function extractCardGrades(
   artifactValue: unknown,
 ): Map<string, { grade: string | null; score: number | null; ratingStatus: "rated" | "not-rated" | "pipeline-gap" }> {
-  const cards = resolvePath(artifactValue, CARD_ARRAY_PATH);
+  const cards = validateReplayCardProjection(artifactValue);
   const out = new Map<string, { grade: string | null; score: number | null; ratingStatus: "rated" | "not-rated" | "pipeline-gap" }>();
-  if (!Array.isArray(cards)) return out;
   for (const card of cards) {
     const row = card as Record<string, unknown>;
     const score = row[CARD_SCORE_FIELD];
@@ -301,7 +302,7 @@ export async function runSafetyScoreV9DiffCli(argv: readonly string[]): Promise<
 
   if (values["assert-empty"] === true) {
     if (diff.equal) {
-      process.stdout.write("EMPTY DIFF — bit-identical\n");
+      process.stdout.write("EMPTY DIFF — normalized score-output equality (activation identity checked separately)\n");
       return;
     }
     process.stderr.write(`DIFF: ${diff.entries.length} entries\n`);

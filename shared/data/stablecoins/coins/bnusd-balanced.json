@@ -113,6 +113,10 @@
     "adapter": "sodax-sonic",
     "version": 1,
     "semantics": "collateral-mix",
+    "suspended": {
+      "reason": "Tracked ICON bnUSD(old) and its burn-mint representations are a different liability from the Sonic SODAX new bnUSD reserve census. Resume only after identity-bound legacy backing evidence is reviewed.",
+      "since": "2026-10-08"
+    },
     "inputs": { "primary": { "kind": "onchain-evm", "chain": "sonic", "rpcMode": "public-rpc" } },
     "display": { "url": "https://balanced.network/stablecoin/", "label": "SODAX borrower collateral" }
   },

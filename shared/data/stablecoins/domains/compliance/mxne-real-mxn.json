@@ -1,90 +1,91 @@
 {
   "id": "mxne-real-mxn",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register landing page (last update 2026-08-12); no MXNe, Brale, or Etherfuse entry identified in the ART, EMT, other-white-paper, or non-compliant files checked on 2026-08-14",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Brale MXNe page: Mexican-peso stablecoin issued through Brale for the Mexican economy; no EU offer or admission disclosed",
-        "url": "https://brale.xyz/stablecoins/MXNe"
-      },
-      {
-        "label": "Brale MXNe launch disclosure: local Mexican payments, remittances, and payroll focus; U.S. businesses in supported states can mint and redeem",
-        "url": "https://brale.xyz/blog/introducing-mxne"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Brale identifies MXNe as its Mexican peso stablecoin for payments, remittances and payroll. Its launch disclosure describes supported U.S. businesses minting and redeeming with USDC or USDP, while the Base announcement illustrates conversion to local pesos without binding fixed-peso redemption terms. Brale's May 27, 2026 Terms of Service defer particular services to additional agreements; its End User Agreement section 3.2 provides access to supported-asset redemption, subject to suspension or termination, without specifying an MXNe fixed-peso redemption obligation. No binding MXNe terms establishing repayment of a fixed amount of national currency or a qualifying national-currency deposit were found in the reviewed public materials. That issuer obligation is required by GENIUS Act sections 2(17) and 2(22), so applicability remains unresolved rather than affirmatively in scope or excluded."
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Brale Inc.",
-    "issuerDomicile": "United States",
-    "licensingRegulator": "FinCEN / state money transmitter regulators; NMLS ID #2376957",
-    "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://brale.xyz/stablecoins/MXNe",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "MXNe is a Brale-issued peso stablecoin with U.S. money-transmitter context, but no GENIUS permitted-issuer approval or official application was located. Brale operates as a FinCEN-registered MSB and licensed money transmitter (NMLS #2376957). The June 2026 Visa/Brale SBC proof-of-concept on Canton Network does not change MXNe's GENIUS status. Brale has not announced a PPSI pathway election (state-qualified vs. federal nonbank) as of 2026-06-18.",
     "references": [
       {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "Brale MXNe stablecoin page",
+        "label": "Brale: MXNe listing identifies Brale issuance and the tracked token contracts",
         "url": "https://brale.xyz/stablecoins/MXNe",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Brale MXNe announcement",
+        "label": "Brale: MXNe launch and USDC or USDP minting and redemption",
         "url": "https://brale.xyz/blog/introducing-mxne",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-18"
+        "sourceDate": "2024-05-22",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Brale terms",
+        "label": "Brale: MXNe Base announcement expressly identifies Brale as issuer on all three networks",
+        "url": "https://brale.xyz/blog/mxne-is-live-on-base",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-03-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brale: Terms of Service identify Brale Inc. and additional service agreements",
         "url": "https://brale.xyz/legal/terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-18"
+        "sourceDate": "2026-05-27",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Brale Review 2026: The Stablecoin Infrastructure Platform Powering Custom Issuance",
-        "url": "https://stablecoininsider.org/brale-review-2026/",
-        "sourceKind": "news",
-        "accessedAt": "2026-06-07",
-        "quoted": true
+        "label": "Brale: End User Agreement identifies Brale Inc. and supported-asset redemption conditions",
+        "url": "https://brale.xyz/legal/end-user-agreement",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-27",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: monetary value and payment-stablecoin definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule (Bulletin 2026-3, Feb 25 2026) and Federal Register",
-        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026)",
-        "FinCEN/OFAC joint AML NPRM (Apr 8 2026)",
-        "Brale issuer disclosure pages and blog (brale.xyz)",
-        "Brale Review 2026 (stablecoininsider.org)",
-        "No Brale PPSI application, state-qualified approval, or official-application announcement found in any federal or state regulatory source",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC digital-assets licensing applications: complete pending-applicant table reopened in raw HTML; no Brale entry; this is not an exhaustive GENIUS PPSI register",
+        "NYDFS virtual-currency regulated entities and Greenlisted Coins tables: no Brale or MXNe entry",
+        "Treasury/SCRC September 30, 2026 interim final procedural rule: state certifications await PRA approval and an opening notice; no Brale issuer qualification",
+        "Treasury August 17, 2026 section 3 rulemaking release: implementation proposal, no named Brale approval",
+        "Brale MXNe product, launch, Base announcement, Etherfuse case study, Terms of Service, End User Agreement and September 10, 2026 legal disclosures",
+        "Official-domain web search for Brale and GENIUS across OCC, Treasury, Federal Register, NYDFS, FDIC and Federal Reserve"
       ],
-      "summary": "Brale operates as a FinCEN-registered MSB and state money transmitter; no PPSI application, state-qualified approval, or official GENIUS authorization source was found for Brale or MXNe specifically as of 2026-06-18.",
+      "summary": "The public issuer materials, official directories, rulemaking sources and official-domain search reviewed for October 7, 2026 did not identify a GENIUS PPSI approval, state qualification or official pending GENIUS application for Brale Inc. or MXNe. Brale's ordinary financial-services license disclosures and regulated-issuance marketing do not establish a GENIUS authorization. This is a bounded negative public-evidence finding, not a claim that no unpublished application exists or that every state record has been reviewed.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC: pending digital-assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS: regulated virtual-currency entities and Greenlisted Coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury/SCRC: forms and procedures for state certifications",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

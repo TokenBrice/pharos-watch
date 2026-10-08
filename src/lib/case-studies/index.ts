@@ -94,9 +94,9 @@ const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] =
   );
 
 /**
- * Server-side resolver for surfaces that already import the full content
- * registry. Client chart overlays import the generated implementation from
- * `client-index.ts` instead, so article prose stays out of charted bundles.
+ * General server-side event resolver for surfaces that already import the
+ * full content registry. The client chart-overlay resolver is retired;
+ * ordinary case-study evidence and event-window matching remain.
  */
 export function caseStudySlugForEvent(coinId: string, tsMs: number): string | undefined {
   return resolveCaseStudySlugForEvent(CASE_STUDY_EVENT_WINDOWS, coinId, tsMs);

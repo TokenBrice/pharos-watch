@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import { createAdapterIoLimiter } from "../concurrency";
 import {
+  ADAPTER_USER_AGENT,
   buildBrowserHeaders,
+  createRequestBodyObserver,
   fetchJsonAdapterInput,
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
@@ -10,6 +13,7 @@ import {
   fetchWithBrowserFallback,
   fetchTextWithRetry,
   getCachedRequest,
+  getRequestResourceSnapshot,
   REQUEST_CACHE_MAX_ENTRY_BYTES,
   REQUEST_CACHE_MAX_TOTAL_BYTES,
 } from "../request";
@@ -75,7 +79,7 @@ describe("buildBrowserHeaders", () => {
 
     const recovered = await getCachedRequest("recoverable", async () => {
       calls++;
-      return "ok";
+      return { value: "ok", cacheBytes: 2, basis: "declared-estimate" };
     }, ctx);
 
     expect(recovered).toBe("ok");
@@ -88,10 +92,10 @@ describe("buildBrowserHeaders", () => {
     const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES);
 
     for (const key of ["first", "second", "third", "fourth"]) {
-      await getCachedRequest(key, async () => body, ctx);
+      await getCachedRequest(key, async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx);
     }
-    await getCachedRequest("first", async () => "unused", ctx);
-    await getCachedRequest("fifth", async () => body, ctx);
+    await getCachedRequest("first", async () => ({ value: "unused", cacheBytes: 6, basis: "declared-estimate" }), ctx);
+    await getCachedRequest("fifth", async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx);
 
     expect(cache.has("first")).toBe(true);
     expect(cache.has("second")).toBe(false);
@@ -106,8 +110,60 @@ describe("buildBrowserHeaders", () => {
     const ctx = { requestCache: cache };
     const body = "x".repeat(REQUEST_CACHE_MAX_ENTRY_BYTES + 1);
 
-    await expect(getCachedRequest("oversized", async () => body, ctx)).resolves.toBe(body);
+    await expect(getCachedRequest("oversized", async () => ({ value: body, cacheBytes: body.length, basis: "declared-estimate" }), ctx)).resolves.toBe(body);
     expect(cache.has("oversized")).toBe(false);
+  });
+
+  it("dedupes pending work without retaining it and cleans failed promises", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const onRequestCache = vi.fn();
+    const ctx = { requestCache: cache, onRequestCache };
+    let resolve!: (value: { value: string; cacheBytes: null; basis: "unavailable" }) => void;
+    const factory = vi.fn(() => new Promise<{ value: string; cacheBytes: null; basis: "unavailable" }>((done) => { resolve = done; }));
+    const first = getCachedRequest("pending", factory, ctx);
+    const second = getCachedRequest("pending", factory, ctx);
+    expect(first).toBe(second);
+    expect(cache.size).toBe(0);
+    await Promise.resolve();
+    resolve({ value: "ok", cacheBytes: null, basis: "unavailable" });
+    await expect(first).resolves.toBe("ok");
+    expect(factory).toHaveBeenCalledOnce();
+    expect(onRequestCache.mock.calls.map(([event]) => event.hit)).toEqual([false, true]);
+    expect(getRequestResourceSnapshot(ctx, "settled")).toMatchObject({ cacheBytes: 0, guard: "cache-bypassed" });
+  });
+
+  it("never serializes returned values or invokes getters to account retention", async () => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const getter = vi.fn(() => { throw new Error("must not inspect"); });
+    const value = Object.defineProperty({}, "toJSON", { get: getter });
+    await expect(getCachedRequest("opaque", async () => ({
+      value, cacheBytes: 100, basis: "declared-estimate",
+    }), ctx)).resolves.toBe(value);
+    expect(getter).not.toHaveBeenCalled();
+    expect(getRequestResourceSnapshot(ctx, "retained")).toMatchObject({ cacheBytes: 100, cacheBasis: "declared-estimate" });
+  });
+
+  it("never exceeds the prospective total at Map insertion", async () => {
+    const cache = new Map<string, Promise<unknown>>();
+    const ctx = { requestCache: cache };
+    const insert = vi.spyOn(cache, "set");
+    for (let index = 0; index < 6; index++) {
+      await getCachedRequest(String(index), async () => ({
+        value: index, cacheBytes: REQUEST_CACHE_MAX_ENTRY_BYTES, basis: "declared-estimate",
+      }), ctx);
+      expect(cache.size).toBeLessThanOrEqual(4);
+      expect(getRequestResourceSnapshot(ctx, "admitted").cacheBytes).toBeLessThanOrEqual(REQUEST_CACHE_MAX_TOTAL_BYTES);
+    }
+    expect(insert).toHaveBeenCalledTimes(6);
+  });
+
+  it.each([null, -1, Infinity, 0.5])("bypasses unknown or invalid estimates %s without failing work", async (cacheBytes) => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    await expect(getCachedRequest("uncached", async () => ({
+      value: "ok", cacheBytes, basis: "declared-estimate",
+    }), ctx)).resolves.toBe("ok");
+    expect(ctx.requestCache.size).toBe(0);
+    expect(getRequestResourceSnapshot(ctx, "done").guard).toBe("cache-bypassed");
   });
 });
 
@@ -309,6 +365,225 @@ describe("adapter request cache", () => {
   });
 });
 
+describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const url = "https://issuer.example/reserves";
+  const request = (
+    ctx: Parameters<typeof fetchJsonWithRetry>[3],
+    options?: Parameters<typeof fetchJsonWithRetry>[4],
+    timeoutMs = 1_000,
+  ) => {
+    const signal = new AbortController().signal;
+    return method === "GET"
+      ? fetchJsonWithRetry(url, signal, timeoutMs, ctx, options)
+      : fetchJsonPostWithRetry(url, { coin: "usdc" }, signal, timeoutMs, ctx, options);
+  };
+
+  it("isolates redirect policies for pending and retained responses", async () => {
+    const network = installAdapterNetwork({
+      json: { [url]: (received: Request) => ({ json: { redirect: received.redirect } }) },
+    });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const policies = ["follow", "error", "manual"] as const;
+    const results = await Promise.all(policies.map((redirect) => request(ctx, { redirect })));
+    expect(results).toEqual(policies.map((redirect) => ({ redirect })));
+    for (const redirect of policies) {
+      await expect(request(ctx, { redirect })).resolves.toEqual({ redirect });
+    }
+    await expect(request(ctx)).resolves.toEqual({ redirect: "follow" });
+    expect(network.fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("replaces default headers with lower-case overrides rather than appending them", async () => {
+    const name = method === "GET" ? "accept" : "content-type";
+    const network = installAdapterNetwork({
+      json: { [url]: (received: Request) => ({ json: {
+        profile: received.headers.get(name),
+        agent: received.headers.get("user-agent"),
+      } }) },
+    });
+    await expect(request(undefined, { headers: {
+      [name]: "application/vnd.issuer+json",
+      "user-agent": "issuer-probe",
+    } })).resolves.toEqual({ profile: "application/vnd.issuer+json", agent: "issuer-probe" });
+    expect(network.fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("dedupes equivalent reordered/cased records, Headers and entry arrays", async () => {
+    const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const variants: HeadersInit[] = [
+      { Authorization: "Bearer shared", Origin: "https://issuer.example" },
+      { origin: "https://issuer.example", authorization: "Bearer shared" },
+      new Headers({ ORIGIN: "https://issuer.example", AUTHORIZATION: "Bearer shared" }),
+      [["origin", "https://issuer.example"], ["Authorization", "Bearer shared"]],
+    ];
+    const results = await Promise.all(variants.map((headers) => request(ctx, { headers })));
+    expect(results).toEqual(variants.map(() => ({ ok: true })));
+    await request(ctx, { headers: variants[1] });
+    expect(network.fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("shares implicit and explicit effective default profiles", async () => {
+    const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const name = method === "GET" ? "accept" : "content-type";
+    const options = { headers: { [name]: "application/json", "user-agent": ADAPTER_USER_AGENT }, redirect: "follow" as const };
+    expect(await Promise.all([request(ctx), request(ctx, options)])).toEqual([{ ok: true }, { ok: true }]);
+    await request(ctx, { headers: new Headers(options.headers) });
+    expect(network.fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("never shares different authorization credentials", async () => {
+    const network = installAdapterNetwork({
+      json: { [url]: (received: Request) => ({ json: { auth: received.headers.get("authorization") } }) },
+    });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const [first, second] = await Promise.all([
+      request(ctx, { headers: { Authorization: "Bearer first" } }),
+      request(ctx, { headers: { authorization: "Bearer second" } }),
+    ]);
+    expect(first).toEqual({ auth: "Bearer first" });
+    expect(second).toEqual({ auth: "Bearer second" });
+    await expect(request(ctx, { headers: { AUTHORIZATION: "Bearer first" } })).resolves.toEqual(first);
+    expect(network.fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives each observer its own actual response despite a retained matching result", async () => {
+    const responses: Response[] = [];
+    const fetchMock = vi.fn(async () => {
+      const response = Response.json({ request: responses.length });
+      responses.push(response);
+      return response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    await expect(request(ctx)).resolves.toEqual({ request: 0 });
+    const first = vi.fn();
+    const second = vi.fn();
+    const results = await Promise.all([
+      request(ctx, { onResponse: first }),
+      request(ctx, { onResponse: second }),
+    ]);
+    expect(results).toEqual([{ request: 1 }, { request: 2 }]);
+    expect(first.mock.calls).toEqual([[responses[1]]]);
+    expect(second.mock.calls).toEqual([[responses[2]]]);
+    expect(first.mock.calls[0][0]).toBe(responses[1]);
+    expect(second.mock.calls[0][0]).toBe(responses[2]);
+    expect(responses[1]).not.toBe(responses[2]);
+    await expect(request(ctx, { onResponse: first })).resolves.toEqual({ request: 3 });
+    expect(first.mock.calls[1][0]).toBe(responses[3]);
+    const beforeHit = getRequestResourceSnapshot(ctx, "before-hit");
+    await expect(request(ctx)).resolves.toEqual({ request: 0 });
+    expect(getRequestResourceSnapshot(ctx, "after-hit").intakeBytes).toBe(beforeHit.intakeBytes);
+    expect(ctx.requestCache.size).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not populate the cache with observer-only requests", async () => {
+    const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const onResponse = vi.fn();
+    await Promise.all([request(ctx, { onResponse }), request(ctx, { onResponse })]);
+    expect(onResponse).toHaveBeenCalledTimes(2);
+    expect(ctx.requestCache.size).toBe(0);
+    await request(ctx);
+    await request(ctx);
+    expect(network.fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("observes each retry response without replaying it to another caller", async () => {
+    const responses = [
+      new Response("down", { status: 500 }),
+      Response.json({ ok: true }),
+      Response.json({ ok: true }),
+    ];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responses[0])
+      .mockResolvedValueOnce(responses[1])
+      .mockResolvedValueOnce(responses[2]);
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const first = vi.fn();
+    const second = vi.fn();
+    await request(ctx, { maxRetries: 1, onResponse: first });
+    await request(ctx, { maxRetries: 1, onResponse: second });
+    expect(first.mock.calls).toEqual([[responses[0]], [responses[1]]]);
+    expect(second.mock.calls).toEqual([[responses[2]]]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps observer requests inside the two-I/O limit until their bodies finish", async () => {
+    const bodies: ReadableStreamDefaultController<Uint8Array>[] = [];
+    const fetchMock = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) { bodies.push(controller); },
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+    const ctx = { requestCache: new Map<string, Promise<unknown>>(), ioLimiter: createAdapterIoLimiter() };
+    const onResponse = vi.fn();
+    const requests = Array.from({ length: 3 }, () => request(ctx, { onResponse }));
+    // Fetch is started synchronously in the first two claimed limiter slots.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const complete = (index: number) => {
+      bodies[index].enqueue(new TextEncoder().encode('{"ok":true}'));
+      bodies[index].close();
+    };
+    complete(0);
+    await requests[0];
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    complete(1);
+    complete(2);
+    await Promise.all(requests);
+    expect(onResponse).toHaveBeenCalledTimes(3);
+    expect(ctx.requestCache.size).toBe(0);
+  });
+
+  it("still cancels an oversized observed body instead of admitting a result", async () => {
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode('{"data":"oversized"}')); },
+      cancel,
+    }));
+    const fetchMock = vi.fn(async () => response);
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onResponse = vi.fn();
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    await expect(request(ctx, { onResponse, maxRetries: 0, maxResponseBytes: 8 }))
+      .rejects.toMatchObject({ code: "resource-budget-exceeded" });
+    expect(onResponse.mock.calls[0][0]).toBe(response);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(ctx.requestCache.size).toBe(0);
+    expect(getRequestResourceSnapshot(ctx, "oversized").rejectedBodies).toBe(1);
+  });
+
+  it("still applies the attempt deadline through observed body consumption", async () => {
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream<Uint8Array>({
+      async pull() { await new Promise<never>(() => {}); },
+      cancel,
+    }));
+    const fetchMock = vi.fn(async () => response);
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onResponse = vi.fn();
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    await expect(request(ctx, { onResponse, maxRetries: 0 }, 50))
+      .rejects.toMatchObject({ name: "TimeoutError" });
+    expect(onResponse.mock.calls[0][0]).toBe(response);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(ctx.requestCache.size).toBe(0);
+    expect(getRequestResourceSnapshot(ctx, "timed-out").rejectedBodies).toBe(0);
+  });
+});
+
 describe("binary fetch lifecycle", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -331,7 +606,7 @@ describe("binary fetch lifecycle", () => {
     const startedAt = Date.now();
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 50, undefined, { maxRetries: 0 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ name: "TimeoutError" });
     expect(Date.now() - startedAt).toBeLessThan(1_000);
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -356,7 +631,7 @@ describe("binary fetch lifecycle", () => {
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 1024 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -377,7 +652,7 @@ describe("binary fetch lifecycle", () => {
     await expect(fetchBinaryResponseWithRetry(
       "https://issuer.example/report.pdf", new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 8 },
-    )).rejects.toThrow("Fetch failed for issuer.example");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(cancelled).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -396,7 +671,7 @@ describe("JSON POST retry and size limits", () => {
     await expect(fetchJsonPostWithRetry(
       "https://issuer.example/graphql", { coin: "usdc" }, new AbortController().signal, 1_000, undefined,
       { maxRetries: 0, maxResponseBytes: 64 },
-    )).rejects.toThrow("POST fetch failed for https://issuer.example/graphql");
+    )).rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(network.fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -409,5 +684,20 @@ describe("JSON POST retry and size limits", () => {
       { maxRetries: 1 },
     )).rejects.toThrow("HTTP 500 for POST https://issuer.example/graphql");
     expect(network.fetchSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("body intake attribution", () => {
+  it("counts partial interruption without inventing a budget rejection", () => {
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const observer = createRequestBodyObserver(ctx, 4);
+    observer.onBodyRead({ intakeBytes: 2, declaredBytes: null, outcome: "rejected" });
+    expect(getRequestResourceSnapshot(ctx, "abort")).toMatchObject({
+      intakeBytes: 2, rejectedBodies: 0, guard: "within-policy",
+    });
+    observer.onBodyRead({ intakeBytes: 5, declaredBytes: 1, outcome: "rejected" });
+    expect(getRequestResourceSnapshot(ctx, "overflow")).toMatchObject({
+      intakeBytes: 7, rejectedBodies: 1, guard: "resource-budget-exceeded",
+    });
   });
 });

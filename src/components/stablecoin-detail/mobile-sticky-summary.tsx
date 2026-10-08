@@ -7,6 +7,7 @@ import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
 import { PartialEvidenceChip } from "@/components/stablecoin-detail/ops-status-chip";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
@@ -23,7 +24,8 @@ const STICKY_HEIGHT_VAR = "--pharos-sticky-summary-h";
 
 /**
  * Mobile-only compact summary that appears once the hero card scrolls out of
- * view. Sticks to top: 0; the scrollspy nav sticks to top: 3.5rem just below.
+ * view below the lg breakpoint. Its measured height composes with global
+ * chrome and scrollspy offsets; desktop installs no summary observers.
  *
  * Publishes its measured height as `--pharos-sticky-summary-h` on
  * `document.documentElement` so `LongformScrollspyNav` can include it in
@@ -39,11 +41,13 @@ export function MobileStickySummary({
   observeTarget,
 }: MobileStickySummaryProps) {
   const enabled = isMobileStickySummaryEnabled();
+  const isMobile = useIsMobile(1024);
+  const active = enabled && isMobile;
   const [visible, setVisible] = useState(false);
   const summaryRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!active) return;
     const el = observeTarget.current;
     if (!el) return;
     if (typeof window === "undefined" || typeof window.IntersectionObserver === "undefined") return;
@@ -52,11 +56,14 @@ export function MobileStickySummary({
       { threshold: 0 },
     );
     io.observe(el);
-    return () => io.disconnect();
-  }, [enabled, observeTarget]);
+    return () => {
+      io.disconnect();
+      setVisible(false);
+    };
+  }, [active, observeTarget]);
 
   useEffect(() => {
-    if (!enabled || !visible) return;
+    if (!active || !visible) return;
     const node = summaryRef.current;
     if (!node) return;
     if (typeof window === "undefined" || typeof window.ResizeObserver === "undefined") return;
@@ -74,9 +81,9 @@ export function MobileStickySummary({
       ro.disconnect();
       document.documentElement.style.removeProperty(STICKY_HEIGHT_VAR);
     };
-  }, [enabled, visible]);
+  }, [active, visible]);
 
-  if (!enabled || !visible) return null;
+  if (!active || !visible) return null;
   return (
     <div
       ref={summaryRef}

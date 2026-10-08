@@ -4869,6 +4869,56 @@
         {"sourceUrl": "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a?fields=sources,abi,runtimeMatch,runtimeBytecode", "description": "runtimeMatch=exact_match. STUSDWrapper notice: One-way wrapper for converting sUSDC to STUSD with lock support (NO UNWRAP). ABI/source contains no holder unwrap; reserve transfers require onlyOwnerOrOperator. W3R38 complete lifetime zero-sweep census corroborates, but does not establish, the entitlement."},
         {"sourceUrl": "https://docs.stoneyield.io/docs/protocol/stusd-wrapper", "description": "Return to sUSDC by sweeping reserves (no public unwrap function). Current source re-read confirms the same adverse entitlement."}
       ]
+    },
+    {
+      "kind": "accounting",
+      "assetId": "senrlusdv2-sentora",
+      "mechanism": "vault-v2-share-accounting",
+      "reviewer": "Sol unknown-resolver wave 2026-10-07 (WRAP_ALLOC)",
+      "reviewedAt": "2026-10-07T14:39:58Z",
+      "observedAtSec": 1790981027,
+      "expiresAtSec": 1793573027,
+      "identity": {
+        "assetId": "senrlusdv2-sentora",
+        "registeredDeploymentKeys": [
+          "ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+        ],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "ethereum",
+            "address": "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+            "observedAtSec": 1790981027,
+            "block": 26107702,
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+          }
+        ]
+      },
+      "rationale": "Exact immutable VaultV2 contract-local RLUSD share accounting is established independently of borrower collateral liquidation oracles. The pinned runtime is byte-for-byte equal to the verified deployment's deployed_bytecode, and the verified source computes totalAssets from idle RLUSD plus all adapter realAssets, limited by maxRate, recognizing losses. Conversions use fee-adjusted totalSupply with virtualShares and one virtual asset. This is known moderate share-accounting/NAV risk, not dollar-fixed redemption, reliable borrower feeds, complete strategy custody, zero leverage or measured USD unwind.",
+      "sources": [
+        {
+          "label": "Exact verified Sentora RLUSD Main VaultV2 deployment",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+        },
+        {
+          "label": "Pinned Ethereum Dwellir RPC block 26107702",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        },
+        {
+          "label": "Morpho VaultV2 accounting documentation",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+          "description": "Pinned block 26107702, hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6, timestamp 2026-10-02T22:43:47Z; read completed 2026-10-07T14:38:10.969Z. asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets()=451873322385272395066245035; totalSupply()=445977774185772181139741691. eth_getCode equals exact verified deployed_bytecode. Evidence record agents/wave5/scratch/WRAP_ALLOC/senrlusdv2-accounting-pin.json."
+        },
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+          "description": "VaultV2.sol source SHA256=027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6. totalAssets calls accrueInterestView, which sums asset.balanceOf(vault) and each adapter.realAssets, applies maxRate and computes performance/management fee shares. previewDeposit/Mint/Withdraw/Redeem use newTotalSupply plus virtualShares and newTotalAssets plus 1. Loss realization explicitly decreases total assets and share value. Constructor fixes asset and decimal-derived virtualShares; no proxy implementation."
+        }
+      ]
     }
   ]
 }

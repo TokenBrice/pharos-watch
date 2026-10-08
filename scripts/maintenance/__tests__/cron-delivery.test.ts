@@ -1,9 +1,13 @@
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { parseCronDeliveryArgs, readCronDelivery } from "../cron-delivery.mjs";
 
 const row = { datetime: "2026-10-06T20:01:00Z", scheduledDatetime: "2026-10-06T20:01:00Z", cron: "1,6 * * * *", status: "success", cpuTimeUs: 1000 };
 function response(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status }); }
 const payload = (rows: unknown[]) => ({ data: { viewer: { accounts: [{ workersInvocationsScheduled: rows }] } } });
+const scriptPath = resolve("scripts/maintenance/cron-delivery.mjs");
 
 describe("cron-delivery read-only CLI", () => {
   it("uses strict options and bounded windows", () => {
@@ -38,5 +42,28 @@ describe("cron-delivery read-only CLI", () => {
   it("propagates transport failure and keeps empty evidence distinct", async () => {
     await expect(readCronDelivery({ token: "test-only", fetchImpl: vi.fn().mockRejectedValue(new Error("network")) })).rejects.toThrow("network");
     expect((await readCronDelivery({ token: "test-only", fetchImpl: vi.fn().mockResolvedValue(response(payload([]))) })).rows).toEqual([]);
+  });
+});
+describe("scheduled delivery operator target", () => {
+  it.each([undefined, "stablecoin-heavy"])("uses and prints the selected script (%s)", (workerName) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, CLOUDFLARE_API_TOKEN: "test-analytics-token" };
+    delete env.CLOUDFLARE_WORKER_NAME;
+    if (workerName) env.CLOUDFLARE_WORKER_NAME = workerName;
+    const expected = workerName ?? "stablecoin-api";
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      process.argv.splice(1, process.argv.length - 1, ${JSON.stringify(scriptPath)}, '--minutes', '240');
+      globalThis.fetch = async (_url, init) => {
+        const request = JSON.parse(init.body);
+        if (request.variables.s !== ${JSON.stringify(expected)}) throw new Error('Wrong Analytics script target');
+        if (Date.parse(request.variables.t) - Date.parse(request.variables.f) !== 240 * 60000) throw new Error('Wrong window');
+        return { ok: true, json: async () => ({ data: { viewer: { accounts: [{ workersInvocationsScheduled: [] }] } } }) };
+      };
+      // Load the CLI only after installing argv and fetch mocks to exercise its direct-run boundary.
+      await import(${JSON.stringify(pathToFileURL(scriptPath).href)});
+    `], { env, encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain(`script=${expected} rows=0 window=`);
+    expect(result.stdout).toContain("absence is not a success claim");
+    expect(result.stdout).not.toContain("test-analytics-token");
   });
 });

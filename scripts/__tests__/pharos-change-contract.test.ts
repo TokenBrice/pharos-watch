@@ -89,6 +89,12 @@ describe("normalizeChangedFiles", () => {
 });
 
 describe("classifyChangedFiles", () => {
+  it("routes the heavy configuration to Worker deployment ownership", () => {
+    const contract = classifyChangedFiles(["worker/wrangler.heavy.toml"]);
+    expect(contract.background.map((entry) => entry.path)).toContain("docs/worker-infrastructure.md");
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("worker-cron");
+    expect(contract.deploy.workerImpact).toBe(true);
+  });
   // One row per owned path family: what the router must attach to a change in it.
   it.each([
     {
@@ -172,7 +178,7 @@ describe("classifyChangedFiles", () => {
       docs: [
         "docs/telegram-architecture.md#1-ingress",
         "docs/telegram-alerts.md#dispatch",
-        "docs/telegram-mini-app.md",
+        "docs/telegram-mini-app.md#overview",
       ],
       checks: ["npm run typecheck"],
     },
@@ -709,6 +715,7 @@ describe("hard-block hook outputs", () => {
     ["destructive git reset", "git reset --hard HEAD", "git reset --hard"],
     ["git global flags", "git --no-pager reset --hard HEAD", "git reset --hard"],
     ["production deploy", "cd worker && npx --no-install wrangler versions deploy 00000000-0000-0000-0000-000000000000@100", "Raw production deploy commands"],
+    ["heavy production deploy", "cd worker && npx --no-install wrangler deploy --config wrangler.heavy.toml", "Raw production deploy commands"],
     ["shell eval wrapper", 'bash -lc "cd worker && npx --no-install wrangler pages deploy out"', "opaque shell construct"],
     ["remote D1 mutation", "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote", "Remote D1 mutation commands"],
     [

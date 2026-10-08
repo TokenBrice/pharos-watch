@@ -1,6 +1,6 @@
 import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
-import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_STABLECOINS, loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,
@@ -24,12 +24,12 @@ import type {
 } from "@shared/types";
 import { formatReserveReportNote } from "@/lib/regulatory-standing";
 
-import type { GeniusComplianceProfile } from "@shared/types/stablecoin-client-meta";
+import type { GeniusComplianceProfile, GeniusComplianceSummary } from "@shared/types/stablecoin-client-meta";
 
 interface ComplianceProjectionEntry {
   id: string;
   mica?: MicaProfile;
-  genius?: GeniusComplianceProfile;
+  genius?: GeniusComplianceSummary;
   proofOfReserves?: Pick<NonNullable<StablecoinMeta["proofOfReserves"]>, "latestReport">;
 }
 
@@ -86,6 +86,9 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   redemptionPolicyPresent: boolean;
   monthlyAttestationPresent: boolean;
   reserveReportNote?: string;
+}
+
+export interface GeniusComplianceEvidence {
   notes?: string;
   applicabilitySummary?: string;
   foreignExceptionSummary?: string;
@@ -230,7 +233,7 @@ function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: M
 
 function buildGeniusRow(
   meta: (typeof CLIENT_TRACKED_STABLECOINS)[number],
-  genius: GeniusComplianceProfile,
+  genius: GeniusComplianceSummary,
   report: NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"],
 ): GeniusComplianceRow {
   const reserveReportNote = formatReserveReportNote(report);
@@ -263,6 +266,11 @@ function buildGeniusRow(
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,
     reserveReportNote,
+  };
+}
+
+function buildGeniusComplianceEvidence(genius: GeniusComplianceProfile): GeniusComplianceEvidence {
+  return {
     notes: genius.notes,
     applicabilitySummary: genius.applicabilityBasis?.summary,
     foreignExceptionSummary: genius.foreignExceptionEvidence?.summary,
@@ -272,6 +280,25 @@ function buildGeniusRow(
     reviewedAt: genius.reviewedAt,
     references: collectGeniusReferences(genius),
   };
+}
+
+// Successful loads and in-flight requests survive fold unmounts for this session.
+const geniusEvidenceById = new Map<string, Promise<GeniusComplianceEvidence>>();
+
+export function loadGeniusComplianceEvidence(id: string): Promise<GeniusComplianceEvidence> {
+  const cached = geniusEvidenceById.get(id);
+  if (cached) return cached;
+  const pending = loadClientStablecoinDetail(id)
+    .then((detail) => {
+      if (!detail?.genius) throw new Error(`GENIUS evidence unavailable for ${id}`);
+      return buildGeniusComplianceEvidence(detail.genius);
+    })
+    .catch((error: unknown) => {
+      geniusEvidenceById.delete(id);
+      throw error;
+    });
+  geniusEvidenceById.set(id, pending);
+  return pending;
 }
 
 function collectGeniusReferences(genius: GeniusComplianceProfile): StablecoinLink[] {

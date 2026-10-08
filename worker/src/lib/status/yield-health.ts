@@ -6,7 +6,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import { isYieldSafetyFallbackWithinWindow, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
   booleanValue as getBoolean,
   numberValue as getNumber,
@@ -38,7 +38,7 @@ import {
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "../../cron/yield-sync/supplemental-source-family-keys";
 import { safeJsonParse } from "../api-cache-read";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "../safety-score-v9/publication-store";
+import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -205,6 +205,7 @@ function readComparisonAnchorExamples(value: unknown): YieldHealthSummary["compa
           dataSource,
           anchorAgeSeconds,
           comparisonAnchorObservedAt,
+          maxAgeSeconds: getNumber(row?.maxAgeSeconds),
         }]
       : [];
   });
@@ -230,6 +231,7 @@ function buildComparisonAnchorFreshnessSummary(
     oldestAnchorSourceKey: getString(summary?.oldestAnchorSourceKey),
     staleAnchorExamples: readComparisonAnchorExamples(summary?.staleAnchorExamples),
     staleAnchorExamplesTruncated: getBoolean(summary?.staleAnchorExamplesTruncated) ?? false,
+    sourceRunStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
   };
 }
 
@@ -659,6 +661,10 @@ function readQueueTotals(payload: Record<string, unknown> | null): YieldHealthSu
         return count != null ? [[kind, count] as const] : [];
       }),
     ),
+    totalItemCount: getNumber(totals.totalItemCount) ?? getNumber(getObject(payload?.operatorReviewSummary)?.visibleItemCount),
+    publishedItemCount: getNumber(totals.publishedItemCount) ?? getNumber(getObject(payload?.operatorReviewSummary)?.publishedItemCount),
+    truncatedItemCount: getNumber(totals.truncatedItemCount) ?? getNumber(getObject(payload?.operatorReviewSummary)?.truncatedItemCount),
+    byKindScope: totals.byKindScope === "full-visible" ? "full-visible" : "published-sample",
     suppressedItemCount: getNumber(totals.suppressedItemCount) ?? 0,
     truncated: getBoolean(totals.truncated) ?? false,
   };
@@ -673,8 +679,7 @@ function buildCoverageAuditQueue(payload: Record<string, unknown> | null): Pick<
   const queuedRecommendations = readQueueItems(operatorQueue?.recommendationCandidates);
   const queuePersistence = operatorQueue?.persistence;
   const queueTotals = readQueueTotals(payload);
-  // The panel lists dispositions; nothing writes them back until the admin
-  // disposition route lands, so the surface is explicitly display-only (C8).
+  // Permanent operator evidence only: no disposition UI/API is authorized.
   const shared = {
     allowedActions: readAllowedQueueActions(operatorQueue),
     queueTotals,
@@ -799,49 +804,43 @@ function buildSupplementalHealth(
   };
 }
 
-/**
- * C5: the tile used to read only the publish-time safety snapshot, so a read
- * path serving the publish-time fallback (or, past the stale-coherent window,
- * unrated safety) was invisible here. Reproduces `/api/health`'s identity
- * comparison from D1-side extracts only.
- */
+/** Permanent diagnostic of the public compact-index/two-clock read policy. */
 async function buildLiveSafetyHydration(
   db: D1Database,
   now: number,
   safetySnapshot: Record<string, unknown> | null,
   rankingUpdatedAt: number | null,
 ): Promise<NonNullable<YieldHealthSummary["liveSafetyHydration"]>> {
-  const cachedAgeSec = ageSeconds(now, rankingUpdatedAt);
+  const safetyPublishedAt = getNumber(safetySnapshot?.publishedAt);
   const base = {
     staleCoherentMaxAgeSec: YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC,
-    cachedAgeSec,
+    cachedAgeSec: ageSeconds(now, rankingUpdatedAt),
+    yieldPublishedAt: rankingUpdatedAt,
+    safetyPublishedAt,
+    safetyAgeSec: ageSeconds(now, safetyPublishedAt),
   };
   if (safetySnapshot == null) {
-    return { ...base, status: "unknown", reason: null, fallback: null };
+    return { ...base, status: "unknown", reason: "publish-time-safety-missing", fallback: null };
   }
-  let live = null;
-  try {
-    live = await loadSafetyScoreV9PublicationIdentityEnvelope(db);
-  } catch {
-    // Without the active identity there is nothing to compare against, so the
-    // hydration state is unmeasured rather than degraded.
-    return { ...base, status: "unknown", reason: "identity-lookup-failed", fallback: null };
-  }
+  const active = await loadActiveSafetyScoreIndex(db);
   const stamped = SafetyScorePublicationIdentitySchema.safeParse(safetySnapshot.safetyScoreIdentity);
-  if (!stamped.success) {
-    return { ...base, status: "degraded", reason: "safety-identity-missing", fallback: null };
-  }
-  if (live && safetyScorePublicationIdentitiesAreComparable(stamped.data, live)) {
+  if (active.kind === "v9" && stamped.success
+    && safetyScorePublicationIdentitiesAreComparable(stamped.data, active.snapshot.safetyScoreIdentity)) {
     return { ...base, status: "healthy", reason: null, fallback: null };
   }
-  const reason = live ? "safety-identity-mismatch" : "safety-snapshot-unavailable";
-  // Past the stale-coherent window the public surface blanks safety to NR.
-  const pastWindow = cachedAgeSec != null && cachedAgeSec > YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
+  if (active.kind === "error" && active.reason === "safety-score-index-read-failed") {
+    return { ...base, status: "unknown", reason: active.reason, fallback: null };
+  }
+  const reason = active.kind !== "v9" ? active.reason
+    : stamped.success ? "safety-identity-mismatch" : "safety-identity-missing";
+  const fallbackAllowed = !(active.kind === "error" && active.reason.startsWith("safety-score-index-"))
+    && stamped.success && rankingUpdatedAt != null
+    && isYieldSafetyFallbackWithinWindow(rankingUpdatedAt, safetyPublishedAt, now);
   return {
     ...base,
-    status: pastWindow ? "stale" : "degraded",
+    status: fallbackAllowed ? "degraded" : "stale",
     reason,
-    fallback: pastWindow ? null : "publish-time-snapshot",
+    fallback: fallbackAllowed ? "publish-time-snapshot" : null,
   };
 }
 
@@ -857,12 +856,14 @@ function buildPysInputsPersistence(
   // counters under `metadata.publicationStats`; runs that skip publication
   // emit no entry, which stays `unknown` instead of counting as zero (R1).
   const publicationStats = getObject(metadata?.publicationStats);
-  const persistedCount = getNumber(publicationStats?.pysInputsPersistedCount);
-  const nullCount = getNumber(publicationStats?.pysInputsNullCount);
-  const total = (persistedCount ?? 0) + (nullCount ?? 0);
-  const nullRate = persistedCount == null && nullCount == null
-    ? null
-    : ratio(nullCount ?? 0, total);
+  const measuredCount = (value: unknown): number | null => {
+    const count = getNumber(value);
+    return count != null && Number.isSafeInteger(count) && count >= 0 ? count : null;
+  };
+  const persistedCount = measuredCount(publicationStats?.pysInputsPersistedCount);
+  const nullCount = measuredCount(publicationStats?.pysInputsNullCount);
+  const total = persistedCount != null && nullCount != null ? persistedCount + nullCount : null;
+  const nullRate = total != null && total > 0 ? ratio(nullCount!, total) : null;
   return {
     status: nullRate == null
       ? "unknown"
@@ -873,6 +874,8 @@ function buildPysInputsPersistence(
     nullCount,
     nullRate,
     threshold: PYS_INPUTS_NULL_RATE_BUDGET,
+    reason: nullRate != null ? null : total === 0 ? "zero-published-rows" : "publisher-counters-incomplete-or-invalid",
+    sourceRunStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
   };
 }
 

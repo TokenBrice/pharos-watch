@@ -1,5 +1,5 @@
 /* Integer fixed-point boundaries for execution producers. No floating token arithmetic. */
-export function decimalToExitUnits(value: string, decimals: number, roundUp = false): bigint {
+function decimalToExitUnits(value: string, decimals: number, roundUp = false): bigint {
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
   const match = /^(\d+)(?:\.(\d+))?$/.exec(value);
   if (!match || !Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw new Error("invalid-execution-decimal");
@@ -8,7 +8,7 @@ export function decimalToExitUnits(value: string, decimals: number, roundUp = fa
   return units + (roundUp && /[1-9]/.test(fraction.slice(decimals)) ? 1n : 0n);
 }
 
-export function exitNumberToDecimal(value: number): string {
+function exitNumberToDecimal(value: number): string {
   if (!Number.isFinite(value) || value < 0) throw new Error("invalid-execution-value");
   const [coefficient, exponentText] = String(value).toLowerCase().split("e");
   if (exponentText === undefined) return coefficient!;

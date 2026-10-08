@@ -6,6 +6,7 @@ import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   buildAlchemyRpcUrl,
+  CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON,
   buildChainRpcs,
   getRpcAuthHeaders,
   hasRegistryRpc,
@@ -116,6 +117,13 @@ function dwellirEntry(chainId: string) {
 }
 
 describe("buildChainRpcs", () => {
+  it("keeps Monad provisioning explicit without registering an unverified archive", () => {
+    expect(CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON).toBe("monad-canonical-hash-archive-required");
+    const rpcs = buildChainRpcs(undefined, undefined);
+    const endpoints = registryRpcEndpoints(rpcs.get("monad"));
+    expect(endpoints.length).toBeGreaterThan(0);
+    expect(endpoints.every(endpoint => !endpoint.keyed && endpoint.verifiedAt === undefined)).toBe(true);
+  });
   it.each(KEY_COMBINATIONS)(
     "keeps today's registry URL lists with $label",
     ({ alchemyApiKey, drpcApiKey, urls }) => {

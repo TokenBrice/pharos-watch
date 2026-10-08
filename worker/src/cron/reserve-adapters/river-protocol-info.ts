@@ -102,7 +102,7 @@ export function adaptRiverProtocolInfo(payload: RiverProtocolInfoPayload): Adapt
 // CDP troves on their own chain, so the only same-run capacity is per-chain
 // trove debt. Aggregate protocol TVL is not that number — most satUSD is
 // bridged or Smart-Vault-minted rather than trove-backed.
-// https://docs.river.inc/products/editor/redemption
+// https://docs.riverai.inc/products/editor/redemption.md
 const SATOSHI_APP_BY_CHAIN: Record<string, string> = {
   ethereum: "0xb8374e4dff99202292da2fe34425e1de665b67e6",
   base: "0x9a3c724ee9603a7550499be73dc743b371811dd3",
@@ -115,8 +115,8 @@ const SATOSHI_APP_BY_CHAIN: Record<string, string> = {
 // silently fee-underreported.
 const MAX_TROVE_MANAGERS_PER_CHAIN = 12;
 const SATUSD_DEBT_DECIMALS = 18;
-const RIVER_REDEMPTION_DOC_URL = "https://docs.river.inc/products/editor/redemption";
-const RIVER_DEPLOYED_CONTRACTS_DOC_URL = "https://docs.river.inc/outro/deployed-contracts";
+const RIVER_REDEMPTION_DOC_URL = "https://docs.riverai.inc/products/editor/redemption.md";
+const RIVER_DEPLOYED_CONTRACTS_DOC_URL = "https://docs.riverai.inc/outro/deployed-contracts.md";
 
 const DEBT_TOKEN_SELECTOR = "0xf8d89898"; // debtToken()
 const GLOBAL_SYSTEM_BALANCES_SELECTOR = "0x716c53c2"; // getGlobalSystemBalances()

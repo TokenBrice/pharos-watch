@@ -39,7 +39,7 @@
     "compositionBasis": "Bureau Veritas physical audit against the Parcel Ownership List dated 30 June 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Physical gold is the reported asset category. The June 30 inventory is historical; current token-liability reconciliation, exclusive allocation and encumbrance status remain unverified. The live price-reference proxy does not refresh this composition date.",
+    "knownUnknownExposure": "Physical gold is the retained reported asset category; current token-liability reconciliation, exclusive allocation and encumbrance remain unverified. Source-maintenance check 2026-10-07: Matrixdock live totals report 16716.960 fine troy ounces/16716.954084234 tokens but carry no source timestamp. Official list/download API works; newest PDF upload is September 16 while inventory basis is August 31. Tables are images and include silver rows, so grand totals mix commodities. This offline-manifest lead does not refresh the retained June 30 composition. Configured BSC proxy proves NAV price, not reserves; no exact XAUm reserve-feed sibling address was established. Do not copy XAGm feed/address or its 60-day cap. Monthly report cadence needs measured publication lag and separate inventory dates before promotion.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

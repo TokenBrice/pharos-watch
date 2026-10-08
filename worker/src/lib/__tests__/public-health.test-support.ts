@@ -117,6 +117,10 @@ export function makePublicHealth(
         scheduleKey, lastStartedAt: Math.floor(Date.now() / 1000) - 30,
       })),
       unavailableReason: null,
+      heavy: {
+        scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: Math.floor(Date.now() / 1000) - 30,
+        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      },
     },
     schedulerLivenessImpactStatus: "healthy",
     ...overrides,

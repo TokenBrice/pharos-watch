@@ -219,12 +219,15 @@ describe("loadTrackedStablecoinMaps", () => {
     const maps = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
     expect(maps.stablecoinMcapById).toEqual(new Map());
     expect(maps.stablecoinPriceById).toEqual(new Map([["zero", 1], ["negative", 1]]));
+    expect(maps.stablecoinPriceProvenanceById.get("zero")).toEqual({
+      referencePriceSourceId: "coingecko", referencePriceObservedAt: NOW_SEC - 60,
+    });
   });
 
-  it("returns both empty maps when the cache is unavailable", async () => {
+  it("returns empty price, provenance and market-cap maps when the cache is unavailable", async () => {
     loadStablecoinsCache.mockResolvedValue({ kind: "missing" });
     expect(await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC)).toEqual({
-      stablecoinPriceById: new Map(), stablecoinMcapById: new Map(),
+      stablecoinPriceById: new Map(), stablecoinMcapById: new Map(), stablecoinPriceProvenanceById: new Map(),
     });
   });
 });

@@ -4,21 +4,20 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
-  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
+  strictAmountParser,
   verifiedFreshnessMetadata,
 } from "./helpers";
 
 const ADAPTER_KEY = "bridge-transparency";
 
-/** Absolute USD tolerance for the component-sum reconciliation. Bridge rounds
- *  its headline totals to cents: pathUSD's disclosed components sum $0.32 above
- *  the published reserve total purely from rounding, and its reserves trail the
- *  on-chain liability by $0.005. Drift beyond $1 is real and publishes as
- *  degraded (E4) instead of being forgiven silently. */
+/** Absolute USD tolerance for reconciliation of disclosed components to assets.
+ *  Bridge rounds headline totals to cents: pathUSD's components can sum $0.32
+ *  above its published reserves. Liability coverage is checked separately;
+ *  genuine asset drift beyond $1 remains degraded. */
 const COMPONENT_SUM_TOLERANCE_USD = 1;
 
 interface BridgeReserveComponent {
@@ -68,11 +67,26 @@ const BRIDGE_COMPONENT_CONFIG: Record<string, BridgeComponentConfig> = {
   },
 };
 
-const parseStrictAmount = (value: unknown, label: string): number =>
-  parseFiniteNumber(value, { label: `${ADAPTER_KEY} ${label}` });
+/** CASH's dashboard combines direct Treasury exposure and government MMFs;
+ *  it does not disclose instrument, fund-counterparty, or provider weights. */
+const CASH_COMPONENT_CONFIG: Record<string, BridgeComponentConfig> = {
+  cash: {
+    sourceKey: "bridge-transparency:cash",
+    name: "Cash and deposit accounts in the BBI Reserve",
+    risk: "very-low",
+    assetClass: "bank-deposit",
+    issuerOrObligor: "Depository institutions holding the Bridge Building Inc Reserve (institutions undisclosed)",
+  },
+  treasury: {
+    sourceKey: "bridge-transparency:treasury",
+    name: "U.S. Treasury and government money-market fund exposure",
+    risk: "very-low",
+    assetClass: "other",
+    issuerOrObligor: "United States Treasury underlying exposure; government money-market fund counterparties undisclosed",
+  },
+};
 
-const parseOptionalReportedRatio = (value: unknown): number =>
-  parseFiniteNumber(value, { label: `${ADAPTER_KEY} collateralization_ratio` });
+const parseStrictAmount = strictAmountParser(ADAPTER_KEY);
 
 export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug: string): AdapterResult {
   if (!Array.isArray(payload.reserves) || payload.reserves.length === 0) {
@@ -119,9 +133,10 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
     assetClass?: ReserveSlice["assetClass"];
     issuerOrObligor?: string;
   }> = [];
+  const componentConfig = slug === "cash" ? CASH_COMPONENT_CONFIG : BRIDGE_COMPONENT_CONFIG;
   for (const [type, amount] of componentTotals) {
     if (amount <= 0) continue;
-    const config = BRIDGE_COMPONENT_CONFIG[type];
+    const config = Object.prototype.hasOwnProperty.call(componentConfig, type) ? componentConfig[type] : undefined;
     if (!config) {
       warnings.push(reserveDegradedWarning(
         "unknown-component",
@@ -147,14 +162,11 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
   const componentSumUsd = sliceInputs.reduce((sum, slice) => sum + slice.value, 0);
   const driftVsReservesUsd = componentSumUsd - reservesUsd;
   const driftVsLiabilitiesUsd = componentSumUsd - liabilitiesUsd;
-  if (
-    Math.abs(driftVsReservesUsd) > COMPONENT_SUM_TOLERANCE_USD
-    || Math.abs(driftVsLiabilitiesUsd) > COMPONENT_SUM_TOLERANCE_USD
-  ) {
+  if (Math.abs(driftVsReservesUsd) > COMPONENT_SUM_TOLERANCE_USD) {
     warnings.push(reserveDegradedWarning(
       "bridge-component-sum-drift",
-      `Reserve components sum to $${componentSumUsd.toFixed(2)}, which drifts from the published reserves `
-      + `($${reservesUsd.toFixed(2)}) / on-chain liability ($${liabilitiesUsd.toFixed(2)}) by more than `
+      `Reserve components sum to $${componentSumUsd.toFixed(2)}, a $${driftVsReservesUsd.toFixed(2)} drift `
+      + `from published reserve assets ($${reservesUsd.toFixed(2)}), beyond `
       + `the $${COMPONENT_SUM_TOLERANCE_USD.toFixed(0)} rounding tolerance`,
     ));
   }
@@ -175,7 +187,7 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
     driftVsLiabilitiesUsd,
   };
   if (payload.collateralization_ratio != null) {
-    details.reportedCollateralizationRatio = parseOptionalReportedRatio(payload.collateralization_ratio);
+    details.reportedCollateralizationRatio = parseStrictAmount(payload.collateralization_ratio, "collateralization_ratio");
   }
 
   return {

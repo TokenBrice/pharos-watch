@@ -4,32 +4,24 @@ import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapte
 import { getConfiguredLiveReserveCoins, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
 import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntry } from "./live-reserves/store-history-read";
 
-const reviewedAt = Date.UTC(2026, 9, 6) / 1000;
-const expiresAt = Date.UTC(2026, 9, 13) / 1000;
-const staleReport = (stablecoinId: string, url: string, evidenceDate: string): ReserveFeedReview => ({
-  stablecoinId, adapterKey: "attestation-pdf-index", failureCategory: "validation",
-  warningCodes: ["stale-redemption-source-timestamp"], errorPrefix: "Validation failed: Redemption source timestamp",
-  owner: "ops", reason: `Official balance-date ${evidenceDate} evidence remains outside the unchanged source-age budget; awaiting issuer publication.`,
-  sources: [{ url, evidenceDate }], reviewedAt, expiresAt,
-});
+const reviewedAt = Date.UTC(2026, 9, 7, 14, 19, 23) / 1000;
+const expiresAt = reviewedAt + RESERVE_FEED_REVIEW_MAX_AGE_SEC;
 
 /** Dated operational acknowledgements: no snapshot, scoring, or freshness authority. */
 export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
-  ...["wars-argentine-peso", "wbrl-ripio", "wcop-ripio", "wmxn-ripio"].map((id) =>
-    staleReport(id, "https://action.ripio.com/en/wfiat-attestations", "2026-06-30")),
-  staleReport("usdu-universal", "https://www.universal.ae/transparency", "2026-08-31"),
-  staleReport("zarp-zarp", "https://www.zarpstablecoin.com/transparency/", "2026-08-31"),
-  staleReport("zarsc-supercoin", "https://www.supercoin.co.za/assurance-reports", "2026-08-31"),
   {
     stablecoinId: "gusd-gemini", adapterKey: "gemini-independent-assurance", failureCategory: "unknown",
     warningCodes: [], errorPrefix: "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index",
-    owner: "ops", reason: "2026-10-06 official index finding requires review of a newer assurance report; this acknowledges review debt, not report freshness.",
-    sources: [{ url: "https://www.gemini.com/dollar", evidenceDate: "2026-10-06" }], reviewedAt, expiresAt,
+    owner: "ops", reason: "2026-10-07 official Contentful index still leads with the July 31 report, marked draft as of October 2, newer than the pinned May report. The same unreviewed-report failure persists; this acknowledges pending report review without admitting the draft or changing freshness.",
+    sources: [
+      { url: "https://www.gemini.com/dollar", evidenceDate: "2026-10-07" },
+      { url: "https://assets.ctfassets.net/jg6lo9a2ukvr/1fSg98ekn9sHoyC1SnjceC/eca615fb0dfcaf8f3cd1541fc4c1c0bd/Gemini-GUSD_Reserves_Report_-July_2026.pdf", evidenceDate: "2026-10-02" },
+    ], reviewedAt, expiresAt,
   },
   {
     stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "unknown",
     warningCodes: [], errorPrefix: "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
-    owner: "ops", reason: "Portfolio source clock 2026-09-18T12:06:10.121Z, captured 2026-10-06T07:49:04Z, exceeds the unchanged three-day budget. Only the explicit stale token is reviewed, never future clocks.",
+    owner: "ops", reason: "2026-10-07 public portfolio check still reports source clock 2026-09-18T12:06:10.121Z, outside the unchanged three-day budget. Today's 04:12Z, 08:15Z and 12:15Z attempts match the explicit stale token again; there is no successful recovery. Future or ambiguous clocks remain unacknowledged.",
     sources: [{ url: "https://api-prod.midas.app/api/transparency?token=mTBILL", evidenceDate: "2026-09-18" }], reviewedAt, expiresAt,
   },
 ];

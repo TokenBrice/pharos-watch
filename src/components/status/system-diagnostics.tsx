@@ -125,7 +125,7 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">
           reason: {discrepancyReasonLabel(discrepancy.discrepancyReason)}
         </div>
-        <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent}</div>
+        <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent ?? "unavailable"}</div>
         <div className="text-xs text-muted-foreground">
           delta {discrepancy.severityDelta} • probe age{" "}
           {discrepancy.probeAgeSeconds != null ? formatElapsedSeconds(discrepancy.probeAgeSeconds) : "—"}

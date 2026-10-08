@@ -1,0 +1,94 @@
+{
+  "id": "rwausdi-multipli",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "rwaUSDi is documented as a KYB-gated institutional private-credit pool position with periodic asset pricing, committed investment horizons and defined delayed redemption schedules. The token-specific materials describe private-market borrowing and lending exposure, not a payment or settlement instrument. General protocol terms additionally disclaim fixed value and redemption guarantees, but their rwaUSD Units wording is not treated as a complete rwaUSDi-specific offering agreement.",
+      "references": [
+        {
+          "label": "Multipli rwaUSDi: institutional private-credit pools, KYB and scheduled exits",
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Multipli liquidity-class segmentation: rwaUSDi isolated illiquid credit exposure",
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Multipli Protocol Terms: units, value and redemption disclaimers",
+          "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-19",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+    "notes": "Scope assessment is limited to the documented institutional private-credit use of rwaUSDi. No categorical U.S. securities exclusion is asserted without instrument-specific legal documents. The token-specific product description identifies permissioned private pools, capital committed for defined horizons, periodic pricing, KYB controls and delayed asset-linked exits. These disclosures support the non-payment-token classification independently of the exact legal issuer identity. General terms name BRS Tech Services with affiliates as software provider and deny protocol issuer status; that provider is not assigned as the token legal issuer, and Dubai arbitration does not establish issuer domicile. The generic statement that exits are scheduled does not establish a public 1:1 redemption policy, so redemptionPolicyPresent is omitted. The AFI endpoint publicly supplies rwaUSDi reserve/liability totals and cryptographic proofs; those data do not establish independent monthly accountant assurance or GENIUS-eligible reserve composition. monthlyAttestationPresent is omitted because the reviewed sources do not establish a token-specific monthly reserve-attestation series or its comprehensive absence. No approval, state qualification, foreign exception or broad legality claim is made.",
+    "references": [
+      {
+        "label": "Multipli rwaUSDi: institutional private-credit pools, KYB and scheduled exits",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Multipli liquidity-class segmentation: rwaUSDi isolated illiquid credit exposure",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Multipli Protocol Terms: units, value and redemption disclaimers",
+        "url": "https://docs.multipli.fi/legal/protocol-terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Multipli Website Terms: legal service-provider roles and geographic restrictions",
+        "url": "https://docs.multipli.fi/legal/standard-website-terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Multipli rwaUSDi AFI proof endpoint: reserve/liability inputs",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS implementing proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -151,6 +151,8 @@ export function makeHealthyStatusResponse(): StatusResponse {
   return {
     timestamp: 1_700_000_000,
     dbHealthy: true,
+    workerVersions: { public: null, heavy: null },
+    schedulerLiveness: makeHealthyHealthResponse().schedulerLiveness,
     availabilityStatus: "healthy",
     dataQualityStatus: "healthy",
     rawOverallStatus: "healthy",
@@ -261,7 +263,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
       authoritativeFreshCoverageRatio: 1,
     }),
     reserveDrift: [],
-    classificationWarnings: [],
   };
 }
 

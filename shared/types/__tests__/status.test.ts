@@ -1,10 +1,74 @@
 import { describe, expect, it } from "vitest";
 import { PublicStatusHistoryResponseSchema, StatusHistoryResponseSchema, StatusResponseSchema } from "../status";
-import { CronRunSchema } from "../status/cron";
+import { CronRunSchema, CronInFlightSchema, ResourcePressureSchema } from "../status/cron";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
 describe("StatusResponseSchema reserve composition contract", () => {
+  it("preserves both verified Worker markers and defaults pre-upgrade payloads to unavailable", () => {
+    const workerVersions = {
+      public: { scriptName: "stablecoin-api", workerVersion: "public-v1", activatedAt: 100 },
+      heavy: { scriptName: "stablecoin-heavy", workerVersion: "heavy-v2", activatedAt: 200 },
+    };
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions }).workerVersions).toEqual(workerVersions);
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions: undefined }).workerVersions)
+      .toEqual({ public: null, heavy: null });
+    expect(StatusResponseSchema.parse({ ...statusResponse(), workerVersions: { public: workerVersions.public, heavy: null } }).workerVersions.heavy).toBeNull();
+    for (const heavy of [{}, { ...workerVersions.heavy, activatedAt: -1 }, { ...workerVersions.heavy, workerVersion: "" }]) {
+      expect(StatusResponseSchema.safeParse({ ...statusResponse(), workerVersions: { public: null, heavy } }).success).toBe(false);
+    }
+  });
+  it("preserves unavailable discrepancy evidence in both admin wire contracts", () => {
+    const fixture = statusResponse();
+    const discrepancy = { ...fixture.discrepancy, consecutiveDivergent: null };
+    expect(StatusResponseSchema.parse({ ...fixture, discrepancy }).discrepancy.consecutiveDivergent).toBeNull();
+    const history = StatusHistoryResponseSchema.parse({
+      timestamp: fixture.timestamp, state: fixture.state, staleness: fixture.staleness,
+      probe: fixture.probe, discrepancy, transitions: [], reserveComposition: null,
+      sectionErrors: { discrepancy: { code: "status_discrepancy_streak_failed", message: "Status persistence degraded." } },
+    });
+    expect(history.discrepancy.consecutiveDivergent).toBeNull();
+    expect(history.sectionErrors?.discrepancy.code).toBe("status_discrepancy_streak_failed");
+  });
+
+  it.each(["completed", "failed", null, undefined])("keeps canary execution separate from severe findings (%s)", (executionStatus) => {
+    const parsed = StatusResponseSchema.parse({
+      ...statusResponse(),
+      canaries: {
+        checkedAt: 100, status: "degraded", latestRunAt: 100, maxAgeSec: 7200,
+        totalChecks: 1, okCount: 0, degradedCount: 0, errorCount: 1, skippedCount: 0, staleCount: 0,
+        checks: { corruption: {
+          checkId: "corruption", label: "Corruption", description: "Measured invariant",
+          status: "error", severity: "error", executionStatus,
+          executionFailureReason: executionStatus === "failed" ? "read-failed" : null,
+          observedAt: 100, durationMs: 1,
+        } },
+      },
+    });
+    expect(parsed.canaries?.checks.corruption).toMatchObject({ status: "error", severity: "error" });
+    expect(parsed.canaries?.checks.corruption.executionStatus).toBe(executionStatus);
+  });
+  it("validates one resource block for terminal and progress metadata while retaining job keys", () => {
+    const resourcePressure = {
+      phase: "intake", observedAt: 100,
+      bodyCapBytes: 4, cacheCapBytes: null, cacheEntryCapBytes: null, maxConcurrentDecodes: 2,
+      inputCapBytes: null, catalogMaxAssets: null, intakeBytes: 0, cacheBytes: null, rejectedBodies: 1,
+      inputBytes: null, catalogAssets: null, intakeBasis: "actual-stream", cacheBasis: "unavailable",
+      guard: "resource-budget-exceeded", platformOutcome: null, platformOutcomeSource: null,
+      heapUsedBytes: null, heapUnavailableReason: "workers-runtime-no-heap-api",
+    };
+    const metadata = { resourcePressure, cursor: "coin-a" };
+    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata }).metadata).toEqual(metadata);
+    expect(CronInFlightSchema.parse({ startedAt: 1, updatedAt: 2, stale: false, metadata }).metadata).toEqual(metadata);
+    for (const invalid of [
+      { ...resourcePressure, intakeBytes: -1 }, { ...resourcePressure, cacheBytes: Infinity },
+      { ...resourcePressure, inputBytes: 0.5 }, { ...resourcePressure, catalogAssets: Number.MAX_SAFE_INTEGER + 1 },
+      { ...resourcePressure, phase: "x".repeat(81) }, { ...resourcePressure, heapUsedBytes: 0 },
+      { ...resourcePressure, platformOutcome: "platform-abandoned" },
+    ]) expect(ResourcePressureSchema.safeParse(invalid).success).toBe(false);
+    expect(CronRunSchema.parse({ startedAt: 1, durationMs: 2, status: "ok", metadata: { legacy: true } }).metadata).toEqual({ legacy: true });
+  });
+
   it("accepts additive cron reasons without requiring them on legacy runs", () => {
     const run = { startedAt: 1, durationMs: 2, status: "degraded" };
     expect(CronRunSchema.parse(run)).not.toHaveProperty("degradedReason");
@@ -66,12 +130,12 @@ describe("StatusResponseSchema reserve composition contract", () => {
     ["canaries", {}],
     ["telegramSummary", {}],
     ["producerHeads", [{}]],
+    ["workerVersions", {}],
     ["priceSourceHealth", {}],
     ["coingeckoPriceDiff", {}],
     ["d1Usage", {}],
     ["mintBurnReconciliation", {}],
     ["reserveDrift", [{}]],
-    ["classificationWarnings", [{}]],
   ] as const)("rejects malformed %s section", (section, value) => {
     const result = StatusResponseSchema.safeParse({
       ...statusResponse(),

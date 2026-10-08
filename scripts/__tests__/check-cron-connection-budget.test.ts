@@ -33,6 +33,7 @@ describe("check-cron-connection-budget", () => {
       },
       slotPlans: {
         "slot-a": {
+          worker: "public",
           jobChains: [["job-a"]],
         },
       },
@@ -60,6 +61,7 @@ describe("check-cron-connection-budget", () => {
       },
       slotPlans: {
         "current-slot": {
+          worker: "public",
           jobChains: [["job-a"]],
         },
       },
@@ -99,13 +101,48 @@ describe("check-cron-connection-budget", () => {
         "slot-b": "2 * * * *",
       },
       slotPlans: {
-        "slot-a": { jobChains: [["shared-job"]] },
-        "slot-b": { jobChains: [["shared-job"]] },
+        "slot-a": { worker: "public", jobChains: [["shared-job"]] },
+        "slot-b": { worker: "heavy", jobChains: [["shared-job"]] },
       },
     });
 
     expect(report.fetchCapableEntryCount).toBe(1);
     expect(report.fetchCapableEntryLimitExceeded).toBe(false);
     expect(report.failed).toBe(false);
+  });
+  it("keeps the aggregate reviewed gates unchanged across both Workers", () => {
+    const report = evaluateCronConnectionBudget();
+    expect(report.failed).toBe(false);
+    expect(report.growthPolicy.maxFetchCapableEntriesBeforeRebalance).toBe(34);
+    expect(report.fetchCapableEntryCount).toBe(34);
+    expect(report.workerReports.heavy.slotCount).toBe(3);
+    expect(report.workerReports.public.slotCount).toBe(report.triggerReports.length - 3);
+    expect(report.headroomFullTriggers).toHaveLength(2);
+    expect(report.triggerReports.find(
+      (trigger) => trigger.scheduleKey === "halfHourlyMeasuredExecutionSupplemental",
+    )).toMatchObject({ worker: "public", totalConnections: 3 });
+  });
+
+  it("enforces aggregate growth rather than resetting it per Worker", () => {
+    const report = evaluateCronConnectionBudget({
+      schedules: { a: "1 * * * *", b: "2 * * * *" },
+      slotPlans: {
+        a: { worker: "public", jobChains: [["a"]] },
+        b: { worker: "heavy", jobChains: [["b"]] },
+      },
+      entries: [
+        { job: "a", scheduleKey: "a", maxConnections: 1, statusTracked: true },
+        { job: "b", scheduleKey: "b", maxConnections: 1, statusTracked: true },
+      ],
+      growthPolicy: {
+        maxFetchCapableEntriesBeforeRebalance: 1,
+        maxHeadroomFullTriggersBeforeRebalance: 2,
+        queuesOrWorkflowsReview: { p95DurationMs: 600_000, fanoutPerRun: 1_000, connectionPressureAt: 5 },
+      },
+    });
+    expect(report.workerReports.public.fetchCapableEntryCount).toBe(1);
+    expect(report.workerReports.heavy.fetchCapableEntryCount).toBe(1);
+    expect(report.fetchCapableEntryLimitExceeded).toBe(true);
+    expect(report.failed).toBe(true);
   });
 });

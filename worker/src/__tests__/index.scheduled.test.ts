@@ -1,9 +1,14 @@
 import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
+import { getScheduledWorkerRoleForExpression } from "@shared/lib/scheduled-runner-registry";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import type * as V9SlotWindow from "../lib/v9-slot-window";
+import type { ScheduledExecutionFence } from "../lib/scheduled-slot-fence";
+import type { SlotDeadline } from "../lib/cron-timeouts";
+import type { CronRunLoggerOptions } from "../lib/cron-logger";
 
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
@@ -110,7 +115,7 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (signal: AbortSignal, reportProgress: (update: Record<string, unknown>) => Promise<void>) => Promise<unknown>,
-    _options?: { slotStartedAt?: number | null },
+    _options?: CronRunLoggerOptions,
   ) => (
     fn(new AbortController().signal, async () => undefined)
   )),
@@ -121,6 +126,7 @@ const cronMocks = vi.hoisted(() => ({
     _opts?: {
       abortSignal?: AbortSignal;
       owner?: string;
+      deadline?: SlotDeadline;
       onLeaseState?: (state: {
         event: "acquired" | "renewed";
         job: string;
@@ -157,10 +163,13 @@ const cronMocks = vi.hoisted(() => ({
   runScheduledSlotWithFence: vi.fn(async (
     _db: D1Database,
     slotKey: string,
-    fn: (signal: AbortSignal) => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
-    opts: { slotStartedAt: number },
+    fn: (signal: AbortSignal, fence: ScheduledExecutionFence) => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
+    opts: { slotStartedAt: number; invocationId?: string | null; workerRole?: "public" | "heavy"; deadline?: SlotDeadline },
   ) => {
-    const metadata = await fn(new AbortController().signal);
+    const metadata = await fn(new AbortController().signal, {
+      scheduleKey: slotKey, slotStartedAt: opts.slotStartedAt, invocationId: opts.invocationId ?? "slot-invocation",
+      owner: "slot-owner", generation: 1, workerRole: opts.workerRole ?? "public",
+    });
     return {
       status: "ok",
       resultStatus:
@@ -273,7 +282,8 @@ vi.mock("../cron/sync-v9-supply-attribution", () => ({
 vi.mock("../cron/compute-safety-score-v9", () => ({
   computeSafetyScoreV9: cronMocks.computeSafetyScoreV9,
 }));
-vi.mock("../lib/v9-slot-window", () => ({
+vi.mock("../lib/v9-slot-window", async (importOriginal) => ({
+  ...await importOriginal<typeof V9SlotWindow>(),
   waitForV9MemoryLaneRelease: vi.fn(async () => undefined),
   runV9AfterCoreWithinWindow: vi.fn(
     (
@@ -372,6 +382,11 @@ vi.mock("../lib/scheduled-slot-fence", async (importOriginal) => {
     runScheduledSlotWithFence: cronMocks.runScheduledSlotWithFence,
   };
 });
+vi.mock("../lib/scheduled-child-terminal", async (importOriginal) => ({
+  ...await importOriginal(),
+  writeScheduledChildTerminal: vi.fn(async () => ({ accepted: true, attemptKey: "scheduled-child:test", token: "test" })),
+}));
+
 
 vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/circuit-breaker")>();
@@ -403,7 +418,8 @@ vi.mock("../lib/chain-registry", async (importOriginal) => {
   };
 });
 
-import worker, { SafetyScoreV9PublicationWorkflow } from "../index";
+import worker from "../index";
+import heavyWorker, { SafetyScoreV9PublicationWorkflow } from "../index.heavy";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { makeScheduledEnv } from "../test-helpers/scheduled-runtime.test-support";
@@ -440,11 +456,12 @@ describe("worker.scheduled", () => {
   it("imports without cron side effects and resolves the Workflow test stub", () => {
     const ctx = {} as ExecutionContext;
     const env = makeScheduledEnv();
-    const workflow = new SafetyScoreV9PublicationWorkflow(ctx, env);
+    const workflowEnv = { ...env, SAFETY_SCORE_V9_WORKFLOW: {} as Workflow };
+    const workflow = new SafetyScoreV9PublicationWorkflow(ctx, workflowEnv);
 
     expect(indexImportCronCalls).toEqual([]);
     expect(workflow).toBeInstanceOf(WorkflowEntrypoint);
-    expect(workflow).toMatchObject({ ctx, env });
+    expect(workflow).toMatchObject({ ctx, env: workflowEnv });
   });
 
   it("records the worker-version first-seen marker without blocking scheduled execution", async () => {
@@ -524,12 +541,14 @@ describe("worker.scheduled", () => {
 
       for (const [index, [, cron]] of schedules.entries()) {
         const { ctx, waits } = makeExecutionContext();
-        await worker.scheduled(
+        const owner = getScheduledWorkerRoleForExpression(cron);
+        const entry = owner === "public" ? worker : heavyWorker;
+        await entry.scheduled(
           {
             cron,
             scheduledTime: Date.parse("2026-06-12T08:00:00Z") + index * 60_000,
           } as ScheduledEvent,
-          env,
+          { ...env, SAFETY_SCORE_V9_WORKFLOW: {} as Workflow },
           ctx,
         );
         await Promise.all(waits);
@@ -554,6 +573,33 @@ describe("worker.scheduled", () => {
     }
   }, 30_000);
 
+  it.each([
+    ["public", "16 * * * *", worker],
+    ["heavy", "0 * * * *", heavyWorker],
+  ] as const)("skips %s wrong-owner delivery before loading runner or writing D1", async (_role, cron, entry) => {
+    const { SLOT_RUNNER_LOADER_BY_KEY } = await import("../handlers/scheduled");
+    const runnerKey = cron.startsWith("16") ? "halfHourlyChartsOffset" : "quarterHourly";
+    const loader = vi.spyOn(SLOT_RUNNER_LOADER_BY_KEY, runnerKey);
+    const env = { ...makeScheduledEnv(), SAFETY_SCORE_V9_WORKFLOW: {} as Workflow };
+    const prepare = vi.spyOn(env.DB, "prepare");
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    await entry.scheduled({ cron } as ScheduledEvent, env, makeExecutionContext().ctx);
+    expect(loader).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(cronMocks.recordScheduledWorkerVersionFirstSeen).not.toHaveBeenCalled();
+    expect(cronMocks.runScheduledSlotWithFence).not.toHaveBeenCalled();
+    expect(cronMocks.logCronRun).not.toHaveBeenCalled();
+    expect(log.mock.calls.flat().join(" ")).toContain("scheduled-worker-not-owner");
+  });
+
+  it("bypasses the V9 memory wait on public but retains it on heavy charts", async () => {
+    const { waitForV9MemoryLaneRelease } = await import("../lib/v9-slot-window");
+    const env = { ...makeScheduledEnv(), SAFETY_SCORE_V9_WORKFLOW: {} as Workflow };
+    await worker.scheduled({ cron: "9 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
+    expect(waitForV9MemoryLaneRelease).not.toHaveBeenCalled();
+    await heavyWorker.scheduled({ cron: "16 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
+    expect(waitForV9MemoryLaneRelease).toHaveBeenCalledTimes(1);
+  });
   it("throws loudly when a scheduled trigger is unmapped", async () => {
     const { ctx } = makeExecutionContext();
     const env = makeScheduledEnv();
@@ -605,6 +651,17 @@ describe("worker.scheduled", () => {
       expect.any(Function),
       expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
     );
+    const fenceOptions = cronMocks.runScheduledSlotWithFence.mock.calls[0]![3];
+    const loggerOptions = cronMocks.logCronRun.mock.calls.find((call) => call[1] === "sync-stablecoins")![3];
+    expect(loggerOptions).toMatchObject({
+      jobAttemptNo: 1,
+      executionFence: { scheduleKey: "quarterHourly", slotStartedAt: expectedSlotStartedAt,
+        invocationId: fenceOptions.invocationId, owner: "slot-owner", generation: 1 },
+    });
+    expect(loggerOptions?.deadline).toBe(fenceOptions.deadline);
+    expect(cronMocks.runCronWithLease.mock.calls.find((call) => call[1] === "sync-stablecoins")![3]?.deadline)
+      .toBe(fenceOptions.deadline);
+    expect(fenceOptions).not.toHaveProperty("staleAfterSec");
   });
 
   it.each(["skipped_duplicate", "skipped_running"])("does not dispatch children for fence outcome %s", async (status) => {

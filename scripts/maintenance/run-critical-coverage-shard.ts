@@ -44,7 +44,7 @@ export async function runCriticalCoverageShard({
       env,
     ),
   ]), { reporter: {}, runCommandImpl: runCommand });
-  if (timingsFile) publishShardTimings(timingsFile, parseShardCoordinates(rest), Date.now() - startedAt, env);
+  if (timingsFile) publishShardTimings(timingsFile, parseShardCoordinates(rest), Date.now() - startedAt, env, "critical-coverage");
   return result.status;
 }
 

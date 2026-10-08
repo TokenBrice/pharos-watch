@@ -1,0 +1,32 @@
+{
+  "adapter": "matrixdock-stbt",
+  "stablecoinId": "stbt-matrixdock",
+  "retirementDecision": "RETIRE NOW; approved shadow promote/retire decision stbt, 2026-10-08",
+  "publicReserveEndpointAfterCutover": "404; coin, curated sidecars, price/supply, independent redemption routes and history retained",
+  "reviewer": "Codex dependency mapping review",
+  "reviewedAt": "2026-10-03",
+  "sourceFiles": ["worker/src/cron/reserve-adapters/matrixdock-stbt.ts"],
+  "rationale": "Reviewed 2026-10-03 official https://www.matrixdock.com/stbt Next-flight asset_nav roster and stbt_total_supply. Undated issuer reserve buckets reconcile separately from stbt_por; freshness stays unverified and evidence weak-live-probe. USTB/BUIDL display labels remain unlinked because exact held-token identities are not verified. Verified STBTv2 https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152 pins getLatestReserve() to FallbackReserveFeed 0xd7dbecfb1738da6812b6dfd0fe4c424cf7d184dc. Same-block Ethereum 0x18e691e reads reconciled 23791487.76 USD aggregate and owner-set round timestamp 2026-10-02T08:20:35Z. The verified feed is owner-set, not independent Chainlink attestation; its timestamp dates aggregate reserve entry, not category weights. Existing independent-evidence chainlink-por cannot be reused without overstating source assurance, and supply-only single-asset cannot read this aggregate. Keep one weak HTTP composition reader rather than a second misleading oracle reader. This unsecured-debt issuer disclosure proves neither beneficial holder title, independent assurance nor redemption capacity.",
+  "retirementRationale": "The approved retirement supersedes the historical retention rationale above. No independent assurance, verified held USTB/BUIDL identities or complete reserve clock is established. The assessment records failing ordinary public access; no permitted-access or retained-value resumption packet is authorized.",
+  "failureReceipt": {
+    "assessment": "agents/shadow-promote-retire/assessments/C16b-reserve-weak-issuer-observations.md",
+    "capturedAt": "2026-10-07",
+    "scope": "Historical assessment receipt, not a new production observation; preserve access-failure and endpoint-status evidence as captured in that assessment."
+  },
+  "captures": [
+    {
+      "path": "dashboard-capture.html",
+      "source": "https://www.matrixdock.com/stbt",
+      "capturedAt": "2026-10-03T06:32:44Z",
+      "originalPageSha256": "6245a81c71482678297d6ed3daa853286504756420b6c62b650cb93762ff8d87",
+      "scope": "Exact retained trimmed fixture bytes; original page hash comes from its existing header, not a hash of this trimmed capture."
+    },
+    {
+      "path": "stats-api-capture.json",
+      "source": "https://www.matrixdock.com/bond/anon/website/api/v1/stats",
+      "capturedDate": "2026-10-06",
+      "captureDateSource": "Retired NON_HTML_FIXTURE_EXEMPTIONS entry in scripts/ci/check-html-fixture-age.ts",
+      "scope": "Exact original frozen JSON bytes; publisher supplies no reserve observation timestamp."
+    }
+  ]
+}

@@ -128,7 +128,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
-    "version": 1,
+    "version": 3,
     "semantics": "attestation-mix",
     "scoring": {
       "maxSourceAgeSec": 4000000,
@@ -156,7 +156,12 @@
       "issuerCirculationProbe": {
         "kind": "backed-graphql",
         "url": "https://api.backed.fi/graphql",
-        "reserveSymbol": "C3M.MI"
+        "reserveSymbol": "C3M.MI",
+        "maxReserveSupplySkewSec": 86400,
+        "temporalReview": {
+          "reviewedAt": "2026-10-08",
+          "evidenceRef": "https://reference-data-directory.vercel.app/feeds-matic-mainnet.json"
+        }
       }
     }
   },

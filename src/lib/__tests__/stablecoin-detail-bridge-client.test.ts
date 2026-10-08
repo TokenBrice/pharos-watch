@@ -5,6 +5,8 @@ import { BRIDGE_ROUTE_RISK_TIER_VALUES } from "@shared/types/core";
 import {
   BRIDGE_ROUTE_PROJECTION_LIMIT,
   bindBridgeRouteControlComponents,
+  expandBridgeRoute,
+  expandBridgeRoutes,
   projectBridgeRouteRiskClientSummary,
 } from "../stablecoin-detail-bridge-client";
 
@@ -69,12 +71,12 @@ describe("projectBridgeRouteRiskClientSummary", () => {
     expect(summary.routeCount).toBe(13);
     expect(summary.chainCount).toBe(13);
     expect(summary.authoredTier).toBe("single-chain-or-native");
-    for (const row of summary.routes.filter((candidate) => candidate.reviewed)) {
+    for (const row of summary.routes.filter((candidate) => !candidate.unresolved)) {
       expect(TIER_RANK(row.tierKey)).toBeLessThanOrEqual(TIER_RANK(summary.weakestRouteTier!));
     }
     expect(summary.weakestRouteTier).toBe("external-lock-mint");
     expect(summary.homeChainId).toBe("ethereum");
-    expect(summary.routes[0]!.chainId).toBe("ethereum");
+    expect(expandBridgeRoutes(summary)[0]!.chainId).toBe("ethereum");
   });
 
   it("counts third-party routes from the same tiers the legend draws, whatever the route class", () => {
@@ -89,11 +91,11 @@ describe("projectBridgeRouteRiskClientSummary", () => {
   it("names the native tier 'Native' on a multi-chain asset and keeps 'Single-chain' for one chain", () => {
     const multi = projectBridgeRouteRiskClientSummary(coin("single-chain-or-native", EURC_ROUTES))!;
     expect(multi.authoredTierLabel).toBe("Native");
-    expect(multi.routes.find((row) => row.tierKey === "single-chain-or-native")?.tierLabel).toBe("Native");
+    expect(expandBridgeRoutes(multi).find((row) => row.tierKey === "single-chain-or-native")?.tierLabel).toBe("Native");
 
     const single = projectBridgeRouteRiskClientSummary(coin("single-chain-or-native", [route("ethereum")]))!;
     expect(single.chainCount).toBe(1);
-    expect(single.routes[0]!.tierLabel).toBe(BRIDGE_TIER_LABELS["single-chain-or-native"]);
+    expect(expandBridgeRoutes(single)[0]!.tierLabel).toBe(BRIDGE_TIER_LABELS["single-chain-or-native"]);
     expect(single.homeChainId).toBe("ethereum");
   });
 
@@ -114,7 +116,7 @@ describe("projectBridgeRouteRiskClientSummary", () => {
     expect(summary.weakestRouteTier).toBe("issuer-native-burn-mint");
     expect(summary.unresolvedRouteCount).toBe(1);
     expect(summary.tierCounts["opaque-or-unknown"]).toBeUndefined();
-    expect(summary.routes.find((row) => row.chainId === "linea")?.reviewed).toBe(false);
+    expect(expandBridgeRoutes(summary).find((row) => row.chainId === "linea")?.reviewed).toBe(false);
   });
 
   it("caps the route list, reports the remainder, and keeps every tier and the unresolved routes represented", () => {
@@ -131,14 +133,60 @@ describe("projectBridgeRouteRiskClientSummary", () => {
     expect(new Set(summary.routes.map((row) => row.tierKey))).toEqual(
       new Set(["single-chain-or-native", "external-lock-mint", "opaque-or-unknown"]),
     );
-    expect(summary.routes.some((row) => !row.reviewed)).toBe(true);
-    expect(summary.routes.some((row) => row.reviewed && row.tierKey === "opaque-or-unknown")).toBe(true);
+    expect(summary.routes.some((row) => row.unresolved)).toBe(true);
+    expect(summary.routes.some((row) => !row.unresolved && row.tierKey === "opaque-or-unknown")).toBe(true);
     expect(summary.tierCounts["external-lock-mint"]).toBe(55);
-    expect(summary.routes[0]!.chainId).toBe("ethereum");
+    expect(expandBridgeRoutes(summary)[0]!.chainId).toBe("ethereum");
+  });
+
+  it("serializes only what the client cannot derive, omitting defaults instead of writing null", () => {
+    const arbitrum = representation("arbitrum", "external-lock-mint", { failureDomainKeys: ["protocol:layerzero-v2"] });
+    const unresolved = representation("linea", "opaque-or-unknown", { reviewDisposition: "unresolved" });
+    const summary = projectBridgeRouteRiskClientSummary(coin("external-lock-mint", [route("ethereum"), arbitrum, unresolved]))!;
+    expect(summary.routes).toEqual([
+      { key: route("ethereum").id, tierKey: "single-chain-or-native" },
+      { key: arbitrum.id, tierKey: "external-lock-mint", protocolKey: "layerzero-v2", bridged: true },
+      { key: unresolved.id, tierKey: "opaque-or-unknown", bridged: true, unresolved: true },
+    ]);
+  });
+
+  it("ships a protocol name only for a chain carrying several drawn routes, where the cell names it", () => {
+    const summary = projectBridgeRouteRiskClientSummary(coin("external-lock-mint", [
+      route("ethereum"),
+      representation("arbitrum", "external-lock-mint", { protocol: "LayerZero OFT" }),
+      representation("arbitrum", "canonical-rollup-bridge", { id: "arbitrum:0xb", protocol: "Arbitrum Gateway" }),
+      representation("base", "external-lock-mint", { protocol: "LayerZero OFT" }),
+    ]))!;
+    const labels = Object.fromEntries(expandBridgeRoutes(summary).map((row) => [row.key, [row.bridged, row.protocolLabel]]));
+    expect(labels).toEqual({
+      [route("ethereum").id]: [false, null],
+      [route("arbitrum").id]: [true, "LayerZero OFT"],
+      "arbitrum:0xb": [true, "Arbitrum Gateway"],
+      [route("base").id]: [true, null],
+    });
   });
 
   it("returns null without a bridge review", () => {
     expect(projectBridgeRouteRiskClientSummary({ id: "none" } as StablecoinMeta)).toBeNull();
+  });
+});
+
+describe("expandBridgeRoute", () => {
+  it("derives the chain from the key prefix, the labels from the registries, and defaults for omitted fields", () => {
+    expect(expandBridgeRoute({ key: "arbitrum:0xa", tierKey: "single-chain-or-native" }, 2)).toEqual({
+      key: "arbitrum:0xa",
+      chainId: "arbitrum",
+      chainLabel: "Arbitrum",
+      tierKey: "single-chain-or-native",
+      tierLabel: "Native",
+      bridged: false,
+      protocolLabel: null,
+      protocolKey: null,
+      reviewed: true,
+      controlComponentKey: null,
+    });
+    expect(expandBridgeRoute({ key: "new-chain:0xn", tierKey: "opaque-or-unknown", bridged: true, unresolved: true }, 2))
+      .toMatchObject({ chainId: "new-chain", chainLabel: "New Chain", bridged: true, reviewed: false });
   });
 });
 
@@ -156,17 +204,17 @@ describe("bindBridgeRouteControlComponents", () => {
 
   it("joins a route to its bridge component through the normalized deployment key", () => {
     const summary = projectBridgeRouteRiskClientSummary(coin("external-lock-mint", [route("ethereum"), arbitrum]))!;
-    expect(summary.routes.every((row) => row.controlComponentKey === null)).toBe(true);
     const bound = bindBridgeRouteControlComponents(summary, components);
-    expect(bound.routes.find((row) => row.chainId === "arbitrum")).toMatchObject({
+    expect(bound.find((row) => row.chainId === "arbitrum")).toMatchObject({
       controlComponentKey: components[1]!.key,
       protocolKey: "layerzero-v2",
     });
-    expect(bound.routes.find((row) => row.chainId === "ethereum")?.controlComponentKey).toBeNull();
+    expect(bound.find((row) => row.chainId === "ethereum")?.controlComponentKey).toBeNull();
   });
 
-  it("leaves the summary untouched before the card arrives", () => {
+  it("leaves every route unbound before the card arrives", () => {
     const summary = projectBridgeRouteRiskClientSummary(coin("external-lock-mint", [arbitrum]))!;
-    expect(bindBridgeRouteControlComponents(summary, null)).toBe(summary);
+    expect(bindBridgeRouteControlComponents(summary, null)).toEqual(expandBridgeRoutes(summary));
+    expect(bindBridgeRouteControlComponents(summary, null).every((row) => row.controlComponentKey === null)).toBe(true);
   });
 });

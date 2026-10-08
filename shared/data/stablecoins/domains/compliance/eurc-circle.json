@@ -8,7 +8,7 @@
     "authorizedEntity": "Circle Internet Financial Europe SAS",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, updated 4 Jun 2026)",
+        "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv, reviewed 7 Oct 2026)",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
@@ -20,7 +20,7 @@
         "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
       },
       {
-        "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license #17788",
+        "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license (2 Jul 2024)",
         "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
       }
     ]
@@ -28,7 +28,22 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "EURC is a euro-referenced Circle stablecoin issued as a MiCA e-money token by Circle Internet Financial Europe SAS with 1:1 euro redemption and monthly reserve attestations."
+      "summary": "EURC is a euro-referenced Circle stablecoin issued as a MiCA e-money token by Circle Internet Financial Europe SAS with 1:1 euro redemption and monthly reserve attestations.",
+      "references": [
+        {
+          "label": "Circle EURC terms",
+          "url": "https://www.circle.com/legal/eurc-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -42,51 +57,148 @@
     "reserveDisclosureUrl": "https://www.circle.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Reviewed 2026-10-07. EURC is issued solely by Circle Internet Financial Europe SAS and redeemable 1:1 for euros. MiCA authorization and U.S. group affiliate charters do not establish EURC GENIUS permission. Circle GENIUS readiness and charter statements concern USDC; no EURC/Circle Europe-specific intent or application was established. August 2026 EURC reserve examination covers August 11 and August 31, with management assertion dated September 29, 2026. GENIUS remains pre-effective in the reviewed public implementation sources; the expected effective date is January 18, 2027, with the general DASP offer/sale ban separately beginning July 18, 2028. Foreign lawful-order requirements attach at Act effectiveness. Foreign exception remains unknown.",
     "references": [
       {
         "label": "Circle EURC page",
         "url": "https://www.circle.com/eurc",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Circle EURC terms",
         "url": "https://www.circle.com/legal/eurc-terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Circle MiCA redemption policy",
         "url": "https://www.circle.com/legal/mica-redemption-policy",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS NPRM",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC digital assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Circle EURC monthly reserve examination, August 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Circle GENIUS readiness statement concerning USDC",
+        "url": "https://www.circle.com/blog/circle-genius-act-readiness-and-path-forward",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS NPRM and reporting-form notices",
-        "Federal Register OCC foreign payment stablecoin issuer registration proposal",
-        "Circle EURC, Circle EEA/MiCA, redemption, transparency, and GENIUS Act pages",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and March 2, 2026 GENIUS implementation proposed rule, including the full official Federal Register HTML",
+        "OCC current pending digital-assets licensing applications table (nine rows)",
+        "Federal Reserve September 29, 2026 implementation proposed rule in the Federal Register",
+        "FDIC April 7, 2026 notice of proposed GENIUS requirements and standards",
+        "NCUA financial-technology and digital-assets page describing its proposed GENIUS approval framework",
+        "Treasury August 17, 2026 issuance, offer and sale proposal announcement",
+        "Treasury September 30, 2026 SCRC certification procedural rule",
+        "NYDFS regulated virtual-currency entity directory and greenlist",
+        "Exact EURC / Circle Internet Financial Europe searches on OCC, Treasury and NYDFS domains; EURC enforcement and sanctions searches on SEC, CFTC and Treasury domains",
+        "Circle EURC product, EURC terms, MiCA redemption policy, transparency page and August 2026 EURC independent reserve examination",
+        "Circle GENIUS readiness statement and national trust charter application statement, both concerning USDC"
       ],
-      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was located for EURC or Circle Europe.",
+      "summary": "In the public sources checked on 2026-10-07, no token-specific GENIUS PPSI approval, state qualification, official application, OCC foreign-issuer registration or Treasury foreign comparability determination was found for EURC / Circle Internet Financial Europe SAS. This is a bounded public-evidence finding, not proof that no confidential application exists. No token-specific public U.S. regulatory action was located. Existing charters and foreign licenses are not GENIUS approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury GENIUS issuance, offer and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC digital assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

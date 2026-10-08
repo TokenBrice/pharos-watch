@@ -137,7 +137,7 @@ export function StabilityIndexMethodologySection() {
             {
               label: "Aggregate universe",
               value:
-                "Active core stablecoins and cash equivalents, plus PSI-only shadows for historical continuity; variants and stable-value investments are excluded",
+                "Active core stablecoins and cash equivalents, plus PSI historical assets for continuity; variants and stable-value investments are excluded",
             },
             {
               label: "Minimum data",
@@ -234,7 +234,7 @@ export function StabilityIndexMethodologySection() {
               recorded `peak_deviation_bps`, and keep `peak_deviation_bps` as a start-day floor only when the event
               remained active through the UTC close and a daily snapshot misses the move. Replay days whose restored
               daily price is back inside the configured threshold drop out entirely, and restore jobs also repair
-              replay-critical daily price coverage, including PSI-only shadow assets, before the PSI rebuild is rerun.
+              replay-critical daily price coverage, including PSI historical assets, before the PSI rebuild is rerun.
             </li>
             <li>
               <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full weight

@@ -1,0 +1,127 @@
+{
+  "url": "https://ethereum.drpc.org",
+  "accessedAt": "2026-10-07T22:20:50.462420+00:00",
+  "block": {
+    "number": 26143056,
+    "hash": "0x89f40231094f9e32ac24584fe0e0410dadfa93508d21d99b3397a9fcfca72b39",
+    "timestamp": 1791406775
+  },
+  "identities": [
+    {
+      "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "implementationAddress": "0x2b7074cf6681382b70e239063931ebe83c0f4e0a",
+      "codeHash": "0x145bff91aef4f63089cb6e628ab5fca4daf8e51619106333ceb291ccf406cd86",
+      "implementationCodeHash": "0xec3b77f722a89eec23e7dfb2ddfe63e4d82f37adbc5f75a269ed2c82c3ad0300"
+    },
+    {
+      "address": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "implementationAddress": "0xdaf6f8523d7a707d173a12041e1523fdf1373f23",
+      "codeHash": "0x145bff91aef4f63089cb6e628ab5fca4daf8e51619106333ceb291ccf406cd86",
+      "implementationCodeHash": "0x537d27c7b1574e4ab94867b9f5719414169c5941387346bca88b84643612256d"
+    }
+  ],
+  "calls": [
+    {
+      "label": "asset",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x38d52e0f",
+      "returnData": "0x00000000000000000000000023238f20b894f29041f48d88ee91131c395aaa71"
+    },
+    {
+      "label": "queue",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x0e73ecef",
+      "returnData": "0x0000000000000000000000004bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e"
+    },
+    {
+      "label": "queue-asset",
+      "target": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "callData": "0x7a1c600e",
+      "returnData": "0x00000000000000000000000023238f20b894f29041f48d88ee91131c395aaa71"
+    },
+    {
+      "label": "queue-share",
+      "target": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "callData": "0x67700710",
+      "returnData": "0x000000000000000000000000d166337499e176bbc38a1fbd113ab144e5bd2df7"
+    },
+    {
+      "label": "share-paused",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x5c975abb",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "label": "queue-paused",
+      "target": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "callData": "0x5c975abb",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "label": "fee",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0xd68002f3",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000032"
+    },
+    {
+      "label": "base-fee",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x09596655",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000000000a"
+    },
+    {
+      "label": "elevated-fee",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x5bf3cb6c",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000032"
+    },
+    {
+      "label": "mode",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0x67946b64",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000001"
+    },
+    {
+      "label": "mode-expiry",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0xdb2a163d",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000006ac6a4c0"
+    },
+    {
+      "label": "next-id",
+      "target": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "callData": "0x75794a3c",
+      "returnData": "0x00000000000000000000000000000000000000000000000000000000000006b1"
+    },
+    {
+      "label": "nfts",
+      "target": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "callData": "0x18160ddd",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000000007e"
+    },
+    {
+      "label": "share-balance",
+      "target": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+      "callData": "0xbfb74d71",
+      "returnData": "0x000000000000000000000000000000000000000000000000000002fdc481ae95"
+    },
+    {
+      "label": "queue-balance",
+      "target": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "callData": "0x70a082310000000000000000000000004bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000003b080f5a9d"
+    },
+    {
+      "label": "decimals",
+      "target": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "callData": "0x313ce567",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000006"
+    },
+    {
+      "label": "queue-frozen",
+      "target": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "callData": "0xe58398360000000000000000000000004bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

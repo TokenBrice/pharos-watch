@@ -5,7 +5,10 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const WORKER_CONFIG = "worker/wrangler.toml";
+import { parseStrictCliArgs, requireCliString } from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
+export const WORKER_CONFIGS = { public: "worker/wrangler.toml", heavy: "worker/wrangler.heavy.toml" } as const;
+type WorkerRole = keyof typeof WORKER_CONFIGS;
 
 interface BenchmarkOptions {
   candidateDate: string | null;
@@ -24,10 +27,16 @@ interface CommandResult {
 }
 
 interface DateResult {
-  label: string;
+  label: "baseline" | "candidate";
+  role: WorkerRole;
+  config: string;
   date: string;
-  bundleBytes: number;
+  bundleBytes: number | null;
   checks: CommandResult[];
+  bundle: "passed" | "failed" | "skipped";
+  startup: "passed" | "failed" | "skipped";
+  smoke: "passed" | "failed" | "skipped";
+  error: string | null;
 }
 
 function usage(): void {
@@ -47,11 +56,6 @@ Options:
 `);
 }
 
-function readValue(argv: readonly string[], index: number, flag: string): string {
-  const value = argv[index];
-  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
-  return value;
-}
 
 function validDate(value: string, flag: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
@@ -60,29 +64,22 @@ function validDate(value: string, flag: string): string {
   return value;
 }
 
-function parseArgs(argv: readonly string[]): BenchmarkOptions {
-  const options: BenchmarkOptions = {
-    candidateDate: null,
-    baselineDate: null,
-    output: null,
-    skipLocalSmoke: false,
-    dryRun: false,
+export function parseArgs(argv: readonly string[]): BenchmarkOptions {
+  const { values } = parseStrictCliArgs(argv, { options: {
+    "candidate-date": { type: "string" },
+    "baseline-date": { type: "string" },
+    output: { type: "string" },
+    "skip-local-smoke": { type: "boolean" },
+    "dry-run": { type: "boolean" },
+  } });
+  if (values.help) { usage(); process.exit(0); }
+  return {
+    candidateDate: validDate(requireCliString(values["candidate-date"], "--candidate-date"), "--candidate-date"),
+    baselineDate: typeof values["baseline-date"] === "string" ? validDate(values["baseline-date"], "--baseline-date") : null,
+    output: typeof values.output === "string" ? values.output : null,
+    skipLocalSmoke: values["skip-local-smoke"] === true,
+    dryRun: values["dry-run"] === true,
   };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--help" || arg === "-h") {
-      usage();
-      process.exit(0);
-    }
-    if (arg === "--candidate-date") options.candidateDate = validDate(readValue(argv, ++index, arg), arg);
-    else if (arg === "--baseline-date") options.baselineDate = validDate(readValue(argv, ++index, arg), arg);
-    else if (arg === "--output") options.output = readValue(argv, ++index, arg);
-    else if (arg === "--skip-local-smoke") options.skipLocalSmoke = true;
-    else if (arg === "--dry-run") options.dryRun = true;
-    else throw new Error(`Unknown argument: ${arg}`);
-  }
-  if (!options.candidateDate) throw new Error("--candidate-date is required");
-  return options;
 }
 
 function run(
@@ -118,58 +115,71 @@ function run(
   });
 }
 
-function commandPlan(date: string, bundlePath: string, includeSmoke: boolean): Array<[string, string[]]> {
+export function commandPlan(role: WorkerRole, date: string, bundlePath: string, includeSmoke: boolean): Array<[string, string[]]> {
   const commands: Array<[string, string[]]> = [
-    ["npx", ["--no-install", "wrangler", "deploy", "--config", WORKER_CONFIG, "--dry-run", "--compatibility-date", date, "--outfile", bundlePath]],
-    [
-      "npx",
-      [
-        "--no-install",
-        "wrangler",
-        "check",
-        "startup",
-        "--workerBundle",
-        bundlePath,
-        "--outfile",
-        `${bundlePath}.cpuprofile`,
-      ],
-    ],
+    ["npx", ["--no-install", "wrangler", "deploy", "--config", WORKER_CONFIGS[role], "--dry-run", "--compatibility-date", date, "--outfile", bundlePath]],
+    ["npx", ["--no-install", "wrangler", "check", "startup", "--workerBundle", bundlePath, "--outfile", `${bundlePath}.cpuprofile`]],
   ];
-  if (includeSmoke) {
-    commands.push(["node", ["scripts/maintenance/run-worker-smoke.mjs"]]);
-  }
+  if (includeSmoke) commands.push(["node", ["scripts/maintenance/run-worker-smoke.mjs"]]);
   return commands;
 }
 
-async function runDate(label: string, date: string, tempDirectory: string, includeSmoke: boolean): Promise<DateResult> {
-  const bundlePath = path.join(tempDirectory, `${label}.mjs`);
-  const commands = commandPlan(date, bundlePath, includeSmoke);
-  const results = [];
-  for (const [command, args] of commands) {
-    const env = command === "node"
-      ? {
-          ...process.env,
-          WORKER_SMOKE_COMPATIBILITY_DATE: date,
-          WORKER_SMOKE_ISOLATED: "true",
-          WORKER_SMOKE_MODE: "runtime",
-        }
-      : process.env;
-    results.push(await run(command, args, { env }));
-  }
-  return {
-    label,
-    date,
-    bundleBytes: (await stat(bundlePath)).size,
-    checks: results,
+async function runDate(role: WorkerRole, label: DateResult["label"], date: string, tempDirectory: string, includeSmoke: boolean): Promise<DateResult> {
+  const bundlePath = path.join(tempDirectory, `${role}-${label}.mjs`);
+  const result: DateResult = {
+    role, label, config: WORKER_CONFIGS[role], date, bundleBytes: null, checks: [],
+    bundle: "skipped", startup: "skipped", smoke: "skipped", error: null,
   };
+  const stages = ["bundle", "startup", "smoke"] as const;
+  for (const [index, [command, args]] of commandPlan(role, date, bundlePath, includeSmoke).entries()) {
+    const stage = stages[index];
+    try {
+      const env = command === "node" ? {
+        ...process.env,
+        WORKER_SMOKE_CONFIG: WORKER_CONFIGS[role],
+        WORKER_SMOKE_COMPATIBILITY_DATE: date,
+        WORKER_SMOKE_ISOLATED: "true",
+        WORKER_SMOKE_MODE: role === "heavy" ? "scheduled-heavy" : "runtime",
+      } : process.env;
+      result.checks.push(await run(command, args, { env }));
+      if (stage === "bundle") result.bundleBytes = (await stat(bundlePath)).size;
+      result[stage] = "passed";
+    } catch (error) {
+      result[stage] = "failed";
+      result.error = error instanceof Error ? error.message : String(error);
+      if (error instanceof Error && "result" in error) result.checks.push(error.result as CommandResult);
+      break;
+    }
+  }
+  return result;
+}
+
+export function qualificationComplete(results: readonly DateResult[]): boolean {
+  return (["public", "heavy"] as const).every((role) =>
+    (["baseline", "candidate"] as const).every((label) => {
+      const matches = results.filter((result) => result.role === role && result.label === label);
+      return matches.length === 1 && ["bundle", "startup", "smoke"].every(
+        (stage) => matches[0][stage as "bundle" | "startup" | "smoke"] === "passed",
+      );
+    }),
+  );
+}
+
+export function pairedBaselineDate(publicConfig: string, heavyConfig: string): string {
+  const readDate = (config: string) => config.match(/^compatibility_date\s*=\s*"(\d{4}-\d{2}-\d{2})"/m)?.[1];
+  const publicDate = readDate(publicConfig);
+  const heavyDate = readDate(heavyConfig);
+  if (!publicDate || !heavyDate || publicDate !== heavyDate) throw new Error("Public and Heavy checked-in compatibility dates must match");
+  return publicDate;
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const config = await readFile(WORKER_CONFIG, "utf8");
-  const checkedInDate = config.match(/^compatibility_date\s*=\s*"(\d{4}-\d{2}-\d{2})"/m)?.[1];
+  const checkedInDate = pairedBaselineDate(
+    await readFile(WORKER_CONFIGS.public, "utf8"),
+    await readFile(WORKER_CONFIGS.heavy, "utf8"),
+  );
   const baselineDate = options.baselineDate ?? checkedInDate;
-  if (!baselineDate) throw new Error(`Could not read compatibility_date from ${WORKER_CONFIG}`);
   const candidateDate = options.candidateDate;
   if (!candidateDate) throw new Error("--candidate-date is required");
   if (candidateDate <= baselineDate) {
@@ -179,31 +189,31 @@ async function main() {
   const tempDirectory = await mkdtemp(path.join(tmpdir(), "pharos-worker-compatibility-"));
   try {
     if (options.dryRun) {
-      for (const [label, date] of [["baseline", baselineDate], ["candidate", candidateDate]] as Array<[string, string]>) {
-        const bundlePath = path.join(tempDirectory, `${label}.mjs`);
-        for (const [command, args] of commandPlan(date, bundlePath, !options.skipLocalSmoke)) {
-          console.log([command, ...args].join(" "));
+      for (const role of ["public", "heavy"] as const) {
+        for (const [label, date] of [["baseline", baselineDate], ["candidate", candidateDate]] as const) {
+          const bundlePath = path.join(tempDirectory, `${role}-${label}.mjs`);
+          for (const [command, args] of commandPlan(role, date, bundlePath, !options.skipLocalSmoke)) {
+            console.log(`role=${role} config=${WORKER_CONFIGS[role]} date=${date} ${[command, ...args].join(" ")}`);
+          }
         }
       }
       return;
     }
 
     const generatedAt = new Date().toISOString();
-    const baseline = await runDate("baseline", baselineDate, tempDirectory, !options.skipLocalSmoke);
-    const candidate = await runDate("candidate", candidateDate, tempDirectory, !options.skipLocalSmoke);
-    const report: {
-      generatedAt: string;
-      workerConfig: string;
-      baseline: DateResult;
-      candidate: DateResult;
-      bundleDeltaBytes: number;
-      deployed: false;
-    } = {
-      generatedAt,
-      workerConfig: WORKER_CONFIG,
-      baseline,
-      candidate,
-      bundleDeltaBytes: candidate.bundleBytes - baseline.bundleBytes,
+    const results: DateResult[] = [];
+    for (const role of ["public", "heavy"] as const) {
+      for (const [label, date] of [["baseline", baselineDate], ["candidate", candidateDate]] as const) {
+        results.push(await runDate(role, label, date, tempDirectory, !options.skipLocalSmoke));
+      }
+    }
+    const complete = qualificationComplete(results);
+    const report = {
+      generatedAt, checkedInDate, baselineDate, candidateDate, results,
+      completeness: complete ? "complete" : "incomplete",
+      promotionReady: complete,
+      localOnly: true,
+      heavySmokeScope: "isolated-absent-core-neutral-admission; not Heavy producer acceptance",
       deployed: false,
     };
     const output = options.output
@@ -211,13 +221,15 @@ async function main() {
     await mkdir(path.dirname(output), { recursive: true });
     await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
     console.log(`[worker-compatibility] wrote ${output}`);
+    if (results.some((result) => result.error)) process.exitCode = 1;
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }
 }
 
-main().catch((error: unknown) => {
-  if (error instanceof Error && "result" in error) console.error(JSON.stringify(error.result, null, 2));
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

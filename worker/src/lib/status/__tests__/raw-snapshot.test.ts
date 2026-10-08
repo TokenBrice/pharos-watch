@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -22,7 +23,7 @@ function minimalRawStatus() {
     confidence: 1,
     causes: {},
     caches: {},
-    crons: {},
+    crons: Object.fromEntries(Object.keys(CRON_INTERVALS).map((job) => [job, {}])),
     budgetOnlySurfaces: [],
     dataQuality: {},
     telegramBot: null,
@@ -48,6 +49,21 @@ describe("writeStatusRawSnapshot", () => {
     expect(await loadStatusRawSnapshot(db, NOW)).toMatchObject(kind === "fresh"
       ? { kind, ageSec: 0 }
       : { kind, ageSec: null, error: "future-timestamp" });
+  });
+
+  it.each(["extra", "missing"] as const)("rejects a %s registered cron cohort rather than retaining cached severity", async (mismatch) => {
+    const raw = minimalRawStatus();
+    if (mismatch === "extra") raw.crons["retired-observer"] = {};
+    else delete raw.crons[Object.keys(CRON_INTERVALS)[0]];
+    raw.availabilityStatus = "degraded";
+    raw.rawOverallStatus = "degraded";
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache", rows: [],
+      first: { value: JSON.stringify({ version: 1, producedAt: NOW, raw }), updated_at: NOW },
+    }], { requireMatch: true });
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "unreadable", error: "status raw snapshot cron cohort mismatch",
+    });
   });
 
   it("fences stale writes while accepting equal and newer snapshots", async () => {
@@ -123,6 +139,7 @@ describe("writeStatusRawSnapshot", () => {
     const raw = {
       ...minimalRawStatus(),
       crons: {
+        ...minimalRawStatus().crons,
         "status-self-check": {
           healthy: false,
           lastRun: {
@@ -188,7 +205,7 @@ describe("writeStatusRawSnapshot", () => {
     const adapterLatency = { schemaVersion: 1, groups, omittedGroups: 0, total: { elapsedMs: { sumMs: 4005 } } };
     const raw = {
       ...minimalRawStatus(),
-      crons: { "sync-live-reserves": { lastRun: { metadata: { adapterLatency } } } },
+      crons: { ...minimalRawStatus().crons, "sync-live-reserves": { lastRun: { metadata: { adapterLatency } } } },
     } as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
     await writeStatusRawSnapshot(db, NOW, raw);
     const snapshot = await loadStatusRawSnapshot(db, NOW);

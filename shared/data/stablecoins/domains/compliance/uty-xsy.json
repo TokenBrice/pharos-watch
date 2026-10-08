@@ -1,83 +1,199 @@
 {
   "id": "uty-xsy",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register landing page: no UTY EMT/ART authorization located in the reviewed register",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "EUR-Lex MiCA Regulation: Union offer/admission scope and token classification framework",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
-      },
-      {
-        "label": "XSY Unity overview: UTY is a synthetic dollar interface to yield mechanisms and minting was not available to the general public",
-        "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "non-payment-token",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "UTY is XSY's synthetic dollar and crypto-yield product: its value is defined by delta-hedged, lending, liquidity, and structured-yield mechanisms rather than a fixed-value payment obligation offered to the general public.",
+      "summary": "UTY is a transferable dollar-pegged base token, distinct from the value-accruing yUTY share. Current contracts and flows describe 1:1 minting against USDC and USDC redemption on Base after a seven-day bonding period. Terms identify XSY Foundation doing business as YieldPoint and a geographically permitted UTY redemption right. Payment design is evidenced by live EIP-3009/EIP-2612 support and agent-settlement documentation, but hosted x402 endpoints and the Payable Router are still planned. GENIUS section 2(22) requires an issuer obligation for a fixed amount of monetary value and expressly excludes conversion solely into a digital asset denominated in such value. The reviewed UTY materials establish USDC conversion, not that monetary obligation; applicability is therefore unclear rather than a confirmed payment-stablecoin or non-payment-token exclusion.",
       "references": [
         {
-          "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "OCC GENIUS Act proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator",
-          "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
-        },
-        {
-          "label": "XSY Unity overview",
-          "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview",
+          "label": "YieldPoint core flows: USDC deposit mints UTY 1:1 with a strict 1:1 peg; redemption burns UTY and returns USDC after a 7-day bonding period, Base-only",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/flows",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "XSY risks: UTY is not a bank deposit, investment account, or claim on underlying assets",
+          "label": "YieldPoint website: 'UTY is a dollar-pegged, on-chain token that represents deposited value'; yUTY is the separate opt-in yield token",
+          "url": "https://yieldpoint.io/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "YieldPoint Terms of Use (last updated 7 May 2026): UTY 'only represents your right to redeem $UTY if permitted in your geographic location'; holders are not entitled to interest on reserves",
+          "url": "https://app.yieldpoint.io/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "XSY risk disclosures: UTY is not a bank deposit, investment account, money-market fund, or claim on any underlying assets",
           "url": "https://xsy-1.gitbook.io/xsy-main/risks",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "YieldPoint agent payments: live EIP-3009/EIP-2612; hosted x402 endpoints planned",
+          "url": "https://docs.yieldpoint.io/protocol/tooling/x402.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "YieldPoint deployed contracts: UTY addresses and fixed USDC peg configuration",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "XSY Foundation",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicitly assessed because the dashboard-listed $20M+ UTY is described as a dollar-referenced synthetic asset and could be confused with a payment stablecoin. XSY describes it as a crypto-yield product, with minting initially unavailable to the general public; this is a GENIUS applicability exclusion, not an authorization finding.",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://accountable.xsy.fi/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Re-verified 2026-10-07. The existing non-payment-token/not-applicable row treated UTY as a yield product with minting unavailable to the general public. Current YieldPoint documentation separates fixed USDC-denominated UTY from yield-bearing yUTY and matches the catalog UTY contract 0xba515304d8153c4b162dc79f867e152df9c127eb on Base, Avalanche and Katana. issuerEntity is newly set to XSY Foundation, the exact legal platform/token-services counterparty in the current Terms of Use. No issuer domicile is inferred from the Cayman arbitration seat. The specific U.S. Person restriction applies to yield-bearing tokens; it is not proof that UTY itself is excluded from U.S. access. Applicability changes conservatively to unclear/no-public-authorization-found because fixed USDC exchange and payment design do not establish the statutory monetary-value redemption obligation. The researcher's shipped Payable Router and hosted x402 endpoint claims are corrected: those facilities are under development, although token-level authorization standards are documented as live. No monthly independent reserve attestation was located; the Accountable hub/cache supplies public reserve data instead.",
     "references": [
       {
-        "label": "GENIUS Act statutory text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "label": "GENIUS Act enacted text (Public Law 119-27): payment stablecoin and digital asset service provider definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act implementation proposed rule (91 FR 10202)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications tracker: nine pending applicants, none naming this issuer",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint core flows documentation: 1:1 UTY mint and 7-day async USDC redemption",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/flows",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint Terms of Use: XSY Foundation doing business as YieldPoint; U.S. Person prohibition limited to Yield-Bearing Tokens; sanctions-based Prohibited Jurisdictions",
+        "url": "https://app.yieldpoint.io/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint website: UTY as the dollar-pegged base token and yUTY as the opt-in yield token",
+        "url": "https://yieldpoint.io/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint Payable Router documentation: proposed payment router is in development",
+        "url": "https://docs.yieldpoint.io/protocol/tooling/payable-router",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "XSY Unity overview and protocol mechanics: strategy modules and protocol-defined behaviour",
+        "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "XSY risk disclosures",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Accountable real-time proof-of-solvency hub for YieldPoint",
+        "url": "https://accountable.xsy.fi/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act implementation proposed rule (91 FR 61580)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-29",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint agent payments: live EIP-3009/EIP-2612; hosted x402 endpoints planned",
+        "url": "https://docs.yieldpoint.io/protocol/tooling/x402.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "YieldPoint deployed contracts: UTY addresses and fixed USDC peg configuration",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Accountable XSY dashboard cache: public reserve and yUTY data",
+        "url": "https://cache.accountable.capital/dashboard/xsy",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "XSY Unity overview",
         "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "XSY risks",
-        "url": "https://xsy-1.gitbook.io/xsy-main/risks",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       }
     ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS Act enacted text, Public Law 119-27, including sections 2, 3, 18 and 20; reopened 2026-10-07",
+        "OCC GENIUS implementation proposed rule, 91 FR 10202, official PDF; reopened 2026-10-07",
+        "Federal Reserve GENIUS implementation proposed rule, 91 FR 61580, official GPO HTML extracted by direct fetch; reopened 2026-10-07",
+        "OCC pending digital-asset licensing applications table: nine listed applicants, no matching token issuer; reopened 2026-10-07 using a uniquely named browser tab after plain extraction omitted the table",
+        "Targeted indexed search for Solomon/Genesee Holdings/SOLOMON DAO, Piku Finance, USX Ltd/Solstice Foundation and XSY Foundation/YieldPoint across OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury; 2026-10-07",
+        "YieldPoint core flows, contracts, payment documentation, website, Terms of Use, XSY risk disclosures and Accountable hub; reopened 2026-10-07"
+      ],
+      "summary": "As of 2026-10-07, no public GENIUS permitted-issuer approval, state qualification, official GENIUS application or OCC foreign-issuer registration naming XSY Foundation, YieldPoint or UTY was located in the sources checked. The OCC table covers pending digital-asset licensing applications, not an exhaustive GENIUS issuer register. Indexed searches and issuer silence do not establish that no unindexed or nonpublic filing exists. Foreign-exception status remains unknown; no inference of non-compliance is made.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act implementation proposed rule (91 FR 10202)",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act implementation proposed rule (91 FR 61580)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-29",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Digital Assets Licensing Applications tracker: nine pending applicants, none naming this issuer",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

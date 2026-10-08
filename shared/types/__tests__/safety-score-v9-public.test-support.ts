@@ -88,6 +88,8 @@ export function breakdowns(backingScore = 90, exitScore = 92, controlScore = 95.
       },
       primaryRoute: {
         key: "redemption:main",
+        routeId: "main",
+        lane: "redemption",
         label: "Protocol redemption",
         routeFamily: "protocol-redemption",
         score: exitScore,
@@ -208,7 +210,7 @@ function response() {
 
 export function currentResponse() {
   const current = response() as unknown as CurrentResponse;
-  current.schemaVersion = 6;
+  current.schemaVersion = 7;
   current.lifecycle = "active";
   current.policyVersion = "9.0";
   current.policy = { id: "safety-score-v9", semanticDigest: "d".repeat(64) };

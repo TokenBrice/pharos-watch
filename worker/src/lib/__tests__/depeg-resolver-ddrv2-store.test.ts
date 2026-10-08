@@ -23,6 +23,7 @@ import {
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-resolver-repair-store";
 import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC, DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD, DDR_FORECAST_READINESS_VERSION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
+import { toCanonicalIncidentInput } from "../../cron/depeg-resolver/utils";
 import {
   FLAP_MIGRATION_REPLAY_SCENARIOS,
   ensureIncident,
@@ -190,6 +191,29 @@ describe("DDRv2 storage contract cases", () => {
     ).run(...Object.values(candidate))).toThrow(error);
     expect(rows(target, "SELECT * FROM depeg_resolver_public_predictions")).toEqual([]);
     });
+  }));
+
+  it.each(["ust-terra", "iron-iron-finance"])("keeps %s historical membership outside DDR locks/publication", async (id) => withSqliteD1(async (db) => {
+    insertLiveEvent(db, { eventId: 1, stablecoinId: id, startedAt: 100000 });
+    const input = toCanonicalIncidentInput({
+      id: 1, stablecoin_id: id, symbol: id, peg_type: "peggedUSD", direction: "below",
+      peak_deviation_bps: -300, started_at: 100000, ended_at: null, recovery_price: null,
+      peg_reference: 1, source: "live", confirmation_sources: null, pending_reason: null,
+      provenance_replay_run_id: null, provenance_replay_version: null,
+    });
+    expect(input).toMatchObject({ publicTrackedAtFirstSeen: false, psiOffCatalogAtFirstSeen: true });
+    const [incident] = await ensureCanonicalIncidents(db, [input], {
+      nowSec: 200000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest",
+    });
+    expect(incident?.policyMembership).toMatchObject({
+      policyUniverseIncluded: false, policyUniverseReason: "psi_shadow_excluded",
+      publicTrackedAtFirstSeen: false, psiOffCatalogAtFirstSeen: true,
+    });
+    expect(row(db, "SELECT psi_shadow_at_first_seen, policy_universe_included, policy_universe_reason FROM depeg_resolver_incident_policy_membership WHERE incident_key = ?", incident!.incidentKey))
+      .toEqual({ psi_shadow_at_first_seen: 1, policy_universe_included: 0, policy_universe_reason: "psi_shadow_excluded" });
+    expect(await loadCanonicalIncidents(db, { stablecoinIds: [id], policyUniverseIncluded: true })).toEqual([]);
+    expect(await loadSealedPublicPredictions(db, { incidentKeys: [incident!.incidentKey] })).toEqual([]);
+    expect(await loadFirstPublicationMembership(db)).toEqual([]);
   }));
 
   it("bootstraps incidents, policy membership, lock audit state, and idempotent reads", async () => withSqliteD1(async (db) => {

@@ -152,8 +152,9 @@ const CIRCUIT_RECORD_READ_CHUNK_SIZE = 100;
 export async function getCircuitRecordsForSources(
   db: D1Database,
   sources: readonly string[],
-): Promise<Record<string, CircuitRecord>> {
+): Promise<{ records: Record<string, CircuitRecord>; invalidSources: string[] }> {
   const records: Record<string, CircuitRecord> = {};
+  const invalidSources: string[] = [];
   const uniqueSources = [...new Set(sources)].filter((source) => source.length > 0);
   for (let offset = 0; offset < uniqueSources.length; offset += CIRCUIT_RECORD_READ_CHUNK_SIZE) {
     const chunk = uniqueSources.slice(offset, offset + CIRCUIT_RECORD_READ_CHUNK_SIZE);
@@ -164,9 +165,10 @@ export async function getCircuitRecordsForSources(
       if (!row) continue;
       const parsed = circuitRecordPolicy(source).decode(row.value);
       if (parsed) records[source] = cloneCircuitRecord(parsed);
+      else invalidSources.push(source);
     }
   }
-  return records;
+  return { records, invalidSources };
 }
 
 /**

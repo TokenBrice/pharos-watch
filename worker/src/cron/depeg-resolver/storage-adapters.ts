@@ -193,7 +193,7 @@ function toStoreCanonicalIncidentInput(input: DdrCanonicalIncidentInput): StoreD
     source: input.source,
     sourceFingerprint: sourceFingerprint && /^[0-9a-f]{64}$/.test(sourceFingerprint) ? sourceFingerprint : null,
     publicTrackedAtFirstSeen: input.publicTrackedAtFirstSeen,
-    psiShadowAtFirstSeen: input.psiShadowAtFirstSeen,
+    psiOffCatalogAtFirstSeen: input.psiOffCatalogAtFirstSeen,
     registrySnapshot: input.registrySnapshot,
   };
 }

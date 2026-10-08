@@ -29,10 +29,33 @@ import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registr
 import type { ProducerHeadStatus } from "@shared/types/status";
 import { loadProducerHeads } from "../lib/producer-history";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
-import { loadSchedulerLiveness } from "../lib/status/scheduler-liveness";
+import { loadSchedulerLiveness, schedulerLivenessImpactStatus } from "../lib/status/scheduler-liveness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { maxStatus } from "../lib/status/evaluation-state";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
+import { getActiveWorkerVersionMarker } from "../lib/worker-version-first-seen";
+
+async function loadWorkerVersions(db: D1Database): Promise<{
+  versions: StatusResponse["workerVersions"];
+  error: StatusSectionError | null;
+}> {
+  const versions: StatusResponse["workerVersions"] = { public: null, heavy: null };
+  const failedRoles: string[] = [];
+  await Promise.all((["public", "heavy"] as const).map(async (role) => {
+    try {
+      versions[role] = await getActiveWorkerVersionMarker(db, role);
+    } catch {
+      failedRoles.push(role);
+    }
+  }));
+  return {
+    versions,
+    error: failedRoles.length > 0 ? {
+      code: "worker_versions_query_failed",
+      message: `Verified Worker versions unavailable for: ${failedRoles.sort().join(", ")}.`,
+    } : null,
+  };
+}
 
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
 
@@ -150,9 +173,12 @@ async function resolveRawStatusForResponse(
     || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])
       !== JSON.stringify([cachedReserve?.acknowledgedFeeds, cachedReserve?.expiredFeedReviewIds, cachedReserve?.invalidFeedReviewIds]);
   const cachedSchedulerUnhealthy = snapshot.kind === "fresh"
-    && (snapshot.raw.schedulerLiveness?.status !== "healthy" || snapshot.raw.causes.availability.some((cause) =>
-      cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"));
-  if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged && schedulerLiveness) {
+    && (snapshot.raw.schedulerLiveness?.status !== "healthy" || snapshot.raw.schedulerLiveness?.heavy?.status !== "healthy"
+      || snapshot.raw.causes.availability.some((cause) =>
+      cause.code === "scheduled_delivery_stalled" || cause.code === "scheduler_liveness_unavailable"
+      || cause.code === "heavy_scheduled_delivery_stalled" || cause.code === "heavy_scheduler_liveness_unavailable"));
+  if (snapshot.kind === "fresh" && !cachedSchedulerUnhealthy && !reviewApplicabilityChanged
+    && schedulerLiveness) {
     // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
     const cronHealth = await loadCronHealth(db, now);
     // Informational cron causes (degraded_cron_warning and friends) must be
@@ -161,7 +187,8 @@ async function resolveRawStatusForResponse(
     // cause count next to a live summary count that disagrees with it (R5).
     const scheduler = evaluateSchedulerLiveness(schedulerLiveness);
     const availabilityCauses = [...rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability.filter((cause) =>
-      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"), {
+      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"
+      && cause.code !== "heavy_scheduled_delivery_stalled" && cause.code !== "heavy_scheduler_liveness_unavailable"), {
       degradedCronRuns: cronHealth.degradedCronRuns,
       cronErrorCount: cronHealth.cronErrorCount,
       availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,
@@ -175,6 +202,10 @@ async function resolveRawStatusForResponse(
     if (schedulerLiveness.status === "unavailable") sectionErrors.schedulerLiveness = {
       code: "scheduler_liveness_unavailable",
       message: `Scheduler delivery evidence unavailable (${schedulerLiveness.unavailableReason}).`,
+    };
+    else if (schedulerLiveness.heavy.status === "unavailable") sectionErrors.schedulerLiveness = {
+      code: "heavy_scheduler_liveness_unavailable",
+      message: `Heavy scheduler delivery evidence unavailable (${schedulerLiveness.heavy.unavailableReason}; warning >${schedulerLiveness.heavy.warningAfterSec}s; stale >${schedulerLiveness.heavy.staleAfterSec}s).`,
     };
     delete sectionErrors.scheduledSlots;
     applyCronHealthSectionErrors(sectionErrors, cronHealth);
@@ -269,7 +300,7 @@ export function handleStatus({
       };
 
       const effectiveOverallStatus = maxStatus(resolvedState.currentStatus,
-        schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status);
+        schedulerLivenessImpactStatus(schedulerLiveness));
       const probeIssues: StatusPersistenceIssue[] = [];
       const discrepancyIssues: StatusPersistenceIssue[] = [];
       const timelineIssues: StatusPersistenceIssue[] = [];
@@ -279,6 +310,7 @@ export function handleStatus({
         timeline,
         supplements,
         producerHistory,
+        workerVersions,
       ] = await Promise.all([
         getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
         getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
@@ -292,6 +324,7 @@ export function handleStatus({
           workerCanaryMode,
         ),
         loadProducerHeadStatuses(db),
+        loadWorkerVersions(db),
       ]);
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
@@ -327,6 +360,7 @@ export function handleStatus({
         timestamp: now,
         dbHealthy: raw.dbHealthy,
         schedulerLiveness,
+        workerVersions: workerVersions.versions,
         availabilityStatus: raw.availabilityStatus,
         dataQualityStatus: raw.dataQualityStatus,
         rawOverallStatus: raw.rawOverallStatus,
@@ -350,6 +384,7 @@ export function handleStatus({
           ...(snapshotErrorSection ? { statusSnapshot: snapshotErrorSection } : {}),
           ...(dependencyHealthError ? { dependencyHealth: dependencyHealthError } : {}),
           ...(producerHistory.error ? { producerHistory: producerHistory.error } : {}),
+          ...(workerVersions.error ? { workerVersions: workerVersions.error } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
         summary: {
@@ -370,7 +405,6 @@ export function handleStatus({
         d1Usage: supplements.d1Usage,
         mintBurnReconciliation: supplements.mintBurnReconciliation,
         reserveDrift: supplements.reserveDrift,
-        classificationWarnings: supplements.classificationWarnings,
       };
 
       return jsonResponse(body, { noStore: true });

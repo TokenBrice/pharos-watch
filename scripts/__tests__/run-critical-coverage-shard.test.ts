@@ -15,6 +15,7 @@ describe("critical coverage shard runner", () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-coverage-timing-test-"));
     temporary.push(directory);
     const timings = join(directory, "coverage.json");
+    const summaryPath = join(directory, "summary.md");
     const runCommand = vi.fn((command: SpawnCommand) => {
       expect(command.args).toContain("--reporter=blob");
       expect(command.args).toContain("--reporter=default");
@@ -29,6 +30,7 @@ describe("critical coverage shard runner", () => {
     });
     expect(await runCriticalCoverageShard({ argv: ["--shard=3/8"], env: {
       NODE_ENV: "test",
+      GITHUB_STEP_SUMMARY: summaryPath,
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/lib/auth.ts", PR_SHARD_TIMINGS_FILE: timings,
     }, runCommand })).toBe(1);
     expect(runCommand).toHaveBeenCalledTimes(1);
@@ -36,6 +38,7 @@ describe("critical coverage shard runner", () => {
       shard: 3, shardCount: 8, success: false, summedFileMs: 2300,
       files: [{ file: "worker/src/example.test.ts", durationMs: 2300, tests: 2 }],
     });
+    expect(readFileSync(summaryPath, "utf8")).toContain("### PR critical coverage shard 3/8");
   });
 
   it("honors caller blob destinations and retains the whole owner suite in unsharded local mode", async () => {

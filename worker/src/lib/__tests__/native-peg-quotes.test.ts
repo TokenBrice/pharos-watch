@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type * as FetchRetry from "../fetch-retry";
 
 const fetchWithRetryMock = vi.fn();
 
-vi.mock("../fetch-retry", () => ({
+vi.mock("../fetch-retry", async (importOriginal) => ({
+  ...await importOriginal<typeof FetchRetry>(),
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
 }));
 
@@ -27,6 +29,16 @@ describe("native-peg-quotes", () => {
     fetchWithRetryMock.mockReset();
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
   });
+  it("keeps over-cap native quote data unavailable", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+    const quotes = await fetchCurrentNativePegQuotes([
+      { stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" },
+    ]);
+    expect(quotes.size).toBe(0);
+  });
+
 
   it("normalizes supported fiat pegs and exposes CoinGecko query currencies", () => {
     expect(normalizeSupportedPegCurrency(" eur ")).toBe("EUR");

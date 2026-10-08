@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   CURVE_STABLESWAP_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
+  UNISWAP_V4_REVIEWED_DEPLOYMENTS,
+  getReviewedUniswapV4Deployment,
   CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
 import { getCurveStableSwapNgPolicy } from "../curve-stableswap-ng";
 import { getUniswapV4Deployment } from "../uniswap-v4";
-import { CURVE_R3_METAPOOL_POLICIES } from "../curve-composite-policies";
+import { CURVE_R3_METAPOOL_POLICIES } from "@shared/lib/curve-composite-policies";
 import { getDexMeasuredExecutionDeployment } from "../registry";
 import { isDexMeasuredExecutionTargetScoreEligible, resolveTargetDeployment } from "../admission";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
@@ -14,7 +16,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 describe("measured deployment policy registry", () => {
   it("collects pinned shadow cohorts without admitting them to scoring", () => {
     const targets = [
-      ...["bsc", "base", "arbitrum", "polygon"].map((chain) => ({
+      ...["bsc", "base", "arbitrum", "polygon", "tempo"].map((chain) => ({
         adapterProfileId: UNISWAP_V4_DEPLOYMENT.adapterProfileId, chain, poolId: `${chain}:0x${"ab".repeat(32)}`,
       })),
       ...["base", "xlayer"].map((chain) => ({
@@ -48,6 +50,31 @@ describe("measured deployment policy registry", () => {
     expect(getUniswapV4Deployment("ethereum")).toMatchObject({ mode: "active", scoreEligible: true });
     expect(getUniswapV4Deployment("unsupported-chain")).toBeNull();
     expect(getCurveStableSwapNgPolicy("etherlink", "0x" + "ab".repeat(20))).toBeNull();
+  });
+
+  it("projects every reviewed V4 lifecycle and pin into the Worker without independent chain authority", () => {
+    for (const reviewed of UNISWAP_V4_REVIEWED_DEPLOYMENTS) {
+      expect(getReviewedUniswapV4Deployment(` ${reviewed.chain.toUpperCase()} `)).toBe(reviewed);
+      expect(getUniswapV4Deployment(reviewed.chain)).toMatchObject({
+        chain: reviewed.chain, mode: reviewed.mode, scoreEligible: reviewed.scoreEligible,
+        endpointAddress: reviewed.quoterAddress, expectedCodeHash: reviewed.quoterCodeHash,
+        poolManagerAddress: reviewed.poolManagerAddress,
+        expectedPoolManagerCodeHash: reviewed.poolManagerCodeHash,
+        stateViewAddress: reviewed.stateViewAddress, expectedStateViewCodeHash: reviewed.stateViewCodeHash,
+      });
+    }
+    expect(getReviewedUniswapV4Deployment("unichain")).toBeNull();
+    expect(getUniswapV4Deployment("unichain")).toBeNull();
+  });
+
+  it.each([
+    ["hybra-v3-quoter-v2", "hyperevm"],
+    ["xswap-v3-quoter-v2", "xdc"],
+  ])("refuses the retired %s measured deployment", (adapterProfileId, chain) => {
+    expect(getDexMeasuredExecutionDeployment(adapterProfileId, chain)).toBeNull();
+    const target = { adapterProfileId, chain } as DexMeasuredExecutionTarget;
+    expect(resolveTargetDeployment(target)).toBeNull();
+    expect(isDexMeasuredExecutionTargetScoreEligible(target)).toBe(false);
   });
 
   it("keeps legacy Ethereum factory/3Crv policies on one reviewed template", () => {

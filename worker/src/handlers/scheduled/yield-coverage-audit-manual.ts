@@ -1,6 +1,5 @@
 import { makeIdempotentAdminRoute, type AdminRouteContext } from "../../lib/route-wrappers";
 import { jsonResponse } from "../../lib/api-response";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { runYieldCoverageAudit } from "../../cron/yield-coverage-audit";
 import { logCronRun } from "../../lib/cron-logger";
 import { createLeaseOwner, runCronWithLease } from "../../lib/cron-lease-primitives";
@@ -10,14 +9,11 @@ import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
 import { getScheduledTaskDescriptor } from "@shared/lib/scheduled-runner-registry";
 
-interface TriggerYieldCoverageAuditContext extends AdminRouteContext {
-  chainRpcs?: Map<string, ChainRpcConfig>;
-}
 
 export const handleTriggerYieldCoverageAudit = makeIdempotentAdminRoute(
   "route-trigger-yield-coverage-audit",
   "trigger-yield-coverage-audit",
-  async ({ db, request, chainRpcs }: TriggerYieldCoverageAuditContext) => {
+  async ({ db, request }: AdminRouteContext) => {
     const job = "yield-coverage-audit";
     const descriptor = getScheduledTaskDescriptor("monthlyYieldAudit", job);
     const timeoutBudget = resolveCronTimeoutBudget(job);
@@ -40,7 +36,7 @@ export const handleTriggerYieldCoverageAudit = makeIdempotentAdminRoute(
       logCronRun(db, job, async (signal, reportProgress) => {
         const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
           await reportProgress({ stage: "lease-acquired", leaseOwner: owner });
-          return runYieldCoverageAudit(db, leaseSignal, chainRpcs, reportProgress);
+          return runYieldCoverageAudit(db, leaseSignal, reportProgress);
         }, { owner, abortSignal: signal, timeoutBudget });
         const leaseMeta = {
           leaseOwner: lease.leaseOwner,

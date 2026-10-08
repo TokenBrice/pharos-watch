@@ -5,7 +5,7 @@ import {
   SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
   SCHEDULED_SLOT_JOB_BUDGET_MS,
   getCronTimeoutBudgetMetadata,
-  getScheduledSlotControlledDeadlineMs,
+  createSlotDeadline,
   resolveCronTimeoutBudget,
 } from "../cron-timeouts";
 
@@ -77,8 +77,20 @@ describe("cron timeout budget resolution", () => {
   it("derives the controlled deadline from the platform ceiling minus reserve", () => {
     const slotStartedAtMs = 1_000_000;
 
-    expect(getScheduledSlotControlledDeadlineMs(slotStartedAtMs)).toBe(
+    expect(createSlotDeadline(slotStartedAtMs).platformDeadlineMs).toBe(
       slotStartedAtMs + SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS - SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
     );
+  });
+
+  it("inherits one immutable event deadline after waits and replay", () => {
+    const deadline = createSlotDeadline(1_000_000);
+    expect(Object.isFrozen(deadline)).toBe(true);
+    expect(deadline.eventEntryMs).toBe(1_000_000);
+    expect(deadline.remainingMs(deadline.platformDeadlineMs + 1)).toBe(0);
+    expect(deadline.childCeilingMs(60_000, deadline.platformDeadlineMs - 10_000)).toBe(10_000);
+    expect(deadline.latestAdmissionMs(60_000, 5_000)).toBe(deadline.platformDeadlineMs - 65_000);
+    expect(resolveCronTimeoutBudget("reserve-recovery", {
+      deadline, nowMs: deadline.platformDeadlineMs - 10_000, slotBudgetStartedAtMs: 2_000_000,
+    })).toMatchObject({ effectiveTimeoutMs: 10_000, slotBudgetStartedAtMs: deadline.eventEntryMs });
   });
 });

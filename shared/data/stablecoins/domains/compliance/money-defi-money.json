@@ -1,0 +1,151 @@
+{
+  "id": "money-defi-money",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Official documents describe MONEY as a transferable, USD-denominated permissionless CDP stablecoin minted by depositing BTC or ETH collateral and opening loans. Automated Loan Protection trades collateral within price bands. These materials do not identify a legal issuer obligated to redeem holders for national currency or a national-currency bank deposit. The May 7, 2025 sunset notice ends team and interface support while preserving smart-contract access. Historical general stablecoin use and the unresolved statutory issuer obligation support unclear applicability rather than a categorical non-payment-token exemption.",
+      "references": [
+        {
+          "label": "defi.money MONEY token mechanics",
+          "url": "https://docs.defi.money/welcome/money/money-a-stablecoin.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "defi.money MONEY collateral and Automated Loan Protection mechanics",
+          "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "defi.money protocol sunset notice",
+          "url": "https://blog.defi.money/sunsetting-defimoney",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-05-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Reviewed 2026-10-07. The official sunset notice schedules interface shutdown for June 1, 2025 and ends core development and support effective May 7, 2025; contracts remain available for direct position management. No legal token issuer, domicile or fixed monetary-value redemption obligor is assigned. Collateral-mechanics documentation is not evidence of a current reserve disclosure or reserve attestation, so reserveDisclosurePresent, reserveDisclosureUrl and monthlyAttestationPresent are omitted. No public GENIUS authorization or token-specific issuer intent was found in the consulted sources. No enforcement status is assigned from a bounded authorization search. Unknown pathway and foreign-exception fields do not assert authorization or rejection. DASP posture refers to the GENIUS statutory timetable, not unconditional permission under other laws.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury expected effective date and later DASP sales restriction",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "defi.money MONEY token mechanics",
+        "url": "https://docs.defi.money/welcome/money/money-a-stablecoin.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "defi.money MONEY collateral and Automated Loan Protection mechanics",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "defi.money protocol sunset notice",
+        "url": "https://blog.defi.money/sunsetting-defimoney",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-05-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://home.treasury.gov/news/press-releases/sb0605",
+        "https://docs.defi.money/welcome/money/money-a-stablecoin.md",
+        "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made.md",
+        "https://blog.defi.money/sunsetting-defimoney",
+        "Official-domain exact-name review for defi.money and defi money with GENIUS, stablecoin approval and enforcement across OCC, Federal Register, NYDFS, Federal Reserve, FDIC, Treasury, SEC and CFTC, cutoff 2026-10-07; no qualifying MONEY authorization located. The similarly named DeFi Money Market search result concerns different tokens and is not assigned to MONEY."
+      ],
+      "summary": "As of 2026-10-07, the reopened OCC pending digital-asset bank-charter table, OCC proposal, Federal Register SCRC procedure, Federal Reserve proposal, NYDFS directory and token documents, together with token/entity-specific official-domain searches, did not identify a qualifying public GENIUS issuer approval, state qualification, pending GENIUS application or registered foreign exception for this token. The OCC table is not an exhaustive GENIUS issuer register; general rulemaking and ordinary licenses are not token-specific authorization. This bounded public-evidence finding does not exclude confidential or unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

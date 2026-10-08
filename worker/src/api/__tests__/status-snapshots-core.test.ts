@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -105,14 +107,124 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+  it.each([false, true])("recomputes an incompatible observer OOM snapshot without hiding current failure (%s)", async (currentProducerFails) => {
+    const now = Math.floor(Date.now() / 1000);
+    const job = "compute-safety-score-v9-workflow";
+    const priorCrons = Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
+      id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+    ]));
+    priorCrons[job] = {
+      lastRun: null, recentRuns: [], expectedIntervalSec: 1800, healthy: false,
+    };
+    const liveRows = makeMinimalLiveStatusRows(now, null, true);
+    if (currentProducerFails) {
+      liveRows.unshift({ match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((id) =>
+        makeCronRow(id, id === "sync-stablecoins" ? "error" : "ok", 30)) });
+    }
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60, {
+          crons: priorCrons, availabilityStatus: "degraded", rawOverallStatus: "degraded",
+          causes: { availability: [{ code: "observer-oom", message: "Worker exceeded memory limit" }], dataQuality: [], overall: [] },
+        })] },
+      ...liveRows,
+    ]);
+    const response = await handleStatus({ db, trustedAdmin: true });
+    const body = await readJsonResponse<{
+      crons: Record<string, unknown>; availabilityStatus: string; rawOverallStatus: string;
+      causes: { availability: Array<{ code: string }> };
+    }>(response, 200);
+    expect(body.crons).not.toHaveProperty(job);
+    expect(body.causes.availability.map((cause) => cause.code)).not.toContain("observer-oom");
+    expect(body.availabilityStatus).toBe(currentProducerFails ? "degraded" : "healthy");
+    expect(body.rawOverallStatus).toBe(currentProducerFails ? "degraded" : "healthy");
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
+  });
+
+  it.each([false, true])("reads both role markers outside cached status (heavy query failure: %s)", async (heavyFails) => {
+    const now = Math.floor(Date.now() / 1000);
+    const publicMarker = { worker: "public", scriptName: "stablecoin-api", workerVersion: "11111111-1111-1111-1111-111111111111", activatedAt: now - 100 };
+    const heavyMarker = { worker: "heavy", scriptName: "stablecoin-heavy", workerVersion: "22222222-2222-2222-2222-222222222222", activatedAt: now - 50 };
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:public"],
+        rows: [], first: { value: JSON.stringify(publicMarker), updated_at: publicMarker.activatedAt } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:heavy"],
+        rows: [], first: { value: JSON.stringify(heavyMarker), updated_at: heavyMarker.activatedAt },
+        ...(heavyFails ? { throwError: "heavy marker unavailable" } : {}) },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.workerVersions.public).toEqual({
+      scriptName: publicMarker.scriptName, workerVersion: publicMarker.workerVersion, activatedAt: publicMarker.activatedAt,
+    });
+    expect(body.workerVersions.heavy).toEqual(heavyFails ? null : {
+      scriptName: heavyMarker.scriptName, workerVersion: heavyMarker.workerVersion, activatedAt: heavyMarker.activatedAt,
+    });
+    expect(body.sectionErrors.workerVersions?.code).toBe(heavyFails ? "worker_versions_query_failed" : undefined);
+    expect(body.schedulerLiveness?.lanes).toHaveLength(3);
+  });
+
+  it.each([
+    [1801, "degraded", "heavy_scheduled_delivery_stalled"],
+    [2701, "stale", "heavy_scheduled_delivery_stalled"],
+    [null, "degraded", "heavy_scheduler_liveness_unavailable"],
+  ] as const)("folds live heavy delivery loss (%s) into admin snapshot status", async (age, status, code) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
+      { match: "AS last_any", rows: [], first: {
+        last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30,
+        heavy: age == null ? null : now - age,
+      } },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.schedulerLiveness?.status).toBe("healthy");
+    expect(body.schedulerLiveness?.heavy.ageSeconds).toBe(age);
+    expect(body.availabilityStatus).toBe(status);
+    expect(body.overallStatus).toBe(status);
+    expect(body.causes.availability).toEqual(expect.arrayContaining([expect.objectContaining({ code, threshold: 1800 })]));
+    expect(body.sectionErrors.schedulerLiveness?.code).toBe(age == null ? code : undefined);
+  });
+  it("recomputes a pre-heavy cached scheduler rather than trusting public-only evidence", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const row = makeRawStatusSnapshotRow(now, 120);
+    const snapshot = JSON.parse(row.value);
+    delete snapshot.raw.schedulerLiveness.heavy;
+    row.value = JSON.stringify(snapshot);
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [row] },
+    ]);
+    const body = StatusResponseSchema.parse(await readJsonResponse(await handleStatus({ db, trustedAdmin: true }), 200));
+    expect(body.schedulerLiveness?.heavy.status).toBe("healthy");
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(true);
+  });
+
+  it("keeps missing and malformed role markers unavailable without producer inference", async () => {
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:public"],
+        rows: [], first: { value: "not-json", updated_at: 100 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["worker-active-version:heavy"], rows: [], first: null },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.workerVersions).toEqual({ public: null, heavy: null });
+    expect(body.sectionErrors.workerVersions).toBeUndefined();
+  });
   it.each([false, true])("refreshes cron evidence independently of cached assessment (read failure: %s)", async (readFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "reserve-recovery";
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
         makeRawStatusSnapshotRow(now, 120, {
-          crons: { [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
-            expectedIntervalSec: 300, healthy: false, telemetryUnknown: false } },
+          crons: {
+            ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
+              id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+            ])),
+            [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
+              expectedIntervalSec: 300, healthy: false, telemetryUnknown: false },
+          },
           sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
         }),
       ] },
@@ -242,11 +354,16 @@ describe("handleStatus", () => {
     expect(body.confidence).toBe(0.72);
     expect(body.causes.availability[0]?.code).toBe("snapshot-availability");
 
-    const nonCircuitBatchCacheReads = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("cache WHERE key IN"))
-      .filter((entry) => !entry.binds.every((bind) => typeof bind === "string" && (bind.startsWith("circuit:") || bind.startsWith("cron:event:"))));
-    expect(nonCircuitBatchCacheReads).toEqual([]);
+    const batchCacheReads = db.getHistory().filter((entry) => entry.sql.includes("cache WHERE key IN"));
+    const conservationReads = batchCacheReads.filter((entry) =>
+      entry.binds.every((bind) => typeof bind === "string" && bind.startsWith("mint-burn:conservation:")));
+    expect(conservationReads.length).toBeGreaterThan(0);
+    expect(conservationReads.flatMap((entry) => entry.binds))
+      .toEqual([...new Set(MINT_BURN_CONFIGS.map(mintBurnConservationCacheKey))]);
+    const nonSupplementalBatchCacheReads = batchCacheReads.filter((entry) =>
+      !entry.binds.every((bind) => typeof bind === "string" &&
+        (bind.startsWith("circuit:") || bind.startsWith("cron:event:") || bind.startsWith("mint-burn:conservation:"))));
+    expect(nonSupplementalBatchCacheReads).toEqual([]);
     const sql = db
       .getHistory()
       .map((entry) => entry.sql)
@@ -967,6 +1084,7 @@ describe("handleStatus", () => {
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      ...makeMinimalLiveStatusRows(now).filter((entry) => entry.matchBinds?.includes("ops:d1-capacity:v1")),
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
     ]);

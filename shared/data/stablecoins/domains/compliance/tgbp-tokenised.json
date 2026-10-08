@@ -1,5 +1,23 @@
 {
   "id": "tgbp-tokenised",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Coinbase MiCA non-compliant stablecoins: TGBP EEA restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Coinbase Tokenised GBP identity and contract address",
+        "url": "https://www.coinbase.com/price/tokenised-gbp"
+      },
+      {
+        "label": "Tokenised GBP terms: BCP Technologies Ltd issuer and GBP 1 redemption",
+        "url": "https://www.tokenisedgbp.com/terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -7,16 +25,16 @@
       "references": [
         {
           "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "tGBP transparency and redemption disclosures",
           "url": "https://www.tokenisedgbp.com/transparency",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -27,78 +45,145 @@
     "licensingRegulator": "UK Financial Conduct Authority cryptoasset AML registration (FRN 928840); this is not a GENIUS authorization",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.tokenisedgbp.com/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "BCP's FCA registration and sandbox participation establish UK regulatory context only. No public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for BCP Technologies Ltd or tGBP. The reviewed product materials also did not establish that tGBP is offered to U.S. persons, so the payment-stablecoin applicability call is product-based rather than a finding of U.S. distribution.",
+    "notes": "BCP's FCA registration and sandbox participation establish UK regulatory context only. No public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for BCP Technologies Ltd or tGBP. The reviewed product materials also did not establish that tGBP is offered to U.S. persons, so the payment-stablecoin applicability call is product-based rather than a finding of U.S. distribution. The transparency hub publishes a monthly independent accountants report series through August 2026; the opened Andersen August report is agreed-upon procedures, not an audit or review assurance engagement. DASP not-yet-restricted records the pre-effective GENIUS framework and does not establish U.S. distribution or permission under other laws.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act statutory text: foreign issuer exception",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "FCA accepted firms: BCP Technologies / BCP Markets",
         "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/accepted-firms",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "tGBP transparency",
         "url": "https://www.tokenisedgbp.com/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS offer and sale proposal: effective-date and foreign-issuer conditions",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and approved stablecoin list",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets licensing applications inventory",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Tokenised GBP terms and conditions: fixed GBP redemption",
+        "url": "https://www.tokenisedgbp.com/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-06"
+      },
+      {
+        "label": "Andersen tGBP independent accountants report: August 2026",
+        "url": "https://www.tokenisedgbp.com/assets/reports/independent-accounts-report-2026-08-31.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-31"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and foreign-issuer supervision materials",
-        "GENIUS Act statutory text, including the foreign payment stablecoin issuer exception",
-        "FDIC GENIUS Act proposed rule materials",
-        "Treasury GENIUS Act state-regime comparability proposal",
-        "Public regulator searches for BCP Technologies, BCP Markets, and tGBP",
-        "FCA accepted-firms and BCP regulatory disclosures",
-        "tGBP issuer transparency, redemption, and reserve materials",
-        "Public web search for BCP/tGBP GENIUS approval, application, or foreign-issuer registration"
+        "OCC Bulletin 2026-3 GENIUS NPRM, including proposed foreign-issuer registration",
+        "OCC pending digital-assets licensing applications inventory (limited charter-application scope)",
+        "GENIUS Act Public Law 119-27",
+        "Treasury August 17 GENIUS offer/sale proposal and September 30 SCRC procedural rule",
+        "FDIC April 7 prudential implementation NPRM",
+        "Federal Reserve September 29 prudential implementation NPRM",
+        "NYDFS regulated virtual-currency entities and approved-stablecoin lists",
+        "Exact-name public searches on OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Agant Finance/GBPA, BCP Technologies/tGBP, Anchorpoint Financial/HKDAP and HSBC RedCoin, with GENIUS/PPSI/enforcement terms, returned no exact token-specific public approval, application, foreign registration, comparability determination or GENIUS enforcement action (searched 2026-10-07). No nonpublic process or exhaustive all-state census is claimed.",
+        "Exact token issuer terms/product disclosures and reserve/redemption materials listed in this review"
       ],
-      "summary": "The review found UK FCA AML-registration and sandbox evidence plus issuer reserve and redemption disclosures, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for BCP Technologies Ltd or tGBP.",
+      "summary": "No public token-specific GENIUS PPSI approval, state-qualified approval, official GENIUS application, OCC foreign-issuer registration or Treasury comparability determination was located for BCP Technologies Ltd or tGBP. The finding is limited to the opened public materials and exact-name searches; it does not establish that the issuer is ineligible or has no nonpublic application.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "GENIUS Act statutory text",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "tGBP transparency",
           "url": "https://www.tokenisedgbp.com/transparency",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS offer and sale proposal: effective-date and foreign-issuer conditions",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and approved stablecoin list",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets licensing applications inventory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

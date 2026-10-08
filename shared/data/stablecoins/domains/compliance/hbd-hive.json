@@ -1,5 +1,22 @@
 {
   "id": "hbd-hive",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive decentralized governance and consensus whitepaper",
+        "url": "https://hive.io/whitepaper.pdf"
+      },
+      {
+        "label": "European Commission issuerless-asset MiCA interpretation",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
@@ -9,14 +26,14 @@
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Hive Backed Dollar overview",
           "url": "https://hive.io/hbd/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -26,59 +43,130 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Explicitly assessed because HBD is a roughly $31.8M tracked stablecoin and is presented as a payment-capable native asset. The Hive documentation identifies protocol conversions rather than a legal issuer's fixed-value redemption obligation. No public GENIUS approval, state-qualified approval, official application, or foreign-issuer exception registration was located; rulemaking remains in proposed-rules phase.",
+    "notes": "Hive documentation describes native protocol conversions into $1 worth of HIVE using a 3.5-day median price, with a haircut when the debt ratio reaches the documented threshold. This is a public protocol conversion policy, not a legal issuer's fixed monetary-value redemption policy. The decentralized network whitepaper describes witness consensus and protocol-created rewards rather than a corporate reserve or legal redemption obligor. No public GENIUS approval, state qualification, official application, issuer intent or foreign registration was located. The reviewed federal issuer implementation remains at proposed-rule stage; Treasury's effective SCRC procedural rule does not itself authorize HBD or make the Act effective.",
     "references": [
       {
         "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC digital assets licensing applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury state-level GENIUS regime NPRM",
         "url": "https://home.treasury.gov/news/press-releases/sb0428",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-01",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-01"
       },
       {
         "label": "Hive Backed Dollar overview",
         "url": "https://hive.io/hbd/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer, and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Hive decentralized governance and consensus whitepaper",
+        "url": "https://hive.io/whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2020-09-28"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "GENIUS Act statutory text and payment-stablecoin issuer definitions",
-        "OCC GENIUS Act proposed rule and 2026 implementation bulletins",
-        "OCC digital assets licensing applications table",
-        "Treasury state-level GENIUS comparability NPRM",
-        "Federal Register and federal-regulator searches for Hive/HBD authorization or application",
-        "Hive HBD documentation and public protocol disclosures",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+        "GENIUS Act enacted text and issuer/monetary-value definitions",
+        "OCC Bulletin 2026-3 and original full digital-assets pending-bank application table",
+        "Treasury April state-comparability proposal, August section 3 proposal, and September SCRC procedures",
+        "Federal Reserve September 2026 issuer/application proposals",
+        "Hive HBD overview and decentralized governance/issuance whitepaper",
+        "Exact token-name searches across OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury public domains on 2026-10-07",
+        "Exact token-name searches across SEC, CFTC, FinCEN, OFAC and NYDFS public domains on 2026-10-07"
       ],
-      "summary": "The review found no token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for HBD. Hive documentation describes decentralized protocol conversions and a haircut rule, not a named legal issuer with a fixed-value redemption obligation.",
+      "summary": "No token-specific public PPSI approval, GENIUS state qualification, regulator-published pending application, issuer GENIUS intent or registered foreign exception was located for HBD. No public action naming HBD was located in the searched U.S. regulator records. Public Hive materials describe consensus-driven conversion into HIVE and a haircut, without a named legal obligor redeeming fixed monetary value.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury state-level GENIUS regime NPRM",
+          "url": "https://home.treasury.gov/news/press-releases/sb0428",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-04-01"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury GENIUS issuance, offer, and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -192,31 +192,50 @@ describe("CI workflow scope", () => {
     expect(blobs.with).toMatchObject({ pattern: "critical-coverage-*", "merge-multiple": true });
   });
 
-  it("packages the Worker before production D1 mutation", () => {
+  it("packages both Workers before one migration and deploys heavy then public with individual proofs", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
-    const steps = workflow.jobs["deploy-worker"].steps as Array<{ run?: string }>;
+    const steps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; run?: string }>;
     const packageStep = steps.findIndex((step) => step.run === "npm run check:worker-package");
-    const migrationStep = steps.findIndex((step) =>
-      step.run === "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote");
+    const migrations = steps.map((step, index) => /d1 migrations apply/.test(step.run ?? "") ? index : -1).filter((index) => index >= 0);
+    const heavyDeploy = steps.findIndex((step) => /wrangler deploy.*--config wrangler.heavy.toml/.test(step.run ?? ""));
+    const publicDeploy = steps.findIndex((step) => /wrangler deploy.*--config wrangler.toml/.test(step.run ?? ""));
+    const heavyVerify = steps.findIndex((step) => step.id === "verify-heavy-deployment");
+    const publicVerify = steps.findIndex((step) => step.id === "verify-worker-deployment");
     expect(packageStep).toBeGreaterThanOrEqual(0);
-    expect(migrationStep).toBeGreaterThan(packageStep);
+    expect(migrations).toHaveLength(1);
+    expect(migrations[0]).toBeGreaterThan(packageStep);
+    expect(heavyDeploy).toBeGreaterThan(migrations[0]);
+    expect(heavyVerify).toBeGreaterThan(heavyDeploy);
+    expect(publicDeploy).toBeGreaterThan(heavyVerify);
+    expect(publicVerify).toBeGreaterThan(publicDeploy);
+    for (const index of [heavyDeploy, publicDeploy]) {
+      expect(steps[index].run).toContain('--message "GitHub Actions deploy ${GITHUB_SHA}"');
+    }
+    expect(steps[heavyVerify].run).toContain("--script-name stablecoin-heavy");
+    expect(steps[publicVerify].run).toContain("--script-name stablecoin-api");
+    expect(steps.slice(0, heavyDeploy).some((step) => /deployments list|versions list/.test(step.run ?? ""))).toBe(false);
   });
 
-  it("passes the verified Worker activation output to the marker step", () => {
-    const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
-      jobs: Record<string, {
-        steps?: Array<{ id?: string; name?: string; env?: Record<string, string>; run?: string }>;
-      }>;
-    };
-    const steps = workflow.jobs["deploy-worker"].steps ?? [];
-    const verify = steps.find((step) => step.id === "verify-worker-deployment");
-    const marker = steps.find((step) => step.name === "Record Worker activation marker");
-
-    // The activation second is selected by the tested entrypoint, not inline YAML.
-    expect(verify?.run).toContain("scripts/ci/verify-worker-deployment.ts");
-    expect(marker?.env?.WORKER_ACTIVATED_AT).toBe(
-      "${{ steps.verify-worker-deployment.outputs.worker_activation_at }}",
-    );
+  it("records both verified role markers monotonically only after paired proof", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml"));
+    const steps = workflow.jobs["deploy-worker"].steps as Array<{ id?: string; name?: string; env?: Record<string, string>; run?: string }>;
+    const markerIndex = steps.findIndex((step) => step.name === "Record verified Worker activation markers");
+    const marker = steps[markerIndex];
+    expect(markerIndex).toBeGreaterThan(steps.findIndex((step) => step.id === "verify-worker-deployment"));
+    expect(marker.env).toMatchObject({
+      PUBLIC_ACTIVATED_AT: "${{ steps.verify-worker-deployment.outputs.worker_activation_at }}",
+      PUBLIC_VERSION: "${{ steps.verify-worker-deployment.outputs.worker_version }}",
+      HEAVY_ACTIVATED_AT: "${{ steps.verify-heavy-deployment.outputs.worker_activation_at }}",
+      HEAVY_VERSION: "${{ steps.verify-heavy-deployment.outputs.worker_version }}",
+    });
+    expect(marker.run).toContain("for role in heavy public");
+    expect(marker.run).toContain("worker-active-version:${role}");
+    expect(marker.run).toContain("worker-version-activated:${version}");
+    expect(marker.run).toContain("ON CONFLICT(key) DO NOTHING");
+    expect(marker.run).toContain("WHERE excluded.updated_at >= cache.updated_at");
+    expect(marker.run).toContain("exit 1");
+    expect(marker.run).not.toContain("exit 0");
+    expect(marker.run).not.toContain("date +");
   });
 
   it("records read-only post-deploy acceptance for successfully deployed surfaces", () => {
@@ -242,6 +261,7 @@ describe("CI workflow scope", () => {
     expect(acceptance?.run).toContain("scripts/ci/run-post-deploy-acceptance.ts");
     expect(workflow.jobs["deploy-worker"].outputs).toEqual({
       worker_version: "${{ steps.verify-worker-deployment.outputs.worker_version }}",
+      heavy_worker_version: "${{ steps.verify-heavy-deployment.outputs.worker_version }}",
     });
     const identity = job.steps?.find((step) => step.id === "verify-worker-identity");
     const deployIdentity = workflow.jobs["deploy-worker"].steps?.find(
@@ -249,6 +269,15 @@ describe("CI workflow scope", () => {
     );
     expect(identity?.run).toBe(deployIdentity?.run);
     expect(identity?.run).toContain("scripts/ci/verify-worker-deployment.ts");
+    expect(job.steps?.find((step) => step.id === "verify-heavy-identity")?.run).toBe(
+      workflow.jobs["deploy-worker"].steps?.find((step) => step.id === "verify-heavy-deployment")?.run,
+    );
+    const heavyMatch = job.steps?.find((step) => step.name === "Require unchanged heavy activation identity");
+    expect(heavyMatch?.env).toMatchObject({
+      EXPECTED_HEAVY_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
+      OBSERVED_HEAVY_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
+    });
+    expect(heavyMatch?.run).toContain('test "${EXPECTED_HEAVY_VERSION}" = "${OBSERVED_HEAVY_VERSION}"');
     const setup = job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
     expect(setup?.with).toMatchObject({
       "install-deps": "false", "cache-npm": "false", "bootstrap-generated": "false",
@@ -364,4 +393,62 @@ it("runs the mechanism-refresh verifier only from a trusted snapshot inside the 
   const imports = [...verifier.matchAll(/from "\.\.\/lib\/([^"]+)"/g)].map((match) => match[1]);
   expect(imports.length).toBeGreaterThan(0);
   for (const lib of imports) expect(run).toContain(`scripts/lib/${lib}`);
+});
+
+it("scopes protocol archive read credentials to trusted capture and strict replay only", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
+  const steps = workflow.jobs.refresh.steps as Array<{ name?: string; env?: Record<string, string> }>;
+  expect(workflow.jobs.refresh.env).toBeUndefined();
+  const archiveSteps = steps.filter((step) => step.env?.R2_MEASUREMENTS_ACCESS_KEY_ID !== undefined);
+  expect(archiveSteps.map((step) => step.name)).toEqual([
+    "Capture protocol API mechanism evidence", "Replay all protocol API evidence",
+  ]);
+  for (const step of archiveSteps) {
+    expect(step.env?.CLOUDFLARE_ACCOUNT_ID).toBe("${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+    expect(step.env?.R2_MEASUREMENTS_ACCESS_KEY_ID).toBe("${{ secrets.R2_MEASUREMENTS_ACCESS_KEY_ID }}");
+    expect(step.env?.R2_MEASUREMENTS_SECRET_ACCESS_KEY).toBe("${{ secrets.R2_MEASUREMENTS_SECRET_ACCESS_KEY }}");
+    expect(step.env?.GH_TOKEN).toBeUndefined();
+  }
+});
+
+describe("external scheduler delivery monitor", () => {
+  function runMonitor(overrides: Record<string, unknown> = {}) {
+    const workflow = parseYaml(readRepoFile(".github/workflows/cron-liveness.yml"));
+    const run = workflow.jobs.delivery.steps.find((step: { id?: string }) => step.id === "health").run as string;
+    const script = run.split("<<'NODE'\n")[1].split("\nNODE")[0];
+    const now = Math.floor(Date.now() / 1000);
+    const health = {
+      status: "healthy", timestamp: now, warnings: [],
+      schedulerLiveness: {
+        status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+        lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+          scheduleKey, lastStartedAt: now - 30,
+        })),
+        heavy: { status: "healthy", scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30,
+          ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      },
+      ...overrides,
+    };
+    return spawnSync(process.execPath, ["-e",
+      `require('node:fs').readFileSync = () => process.argv[1];\n${script}`, JSON.stringify(health)], { encoding: "utf8" });
+  }
+  it("accepts healthy delivery from both roles", () => {
+    expect(runMonitor().status).toBe(0);
+  });
+  it.each(["heavy_scheduled_delivery_stalled", "heavy_scheduler_liveness_unavailable"])(
+    "fails on %s even if both role status fields claim healthy", (warning) => {
+      expect(runMonitor({ warnings: [warning] }).status).toBe(1);
+    },
+  );
+  it.each(["degraded", "stale", "unavailable"])("fails on a non-healthy heavy status (%s)", (status) => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status, scheduleKey: "v9SupplyAttributionOffset", warningAfterSec: 1800, staleAfterSec: 2700 },
+    } }).status).toBe(1);
+  });
 });

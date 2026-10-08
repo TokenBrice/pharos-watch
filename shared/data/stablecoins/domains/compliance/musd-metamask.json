@@ -1,23 +1,5 @@
 {
   "id": "musd-metamask",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA MiCA register and scope page",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "MetaMask USD announcement: European availability and Bridge issuer",
-        "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet"
-      },
-      {
-        "label": "MetaMask USD purchase guide",
-        "url": "https://metamask.io/how-to-buy/metamask-usd"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -35,53 +17,119 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bridge and MetaMask materials describe MUSD issuance and redemption, but no token-specific public GENIUS PPSI approval exists as of 2026-06-18. In February 2026 the OCC issued conditional approval CD-1365 for a new entity 'Bridge National Trust Bank' (a subsidiary to be organized by Bridge Ventures LLC) to organize a federally chartered national trust bank for stablecoin issuance, custody, and reserve management. This is a conditional pre-approval for an as-yet-unopened entity: not a final charter for Bridge Building Inc. (the current MUSD issuer). issuerPathway remains unknown until Bridge National Trust Bank receives final OCC approval and begins issuing MUSD. Monthly reserve attestations: the MetaMask reserve explainer explicitly states mUSD's attestation history 'is still being built' with no confirmed monthly cadence; monthlyAttestationPresent remains false.",
+    "notes": "MetaMask names Bridge as mUSD issuer and M0 as underlying minting infrastructure. Bridge stablecoin terms identify Bridge Building Inc. as issuer and establish USD 1 redemption for eligible onboarded users, subject to disclosed fees and restrictions. Bridge Open Issuance describes GENIUS-ready compliance; this supports issuer-announced-intent rather than completed qualification. OCC Decision 1365 is preliminary conditional charter approval for proposed Bridge National Trust Bank, a separate entity organized by Bridge Ventures LLC. The reviewed public record did not establish a token-specific GENIUS approval or legal issuer transfer for mUSD. Ordinary Bridge Building Inc. FinCEN/state registrations and the Bridge Building S.A. European entity do not establish that status. issuerPathway remains unknown on the token-specific evidence. The reserve explainer says mUSD attestation history is still being built; no confirmed monthly independent reserve report was located. The M0 dashboard describes the underlying reserve infrastructure and rendered a shell; no live reserve values were extracted.",
     "references": [
       {
         "label": "MetaMask USD announcement",
         "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bridge Open Issuance",
         "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 Dashboard",
         "url": "https://dashboard.m0.org",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Corporate Decision #1365: Bridge Ventures LLC conditional national trust bank charter",
         "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-12",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. stablecoin terms",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Bridge Building Inc. US licenses and registrations",
+        "url": "https://www.withbridge.com/legal/licenses/us-licenses-and-registrations",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MetaMask names Bridge as mUSD issuer and M0 as minting infrastructure",
+        "url": "https://metamask.io/en-GB/news/metamask-announces-stablecoin-metamask-usd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-21"
+      },
+      {
+        "label": "MetaMask stablecoin reserves and attestation history",
+        "url": "https://metamask.io/en-GB/news/how-stablecoin-reserves-work-and-how-to-evaluate-them",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC Conditional Approval CD-1365 (February 2026): for Bridge National Trust Bank, not Bridge Building Inc.",
-        "MetaMask USD launch materials",
-        "MetaMask stablecoin reserves explainer (attestation frequency for MUSD)",
-        "Bridge Open Issuance documentation",
-        "M0 reserve dashboard",
-        "Bridge.xyz legal / NMLS licensing pages",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and current OCC interpretations and decisions index reopened on 2026-10-07",
+        "Federal Reserve September 24, 2026 GENIUS issuer and application proposal announcement reopened",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural rule reopened",
+        "NYDFS virtual-currency business directory and Greenlist reopened; MoonPay USA LLC and MoonPay Trust Company, LLC distinguished",
+        "Official-domain search for MoonPay USA, Bridge Building Inc., NASD Inc. (Noble), mantraUSD and M0 with GENIUS or PPSI found no qualifying exact-token approval or official application",
+        "SEC, FinCEN, NYDFS, OCC and OFAC exact-entity enforcement search returned no matching action; historical securities-SRO NASD and unrelated Noble Corporation matches excluded",
+        "MetaMask launch and purchase pages, Bridge Building Inc. stablecoin terms, Open Issuance GENIUS-ready statement, licenses and OCC CD1365 reopened; proposed bank and existing issuer distinguished",
+        "M0 dashboard returned a JavaScript shell; unique verifier browser tab navigation returned ERR_ABORTED; no live reserve figures extracted"
       ],
-      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or granted for MUSD or Bridge Building Inc. The OCC conditional trust bank charter CD-1365 (Feb 2026) is for a new entity 'Bridge National Trust Bank': a conditional pre-approval for an entity not yet operational, not a final charter for the current issuer Bridge Building Inc. No monthly attestation reports for MUSD were found; MetaMask's own reserve explainer notes mUSD's attestation history is still being built.",
+      "summary": "As of 2026-10-07, the checked public regulator and issuer sources did not identify a qualifying GENIUS PPSI approval, state-qualified designation, official GENIUS application or registered foreign-issuer exception for MetaMask USD / Bridge Building Inc. This finding concerns the reviewed public record and does not exclude confidential or unpublished filings. Ordinary licenses and affiliate charter decisions are separate from token-specific GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

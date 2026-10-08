@@ -1,0 +1,73 @@
+{
+  "id": "susn-noon",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Noon sUSN return distribution: appreciating USN redemption value",
+        "url": "https://docs.noon.capital/3.-the-yield-engine/return-distribution.md"
+      },
+      {
+        "label": "Noon sUSN staking rights and operator terms",
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSN represents a staked-USN position and entitlement to protocol distributions. Its value increases with strategy returns and it is redeemed through unstaking USN, rather than an issuer obligation to pay a fixed amount of national currency. July 31, 2026 staking terms permit delayed withdrawals and proportional haircut after reserve losses. This wrapper analysis is independent of the payment-oriented USN base token.",
+      "references": [
+        {
+          "label": "Noon USN and sUSN product documentation",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Noon sUSN staking terms",
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-31"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "sUSN is the savings-passthrough wrapper of USN, not a separate fixed-dollar redeemable payment token. Noon Holdco Ltd. is identified as the staking platform operator, separately from the USN issuer Noon YBS Issuer Ltd; operator identity alone is not used to assign an issuerEntity for this receipt. Section 2 identifies the operator with BVI incorporation and governing law, while section 6.4 refers to Panamanian law, an internal inconsistency left unresolved. The staking terms exclude U.S. persons and do not guarantee principal or returns. No payment-stablecoin authorization, foreign exception, enforcement or reserve-attestation status is inherited from USN.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Noon USN and sUSN product documentation",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Noon sUSN staking terms",
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-31"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

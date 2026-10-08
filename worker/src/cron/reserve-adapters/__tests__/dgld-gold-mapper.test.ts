@@ -65,6 +65,101 @@ describe("adaptDgldGoldMapperState", () => {
     expect(result.metadata?.unknownExposurePct).toBeGreaterThan(0);
   });
 
+  it.each([
+    ["1", "1000000000000000000"], ["0.000000001", "1000000000"],
+  ])("degrades a matched network with reported gap %s despite aggregate equality", (gap, raw) => {
+    const networks = structuredClone(NETWORKS);
+    networks[0].gap = { raw, decimal: gap };
+    const result = adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "network-recon-gap", effect: "degraded",
+    }));
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 10);
+    expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2411.955, 3);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(2411.955, 3);
+    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse(NETWORKS[1].reconCheckedAt) / 1000));
+    expect(result.metadata?.details?.networks).toContainEqual(expect.objectContaining({
+      id: "base", reconState: "matched", supply: 401.159, gap: Number(gap),
+    }));
+  });
+
+  it("keeps every local gap degraded when several matched networks share an aggregate match", () => {
+    const networks = structuredClone(NETWORKS);
+    networks[0].gap = { raw: "1000000000000000000", decimal: "1" };
+    networks[1].gap = { raw: "2000000000000000000", decimal: "2" };
+    const result = adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS);
+    expect(result.warnings?.filter((warning) => warning.code === "network-recon-gap")).toHaveLength(2);
+    expect(result.warnings?.every((warning) => warning.effect === "degraded")).toBe(true);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 10);
+    expect(result.metadata?.details?.networks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "base", gap: 1 }),
+      expect.objectContaining({ id: "ethereum", gap: 2 }),
+      expect.objectContaining({ id: "solana", gap: 0 }),
+    ]));
+  });
+
+  it("preserves the distinct aggregate tolerance when every reported local gap is zero", () => {
+    const networks = structuredClone(NETWORKS);
+    networks[0].supply.decimal = String(Number(networks[0].supply.decimal) + 1);
+    const result = adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.unknownExposurePct).toBeGreaterThan(0);
+    expect(result.metadata?.unknownExposurePct).toBeLessThan(0.5);
+  });
+
+  it.each(["0", "0.000"])("accepts an explicitly observed zero local gap %s", (gap) => {
+    const networks = NETWORKS.map((network) => ({ ...network, gap: { raw: "0", decimal: gap } }));
+    const result = adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 10);
+    expect(result.metadata?.details?.networks).toEqual(networks.map((network) => expect.objectContaining({
+      id: network.id, gap: 0,
+    })));
+  });
+
+  it("allows an observed zero-supply network without manufacturing additional backing", () => {
+    const baseline = adaptDgldGoldMapperState({ networks: NETWORKS, bars: BARS }, PARAMS);
+    const inactive = {
+      ...NETWORKS[0], id: "inactive", supply: { raw: "0", decimal: "0" }, gap: { raw: "0", decimal: "0" },
+    };
+    const result = adaptDgldGoldMapperState({ networks: [...NETWORKS, inactive], bars: BARS }, PARAMS);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.supplyTokens).toBe(baseline.metadata?.supplyTokens);
+    expect(result.metadata?.collateralizationRatio).toBe(baseline.metadata?.collateralizationRatio);
+  });
+
+  it.each(["", " ", "NaN", "Infinity", "-1", "0x0"])("rejects unavailable or invalid local gap %j instead of claiming zero", (gap) => {
+    const networks = structuredClone(NETWORKS);
+    networks[0].gap.decimal = gap;
+    expect(() => adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS)).toThrow();
+  });
+
+  it("rejects an absent network gap instead of assuming zero", () => {
+    const missing: Partial<(typeof NETWORKS)[number]> = { ...NETWORKS[0] };
+    delete missing.gap;
+    expect(() => adaptDgldGoldMapperState({
+      networks: [missing as (typeof NETWORKS)[number], ...NETWORKS.slice(1)], bars: BARS,
+    }, PARAMS)).toThrow();
+  });
+
+  it.each([false, true])("rejects duplicate network IDs before summing even when the duplicate is inactive=%s", (inactive) => {
+    const duplicate = inactive
+      ? { ...NETWORKS[0], supply: { raw: "0", decimal: "0" }, gap: { raw: "0", decimal: "0" } }
+      : { ...NETWORKS[0] };
+    for (const networks of [[...NETWORKS, duplicate], [duplicate, ...NETWORKS]]) {
+      expect(() => adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS)).toThrow(/duplicate network ID/);
+    }
+  });
+
+  it("retains unmatched-status degradation even when the reported gap is zero", () => {
+    const networks = structuredClone(NETWORKS);
+    networks[0].reconState = "pending";
+    const result = adaptDgldGoldMapperState({ networks, bars: BARS }, PARAMS);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "network-recon-mismatch", effect: "degraded",
+    }));
+  });
+
   it("throws on an unreadable reconCheckedAt", () => {
     const broken = NETWORKS.map((network) => ({ ...network, reconCheckedAt: null }));
     expect(() => adaptDgldGoldMapperState({ networks: broken, bars: BARS }, PARAMS)).toThrow("reconCheckedAt");

@@ -1,6 +1,6 @@
 ---
 name: yield-coverage-audit-drain
-description: Drain the Pharos Yield Intelligence coverage-audit queue into reviewed source coverage, documented intentional gaps, or watchlisted deferrals. Use monthly after `yield-coverage-audit` runs, after yield coverage drops, or when promoting queue candidates such as `native-exact-pool`, `lending-allowlist`, `source-family-adapter`, `stale-auto-lending-override`, or `quarantine-ready-to-restore`.
+description: Drain the Pharos Yield Intelligence coverage-audit queue into reviewed source coverage, documented intentional gaps, or watchlisted deferrals. Use monthly after `yield-coverage-audit` runs, after yield coverage drops, or when promoting queue candidates such as `native-exact-pool`, `lending-allowlist`, `source-family-adapter`, or `stale-auto-lending-override`.
 ---
 
 Read `docs/editorial-style.md` before writing. Its universal rules and the named `technical-evidence` register govern all Pharos-owned prose; this skill adds only factual, sourcing, schema, and format requirements.
@@ -44,9 +44,13 @@ or fixture-derived.
 
 Record `queueBudgetBasis`: new reports use `post-disposition` unresolved counts
 before truncation, with budgets of 150 headline gaps and 100 recommendation
-candidates. Dead-pin and restoration queue items count once; suppressed reviewed
-work does not. Legacy reports use `raw-detectors` until refreshed. Status samples
-six items per side and the report queue twenty; neither is the full count.
+candidates. Dead-pin queue items count once; suppressed reviewed work does not.
+Record `queueTotals.totalItemCount`, `publishedItemCount`, `truncatedItemCount`,
+and `byKindScope`: `full-visible` names pre-cap by-kind counts; legacy
+`published-sample` counts are not full totals. Visible = published + truncated;
+candidate = visible + suppressed. Status samples six items per side and the
+report queue twenty; neither is the full count. The admin queue is permanently
+DISPLAY-ONLY (`queueDisplayOnly: true`), with no disposition UI/API.
 Missing or malformed supply cache defers the audit and preserves the prior report.
 
 ## Decision Workflow
@@ -67,9 +71,10 @@ Handle queue items by `kind`:
 - `source-family-adapter`: require a reusable protocol-native API/on-chain
   adapter shape. Do not add one-off scrapers for pages without stable machine
   payloads.
-- `quarantine-ready-to-restore`: verify the live deterministic probe, the
-  exchange-rate envelope, source freshness, and reason the adapter was
-  quarantined before restoring hourly coverage.
+- Historical `quarantine-ready-to-restore`: the empty reprobe producer has retired.
+  Preserve historical decoding/dispositions until a named fresh report and full
+  pre-cap zero-current-kind evidence close the reader floor. Do not re-enable
+  generic scrvUSD/USTB readers or excluded K3/HedgeCore gross pool pins.
 - `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
   protocol has no local coverage mapping. Decide venue map, allowlist, or
   adapter candidacy. Record a documented intentional gap; do not leave the
@@ -84,6 +89,11 @@ Handle queue items by `kind`:
 - `manifest-missing` / `ranking-missing`: check whether this is a source gap,
   publication gate, safety gate, stale benchmark, or intentional gap. Do not
   force coverage around a guard without written rationale.
+
+The BIMA consumed variant and dormant CETES/vaults.fyi sources are retired.
+Base USBD and CETES catalog identity/quarantine remain unchanged; Banxico stays.
+BIMA stale-item clearance requires a new normal monthly report or separately
+authorized leased refresh, verified by `reportedAt`, not an hourly yield run.
 
 The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
 `shared/types/status/yield-liquidity.ts`. The source file wins; triage any

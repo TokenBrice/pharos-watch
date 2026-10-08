@@ -4,6 +4,7 @@ import {
   RedemptionBusinessDayTermsSchema,
   RedemptionCapacityBasisSchema,
   RedemptionCapacityConfidenceSchema,
+  ExecutableRedemptionObserverIdSchema,
   RedemptionDocSourceSupportSchema,
   RedemptionExecutionModelSchema,
   RedemptionFeeModelKindSchema,
@@ -101,6 +102,12 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
      */
     eventualCapacityModel: z.literal("supply-full").optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("executable-observer"),
+    observerId: ExecutableRedemptionObserverIdSchema,
+    capacityUse: z.enum(["diagnostic-only", "measured"]),
+    requiredOutputAssetKeys: LiveReserveRedemptionTelemetrySchema.shape.outputAssetKeys.unwrap(),
   }),
 ]);
 
@@ -244,8 +251,8 @@ export const RedemptionBackstopConfigSchema = z
     /**
      * Reviewed cost terms projected only by the Safety Score V9 route adapter.
      *
-     * This compatibility overlay keeps evidence corrections made after the V8
-     * methodology freeze from changing the public V8 redemption producer.
+     * The standalone redemption row does not consume these terms; they apply
+     * only to Safety Score exit-route evidence.
      */
     v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
     /**
@@ -262,7 +269,8 @@ export const RedemptionBackstopConfigSchema = z
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
     /**
      * Reviewed fee-free wrap composed with the intermediate asset's captured DEX
-     * routes. This is projected only into V9 and does not alter the V8 producer.
+     * routes. Projected only into Safety Score exit routes; the standalone
+     * redemption row ignores it.
      */
     v9ComposedDexExit: RedemptionV9ComposedDexExitSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
@@ -311,7 +319,8 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
-    if (config.capacityModel.kind === "reserve-sync-metadata" && config.capacityModel.requiredOutputAssetKeys) {
+    if ((config.capacityModel.kind === "reserve-sync-metadata" || config.capacityModel.kind === "executable-observer") &&
+        config.capacityModel.requiredOutputAssetKeys) {
       const requiredKeys = config.capacityModel.requiredOutputAssetKeys;
       const configuredKeys = config.outputAssets ?? config.unresolvedOutputAssetKeys ?? [];
       if (requiredKeys.length !== configuredKeys.length ||
@@ -358,6 +367,10 @@ export const RedemptionBackstopConfigSchema = z
         ctx.addIssue({ code: "custom", path: ["v9RouteReviewTerms", "businessDayTerms"], message: "Business-day terms require dated settlement sources" });
       }
     }
+    const hasSettlementSource = reviewedSettlement?.docs?.some((doc) => doc.supports?.includes("settlement"));
+    const settlementExplicitlyMissing =
+      reviewedSettlement?.scoringDisposition === "bounded-terms-gap" &&
+      reviewedSettlement.missingScoringFields?.includes("settlement");
     if (reviewedSettlement?.scoringDisposition === "bounded-terms-gap") {
       if (reviewedSettlement.missingScoringFields === undefined) {
         ctx.addIssue({
@@ -406,25 +419,25 @@ export const RedemptionBackstopConfigSchema = z
       fasterSettlementModel &&
       ((reviewedSettlement.settlementDelaySec === undefined && reviewedSettlement.businessDayTerms === undefined) ||
         reviewedSettlement.reviewedAt === undefined ||
-        reviewedSettlement.docs === undefined)
+        (!hasSettlementSource && !settlementExplicitlyMissing))
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementModel"],
         message:
-          "Faster V9 reviewed settlement requires exact or calendar terms, reviewedAt, and at least one docs source",
+          "Faster V9 reviewed settlement requires exact or calendar terms, reviewedAt, and a settlement-supporting source unless explicitly withheld",
       });
     }
     if (
       !fasterSettlementModel &&
       reviewedSettlement?.settlementDelaySec !== undefined &&
-      (reviewedSettlement.reviewedAt === undefined || reviewedSettlement.docs === undefined)
+      (reviewedSettlement.reviewedAt === undefined || (!hasSettlementSource && !settlementExplicitlyMissing))
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["v9RouteReviewTerms", "settlementDelaySec"],
         message:
-          "Explicit V9 reviewed settlement SLA requires reviewedAt and at least one docs source",
+          "Explicit V9 reviewed settlement SLA requires reviewedAt and a settlement-supporting source unless explicitly withheld",
       });
     }
     if (config.outputAssets) {
@@ -601,14 +614,6 @@ export const RedemptionBackstopConfigSchema = z
   });
 
 export type RedemptionBackstopConfig = z.infer<typeof RedemptionBackstopConfigSchema>;
-
-/** Capture-time, exact-route admission; other issuer channels and DEX routes are untouched. */
-export function resolveReviewedRouteSuspension(config: RedemptionBackstopConfig | null | undefined, routeId: string, clockSec: number) {
-  const suspension = config?.routeStatus === "suspended" ? config.routeSuspension : undefined;
-  if (!suspension || suspension.routeId !== routeId) return undefined;
-  const reviewedAtSec = Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000;
-  return reviewedAtSec <= clockSec ? suspension : undefined;
-}
 
 export function currentUtcDate(): string {
   return formatUtcDateOnly(new Date());

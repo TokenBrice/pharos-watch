@@ -25,7 +25,6 @@ import { TelegramBotStatsSchema } from "./telegram";
 import { HealthResponseSchema, SchedulerLivenessSchema } from "./public-health";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
-  ClassificationWarningSchema,
   CoinGeckoPriceDiffSchema,
   LiquidityHealthSchema,
   MintBurnReconciliationSummarySchema,
@@ -39,6 +38,7 @@ export type StatusSectionKey =
   | "telegramBot"
   | "reserveComposition"
   | "schedulerLiveness"
+  | "workerVersions"
   | "d1Usage"
   | "liquidityHealth"
   | "yieldHealth"
@@ -51,7 +51,6 @@ export type StatusSectionKey =
   | "scheduledSlots"
   | "mintBurnReconciliation"
   | "reserveDrift"
-  | "classificationWarnings"
   | "producerHistory";
 
 const StatusSectionErrorSchema = z.object({ code: z.string(), message: z.string() });
@@ -140,11 +139,23 @@ const StatusReserveCompositionSchema = z.union([
   }),
 ]);
 
+export const ActiveWorkerVersionMarkerSchema = z.object({
+  scriptName: z.string().min(1),
+  workerVersion: z.string().min(1),
+  activatedAt: z.number().int().positive(),
+});
+
+const WorkerVersionsSchema = z.object({
+  public: ActiveWorkerVersionMarkerSchema.nullable(),
+  heavy: ActiveWorkerVersionMarkerSchema.nullable(),
+});
+
 const StatusResponseObjectSchema = z
   .object({
     timestamp: z.number(),
     dbHealthy: z.boolean(),
     schedulerLiveness: SchedulerLivenessSchema.optional(),
+    workerVersions: WorkerVersionsSchema.default({ public: null, heavy: null }),
     availabilityStatus: StatusHealthValueSchema,
     dataQualityStatus: StatusHealthValueSchema,
     rawOverallStatus: StatusHealthValueSchema,
@@ -182,7 +193,6 @@ const StatusResponseObjectSchema = z
     mintBurnReconciliation: MintBurnReconciliationSummarySchema.nullable(),
     reserveComposition: StatusReserveCompositionSchema,
     reserveDrift: z.array(ReserveDriftEntrySchema).optional(),
-    classificationWarnings: z.array(ClassificationWarningSchema).optional(),
   })
   .passthrough();
 
@@ -204,5 +214,6 @@ export const StatusHistoryResponseSchema = z.object({
   transitions: z.array(StatusTransitionSchema),
   hasMore: z.boolean().nullable().default(null),
   reserveComposition: StatusReserveCompositionSchema.nullable(),
+  sectionErrors: z.record(z.string(), StatusSectionErrorSchema).optional(),
 });
 export type StatusHistoryResponse = z.output<typeof StatusHistoryResponseSchema>;

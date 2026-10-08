@@ -45,7 +45,7 @@ import {
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
-import { loadSchedulerLiveness, schedulerLivenessWarnings } from "./status/scheduler-liveness";
+import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -494,7 +494,7 @@ export async function assessPublicHealth(
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
   const schedulerLiveness = options?.schedulerLiveness ?? await loadSchedulerLiveness(db, now);
-  const schedulerLivenessImpactStatus = schedulerLiveness.status === "unavailable" ? "degraded" : schedulerLiveness.status;
+  const schedulerLivenessImpactStatus = getSchedulerLivenessImpactStatus(schedulerLiveness);
   warnings.push(...schedulerLivenessWarnings(schedulerLiveness));
 
   const { dbHealthy, warning: dbWarning } = await checkDbHealth(db, logPrefix);
@@ -588,7 +588,11 @@ export async function assessPublicHealth(
         return { circuits: {}, error: publicHealthErrorMessage("circuit") };
       }),
     loadCachedD1CapacityAssessment(db, now)
-      .then((assessment) => ({ assessment, error: null as string | null }))
+      .then(({ assessment, reason }) => ({
+        assessment,
+        reason,
+        error: reason ? "D1 capacity assessment unavailable." : null,
+      }))
       .catch((err) => {
         logWorkerEvent({
           scope: "status",
@@ -599,7 +603,7 @@ export async function assessPublicHealth(
           message: "Failed to load the cached D1 capacity assessment",
           error: err,
         });
-        return { assessment: null, error: "D1 capacity assessment unavailable." };
+        return { assessment: null, reason: "query-failed" as const, error: "D1 capacity assessment unavailable." };
       }),
     capturePublicHealthRead(
       {
@@ -686,9 +690,9 @@ export async function assessPublicHealth(
     ? "degraded"
     : d1CapacityResult.assessment
       ? getD1CapacityImpactStatus(d1CapacityResult.assessment.thresholdState)
-      : "healthy";
-  if (d1CapacityResult.error) {
-    warnings.push("d1-capacity-query-failed");
+      : "degraded";
+  if (d1CapacityResult.reason) {
+    warnings.push(`d1-capacity-${d1CapacityResult.reason}`);
   } else if (d1CapacityResult.assessment?.thresholdState !== "normal" && d1CapacityResult.assessment) {
     warnings.push(
       `d1-capacity-${d1CapacityResult.assessment.thresholdState}`,

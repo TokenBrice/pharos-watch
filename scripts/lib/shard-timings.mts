@@ -43,6 +43,8 @@ export interface ShardCoordinates {
   shardCount: number;
 }
 
+export type ShardTimingLane = "plain-test" | "critical-coverage";
+
 /**
  * Reads the Vitest `--shard=<n>/<count>` coordinates a lane was invoked with.
  * Unsharded invocations report the whole run as shard 1 of 1.
@@ -96,9 +98,11 @@ function seconds(ms: number): string {
  * Renders the GitHub step-summary table. The uploaded JSON keeps every file;
  * the summary shows only the slowest `topLimit` so the run page stays readable.
  */
-export function formatShardTimingSummary(summary: ShardTimingSummary, topLimit = 10): string {
+export function formatShardTimingSummary(summary: ShardTimingSummary, lane: ShardTimingLane, topLimit = 10): string {
+  const title = lane === "critical-coverage" ? "PR critical coverage" : "PR tests";
+  const artifact = lane === "critical-coverage" ? "pr-coverage-timings" : "pr-test-timings";
   const lines = [
-    `### PR tests shard ${summary.shard}/${summary.shardCount}`,
+    `### ${title} shard ${summary.shard}/${summary.shardCount}`,
     "",
     `Vitest wall ${seconds(summary.wallMs)} · ${summary.fileCount} files (summed ${seconds(summary.summedFileMs)}) · ${summary.testCount} tests`,
     "",
@@ -107,7 +111,7 @@ export function formatShardTimingSummary(summary: ShardTimingSummary, topLimit =
     ...summary.files.slice(0, topLimit).map((file) => `| \`${file.file}\` | ${seconds(file.durationMs)} | ${file.tests} |`),
   ];
   if (summary.fileCount > topLimit) {
-    lines.push("", `_${summary.fileCount - topLimit} further files in the \`pr-test-timings-${summary.shard}\` run artifact._`);
+    lines.push("", `_${summary.fileCount - topLimit} further files in the \`${artifact}-${summary.shard}\` run artifact._`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -122,6 +126,7 @@ export function publishShardTimings(
   coordinates: ShardCoordinates,
   wallMs: number,
   env: NodeJS.ProcessEnv,
+  lane: ShardTimingLane,
 ): void {
   const rawReport = rawShardReportPath(timingsFile);
   if (!existsSync(rawReport)) return;
@@ -129,5 +134,5 @@ export function publishShardTimings(
   const summary = summarizeShardTimings(report, { ...coordinates, wallMs });
   mkdirSync(dirname(timingsFile), { recursive: true });
   writeFileSync(timingsFile, `${JSON.stringify(summary, null, 2)}\n`);
-  if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, formatShardTimingSummary(summary));
+  if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, formatShardTimingSummary(summary, lane));
 }

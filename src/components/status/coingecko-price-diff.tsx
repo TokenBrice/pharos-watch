@@ -100,7 +100,9 @@ export function CoinGeckoPriceDiffCard({
           </div>
         ) : (
           <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-            No tracked CoinGecko-covered tokens are beyond {summary.thresholdPct}% right now.
+            {summary.comparedCoins === 0
+              ? "Comparison unavailable: no quotes passed both observed-price and upstream freshness admission."
+              : `None of the ${summary.comparedCoins} comparable tokens are beyond ${summary.thresholdPct}% right now; unmeasured tokens are not counted as healthy.`}
           </div>
         )}
       </CardContent>

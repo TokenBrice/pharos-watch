@@ -8,7 +8,6 @@
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
 import { collectSuiClmmShadowQuotes } from "../../cron/dex-liquidity/sui/shadow";
-import { collectDlmmShadowQuotes } from "../../cron/dex-liquidity/solana/dlmm-shadow";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -69,17 +68,22 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
         suiShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - suiStartedAt };
       }
       throwIfAborted(signal);
-      let meteoraShadow: unknown;
-      const meteoraStartedAt = Date.now();
-      try {
-        meteoraShadow = await collectDlmmShadowQuotes({
-          db: runtime.db, signal, ctx: { db: runtime.db, chainRpcs: runtime.chainRpcs },
-        });
-      } catch (error) {
-        throwIfAborted(signal);
-        meteoraShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - meteoraStartedAt };
-      }
-      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, suiShadow, meteoraShadow }) };
+      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, suiShadow }) };
     },
+  });
+}
+
+/**
+ * Additional active EVM admission opportunities at :20/:50 (logical :15/:45).
+ * Reuse the same job lease, active publication surface and durable cursor;
+ * native diagnostics retain their existing :05/:35 cadence.
+ */
+export async function runSupplementalMeasuredExecutionSlot(runtime: ScheduledRuntimeContext) {
+  return runSingleScheduledJob(runtime, "supplemental measured execution slot", {
+    job: "sync-cl-exit-depth",
+    run: (signal, reportProgress) => settleMeasuredExecutionLane(
+      "evm",
+      syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress, "halfHourlyMeasuredExecutionSupplemental"),
+    ),
   });
 }

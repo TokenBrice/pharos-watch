@@ -1,5 +1,6 @@
 import { DATA_DEPENDENCY_REGISTRY, type DataDependencyDefinition } from "@shared/lib/data-dependency-registry";
 import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { classifyPublicationDiagnostic } from "@shared/lib/status-thresholds";
 import type {
   CacheStatus,
   CronStatus,
@@ -212,55 +213,11 @@ function failedPublicationSurfaceSignal(
 }
 
 function publicationSignal(surface: PublicationSurfaceHealth | undefined, now: number): DependencySignal {
-  if (!surface) {
-    return {
-      status: "unknown",
-      updatedAt: null,
-      ageSeconds: null,
-      maxAgeSec: null,
-      reason: "Publication health surface unavailable.",
-    };
-  }
-
-  const publishedAt = publicationTimestamp(surface);
-  const ageSeconds = publishedAt != null ? Math.max(0, now - publishedAt) : null;
-  const latestAttempt = surface.lastAttemptedGeneration;
-  if (!surface.lastPublishedGeneration) {
-    return {
-      status: "stale",
-      updatedAt: latestAttempt?.startedAt ?? null,
-      ageSeconds: null,
-      maxAgeSec: null,
-      reason: "No published generation recorded.",
-    };
-  }
-
-  if (latestAttempt?.state === "failed" && latestAttempt.startedAt > surface.lastPublishedGeneration.startedAt) {
-    return {
-      status: "degraded",
-      updatedAt: latestAttempt.failedAt ?? latestAttempt.startedAt,
-      ageSeconds,
-      maxAgeSec: null,
-      reason: latestAttempt.failureReason ?? surface.lastFailureReason ?? "Latest generation failed.",
-    };
-  }
-
-  if (surface.candidateAgeSec != null && surface.candidateAgeSec > 2 * 3600) {
-    return {
-      status: "degraded",
-      updatedAt: latestAttempt?.startedAt ?? publishedAt,
-      ageSeconds,
-      maxAgeSec: 2 * 3600,
-      reason: `Candidate generation has been pending for ${surface.candidateAgeSec}s.`,
-    };
-  }
-
+  const diagnostic = classifyPublicationDiagnostic(surface);
+  const publishedAt = surface ? publicationTimestamp(surface) : null;
   return {
-    status: "healthy",
-    updatedAt: publishedAt,
-    ageSeconds,
-    maxAgeSec: null,
-    reason: null,
+    ...diagnostic,
+    ageSeconds: publishedAt != null ? Math.max(0, now - publishedAt) : null,
   };
 }
 

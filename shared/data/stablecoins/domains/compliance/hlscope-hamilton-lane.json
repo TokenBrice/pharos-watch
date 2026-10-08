@@ -20,19 +20,28 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "SCOPE is a tokenized private-credit fund interest offered under an Investment Company Act Section 3(c)(7) structure, not a payment stablecoin.",
+      "summary": "HLSCOPE represents a tokenized private-credit feeder-fund interest for qualified purchasers. Hamilton Lane describes shares with subscriptions and redemptions at fund NAV; the enacted GENIUS Act section 2(22)(B)(iii) excludes securities.",
       "references": [
         {
           "label": "GENIUS Act statutory payment-stablecoin framework",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "SEC Form D: Hamilton Lane SCOPE Securitize Tokenized Feeder LP",
           "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/primary_doc.xml",
           "sourceKind": "issuer-filing",
-          "accessedAt": "2026-10-01"
+          "sourceDate": "2023-05-16",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Hamilton Lane: SCOPE available via Securitize",
+          "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2023-05-04",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -40,33 +49,41 @@
     "issuerPathway": "not-applicable",
     "issuerEntity": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP",
     "issuerDomicile": "United States (Delaware)",
-    "licensingRegulator": "SEC exempt offering; Investment Company Act Section 3(c)(7) qualified-purchaser structure",
+    "licensingRegulator": "SEC exempt-offering notice; qualified-purchaser feeder-fund structure",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "SCOPE is described by Hamilton Lane as a tokenized private-credit fund with NAV-based subscriptions/redemptions and qualified-purchaser access. Its SEC Form D identifies a Section 3(c)(7) exempt offering. GENIUS payment-stablecoin authorization is therefore not applicable on the reviewed facts.",
+    "notes": "SCOPE is described by Hamilton Lane as a tokenized private-credit fund with NAV-based subscriptions/redemptions and qualified-purchaser access. The feeder offering is separate from the underlying SCOPE offering and Securitize Capital manages the feeder. SEC EDGAR API fallback confirms the exact Delaware feeder name and Form D/D-A filing dates but did not expose the full exemption text; the particular Section 3(c)(7) subsection is therefore not independently reasserted. GENIUS payment-stablecoin authorization is not applicable to the reviewed fund interest. No regulator action-status inference is made solely from this exclusion.",
     "references": [
       {
         "label": "GENIUS Act statutory payment-stablecoin framework",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "SEC Form D: Hamilton Lane SCOPE Securitize Tokenized Feeder LP",
         "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671023000001/primary_doc.xml",
         "sourceKind": "issuer-filing",
         "sourceDate": "2023-05-16",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Hamilton Lane: SCOPE available via Securitize",
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2023-05-04",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

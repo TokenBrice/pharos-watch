@@ -43,6 +43,41 @@ export function* iterateEvidenceResponsibilityFacts(evidence: V9EvidenceFactCont
     yield [row[0], resolveEvidenceFactPath(evidence, row), row[2], row[3], row[4], row[5], row[6]];
   }
 }
+
+/**
+ * Count source obligations without dropping their scoring witnesses. A source-less
+ * singleton causal view is an alias only when that exact source is present on
+ * this card under the same owner. Foreign-root and gapless views remain separate.
+ */
+export function countV9EvidenceObligations<T, Ref extends string | number>(
+  facts: readonly T[],
+  sourceFor: (fact: T) => Ref | null,
+  causesFor: (fact: T) => readonly Ref[],
+  criticalFor: (fact: T) => boolean,
+): { factCount: number; criticalFactCount: number } {
+  const sources = new Map<Ref, boolean>();
+  let factCount = 0;
+  let criticalFactCount = 0;
+  for (const fact of facts) {
+    const source = sourceFor(fact);
+    if (source === null) continue;
+    sources.set(source, (sources.get(source) ?? false) || criticalFor(fact));
+  }
+  for (const fact of facts) {
+    if (sourceFor(fact) !== null) continue;
+    const causes = causesFor(fact);
+    const root = causes.length === 1 ? causes[0]! : undefined;
+    if (root !== undefined && sources.has(root)) {
+      if (criticalFor(fact)) sources.set(root, true);
+    } else {
+      factCount++;
+      if (criticalFor(fact)) criticalFactCount++;
+    }
+  }
+  factCount += sources.size;
+  for (const critical of sources.values()) if (critical) criticalFactCount++;
+  return { factCount, criticalFactCount };
+}
 export function refineEvidenceFactPathPrefixes(evidence: V9EvidenceFactContext, ctx: Pick<z.RefinementCtx, "addIssue">): boolean {
   const used = new Uint8Array(evidence.factPathPrefixes?.length ?? 0);
   let valid = true;

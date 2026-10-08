@@ -66,6 +66,7 @@ describe("hourly corroboration before the next publication", () => {
     });
   }
 
+
   it.each([false, true])("runs after monitors and persists slot/version (provider failed: %s)", async (failed) => {
     const order: string[] = [];
     mocks.runPriceDexRefresh.mockImplementation(async () => {

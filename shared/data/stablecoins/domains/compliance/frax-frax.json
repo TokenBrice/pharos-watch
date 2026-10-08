@@ -4,46 +4,136 @@
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Frax DAO",
-    "issuerDomicile": "United States",
-    "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
+    "foreignExceptionStatus": "unknown",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.frax.finance/v2/frax/balance-sheet/latest",
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "Frax governance describes legacy FRAX as AMO-driven and not aligned with the newer payment-stablecoin architecture.",
+    "notes": "Legacy FRAX uses an AMO-supported dollar peg; its documentation expressly denies guaranteed redemption for specified assets. No exact legal issuer or domicile was established, so issuerEntity is omitted rather than using Frax DAO as a legal entity. Financial Reserves and Asset Exploration Inc. is a separate reserve partner and frxUSD issuer-level operator. The live balance sheet is a protocol reserve disclosure. No fixed fiat redemption policy was established. The dated negative review is limited to the consulted public sources and does not exclude confidential or differently named filings. No enforcement clearance or independent attestation conclusion is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "FIP-430 payment-stablecoin compliance proposal",
         "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC public pending digital-asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "SCRC state-regime review interim procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Frax v3 legacy FRAX non-redeemability disclosure",
+        "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Frax live legacy FRAX balance-sheet disclosure",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FIP-277 separate Delaware reserve partner",
+        "url": "https://gov.frax.finance/t/fip-277-onboard-finrespbc-as-frax-v3s-offchain-rwa-partner/2492",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2023-08-04"
+      },
+      {
+        "label": "OCC GENIUS implementation notice of proposed rulemaking: scope and effective-date discussion",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "https://docs.frax.finance/frax-v3-100-cr-and-more/overview",
+        "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
       ],
-      "summary": "Frax governance describes legacy FRAX as AMO-driven and not compatible with GENIUS/STABLE-style payment-stablecoin architecture; no public GENIUS authorization or application source was located.",
+      "summary": "The reopened OCC pending digital-asset bank application table and NYDFS directory contain no Frax, FRAX Inc or FinresPBC entry. Federal Register exact-name searches for Frax and FinresPBC through 2026-10-07 returned zero documents. Legacy FRAX token documents show no token-specific GENIUS authorization or application; the distinct frxUSD charter-intent proposal does not authorize legacy FRAX. This bounded public review cannot exclude confidential, unindexed or differently named filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC pending digital-asset bank applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact Frax search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Frax%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact FinresPBC search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22FinresPBC%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "Legacy Frax Dollar maintains an AMO-supported USD peg, while the issuer documentation states holders have no guaranteed redemption for specified assets. Its general dollar-stablecoin use and absent fixed monetary-value issuer obligation leave payment-stablecoin applicability unclear.",
+      "references": [
+        {
+          "label": "Frax v3 legacy FRAX non-redeemability disclosure",
+          "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FIP-430 legacy FRAX and frxUSD architecture separation",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-04-21"
+        }
+      ]
+    }
   }
 }

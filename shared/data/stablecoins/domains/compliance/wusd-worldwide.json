@@ -2,73 +2,136 @@
   "id": "wusd-worldwide",
   "genius": {
     "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "WUSD is marketed for payments and settlement at one U.S. dollar, and the WSPN terms provide verified customers with contractual minting and redemption into U.S. dollars.",
+      "references": [
+        {
+          "label": "WSPN terms of service",
+          "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2024-06-04"
+        },
+        {
+          "label": "WSPN reserve disclosure",
+          "url": "https://developer.wspn.io/5768563m0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "WSPN Fintech Limited",
-    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "WUSD terms identify WSPN Fintech Limited and restrict U.S. persons, with discretionary exceptions for eligible contract participants. WSPN's transparency page attributes MSB registration 31000251587240 to WSPN U.S. and Dutch EMI license 77446844 to group entity Aplauz NL B.V.; these issuer disclosures do not establish WUSD-specific U.S. GENIUS authorization or a registered foreign-issuer exception. Treasury's August 17, 2026 section 3 proposal addresses issuance and sale of foreign-issued payment stablecoins; the older state-regime comparability proposal does not by itself establish that foreign registration is legally impossible. No token-specific authorization source was located in the issuer disclosures and official materials searched on 2026-10-01.",
+    "notes": "WUSD terms identify WSPN Fintech Limited as the ordinary contracting party, permit WUSD payment use and provide personal contractual issuance/redemption rights to verified customers. The developer documentation identifies the tracked Ethereum and Polygon contracts and describes 1:1 USD redemption for qualified businesses. U.S. persons and New York users are excluded from direct services, with discretionary eligible-contract-participant exceptions. ReserveDisclosurePresent records a public reserve policy, not verification of current reserve balances or independent assurance. No issuer domicile, licensing regulator, federal/state regulator or registered foreign exception is inferred from court jurisdiction or affiliate permissions. The current transparency page yielded a JavaScript shell; the unique browser attempt timed out, and the bundle fetch could not be fully recovered. Consequently affiliate licensing statements and the monthly-attestation boolean are omitted. No token-specific GENIUS intent or qualifying public authorization was located in the bounded review below. The enforcement enum is omitted rather than treating a finite set of searches as a comprehensive review.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "FinCEN/OFAC AML NPRM for PPSIs",
-        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
-        "sourceKind": "federal-register"
-      },
-      {
-        "label": "WSPN transparency and group licensing disclosures",
-        "url": "https://wspn.io/transparency/",
-        "sourceKind": "issuer-disclosure"
+        "label": "FinCEN/OFAC AML proposed-rule announcement",
+        "url": "https://www.fincen.gov/news/news-releases/treasury-proposes-rule-implement-genius-acts-requirements-counter-illicit",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "WSPN reserve disclosure",
         "url": "https://developer.wspn.io/5768563m0",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "WSPN terms of service",
         "url": "https://assets.wspn.io/docs/WSPN_Term%20of%20Use.pdf",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-06-04"
       },
       {
         "label": "Treasury section 3 GENIUS proposed rule",
         "url": "https://home.treasury.gov/news/press-releases/sb0605",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "FinCEN/OFAC AML NPRM (FR 2026-06963): no PPSI approvals issued",
-        "Treasury state-regime comparability NPRM (FR 2026-06489): foreign exception framework not yet final",
-        "FinCEN MSB registrant search (msb.fincen.gov)",
-        "WSPN issuer disclosures, reserve documentation, and terms of service",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC digital-assets pending licensing applications tracker: all nine visible banking applicants reopened in raw HTML; no WSPN/WUSD applicant and no inference that this is a complete PPSI register.",
+        "OCC Bulletin 2026-3 full raw body and Treasury August 17 section 3 proposal announcement.",
+        "Federal Register API exact-name WSPN search returned zero documents; exact-name WUSD search returned two unrelated historical FCC radio-station records.",
+        "NYDFS complete virtual-currency regulated-entity and issuance Greenlist tables: no WSPN Fintech Limited, WSPN or WUSD entry.",
+        "WSPN binding June 4, 2024 terms, current developer About WUSD reserve/redemption documentation and issuer whitepaper. Transparency and blog routes were reopened but yielded app shells; browser attempt timed out.",
+        "Named WSPN/WUSD/WSPN Fintech searches across OCC, Federal Register, FDIC, Federal Reserve, NCUA, Treasury and NYDFS domains; issuer-domain WUSD GENIUS/OCC/application/approval search.",
+        "September 30, 2026 SCRC procedural rule and FinCEN April 8, 2026 AML proposal announcement."
       ],
-      "summary": "WSPN issuer, reserve, redemption, and terms materials were reviewed; no token-specific public U.S. GENIUS approval, official application, or registered/comparable foreign-issuer exception source was located for WUSD. The foreign-exception comparability framework remains in proposed rulemaking.",
+      "summary": "As of the 2026-10-07 review, no qualifying public GENIUS issuer approval, state qualification, named official application, foreign registration or explicit WUSD GENIUS intent was located in the listed primary sources and named-token/entity searches. The issuer whitepaper describes general future licensing objectives, not a token-specific GENIUS application. This is a bounded public-evidence conclusion; it does not exclude confidential, unpublished, unindexed or differently named filings. The unrendered issuer routes were not treated as positive evidence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "Treasury section 3 GENIUS proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name WSPN document search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22WSPN%22&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Register exact-name WUSD document search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22WUSD%22&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-05"
+    "reviewedAt": "2026-10-07"
   }
 }

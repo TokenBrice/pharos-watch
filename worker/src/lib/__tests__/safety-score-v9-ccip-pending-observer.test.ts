@@ -172,6 +172,44 @@ beforeEach(() => {
 });
 
 describe("authenticated CCIP pending quantities", () => {
+  it.each(["schema", "topics", "payload"])("retains the exact rejected log %s branch and shape", async branch => {
+    const log = sent[0]!;
+    if (branch === "schema") log.removed = true;
+    if (branch === "topics") log.topics.push(word(999));
+    if (branch === "payload") log.data = `0x${"ab".repeat(16385)}`;
+    const onDiagnostic = vi.fn();
+    expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "log-invalid" });
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ observer: "ccip", chainId: "ethereum", hardEvidenceFailure: true, failurePredicate: branch === "schema" ? "asLog-schema" : branch === "topics" ? "topic-count" : "matched-payload-cap", operands: expect.objectContaining({ address: log.address, topicCount: log.topics.length, dataLength: log.data.length, transactionHash: log.transactionHash, logIndex: log.logIndex }) }));
+  });
+  it("names the Monad canonical-hash archive prerequisite without substituting state", async () => {
+    const read = source(); read.chainId = "monad"; read.lanes[0]!.source.chainId = "monad";
+    vi.mocked(fetchEvmRpcBatch).mockResolvedValue(null);
+    const onDiagnostic = vi.fn();
+    expect(await observeCcipPending({ ...input(read), onDiagnostic })).toEqual({ status: "rejected", reason: "monad-canonical-hash-archive-required" });
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "monad", method: "eth_getCode", hardEvidenceFailure: true, failurePredicate: "monad-canonical-hash-archive-required" }));
+    expect(vi.mocked(fetchEvmRpcBatch).mock.calls[0]![1][0]!.params[1]).toEqual({ blockHash: word(pinNumber), requireCanonical: true });
+  });
+  it("reports durable cursor advancement rather than timestamp-only checkpoint writes", async () => {
+    pinNumber = 20000; finalized = pinNumber;
+    const onDiagnostic = vi.fn(), first = await observeCcipPending({ ...input(), db: {} as D1Database, onDiagnostic });
+    expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
+    expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({ persisted: true, authenticatedCursorAdvanced: true, beforeCursor: "100", afterCursor: "2100", targetCursor: "20001" }));
+    expect(onDiagnostic.mock.calls.map(([value]) => value)).toContainEqual(expect.objectContaining({ incompleteBootstrap: true, hardEvidenceFailure: false, failurePredicate: "history-incomplete" }));
+    const accepted = await observeCcipPending({ ...input(), onDiagnostic: vi.fn() });
+    expect(accepted.status).toBe("rejected");
+    pinNumber = 105; finalized = 20000;
+    const complete = await observeCcipPending(input());
+    if (complete.status !== "accepted") throw new Error("fixture");
+    onDiagnostic.mockClear();
+    await observeCcipPending({ ...input(source(), complete.checkpoint), db: {} as D1Database, onDiagnostic });
+    expect(onDiagnostic.mock.calls.every(([value]) => !value.authenticatedCursorAdvanced)).toBe(true);
+  });
+  it("exposes the rejected pin clock and finalized deficit", async () => {
+    finalized = 100;
+    const onDiagnostic = vi.fn();
+    expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "pin-not-finalized" });
+    expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "ethereum", pinObservedAtSec: 1000, finalizedLagBlocks: 5, hardEvidenceFailure: true, operands: expect.objectContaining({ pinNumber: 105, finalizedNumber: 100 }) }));
+  });
   it("completes an indexer omission through consecutive source logs", async () => {
     const result = await observeCcipPending(input());
     expect(result.status).toBe("accepted");

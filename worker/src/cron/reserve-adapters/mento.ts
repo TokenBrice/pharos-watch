@@ -5,6 +5,7 @@ import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@share
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
+  calculateRawPercentageSumDeviation,
   decimalNumberFromBigInt,
   fetchOnchainMulticall3,
   verifiedFreshnessMetadata,
@@ -488,7 +489,7 @@ export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: 
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      diag: { rawSumDeviation: Math.abs(totalPct - 100) },
+      diag: { rawSumDeviation: calculateRawPercentageSumDeviation(entries.map((entry) => entry.percent)) },
       entryCount: entries.length,
       totalPct,
       ...(sourceTimestamp != null

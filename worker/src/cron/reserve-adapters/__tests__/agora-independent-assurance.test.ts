@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getIndependentAssuranceManifest, IndependentAssuranceManifestSchema, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "../agora-independent-assurance";
+import { AGORA_INDEPENDENT_ASSURANCE_PROFILE } from "../agora-independent-assurance-profile";
 import { collectPdfAnchors } from "../helpers";
 import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-support";
 

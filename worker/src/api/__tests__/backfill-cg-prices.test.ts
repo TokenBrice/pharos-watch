@@ -62,7 +62,7 @@ describe("handleBackfillCgPrices", () => {
     expect(body.errors).toBeUndefined();
   });
 
-  it("accepts PSI-only shadow assets for price backfills", async () => {
+  it("accepts PSI historical assets for price backfills", async () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const db = mockD1([
       {

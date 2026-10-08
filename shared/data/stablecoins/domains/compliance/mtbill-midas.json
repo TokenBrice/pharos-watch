@@ -18,46 +18,65 @@
     ]
   },
   "genius": {
-    "applicability": "excluded-security",
+    "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "mTBILL is a non-interest-bearing, NAV-linked debt certificate issued by Midas Software GmbH under the European prospectus framework. Its July 17, 2026 final terms specify USDC subscription and settlement. GENIUS defines a payment stablecoin by payment or settlement use, a fixed monetary-value redemption obligation and a stable-value representation, and separately excludes securities under specified U.S. federal securities laws. This review retains the inherited excluded-security status without treating European securities classification as a U.S. federal securities determination."
+      "summary": "mTBILL is a NAV-linked investment certificate issued by Midas Software GmbH. The July 17, 2026 final terms identify a Treasury-bill underlying and USDC subscription and settlement. The incorporated product terms provide redemption by reference to NAV per token less fees, subject to gates and holdbacks, rather than a fixed USD 1 redemption obligation. This supports non-payment-token without inferring a U.S. securities-law exclusion from European or Swiss classification.",
+      "references": [
+        {
+          "label": "Midas mTBILL final terms dated July 17, 2026",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Midas 2026 base prospectus: continued mRE7YIELD security series",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
     "issuerEntity": "Midas Software GmbH",
     "issuerDomicile": "Germany",
-    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority for Liechtenstein Derivative Debt Instrument; issuer domiciled in Germany under EU Prospectus Regulation / MiFID II financial-instrument framework)",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://api-prod.midas.app/api/transparency?token=mTBILL",
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "The July 17, 2026 base prospectus and mTBILL final terms continue the certificate series under a prospectus valid until July 17, 2027. The products are derivative financial instruments (debt instruments), issued as Swiss-law ledger-based securities; Midas Software GmbH is incorporated in Germany. FMA prospectus approval does not license or supervise the issuer or endorse the securities. The mTBILL final terms specify USDC settlement, redemption gates, and a holdback. The reserve API publishes issuer-reported USTB and BUIDL positions with a September 18, 2026 source timestamp; these are not independent assurance. The inherited excluded-security applicability status is unchanged; European securities classification alone is not a fresh U.S. legal determination.",
+    "notes": "This assessment follows the documented variable-value investment certificate and does not assert a U.S. federal securities determination. The July 17, 2026 base prospectus names Midas Software GmbH in Berlin, Germany and continues this token series. FMA prospectus approval concerns the prospectus and does not establish GENIUS issuer authorization. Public disclosure and enforcement fields are omitted where this adjudication could not independently substantiate them.",
     "references": [
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "Midas mTBILL current legal documentation",
-        "url": "https://docs.midas.app/resources/legal-product-documentation/mtbill",
-        "sourceKind": "issuer-disclosure"
-      },
       {
         "label": "Midas mTBILL final terms dated July 17, 2026",
         "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FUDquVH8yRhSxnVqxp0X4%2F20260714_mTBILL_FT_signed_final.pdf?alt=media&token=bf215cdc-f549-474d-8ca9-5a1810fabeb8",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "GENIUS Act S.1582 text: payment stablecoin definition excludes securities",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "statute"
+        "label": "Midas 2026 base prospectus: continued mRE7YIELD security series",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "redemptionPolicyPresent": false
   }
 }

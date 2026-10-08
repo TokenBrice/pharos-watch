@@ -2,8 +2,9 @@
   "id": "usdo-openeden",
   "reserves": [
     {
+      "sourceKey": "openeden-usdo:tbill",
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 79.31833137,
+      "pct": 78.95194721,
       "risk": "very-low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital and United States Treasury",
@@ -11,8 +12,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "openeden-usdo:buidl",
       "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 8.53870643,
+      "pct": 9.64028307,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -22,8 +24,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "openeden-usdo:rlusd",
       "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 8.39469836,
+      "pct": 8.62380556,
       "risk": "low",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
@@ -33,8 +36,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "openeden-usdo:vbill",
       "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 3.47193640,
+      "pct": 2.63169331,
       "risk": "low",
       "coinId": "vbill-vaneck",
       "depType": "collateral",
@@ -44,8 +48,9 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "openeden-usdo:usdc",
       "name": "USDC redemption buffer",
-      "pct": 0.27632745,
+      "pct": 0.15227084,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -56,26 +61,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "RegistryActivation RS7-01 issuer inventory review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "OpenEden USDO reserve composition API (snapshot accessed 2026-09-21T08:26:16Z)",
+        "label": "OpenEden USDO reserve composition API (source 2026-10-07T08:00:19.096Z; accessed 2026-10-07T20:47:18.580729Z)",
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       },
       {
-        "label": "OpenEden USDO transparency dashboard (last update 2026-09-21 08:00 UTC)",
+        "label": "OpenEden USDO transparency dashboard",
         "url": "https://openeden.com/usdo/transparency"
       },
       {
-        "label": "OpenEden USDO reserve asset inventory (accessed 2026-09-21)",
+        "label": "OpenEden USDO reserve asset inventory",
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
       }
     ],
-    "rationale": "The issuer transparency dashboard marks the reserve disclosure last updated 2026-09-21 at 08:00 UTC and reports $17.51 million of reserves against $15.29 million USDO, with a 114.52% reserve ratio. The matching issuer API snapshot accessed 2026-09-21T08:26:16Z reported exact values of $17,510,551.76526474 and 15,290,464.16598848 USDO. Positive constituent values normalize to OpenEden TBILL 79.31833137%, BUIDL 8.53870643%, RLUSD 8.39469836%, VBILL 3.47193640%, and USDC 0.27632745%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "rationale": "Issuer API source 2026-10-07T08:00:19.096Z, accessed 2026-10-07T20:47:18.580729Z, reports $15,537,989.483383574 reserves and 15,275,117.334802557 USDO with a 101.7209% ratio. Positive constituents normalize to TBILL 78.95194721%, BUIDL 9.64028307%, RLUSD 8.62380556%, VBILL 2.63169331%, and USDC 0.15227084%. USYC, BENJI, pending-USDC and uAmount are observed zero and create no positive holdings. The ratio reconciles only reported usdoAmount, not every queued claim; pendingReserverAssetsRedeem and gap fields are unresolved context, not additional inventory. This is issuer accounting, not independent financial assurance or proof of redemption openness.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-10-07",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
     "knownUnknownExposurePct": 0,
@@ -83,7 +88,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-        "pct": 79.31833137,
+        "pct": 78.95194721,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The TBILL reserve token is identified by issuer documentation but is outside the active tracked stablecoin set."
       }

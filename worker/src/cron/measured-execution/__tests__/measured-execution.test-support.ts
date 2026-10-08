@@ -13,11 +13,11 @@ import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
   encodeCurveStableSwapNgGetDy,
+  type CurveStableSwapNgPoolPolicy,
 } from "../curve-stableswap-ng";
+import { CURVE_R3_METAPOOL_POLICIES, type CurveMetapoolPolicy } from "@shared/lib/curve-composite-policies";
 import {
-  CURVE_R3_METAPOOL_POLICIES,
   encodeCurveCompositeQuote,
-  type CurveMetapoolPolicy,
 } from "../curve-composite";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
@@ -159,8 +159,7 @@ function makeRoutePacket(
   };
 }
 
-export function makeCurveStableSwapNgRoute() {
-  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+export function makeCurveStableSwapNgRoute(policy: CurveStableSwapNgPoolPolicy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY) {
   const measuredTarget = makeMeasuredTarget({
     stablecoinId: policy.stablecoinId,
     adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
@@ -175,7 +174,7 @@ export function makeCurveStableSwapNgRoute() {
     capturedAt: 1_000,
   });
   const points = [1_000, 100_000, 1_000_000, 10_000_000, 25_000_000].map((inputUsd) => {
-    const amountInRaw = BigInt(inputUsd) * 1_000_000n;
+    const amountInRaw = BigInt(inputUsd) * 10n ** BigInt(measuredTarget.tokenIn.decimals);
     const outputUsd = Math.min(inputUsd * 0.999, 10_325_100);
     const amountOutRaw = BigInt(Math.round(outputUsd * 1_000_000));
     return {

@@ -1,0 +1,16 @@
+{
+  "id": "yousd-yield-optimizer",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "YO documentation: non-rebasing yield-accruing vault tokens",
+        "url": "https://docs.yo.xyz/protocol/yovault-tokens.md"
+      },
+      {
+        "label": "YO documentation: exact yoUSD contract and underlying assets",
+        "url": "https://docs.yo.xyz/protocol/contract-addresses.md"
+      }
+    ]
+  }
+}

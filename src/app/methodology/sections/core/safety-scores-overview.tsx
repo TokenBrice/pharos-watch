@@ -56,12 +56,13 @@ export function SafetyScoresOverview() {
         substitute for an executable route.
       </p>
       <p>
-        Faster settlement needs a reviewed delay and source. A route with unproven same-notional capacity, cost or
-        settlement stays visible but receives no invented executable or backup credit. Genuine unresearched or
-        undisclosed whole-exit uncertainty remains bounded at 35 where the policy permits it, not measured zero
-        and not an Exit-wide ceiling. Proven pipeline or curation gaps are excluded rather than charged. The bounded
-        floor is applied after portfolio selection; evidence explanations do not switch on or off when the floor
-        binds. Measured exhaustion still needs complete admitted evidence.
+        Settlement ceilings require a dated current source for the completed endpoint, not a processing target,
+        average or cooldown. Exact-route reviews naming missing capacity, cost or settlement remain gaps even
+        beside captured numbers, unless newer admitted exact evidence proves that same rail and request.
+        Costs are request-specific; issuer zero and fee floors do not establish all-in ceilings.
+        Unresearched or undisclosed whole-exit uncertainty remains bounded at 35 where policy permits it, not
+        measured zero or an Exit-wide ceiling. Proven pipeline/curation gaps are excluded. Redemption fee
+        reviews do not close independent DEX portfolio coverage, and exhaustion still needs complete evidence.
       </p>
       <p>
         Equal-score route ties and every other canonical V10 array use locale-independent JavaScript code-unit order.
@@ -110,6 +111,14 @@ export function SafetyScoresOverview() {
         an adapter-owned reserve category to reviewed classification and dependency metadata across rebalancing or
         label changes. Explicit keys must match uniquely and otherwise fail closed; historical unkeyed captures retain
         a unique normalized-name compatibility join.
+      </p>
+      <p>
+        The live-reserve/redemption closure preserves original freshness mode, invalid-source diagnosis and
+        matching configuration identity in new accepted generations. A failed or future fetch cannot become
+        fresh evidence, and direct controller observations do not upgrade reserve composition. Required typed
+        route identity separates the observed rail from its producer key; independent-resource checks prevent
+        Reservoir&apos;s shared PSM cash from being counted three times. Pillar weights, stress requests,
+        portfolio thresholds and grade gates are unchanged.
       </p>
       <p>
         Classification research lasts 365 days; composition has its own clock. Named-firm attestations, audits and
@@ -178,6 +187,14 @@ export function SafetyScoresOverview() {
         strength still bound it, with missing factors at their best ordinary rungs. An empty issuer/obligor census
         scores concentration at bounded-unknown 35, not diversified 98. A missing obligor affects only concentration,
         never a reserve row&apos;s class quality.
+      </p>
+      <p>
+        Since methodology v10.10, a reserve liquidity or maturity factor is known when the existing evaluator&apos;s
+        selected current bound fully determines that exact exposure. Every supporting reference remains attached;
+        a raw unknown horizon or maximum stays null rather than becoming a fictional number. Partial bounds are
+        never summed, and a selected stronger partial bound cannot borrow a weaker full bound&apos;s coverage.
+        Stale, future, rejected, unmatched and nonbinding evidence keeps its gap. Quality ladders, weights,
+        applicability and scores do not change.
       </p>
       <p>
         Responsibility follows validated evidence about the exact missing question, not the nearest processing stage
@@ -273,6 +290,15 @@ export function SafetyScoresOverview() {
         moved, 0 grades flipped. No evidence was added.
       </p>
       <p>
+        Since methodology v10.10, open data points count distinct evidence obligations on each card, not the number
+        of scoring explanations. Multiple reasons or paths tied to the same exact source gap count once under the
+        same responsibility owner. A source-less causal view aliases it only when its single exact root is already
+        counted as a source on that card under that owner. All scoring witnesses, caps and not-rated explanations
+        remain visible. Unmatched inherited roots, synthetic facts and multi-root views remain separate; nothing is
+        deduplicated across cards. Critical counts retain any critical witness and reason lists retain every code.
+        This accounting correction adds no evidence and changes no score.
+      </p>
+      <p>
         Since methodology v9.461, two evaluator mapping defects are corrected without adding evidence. First,
         reviewed-native selected supply rows no longer enter the bridge-exposure completeness join:
         <code className="text-xs">evaluateV9SubthresholdUnresolvedBridgeJoins</code> excludes them from
@@ -357,11 +383,39 @@ export function SafetyScoresOverview() {
         risk, with root-claim, deployment, integration-only, or holder-exit scope. Active, mitigated, and resolved
         evidence therefore changes an existing component without creating a fourth pillar or charging an event beyond
         the affected liability.
+        Since methodology v10.10, independent researched-negative incident reviews can resolve only a matching
+        unknown control incident state. They require dated issuer/status evidence, exact-deployment event history
+        and an independent incident-tracker search, with source excerpts, an honest researched window and reviewer
+        identity. Both review and window end must remain current; date-only reviews wait until their UTC day ends.
+        Exact deployment/control-kind reviews never resolve global controls. Actual incidents retain precedence,
+        an empty registry or audit alone proves no absence, and unrelated authority or custody gaps stay open.
       </p>
       <p>
         Publication remains fail-closed: global or invalid-identity state holds the last accepted publication.
         Attributable asset-local producer failures are technical pipeline gaps, never fabricated issuer NR or
         measured danger. Current consumers use the accepted publication and status, not a fallback scorer.
+      </p>
+      <p>
+        Since methodology v10.12, exact orderbook execution is research-only with diagnostic certification.
+        The dormant Kraken request observer is retired: a public book does not prove same-run account access,
+        deposits, withdrawals, fees or maximum settlement. Ordinary exchange spot prices and generic CoinGecko
+        synthetic books remain separate evidence; reviewed Securitize and synchronous ERC-4626 routes keep
+        their existing admission. A neutral captured-input replay is required before release, not assumed.
+      </p>
+      <p>
+        The same release preserves source-native reserve quantities and original clocks: CAD/QCAD and GBP/tGBP
+        are not USD, and an ETH supply check does not refresh an entire reserve. Ratios without a reviewed
+        reserve-versus-circulation time allowance are withheld. BC3M now has a source-reviewed inclusive
+        86,400-second allowance from its own Chainlink heartbeat and Backed daily/10% reporting disclosure,
+        applied to every pinned circulation block. Its ratio requires complete same-run inventory-adjusted
+        on-chain circulation/API reconciliation and is withheld beyond that allowance. Original clocks remain;
+        this is not simultaneous reserve/liability attestation, production observation or scoring activation.
+        BIB01 remains quarantined with no policy change, and no TUSD allowance is borrowed.
+        Reserve snapshots no longer invent redemption
+        terms or capacity; actual River exits and Origin vault/redemption remain. Static/weak source evidence
+        does not activate independent scoring. MYRC retains its upstream released independent-assurance adapter
+        and original report clocks, with no further promotion in this release. Fresh admitted inputs can change
+        availability or scores and require their own attributed comparison.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}

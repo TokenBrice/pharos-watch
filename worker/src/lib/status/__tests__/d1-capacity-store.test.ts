@@ -26,17 +26,32 @@ describe("D1 capacity observation store", () => {
     await refreshD1CapacityAssessment(db, 4_001_000_000, NOW + 1);
     await refreshD1CapacityAssessment(db, 1, NOW);
     expect(sqlite.prepare("SELECT observed_at, database_size_bytes FROM d1_capacity_observations WHERE observed_hour = ?").get(Math.floor(NOW / 3600) * 3600)).toEqual({ observed_at: NOW + 1, database_size_bytes: 4_001_000_000 });
-    await expect(loadCachedD1CapacityAssessment(db, NOW + 1)).resolves.toMatchObject({ observedAt: NOW + 1, databaseSizeBytes: 4_001_000_000 });
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 1)).resolves.toMatchObject({ assessment: { observedAt: NOW + 1, databaseSizeBytes: 4_001_000_000 }, reason: null });
   });
 
   it("accepts the exact freshness boundary and rejects expired or invalid envelopes", async () => {
     const { db, sqlite } = fixtures.open();
     const assessment = await refreshD1CapacityAssessment(db, 6_000_000_000, NOW);
-    await expect(loadCachedD1CapacityAssessment(db, NOW + 60, 60)).resolves.toEqual(assessment);
-    await expect(loadCachedD1CapacityAssessment(db, NOW + 61, 60)).resolves.toBeNull();
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 60, 60)).resolves.toEqual({ assessment, reason: null });
+    await expect(loadCachedD1CapacityAssessment(db, NOW + 61, 60)).resolves.toEqual({ assessment: null, reason: "expired" });
     for (const value of ["{", JSON.stringify({ version: 2, assessment }), JSON.stringify({ version: 1, assessment: { ...assessment, databaseSizeBytes: "invalid" } })]) {
       sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, D1_CAPACITY_CACHE_KEY);
-      await expect(loadCachedD1CapacityAssessment(db, NOW, 60)).resolves.toBeNull();
+      await expect(loadCachedD1CapacityAssessment(db, NOW, 60)).resolves.toEqual({ assessment: null, reason: "malformed" });
     }
+  });
+
+  it("reports missing and future-clock evidence without treating either as healthy", async () => {
+    const { db, sqlite } = fixtures.open();
+    await expect(loadCachedD1CapacityAssessment(db, NOW)).resolves.toEqual({ assessment: null, reason: "missing" });
+    const assessment = await refreshD1CapacityAssessment(db, 9_000_000_000, NOW + 1);
+    await expect(loadCachedD1CapacityAssessment(db, NOW)).resolves.toEqual({ assessment: null, reason: "future-clock" });
+    sqlite.prepare("UPDATE cache SET updated_at = ? WHERE key = ?").run(NOW, D1_CAPACITY_CACHE_KEY);
+    await expect(loadCachedD1CapacityAssessment(db, NOW)).resolves.toEqual({ assessment: null, reason: "future-clock" });
+    sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(
+      JSON.stringify({ version: 1, assessment: { ...assessment, observedAt: NOW - 61 } }),
+      NOW,
+      D1_CAPACITY_CACHE_KEY,
+    );
+    await expect(loadCachedD1CapacityAssessment(db, NOW, 60)).resolves.toEqual({ assessment: null, reason: "expired" });
   });
 });

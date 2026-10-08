@@ -38,7 +38,7 @@ export async function persistActiveNativeEventQuotes(
     if (!isNativePegEvent(event)) continue;
     const quote = quotes.get(event.stablecoin_id);
     if (!quote || quote.stablecoinId !== event.stablecoin_id ||
-        normalizePegType(event.peg_type) !== `pegged${quote.pegCurrency}`) continue;
+        normalizePegType(event.peg_type) !== normalizePegType(`pegged${quote.pegCurrency}`)) continue;
     const parsed = PersistedNativePegQuoteSchema.safeParse({
       value: quote.price, observedAt: quote.updatedAt, source: "coingecko",
     });

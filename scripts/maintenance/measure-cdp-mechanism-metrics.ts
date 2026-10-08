@@ -23,7 +23,11 @@ Options:
   --block <number>  Measure at an explicit historical block instead of the finalized head
   --out-dir <path>  Evidence root (default: shared/data/safety-score-v9/mechanism-measurements)
   --replay <path>   Offline byte-replay an evidence artifact (repeatable; exclusive with live options)
-  -h, --help        Show this help`;
+  -h, --help        Show this help
+
+fxSAVE captures standalone local wrapper accounting: complete:false, CDP metrics
+N/A. Its reviewed asset-wide dossier already links separate parent fxUSD evidence.
+Do not merge the local and parent block clocks or infer new liquidation credit.`;
 
 interface CliOptions {
   assets: string[];

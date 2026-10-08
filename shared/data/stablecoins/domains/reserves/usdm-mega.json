@@ -27,12 +27,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-07",
+    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_5)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "MegaUSD transparency backing-and-supply API (disclosure 2026-09-29T14:53:11Z; accessed 2026-09-29)",
+        "label": "MegaUSD transparency backing-and-supply API (source lastUpdatedAt 2026-10-07T14:38:35.000Z)",
         "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
       },
       {
@@ -44,12 +44,12 @@
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
       }
     ],
-    "rationale": "The issuer transparency API disclosed USDC $17,439,383.81 and USDtb $20,915.84 against $17,460,299.65 total backing at 2026-09-29T14:53:11Z, or 99.8803% and 0.1197%. The authored 99.9/0.1 rows match the megausd-custody adapter's captured rounding and stable source identities; admitted live measurements own subsequent weights. USDtb's underlying BUIDL and liquid assets are not duplicated as direct MegaUSD reserves. MegaETH's launch announcement describes Ethena's USDtb rails historically, without proving that they remain today's operative mint path.",
-    "compositionBasis": "Dated issuer backing-and-supply API amounts, normalized by the megausd-custody live adapter on 2026-09-29",
+    "rationale": "The issuer API's 2026-10-07T14:38:35.000Z snapshot lists five custody addresses per asset. Summing its positive external backing rows gives USDC 16,904,991.110392 and USDtb 20,915.8416401, totaling 16,925,906.9520321; the disclosed allocation is 99.876427% USDC and 0.123573% USDtb. The authored 99.9/0.1 rows retain the megausd-custody adapter's one-decimal rounding and exact source identities. All USDm self-token backing rows are zero and are excluded. The same response reports supply 31,371.7707062666; that difference from aggregate backing is not independently reconciled and is not converted into a liability, collateralization or excess-reserve claim. This is a dated issuer portfolio observation, not an independent examination. USDtb's underlying BUIDL is not duplicated as direct MegaUSD backing.",
+    "compositionBasis": "Issuer backingAssets inventory at lastUpdatedAt 2026-10-07T14:38:35.000Z; sums of USDC and USDtb across the five disclosed custody addresses, normalized by their combined external backing",
     "scope": "full-composition",
-    "knownUnknownExposure": "Direct reserve identities and dated allocation are disclosed. Custodian wallet labels do not independently establish account control, legal segregation, insolvency treatment, or reuse terms; allocation changes are remeasured by the live adapter.",
+    "knownUnknownExposure": "The issuer identifies the complete disclosed external backing categories and allocation. The separate reported supply is not independently reconciled to reserve balances. Wallet labels do not prove custody control, legal segregation, insolvency treatment, reuse terms, or full-position stressed realization; both liquidity horizons remain unknown.",
     "knownUnknownExposurePct": 0,
-    "compositionAsOf": "2026-09-29"
+    "compositionAsOf": "2026-10-07"
   },
   "custodyProfile": {
     "providers": [

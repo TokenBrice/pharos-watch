@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { EvidenceFooter } from "../evidence-footer";
 
 const SOURCES = [
@@ -44,6 +44,24 @@ describe("EvidenceFooter", () => {
 
     const summary = container.querySelector("details > summary")!;
     expect(accessibleText(summary)).toMatch(/\(2\)/);
+  });
+
+  it("lists each source as a new-tab link named by its label, with the note after it", () => {
+    render(
+      <EvidenceFooter
+        sources={[...SOURCES, { label: "Capacity report", url: "https://example.com/capacity", note: "Supports capacity" }]}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "Sources", hidden: true });
+    const links = within(list).getAllByRole("link", { hidden: true });
+    expect(links.map((link) => link.textContent)).toEqual(["Issuer attestation", "Custody agreement", "Capacity report"]);
+    for (const link of links) {
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+    expect(links[2]!.getAttribute("href")).toBe("https://example.com/capacity");
+    expect(links[2]!.closest("li")?.textContent).toBe("Capacity reportSupports capacity");
   });
 
   it("keeps the review date on the always-visible footer line, outside the fold", () => {

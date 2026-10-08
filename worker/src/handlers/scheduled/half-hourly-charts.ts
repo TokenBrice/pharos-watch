@@ -161,6 +161,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
                 reportProgress,
                 runtime.slotStartedAt,
                 {
+                  deadline: runtime.deadline,
                   stageRecovery: {
                     graphApiKey: runtime.env.GRAPH_API_KEY ?? null,
                     coingeckoApiKey: runtime.coingeckoApiKey,
@@ -174,6 +175,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
                 reportProgress,
                 runtime.slotStartedAt,
                 {
+                  deadline: runtime.deadline,
                   publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
                   stageReadyDeadlineMs:
                     (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
@@ -278,6 +280,7 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           signal,
           generationId,
           runtime.chainRpcs,
+          runtime.env.CF_VERSION_METADATA,
         );
         if (recovery === null) {
           return result;

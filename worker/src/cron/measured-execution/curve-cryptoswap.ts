@@ -177,7 +177,7 @@ function familyVerifiedPolicy(
 }
 
 /** Fixed reviewed cohort: eight pinned plus eleven family-anchored active Ethereum TwoCrypto pools. */
-export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[] = [
+export const CURVE_CRYPTOSWAP_REVIEWED_COHORT: readonly CurveCryptoSwapPoolPolicy[] = [
   activeEthereumTwocryptoPolicy(
     "0x862cb4e988fb66e72f128d1183829f8c05b6c6a0",
     "0xd19e3a232367411c825df98165c95898c08e181fe2e0f9211445f48eb4c0dc62",
@@ -254,7 +254,7 @@ export interface CurveCryptoSwapRuntimeEvidence {
 }
 
 export type CurveCryptoSwapEligibilityFailure =
-  | "pool-not-in-shadow-cohort"
+  | "pool-not-in-reviewed-cohort"
   | "execution-endpoint-mismatch"
   | "api-broken-or-unknown"
   | "ng-kill-method-not-proven-absent"
@@ -269,12 +269,12 @@ export type CurveCryptoSwapEligibilityFailure =
 
 export type CurveCryptoSwapEligibility = { ok: true } | { ok: false; reason: CurveCryptoSwapEligibilityFailure };
 
-export function getCurveCryptoSwapShadowPolicy(chain: string, poolAddress: string): CurveCryptoSwapPoolPolicy | null {
+export function getCurveCryptoSwapReviewedPolicy(chain: string, poolAddress: string): CurveCryptoSwapPoolPolicy | null {
   const address = canonicalEvmAddress(poolAddress);
   const normalizedChain = chain.trim().toLowerCase();
   if (address == null) return null;
   return (
-    CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.chain === normalizedChain && entry.poolAddress === address) ??
+    CURVE_CRYPTOSWAP_REVIEWED_COHORT.find((entry) => entry.chain === normalizedChain && entry.poolAddress === address) ??
     null
   );
 }
@@ -295,8 +295,8 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   evidence?: CurveCryptoSwapRuntimeEvidence;
 }): CurveCryptoSwapEligibility {
   const endpointAddress = canonicalEvmAddress(input.endpointAddress);
-  const policy = input.policy ?? getCurveCryptoSwapShadowPolicy(input.chain, input.endpointAddress);
-  if (policy == null) return { ok: false, reason: "pool-not-in-shadow-cohort" };
+  const policy = input.policy ?? getCurveCryptoSwapReviewedPolicy(input.chain, input.endpointAddress);
+  if (policy == null) return { ok: false, reason: "pool-not-in-reviewed-cohort" };
   if (endpointAddress !== policy.poolAddress || input.chain.trim().toLowerCase() !== policy.chain) {
     return { ok: false, reason: "execution-endpoint-mismatch" };
   }
@@ -614,7 +614,7 @@ function prepareRequest(
   eligibility: CurveCryptoSwapEligibility;
 } {
   const endpointAddress = canonicalEvmAddress(request.endpointAddress);
-  const policy = endpointAddress == null ? null : getCurveCryptoSwapShadowPolicy(request.target.chain, endpointAddress);
+  const policy = endpointAddress == null ? null : getCurveCryptoSwapReviewedPolicy(request.target.chain, endpointAddress);
   const eligibility = evaluateCurveCryptoSwapEligibility({
     chain: request.target.chain,
     endpointAddress: request.endpointAddress,
@@ -769,7 +769,7 @@ export function validateCurveCryptoSwapProfileProof(profile: DexMeasuredExecutio
   const issues = new Set<string>();
   if (profile.adapterProfileId !== CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) issues.add("wrong-adapter-profile");
   const endpointAddress = canonicalEvmAddress(profile.executionEndpoint.address);
-  const policy = endpointAddress == null ? null : getCurveCryptoSwapShadowPolicy(profile.chain, endpointAddress);
+  const policy = endpointAddress == null ? null : getCurveCryptoSwapReviewedPolicy(profile.chain, endpointAddress);
   if (policy == null) issues.add("execution-pool-not-in-cohort");
   // A pinned policy binds the exact pool bytecode. A family-anchored policy has
   // no pre-pinned pool hash (Curve NG bakes per-pool immutables into the

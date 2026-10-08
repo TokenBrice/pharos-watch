@@ -209,7 +209,7 @@ describe("YieldHealthCard", () => {
     expect(screen.getByText("Coverage audit operator queue")).toBeTruthy();
     expect(screen.getAllByText("coin-a").length).toBeGreaterThan(0);
     expect(screen.getByText("sUSDe on ethena")).toBeTruthy();
-    expect(screen.getByText("Actions: accept, dismiss, intentional-gap, watch")).toBeTruthy();
+    expect(screen.getByText("Review vocabulary: accept, dismiss, intentional-gap, watch (display-only)")).toBeTruthy();
     expect(screen.getByText(/^Venue tier · /)).toBeTruthy();
     expect(screen.getByText(/^30% \(best /)).toBeTruthy();
   });
@@ -442,14 +442,18 @@ describe("YieldHealthCard", () => {
             ...base.coverageAudit,
             allowedActions: ["accept", "watch"],
             queueDisplayOnly: true,
-            queueTotals: { byKind: { "manifest-missing": 6, "native-exact-pool": 20 }, suppressedItemCount: 9, truncated: true },
+            queueTotals: { byKind: { "manifest-missing": 54, "native-exact-pool": 92 }, byKindScope: "full-visible", totalItemCount: 146, publishedItemCount: 40, truncatedItemCount: 106, suppressedItemCount: 9, truncated: true },
           },
         })}
       />,
     );
 
-    expect(screen.getByText("Actions: accept, watch (display-only)")).toBeTruthy();
-    expect(screen.getByText(/manifest-missing 6 · native-exact-pool 20 · 9 suppressed · producer-truncated/)).toBeTruthy();
+    expect(screen.getByText("Review vocabulary: accept, watch (display-only)")).toBeTruthy();
+    expect(screen.getByText(/146 total visible · 40 producer-published · 106 producer-truncated/)).toBeTruthy();
+    expect(screen.getByText(/By-kind full visible totals: manifest-missing 54 · native-exact-pool 92/)).toBeTruthy();
+    expect(screen.getByText(/Deployment place/)).toBeTruthy();
+    expect(screen.getByText(/Venue protocol/)).toBeTruthy();
+    expect(screen.getByText(/Venue chain/)).toBeTruthy();
     expect(screen.getByText(/9 suppressed · truncated/)).toBeTruthy();
   });
 });

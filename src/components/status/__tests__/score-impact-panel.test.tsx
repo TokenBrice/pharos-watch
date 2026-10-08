@@ -12,8 +12,6 @@ describe("ScoreImpactPanel", () => {
     const { container } = render(
       <ScoreImpactPanel
         reserveComposition={makeReserveComposition({ status: "unavailable" })}
-        reserveDrift={[]}
-        classificationWarnings={[]}
       />,
     );
     expect(screen.getByText("unavailable")).toBeTruthy();
@@ -21,7 +19,7 @@ describe("ScoreImpactPanel", () => {
     expect(container.textContent).not.toContain("0.0%");
     expect(screen.getAllByText("Unknown")).toHaveLength(4);
   });
-  it("renders conservative reserve input and affected drift rows", () => {
+  it("renders conservative reserve input without duplicating the drift watchlist", () => {
     const data = makeHealthyStatusResponse();
     if (data.reserveComposition.status === "unavailable") throw new Error("Expected an observed reserve fixture");
     const reserveComposition = {
@@ -37,31 +35,13 @@ describe("ScoreImpactPanel", () => {
     render(
       <ScoreImpactPanel
         reserveComposition={reserveComposition}
-        reserveDrift={[
-          {
-            coinId: "unknown-coin",
-            liveCollateralScore: 52,
-            curatedCollateralScore: 78,
-            delta: 26,
-          },
-        ]}
-        classificationWarnings={[
-          {
-            coinId: "unknown-coin",
-            governance: "decentralized",
-            centralizedCustodyPct: 61,
-            threshold: 50,
-          },
-        ]}
       />,
     );
 
     expect(screen.getByText("Score impact monitor")).toBeTruthy();
     expect(screen.getByText("conservative")).toBeTruthy();
-    expect(screen.getByText("unknown-coin")).toBeTruthy();
-    expect(screen.getByText("52.0")).toBeTruthy();
-    expect(screen.getByText("78.0")).toBeTruthy();
-    expect(screen.getByText("26.0")).toBeTruthy();
+    expect(screen.queryByText("Drift rows")).toBeNull();
+    expect(screen.queryByText("Classification warnings")).toBeNull();
     expect(screen.getByText(/Safety Scores may look lower/)).toBeTruthy();
   });
 
@@ -79,8 +59,6 @@ describe("ScoreImpactPanel", () => {
           freshCoverageRatio: 0.7374,
           authoritativeFreshCoverageRatio: 0.7374,
         }}
-        reserveDrift={[]}
-        classificationWarnings={[]}
       />,
     );
 
@@ -88,18 +66,4 @@ describe("ScoreImpactPanel", () => {
     expect(screen.queryByText("conservative")).toBeNull();
   });
 
-  it("renders absent optional payloads as Unknown instead of zero", () => {
-    const data = makeHealthyStatusResponse();
-
-    render(
-      <ScoreImpactPanel
-        reserveComposition={data.reserveComposition}
-        reserveDrift={undefined}
-        classificationWarnings={undefined}
-      />,
-    );
-
-    expect(screen.getAllByText("Unknown")).toHaveLength(2);
-    expect(screen.getByText("Reserve drift payload is unavailable; no zero count is inferred.")).toBeTruthy();
-  });
 });

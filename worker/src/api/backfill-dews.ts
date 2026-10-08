@@ -16,6 +16,8 @@ import type {
   SourceFailure,
 } from "../lib/dews/contracts";
 import { computeAndStoreDEWS } from "../lib/dews/service";
+import { getDexLiquidityTrendTolerances, selectTrendBaseline } from "../lib/dex-liquidity-response";
+import type { DexHistoryRow } from "../lib/dex-liquidity-response";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
 interface DepegEventRow {
@@ -331,6 +333,8 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
   const eventDays = events.results.map((event) => bucketUnixSecondsToUtcDay(event.started_at));
   const historyStartDay = Math.min(...eventDays) - 14 * DAY_SECONDS;
   const historyEndDay = Math.max(...eventDays) + 2 * DAY_SECONDS;
+  const liquidityTolerance = getDexLiquidityTrendTolerances().week;
+  const liquidityHistoryStart = historyStartDay - liquidityTolerance;
   const supplyRows = await db
     .prepare(
       `SELECT stablecoin_id, snapshot_date, circulating_usd
@@ -349,26 +353,27 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
   const liqRows = await db
     .prepare(
-      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd, coverage_confidence
        FROM dex_liquidity_history
        WHERE snapshot_date BETWEEN ? AND ?
        ORDER BY snapshot_date ASC`,
     )
-    .bind(historyStartDay, historyEndDay)
+    .bind(liquidityHistoryStart, historyEndDay)
     .all<{
       stablecoin_id: string;
       snapshot_date: number;
       liquidity_score: number | null;
       total_tvl_usd: number | null;
+      coverage_confidence: number | null;
     }>();
 
-  const liqIndex = new Map<string, { snapshotDate: number; score: number | null; tvl: number | null }[]>();
+  const liqIndex = new Map<string, (DexHistoryRow & { liquidity_score: number | null })[]>();
   for (const row of liqRows.results) {
     if (!liqIndex.has(row.stablecoin_id)) liqIndex.set(row.stablecoin_id, []);
     liqIndex.get(row.stablecoin_id)!.push({
-      snapshotDate: row.snapshot_date,
-      score: row.liquidity_score,
-      tvl: row.total_tvl_usd,
+      ...row,
+      total_tvl_usd: row.total_tvl_usd ?? 0,
+      coverage_class: null,
     });
   }
 
@@ -394,10 +399,8 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
       if (current <= 0) continue;
 
-      const liqNow = coinLiq.find((liq) => Math.abs(liq.snapshotDate - dayMidnight) < 2 * DAY_SECONDS);
-      const liq7d = coinLiq.find(
-        (liq) => Math.abs(liq.snapshotDate - (dayMidnight - 7 * DAY_SECONDS)) < 2 * DAY_SECONDS,
-      );
+      const liqNow = selectTrendBaseline(coinLiq, dayMidnight, liquidityTolerance);
+      const liq7d = selectTrendBaseline(coinLiq, dayMidnight - 7 * DAY_SECONDS, liquidityTolerance);
 
       const input: DEWSInput = {
         stablecoinId: event.stablecoin_id,
@@ -409,10 +412,10 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         weightedBalanceRatio: null,
         avgPoolStress: null,
         topPools: null,
-        liquidityScore: liqNow?.score ?? null,
-        liquidityScore7dAgo: liq7d?.score ?? null,
-        tvlCurrent: liqNow?.tvl ?? null,
-        tvl7dAgo: liq7d?.tvl ?? null,
+        liquidityScore: liqNow?.liquidity_score ?? null,
+        liquidityScore7dAgo: liq7d?.liquidity_score ?? null,
+        tvlCurrent: liqNow?.total_tvl_usd ?? null,
+        tvl7dAgo: liq7d?.total_tvl_usd ?? null,
         priceConfidence: null,
         prevPriceConfidence: null,
         price: null,

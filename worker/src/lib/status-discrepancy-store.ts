@@ -18,8 +18,8 @@ export async function updateDiscrepancyObservation(
   hasProbeFailure = false,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{
-  consecutiveDivergent: number;
-  consecutiveProbeFailures: number;
+  consecutiveDivergent: number | null;
+  consecutiveProbeFailures: number | null;
   persistenceSucceeded: boolean;
 }> {
   let current: StatusDiscrepancyStateRow | null = null;
@@ -38,6 +38,11 @@ export async function updateDiscrepancyObservation(
       .first<StatusDiscrepancyStateRow>();
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_discrepancy_read_failed", "load-status-discrepancy", error);
+    return {
+      consecutiveDivergent: null,
+      consecutiveProbeFailures: null,
+      persistenceSucceeded: false,
+    };
   }
 
   const nextConsecutive = hasDivergence ? (current?.consecutive_divergent ?? 0) + 1 : 0;
@@ -89,7 +94,7 @@ export async function updateDiscrepancyObservation(
   }
 }
 
-export async function getDiscrepancyStreak(db: D1Database, onIssue?: StatusPersistenceIssueReporter): Promise<number> {
+export async function getDiscrepancyStreak(db: D1Database, onIssue?: StatusPersistenceIssueReporter): Promise<number | null> {
   try {
     const row = await db
       .prepare("SELECT consecutive_divergent FROM status_discrepancy_state WHERE scope = ?")
@@ -98,6 +103,6 @@ export async function getDiscrepancyStreak(db: D1Database, onIssue?: StatusPersi
     return row?.consecutive_divergent ?? 0;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_discrepancy_streak_failed", "read-discrepancy-streak", error);
-    return 0;
+    return null;
   }
 }

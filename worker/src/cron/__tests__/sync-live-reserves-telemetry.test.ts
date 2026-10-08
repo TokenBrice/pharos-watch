@@ -2,8 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { ResourcePressureSchema, type ResourcePressure } from "@shared/types/status/cron";
+import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { AdapterContext } from "../reserve-adapters/index";
-import { getCachedRequest } from "../reserve-adapters/request";
+import {
+  createRequestBodyObserver,
+  getCachedRequest,
+  REQUEST_CACHE_MAX_ENTRY_BYTES,
+  REQUEST_CACHE_MAX_TOTAL_BYTES,
+} from "../reserve-adapters/request";
 import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
 import {
   ADAPTER_LATENCY_MAX_BYTES,
@@ -27,8 +34,11 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal
   };
 });
 
-function metadataOf(result: { metadata?: string }): { adapterLatency: AdapterLatencySummary } {
-  return JSON.parse(result.metadata ?? "{}") as { adapterLatency: AdapterLatencySummary };
+function metadataOf(result: { metadata?: string }): {
+  adapterLatency: AdapterLatencySummary;
+  resourcePressure: ResourcePressure;
+} {
+  return JSON.parse(result.metadata ?? "{}");
 }
 
 describe("syncLiveReserves adapter latency telemetry", () => {
@@ -56,18 +66,23 @@ describe("syncLiveReserves adapter latency telemetry", () => {
           exercised = true;
           const requests = [];
           for (let index = 0; index < 20; index++) {
-            const promise = getCachedRequest(`payload-${index}`, async () => new Uint8Array(1024 * 1024), ctx);
+            const promise = getCachedRequest(`payload-${index}`, async () => ({
+              value: new Uint8Array(1024 * 1024), cacheBytes: 1024 * 1024, basis: "declared-estimate",
+            }), ctx);
             requests.push(promise);
             await promise;
           }
-          const oversized = getCachedRequest("oversized", async () => new Uint8Array(5 * 1024 * 1024), ctx);
+          const oversized = getCachedRequest("oversized", async () => ({
+            value: new Uint8Array(5 * 1024 * 1024), cacheBytes: 5 * 1024 * 1024, basis: "declared-estimate",
+          }), ctx);
           await oversized;
           expect(ctx!.requestCache!.size).toBe(16);
           expect(ctx!.requestCache!.has("oversized")).toBe(false);
           for (const promise of [...requests.slice(0, 4), oversized]) expect(stronglyOwns(ctx!.requestCache, promise)).toBe(false);
           await getCachedRequest("payload-19", async () => { throw new Error("cached request must not refetch"); }, ctx);
-          ctx!.requestCache!.delete("payload-19");
-          ctx!.requestCache!.set("payload-19", Promise.resolve(true));
+          await getCachedRequest("replacement", async () => ({
+            value: true, cacheBytes: 128, basis: "declared-estimate",
+          }), ctx);
         }
         return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }], metadata: { freshnessMode: "not-applicable" as const } };
       },
@@ -155,6 +170,16 @@ describe("syncLiveReserves adapter latency telemetry", () => {
 
   it("persists attempt, limiter-call, wave, cache-hit, and percentile attribution", async () => {
     let adapterFetches = 0;
+    let setupReported = false;
+    const onRequestCache = vi.fn();
+    const progress: Parameters<CronProgressReporter>[0][] = [];
+    const reportProgress: CronProgressReporter = async (update) => {
+      progress.push(update);
+      if (update.stage === "setup") {
+        await Promise.resolve();
+        setupReported = true;
+      }
+    };
     getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
       const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
       return {
@@ -169,16 +194,22 @@ describe("syncLiveReserves adapter latency telemetry", () => {
           _signal: AbortSignal,
           ctx?: AdapterContext,
         ) => {
+          expect(setupReported).toBe(true);
           adapterFetches += 1;
           const requestKey = `telemetry-request-${adapterFetches}`;
           await getCachedRequest(requestKey, async () => {
+            createRequestBodyObserver(ctx, 1024).onBodyRead({
+              intakeBytes: 64, declaredBytes: 64, outcome: "accepted",
+            });
             await Promise.all([
               ctx!.ioLimiter!.run("first", async () => undefined),
               ctx!.ioLimiter!.run("second", async () => undefined),
             ]);
-            return true;
+            return { value: true, cacheBytes: 128, basis: "declared-estimate" };
           }, ctx);
-          await getCachedRequest(requestKey, async () => false, ctx);
+          await getCachedRequest(requestKey, async () => ({
+            value: false, cacheBytes: 128, basis: "declared-estimate",
+          }), ctx);
           return {
             slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
             metadata: { freshnessMode: "not-applicable" as const },
@@ -191,9 +222,10 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     const result = await syncLiveReserves(
       mockLiveReserveD1(),
       new AbortController().signal,
-      {},
+      { onRequestCache },
+      reportProgress,
     );
-    const { adapterLatency } = metadataOf(result);
+    const { adapterLatency, resourcePressure } = metadataOf(result);
     const configuredCoins = WORKER_ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
     const cacheHitAttempts = adapterLatency.groups
       .filter((group) => group.cacheHit)
@@ -211,6 +243,32 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     });
     expect(adapterLatency.requestCacheMisses).toBe(adapterFetches);
     expect(adapterLatency.requestCacheHits).toBe(adapterFetches);
+    expect(onRequestCache).toHaveBeenCalledTimes(adapterFetches * 2);
+    expect(onRequestCache.mock.calls.filter(([event]) => event.hit)).toHaveLength(adapterFetches);
+    expect(onRequestCache.mock.calls.filter(([event]) => !event.hit)).toHaveLength(adapterFetches);
+    expect(progress.map((update) => update.stage)).toEqual(expect.arrayContaining(["setup", "syncing", "finalizing"]));
+    for (const update of progress) {
+      const pressure = ResourcePressureSchema.parse(update.metadata?.resourcePressure);
+      expect(pressure.phase).toBe(update.stage);
+      expect(update.metadata).toHaveProperty("adapterTelemetryProgress");
+      expect(update.metadata).toHaveProperty("synced");
+    }
+    expect(progress[0].metadata?.resourcePressure).toMatchObject({
+      phase: "setup",
+      intakeBytes: null,
+      cacheBytes: 0,
+    });
+    expect(ResourcePressureSchema.parse(resourcePressure)).toMatchObject({
+      phase: "terminal",
+      bodyCapBytes: 1024,
+      cacheCapBytes: REQUEST_CACHE_MAX_TOTAL_BYTES,
+      cacheEntryCapBytes: REQUEST_CACHE_MAX_ENTRY_BYTES,
+      intakeBytes: adapterFetches * 64,
+      cacheBytes: adapterFetches * 128,
+      rejectedBodies: 0,
+      cacheBasis: "declared-estimate",
+      heapUsedBytes: null,
+    });
     expect(cacheHitAttempts).toBe(configuredCoins - adapterFetches);
     expect(adapterLatency.groups.every((group) => (
       group.elapsedMs.count === group.attemptCount
@@ -269,8 +327,9 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     });
   });
 
-  it("observes preloaded, reordered, rejected, and cleared request-cache promises", async () => {
+  it("observes helper cache hits, pending deduplication, rejection retries, and external observers", async () => {
     const backing = new Map<string, Promise<unknown>>([["preloaded", Promise.resolve(true)]]);
+    const onRequestCache = vi.fn();
     let exerciseCache = true;
     getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
       const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
@@ -288,22 +347,25 @@ describe("syncLiveReserves adapter latency telemetry", () => {
         ) => {
           if (exerciseCache) {
             exerciseCache = false;
+            expect(ctx!.requestCache).toBe(backing);
+            await getCachedRequest("preloaded", async () => { throw new Error("preloaded request must not refetch"); }, ctx);
             let resolveSuccess!: (value: true) => void;
             const success = new Promise<true>((resolve) => { resolveSuccess = resolve; });
-            ctx!.requestCache!.set("success", success);
-            ctx!.requestCache!.delete("success");
-            ctx!.requestCache!.set("success", success);
-            ctx!.requestCache!.delete("success");
-            ctx!.requestCache!.set("success", success);
+            const pending = getCachedRequest("success", async () => ({
+              value: await success, cacheBytes: 128, basis: "declared-estimate",
+            }), ctx);
+            const duplicate = getCachedRequest("success", async () => { throw new Error("pending request must not refetch"); }, ctx);
+            expect(duplicate).toBe(pending);
             resolveSuccess(true);
-            await success;
+            await pending;
+            await getCachedRequest("success", async () => { throw new Error("retained request must not refetch"); }, ctx);
 
-            const failure = Promise.reject(new Error("expected request failure"));
-            ctx!.requestCache!.set("failure", failure);
-            ctx!.requestCache!.delete("failure");
-            ctx!.requestCache!.set("failure", failure);
-            await failure.catch(() => undefined);
-            ctx!.requestCache!.clear();
+            await expect(getCachedRequest("failure", async () => { throw new Error("expected request failure"); }, ctx))
+              .rejects.toThrow("expected request failure");
+            await getCachedRequest("failure", async () => ({
+              value: true, cacheBytes: 128, basis: "declared-estimate",
+            }), ctx);
+            backing.clear();
           }
           return {
             slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
@@ -317,13 +379,24 @@ describe("syncLiveReserves adapter latency telemetry", () => {
     const result = await syncLiveReserves(
       mockLiveReserveD1(),
       new AbortController().signal,
-      { requestCache: backing },
+      { requestCache: backing, onRequestCache },
     );
     const { adapterLatency } = metadataOf(result);
 
     expect(backing.size).toBe(0);
-    expect(adapterLatency.requestCacheMisses).toBe(2);
-    expect(adapterLatency.requestCacheHits).toBe(2);
+    expect(adapterLatency.requestCacheMisses).toBe(3);
+    expect(adapterLatency.requestCacheHits).toBe(3);
+    expect(onRequestCache.mock.calls.map(([event]) => ({ key: event.key, hit: event.hit }))).toEqual([
+      { key: "preloaded", hit: true },
+      { key: "success", hit: false },
+      { key: "success", hit: true },
+      { key: "success", hit: true },
+      { key: "failure", hit: false },
+      { key: "failure", hit: false },
+    ]);
+    expect(metadataOf(result).resourcePressure).toMatchObject({
+      phase: "terminal", cacheBytes: 0,
+    });
   });
 
   it("persists a valid zero-attempt summary when the whole queue is deferred", async () => {

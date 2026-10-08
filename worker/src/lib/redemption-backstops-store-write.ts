@@ -1,4 +1,5 @@
 import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
+import { RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -67,8 +68,10 @@ ${SNAPSHOT_RUN_ROW_UPDATE_ASSIGNMENTS}`;
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
     RedemptionBackstopDetailsSchema.parse({
+      ...(record.reserveInput ? { reserveInput: record.reserveInput } : {}),
       resolutionState: record.resolutionState,
       capacityConfidence: record.capacityConfidence,
+      ...(record.capacityRejectionReason ? { capacityRejectionReason: record.capacityRejectionReason } : {}),
       ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
       capacitySemantics: record.capacitySemantics,
       ...(record.capacityProfile ? { capacityProfile: record.capacityProfile } : {}),
@@ -579,6 +582,9 @@ export async function upsertRedemptionBackstopSnapshots(
     throw new Error("Duplicate stablecoin IDs in redemption backstop snapshot records");
   }
 
+  if (options?.metadata?.stablecoinsInput !== undefined) {
+    RedemptionReserveRunMetadataSchema.shape.stablecoinsInput.parse(options.metadata.stablecoinsInput);
+  }
   const runId = options?.runId ?? createRedemptionBackstopRunId();
   const startedAt = Math.floor(Date.now() / 1000);
   const snapshotDate = bucketUnixMillisecondsToUtcDay(Date.now()) / 1000;

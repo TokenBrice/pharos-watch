@@ -10,6 +10,10 @@ import type { LlamaPool } from "../dex-liquidity/types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
 import * as realPoolShaping from "../../lib/dex-api-pool-shaping";
+import { createSlotDeadline } from "../../lib/cron-timeouts";
+import * as v2Enrichment from "../dex-liquidity/constant-product-v2";
+import * as quoterEnrichment from "../dex-liquidity/enrich-quoter-v2-targets";
+import * as v4Enrichment from "../dex-liquidity/uniswap-v4-identity";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -74,13 +78,6 @@ const phaseFixtures = vi.hoisted(() => {
         },
       },
       stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null },
-      orderbook: {
-        checkedSymbols: 2,
-        venueCount: 2,
-        observations: 3,
-        maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
-        maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
-      },
       challenger: { publishedStablecoins: 0, skippedStablecoins: 0 },
       ...overrides,
     };
@@ -252,9 +249,6 @@ vi.mock("../../lib/dex-api-common", async () => {
     extractPriceObservations: vi.fn(() => new Map()),
   };
 });
-vi.mock("../../lib/cex-orderbooks", () => ({
-  fetchMajorStablecoinOrderbookDepthSummary: vi.fn(async () => phaseFixtures.current.orderbook),
-}));
 
 import {
   DEX_LIQUIDITY_STAGE_LEAD_SEC,
@@ -295,7 +289,6 @@ import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persis
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
-import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 import * as registryPersistence from "../dex-discovery/persistence";
 import { readDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 
@@ -623,7 +616,8 @@ describe("dex liquidity scoring stage cycle", () => {
     },
   );
 
-  it("returns ok when required source families succeed", async () => {
+  it("publishes successful source inputs without direct CEX depth traffic or metadata", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(result.status).toBe("ok");
@@ -634,10 +628,6 @@ describe("dex liquidity scoring stage cycle", () => {
       sourceCoverage?: {
         nearCoverageGuard?: boolean;
         weakCoverageCoins?: number;
-        directCexOrderbookDepth?: {
-          observations: number;
-          maxDepthDown2PctUsdBySymbol: Record<string, number>;
-        } | null;
         qualityDriftSeverity?: string;
         qualityDriftFlags?: string[];
         coinsWithoutMeasuredBalances?: number;
@@ -649,10 +639,16 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
     expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
-    expect(metadata.sourceCoverage?.directCexOrderbookDepth).toMatchObject({
-      observations: 3,
-      maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
-    });
+    expect(metadata.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(persistScores).toHaveBeenCalledWith(
+      db,
+      expect.any(Map),
+      phaseFixtures.current.scores.scores,
+      phaseFixtures.current.scores.globalAgg,
+      expect.any(Number),
+      undefined,
+    );
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
@@ -756,52 +752,6 @@ describe("dex liquidity scoring stage cycle", () => {
     });
   });
 
-  it("fetches bounded market telemetry before pool graphs accumulate", async () => {
-    const knownPoolIndex = {
-      exactKeys: new Set(["ethereum:0xpool"]),
-      exactStablecoinIdsByKey: new Map([["ethereum:0xpool", new Set(["usdt-tether"])]]),
-      derivedKeyCounts: new Map([["derived", 1]]),
-      derivedToExactKeys: new Map([["derived", new Set(["ethereum:0xpool"])]]),
-      wildcardKeyCounts: new Map([["wildcard", 1]]),
-      wildcardToExactKeys: new Map([["wildcard", new Set(["ethereum:0xpool"])]]),
-      concreteFeeVariantKeys: new Map([["variant", new Set(["derived"])]]),
-    };
-    const stagedPriceObservations = new Map([
-      ["usdt-tether", [{ price: 1, tvl: 1_000_000, chain: "Ethereum", protocol: "curve", sourceFamily: "cg_onchain" }]],
-    ]);
-    vi.mocked(buildKnownPoolAddresses).mockReturnValueOnce(knownPoolIndex);
-    vi.mocked(mergeStagedPools).mockResolvedValueOnce({
-      mergedCount: 0,
-      skippedCount: 0,
-      skippedByExactIdentityCount: 0,
-      skippedByUniqueDerivedIdentityCount: 0,
-      skippedByOptionalWildcardIdentityCount: 0,
-      skippedByAuthoritativeProtocolCount: 0,
-      skipDimensions: [],
-      priceObservations: stagedPriceObservations,
-      registryRowsRead: 0,
-      registryMultiSourcePools: 0,
-      registryFamilyBySource: {},
-      deadPoolUnindexedChainSkips: {},
-    });
-    let callsAtTelemetryEntry: number[] | undefined;
-    vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
-      callsAtTelemetryEntry = [
-        fetchDataSources, buildKnownPoolAddresses, processPoolMetrics, mergeStagedPools,
-      ].map((dependency) => vi.mocked(dependency).mock.calls.length);
-      return {
-        checkedSymbols: 0,
-        venueCount: 0,
-        observations: 0,
-        maxDepthDown2PctUsdBySymbol: {},
-        maxDepthUp2PctUsdBySymbol: {},
-      };
-    });
-
-    await runDexLiquidityScoringCycle(db, "graph-key");
-    expect(fetchMajorStablecoinOrderbookDepthSummary).toHaveBeenCalledOnce();
-    expect(callsAtTelemetryEntry).toEqual([0, 0, 0, 0]);
-  });
 
   it("reports high-SLO stage metadata during source and scoring phases", async () => {
     const progressUpdates: CronProgressUpdate[] = [];
@@ -1567,6 +1517,31 @@ describe("dex liquidity stage same-hour recovery", () => {
     vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
       actualScoringStage.markDexLiquidityScoringStageConsumed,
     );
+  });
+
+  it.each(["publication", "reuse"] as const)("passes the %s event deadline through recovery without using the old source slot", async (mode) => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+    if (mode === "reuse") vi.setSystemTime(halfHourSlot * 1_000);
+    const deadline = createSlotDeadline(Date.now() - 120_000);
+    const v2 = vi.spyOn(v2Enrichment, "enrichEvmV2ExecutionModels");
+    const quoter = vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets");
+    const v4 = vi.spyOn(v4Enrichment, "enrichUniswapV4ExecutionTargets");
+    const options = {
+      deadline,
+      stageReadyDeadlineMs: Date.now() + 90_000,
+      stageRecovery: { graphApiKey: "graph-key" },
+    };
+    if (mode === "publication") {
+      await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, options);
+    } else {
+      await reuseCurrentDexLiquidityScoringGeneration(harness.db, undefined, undefined, halfHourSlot, options);
+    }
+    for (const enrichment of [v2, quoter, v4]) {
+      expect(enrichment).toHaveBeenCalledTimes(1);
+      expect(enrichment.mock.calls[0]![0].deadline).toBe(deadline);
+    }
+    expect(deadline.eventEntryMs).not.toBe(sourceSlot * 1_000);
   });
 
   it("re-runs an errored source stage inline and publishes with recovery metadata", async () => {

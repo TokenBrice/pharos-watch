@@ -68,7 +68,7 @@ function build(
 const USDG_LEGACY_EVENTS = legacyEvents();
 
 describe("Safety Score V9 peg provenance", () => {
-  it("keeps the USDG-shaped legacy-inclusive score unchanged and isolates the upper-bound diagnostic", () => {
+  it("keeps the USDG-shaped legacy-inclusive score unchanged and isolates the backfill-excluded scenario", () => {
     const before = structuredClone(USDG_LEGACY_EVENTS);
     const summary = build(USDG_LEGACY_EVENTS);
 
@@ -145,6 +145,18 @@ describe("Safety Score V9 peg provenance", () => {
     expect(summary.verifiedOnlyDiagnostic.omittedClasses).toEqual([
       "legacy-backfill-unprovenanced",
     ]);
+  });
+
+  it("retains low-provenance and unprovenanced live events in the diagnostic scenario", () => {
+    const events = [
+      event({ id: 81, startedAt: CLOCK_SEC - 10 * DAY_SEC, peakDeviationBps: -200, provenance: replayProvenance("low") }),
+      event({ id: 82, startedAt: CLOCK_SEC - 5 * DAY_SEC, peakDeviationBps: 300, source: "live" }),
+    ];
+    const summary = build(events);
+    expect(summary.classes["provenance-low"].eventCount).toBe(1);
+    expect(summary.classes["legacy-live-unprovenanced"].eventCount).toBe(1);
+    expect(summary.verifiedOnlyDiagnostic.result).toEqual(summary.legacyInclusive.result);
+    expect(summary.verifiedOnlyDiagnostic.omittedClasses).toEqual(["legacy-backfill-unprovenanced"]);
   });
 
   it("canonicalizes event and provider ordering while content-binding material changes", () => {

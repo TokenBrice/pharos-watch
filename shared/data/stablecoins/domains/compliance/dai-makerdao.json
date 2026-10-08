@@ -19,6 +19,30 @@
   },
   "genius": {
     "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "DAI is a general dollar-referenced protocol stablecoin generated through collateralized issuance and exchanged through token converters and the LitePSM. Reviewed Sky token and conversion documentation establishes onchain issuance and DAI/USDC or DAI/USDS exchange mechanics, but does not establish an identifiable issuer obligation to redeem DAI for a fixed amount of monetary value under GENIUS Act section 2(22). Conversion into another digital asset alone does not resolve that statutory requirement. Applicability remains genuinely ambiguous for this decentralized CDP design.",
+      "references": [
+        {
+          "label": "MakerDAO DAI module",
+          "url": "https://developers.skyeco.com/protocol/tokens/dai/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky Protocol token conversion routes",
+          "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "MakerDAO / Sky Protocol governance",
@@ -29,62 +53,199 @@
     "reserveDisclosureUrl": "https://financial.skyeco.com/usds/collateral-backing",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "DAI is a protocol stablecoin generated against collateral through CDP vaults and the LitePSM. The reviewed protocol, Skybase legal-service disclaimer and OCC material do not establish a specific authorized PPSI issuer for DAI; applicability and issuer pathway remain unclear/unknown. The June 18 negative authorization/enforcement review is historical and is not extended to October 1 or to approvals for all issuers. On October 1, the primary Sky site discloses shared DAI/USDS collateral backing through https://financial.skyeco.com/usds/collateral-backing; this is public disclosure evidence, not a statutory monthly attestation, holder-dollar redemption policy, approval or exemption. A current comprehensive authorization review across the cited regulators and applicable state registers is still needed.",
+    "notes": "Reviewed on 2026-10-07. The existing issuerEntity string is retained as a description of protocol governance; this review does not establish it as a legal issuer or GENIUS applicant. Public regulator resources and issuer documentation reviewed did not establish DAI-specific PPSI approval, state qualification, a formal pending application, issuer-announced intent, or a registered foreign exception. The Sky home page publishes shared USDS/DAI supply and collateral information and links the collateral-backing dashboard. The dashboard URL returned an application shell during independent re-verification; current dashboard balances were not verified. Public disclosure presence is supported by the substantive Sky home page and Spark documentation links. No holder-dollar redemption policy or statutory monthly attestation was found in the reviewed issuer material. Treasury describes January 18, 2027 as the expected Act effective date and July 18, 2028 for the licensed-issuer DASP offer/sale restriction; the reopened proposed rules and SCRC procedural rule do not establish an earlier general commencement. Negative authorization and enforcement findings are limited to the listed public sources and dated searches.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "MakerDAO docs",
         "url": "https://docs.makerdao.com/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "MakerDAO DAI module",
         "url": "https://developers.skyeco.com/protocol/tokens/dai/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sky DAI docs",
         "url": "https://developers.skyeco.com/protocol/tokens/dai/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sky.money shared USDS and DAI supply and collateral disclosure",
         "url": "https://sky.money/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sky shared system collateral-backing disclosure",
         "url": "https://financial.skyeco.com/usds/collateral-backing",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury section 3 proposal and GENIUS effective-date explanation",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer application and standards proposal",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS payment-stablecoin standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NCUA financial technology and digital assets GENIUS resources",
+        "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury Stablecoin Certification Review Committee procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual currency businesses and approved stablecoins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FinCEN enforcement actions index",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OFAC civil penalties and enforcement information",
+        "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-asset pending bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases (Bulletin 2026-3)",
-        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026, May 2026)",
-        "FinCEN/OFAC AML NPRM (Apr 2026)",
-        "Treasury state-regime comparability NPRM (Apr 2026)",
-        "Issuer disclosures and token documentation (MakerDAO/Sky docs)",
-        "Web search: MakerDAO Sky DAI GENIUS Act PPSI application 2026: no application or intent announcement found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3: live page metadata identifies a proposed rule; no DAI authorization evidence in returned content",
+        "Federal Reserve September 24, 2026 GENIUS issuer standards and application proposal",
+        "FDIC April 7, 2026 GENIUS standards proposal",
+        "NCUA financial technology and digital assets GENIUS resources",
+        "Treasury August 17, 2026 section 3 NPRM and expected effective-date explanation",
+        "Treasury SCRC September 30, 2026 procedural interim final rule",
+        "NYDFS virtual currency business directory and greenlisted stablecoins: no MakerDAO/Sky DAI issuer or DAI qualification identified",
+        "Sky DAI token documentation, protocol conversion routes, Sky home page and Spark savings disclosure links",
+        "FinCEN enforcement-actions index and OFAC 2026 civil-penalties index: no named DAI/MakerDAO/Sky action identified",
+        "OCC digital-asset pending bank licensing table: ordinary national bank applications recovered from official raw HTML; no MakerDAO or Sky applicant listed; this is not a GENIUS PPSI register",
+        "Search: \"DAI\" \"GENIUS\" \"Sky\" approval application PPSI; no qualifying token-specific approval, application or issuer-intent disclosure located",
+        "Search: site:occ.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov \"MakerDAO\" OR \"DAI\" \"GENIUS\"; research mentions and general rulemaking located, without a token-specific approval or application",
+        "Search: site:sec.gov OR site:cftc.gov OR site:fincen.gov OR site:ofac.treasury.gov \"MakerDAO\" OR \"DAI\" enforcement; no token/issuer-specific public action located"
       ],
-      "summary": "As of the historical June 18, 2026 review, the listed sources did not establish a DAI PPSI authorization, state-qualified approval, official application, or issuer-announced intent. Protocol CDP generation alone does not adjudicate whether a legal issuer exists or whether the Act applies. The broad statement that no approvals exist for any issuer is not supported by this token-specific review and is withdrawn; this is not an October 1 refresh of all listed regulators.",
+      "summary": "As of 2026-10-07, independently reopened public regulator resources, issuer documentation, the NYDFS directory and scoped primary-domain searches did not establish DAI-specific GENIUS authorization, state qualification, an official pending application, issuer-announced intent, a registered foreign exception, or an issuer-specific enforcement action. This dated negative finding does not establish that no private application exists, that no approvals exist for other issuers, or that DAI is prohibited. The OCC pending bank licensing table was recovered from official raw HTML and did not list MakerDAO or Sky; ordinary bank licensing is distinct from GENIUS PPSI approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury section 3 proposal and GENIUS effective-date explanation",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer application and standards proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS payment-stablecoin standards proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA financial technology and digital assets GENIUS resources",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury Stablecoin Certification Review Committee procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions index",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OFAC civil penalties and enforcement information",
+          "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-asset pending bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

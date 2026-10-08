@@ -42,7 +42,6 @@ import { parseNyFedEffrJson } from "../tbill-sources/nyfed";
 import { parseRbaF1MoneyMarketCsv } from "../tbill-sources/rba";
 import { parseSixSar3mcCsv } from "../tbill-sources/six";
 import { parseTreasuryYieldXml } from "../tbill-sources/treasury";
-import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
 
 const ECB_ESTR_3M_CSV_SNIPPET = `KEY,FREQ,BENCHMARK_ITEM,DATA_TYPE_EST,TIME_PERIOD,OBS_VALUE,OBS_STATUS,CONF_STATUS,PRE_BREAK_VALUE,COMMENT_OBS,CALCUL_START_DATE,CALCUL_END_DATE,TIME_FORMAT,BREAKS,COMMENT_TS,COMPILING_ORG,COVERAGE,DATA_COMP,DECIMALS,DISS_ORG,PUBL_ECB,PUBL_MU,PUBL_PUBLIC,TIME_PER_COLLECT,TITLE,TITLE_COMPL,UNIT_INDEX_BASE,UNIT_MEASURE,UNIT_MULT
 EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-25,1.93576,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
@@ -55,33 +54,6 @@ const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;
 23.03.2026;24.03.2026;24.12.2025;SAR3MC;-0.0540;90;360
 `;
 
-const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
-  props: {
-    pageProps: {
-      cachedStablebondsLookup: {
-        calculatedAt: "2026-05-19T14:24:43.661467807+00:00",
-      },
-      cachedBonds: [
-        {
-          issuanceNumber: 110,
-          currentIssuance: {
-            address: "2p3sFHSkC7f8WoxenAgcpGbKjDYHtAScMuJPft47o5cS",
-            startingTokenAmount: "1.162263",
-            endingTokenAmount: "1.163506",
-            startDate: 1778798112000,
-            endDate: 1779402912000,
-            interestRateBps: 558,
-            status: 1,
-          },
-          mint: {
-            symbol: "CETES",
-            currentTokenAmount: "1.163091",
-          },
-        },
-      ],
-    },
-  },
-})}</script></body></html>`;
 
 describe("parseEcbCompoundedEstrCsv", () => {
   it("extracts the latest ECB 3M compounded €STR observation", () => {
@@ -320,26 +292,6 @@ describe("parseBanxicoSeries", () => {
   });
 });
 
-describe("parseEtherfuseCetesStablebondPage", () => {
-  it("extracts the current CETES issuance rate from Etherfuse Next data", () => {
-    expect(parseEtherfuseCetesStablebondPage(ETHERFUSE_CETES_HTML)).toEqual({
-      apyPercent: 5.58,
-      recordDate: "2026-05-14",
-      observedAtSec: 1779200683,
-      startSec: 1778798112,
-      endSec: 1779402912,
-      issuanceAddress: "2p3sFHSkC7f8WoxenAgcpGbKjDYHtAScMuJPft47o5cS",
-      issuanceNumber: 110,
-      startingTokenAmount: 1.162263,
-      endingTokenAmount: 1.163506,
-      currentTokenAmount: 1.163091,
-    });
-  });
-
-  it("returns null when the Etherfuse page does not expose a CETES issuance rate", () => {
-    expect(parseEtherfuseCetesStablebondPage("<html></html>")).toBeNull();
-  });
-});
 
 describe("parseBcbSelicSeries", () => {
   it("annualizes the most recent daily SELIC observation", () => {

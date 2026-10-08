@@ -506,6 +506,71 @@
       transform var(--motion-duration-fast) var(--motion-ease-standard);
   }
 
+  /* Reviewed-evidence source list (SourceLinkList): one external link per row
+     behind the lucide external-link glyph. Detail pages render 50+ rows, so
+     the glyph, link and note styling live here and each row stays a bare
+     `<li><a>[<span>note</span>]</li>`. The glyph is a mask filled with
+     currentColor (12px, 2px down, 8px gap — the former `mt-0.5 h-3 w-3` SVG);
+     forced-colors repaints it as CanvasText so it stays visible. The link
+     mirrors `pharos-focus-ring` plus its former utility string. */
+  .pharos-source-list > li {
+    position: relative;
+    padding-left: 1.25rem;
+    overflow-wrap: break-word;
+  }
+  .pharos-source-list > li::before {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    left: 0;
+    width: 0.75rem;
+    height: 0.75rem;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  .pharos-source-list a {
+    @apply rounded-sm underline underline-offset-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none;
+  }
+  .pharos-source-list a + span {
+    @apply ml-2 text-muted-foreground/80;
+  }
+  @media (forced-colors: active) {
+    .pharos-source-list > li::before {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+  }
+  /* Numbered variant (`SourceLinkList numbered`): the row's 1-based position
+     replaces the glyph, right-aligned in the former 1.25rem number column with
+     an 0.5rem gap, in the tabular `pharos-numeric` face. The `/ ""` alt text
+     keeps the digit out of the accessibility tree; the `<ol>` conveys order. */
+  .pharos-source-list-numbered {
+    counter-reset: pharos-source;
+  }
+  .pharos-source-list-numbered > li {
+    counter-increment: pharos-source;
+    padding-left: 1.75rem;
+  }
+  .pharos-source-list-numbered > li::before {
+    content: counter(pharos-source) / "";
+    top: 0;
+    width: 1.25rem;
+    height: auto;
+    background-color: transparent;
+    mask: none;
+    text-align: right;
+    color: color-mix(in oklab, var(--color-foreground) 70%, transparent);
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  @media (forced-colors: active) {
+    .pharos-source-list-numbered > li::before {
+      background-color: transparent;
+      color: CanvasText;
+    }
+  }
+
   .pharos-page-title {
     @apply min-w-0 text-3xl font-extrabold tracking-tight sm:text-4xl;
     font-family: var(--font-pharos-display);

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
@@ -78,7 +79,7 @@ describe("reviewed exact-channel suspension", () => {
 
   it("retains public diagnostic evidence without a capture row and never infers measured total failure from suspension alone", () => {
     const fixed = makeV9FixedInput({ assetId: ID, clockSec: CLOCK, includeDexObservations: false,
-      dexOverrides: { exitRouteObservationCoverage: { status: "populated", capabilityMatrixVersion: "p4a.9",
+      dexOverrides: { exitRouteObservationCoverage: { status: "populated", capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
         retainedPoolCount: 0, observationCount: 0, scoreEligibleObservationCount: 0,
         unsupportedPoolCount: 0, evidenceCounts: {}, unsupportedReasons: {} } },
     });
@@ -122,6 +123,11 @@ describe("reviewed exact-channel suspension", () => {
   it("does not admit future reviews or apply the notice to another route", () => {
     const config = { ...getRedemptionBackstopConfig(ID)!, routeStatus: "suspended" as const, routeSuspension: suspension };
     expect(resolveReviewedRouteSuspension(config, suspension.routeId, Date.UTC(2026, 5, 30) / 1_000)).toBeUndefined();
+    const reviewClock = Date.UTC(2026, 6, 1) / 1_000;
+    expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock - 1)).toBeUndefined();
+    expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock)).toBe(suspension);
+    expect(resolveReviewedRouteSuspension(config, suspension.routeId, reviewClock + 1)).toBe(suspension);
+    expect(resolveReviewedRouteSuspension(config, suspension.routeId, Number.NaN)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(config, "redemption:successor-channel", CLOCK)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(null, suspension.routeId, CLOCK)).toBeUndefined();
     expect(resolveReviewedRouteSuspension(undefined, suspension.routeId, CLOCK)).toBeUndefined();

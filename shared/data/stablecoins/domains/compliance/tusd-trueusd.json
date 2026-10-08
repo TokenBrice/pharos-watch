@@ -21,7 +21,16 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "TUSD is a U.S. dollar-pegged stablecoin with issuer-managed redemption and daily reserve attestations."
+      "summary": "TUSD is a U.S. dollar-pegged stablecoin with issuer-managed redemption and daily reserve attestations.",
+      "references": [
+        {
+          "label": "TrueUSD white paper",
+          "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-02"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -34,55 +43,115 @@
     "reserveDisclosureUrl": "https://tusd.io/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Techteryx (current TUSD issuer, BVI-incorporated) has no confirmed U.S. GENIUS approval, application, or foreign-issuer exception. The SEC settled charges in September 2024 against prior TUSD operators TrueCoin LLC and TrustToken Inc. for false reserve representations through April 2023; Techteryx was not named, so this is tracked as a warning/notice posture rather than a prohibited/revoked current-issuer action. Ongoing civil litigation in Hong Kong and Dubai (worldwide asset freeze of $456M tied to First Digital Trust/Aria Commodities reserve dispute) does not constitute a U.S. enforcement action against Techteryx. TUSD delisted from EEA-regulated venues by Q1 2025 (Kraken, Binance) and several Binance spot pairs delisted April 2026.",
+    "notes": "No public U.S. GENIUS approval, official application, state qualification or foreign-issuer registration was located for Techteryx/TUSD in the checked sources on October 7, 2026. The existing warning-or-notice classification records the historical September 2024 SEC action concerning TUSD investment contracts against TrueCoin LLC and TrustToken Inc.; Techteryx was not a respondent. SEC Litigation Release 26126 was independently reopened in a dedicated browser after static HTTP 403 and confirms the parties, token and settlement announcement, which was subject to court approval at publication. The October 7 Moore report names Techteryx Ltd. as current issuer; the existing issuerEntity string Techteryx is preserved. The report provides reasonable assurance over issued-token and collateral balances at cost, with fair-value, liquidity and credit-risk limitations. Its additional management notes are outside the assurance scope. Daily reserve reporting supports the attestation-presence field but does not establish GENIUS authorization or reserve compliance. GENIUS remains pre-effective; the general DASP licensed-issuer offer/sale provision has a separate three-year clock.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
-        "label": "SEC Press Release 2024-145: TrueCoin/TrustToken settled charges",
-        "url": "https://www.sec.gov/newsroom/press-releases/2024-145",
+        "label": "SEC Litigation Release 26126: TrueCoin and TrustToken TUSD investment-contract charges",
+        "url": "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-26126",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2024-09-24",
-        "accessedAt": "2026-06-13"
+        "sourceDate": "2024-09-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "TUSD transparency",
         "url": "https://tusd.io/transparency",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-13"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "TrueUSD white paper",
         "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-02"
+      },
+      {
+        "label": "Moore CPA independent assurance report: TrueUSD current holdings",
+        "url": "https://widget.verinumus.io/api/v1/tusd/report",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer standards",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury State Certification Review Committee interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlisted Coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "SEC press release 2024-145 and litigation release LR-26126 (action against prior operators TrueCoin/TrustToken; Techteryx not named)",
-        "TrueUSD transparency page and white paper materials",
-        "Public foreign payment stablecoin issuer exception materials (Treasury NPRM FR 2026-06489)",
-        "FinCEN/OFAC enforcement pages: no Techteryx-specific action found",
-        "CoinDesk reporting on Dubai worldwide asset freeze (Oct 2025): civil litigation, not U.S. enforcement",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 proposal body",
+        "Federal Reserve September 24, 2026 proposed issuer standards and application procedures",
+        "Treasury September 30, 2026 SCRC procedural interim rule",
+        "NYDFS regulated entities and Greenlisted Coins",
+        "TrueUSD February 2, 2026 white paper and current transparency hub",
+        "October 7, 2026 Moore CPA TUSD reasonable-assurance report",
+        "SEC Litigation Release 26126, reopened through dedicated browser",
+        "Independent October 7 exact-name search for Techteryx/TrueUSD/United Stables with GENIUS, PPSI or enforcement on OCC, FDIC, NCUA, Federal Reserve, Treasury, NYDFS, FinCEN and OFAC domains; no token-specific qualifying permission found"
       ],
-      "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD/Techteryx. SEC action against prior operators TrueCoin/TrustToken (settled Sep 2024) supports a warning/notice posture for TUSD reserve representations but does not constitute a Techteryx prohibited/revoked action. No FinCEN or OFAC action against Techteryx found.",
+      "summary": "As of October 7, 2026, the specified regulator materials, issuer disclosures and exact-name public searches yielded no TUSD/Techteryx GENIUS approval, official application, state qualification or foreign registration. This is a bounded public-evidence conclusion. Treasury SCRC state certification procedures do not establish a foreign-issuer permission. The historical SEC action names TrueCoin and TrustToken, while the current issuer is Techteryx; no present Techteryx issuance prohibition is inferred.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer standards",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury State Certification Review Committee interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlisted Coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

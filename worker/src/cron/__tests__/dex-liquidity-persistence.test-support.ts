@@ -6,6 +6,7 @@ import type {
 import type { FullScoreResult } from "../dex-liquidity/types";
 import { summarizeRetainedPoolVolume } from "../dex-liquidity/scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 
 /** Availability record of one retained pool whose 24h and 7d readings were observed at `asOfSec`. */
 export function makeCompleteVolumeAvailability(volume24hUsd: number, volume7dUsd: number, asOfSec = 1_800_000_000) {
@@ -100,7 +101,7 @@ export function makeDexRouteObservation(
 export function makeDexRouteObservationCoverage(): ExitRouteObservationCoverage {
   return {
     status: "populated",
-    capabilityMatrixVersion: "p4a.9",
+    capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
     retainedPoolCount: 1,
     observationCount: 1,
     scoreEligibleObservationCount: 1,
