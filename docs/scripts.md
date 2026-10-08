@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · [Safety Score movement ledger](#safety-score-movement-ledger) · [DEX liquidity acceptance capture](#dex-liquidity-acceptance-capture) · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · [Safety Score movement ledger](#safety-score-movement-ledger) · [Safety Score historical capture archive](#safety-score-historical-capture-archive) · [DEX liquidity acceptance capture](#dex-liquidity-acceptance-capture) · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
 
 ## Overview
 
@@ -54,6 +54,30 @@ npx tsx worker/scripts/safety-score-movement-ledger.ts \
 `--from` / `--to` are required UTC `YYYY-MM-DD` dates; the window is `[from,to)` and at most 120 days. `--output` is a required local filename prefix; it creates parent directories and writes `<prefix>.md` and `<prefix>.json`. `--database` defaults to `stablecoin-db`. The script performs only remote D1 `SELECT`s through `createRemoteD1Client()` using Wrangler `--remote --command <SQL> --json`, never `--file` or production writes. It keyset-paginates change rows and attempts, loads each changed coin's latest retained pre-window baseline, and includes one attempt before/after the window for hold context. Failed/malformed query envelopes fail instead of becoming empty evidence.
 
 The ledger counts only score/grade changes, not every compact diagnostic change. First sight without a prior retained baseline is reported in `missingBaselineCoinIds`, not counted as movement. Identity changes take precedence as `release` (non-comparable methodology/policy/build, **not causal proof**). Same-identity changes in pipeline-gap or partial-evidence state classify as `operational`. Persistent partial evidence remains context and does not override an included-pillar, peg, or cap movement; unexplained movement adjacent to a hold is operational. Otherwise the largest observed absolute pillar delta or pillar availability change supplies `data:<pillar>`, with all secondary/null deltas retained. Peg-only and cap-only changes have explicit labels; adjacent holds remain linked context. Remaining edges are `data:unattributed`. The JSON retains before/after compact cards, identities, lineage and hold codes; retained change-only observations cannot replace a full frozen-input replay or prove that missing edges did not occur.
+
+### Safety Score historical capture archive
+
+`worker/scripts/export-safety-score-capture-archive.ts` reads the [accepted capture archive](./report-cards.md#accepted-capture-archive-and-historical-replay). Run from the repository root:
+
+```bash
+npx tsx worker/scripts/export-safety-score-capture-archive.ts list \
+  --from 2026-10-01 --to 2026-10-08 --gaps
+npx tsx worker/scripts/export-safety-score-capture-archive.ts boundary \
+  --before-time 2026-10-08T12:00:00Z
+npx tsx worker/scripts/export-safety-score-capture-archive.ts export \
+  --generation '<generation_id>' --output agents/v9-captures/historical.raw.json \
+  --cards-output agents/v9-captures/historical.accepted.json
+```
+
+- All modes use read-only D1 `SELECT`s through `createWorkerD1Client()`, defaulting to remote `stablecoin-db`; `--local` selects Wrangler's local D1 instead, and `--database` selects another configured database. Failed/malformed envelopes fail closed. No remote writes or `--file` SQL are issued by this CLI.
+- `list` requires increasing UTC `YYYY-MM-DD` dates, includes `[from,to)`, and permits at most 180 days. JSON includes each index row's generation, clocks, methodology/policy/build identity, object key/checksum/bytes, and the uniform `180-day-captures-lifecycle` policy label. This names external account state: enabled rule `180d-capture-cleanup` on `pharos-measurements`, prefix `captures/`, 180-day deletion, verified **2026-10-08**. The migration/CLI do not create or continuously verify it. There are no hot/daily/boundary sampling tiers.
+- Optional `list --gaps` also reports retained **accepted** publication attempts in `[from,to)` with no archive index row, including unchanged accepted publications that have no change-only card journal entries. Each gap carries attempt/generation/clock and methodology/policy/build identity. It excludes held attempts and keyset-paginates evidence. The attempt journal is best effort and retained for 120 days: absent/pruned attempts, an index-present expired/missing object, and missing history outside that evidence window are not detected by this query. Empty `gaps` is not a complete archive-coverage certificate.
+- `boundary --before-time <instant>` returns the maximum archived publication clock strictly before a validated nonnegative integer Unix timestamp or ISO-8601 UTC timestamp ending in `Z` (seconds with optional one-to-three fractional digits). Use the exact deployment instant for intraday releases; `--before YYYY-MM-DD` still selects strictly before UTC midnight. The options are mutually exclusive. `--before methodology:<version>`, `policy:<sha256>` and `build:<sha256>` retrospectively return the predecessor of the most recent **already archived** transition into that identity, not a future release boundary. Missing predecessors fail; missing archive rows cannot establish the exact last production generation or release time. Ordering is `published_at,generation_id`, including deterministic timestamp ties.
+- `export` requires `--generation` and `--output`. It reads the indexed R2 object using the existing signed measurement client (`CLOUDFLARE_ACCOUNT_ID`, `R2_MEASUREMENTS_ACCESS_KEY_ID`, `R2_MEASUREMENTS_SECRET_ACCESS_KEY`), verifies exact object SHA-256/byte count, schema, index identity, paired retention clocks and the accepted cards' native codec/identity, then writes the one-successful-result/two-cache-row JSON shape consumed by `report-cards:capture-fixed-input --accepted-cache-export`. The capture CLI still verifies the base/delta envelopes and binding before restoring them; archive export does not substitute for that admission step.
+- Optional `--cards-output` writes the decoded accepted publication JSON, not its compressed cache envelope and not a full replay artifact. Optional `--source-dir` reads exact object bytes from `<dir>/<r2_key>` instead of R2; it needs no R2 credentials and works with either D1 target. Both output files must be distinct; parent directories are created.
+
+The [historical release/data separation procedure](./process/safety-score-equivalence-harness.md#historical-release-and-data-separation) includes local D1 fixture loading and the explicit lightweight projections needed to compare accepted cards with replay output. Archive creation is best effort, starts when the writer is deployed, and can leave permanent failed/skipped gaps once mutable accepted rows are overwritten. `--gaps` makes retained journal-observable omissions visible; it does not repair them or discover unindexed R2 orphans. No historical captures are invented or backfilled.
+
 
 ### DEX liquidity acceptance capture
 

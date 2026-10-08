@@ -68,6 +68,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/dex-liquidity-acceptance-capture.ts"),
     strict("worker/scripts/diff-safety-score-v9-movers.ts"),
     strict("worker/scripts/diff-safety-score-v9-replays.ts"),
+    strict("worker/scripts/export-safety-score-capture-archive.ts"),
     strict("worker/scripts/list-curation-expiry-queue.ts"),
     strict("worker/scripts/measure-contagion-gate0.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),

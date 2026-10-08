@@ -3,8 +3,17 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
-import { loadSafetyScoreV9RegistryRef, localRegistrySnapshot } from "./lib/safety-score-v9-registry";
+import { loadSafetyScoreV9RegistryRef, localRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./lib/safety-score-v9-registry";
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
+
+/** The accepted-cache-export admission path shared by the CLI and archive round-trip tests. */
+export async function parseReportCardsAcceptedCacheExport(value: unknown, registrySnapshot?: SafetyScoreV9RegistrySnapshot) {
+  const rows = parseSafetyScoreV9PublicationReplayCacheRows(value);
+  const base = await parseSafetyScoreV9ReplayFixedInput(rows.baseValue, registrySnapshot);
+  const capture = await parseSafetyScoreV9PublicationReplayCapture(rows.deltaValue, base);
+  if (rows.retainedAtSec !== base.clockSec) throw new Error("accepted-publication-replay-retention-base-clock-mismatch");
+  return { ...capture, registrySnapshot };
+}
 
 const USAGE = `Usage: npx tsx worker/scripts/capture-report-cards-fixed-input.ts [options]
 
@@ -45,11 +54,8 @@ export async function runReportCardsFixedInputCaptureCli(argv: readonly string[]
   const registrySnapshot = values["normalized-only"] === true ? undefined
     : typeof values["registry-ref"] === "string" ? loadSafetyScoreV9RegistryRef(values["registry-ref"]) : localRegistrySnapshot();
   if (typeof values["accepted-cache-export"] === "string") {
-    const rows = parseSafetyScoreV9PublicationReplayCacheRows(JSON.parse(readFileSync(values["accepted-cache-export"], "utf8")));
-    const base = await parseSafetyScoreV9ReplayFixedInput(rows.baseValue, registrySnapshot);
-    const capture = await parseSafetyScoreV9PublicationReplayCapture(rows.deltaValue, base);
-    if (rows.retainedAtSec !== base.clockSec) throw new Error("accepted-publication-replay-retention-base-clock-mismatch");
-    writeFileSync(values.output, `${JSON.stringify({ ...capture, registrySnapshot })}\n`, "utf8");
+    const capture = await parseReportCardsAcceptedCacheExport(JSON.parse(readFileSync(values["accepted-cache-export"], "utf8")), registrySnapshot);
+    writeFileSync(values.output, `${JSON.stringify(capture)}\n`, "utf8");
     return;
   }
 
