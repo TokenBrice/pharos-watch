@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   LIVE_SLICES,
   makeReservesDb,
@@ -15,6 +16,7 @@ import {
 import { resolveReserveResult } from "../live-reserves/store-views";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
+import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
 import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
 describe("live-reserves-store", () => {
@@ -491,26 +493,21 @@ describe("live-reserves-store", () => {
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
-  it("drops out-of-range redemption ratios and fees from legacy stored rows", () => {
-    const nested = parseSnapshotMetadata(JSON.stringify({
-      redemption: {
-        capacityUsd: 100,
-        capacityRatioOfSupply: 1.1,
-        feeBps: -1,
-      },
-    }));
-    expect(nested.redemption).toMatchObject({ capacityUsd: 100 });
-    expect(nested.redemption).not.toHaveProperty("capacityRatioOfSupply");
-    expect(nested.redemption).not.toHaveProperty("feeBps");
-
-    const flat = parseSnapshotMetadata(JSON.stringify({
-      immediateRedeemableUsd: 100,
-      immediateRedeemableRatio: -0.1,
-      redemptionFeeBps: 10_001,
-    }));
-    expect(flat.redemption).toMatchObject({ capacityUsd: 100 });
-    expect(flat.redemption).not.toHaveProperty("capacityRatioOfSupply");
-    expect(flat.redemption).not.toHaveProperty("feeBps");
+  it.each([
+    {
+      redemption: { capacityUsd: 100, capacityRatioOfSupply: 1.1, feeBps: -1 },
+    },
+    {
+      immediateRedeemableUsd: 100, immediateRedeemableRatio: -0.1, redemptionFeeBps: 10_001,
+    },
+  ])("quarantines the entire stored redemption claim when its ratio or fee is invalid: %j", (raw) => {
+    const metadata = parseSnapshotMetadata(JSON.stringify(raw));
+    expect(decodeLiveReserveRedemptionTelemetry(metadata).status).toBe("invalid");
+    expect(metadata.redemption).not.toHaveProperty("capacityUsd");
+    expect(metadata.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(metadata.redemption).not.toHaveProperty("feeBps");
+    const serialized = JSON.parse(JSON.stringify(metadata));
+    expect(serialized.redemption).not.toHaveProperty("capacityUsd");
   });
 
 
@@ -790,7 +787,9 @@ describe("live-reserves-store", () => {
         adapter_evidence_class: independentUnverified!.definition.evidenceClass,
       },
     ];
-    const allRows = [...scoringRows, ...nonScoringRows];
+    const allRows = [...scoringRows, ...nonScoringRows].map((row) => ({
+      ...row, config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)!.liveReservesConfig!),
+    }));
     const db = mockD1([
       {
         match: "reserve_sync_state",

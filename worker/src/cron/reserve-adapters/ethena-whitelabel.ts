@@ -5,13 +5,13 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonAdapterInput,
-  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { strictAmountParser } from "./strict-amount";
 
 const ADAPTER_KEY = "ethena-whitelabel";
 // Custody amounts have sub-cent rounding differences; the wire ratio has six decimals.
@@ -68,8 +68,7 @@ const ON_CHAIN_ASSET_CONFIG: Record<string, AssetConfig> = {
  *  verified. */
 const OFF_CHAIN_NETWORKS: Record<string, true> = { coinbase_prime: true };
 
-const parseStrictAmount = (value: unknown, label: string): number =>
-  parseFiniteNumber(value, { label: `${ADAPTER_KEY} ${label}` });
+const parseStrictAmount = strictAmountParser(ADAPTER_KEY);
 
 export function adaptEthenaWhitelabel(
   payload: EthenaWhitelabelPayload,

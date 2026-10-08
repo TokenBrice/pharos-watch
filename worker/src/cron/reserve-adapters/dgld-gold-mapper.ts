@@ -10,6 +10,7 @@ import {
   reserveDegradedWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { parseFiniteNumber } from "./strict-amount";
 
 const ADAPTER_KEY = "dgld-gold-mapper";
 const GOLD_SOURCE_KEY = "dgld-gold-mapper:gold";
@@ -64,6 +65,14 @@ export function adaptDgldGoldMapperState(
     throw new Error(`${ADAPTER_KEY}: /networks returned no networks`);
   }
 
+  const seenNetworkIds = new Set<string>();
+  for (const network of state.networks) {
+    if (seenNetworkIds.has(network.id)) {
+      throw new Error(`${ADAPTER_KEY}: duplicate network ID ${network.id}`);
+    }
+    seenNetworkIds.add(network.id);
+  }
+
   // ── Supply + reconciliation anchor per network ───────────────────────────
   let supplyTokens = 0;
   let oldestReconCheckedAt: number | null = null;
@@ -72,7 +81,7 @@ export function adaptDgldGoldMapperState(
 
   for (const network of state.networks) {
     const supply = parseFiniteNonNegativeDecimal(network.supply.decimal, `supply(${network.id})`);
-    const gap = parseFiniteNonNegativeDecimal(network.gap.decimal, `gap(${network.id})`);
+    const gap = parseFiniteNonNegativeDecimal(network.gap?.decimal, `gap(${network.id})`);
     supplyTokens += supply;
 
     const reconCheckedAt = parseTimestampLikeToUnixSeconds(network.reconCheckedAt);
@@ -85,6 +94,12 @@ export function adaptDgldGoldMapperState(
 
     if (network.reconState !== "matched") {
       unmatchedNetworks.push(network.id);
+    }
+    if (gap > 0) {
+      warnings.push(reserveDegradedWarning(
+        "network-recon-gap",
+        `${ADAPTER_KEY}: network ${network.id} reports a nonzero reconciliation gap (${gap}) with reconState "${network.reconState}"`,
+      ));
     }
 
     networkDetails.push({
@@ -232,9 +247,5 @@ function parseFiniteNonNegativeDecimal(value: unknown, label: string): number {
   if (typeof value !== "string" || value.length === 0 || value.length > 64) {
     throw new Error(`${ADAPTER_KEY}: ${label} is not a decimal string`);
   }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${ADAPTER_KEY}: ${label} is not a finite non-negative number`);
-  }
-  return parsed;
+  return parseFiniteNumber(value, { label: `${ADAPTER_KEY}: ${label}`, min: 0 });
 }

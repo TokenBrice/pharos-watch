@@ -1061,3 +1061,69 @@ export async function claimNextLiveReserveCheckpointRecovery(
   const finalPriority = await getReserveProducerPriority(db, input.nowSec);
   return finalPriority ? { disposition: "priority", producerPriority: finalPriority } : { disposition: "none" };
 }
+
+export type LiveReserveRecoveryClaimRelease = {
+  disposition: "released" | "not-owned" | "already-started";
+};
+
+/** Return an untouched replay to the ready queue without creating another attempt. */
+export async function releaseUnstartedLiveReserveRecoveryClaim(
+  db: D1Database,
+  claimedCheckpoint: ScheduledRecoveryCheckpoint,
+): Promise<LiveReserveRecoveryClaimRelease> {
+  if (
+    claimedCheckpoint.scheduleKey !== LIVE_RESERVE_SCHEDULE_KEY
+    || claimedCheckpoint.job !== LIVE_RESERVE_CHECKPOINT_JOB
+    || claimedCheckpoint.state !== "recovering"
+    || !claimedCheckpoint.recoveryOwner
+    || claimedCheckpoint.recoveryOwner !== claimedCheckpoint.invocationId
+  ) return { disposition: "not-owned" };
+  if (
+    claimedCheckpoint.currentItemKey !== null
+    || Object.values(claimedCheckpoint.childDispositions).some(
+      (disposition) => disposition !== "not_started" && disposition !== "completed",
+    )
+  ) return { disposition: "already-started" };
+
+  const result = await runWithOverloadRetry(() => db.prepare(
+    `UPDATE worker_scheduled_checkpoints
+        SET state = 'ready', recovery_owner = NULL, recovery_lease_until = NULL, updated_at = ?
+      WHERE ${identityWhereSql()}
+        AND state = 'recovering' AND recovery_owner = ? AND recovery_lease_until IS ?
+        AND queue_hash = ? AND next_item_key IS ?
+        AND current_item_key IS NULL AND current_domain_attempt_id IS ?
+        AND items_done = ? AND items_total = ?
+        AND json(child_dispositions_json) = json(?)
+        AND source_attempt_no IS ? AND updated_at = ? AND completed_at IS NULL`,
+  ).bind(
+    nowSec(),
+    ...identityBinds(claimedCheckpoint),
+    claimedCheckpoint.recoveryOwner,
+    claimedCheckpoint.recoveryLeaseUntil,
+    claimedCheckpoint.queueHash,
+    claimedCheckpoint.nextItemKey,
+    // Prepared rows retain the abandoned domain attempt as a fence, not a start marker.
+    claimedCheckpoint.currentDomainAttemptId,
+    claimedCheckpoint.itemsDone,
+    claimedCheckpoint.itemsTotal,
+    JSON.stringify(claimedCheckpoint.childDispositions),
+    claimedCheckpoint.sourceAttemptNo,
+    claimedCheckpoint.updatedAt,
+  ).run());
+  if ((result.meta.changes ?? 0) === 1) return { disposition: "released" };
+
+  const current = await loadLiveReserveCheckpoint(db, claimedCheckpoint);
+  if (
+    current?.state === "recovering"
+    && current.executionGeneration === claimedCheckpoint.executionGeneration
+    && current.invocationId === claimedCheckpoint.invocationId
+    && current.recoveryOwner === claimedCheckpoint.recoveryOwner
+    && (
+      current.currentItemKey !== null
+      || Object.entries(current.childDispositions).some(([job, disposition]) =>
+        disposition !== "not_started" && disposition !== claimedCheckpoint.childDispositions[job]
+      )
+    )
+  ) return { disposition: "already-started" };
+  return { disposition: "not-owned" };
+}

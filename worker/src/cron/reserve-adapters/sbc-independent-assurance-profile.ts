@@ -1,9 +1,5 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
+import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
-import type { AdapterContext, AdapterResult } from "./types";
 
 // Brale publishes MCCPA's monthly SBC reserve attestations on
 // brale.xyz/stablecoins/SBC as direct monthly PDF links (01-2026 … 08-2026).
@@ -22,7 +18,7 @@ function sbcReportDate(href: string): string | null {
   return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!);
 }
 
-const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
+export const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "sbc-independent-assurance",
   product: "SBC",
   profile: "sbc-v1",
@@ -49,13 +45,3 @@ const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   reportDateFromCandidate: sbcReportDate,
 };
 
-export async function fetchSbcIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams("sbc-independent-assurance", config.params) as
-    LiveReserveAdapterParamsByKey["sbc-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, SBC_INDEPENDENT_ASSURANCE_PROFILE, params, ctx);
-}

@@ -1,8 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
-import type { AdapterContext, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate } from "./report-date";
 
 // Anchorage publishes Deloitte's monthly USAT and USDPT examinations on
@@ -88,18 +84,8 @@ export const USDPT_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   reportDateFromCandidate: anchorageReportDate("USDPT"),
 };
 
-const ANCHORAGE_ASSURANCE_PROFILES: Record<"USAT" | "USDPT", IndependentAssuranceProfile> = {
+export const ANCHORAGE_ASSURANCE_PROFILES: Record<"USAT" | "USDPT", IndependentAssuranceProfile> = {
   USAT: USAT_INDEPENDENT_ASSURANCE_PROFILE,
   USDPT: USDPT_INDEPENDENT_ASSURANCE_PROFILE,
 };
 
-export async function fetchAnchorageIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams("anchorage-independent-assurance", config.params) as
-    LiveReserveAdapterParamsByKey["anchorage-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, ANCHORAGE_ASSURANCE_PROFILES[params.product], params, ctx);
-}

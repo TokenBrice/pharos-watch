@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  calculateRawPercentageSumDeviation,
   escapeRegExp,
   extractAnchorWindow,
   extractTagById,
@@ -197,7 +198,9 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       diag: {
-        rawSumDeviation: useAbsoluteValues ? 0 : Math.abs(rawValueSum - 100),
+        ...(useAbsoluteValues ? {} : {
+          rawSumDeviation: calculateRawPercentageSumDeviation(entries.map((entry) => entry.value)),
+        }),
         sliceCount: entries.length,
         expectedSliceCount: coinType === "eurc" ? 1 : 3,
         valueMode: useAbsoluteValues ? "absolute" : "percentage",

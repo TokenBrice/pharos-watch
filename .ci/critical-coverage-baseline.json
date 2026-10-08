@@ -16,6 +16,7 @@
     "shared/lib/blacklist-active-records.ts": 98.4,
     "shared/lib/bluechip-freshness.ts": 100,
     "shared/lib/liquidity-score-weights.ts": 100,
+    "shared/lib/live-reserve-freshness.ts": 100,
     "shared/lib/peg-score.ts": 92.1,
     "shared/lib/psi-eligible.ts": 100,
     "shared/lib/report-card-blacklist-matchers.ts": 100,

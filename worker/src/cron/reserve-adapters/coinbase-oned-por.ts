@@ -4,7 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry, requireJsonInput, verifiedFreshnessMetadata } from "./helpers";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const KEY = "coinbase-oned-por";

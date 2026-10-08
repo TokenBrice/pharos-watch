@@ -1,4 +1,6 @@
 import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   finalizeReserveSyncSuccess,
   type ReserveCompositionRecord,
@@ -35,6 +37,7 @@ const COMPOSITION_ROW: MockRow = {
   slices: JSON.stringify(LIVE_SLICES),
   fetched_at: 1_000,
   source: "infinifi",
+  config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!.liveReservesConfig!),
 };
 
 const SYNC_STATE_ROW: MockRow = {
@@ -55,11 +58,12 @@ export function makeReservesDb(
 ): MockD1Database {
   const composition = overrides.composition === undefined ? {} : overrides.composition;
   const syncState = overrides.syncState === undefined ? {} : overrides.syncState;
+  const config = WORKER_TRACKED_META_BY_ID.get(String(composition?.stablecoin_id ?? "iusd-infinifi"))?.liveReservesConfig;
   return mockReserveD1([
     {
       match: "reserve_composition",
       rows: [],
-      first: composition && { ...COMPOSITION_ROW, ...composition },
+      first: composition && { ...COMPOSITION_ROW, config_fingerprint: config ? computeLiveReserveConfigFingerprint(config) : null, ...composition },
     },
     {
       match: "reserve_sync_state",
@@ -84,6 +88,7 @@ export function reserveCompositionInput(
     warnings: [],
     adapterSourceModel: "dynamic-mix",
     adapterEvidenceClass: "independent",
+    configFingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(overrides.stablecoinId ?? "iusd-infinifi")!.liveReservesConfig!),
     ...overrides,
   };
 }
@@ -146,11 +151,13 @@ export function reserveSyncRow(overrides: MockRow = {}): MockRow {
 }
 
 export function reserveCompositionRow(overrides: MockRow = {}): MockRow {
+  const config = WORKER_TRACKED_META_BY_ID.get(String(overrides.stablecoin_id ?? "iusd-infinifi"))?.liveReservesConfig;
   return {
     stablecoin_id: "iusd-infinifi",
     slices: JSON.stringify(LIVE_SLICES),
     fetched_at: 1_000,
     source: "infinifi",
+    config_fingerprint: config ? computeLiveReserveConfigFingerprint(config) : null,
     ...overrides,
   };
 }

@@ -10,6 +10,8 @@ import { validateAdapterOutput } from "../validate";
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const STRATEGY_FIXTURE = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-strategy.json"), "utf8"));
 const ALLOCATIONS_FIXTURE = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-allocations.json"), "utf8"));
+const OCTOBER_STRATEGY = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-strategy-oct7-2026.json"), "utf8"));
+const OCTOBER_ALLOCATIONS = JSON.parse(readFileSync(join(FIXTURES_DIR, "makina-allocations-oct7-2026.json"), "utf8"));
 
 const PARAMS = {
   allocationsUrl: "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations",
@@ -43,6 +45,29 @@ const REDEMPTION_STATE = {
 };
 
 describe("makina-strategy adapter", () => {
+  it("replays October's stale allocation clocks and contradictory issuer AUM against pinned Machine authority", () => {
+    const result = adaptMakinaStrategyReserves(OCTOBER_STRATEGY, OCTOBER_ALLOCATIONS, PARAMS, {
+      ...REDEMPTION_STATE,
+      machineAccounting: {
+        aumUsd: 1_903_917.124582, accountedAt: 1791278999,
+        blockNumber: 26143016, blockTimestamp: Date.parse("2026-10-07T20:51:35Z") / 1000,
+      },
+    });
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(1_904_022.538504, 6);
+    expect(result.metadata?.details).toMatchObject({
+      reconciliationKind: "allocation-net-value-equals-onchain-machine-aum",
+      reconciliationAumUsd: 1_903_917.124582,
+      oldestPositionUpdatedAt: 1791278963,
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(1791278963);
+    expectWarningEffect(result, "makina-api-aum-disagreement", "degraded");
+    const report = validateAdapterOutput(result, {
+      adapter: getReserveAdapter("makina-strategy") ?? undefined,
+      now: Date.parse("2026-10-07T20:47:43Z") / 1000,
+    });
+    expectWarningEffect(report, "stale-source-data", "degraded");
+  });
+
   it("groups protocol buckets, subtracts debts, and preserves unlabelled exposure", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 

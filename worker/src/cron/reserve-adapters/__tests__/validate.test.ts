@@ -26,6 +26,52 @@ describe("validateAdapterOutput redemption telemetry", () => {
     }));
   });
 
+  it.each([
+    [undefined, undefined, 172800],
+    [3600, undefined, 3600],
+    [undefined, 7200, 7200],
+    [3600, 7200, 3600],
+    [7200, 3600, 3600],
+    [3600, 3600, 3600],
+  ] as const)("takes the same tighter scoring %s / adapter %s budget for producer and nested evidence", (scoring, adapterCap, budget) => {
+    const now = 1_790_467_200;
+    const adapter = { ...getReserveAdapter("infinifi")!, validation: { maxSourceAgeSec: adapterCap } };
+    const validate = (age: number, nested: boolean) => validateAdapterOutput({ slices, metadata: {
+      freshnessMode: "verified", sourceTimestamp: now - (nested ? 0 : age),
+      ...(nested ? { redemption: { sourceTimestamp: now - age, freshnessKind: "verified-source-timestamp" } } : {}),
+    } }, { adapter, now, maxSourceAgeSec: scoring });
+    expect(validate(budget, true).valid).toBe(true);
+    expect(validate(budget + 1, true).warnings).toContainEqual(expect.objectContaining({
+      code: "stale-redemption-source-timestamp", effect: "fatal",
+    }));
+    expect(validate(budget, false).warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
+    expect(validate(budget + 1, false).warnings.some((warning) => warning.code === "stale-source-data"))
+      .toBe(scoring !== undefined || adapterCap !== undefined);
+  });
+
+  it.each([0, -1])("degrades non-positive verified source clock %s without treating it as current", (sourceTimestamp) => {
+    const result = validateAdapterOutput({ slices, metadata: { freshnessMode: "verified", sourceTimestamp } },
+      { now: 1_790_467_200, adapter: getReserveAdapter("infinifi")!, maxSourceAgeSec: 3600 });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+  });
+
+  it("rejects upstream source clocks beyond the skew allowance", () => {
+    expect(validateAdapterOutput({ slices, metadata: { freshnessMode: "verified", sourceTimestamp: 1_790_467_801 } },
+      { now: 1_790_467_200, adapter: getReserveAdapter("infinifi")!, maxSourceAgeSec: 3600 }).valid).toBe(false);
+  });
+
+  it("allows the upstream source-skew boundary without extending the source-age cap", () => {
+    const result = validateAdapterOutput({ slices, metadata: { freshnessMode: "verified", sourceTimestamp: 1_790_467_800 } },
+      { now: 1_790_467_200, adapter: getReserveAdapter("infinifi")!, maxSourceAgeSec: 3600 });
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.effect === "degraded")).toBe(false);
+  });
+
+  it("treats an explicitly undefined optional redemption block as absent", () => {
+    const result = validateAdapterOutput({ slices, metadata: { redemption: undefined } });
+    expect(result).toEqual({ valid: true, warnings: [] });
+  });
+
   it("retains raw upstream percentage drift after slices have been normalized", () => {
     const validateRawDeviation = (rawSumDeviation: number) => validateAdapterOutput({
       slices,
@@ -42,6 +88,32 @@ describe("validateAdapterOutput redemption telemetry", () => {
     expect(fatal.warnings).toContainEqual(expect.objectContaining({
       code: "pct-sum-deviation", effect: "fatal",
     }));
+  });
+
+  it.each([null, "0", -0.1, Number.NaN, Infinity, undefined])("rejects present malformed raw deviation %s", (rawSumDeviation) => {
+    const result = validateAdapterOutput({ slices, metadata: { diag: { rawSumDeviation } } });
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "invalid-raw-sum-deviation", effect: "fatal" }));
+  });
+
+  it("accepts absent raw deviation and measured zero without changing reviewed rounding omissions", () => {
+    for (const diag of [{}, { rawSumDeviation: 0 }, { publishedAllocationSumPct: 99, roundingEnvelopePct: 2 }]) {
+      expect(validateAdapterOutput({ slices, metadata: { diag } })).toEqual({ valid: true, warnings: [] });
+    }
+  });
+
+  it.each([
+    [null, "invalid-redemption-telemetry"],
+    [[], "invalid-redemption-telemetry"],
+    ["invalid", "invalid-redemption-telemetry"],
+    [{ capacityUsd: 1_000_000, dailyLimitUsd: null }, "invalid-redemption-daily-limit"],
+    [{ capacityUsd: 1_000_000, outputAssetKeys: ["asset:a", "asset:a"] }, "invalid-redemption-output-assets"],
+    [{ capacityUsd: 1_000_000, outputValuation: { sourceId: "test", observedAt: 0, unitValueUsd: 1,
+      basketWeights: [{ assetId: "a", weight: 0.9 }, { assetId: "b", weight: 0.2 }] } }, "invalid-redemption-output-valuation"],
+  ])("rejects structurally malformed telemetry %j with a stable issue code", (redemption, code) => {
+    const result = validateAdapterOutput({ slices, metadata: { redemption } }, { adapter: getReserveAdapter("gho")! });
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code, effect: "fatal" }));
   });
 
   it("rejects slices above the public 100% per-slice schema limit", () => {

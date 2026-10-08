@@ -12,7 +12,8 @@ import { getReserves } from "@shared/lib/reserve-templates";
 
 function fixture(id = "hbd-hive", metadata: Record<string, unknown> = { freshnessMode: "not-applicable" }, fingerprint?: string, status = "ok") {
   const source = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? "infinifi";
-  const composition = reserveCompositionRow({ stablecoin_id: id, source, metadata: JSON.stringify(metadata), config_fingerprint: fingerprint,
+  const config = TRACKED_META_BY_ID.get(id)?.liveReservesConfig;
+  const composition = reserveCompositionRow({ stablecoin_id: id, source, metadata: JSON.stringify(metadata), config_fingerprint: fingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null),
     adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent", attempt_id: "success", warnings: "[]" });
   const sync = reserveSyncRow({ stablecoin_id: id, adapter_key: source, last_status: status, last_attempted_at: 1_100, last_success_attempt_id: "success" });
   return mockReserveD1([
@@ -74,6 +75,7 @@ describe("live reserve admission", () => {
   it.each([
     {}, { sourceTimestamp: 1_000 }, { freshnessMode: "invalid", sourceTimestamp: 1_000 },
     { freshnessMode: "verified" }, { freshnessMode: "verified", sourceTimestamp: "1000" },
+    { freshnessMode: "verified", sourceTimestamp: 0 }, { freshnessMode: "verified", sourceTimestamp: -1 },
     { freshnessMode: "verified", sourceTimestamp: 1_801 },
     { freshnessMode: "not-applicable", sourceTimestamp: "invalid" },
   ])("rejects absent or malformed freshness consistently: %j", async (metadata) => {
@@ -107,12 +109,30 @@ describe("live reserve admission", () => {
     expect(evaluateLiveReserveAdmission({ ...record, configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!) }, null, coin, 1_200).reasons).not.toContain("config-mismatch");
   });
 
-  it("accepts matching and legacy fingerprints but excludes internal diagnostics from detail", async () => {
+  it("accepts matching fingerprints but excludes internal diagnostics from detail", async () => {
     const config = TRACKED_META_BY_ID.get("hbd-hive")!.liveReservesConfig!;
     const db = fixture("hbd-hive", { freshnessMode: "not-applicable", diag: { durationMs: 123 }, supplyUsd: 456 }, computeLiveReserveConfigFingerprint(config));
     const detail = await resolveReserveResult(db, "hbd-hive", 1_200);
     expect(detail?.provenance?.scoringEligible).toBe(true);
     expect(detail?.metadata).toEqual({ freshnessMode: "not-applicable", supplyUsd: 456 });
+  });
+
+  it.each([null, "", "old-config", "G".repeat(64), "a".repeat(63)])("rejects missing or malformed composition binding %s even with current sync state", async (fingerprint) => {
+    const config = TRACKED_META_BY_ID.get("hbd-hive")!.liveReservesConfig!;
+    const composition = reserveCompositionRow({ stablecoin_id: "hbd-hive", source: config.adapter,
+      config_fingerprint: fingerprint, metadata: JSON.stringify({ freshnessMode: "not-applicable" }) });
+    const sync = reserveSyncRow({ stablecoin_id: "hbd-hive", adapter_key: config.adapter,
+      config_fingerprint: computeLiveReserveConfigFingerprint(config) });
+    const db = mockReserveD1([{ match: "reserve_composition", rows: [composition], first: composition },
+      { match: "reserve_sync_state", rows: [sync], first: sync }]);
+    const record = { stablecoinId: "hbd-hive", fetchedAt: 1_000, source: config.adapter,
+      adapterSourceModel: "dynamic-mix" as const, adapterEvidenceClass: "independent" as const,
+      slices: [{ name: "HBD", pct: 100, risk: "low" as const }], metadata: { freshnessMode: "not-applicable" as const },
+      warnings: [], warningCount: 0, configFingerprint: fingerprint };
+    expect(evaluateLiveReserveAdmission(record, { lastSuccessAt: 1_000, lastSuccessAttemptId: null },
+      TRACKED_META_BY_ID.get("hbd-hive"), 1_200).reasons).toContain("config-mismatch");
+    expect((await resolveReserveResult(db, "hbd-hive", 1_200))?.mode).not.toBe("live");
+    expect((await loadFreshIndependentLiveReserveMap(db, 1_200)).has("hbd-hive")).toBe(false);
   });
 
   it.each(["usdy-ondo-finance", "usdt-tether"])("never marks suspended or unconfigured %s eligible", async (id) => {

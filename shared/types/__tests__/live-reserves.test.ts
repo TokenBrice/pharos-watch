@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS,
+  decodeLiveReserveRedemptionTelemetry,
+  LiveReserveDiagnosticsSchema,
   LiveReserveRedemptionTelemetrySchema,
-  parseLiveReserveRedemptionTelemetryNumber,
 } from "../live-reserves";
 
 describe("live-reserve redemption telemetry numeric policy", () => {
@@ -30,26 +30,51 @@ describe("live-reserve redemption telemetry numeric policy", () => {
     expect(LiveReserveRedemptionTelemetrySchema.safeParse(boundary).success).toBe(true);
   });
 
-  it("drops policy-violating persisted fields for the D1 decoder, keeping the same rule as the response schema", () => {
-    expect(parseLiveReserveRedemptionTelemetryNumber("settlementDelaySec", -5)).toBeNull();
-    expect(parseLiveReserveRedemptionTelemetryNumber("capacityRatioOfSupply", 1.5)).toBeNull();
-    expect(parseLiveReserveRedemptionTelemetryNumber("feeBps", 10_001)).toBeNull();
-    expect(parseLiveReserveRedemptionTelemetryNumber("feeBps", "9000" as unknown)).toBeNull();
-    expect(parseLiveReserveRedemptionTelemetryNumber("feeBps", Number.NaN)).toBeNull();
-    expect(parseLiveReserveRedemptionTelemetryNumber("settlementDelaySec", 3_600)).toBe(3_600);
+  it.each([
+    [{ capacityUsd: 0, dailyLimitUsd: 0 }, true],
+    [{ capacityRatioOfSupply: 1, feeBps: 10_000, sourceTimestamp: 0 }, true],
+    [{ capacityUsd: 100, dailyLimitUsd: -1 }, false],
+    [{ capacityUsd: null }, false],
+    [{ feeBps: "9000" }, false],
+    [{ sourceTimestamp: -1 }, false],
+    [{ routeStatus: "closed" }, false],
+    [{ routeStatusReviewedAt: "2026-02-30" }, false],
+    [{ sourceUrls: ["ftp://issuer.example"] }, false],
+    [{ outputAssetKeys: ["asset:a", "asset:a"] }, false],
+    [{ outputValuation: { sourceId: "test", observedAt: 0, unitValueUsd: 1,
+      basketWeights: [{ assetId: "a", weight: 0.6 }, { assetId: "b", weight: 0.6 }] } }, false],
+  ])("keeps structural decoding aligned with the response schema for %j", (telemetry, valid) => {
+    expect(LiveReserveRedemptionTelemetrySchema.safeParse(telemetry).success).toBe(valid);
+    expect(decodeLiveReserveRedemptionTelemetry({ redemption: telemetry }).status).toBe(valid ? "valid" : "invalid");
+  });
 
-    // The decoder iterates exactly the policy's field set — no field can be
-    // retained outside the shared rule.
-    expect(LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS).toEqual([
-      "capacityUsd",
-      "capacityRatioOfSupply",
-      "sourceTimestamp",
-      "blockNumber",
-      "settlementDelaySec",
-      "queueDepthUsd",
-      "dailyLimitUsd",
-      "minRedeemUsd",
-      "feeBps",
-    ]);
+  it("distinguishes absence, invalid roots, and valid measured zero with extensions", () => {
+    expect(decodeLiveReserveRedemptionTelemetry({}).status).toBe("absent");
+    expect(decodeLiveReserveRedemptionTelemetry({ redemption: undefined }).status).toBe("absent");
+    for (const redemption of [null, [], "invalid"]) {
+      expect(decodeLiveReserveRedemptionTelemetry({ redemption }).status).toBe("invalid");
+    }
+    const telemetry = { capacityUsd: 0, v9RouteAttempt: { status: "accepted", state: { measured: 0 } } };
+    expect(decodeLiveReserveRedemptionTelemetry({ redemption: telemetry })).toEqual({ status: "valid", telemetry });
+  });
+
+  it("preserves stored valid source URL evidence verbatim during decoding", () => {
+    const decoded = decodeLiveReserveRedemptionTelemetry({ redemption: {
+      capacityUsd: 100,
+      sourceUrls: ["https://issuer.example", "https://issuer.example/", "https://issuer.example/redeem"],
+    } });
+    expect(decoded).toEqual({ status: "valid", telemetry: {
+      capacityUsd: 100, sourceUrls: ["https://issuer.example", "https://issuer.example/", "https://issuer.example/redeem"],
+    } });
+  });
+
+  it.each([null, "0", -1, Number.NaN, Infinity])("rejects malformed raw deviation %s", (rawSumDeviation) => {
+    expect(LiveReserveDiagnosticsSchema.safeParse({ rawSumDeviation }).success).toBe(false);
+  });
+
+  it("retains auxiliary diagnostics and reviewed rounding omission without publishing zero", () => {
+    const diag = { publishedAllocationSumPct: 99, roundingEnvelopePct: 2 };
+    expect(LiveReserveDiagnosticsSchema.parse(diag)).toEqual(diag);
+    expect(LiveReserveDiagnosticsSchema.parse({ rawSumDeviation: 0 }).rawSumDeviation).toBe(0);
   });
 });

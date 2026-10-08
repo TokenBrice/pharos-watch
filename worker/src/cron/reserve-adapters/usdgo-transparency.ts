@@ -3,13 +3,10 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import type { AdapterContext, AdapterResult } from "./types";
+import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
 import { fetchJsonWithRetry, reserveInfoWarning } from "./helpers";
-import {
-  fetchIndependentAssuranceReserves,
-  type IndependentAssuranceProfile,
-} from "./independent-assurance";
-import { anchorageReportDate } from "./anchorage-independent-assurance";
+import { fetchIndependentAssuranceReserves } from "./independent-assurance";
+import { anchorageReportDate } from "./anchorage-independent-assurance-profile";
 
 const ADAPTER_KEY = "usdgo-transparency";
 const SAME_PERIOD_CROSS_CHECK_MAX_AGE_SEC = 3 * 24 * 60 * 60;

@@ -1,0 +1,77 @@
+{
+  "provenance": {
+    "source": "agents/lrr/evidence/RS3/prod-targets.json, captured Pharos production envelope, contextual oracle valuations (not independent RPC captures)"
+  },
+  "observedBlock": {
+    "chain": "ethereum",
+    "number": 26142825,
+    "timestamp": 1791403991
+  },
+  "branches": [
+    {
+      "name": "Hashnote USYC",
+      "token": "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b",
+      "chain": "ethereum",
+      "balanceRaw": "9385175320679",
+      "decimals": 6,
+      "observedDecimals": 6,
+      "priceUsd": 1.13953326
+    },
+    {
+      "name": "M by M^0 (via UsualM wrapper)",
+      "token": "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470",
+      "chain": "ethereum",
+      "balanceRaw": "44300124429854",
+      "decimals": 6,
+      "observedDecimals": 6,
+      "priceUsd": 1
+    },
+    {
+      "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
+      "token": "0x58073531a2809744D1bF311D30FD76B27D662abB",
+      "chain": "ethereum",
+      "balanceRaw": "0",
+      "decimals": 18,
+      "observedDecimals": 18,
+      "priceUsd": null
+    },
+    {
+      "name": "UsualUSDC",
+      "token": "0xb672b3976baa3952bfb2ece8eefb784f8dab1424",
+      "chain": "ethereum",
+      "balanceRaw": "199319783167",
+      "decimals": 6,
+      "observedDecimals": 6,
+      "priceUsd": 0.99977851
+    },
+    {
+      "name": "Spiko USTBL",
+      "token": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+      "chain": "ethereum",
+      "balanceRaw": "2671218940976",
+      "decimals": 5,
+      "observedDecimals": 5,
+      "priceUsd": 1.098479
+    },
+    {
+      "name": "EVK Vault eUSD0-4",
+      "token": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+      "chain": "ethereum",
+      "balanceRaw": "14867266666424154616700613",
+      "decimals": 18,
+      "observedDecimals": 18,
+      "priceUsd": 1.0451875373515296,
+      "classification": "unclassified-self-referential"
+    },
+    {
+      "name": "U0R",
+      "token": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+      "chain": "ethereum",
+      "balanceRaw": "444700000000000000000000000",
+      "decimals": 18,
+      "observedDecimals": 18,
+      "priceUsd": 1.0007206943740061,
+      "classification": "unclassified-self-referential"
+    }
+  ]
+}

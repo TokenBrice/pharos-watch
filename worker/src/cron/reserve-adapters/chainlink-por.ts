@@ -24,7 +24,7 @@ import {
   type ScopedLiabilitySupply,
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { decodeUint256Word } from "./abi-decode";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;

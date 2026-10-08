@@ -1,8 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
-import type { AdapterContext, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 
 // AUDD's monthly William Buck ASRS 4400 report is an agreed-upon-procedures
@@ -56,13 +52,3 @@ function auddReportDate(href: string): string | null {
   return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!);
 }
 
-export async function fetchAuddIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams("audd-independent-assurance", config.params) as
-    LiveReserveAdapterParamsByKey["audd-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, AUDD_INDEPENDENT_ASSURANCE_PROFILE, params, ctx);
-}

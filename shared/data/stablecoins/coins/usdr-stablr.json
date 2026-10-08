@@ -49,27 +49,6 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "usdr-stablr",
-    "display": {
-      "url": "https://www.stablr.com/proof-of-reserve",
-      "label": "StablR Proof of Reserve"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Cash & short-term government bonds",
-      "risk": "very-low"
-    }
-  },
   "launchDate": "2024-12-06",
   "notices": [
     {

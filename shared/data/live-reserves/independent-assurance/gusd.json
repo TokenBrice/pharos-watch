@@ -3,13 +3,12 @@
   "product": "GUSD",
   "profile": "gusd-v1",
   "officialIndexUrl": "https://cdn.contentful.com/spaces/jg6lo9a2ukvr/entries?access_token=AIRFWcFNIs83Nw7SKtdz1wLW9j94yxYlS5ef5qHGo8A&content_type=gusdAttestation&order=-fields.reportDate&limit=1000&include=1",
-  "reportUrl": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf",
-  "reportSha256": "ecfc9a720a43f9d8176e0131aeb3372cef7c9ad70067a00c100425530afb3034",
-  "reportByteLength": 231787,
-  "reportDate": "2026-05-29",
-  "reportAsOf": "2026-05-29T17:00:00-04:00",
+  "reportUrl": "https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Gemini_Trust_Company__LLC_-_GUSD_RR_August_2026_-_Issued.pdf",
+  "reportSha256": "f990c8411d8d603b50c301e0636dc732f99e7e01fa03c211780cb775f1c09d12",
+  "reportByteLength": 195906,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-06-29T23:59:00-04:00",
   "attestor": "BPM LLP",
   "engagement": "Independent accountants' examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,32 +17,32 @@
     {
       "code": "cash-deposits",
       "label": "Cash deposits held at U.S. regulated financial institutions, net of timing and settlement differences",
-      "amount": "40136854.84"
+      "amount": "39573881.00"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "GUSD issued and in circulation",
-      "amount": "40136854.84"
+      "amount": "39573881.00"
     }
   ],
   "adjustments": [
     {
       "code": "net-cash-receivable",
       "label": "Net cash receivable (payable) due to timing and settlement differences",
-      "amount": "-500211.38",
+      "amount": "-770884.86",
       "alreadyNettedIntoAssets": true,
       "treatment": "Deducted from gross cash deposits to arrive at the reported Total Reserve"
     }
   ],
-  "reportedAssetTotal": "40136854.84",
-  "computedAssetTotal": "40136854.84",
-  "reportedLiabilityTotal": "40136854.84",
+  "reportedAssetTotal": "39573881.00",
+  "computedAssetTotal": "39573881.00",
+  "reportedLiabilityTotal": "39573881.00",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "04b87d894057837530bfff8a86773d1942865a7a1dde60d3a874f3a6f42ae11c",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "5a7d6be03d15bcb0df9b9dbf0a0d9e2c22797c146e85f21a8c342985ff1713ff",
     "pageCount": 4
   },
   "assuranceTier": "independent-assurance"

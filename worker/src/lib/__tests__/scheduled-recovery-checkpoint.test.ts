@@ -11,6 +11,7 @@ import {
   prepareEligibleLiveReserveCheckpointRecoveries,
   prepareLiveReserveCheckpointRecoveryForSlot,
   retireSupersededLiveReserveCheckpoints,
+  releaseUnstartedLiveReserveRecoveryClaim,
   ScheduledCheckpointOwnershipLostError,
   setLiveReserveCheckpointChildDisposition,
 } from "../scheduled-recovery-checkpoint";
@@ -84,6 +85,107 @@ describe("scheduled recovery checkpoint", () => {
     openDatabases.push(value.sqlite);
     return value;
   }
+
+  async function claimUnstartedRecovery(db: D1Database) {
+    const checkpoint = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "original-owner", nextItemKey: "coin-suffix",
+      itemsTotal: 10, nowSec: 1_701,
+    });
+    await markLiveReserveCheckpointItemStarted(db, checkpoint, {
+      itemKey: "coin-suffix", domainAttemptId: "abandoned-domain-attempt",
+      itemsDone: 4, itemsTotal: 10, nowSec: 1_702,
+    });
+    await setLiveReserveCheckpointChildDisposition(db, checkpoint, "sync-kinesis-supply", "completed", 1_703);
+    await prepareLiveReserveCheckpointRecoveryForSlot(db, { slotStartedAt: 1_700, nowSec: 1_710 });
+    const claim = await claimNextLiveReserveCheckpointRecovery(db, {
+      owner: "recovery-owner", leaseSec: 900, nowSec: 1_711,
+    });
+    if (claim.disposition !== "claimed") throw new Error("expected recovery claim");
+    return claim.checkpoint;
+  }
+
+  it("releases an untouched claim with its old domain fence and immediately reclaims the same suffix", async () => {
+    const { sqlite, db } = harness();
+    const claimed = await claimUnstartedRecovery(db);
+    expect(claimed.currentItemKey).toBeNull();
+    expect(claimed.currentDomainAttemptId).toBe("abandoned-domain-attempt");
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(db, claimed)).toEqual({ disposition: "released" });
+    const ready = await loadLiveReserveCheckpoint(db, claimed);
+    expect(ready).toEqual({
+      ...claimed, state: "ready", recoveryOwner: null, recoveryLeaseUntil: null,
+      updatedAt: expect.any(Number),
+    });
+    const nextClaim = await claimNextLiveReserveCheckpointRecovery(db, {
+      owner: "next-poll-owner", leaseSec: 900, nowSec: 1_712,
+    });
+    expect(nextClaim).toMatchObject({ disposition: "claimed", checkpoint: {
+      attemptNo: claimed.attemptNo, executionGeneration: claimed.executionGeneration,
+      sourceAttemptNo: claimed.sourceAttemptNo, nextItemKey: "coin-suffix", itemsDone: 4,
+      currentItemKey: null, currentDomainAttemptId: "abandoned-domain-attempt",
+      childDispositions: { "sync-kinesis-supply": "completed" },
+      invocationId: "next-poll-owner", recoveryOwner: "next-poll-owner",
+    } });
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(db, claimed)).toEqual({ disposition: "not-owned" });
+    expect(await loadLiveReserveCheckpoint(db, claimed)).toEqual(
+      nextClaim.disposition === "claimed" ? nextClaim.checkpoint : null,
+    );
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_scheduled_checkpoints").get()).toEqual({ count: 2 });
+  });
+
+  it.each([
+    ["replacement invocation", "invocation_id = 'replacement'", "not-owned"],
+    ["replacement owner", "recovery_owner = 'replacement'", "not-owned"],
+    ["replacement generation", "execution_generation = execution_generation + 1", "not-owned"],
+    ["different schedule", "schedule_key = 'different-slot'", "not-owned"],
+    ["different slot", "slot_started_at = 1701", "not-owned"],
+    ["different job", "job = 'different-job'", "not-owned"],
+    ["different attempt", "attempt_no = attempt_no + 1", "not-owned"],
+    ["started item", "current_item_key = 'coin-suffix'", "already-started"],
+    ["running child", "child_dispositions_json = json_set(child_dispositions_json, '$.\"sync-live-reserves\"', 'running')", "already-started"],
+    ["completed child", "child_dispositions_json = json_set(child_dispositions_json, '$.\"sync-live-reserves\"', 'completed')", "already-started"],
+    ["reset inherited child", "child_dispositions_json = json_set(child_dispositions_json, '$.\"sync-kinesis-supply\"', 'not_started')", "not-owned"],
+    ["advanced progress", "items_done = items_done + 1", "not-owned"],
+    ["changed total", "items_total = items_total + 1", "not-owned"],
+    ["changed suffix", "next_item_key = 'different-coin'", "not-owned"],
+    ["changed domain fence", "current_domain_attempt_id = 'new-domain-attempt'", "not-owned"],
+    ["changed queue", "queue_hash = 'replacement-queue'", "not-owned"],
+    ["changed source attempt", "source_attempt_no = source_attempt_no + 1", "not-owned"],
+    ["renewed lease", "recovery_lease_until = recovery_lease_until + 1", "not-owned"],
+    ["changed timestamp", "updated_at = updated_at + 1", "not-owned"],
+    ["terminal timestamp", "completed_at = 1712", "not-owned"],
+    ["completed row", "state = 'completed'", "not-owned"],
+    ["failed row", "state = 'failed'", "not-owned"],
+    ["abandoned row", "state = 'platform_abandoned'", "not-owned"],
+  ])("refuses to release a %s without mutating its persisted checkpoint", async (_case, mutation, disposition) => {
+    const { sqlite, db } = harness();
+    const claimed = await claimUnstartedRecovery(db);
+    sqlite.prepare(`UPDATE worker_scheduled_checkpoints SET ${mutation} WHERE attempt_no = 2`).run();
+    const before = sqlite.prepare("SELECT * FROM worker_scheduled_checkpoints ORDER BY attempt_no").all();
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(db, claimed)).toEqual({ disposition });
+    expect(sqlite.prepare("SELECT * FROM worker_scheduled_checkpoints ORDER BY attempt_no").all()).toEqual(before);
+  });
+
+  it("does not release progress changed at the release CAS boundary", async () => {
+    const { sqlite, db } = harness();
+    const claimed = await claimUnstartedRecovery(db);
+    const racingDb = createSqliteD1(sqlite, { onRun: (sql) => {
+      if (sql.includes("SET state = 'ready'")) sqlite.prepare(
+        "UPDATE worker_scheduled_checkpoints SET items_done = 5 WHERE attempt_no = 2",
+      ).run();
+    } });
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(racingDb, claimed)).toEqual({ disposition: "not-owned" });
+    expect(await loadLiveReserveCheckpoint(db, claimed)).toEqual({ ...claimed, itemsDone: 5 });
+  });
+
+  it("refuses a snapshot of an already-started replay", async () => {
+    const { db } = harness();
+    const claimed = await claimUnstartedRecovery(db);
+    await setLiveReserveCheckpointChildDisposition(db, claimed, "sync-live-reserves", "running", 1_712);
+    const started = await loadLiveReserveCheckpoint(db, claimed);
+    if (!started) throw new Error("expected started checkpoint");
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(db, started)).toEqual({ disposition: "already-started" });
+    expect(await loadLiveReserveCheckpoint(db, claimed)).toEqual(started);
+  });
 
   it("retires incompatible debt only after full-cohort supersession and expired leases, fencing exact pending attempts", async () => {
     const { sqlite, db } = harness();

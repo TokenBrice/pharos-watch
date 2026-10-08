@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { getReserveAdapter } from "../index";
-import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE as profile } from "../rlusd-independent-assurance";
+import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE as profile } from "../rlusd-independent-assurance-profile";
 import { validateAdapterOutput } from "../validate";
 import { verifyIndependentAssuranceReport } from "../independent-assurance";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";

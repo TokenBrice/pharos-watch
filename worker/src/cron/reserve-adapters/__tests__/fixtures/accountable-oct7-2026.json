@@ -1,0 +1,376 @@
+{
+  "provenance": {
+    "accessedAt": "2026-10-07T20:47:43Z",
+    "sources": [
+      "https://cache.accountable.capital/dashboard/yuzu",
+      "https://axis.accountable.capital:8443/dashboard"
+    ],
+    "scope": "Selected raw fields; Yuzu timeline retains the closest source-clock row, not a new observation."
+  },
+  "yuzu": {
+    "res": "ok",
+    "data": {
+      "ts": 1791405089879,
+      "collateralization": 1.109231,
+      "ledgerSnapshots": [],
+      "reserves": {
+        "exposure_split": {
+          "[Ethena]_USDe": {
+            "": 8.07901650838225e-8
+          },
+          "[Agora]_PT_AUSD": {
+            "": 9.8387133872608
+          },
+          "[Maple]_syrupUSDT_Loop": {
+            "": 365714.08950434
+          },
+          "[Agora]_AUSD_LP": {
+            "": 497181.439586359
+          },
+          "[Sky]_sUSDS_Loop": {
+            "": -0.107069834488867
+          },
+          "[Ethena]_sUSDe_Loop": {
+            "": -631943.2779085842
+          },
+          "[Aave]_USDT": {
+            "": 0.000168918711
+          },
+          "[Aave]_RLUSD": {
+            "": 62.8070305198033
+          },
+          "[Global_Dollar]_PT_USDG_Loop": {
+            "": 1844356.9222082
+          },
+          "[Fasanara]_mGLOBAL_Loop": {
+            "": 191688.284822255
+          },
+          "[Aave]_USDT0": {
+            "": 506260.983070729
+          },
+          "[Fasanara]_mGLO_Loop": {
+            "": 656036.22047752
+          },
+          "[Securitize]_VBILL_Loop": {
+            "": 388.92
+          },
+          "[Re]_reUSD_LP": {
+            "": 1984911.575656435
+          },
+          "[Ethena]_USDe_Loop": {
+            "": 37007638.03158388
+          },
+          "[Maple]_syrupUSDG_Loop": {
+            "": 9975497.3598155
+          },
+          "Liquidity_Buffer": {
+            "": 1000223.2919666576
+          },
+          "[Re]_PT_reUSD": {
+            "": 1512260.02196848
+          },
+          "[Agora]_PT_AUSD_Loop": {
+            "": 1031189.51098659
+          },
+          "[Maple]_syrupUSDC_Loop": {
+            "": 5484048.17610244
+          },
+          "[Aave]_GHO": {
+            "": 577611.656274393
+          },
+          "Rest_of_Assets": {
+            "": 152046.02170379867
+          },
+          "[Yuzu]_yzPRIME": {
+            "": 3079235.99381803
+          },
+          "[Aave]_Gho_Savings": {
+            "": 4.72943908323066
+          },
+          "[Sky]_PT_sUSDS_Loop": {
+            "": 7.71614884583635
+          }
+        },
+        "exposure_split_ts": "2026.10.07 13:44:59 UTC",
+        "total_reserves": {
+          "value_rwa": 7617574.34,
+          "name": "Total Backing Assets",
+          "value": 65515464.39
+        },
+        "timeline": [
+          {
+            "date": "2026-10-07",
+            "syzusd_apy_7d": 8.284281428167821,
+            "yzpp_apy_1d": 25,
+            "staked_ratio": 0.9910845557462139,
+            "yzpp_apy_7d": 25,
+            "yield_rwa": 32166.532627481174,
+            "reservesRWA": 7614943.31,
+            "supply": 59063857.55,
+            "point": "74647",
+            "yzprime_tvl": 7603187.36855128,
+            "yzpp_tvl": 6764759.92063657,
+            "syzusd_apy": 8,
+            "yzprime_price": 1.027828,
+            "syzusd_tvl": 59063857.5531574,
+            "yield": 3418917.761746925,
+            "syzusd_apy_1d": 8.368965934431792,
+            "verifiability": "100",
+            "yzprime_apy_7d": 6.75,
+            "yzpp_price": 1.21342261286104,
+            "supplyRWA": 7603187.37,
+            "reserves": 62884867.05,
+            "yzprime_apy_1d": 6.75,
+            "syzusd_apy_30d": 7.801137067321166,
+            "yzpp_apy_30d": 26,
+            "syzusd_yzusd": 1.0866010030000832,
+            "yzprime_apy_30d": 6.78,
+            "ts": "1791369995388",
+            "ratio": 1.06
+          }
+        ]
+      }
+    }
+  },
+  "axis": {
+    "res": "ok",
+    "data": {
+      "ts": 1791393131637,
+      "collateralization": 1.009231,
+      "dataSources": {
+        "Blockchain": {
+          "name": "Blockchain",
+          "type": "Wallet",
+          "verificationLevel": 6,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791392441802",
+          "categories": [
+            "On-Chain Assets"
+          ]
+        },
+        "Exchange 576c4011": {
+          "name": "Exchange 576c4011",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393120265",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange 5d87f4b7": {
+          "name": "Exchange 5d87f4b7",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791392441696",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange 6fe14b36": {
+          "name": "Exchange 6fe14b36",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791392429014",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange 7817555f": {
+          "name": "Exchange 7817555f",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393124119",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange a8d08477": {
+          "name": "Exchange a8d08477",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393124553",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange ab17f207": {
+          "name": "Exchange ab17f207",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791392424490",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange ac6a7110": {
+          "name": "Exchange ac6a7110",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791392417576",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange afcb9bc6": {
+          "name": "Exchange afcb9bc6",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393126985",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange c20992c1": {
+          "name": "Exchange c20992c1",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393128458",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange ce73033d": {
+          "name": "Exchange ce73033d",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393121266",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange dedc141b": {
+          "name": "Exchange dedc141b",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393120687",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange efec8c63": {
+          "name": "Exchange efec8c63",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393120441",
+          "categories": [
+            "CEX"
+          ]
+        },
+        "Exchange fb62f2b2": {
+          "name": "Exchange fb62f2b2",
+          "type": "API",
+          "verificationLevel": 4,
+          "frequency": "15 MIN",
+          "lastUpdated": "1791393126254",
+          "categories": [
+            "CEX"
+          ]
+        }
+      },
+      "reserves": {
+        "reserves_split": [
+          {
+            "name": "Exchange 5d87f4b7",
+            "value": 13181683.81
+          },
+          {
+            "name": "Exchange ce73033d",
+            "value": 10697085.36
+          },
+          {
+            "name": "Exchange afcb9bc6",
+            "value": 8354251.06
+          },
+          {
+            "name": "Exchange efec8c63",
+            "value": 7021460.76
+          },
+          {
+            "name": "Exchange fb62f2b2",
+            "value": 5556642.64
+          },
+          {
+            "name": "Exchange 576c4011",
+            "value": 4395244.6
+          },
+          {
+            "name": "Exchange a8d08477",
+            "value": 4000868.33
+          },
+          {
+            "name": "Exchange c20992c1",
+            "value": 3501504.97
+          },
+          {
+            "name": "Exchange 6fe14b36",
+            "value": 2702271.81
+          },
+          {
+            "name": "Exchange dedc141b",
+            "value": 2293644.11
+          },
+          {
+            "name": "Exchange ac6a7110",
+            "value": 1337580.13
+          },
+          {
+            "name": "Exchange ab17f207",
+            "value": 690207.64
+          },
+          {
+            "name": "Exchange df347432",
+            "value": 44502.05
+          },
+          {
+            "name": "Exchange b62ad08a",
+            "value": 178.99
+          },
+          {
+            "name": "Exchange 891c150f",
+            "value": 174.43
+          },
+          {
+            "name": "Exchange d94a286b",
+            "value": 55.27
+          },
+          {
+            "name": "Exchange 6dd40e2c",
+            "value": 53.88
+          },
+          {
+            "name": "Exchange e37953f1",
+            "value": 41.04
+          },
+          {
+            "name": "Exchange bc1ac5ec",
+            "value": 21.21
+          },
+          {
+            "name": "Exchange ff954087",
+            "value": 0.9
+          },
+          {
+            "name": "Exchange 7817555f",
+            "value": 0.53
+          }
+        ],
+        "total_reserves": {
+          "name": "Total Reserves",
+          "value": 63777473.52
+        }
+      }
+    }
+  }
+}

@@ -1,11 +1,7 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
+import type { IndependentAssuranceProfile } from "./types";
 import { decodeHtmlEntities } from "./helpers";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
-import type { AdapterContext, AdapterResult } from "./types";
 
 // Ripple's archive uses month-only anchor labels. The report filename carries
 // the year, with both full years and abbreviated forms such as June'26.
@@ -50,13 +46,3 @@ export const RLUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
     `href="${decodeHtmlEntities(double ?? single ?? "").replace(/"/g, "%22").replace(/'/g, "%27")}"`),
 };
 
-export async function fetchRlusdIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams("rlusd-independent-assurance", config.params) as
-    LiveReserveAdapterParamsByKey["rlusd-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, RLUSD_INDEPENDENT_ASSURANCE_PROFILE, params, ctx);
-}

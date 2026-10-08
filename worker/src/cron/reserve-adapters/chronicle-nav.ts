@@ -1,5 +1,6 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
@@ -17,22 +18,13 @@ import {
   type MultichainSupplyAggregate,
 } from "./helpers";
 import { validateDecimals } from "./slice-math";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 const READ_WITH_AGE_SELECTOR = "0x393e5ede";
 const CHRONICLE_NAV_DECIMALS = 18;
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
-export interface ChronicleNavParams {
-  consumerAddress: string;
-  tokenAddress: string;
-  assetLabel: string;
-  assetRisk: ReserveSlice["risk"];
-  navScope: "native-fund-share" | "portfolio";
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-  maxOracleAgeSec?: number;
-}
+export type ChronicleNavParams = LiveReserveAdapterParamsByKey["chronicle-nav"];
 
 export type ChronicleNavSupplyAggregate = MultichainSupplyAggregate;
 

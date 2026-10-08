@@ -2,15 +2,17 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { toFunctionSelector } from "viem/utils";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
-import { RESERVOIR_ENDPOINT, reservoirSnapshot, runReservoir } from "./reservoir.test-support";
+import { RESERVOIR_ENDPOINT, reservoirSnapshot, runReservoir, type ReservoirNetworkOptions } from "./reservoir.test-support";
 
 afterEach(() => vi.unstubAllGlobals());
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const PREVIEW_REDEEM_SELECTOR = toFunctionSelector("previewRedeem(uint256)");
 
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
@@ -39,6 +41,34 @@ describe("adaptReservoirReserves", () => {
     const value = payload.assets.find((row) => row.address?.toLowerCase() === "0xc21b08c16458202593d4d9b26b9984ee67b38bbd")!;
     expect(prime).toMatchObject({ coinId: "pyusd-paypal", depType: "collateral", risk: "high" });
     expect(prime?.pct).toBeCloseTo(Number(value.totalBalanceValue) / Number(payload.totalAssets) * 100, 10);
+  });
+
+  it("maps the reviewed Arbitrum USDG vault without treating lending collateral as cash", () => {
+    const result = adaptReservoirReserves({
+      assets: [{ chainId: 42161, address: "0x390c1bb01F3F627144a40617e287d4cE3D5aBCfa",
+        label: "Morpho - Gauntlet USDG Premium", totalBalanceValue: "2999553.202023" }],
+      liabilities: [], totalAssets: "2999553.202023", totalLiabilities: "2999553.202023", equity: "0",
+    });
+    expect(result.slices).toEqual([expect.objectContaining({
+      sourceKey: "reservoir:gauntlet-usdg-premium", coinId: "usdg-paxos",
+      depType: "collateral", risk: "high", pct: 100,
+    })]);
+    expect(result.stableBucketLiquidityUsd).toBe(0);
+    expect(result.immediateRedeemableUsd).toBe(0);
+    expect(result.unknownExposurePct).toBe(0);
+  });
+
+  it.each([
+    { chainId: 1, address: "0x390c1bb01F3F627144a40617e287d4cE3D5aBCfa" },
+    { chainId: 42161, address: "0x0000000000000000000000000000000000000001" },
+    {},
+  ])("does not infer USDG from a spoofed vault label (%j)", (identity) => {
+    const result = adaptReservoirReserves({
+      assets: [{ label: "Morpho - Gauntlet USDG Premium", totalBalanceValue: "1", ...identity }],
+      liabilities: [], totalAssets: "1", totalLiabilities: "1", equity: "0",
+    });
+    expect(result.slices).toEqual([expect.objectContaining({ sourceKey: "reservoir:unknown", pct: 100 })]);
+    expect(result.slices[0].coinId).toBeUndefined();
   });
 
   it.each([
@@ -281,24 +311,28 @@ describe("adaptReservoirReserves", () => {
         settlementDelaySec: 0,
       },
     });
-    expect(result.metadata?.redemption?.routeStatusReason).toContain("underlyingBalance()");
     expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "reservoir-psm-unreadable" }));
     // Reservoir's balance sheet is protocol-wide, so the adapter has no
     // per-coin supply to divide by; the ratio is derived downstream.
     expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
   });
 
-  it.each(["srusd-reservoir", "wsrusd-reservoir"])(
-    "publishes the SavingModule redeemFee() as live fee telemetry for %s without rounding it away",
-    async (coinId) => {
-      // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
-      // at the adapter would understate it by a quarter.
-      const { result } = await runReservoir(coinId, SAMPLE_RESPONSE, { redeemFee: 134n });
+  it("publishes the exact srUSD SavingModule fee and rounded burn requirement", async () => {
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n, currentPrice: 100_000_003n });
+    expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
+    const amount = 4n * 10n ** 18n;
+    const burn = (amount * 100_000_000n + 100_000_002n) / 100_000_003n;
+    expect(result.metadata?.savingsExit).toMatchObject({
+      previewAmountRaw: amount.toString(),
+      burnAmountRaw: (burn * 1_000_134n / 1_000_000n).toString(),
+    });
+  });
 
-      expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
-      expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
-    },
-  );
+  it("binds the wsrUSD direct rUSD conversion without borrowing the srUSD fee", async () => {
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, { redeemFee: null });
+    expect(result.metadata?.redemption?.feeBps).toBe(0);
+    expect(result.metadata?.redemption?.capacityUsd).toBe(4);
+  });
 
   it("does not attribute the SavingModule exit fee to rUSD, which redeems straight at the PSM", async () => {
     const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n });
@@ -313,8 +347,7 @@ describe("adaptReservoirReserves", () => {
     const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 1_000_000n });
 
     expect(result.metadata?.redemption?.feeBps).toBeUndefined();
-    // The unreadable fee must not take the capacity surface down with it.
-    expect(result.metadata?.redemption?.capacityKind).toBe("live-direct");
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("reports the route paused when the PSM paused() read returns true", async () => {
@@ -324,6 +357,53 @@ describe("adaptReservoirReserves", () => {
       routeStatus: "paused",
       routeStatusSource: "onchain",
     });
+  });
+
+  it("pins all PSM and savings calls to one header and does not clamp to API liabilities", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    let pins = 0;
+    let headers = 0;
+    const { result, network } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE,
+      { balance: 200_000000n, blockTimestamp: now - 12,
+        onPin: () => { pins++; }, onHeader: () => { headers++; } });
+    expect(pins).toBe(1);
+    expect(headers).toBe(1);
+    expect(network.rpcCalls.filter((call) => call.method === "eth_call").every((call) => call.block === `0x${(26_142_993).toString(16)}`)).toBe(true);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 200, sourceTimestamp: now - 12, blockNumber: 26_142_993,
+      outputAssetKeys: ["usdc-circle"], sharedResourceKey: "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d",
+    });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+
+  it.each([
+    ["rusd-reservoir", 3, 0],
+    ["srusd-reservoir", 4, 0],
+    ["wsrusd-reservoir", 6, 2],
+  ] as const)("batches pinned %s identities and dependent quotes within %d RPC requests", async (coinId, rpcRequests, ladderReads) => {
+    const { result, network } = await runReservoir(coinId, SAMPLE_RESPONSE);
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 4, outputAssetKeys: ["usdc-circle"] });
+    // Counts actual boundary requests, not decoded aggregate members. Includes
+    // exactly one block-number/header pair in addition to the state batches.
+    expect(network.requests.filter((request) => request.method === "POST")).toHaveLength(rpcRequests);
+    const directReads = network.rpcCalls.filter((call) => call.method === "eth_call" && !call.viaMulticall);
+    expect(directReads).toHaveLength(ladderReads);
+    expect(directReads.every((call) => call.contract === "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+      && call.selector === PREVIEW_REDEEM_SELECTOR)).toBe(true);
+    expect(network.rpcCalls.every((call) => call.block === `0x${(26_142_993).toString(16)}`)).toBe(true);
+  });
+
+  const unprovedWrapperCases: ReservoirNetworkOptions[] = [
+    { rpcOverrides: { "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:decimals()": 18n } },
+    { rpcOverrides: { "0x4809010926aec940b550d34a46a52739f996d75d:paused()": 2n } },
+    { failPin: true },
+    { wrapperAsset: "0x738d1115b90efa71ae468f1287fc864775e23a31" },
+    { mintAuthorized: false },
+  ];
+  it.each(unprovedWrapperCases)("withholds an unproved exact wsrUSD route (%s)", async (options) => {
+    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, options);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 
   it("withholds redemption telemetry when the PSM underlying() is not the pinned USDC address", async () => {
@@ -348,7 +428,7 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("scores the PSM-bound route capacity as live-direct through the backstop entry", async () => {
-    const now = 1_800_000_000;
+    const now = Math.floor(Date.now() / 1000);
     const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE);
     const reserveSnapshot = reservoirSnapshot(result, now);
     const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
@@ -394,7 +474,7 @@ describe("adaptReservoirReserves", () => {
     ["srusd-reservoir", 40],
     ["wsrusd-reservoir", 10],
   ] as const)("derives %s capacity ratio from its own supply", async (coinId, supplyUsd) => {
-    const now = 1_800_000_000;
+    const now = Math.floor(Date.now() / 1000);
     const { result } = await runReservoir(coinId, SAMPLE_RESPONSE);
 
     const entry = await buildRedemptionBackstopEntry(
@@ -411,31 +491,16 @@ describe("adaptReservoirReserves", () => {
     expect(entry.immediateCapacityRatio).toBe(4 / supplyUsd);
   });
 
-  it("leaves the route cost-unbounded and score-ineligible when redeemFee() is unreadable", async () => {
-    // An unreadable current fee leaves the published formula unquantified at
-    // this notional. It is an integration gap, not issuer non-disclosure.
-    const now = 1_800_000_000;
-    const { result } = await runReservoir("wsrusd-reservoir", SAMPLE_RESPONSE, {
-      balance: 4_000000n,
-      paused: false,
-      redeemFee: null,
-    });
-    const reserveSnapshot = reservoirSnapshot(result, now);
+  it("does not borrow the PSM capacity when the preceding srUSD fee leg is unreadable", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: null });
+    expect(result.metadata?.redemption).toBeUndefined();
     const entry = await buildRedemptionBackstopEntry(
-      {} as D1Database,
-      "wsrusd-reservoir",
-      getRedemptionBackstopConfig("wsrusd-reservoir")!,
-      95,
-      null,
-      now,
-      { reserveSnapshotMetadata: reserveSnapshot },
+      {} as D1Database, "srusd-reservoir", getRedemptionBackstopConfig("srusd-reservoir")!,
+      95, null, now, { reserveSnapshotMetadata: reservoirSnapshot(result, now, "srusd-reservoir") },
     );
-
-    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
-    expect(observation?.scoreEligible).toBe(false);
-    expect(observation?.feeEvidence).toBe("disclosed-unquantified");
-    // Capacity remains diagnostic; no <=200 bps execution cost is proved.
-    expect(entry.immediateCapacityUsd).toBe(4);
+    expect(entry.immediateCapacityUsd).toBe(95 * 0.0025);
+    expect(entry.capacityConfidence).toBe("documented-bound");
   });
 
   it("falls back to neutral API headers when browser-style headers fail", async () => {

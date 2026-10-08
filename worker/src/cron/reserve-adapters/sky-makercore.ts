@@ -231,8 +231,12 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
 }
 
 export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
+  // Reviewed Block Analitica `datetime` samples omit a zone (including microseconds).
+  // Preserve their prior Worker-UTC interpretation explicitly; this is an assumed
+  // UTC source policy, not a claim that the publisher supplies timezone evidence.
   return summarizeSourceTimestampsRequiringCoverage(
     groups.filter((group) => parseNumericString(group.debt) > 0).map((group) => group.datetime),
+    "assumed-utc",
   );
 }
 
@@ -328,7 +332,8 @@ export async function fetchSkyMakercoreReserves(
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
 
   const timestampSummary = resolveSkyTimestampSummary(groups);
-  const hasCompleteTimestamps = timestampSummary != null && timestampSummary.untimestampedCount === 0;
+  const sourceTimestamp = timestampSummary.sourceTimestamp;
+  const hasCompleteTimestamps = sourceTimestamp != null && timestampSummary.untimestampedCount === 0;
 
   const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const unknownDebt = groups
@@ -366,7 +371,7 @@ export async function fetchSkyMakercoreReserves(
       "Sky positive-debt modules do not all expose parseable source timestamps",
     ));
   }
-  if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
+  if (timestampSummary.sourceTimestampSpreadSec != null && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
     warnings.push(
       reserveDegradedWarning(
         "source-timestamp-spread",
@@ -418,10 +423,10 @@ export async function fetchSkyMakercoreReserves(
         : {}),
       ...(totalDebt > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebt } : {}),
       skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
-      ...(hasCompleteTimestamps ? { snapshotDate: timestampSummary.sourceTimestamp } : {}),
+      ...(hasCompleteTimestamps ? { snapshotDate: sourceTimestamp } : {}),
       ...(hasCompleteTimestamps
         ? {
-            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
+            ...verifiedFreshnessMetadata(sourceTimestamp),
             latestGroupTimestamp: timestampSummary.latestSourceTimestamp,
             sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
             sourceTimestampCount: timestampSummary.timestampCount,

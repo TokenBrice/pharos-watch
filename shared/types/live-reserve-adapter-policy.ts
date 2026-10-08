@@ -113,6 +113,19 @@ export const DASHBOARD_VERIFIED_VALIDATION = {
   allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
 } as const satisfies LiveReserveAdapterValidationPolicy;
 
+/** Dashboard with mandatory publication time and no unpriced exposure allowed. */
+export const DASHBOARD_VERIFIED_NO_UNKNOWN_VALIDATION = {
+  maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+  maxUnknownExposurePct: 0,
+  allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+} as const satisfies LiveReserveAdapterValidationPolicy;
+
+/** Dated issuer NAV or holdings published on a business-day cadence. */
+export const BUSINESS_DAY_VERIFIED_VALIDATION = {
+  maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
+  allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+} as const satisfies LiveReserveAdapterValidationPolicy;
+
 /** Weekly issuer disclosure feed. */
 export const DISCLOSURE_VALIDATION = {
   maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,

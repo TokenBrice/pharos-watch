@@ -1,12 +1,5 @@
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import {
-  fetchIndependentAssuranceReserves,
-  type IndependentAssuranceProfile,
-} from "./independent-assurance";
+import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
-import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "fdusd-independent-assurance";
 
@@ -67,13 +60,3 @@ function fdusdReportDate(href: string, _text: string): string | null {
   return formatValidIsoDate(year, month, lastDayOfMonth(year, month)!, 2000);
 }
 
-export async function fetchFdusdIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params) as
-    LiveReserveAdapterParamsByKey["fdusd-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, FDUSD_INDEPENDENT_ASSURANCE_PROFILE, params, ctx);
-}

@@ -4,7 +4,7 @@ import {
   getIndependentAssuranceManifest,
   reconcileIndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
-import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "../cadd-independent-assurance";
+import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "../cadd-independent-assurance-profile";
 import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-support";
 
 describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {

@@ -47,23 +47,6 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "implementationLaunchDate": "2021-12-31",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "attestation-mix",
-    "breakerScope": "dusd-fluid",
-    "display": {
-      "url": "https://fluid.ch/dusd/",
-      "label": "Fluid DUSD"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "arbitrum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "obituary": {
     "causeOfDeath": "counterparty-failure",
     "deathDate": "2024-04-22",

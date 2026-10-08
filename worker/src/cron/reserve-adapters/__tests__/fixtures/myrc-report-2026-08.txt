@@ -1,0 +1,195 @@
+                    TOMMY UNG & PARTNERS PLT (AF 002378)
+                    202006000027 (LLP0025192-LCA)
+                    Chartered Accountants
+
+
+
+INDEPENDENT AUDITOR’S REPORT
+
+The Board of Directors and Management
+Blox Blockchain Sdn Bhd
+
+We have been engaged to perform a reasonable assurance engagement of Blox Blockchain
+Sdn Bhd’s (the “Company”) assertion that the following information (“Reserve Information”) of
+the Company in the accompanying Malaysian Ringgit Coin (“MYRC”) Reserve Report as at
+31 August 2026 at 11:59 PM GMT+8 (“Report Date”) is fairly stated based on the criteria set
+forth in the MYRC Reserve Report.
+
+   •   MYRC in Circulation = 1,800,903.74 MYRC
+
+   •   The total fair value of Malaysian Ringgit (“MYR”) denominated assets held is equal to
+       or greater than the MYRC in circulation at the Report Date.
+
+
+Management’s Responsibility
+
+Management is responsible for the preparation of the Reserve Information in accordance with
+the applicable criteria as set forth in the MYRC Reserve Report. Management is also
+responsible for such internal control as management determines necessary to enable the
+preparation of the Reserve Information that is free from material misstatement, whether due
+to fraud or error.
+
+
+Auditors’ independence and quality control
+
+We are independent of the Company in accordance with the By-Laws (on Professional Ethics,
+Conduct and Practice) of the Malaysian Institute of Accountants (“By-Laws”) and the
+International Ethics Standards Board for Accountants’ International Code of Ethics for
+Professional Accountants (including International Independence Standards) (“IESBA Code”),
+and we have fulfilled our other ethical responsibilities in accordance with the By-Laws and the
+IESBA Code.
+
+Our firm applies International Standard on Quality Management 1, Quality Management for
+Firms that Perform Audits or Reviews of Financial Statements, or Other Assurance or Related
+Services Engagements (“ISQM1”) and, accordingly, maintains a system of quality control that
+includes directors and procedures concerning compliance with ethical requirements,
+professional standards and applicable legal and regulatory requirements.
+
+
+Auditors’ responsibility
+
+Our responsibility is to express a reasonable assurance opinion on the Reserve Information
+based on the evidence we have obtained.
+
+We carried out our work in accordance with the criterial established in the International
+Standard on Assurance Engagements 3000 (Revised), Assurance Engagements Other than
+Audits or Reviews of Historical Financial Information, issued by the International Auditing and
+
+
+                      A: 6-2, Suite B, Jalan Puteri 2/4, Bandar Puteri, 47100 Puchong, Selangor, Malaysia
+                                                        E: Auditsvs.fs@gmail.com      T: 03 - 8051 0332
+Auditors’ responsibility (contd.)
+
+Assurance Standards Board (“IAASB”) for reasonable assurance engagements. This standard
+requires that we plan and perform the engagement to obtain reasonable assurance whether
+the MYRC Reserve Report free from material misstatement.
+
+An examination involves performing procedures to obtain evidence about management’s
+assertion. The nature, timing, and extent of the procedures selected depend on our judgment,
+including an assessment of the risks of material misstatement of management’s assertion,
+whether due to fraud or error. We believe that the evidence we obtained is sufficient and
+appropriate to provide a reasonable basis for our opinion.
+
+
+Significant inherent limitations
+
+The Reserve Information in the accompanying MYRC Reserve Report relates to the
+Company’s MYRC token, which is a cryptographic stored value token that allows financial
+market participants to transact with a crypto asset. Crypto assets are an evolving area of
+technology and marketplace activity. Individuals who acquire and utilise MYRC tokens and
+other crypto assets are responsible for informing themselves of the general risks and
+uncertainties associated with them.
+
+
+Opinion
+
+In our opinion, the Reserve Information in the accompanying MYRC Reserve Report of the
+Company as at 31 August 2026 is fairly stated, based on the criteria set forth in the Reserve
+Account Report, in all material respects.
+
+
+Specific Purpose of Applicable Criteria and Restriction on Distribution and/or Use
+
+This report is made solely to the Company based on the Company’s requirement and for no
+other purpose. We do not assume responsibility to any other person for the content of this
+report.
+
+
+
+
+Tommy Ung & Partners PLT
+202006000027 (LLP0025192-LCA) & AF 002378
+Chartered Accountants
+
+Malaysia
+29 September 2026
+
+
+
+                      A: 6-2, Suite B, Jalan Puteri 2/4, Bandar Puteri, 47100 Puchong, Selangor, Malaysia
+                                                        E: Auditsvs.fs@gmail.com      T: 03 - 8051 0332
+                                                            MYRC Reserve Report
+
+
+
+MYRC Reserve Report Validity Assertion
+
+BLOX Blockchain Sdn. Bhd. (referred to as the "Company" and/or “BLOX”) assumes
+the responsibility for ensuring the accuracy, completeness, and validity of the MYRC
+Reserve Report as of August 31, 2026, at 11:59 pm GMT+8 (referred to as the "Report
+Date"). Company asserts that, based on the criteria outlined in the Report, the Fair
+Value of Assets held within the MYRC Reserve meets or exceeds the quantity of
+MYRC in Circulation as of the specified Report Date.
+
+MYRC Reserve Account Report
+
+ Report Date                                                        31st August 2026
+
+
+ MYRC in Circulation                                                      1,800,903.74
+ (as defined in the Criteria below)
+
+
+ Total    Malaysian  Ringgit   (MYR)                                      1,800,903.74
+ denominated assets held on behalf of
+ MYRC holders. Please refer to MYRC
+ Reserve Breakdown.
+
+
+CRITERIA / NOTES
+
+   1. MYRC in Circulation is defined as the total MYRC supply on MYRC Approved
+      Blockchain at the Report Date (6,365,298.65) less (i) Tokens Authorized But
+      Not Issued as reported on MYRC Approved Blockchain (4,564,394.91).
+
+
+   2. Total Malaysian Ringgit denominated assets consist of MYR cash deposits at
+      banks and MYR cash equivalents held with asset managers licensed by
+      Securities Commission Malaysia that are readily available for withdrawal for
+      token redemption.
+
+   3. BLOX and MYRC are currently in an Open Beta Testing phase, dedicated to
+      the research and development of stablecoin infrastructure and its potential for
+      the Malaysian economy. BLOX is currently not a participant in any regulatory
+      sandbox in Malaysia.
+
+       While BLOX fully acknowledges and supports the initiatives of Bank Negara
+       Malaysia (BNM), specifically the Digital Asset Innovation Hub (DAIH), the
+       Company operates independently from and has no affiliation with the DAIH of
+       that framework at this moment in time.
+
+       For official information regarding the DAIH and its participants, please visit the
+       official BNM portal: https://www.bnm.gov.my/DAIH.
+
+                                                                                 blox.my
+                                            MYRC Reserve Report
+
+
+
+
+____________________
+Ethan Chung
+CEO of BLOX
+September 29, 2026
+
+
+
+MYRC Reserve Breakdown
+
+                             Total (MYR)              Allocation
+
+
+Cash                         1,200,903.77               66.68%
+
+
+Halogen Shariah MYR Liquid    600,000.00                33.32%
+Fund
+
+
+Total                        1,800,903.77               100.00%
+
+
+
+
+                                                          blox.my
+

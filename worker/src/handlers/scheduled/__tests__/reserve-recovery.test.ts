@@ -3,11 +3,13 @@ import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger"
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { resolveScheduledSlotPolicy } from "../../../lib/scheduled-slot-policy";
+import { makeLiveReserveCheckpoint } from "../../../lib/__tests__/scheduled-recovery-checkpoint.test-support";
 
 const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
   prepare: vi.fn(),
   retire: vi.fn(),
+  release: vi.fn(),
   sweep: vi.fn(),
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
@@ -21,6 +23,7 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   claimNextLiveReserveCheckpointRecovery: mocks.claim,
   prepareEligibleLiveReserveCheckpointRecoveries: mocks.prepare,
   retireSupersededLiveReserveCheckpoints: mocks.retire,
+  releaseUnstartedLiveReserveRecoveryClaim: mocks.release,
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
@@ -90,6 +93,7 @@ describe("reserve recovery mode", () => {
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
     mocks.retire.mockResolvedValue(0);
     mocks.claim.mockResolvedValue({ disposition: "none" });
+    mocks.release.mockReset().mockResolvedValue({ disposition: "released" });
     mocks.priority.mockReset().mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
   });
@@ -205,6 +209,68 @@ describe("reserve recovery mode", () => {
       preparation: { inspection: EMPTY_INSPECTION, prepared: [] },
       summary: { jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 },
     });
+  });
+
+  it.each(["released", "not-owned", "already-started"])(
+    "defers after a successful claim and reports the actual release disposition (%s)",
+    async (disposition) => {
+      const checkpoint = makeLiveReserveCheckpoint({
+        state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
+        currentItemKey: null, currentDomainAttemptId: "abandoned-domain-attempt",
+      });
+      mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint });
+      const priority = {
+        reason: "heavy-slot-co-tenancy", scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 900,
+        observedAt: 1000, lookaheadSec: 1440, condition: "heavy-slot-running",
+      };
+      mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce(priority);
+      let completeRelease!: () => void;
+      let releaseStarted!: () => void;
+      const gate = new Promise<void>((resolve) => { completeRelease = resolve; });
+      const started = new Promise<void>((resolve) => { releaseStarted = resolve; });
+      mocks.release.mockImplementationOnce(async () => {
+        releaseStarted();
+        await gate;
+        return { disposition };
+      });
+      const value = runtime("recover");
+      let settled = false;
+      const pending = runFiveMinuteReserveRecoverySlot(value).then((result) => {
+        settled = true;
+        return result;
+      });
+      try {
+        await started;
+        expect(settled).toBe(false);
+        expect(mocks.runReserveSlot).not.toHaveBeenCalled();
+        expect(latestLeasedResult).toBeUndefined();
+      } finally {
+        completeRelease();
+        await pending;
+      }
+      expect(latestLeasedResult).toMatchObject({ status: "skipped_neutral" });
+      expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+        checkpointsClaimed: 1, producerPriority: priority, recoveryClaimRelease: { disposition },
+      });
+      expect(mocks.runReserveSlot).not.toHaveBeenCalled();
+    },
+  );
+
+  it("preserves config degradation when priority defers an owned claim", async () => {
+    mocks.configRecovery.mockResolvedValue({ attempted: ["coin"], healed: [], failed: ["coin"] });
+    mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint({
+      state: "recovering", invocationId: "recovery-poll", recoveryOwner: "recovery-poll",
+    }) });
+    mocks.priority.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValueOnce({
+      reason: "producer-slot-priority", scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1000,
+      observedAt: 1000, lookaheadSec: 1440, condition: "current-slot-unfinished",
+    });
+    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    expect(latestLeasedResult).toMatchObject({ status: "degraded" });
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      reason: "reserve-config-recovery-failed", recoveryClaimRelease: { disposition: "released" },
+    });
+    expect(mocks.runReserveSlot).not.toHaveBeenCalled();
   });
 
   it("persists the config phase before initializing or executing its heavy graph", async () => {

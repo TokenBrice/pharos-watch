@@ -8,7 +8,7 @@ import {
   decodeHtmlEntities,
   fetchTextWithRetry,
   htmlLayoutChangedError,
-  normalizeSlices,
+  normalizeSlicesWithDiagnostics,
   requireHtmlInput,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -113,7 +113,7 @@ function isAttestationReportLink(href: string, text: string): boolean {
   return /(?:^| )(?:attestations?|audits?|reports?)(?: |$)/.test(normalized);
 }
 
-function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
+function readConfiguredSlices(rawSlices: unknown) {
   if (!Array.isArray(rawSlices) || rawSlices.length === 0) {
     throw new Error(`${ADAPTER_NAME} adapter params invalid.slices: expected a non-empty array`);
   }
@@ -143,7 +143,7 @@ function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
     };
   });
 
-  return normalizeSlices(slices);
+  return normalizeSlicesWithDiagnostics(slices);
 }
 
 function betterDate(
@@ -324,10 +324,10 @@ export function adaptAttestationPdfIndex(
   params: AttestationPdfIndexParams,
   options: AttestationPdfIndexAdaptOptions = {},
 ): AdapterResult {
-  const slices = readConfiguredSlices(params.slices);
+  const { slices, rawSumDeviation } = readConfiguredSlices(params.slices);
   // eslint-disable-next-line security/detect-non-literal-regexp -- reviewed static currency token from adapter config; the params schema already rejects non-compiling sources.
   const linkMatch = params.linkMatch ? new RegExp(params.linkMatch) : undefined;
-  const diag = { rawSumDeviation: Math.abs(params.slices.reduce((sum, slice) => sum + slice.pct, 0) - 100) };
+  const diag = { rawSumDeviation };
   const latest = findLatestPdfLink(html, linkMatch);
   if (!latest) {
     if (linkMatch) {

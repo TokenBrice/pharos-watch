@@ -14,10 +14,12 @@ const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const RESERVE_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/domains/reserves");
 
 interface CoinSource {
+  status?: string;
   contracts?: Array<{ chain: string; address: string }>;
   liveReservesConfig?: {
     adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
     scoring?: { maxSourceAgeSec?: number };
+    suspended?: { reason: string; since: string };
     inputs?: { primary?: { chain?: string } };
     params?: {
       slice?: { expectedAssetAddress?: string };
@@ -62,6 +64,38 @@ function getErc4626SidecarKeys(): Map<string, Set<string>> {
 
 
 describe("live reserve catalog integrity", () => {
+  it("rejects invalid authored configs even when suspended or outside the active catalog", () => {
+    const failures = [...getCoinSources()].flatMap(([id, source]) => {
+      const config = source.liveReservesConfig;
+      return config && !LiveReservesConfigSchema.safeParse(config).success ? [id] : [];
+    });
+    expect(failures).toEqual([]);
+  });
+
+  it("has no executable binding on terminal-lifecycle source entries", () => {
+    const deadBindings = [...getCoinSources()].filter(([, source]) =>
+      (source.status === "frozen" || source.status === "delisted")
+      && source.liveReservesConfig && !source.liveReservesConfig.suspended,
+    ).map(([id]) => id);
+    expect(deadBindings).toEqual([]);
+  });
+
+  it("withholds the wrong-identity bnUSD producer and every v2-derived legacy fallback claim", () => {
+    const config = getCoinSources().get("bnusd-balanced")?.liveReservesConfig;
+    expect(config?.suspended).toBeDefined();
+    const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "bnusd-balanced");
+    expect(coin?.liveReservesConfig).toBeUndefined();
+    expect(coin?.reserveReview).toMatchObject({
+      scope: "classification-only", knownUnknownExposurePct: 100,
+    });
+    expect(coin?.reserveReview?.confidence).not.toBe("verified");
+    expect(coin?.reserveReview?.compositionAsOf).toBeUndefined();
+    expect(coin?.reserves).toMatchObject([{ pct: 100, assetClass: "other", liquidityHorizon: "unknown" }]);
+    expect(coin?.reserves).toHaveLength(1);
+    expect(coin?.reserves?.some((row) => row.sourceKey?.startsWith(`${config?.adapter}:`) || row.coinId || row.depType)).toBe(false);
+    expect(coin?.custodyProfile).toBeUndefined();
+  });
+
   it("accepts configured live reserve URLs", () => {
     const failures: string[] = [];
 

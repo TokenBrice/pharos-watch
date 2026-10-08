@@ -1,0 +1,156 @@
+{
+  "chain": "monad",
+  "endpoint": "https://api-monad-mainnet-full.n.dwellir.com",
+  "method": "batch",
+  "params": [
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x0ef8fd8f36cae470aff8b9d9bbd2e5f44fb23d51",
+          "data": "0x97331bf9"
+        },
+        "0x6a42f4b"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+          "data": "0x18160ddd"
+        },
+        "0x6a42f4b"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+          "data": "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704"
+        },
+        "0x6a42f4b"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xc69d584b3118e94b3443cc6c67076281242fa704",
+          "data": "0xf4325d67"
+        },
+        "0x6a42f4b"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+          "data": "0x8da5cb5b"
+        },
+        "0x6a42f4b"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x135951057cfccca7e8ef87ee41318d670f723f68",
+          "data": "0x7ccd12d5"
+        },
+        "0x6a42f4b"
+      ]
+    }
+  ],
+  "requestedBlock": "111423307",
+  "block": {
+    "number": "111423307",
+    "hash": "0xf7f9efc1e9d053387db1d852956b48c99f41e35cadf8e25f7c5641a2dbceba92",
+    "timestamp": "2026-10-07T20:48:37.000Z"
+  },
+  "result": [
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x0ef8fd8f36cae470aff8b9d9bbd2e5f44fb23d51",
+          "data": "0x97331bf9"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+          "data": "0x18160ddd"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x000000000000000000000000000000000000000000012adfb9d936f8a4213000",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+          "data": "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x000000000000000000000000000000000000000000000000000000d433267ee3",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xc69d584b3118e94b3443cc6c67076281242fa704",
+          "data": "0xf4325d67"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x000000000000000000000000754704bc059f8c67012fed69bc8a327a5aafb603",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+          "data": "0x8da5cb5b"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x000000000000000000000000135951057cfccca7e8ef87ee41318d670f723f68",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x135951057cfccca7e8ef87ee41318d670f723f68",
+          "data": "0x7ccd12d5"
+        },
+        "0x6a42f4b"
+      ],
+      "result": "0x0000000000000000000000000ef8fd8f36cae470aff8b9d9bbd2e5f44fb23d51",
+      "state": "ok",
+      "reason": null
+    }
+  ],
+  "state": "ok",
+  "reason": null,
+  "observedAt": "2026-10-07T20:48:57.724Z"
+}

@@ -160,10 +160,20 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
   }
 
   const payloadChains = payload.chains ?? [];
-  // A chain that ships with zero TVL and zero supply (e.g. a chain ahead of its
-  // launch) is an inactive placeholder carrying no reserve yet.
+  const chainsById = new Map<number, FlyingTulipChain>();
+  for (const chain of payloadChains) {
+    if (chain.chainId === undefined) continue;
+    if (chainsById.has(chain.chainId)) {
+      throw new Error(`flying-tulip-ftusd duplicate chain ID ${chain.chainId}`);
+    }
+    chainsById.set(chain.chainId, chain);
+  }
+  // Only explicit zero TVL, supply, and present collateral amounts establish an
+  // inactive placeholder. Unavailable amounts or positive collateral cannot hide
+  // behind zero headline metrics.
   const chainIsActive = (chain: FlyingTulipChain) =>
-    chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0;
+    chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0
+    || (chain.collaterals?.some((collateral) => collateral.tvlAmountUsd !== 0) ?? false);
 
   const collateralUsd = new Map<string, number>();
   const unreviewedCollateralUsd = new Map<string, { name: string; value: number }>();
@@ -175,7 +185,7 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
   // Every reviewed chain must be present. Present collateral rows retain exact
   // identity pins, but zero-capital slots may be added or omitted.
   for (const [chainId, expected] of EXPECTED_CHAINS) {
-    const chain = payloadChains.find((candidate) => candidate.chainId === chainId);
+    const chain = chainsById.get(chainId);
     if (!chain) {
       throw new Error(`flying-tulip-ftusd missing expected ${expected.name} chain payload`);
     }

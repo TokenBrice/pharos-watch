@@ -6,7 +6,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
 import { fetchTextWithRetry, verifiedFreshnessMetadata } from "./helpers";
 import { extractEscapedJsonValueAfterKey } from "./html";
-import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
 const ONDO_OUSG_PORTFOLIO_URL = "https://ondo.finance/ousg";
 const PORTFOLIO_SCOPE = "Current Value excludes OUSG limited partnership interests represented in book-entry (non-tokenized) form.";

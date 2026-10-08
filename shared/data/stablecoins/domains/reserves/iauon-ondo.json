@@ -60,7 +60,7 @@
     "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The aggregate basket contains IAU shares and cash in transit, but the inspected product and current aggregate daily/monthly reports do not provide IAUon-specific weights or liabilities. Alpaca Securities LLC is named as a broker; allocation among providers and attributable cash remain unresolved.",
+    "knownUnknownExposure": "IAU shares/cash-in-transit weights, token-specific liabilities, broker allocation and attributable cash remain unresolved. Source-maintenance check 2026-10-07: official IAUon info API timestamps Physical Gold 100% for the underlying IAU ETF, while primary/circulating supply, TVL and market cap are null. The underlying ETF inventory does not census issuer-owned IAU shares or cash for IAUon; do not replace the retained unresolved wrapper envelope with direct gold. Preserve configured portfolio warning and 4-day NAV transport/scoring budget. A fresh ETF topHoldings clock is not a token reserve date or an automatic composition waiver; pooled Ondo reports do not repair token-level attribution.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

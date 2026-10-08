@@ -1,17 +1,13 @@
+import { createHash } from "node:crypto";
+import * as assurance from "@shared/lib/independent-assurance";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, independentAssuranceSourceTimestamp, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { FDUSD_INDEPENDENT_ASSURANCE_PROFILE, fetchFdusdIndependentAssuranceReserves } from "../fdusd-independent-assurance";
-import { fetchIndependentAssuranceReserves } from "../independent-assurance";
+import { FDUSD_INDEPENDENT_ASSURANCE_PROFILE } from "../fdusd-independent-assurance-profile";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import { PDF_BYTES, verifyFixtureIndex } from "./independent-assurance.test-support";
+import { PDF_BYTES, installFetch, verifyFixtureIndex } from "./independent-assurance.test-support";
 
-vi.mock("../independent-assurance", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("../independent-assurance");
-  return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
-});
 
 const reviewed = getIndependentAssuranceManifest("FDUSD");
 
@@ -124,47 +120,30 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     )).rejects.toThrow("ambiguous report date");
   });
 
-  it("dispatches the bound coin through the publisher adapter and validates output", async () => {
+  it("validates the bound coin through real index, PDF and reconciliation checks", async () => {
     const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === "fdusd-first-digital");
-    expect(coin?.liveReservesConfig).toMatchObject({
-      adapter: "fdusd-independent-assurance",
-      version: 2,
-      semantics: "attestation-mix",
+    if (!coin?.liveReservesConfig) throw new Error("missing FDUSD config");
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
+      ...reviewed,
+      reportByteLength: PDF_BYTES.length,
+      reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
     });
-    vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
-      slices: [{
-        name: "United States Treasury Bills (nine maturities, 1-Sep-26 through 20-Oct-26)",
-        pct: 75.9,
-        risk: "very-low",
-        assetClass: "treasury-bill",
-      }],
-      metadata: { sourceTimestamp: Date.parse("2026-09-01T01:00:00Z") / 1000, freshnessMode: "verified" },
-    });
-    const result = await fetchFdusdIndependentAssuranceReserves(
-      coin!, coin!.liveReservesConfig!, new AbortController().signal,
-    );
-    expect(result.slices[0].name).toContain("Treasury Bills");
-    expect(vi.mocked(fetchIndependentAssuranceReserves)).toHaveBeenCalledWith(
-      coin!, coin!.liveReservesConfig!, expect.any(AbortSignal), FDUSD_INDEPENDENT_ASSURANCE_PROFILE,
-      {
-        product: "FDUSD",
-        profile: "fdusd-v1",
-        indexHost: "firstdigitallabs.webflow.io",
-        reportHosts: ["cdn.prod.website-files.com"],
-      },
-      undefined,
-    );
-
-    const adapter = getReserveAdapter("fdusd-independent-assurance");
-    expect(adapter?.evidenceClass).toBe("independent");
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["fdusd-independent-assurance"].sourceOriginClass).toBe("independent-assurance");
-    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["fdusd-independent-assurance"].provenance.status).toBe("active");
+    installFetch("FDUSD", indexHtml());
+    const adapter = getReserveAdapter("fdusd-independent-assurance")!;
+    const result = await adapter.fetch(coin, coin.liveReservesConfig, new AbortController().signal);
+    expect(result.slices).toHaveLength(3);
+    expect(result.slices.map((slice) => slice.sourceKey)).toEqual(expect.arrayContaining([
+      "fdusd-independent-assurance:fdusd:treasury-bills",
+      "fdusd-independent-assurance:fdusd:fixed-deposits",
+      "fdusd-independent-assurance:fdusd:custody-cash",
+    ]));
+    expect(result.slices.reduce((total, slice) => total + slice.pct, 0)).toBeCloseTo(100, 6);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(336969677.04 / 335636418.35, 12);
+    expect(result.metadata?.sourceTimestamp).toBe(independentAssuranceSourceTimestamp(reviewed));
+    expect(result.metadata?.freshnessMode).toBe("verified");
     expect(validateAdapterOutput(
-      {
-        slices: [{ name: "U.S. Treasury Bills", pct: 100, risk: "very-low" }],
-        metadata: { sourceTimestamp: Date.parse("2026-09-01T01:00:00Z") / 1000, freshnessMode: "verified" },
-      },
-      { adapter: adapter!, now: Date.parse("2026-09-01T01:00:00Z") / 1000 + 3_000_000 },
+      result,
+      { adapter, now: independentAssuranceSourceTimestamp(reviewed) + 60 },
     ).valid).toBe(true);
   });
 });

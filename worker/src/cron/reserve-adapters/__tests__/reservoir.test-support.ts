@@ -15,6 +15,9 @@ const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const SAVING_MODULE_ADDRESS = "0x5475611dffb8ef4d697ae39df9395513b6e947d7";
 const DEFAULT_PSM_BALANCE = 4_000000n;
 const DEFAULT_REDEEM_FEE = 134n;
+const RUSD_ADDRESS = "0x09d4214c03d01f49544c0448dbe3a27f768f2b34";
+const SRUSD_ADDRESS = "0x738d1115b90efa71ae468f1287fc864775e23a31";
+const WSRUSD_ADDRESS = "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094";
 
 export interface ReservoirNetworkOptions {
   /** PSM `underlying()` answer; `null` routes a revert. Defaults to pinned Circle USDC. */
@@ -25,6 +28,15 @@ export interface ReservoirNetworkOptions {
   paused?: boolean | null;
   /** SavingModule `redeemFee()` answer; `null` routes a revert. */
   redeemFee?: bigint | null;
+  currentPrice?: bigint;
+  wrapperRate?: bigint;
+  wrapperAsset?: string | null;
+  mintAuthorized?: boolean | null;
+  rpcOverrides?: Record<string, AdapterRpcValue>;
+  blockTimestamp?: number;
+  failPin?: boolean;
+  onPin?: () => void;
+  onHeader?: () => void;
   /** Answer the browser-header request with 403 so the neutral-header fallback runs. */
   rejectBrowserHeaders?: boolean;
 }
@@ -42,8 +54,39 @@ export function reservoirNetwork(
   const rpc: Record<string, AdapterRpcValue> = {
     [`${PSM_ADDRESS}:0x6f307dc3`]: options.underlying === undefined ? USDC_ADDRESS : options.underlying,
     [`${PSM_ADDRESS}:0x59356c5c`]: options.balance === undefined ? DEFAULT_PSM_BALANCE : options.balance,
-    [`${PSM_ADDRESS}:0x5c975abb`]: options.paused === undefined ? false : options.paused,
+    [`${PSM_ADDRESS}:paused()`]: options.paused === undefined ? false : options.paused,
     [`${SAVING_MODULE_ADDRESS}:0x965fa21e`]: options.redeemFee === undefined ? DEFAULT_REDEEM_FEE : options.redeemFee,
+    [`${PSM_ADDRESS}:rusd()`]: RUSD_ADDRESS,
+    [`${PSM_ADDRESS}:DECIMAL_FACTOR()`]: 6n,
+    [`${USDC_ADDRESS}:decimals()`]: 6n,
+    [`${RUSD_ADDRESS}:decimals()`]: 18n,
+    [`${RUSD_ADDRESS}:MINTER()`]: `0x${"1".repeat(64)}`,
+    [`${RUSD_ADDRESS}:hasRole(bytes32,address)`]: options.mintAuthorized === undefined ? true : options.mintAuthorized,
+    [`${SAVING_MODULE_ADDRESS}:rusd()`]: RUSD_ADDRESS,
+    [`${SAVING_MODULE_ADDRESS}:srusd()`]: SRUSD_ADDRESS,
+    [`${SAVING_MODULE_ADDRESS}:currentPrice()`]: options.currentPrice ?? 100_000_001n,
+    [`${SRUSD_ADDRESS}:decimals()`]: 18n,
+    [`${SAVING_MODULE_ADDRESS}:previewRedeem(uint256)`]: (call) => {
+      const amount = BigInt(`0x${call.data.slice(10)}`);
+      const price = options.currentPrice ?? 100_000_001n;
+      return price > 0n ? (amount * 100_000_000n + price - 1n) / price : 0n;
+    },
+    [`${WSRUSD_ADDRESS}:asset()`]: options.wrapperAsset === undefined ? RUSD_ADDRESS : options.wrapperAsset,
+    [`${WSRUSD_ADDRESS}:decimals()`]: 18n,
+    [`${WSRUSD_ADDRESS}:previewRedeem(uint256)`]: (call) =>
+      BigInt(`0x${call.data.slice(10)}`) * (options.wrapperRate ?? 1_100_000_000_000_000_001n) / 10n ** 18n,
+    [`${WSRUSD_ADDRESS}:previewWithdraw(uint256)`]: (call) =>
+      BigInt(`0x${call.data.slice(10)}`) * 10n ** 18n / (options.wrapperRate ?? 1_100_000_000_000_000_001n),
+    eth_blockNumber: () => {
+      options.onPin?.();
+      if (options.failPin) throw new Error("Fixture pin unavailable");
+      return 26_142_993;
+    },
+    eth_getBlockByNumber: () => {
+      options.onHeader?.();
+      return { number: 26_142_993, timestamp: options.blockTimestamp ?? Math.floor(Date.now() / 1000) };
+    },
+    ...options.rpcOverrides,
   };
   return {
     json: {
@@ -59,6 +102,7 @@ export function reservoirNetwork(
         return payload;
       },
     },
+    block: { number: 26_142_993, timestamp: options.blockTimestamp ?? Math.floor(Date.now() / 1000) },
     rpc,
   };
 }

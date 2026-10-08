@@ -118,6 +118,7 @@ describe("adaptEthenaCollateral", () => {
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
+      lastUpdatedAt: 1_000,
       details: {
         freshnessSource: "issuer-api",
         freshnessReason: expect.stringContaining("omitted source timestamps for 1 of 2 material rows"),
@@ -126,6 +127,36 @@ describe("adaptEthenaCollateral", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "source-timestamp-coverage", effect: "degraded" }),
     ]));
+  });
+
+  it("withholds freshness and reports coverage when all material clocks are invalid", () => {
+    const result = adaptEthenaCollateral({
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: Number.NaN, usdAmount: 60 },
+        { asset: "BTC", exchange: "Binance", timestamp: 0, usdAmount: 40 },
+        { asset: "ETH", exchange: "Binance", timestamp: 1_000, usdAmount: 0 },
+      ],
+    });
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("lastUpdatedAt");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "source-timestamp-coverage", effect: "degraded" }),
+    ]));
+    expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(false);
+  });
+
+  it("rejects a zero-material composition rather than publishing a synthetic clock", () => {
+    for (const collateral of [
+      [],
+      [{ asset: "ETH", exchange: "Binance", timestamp: 1_000, usdAmount: 0 }],
+    ]) {
+      expect(() => adaptEthenaCollateral({
+        totalBackingAssetsInUsd: 100,
+        collateral,
+      })).toThrow(Error);
+    }
   });
 
   it("does not treat the mixed Liquid Cash bucket as redemption capacity", () => {

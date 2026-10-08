@@ -1,5 +1,11 @@
 import { decodeAbiParameters } from "viem/utils";
-import { pinnedBlockPlan } from "./evm-observation-plan";
+import {
+  addressObservation,
+  customObservation,
+  executeEvmObservationPlan,
+  pinnedBlockPlan,
+  uint256Observation,
+} from "./evm-observation-plan";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
@@ -8,10 +14,11 @@ import {
   MENTO_BIPOOL_MANAGER_ADDRESS,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_GET_POOL_EXCHANGE_SELECTOR,
+  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import type { AdapterContext, AdapterResult } from "./types";
-import { decodeBytes32ArrayWord } from "./abi-decode";
+import { decodeBytes32ArrayWord, decodeUint256Word } from "./abi-decode";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -61,6 +68,21 @@ const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWi
 // against the FPMM implementation behind the JPYm/CHFm proxies on 2026-08-12.
 const FPMM_LP_FEE_SELECTOR = "0x704ce43e"; // lpFee()
 const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a"; // protocolFee()
+const FPMM_RESERVES_ABI = [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }] as const;
+const FPMM_TRADING_LIMITS_ABI = [
+  { type: "int120" }, { type: "int120" }, { type: "uint8" },
+  { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" },
+] as const;
+
+function decodeFpmmReserves(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{192}$/.test(raw)) throw new Error("malformed reserves");
+  return decodeAbiParameters(FPMM_RESERVES_ABI, raw);
+}
+
+function decodeFpmmTradingLimits(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{448}$/.test(raw)) throw new Error("malformed trading limits");
+  return decodeAbiParameters(FPMM_TRADING_LIMITS_ABI, raw);
+}
 
 interface MentoPoolCallOptions {
   signal: AbortSignal;
@@ -69,6 +91,7 @@ interface MentoPoolCallOptions {
   fallbackRpcUrl: string | undefined;
   rpcMode: EvmOnchainInput["rpcMode"];
   chain: string;
+  observedBlock: NonNullable<AdapterContext["observedBlock"]>;
 }
 
 type MentoParams = LiveReserveAdapterParamsByKey["mento"];
@@ -76,11 +99,18 @@ type MentoRedemptionParams = NonNullable<MentoParams["redemption"]>;
 type MentoBrokerPoolParams = Extract<MentoRedemptionParams, { kind: "broker-pool" }>;
 type MentoLiquityV2CrParams = Extract<MentoRedemptionParams, { kind: "liquity-v2-cr" }>;
 
-function mentoPoolCacheKey(params: MentoBrokerPoolParams, resource: string): string {
+function mentoPoolCacheKey(
+  params: MentoBrokerPoolParams,
+  callOptions: MentoPoolCallOptions,
+  resource: string,
+): string {
   return [
     "mento-bipool:v2",
     params.rpcUrl ?? "",
     params.fallbackRpcUrl ?? "",
+    callOptions.observedBlock.chain,
+    callOptions.observedBlock.number,
+    callOptions.observedBlock.timestamp,
     resource,
   ].join(":");
 }
@@ -103,7 +133,7 @@ function loadMentoExchangeIds(
   callOptions: MentoPoolCallOptions,
 ): Promise<`0x${string}`[]> {
   return loadCachedMentoPoolRead(
-    mentoPoolCacheKey(params, "exchange-ids"),
+    mentoPoolCacheKey(params, callOptions, "exchange-ids"),
     callOptions,
     async () => {
       const exchangeIdsRaw = await fetchOnchainRawCall({
@@ -130,7 +160,7 @@ function loadMentoPoolExchange(
   callOptions: MentoPoolCallOptions,
 ): Promise<MentoPoolExchange | null> {
   return loadCachedMentoPoolRead(
-    mentoPoolCacheKey(params, `exchange:${exchangeId}`),
+    mentoPoolCacheKey(params, callOptions, `exchange:${exchangeId}`),
     callOptions,
     async () => decodePoolExchange(await fetchOnchainRawCall({
       ...callOptions,
@@ -156,9 +186,11 @@ async function fetchMentoBrokerPoolRedemption(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
 ): Promise<NonNullable<AdapterResult["metadata"]>> {
+  const plan = await pinnedBlockPlan({ chain: CELO_CHAIN, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl });
   const callOptions = {
     signal,
-    ctx,
+    ctx: plan.ctx,
+    observedBlock: plan.observedBlock,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
     rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
@@ -216,19 +248,24 @@ async function fetchMentoBrokerPoolRedemption(
     // valued 1:1 USD since every configured counter asset is USD- or
     // USDm-pegged.
     const counterBucketRaw = match.asset0.toLowerCase() === counterAddress ? match.bucket0 : match.bucket1;
+    if (match.config.spread >= MENTO_POOL_SPREAD_FIXIDITY_SCALE) {
+      throw new Error("mento broker-pool: invalid spread");
+    }
     capacityUsd += decimalNumberFromBigInt(counterBucketRaw, 18);
     const feeBps = mentoSpreadToFeeBps(match.config.spread);
     maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
   }
 
-  if (capacityUsd <= 0) {
-    throw new Error("mento broker-pool: matched pools returned zero counter-asset capacity");
+  if (!Number.isFinite(capacityUsd) || capacityUsd < 0) {
+    throw new Error("mento broker-pool: invalid counter-asset capacity");
   }
 
   return buildRedemptionSnapshotMetadata({
     capacityUsd,
     capacityKind: "live-direct-bounded",
     freshnessKind: "same-run-onchain",
+    blockNumber: plan.observedBlock.number,
+    sourceTimestamp: plan.observedBlock.timestamp,
     routeStatus: "open",
     routeStatusSource: "onchain",
     routeObserved: true,
@@ -244,9 +281,10 @@ async function fetchMentoLiquityV2CrRedemption(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
 ): Promise<NonNullable<AdapterResult["metadata"]>> {
+  const plan = await pinnedBlockPlan({ chain: CELO_CHAIN, signal, ctx, rpcUrl: params.rpcUrl, fallbackRpcUrl: params.fallbackRpcUrl });
   const callOptions = {
     signal,
-    ctx,
+    ctx: plan.ctx,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
     rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
@@ -260,22 +298,24 @@ async function fetchMentoLiquityV2CrRedemption(
       CELO_ONCHAIN_INPUT,
       { contract: params.collateralRegistryAddress, selector: LIQUITY_V2_REDEMPTION_RATE_SELECTOR, decimals: 18 },
       signal,
-      ctx,
+      plan.ctx,
       params.rpcUrl,
       params.fallbackRpcUrl,
     ),
-    fetchErc20TotalSupply(CELO_ONCHAIN_INPUT, params.tokenAddress, signal, ctx, params.rpcUrl, params.fallbackRpcUrl),
+    fetchErc20TotalSupply(CELO_ONCHAIN_INPUT, params.tokenAddress, signal, plan.ctx, params.rpcUrl, params.fallbackRpcUrl),
   ]);
 
   if (debtRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) {
     throw new Error("mento liquity-v2-cr: could not read ActivePool debt or token total supply");
   }
 
-  // shutdownTime() returns a uint256 timestamp: 0 while the branch is live,
-  // nonzero once shut down. A null read keeps the honest "unknown" status.
-  const shutdownTime = shutDownRaw != null && /^0x[0-9a-fA-F]{64}$/.test(shutDownRaw) ? BigInt(shutDownRaw) : null;
-  const routeStatus = shutdownTime == null ? "unknown" : shutdownTime > 0n ? "degraded" : "open";
-  const capacityRatioOfSupply = Math.min(
+  // Unknown shutdown state is missing evidence, never an open branch or a zero.
+  const shutdownTime = decodeUint256Word(shutDownRaw);
+  if (shutdownTime == null) {
+    throw new Error("mento liquity-v2-cr: could not read shutdown guard");
+  }
+  const routeStatus = shutdownTime > 0n ? "degraded" : "open";
+  const capacityRatioOfSupply = shutdownTime > 0n ? 0 : Math.min(
     1,
     decimalNumberFromBigInt(debtRaw, 18) / decimalNumberFromBigInt(totalSupplyRaw, 18),
   );
@@ -284,6 +324,8 @@ async function fetchMentoLiquityV2CrRedemption(
     capacityRatioOfSupply,
     capacityKind: "live-direct-bounded",
     freshnessKind: "same-run-onchain",
+    blockNumber: plan.observedBlock.number,
+    sourceTimestamp: plan.observedBlock.timestamp,
     routeStatus,
     routeStatusSource: "onchain",
     routeObserved: true,
@@ -316,67 +358,65 @@ async function fetchMentoFpmmPoolsRedemption(
   for (const pool of params.pools) {
     const output = pool.counterAsset.address.toLowerCase();
     const outputDecimals = pool.counterAsset.decimals;
-    const calls = [
-      ["token0", pool.poolAddress, "0x0dfe1681"],
-      ["token1", pool.poolAddress, "0xd21220a7"],
-      ["reserves", pool.poolAddress, "0x0902f1ac"],
-      ["balance", output, `0x70a08231${word(pool.poolAddress)}`],
-      ["inputBalance", self, `0x70a08231${word(pool.poolAddress)}`],
-      ["decimals", output, "0x313ce567"],
-      ["lp", pool.poolAddress, FPMM_LP_FEE_SELECTOR],
-      ["protocol", pool.poolAddress, FPMM_PROTOCOL_FEE_SELECTOR],
-      ["inputLimits", pool.poolAddress, `0x6391f7db${word(self)}`],
-      ["outputLimits", pool.poolAddress, `0x6391f7db${word(output)}`],
-      ["unitQuote", pool.poolAddress, quoteData(10n ** BigInt(params.selfDecimals + 6))],
-    ].map(([label, contract, data]) => ({ label, contract, data }));
-    const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
-    // getAmountOut calls OracleAdapter.getFXRateIfValid(), so the routine
-    // weekend/holiday gate reverts with FXMarketClosed(), not an RPC outage.
-    // Retain the actual rejection; never substitute reserves or an old quote.
-    const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
-    if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
-      throw new Error("mento fpmm-pools: fx-market-closed");
-    }
-    const values = new Map(rows?.filter((row) => row.success).map((row) => [row.label, row.returnData]));
-    const raw = (label: string): `0x${string}` => {
-      const value = values.get(label);
-      if (!value) throw new Error(`mento fpmm-pools: missing ${label}`);
-      return value;
-    };
-    const uint = (label: string) => decodeAbiParameters([{ type: "uint256" }], raw(label))[0];
-    const address = (label: string) => decodeAbiParameters([{ type: "address" }], raw(label))[0].toLowerCase();
-    const token0 = address("token0");
-    const token1 = address("token1");
+    if (output === self) throw new Error("mento fpmm-pools: token identity mismatch");
+    const observation = await executeEvmObservationPlan({
+      adapterKey: "mento fpmm-pools",
+      fields: [
+        addressObservation({ label: "token0", contract: pool.poolAddress, data: "0x0dfe1681" }),
+        addressObservation({ label: "token1", contract: pool.poolAddress, data: "0xd21220a7" }),
+        customObservation({ label: "reserves", contract: pool.poolAddress, data: "0x0902f1ac", decode: decodeFpmmReserves }),
+        uint256Observation({ label: "balance", contract: output, data: `0x70a08231${word(pool.poolAddress)}` }),
+        uint256Observation({ label: "inputBalance", contract: self, data: `0x70a08231${word(pool.poolAddress)}` }),
+        uint256Observation({ label: "decimals", contract: output, data: "0x313ce567" }),
+        uint256Observation({ label: "inputDecimals", contract: self, data: "0x313ce567" }),
+        uint256Observation({ label: "lp", contract: pool.poolAddress, data: FPMM_LP_FEE_SELECTOR }),
+        uint256Observation({ label: "protocol", contract: pool.poolAddress, data: FPMM_PROTOCOL_FEE_SELECTOR }),
+        customObservation({ label: "inputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(self)}`, decode: decodeFpmmTradingLimits }),
+        customObservation({ label: "outputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(output)}`, decode: decodeFpmmTradingLimits }),
+        uint256Observation({ label: "unitQuote", contract: pool.poolAddress, data: quoteData(10n ** BigInt(params.selfDecimals + 6)) }),
+      ],
+      read: async (calls) => {
+        const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
+        // getAmountOut's oracle check rejects routine weekend/holiday closure.
+        // Preserve that measured rejection instead of reusing inventory.
+        const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
+        if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
+          throw new Error("mento fpmm-pools: fx-market-closed");
+        }
+        return rows;
+      },
+    });
+    const { token0, token1, reserves, balance, inputBalance, decimals, inputDecimals, unitQuote, lp, protocol } = observation.values;
     if (!((token0 === self && token1 === output) || (token0 === output && token1 === self))
-      || uint("decimals") !== BigInt(outputDecimals)) throw new Error("mento fpmm-pools: token identity mismatch");
-    const reserves = decodeAbiParameters([{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }], raw("reserves"));
+      || decimals !== BigInt(outputDecimals) || inputDecimals !== BigInt(params.selfDecimals)) {
+      throw new Error("mento fpmm-pools: token identity mismatch");
+    }
     const reserve = reserves[token0 === output ? 0 : 1];
     const inputReserve = reserves[token0 === self ? 0 : 1];
     // swap rejects either empty reserve, including its zero-output input side.
     if (inputReserve <= 0n) throw new Error("mento fpmm-pools: empty input reserve");
-    const balance = uint("balance");
-    if (balance !== reserve || uint("inputBalance") !== inputReserve) {
+    if (balance !== reserve || inputBalance !== inputReserve) {
       throw new Error("mento fpmm-pools: unsynchronized balances and reserves");
     }
-    const inventoryBound = reserve - 1n;
-    const unitQuote = uint("unitQuote");
-    const fee = uint("lp") + uint("protocol");
-    if (inventoryBound <= 0n || unitQuote <= 0n || fee > 200n) throw new Error("mento fpmm-pools: invalid inventory, quote or fee");
-    // A large oracle-only probe minimizes integer quote rounding. Round input
-    // down, then admit only the actual quote within the strict inventory bound.
+    const inventoryBound = reserve > 0n ? reserve - 1n : 0n;
+    const fee = lp + protocol;
+    if (unitQuote <= 0n || fee > 200n) throw new Error("mento fpmm-pools: invalid quote or fee");
+    // Empty verified output inventory is measured zero, not a failed quote.
+    // A positive inventory still requires a positive probe input and readable
+    // executable quote; rounding the input to zero is not an observation.
     const amountIn = (inventoryBound * 10n ** BigInt(params.selfDecimals + 6)) / unitQuote;
-    const amountOut = await fetchOnchainUint256({ chain: CELO_CHAIN, signal, ctx: plan.ctx, contract: pool.poolAddress, data: quoteData(amountIn) });
-    if (amountIn <= 0n || amountOut == null || amountOut <= 0n || amountOut > inventoryBound) {
+    if (inventoryBound > 0n && amountIn <= 0n) throw new Error("mento fpmm-pools: bounded quote failed");
+    const amountOut = inventoryBound === 0n ? 0n : await fetchOnchainUint256({
+      chain: CELO_CHAIN, signal, ctx: plan.ctx, contract: pool.poolAddress, data: quoteData(amountIn),
+    });
+    if (amountOut == null || amountOut < 0n || amountOut > inventoryBound) {
       throw new Error("mento fpmm-pools: bounded quote failed");
     }
     for (const [label, amount, decimals] of [
       ["inputLimits", amountIn, params.selfDecimals],
       ["outputLimits", amountOut, outputDecimals],
     ] as const) {
-      const limits = decodeAbiParameters([
-        { type: "int120" }, { type: "int120" }, { type: "uint8" },
-        { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" },
-      ], raw(label));
+      const limits = observation.values[label];
       if (limits[2] !== decimals) throw new Error("mento fpmm-pools: trading-limit decimals mismatch");
       const scaled = (amount * 10n ** 15n + 10n ** BigInt(decimals) - 1n) / 10n ** BigInt(decimals);
       for (const index of [0, 1] as const) {
@@ -393,6 +433,7 @@ async function fetchMentoFpmmPoolsRedemption(
   }
   return buildRedemptionSnapshotMetadata({
     capacityUsd, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+    blockNumber: plan.observedBlock.number, sourceTimestamp: plan.observedBlock.timestamp,
     routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder",
     routeObserved: true,
     settlementDelaySec: 0, feeBps: maxFeeBps,

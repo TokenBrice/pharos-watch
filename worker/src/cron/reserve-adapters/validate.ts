@@ -2,18 +2,15 @@ import type { ReserveSlice } from "@shared/types/core";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { DEPENDENCY_TYPE_VALUES } from "@shared/types/dependency-types";
 import {
-  LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES,
-  LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES,
-  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
-  LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES,
+  decodeLiveReserveRedemptionTelemetry,
+  LiveReserveDiagnosticsSchema,
   type LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
-import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk, PCT_SUM_ERROR_TOLERANCE } from "./helpers";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserves/store-shared";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 
 export interface ValidationInput {
   slices: ReserveSlice[];
@@ -34,81 +31,31 @@ export interface ValidationOptions {
 }
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
-export const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
+
+// Diagnostic vocabulary only: structural constraints live exclusively in the schema.
+const REDEMPTION_ISSUE_CODES: Readonly<Record<string, string>> = {
+  capacityUsd: "invalid-redemption-capacity-usd",
+  capacityRatioOfSupply: "invalid-redemption-capacity-ratio",
+  feeBps: "invalid-redemption-fee-bps",
+  capacityKind: "invalid-redemption-capacity-kind",
+  freshnessKind: "invalid-redemption-freshness-kind",
+  sourceTimestamp: "invalid-redemption-source-timestamp",
+  routeStatus: "invalid-redemption-route-status",
+  routeStatusSource: "invalid-redemption-route-status-source",
+  routeStatusReviewedAt: "invalid-redemption-route-reviewed-at",
+  holderEligibility: "invalid-redemption-holder-eligibility",
+  settlementDelaySec: "invalid-redemption-settlement-delay",
+  queueDepthUsd: "invalid-redemption-queue-depth",
+  dailyLimitUsd: "invalid-redemption-daily-limit",
+  minRedeemUsd: "invalid-redemption-min-redeem",
+  sourceUrls: "invalid-redemption-source-urls",
+  outputAssetKeys: "invalid-redemption-output-assets",
+  outputValuation: "invalid-redemption-output-valuation",
+};
 
 function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
   const value = metadata?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-interface MetadataNumberField {
-  value: number | null;
-  invalid: boolean;
-}
-
-function getMetadataNumberField(metadata: Record<string, unknown> | undefined, key: string): MetadataNumberField {
-  if (!metadata || !(key in metadata) || metadata[key] == null) {
-    return { value: null, invalid: false };
-  }
-  const value = metadata[key];
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return { value: null, invalid: true };
-  }
-  return { value, invalid: false };
-}
-
-function hasNegativeNumber(values: readonly (number | null)[]): boolean {
-  return values.some((value) => value != null && value < 0);
-}
-
-function hasOutOfRangeRatio(values: readonly (number | null)[]): boolean {
-  return values.some((value) => value != null && (value < 0 || value > 1));
-}
-
-function hasNumber(values: readonly (number | null)[]): boolean {
-  return values.some((value) => value != null);
-}
-
-function hasInvalidNumber(values: readonly MetadataNumberField[]): boolean {
-  return values.some((value) => value.invalid);
-}
-
-function hasOutOfRangeFeeBps(values: readonly (number | null)[]): boolean {
-  return values.some((value) => value != null && (value < 0 || value > 10_000));
-}
-
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isValidReviewedAtDate(value: string): boolean {
-  return isValidIsoDateOnly(value);
-}
-
-function isKnownValue<const T extends readonly string[]>(values: T, value: unknown): value is T[number] {
-  return typeof value === "string" && values.includes(value as T[number]);
-}
-
-function validateNonNegativeRedemptionNumber(
-  redemption: Record<string, unknown>,
-  key: string,
-  code: string,
-  label: string,
-  adapterLabel: string,
-): LiveReserveWarning | null {
-  const value = redemption[key];
-  if (value == null) {
-    return null;
-  }
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return reserveFatalWarning(code, `${label} is invalid${adapterLabel}`);
-  }
-  return null;
 }
 
 function getMetadataDetails(metadata: Record<string, unknown> | undefined): Record<string, unknown> | null {
@@ -156,215 +103,59 @@ function validateRedemptionTelemetry(
   metadata: Record<string, unknown> | undefined,
   adapter: ReserveAdapterDefinition | undefined,
 ): LiveReserveWarning[] {
-  const warnings: LiveReserveWarning[] = [];
+  const decoded = decodeLiveReserveRedemptionTelemetry(metadata);
+  if (decoded.status === "absent") return [];
   const adapterLabel = describeAdapter(adapter);
-  const redemption = getMetadataObject(metadata, "redemption");
-  const capacityUsdFields = [getMetadataNumberField(redemption ?? undefined, "capacityUsd")] as const;
-  const capacityRatioFields = [
-    getMetadataNumberField(redemption ?? undefined, "capacityRatioOfSupply"),
-  ] as const;
-  const feeBpsFields = [getMetadataNumberField(redemption ?? undefined, "feeBps")] as const;
-  const capacityUsdValues = capacityUsdFields.map((field) => field.value);
-  const capacityRatioValues = capacityRatioFields.map((field) => field.value);
-  const feeBpsValues = feeBpsFields.map((field) => field.value);
-
-  const hasCapacityTelemetry = hasNumber(capacityUsdValues) || hasNumber(capacityRatioValues);
-  const hasFeeTelemetry = hasNumber(feeBpsValues);
+  if (decoded.status === "invalid") {
+    const warnings: LiveReserveWarning[] = [];
+    for (const issue of decoded.issues) {
+      const field = String(issue.path[0] ?? "");
+      const code = REDEMPTION_ISSUE_CODES[field] ?? "invalid-redemption-telemetry";
+      if (!warnings.some((warning) => warning.code === code)) {
+        warnings.push(reserveFatalWarning(code, `Redemption ${field || "telemetry"} is invalid${adapterLabel}`));
+      }
+    }
+    return warnings;
+  }
+  const redemption = decoded.telemetry;
+  const warnings: LiveReserveWarning[] = [];
+  const hasCapacityTelemetry = redemption.capacityUsd != null || redemption.capacityRatioOfSupply != null;
+  const hasFeeTelemetry = redemption.feeBps != null;
   const adapterCapacity = adapter?.redemptionTelemetry?.capacity ?? "none";
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
-
-  if (hasInvalidNumber(capacityUsdFields) || hasNegativeNumber(capacityUsdValues)) {
-    warnings.push(
-      reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is invalid${adapterLabel}`),
-    );
-  }
-  if (hasInvalidNumber(capacityRatioFields) || hasOutOfRangeRatio(capacityRatioValues)) {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-capacity-ratio",
-        `Redemption capacity ratio is outside 0-1${adapterLabel}`,
-      ),
-    );
-  }
-  if (hasInvalidNumber(feeBpsFields) || hasOutOfRangeFeeBps(feeBpsValues)) {
-    warnings.push(reserveFatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is invalid${adapterLabel}`));
-  }
   if (hasCapacityTelemetry && adapterCapacity === "none") {
-    warnings.push(
-      reserveFatalWarning(
-        "unsupported-redemption-capacity-telemetry",
-        `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`,
-      ),
-    );
+    warnings.push(reserveFatalWarning("unsupported-redemption-capacity-telemetry",
+      `Adapter emitted redemption capacity despite declaring no capacity telemetry${adapterLabel}`));
   }
   if (hasFeeTelemetry && adapterFee === "none") {
-    warnings.push(
-      reserveFatalWarning(
-        "unsupported-redemption-fee-telemetry",
-        `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`,
-      ),
-    );
+    warnings.push(reserveFatalWarning("unsupported-redemption-fee-telemetry",
+      `Adapter emitted redemption fee despite declaring no fee telemetry${adapterLabel}`));
   }
-
-  const capacityKind = redemption?.capacityKind;
-  if (capacityKind != null && !isKnownValue(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES, capacityKind)) {
-    warnings.push(
-      reserveFatalWarning("invalid-redemption-capacity-kind", `Redemption capacity kind is invalid${adapterLabel}`),
-    );
-  } else if (capacityKind === "live-direct" || capacityKind === "live-direct-bounded") {
-    if (adapterCapacity !== "direct") {
-      warnings.push(
-        reserveFatalWarning(
-          "redemption-capacity-kind-mismatch",
-          `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`,
-        ),
-      );
-    }
-  } else if (capacityKind === "live-proxy-validated" || capacityKind === "live-queue") {
-    if (adapterCapacity !== "proxy") {
-      warnings.push(
-        reserveFatalWarning(
-          "redemption-capacity-kind-mismatch",
-          `Adapter emitted ${capacityKind} capacity without proxy telemetry capability${adapterLabel}`,
-        ),
-      );
-    }
+  const capacityKind = redemption.capacityKind;
+  if ((capacityKind === "live-direct" || capacityKind === "live-direct-bounded") && adapterCapacity !== "direct") {
+    warnings.push(reserveFatalWarning("redemption-capacity-kind-mismatch",
+      `Adapter emitted ${capacityKind} capacity without direct telemetry capability${adapterLabel}`));
+  } else if ((capacityKind === "live-proxy-validated" || capacityKind === "live-queue") && adapterCapacity !== "proxy") {
+    warnings.push(reserveFatalWarning("redemption-capacity-kind-mismatch",
+      `Adapter emitted ${capacityKind} capacity without proxy telemetry capability${adapterLabel}`));
   }
-
-  if (capacityKind === "live-queue") {
-    const hasQueueSemantics =
-      getFiniteMetadataNumber(redemption ?? undefined, "queueDepthUsd") != null ||
-      getFiniteMetadataNumber(redemption ?? undefined, "settlementDelaySec") != null ||
-      getFiniteMetadataNumber(redemption ?? undefined, "dailyLimitUsd") != null;
-    if (!hasQueueSemantics) {
-      warnings.push(
-        reserveDegradedWarning(
-          "redemption-queue-semantics-missing",
-          `Queue redemption capacity omitted queue depth, settlement delay, or daily limit metadata${adapterLabel}`,
-        ),
-      );
-    }
+  if (capacityKind === "live-queue" && redemption.queueDepthUsd == null &&
+    redemption.settlementDelaySec == null && redemption.dailyLimitUsd == null) {
+    warnings.push(reserveDegradedWarning("redemption-queue-semantics-missing",
+      `Queue redemption capacity omitted queue depth, settlement delay, or daily limit metadata${adapterLabel}`));
   }
-
-  const freshnessKind = redemption?.freshnessKind;
-  if (freshnessKind != null && !isKnownValue(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES, freshnessKind)) {
-    warnings.push(
-      reserveFatalWarning("invalid-redemption-freshness-kind", `Redemption freshness kind is invalid${adapterLabel}`),
-    );
+  if (redemption.freshnessKind === "verified-source-timestamp" && redemption.sourceTimestamp == null) {
+    warnings.push(reserveFatalWarning("missing-redemption-source-timestamp",
+      `Redemption freshness is verified-source-timestamp without sourceTimestamp${adapterLabel}`));
   }
-  const redemptionSourceTimestamp = getMetadataNumberField(redemption ?? undefined, "sourceTimestamp");
-  if (
-    redemptionSourceTimestamp.invalid ||
-    (redemptionSourceTimestamp.value != null && redemptionSourceTimestamp.value < 0)
-  ) {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-source-timestamp",
-        `Redemption source timestamp is invalid${adapterLabel}`,
-      ),
-    );
+  if (hasCapacityTelemetry && redemption.freshnessKind === "unverified" && !freshnessPolicyIsUnverifiedOnly(adapter)) {
+    warnings.push(reserveDegradedWarning("redemption-capacity-unverified",
+      `Redemption capacity telemetry is marked unverified${adapterLabel}`));
   }
-  if (
-    freshnessKind === "verified-source-timestamp" &&
-    !redemptionSourceTimestamp.invalid &&
-    redemptionSourceTimestamp.value == null
-  ) {
-    warnings.push(
-      reserveFatalWarning(
-        "missing-redemption-source-timestamp",
-        `Redemption freshness is verified-source-timestamp without sourceTimestamp${adapterLabel}`,
-      ),
-    );
+  if (redemption.routeStatus != null && redemption.routeStatus !== "unknown" && redemption.routeStatusSource == null) {
+    warnings.push(reserveFatalWarning("missing-redemption-route-status-source",
+      `Redemption route status requires source attribution${adapterLabel}`));
   }
-  // Skip the redemption-capacity-unverified degrade when the adapter's policy
-  // already restricts freshness to "unverified" only — in that case the output
-  // is expected to be unverified and re-degrading on top of that policy would
-  // double-count the same freshness concern.
-  const policyIsUnverifiedOnly = freshnessPolicyIsUnverifiedOnly(adapter);
-  if (hasCapacityTelemetry && freshnessKind === "unverified" && !policyIsUnverifiedOnly) {
-    warnings.push(
-      reserveDegradedWarning(
-        "redemption-capacity-unverified",
-        `Redemption capacity telemetry is marked unverified${adapterLabel}`,
-      ),
-    );
-  }
-
-  const routeStatus = redemption?.routeStatus;
-  const hasKnownRouteStatus = isKnownValue(LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES, routeStatus);
-  if (routeStatus != null && !hasKnownRouteStatus) {
-    warnings.push(
-      reserveFatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`),
-    );
-  }
-
-  const routeStatusSource = redemption?.routeStatusSource;
-  const hasKnownRouteStatusSource = isKnownValue(LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES, routeStatusSource);
-  if (routeStatusSource != null && !hasKnownRouteStatusSource) {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-route-status-source",
-        `Redemption route status source is invalid${adapterLabel}`,
-      ),
-    );
-  }
-  if (hasKnownRouteStatus && routeStatus !== "unknown" && !hasKnownRouteStatusSource) {
-    warnings.push(
-      reserveFatalWarning(
-        "missing-redemption-route-status-source",
-        `Redemption route status requires source attribution${adapterLabel}`,
-      ),
-    );
-  }
-
-  const routeStatusReviewedAt = redemption?.routeStatusReviewedAt;
-  if (routeStatusReviewedAt != null && typeof routeStatusReviewedAt !== "string") {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-route-reviewed-at",
-        `Redemption route status review timestamp is invalid${adapterLabel}`,
-      ),
-    );
-  } else if (typeof routeStatusReviewedAt === "string" && !isValidReviewedAtDate(routeStatusReviewedAt)) {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-route-reviewed-at",
-        `Redemption route status review timestamp must be YYYY-MM-DD${adapterLabel}`,
-      ),
-    );
-  }
-
-  const holderEligibility = redemption?.holderEligibility;
-  if (holderEligibility != null && !isKnownValue(RedemptionHolderEligibilitySchema.options, holderEligibility)) {
-    warnings.push(
-      reserveFatalWarning(
-        "invalid-redemption-holder-eligibility",
-        `Redemption holder eligibility is invalid${adapterLabel}`,
-      ),
-    );
-  }
-
-  for (const [key, code, label] of [
-    ["settlementDelaySec", "invalid-redemption-settlement-delay", "Redemption settlement delay"],
-    ["queueDepthUsd", "invalid-redemption-queue-depth", "Redemption queue depth"],
-    ["dailyLimitUsd", "invalid-redemption-daily-limit", "Redemption daily limit"],
-    ["minRedeemUsd", "invalid-redemption-min-redeem", "Redemption minimum redeem amount"],
-  ] as const) {
-    const warning = validateNonNegativeRedemptionNumber(redemption ?? {}, key, code, label, adapterLabel);
-    if (warning) {
-      warnings.push(warning);
-    }
-  }
-
-  const sourceUrls = redemption?.sourceUrls;
-  if (sourceUrls != null) {
-    if (!Array.isArray(sourceUrls) || sourceUrls.some((url) => typeof url !== "string" || !isValidUrl(url))) {
-      warnings.push(
-        reserveFatalWarning("invalid-redemption-source-urls", `Redemption source URLs are invalid${adapterLabel}`),
-      );
-    }
-  }
-
   return warnings;
 }
 
@@ -476,10 +267,18 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   const sum = input.slices.reduce((s, r) => s + r.pct, 0);
   const finalDeviation = Math.abs(sum - 100);
   const diagnostics = getMetadataObject(input.metadata, "diag");
-  const rawDeviation = getFiniteMetadataNumber(diagnostics ?? undefined, "rawSumDeviation") ?? 0;
-  const deviation = Math.max(finalDeviation, rawDeviation);
+  const diagnosticsParsed = LiveReserveDiagnosticsSchema.safeParse(input.metadata?.diag);
+  const rawDeviationParsed = diagnostics && Object.prototype.hasOwnProperty.call(diagnostics, "rawSumDeviation")
+    ? LiveReserveDiagnosticsSchema.shape.rawSumDeviation.unwrap().safeParse(diagnostics.rawSumDeviation)
+    : null;
+  if ((input.metadata && Object.prototype.hasOwnProperty.call(input.metadata, "diag") && !diagnosticsParsed.success) ||
+    (rawDeviationParsed && !rawDeviationParsed.success)) {
+    return { valid: false, warnings: [reserveFatalWarning("invalid-raw-sum-deviation", "Upstream percentage diagnostics are malformed")] };
+  }
+  const rawDeviation = rawDeviationParsed?.success ? rawDeviationParsed.data : undefined;
+  const deviation = rawDeviation == null ? finalDeviation : Math.max(finalDeviation, rawDeviation);
   const adapterLabel = describeAdapter(options?.adapter);
-  const sumDescription = rawDeviation > finalDeviation
+  const sumDescription = rawDeviation != null && rawDeviation > finalDeviation
     ? `Upstream slice percentages deviate from 100% by ${rawDeviation.toFixed(2)} percentage points before normalization`
     : `Slice percentages sum to ${sum.toFixed(1)}%`;
   if (deviation > PCT_SUM_ERROR_TOLERANCE) {
@@ -502,16 +301,11 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
     );
   }
 
-  const maxSourceAgeSec = options?.maxSourceAgeSec ?? options?.adapter?.validation?.maxSourceAgeSec;
-  // Match assessReserveSnapshotFreshness: the stricter coin/adapter source budget,
-  // with the reserve fetch freshness budget only when neither declares one.
-  const nestedSourceMaxAge = Math.min(
-    options?.maxSourceAgeSec ?? Infinity,
-    options?.adapter?.validation?.maxSourceAgeSec ?? Infinity,
+  const sourceBudget = resolveLiveReserveSourceAgeBudget(
+    options?.maxSourceAgeSec, options?.adapter?.validation?.maxSourceAgeSec, LIVE_RESERVE_FRESHNESS_SEC,
   );
-  const nestedSourceBudget = Number.isFinite(nestedSourceMaxAge)
-    ? nestedSourceMaxAge
-    : LIVE_RESERVE_FRESHNESS_SEC;
+  const maxSourceAgeSec = sourceBudget.sourceAgeBudgetCap === "fetch-budget" ? undefined : sourceBudget.sourceAgeBudgetSec;
+  const nestedSourceBudget = sourceBudget.sourceAgeBudgetSec;
   const nestedSourceTimestamp = getFiniteMetadataNumber(
     getMetadataObject(input.metadata, "redemption") ?? undefined,
     "sourceTimestamp",

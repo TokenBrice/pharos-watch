@@ -2,6 +2,7 @@ import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import {
   claimNextLiveReserveCheckpointRecovery,
   prepareEligibleLiveReserveCheckpointRecoveries,
+  releaseUnstartedLiveReserveRecoveryClaim,
   retireSupersededLiveReserveCheckpoints,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
@@ -129,11 +130,15 @@ async function runReserveRecovery(
   }
   const checkpoint = claim.checkpoint;
   const replayPriority = await getReserveProducerPriority(runtime.db);
-  if (replayPriority) return createReserveRecoveryResult({
-    status: configReasons.length > 0 ? "degraded" : "skipped_neutral", itemCount: configRecovery.healed.length,
-    metadata: { mode, configRecovery, checkpointsClaimed: 1, reason: configReasons[0] ?? replayPriority.reason,
-      reasons: [...configReasons, replayPriority.reason], producerPriority: replayPriority } as CronMetadataRecord,
-  });
+  if (replayPriority) {
+    const recoveryClaimRelease = await releaseUnstartedLiveReserveRecoveryClaim(runtime.db, checkpoint);
+    return createReserveRecoveryResult({
+      status: configReasons.length > 0 ? "degraded" : "skipped_neutral", itemCount: configRecovery.healed.length,
+      metadata: { mode, configRecovery, checkpointsClaimed: 1, reason: configReasons[0] ?? replayPriority.reason,
+        reasons: [...configReasons, replayPriority.reason], producerPriority: replayPriority,
+        recoveryClaimRelease } as CronMetadataRecord,
+    });
+  }
 
   const recoveryRuntime = createScheduledRuntimeContext(runtime.env, runtime.ctx, {
     cron: CRON_SCHEDULES.fourHourlyReserveSync,

@@ -5,6 +5,10 @@ import babelFish from "@shared/data/stablecoins/coins/xusd-babelfish.json";
 import usual from "@shared/data/stablecoins/coins/usd0-usual.json";
 import { adaptBranchBalanceReserves, readBranchBalanceParams } from "../branch-balances";
 import { runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import xusdWire from "./fixtures/xusd-balances-oct7-2026.json";
+import xusdDecimals from "./fixtures/xusd-decimals-oct7-2026.json";
+import usualWire from "./fixtures/usual-circular-oct7-2026.json";
+import usualContext from "./fixtures/usual-production-oct7-2026.json";
 
 const WAD = 10n ** 18n;
 const NOW_SEC = Date.parse("2026-10-02T12:00:00Z") / 1000;
@@ -43,6 +47,91 @@ async function runUsual(network: AdapterNetworkSpec) {
 }
 
 describe("branch reserve census and unavailable residual", () => {
+  it("replays XUSD's pinned ten-token basket separately from its historical, undated DOC quote", async () => {
+    const rpc: Record<string, AdapterRpcValue> = {};
+    for (const read of [...xusdWire.reads, ...xusdDecimals.reads]) {
+      if (read.method !== "eth_call") continue;
+      const call = read.params[0] as { to: string; data: string };
+      if ("result" in read.response) rpc[`${call.to}:${call.data}`] = read.response.result as string;
+    }
+    const header = xusdWire.block.result;
+    const nowSec = Date.parse("2026-10-07T20:47:43Z") / 1000;
+    const { result, network } = await runAdapter("evm-branch-balances", "xusd-babelfish", {
+      config: babelFish.liveReservesConfig as LiveReservesConfig, nowSec,
+      network: {
+        rpc,
+        block: { number: Number(header.number), timestamp: Number(header.timestamp), hash: header.hash },
+        json: {
+          "https://coins.llama.fi/prices/current/rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db": {
+            coins: { "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db": { price: 0.9862258051288336 } },
+          },
+        },
+      },
+    });
+    expect(network.rpcCalls.filter((call) => call.method === "eth_call").every((call) => call.block === "0x8dfda7")).toBe(true);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.9994367388064652, 10);
+    const details = result.metadata?.details as {
+      valuationBasis: string; liabilityBasis: string;
+      nominalReconciliation: { reserveAtParUsd: number; shortfallAtParUsd: number; ratio: number };
+      branchObservations: Array<{ name: string; priceObservation: Record<string, unknown> }>;
+    };
+    expect(details).toMatchObject({ valuationBasis: "mixed-nominal-market", liabilityBasis: "totalSupply-at-par" });
+    expect(details.nominalReconciliation.reserveAtParUsd).toBeCloseTo(1_960_802.102552265, 6);
+    expect(details.nominalReconciliation.shortfallAtParUsd).toBeCloseTo(2.2792151, 6);
+    expect(details.nominalReconciliation.ratio).toBeCloseTo(0.9999988376121969, 12);
+    expect(details.branchObservations.filter((entry) => entry.priceObservation.sourceKind === "configured-nominal")).toHaveLength(9);
+    expect(details.branchObservations.find((entry) => entry.priceObservation.sourceKind === "market-api")?.priceObservation)
+      .toMatchObject({ sourceLookup: "rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db", quoteTimestamp: null, quoteConfidence: null });
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "undercollateralized", effect: "degraded" }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "defillama-quote-quality", effect: "degraded" }));
+  });
+
+  it("replays the pinned USD0 registry and positive circular claims without normalizing external legs", async () => {
+    const rpc = usualNetwork().rpc!;
+    // External balances/prices are captured production context, not new
+    // independent RPC evidence; registry and circular words below are E1 wire.
+    for (const observed of usualContext.branches) {
+      rpc[`${observed.token}:balanceOf(address)`] = BigInt(observed.balanceRaw);
+      rpc[`${observed.token}:decimals()`] = BigInt(observed.observedDecimals);
+      if (observed.priceUsd != null) {
+        const data = `0x41976e09${observed.token.slice(2).toLowerCase().padStart(64, "0")}`;
+        rpc[`0xb97e163ce6a8296f36112b042891cfe1e23c35bf:${data}`] = BigInt(Math.round(observed.priceUsd * 1e18));
+      }
+    }
+    for (const read of usualWire.result) {
+      const call = read.params[0] as { to: string; data: string };
+      rpc[`${call.to}:${call.data}`] = read.result;
+    }
+    const { result } = await runAdapter("evm-branch-balances", "usd0-usual", {
+      config: usd0Config, nowSec: Date.parse(usualWire.observedAt) / 1000,
+      network: { rpc, block: {
+        number: Number(usualWire.block.number), hash: usualWire.block.hash,
+        timestamp: Date.parse(usualWire.block.timestamp) / 1000,
+      } },
+    });
+    expect(result.metadata).toMatchObject({ censusComplete: true, valuationComplete: false, unknownExposurePct: 100 });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.slices).toEqual([{ name: "Unclassified or unavailable reserve residual", pct: 100, risk: "high" }]);
+    expect(result.metadata?.details).toMatchObject({
+      residualUsd: null, contextualObservationsOnly: true,
+      unclassifiedSelfReferentialBranches: ["EVK Vault eUSD0-4", "U0R"],
+      branchObservations: expect.arrayContaining([
+        expect.objectContaining({ name: "EVK Vault eUSD0-4", balanceRaw: "14867266666424154616700613", classification: "unclassified-self-referential" }),
+        expect.objectContaining({ name: "U0R", balanceRaw: "444700000000000000000000000", classification: "unclassified-self-referential" }),
+      ]),
+    });
+  });
+
+  it("does not count independently observed zero circular balances as unknown exposure", async () => {
+    const network = usualNetwork();
+    for (const branch of usd0Params.branches.filter((entry) => entry.unclassifiedSelfReferential)) {
+      network.rpc![`${branch.token.address}:balanceOf(address)`] = 0n;
+    }
+    const { result } = await runUsual(network);
+    expect(result.metadata).toMatchObject({ censusComplete: true, valuationComplete: true, unknownExposurePct: 0 });
+    expect(result.metadata?.details).toMatchObject({ unclassifiedSelfReferentialBranches: [] });
+  });
+
   it("includes a newly funded verified BabelFish bAsset before normalizing the basket", async () => {
     const config = babelFish.liveReservesConfig as LiveReservesConfig;
     const params = readBranchBalanceParams(config, "evm-branch-balances");

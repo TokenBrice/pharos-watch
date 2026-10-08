@@ -43,6 +43,8 @@ export {
   decimalStringFromBigInt,
   isReserveRisk,
   normalizeSlices,
+  normalizeSlicesWithDiagnostics,
+  calculateRawPercentageSumDeviation,
   parseBoundedDecimals,
   parsePositiveNumericLike,
   PCT_SUM_ERROR_TOLERANCE,
@@ -64,7 +66,11 @@ export {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./freshness";
-export type { SourceTimestampCoverageSummary, SourceTimestampSummary } from "./freshness";
+export type {
+  SourceTimestampCoverageSummary,
+  SourceTimestampSummary,
+  SourceTimestampZonelessPolicy,
+} from "./freshness";
 export {
   HTML_ENTITY_MAP,
   decodeHtmlEntities,

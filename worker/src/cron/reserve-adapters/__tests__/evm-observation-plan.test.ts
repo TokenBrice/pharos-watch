@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { fetchJsonWithRetryMock } = vi.hoisted(() => ({ fetchJsonWithRetryMock: vi.fn() }));
+vi.mock("../../../lib/fetch-retry", () => ({
+  fetchJsonWithRetry: fetchJsonWithRetryMock,
+}));
 import { reserveDegradedWarning } from "../warnings";
 import {
   addressObservation,
   boolObservation,
   executeEvmObservationPlan,
+  pinnedBlockPlan,
   uint256Observation,
   type EvmObservationTransportCall,
 } from "../evm-observation-plan";
@@ -11,6 +17,117 @@ import {
 function word(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
 }
+
+describe("pinnedBlockPlan", () => {
+  const hash = `0x${"a".repeat(64)}`;
+  const options = {
+    chain: "rootstock",
+    signal: new AbortController().signal,
+    rpcUrl: "https://primary.example",
+  };
+
+  afterEach(() => {
+    fetchJsonWithRetryMock.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it("uses the timestamp of the exact numbered header behind the observed head", async () => {
+    fetchJsonWithRetryMock
+      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
+      .mockResolvedValueOnce({
+        response: new Response(),
+        body: { result: { number: "0x10", timestamp: "0x64", hash } },
+      });
+
+    const plan = await pinnedBlockPlan(options);
+    expect(plan.observedBlock).toEqual({ chain: "rootstock", number: 16, timestamp: 100 });
+    expect(plan.ctx.observedBlock).toBe(plan.observedBlock);
+    const requests = fetchJsonWithRetryMock.mock.calls.map((call) => JSON.parse(call[1].body));
+    expect(requests.map(({ method, params }) => ({ method, params }))).toEqual([
+      { method: "eth_blockNumber", params: [] },
+      { method: "eth_getBlockByNumber", params: ["0x10", false] },
+    ]);
+  });
+
+  it.each([
+    { number: "0x11", timestamp: "0x64", hash },
+    { number: "0x10", timestamp: "0x64" },
+    { number: "0x10", timestamp: "0x64", hash: "0x1234" },
+    { number: "0x10", timestamp: "invalid", hash },
+    { number: "0x10", timestamp: "0x0", hash },
+    { number: "0x10", timestamp: "0x20000000000000", hash },
+  ])("rejects unusable headers without substituting another clock: %j", async (header) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchJsonWithRetryMock
+      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
+      .mockResolvedValueOnce({ response: new Response(), body: { result: header } });
+
+    await expect(pinnedBlockPlan(options)).rejects.toThrow(/observation block header/);
+    expect(fetchJsonWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchJsonWithRetryMock.mock.calls[1][1].body).params).toEqual(["0x10", false]);
+  });
+
+  it("accepts a fallback exact-number header rather than the first provider's positive mismatched clock", async () => {
+    fetchJsonWithRetryMock
+      .mockResolvedValueOnce({ response: new Response(), body: { result: "0x10" } })
+      .mockResolvedValueOnce({
+        response: new Response(),
+        body: { result: { number: "0x11", timestamp: "0xc8", hash } },
+      })
+      .mockResolvedValueOnce({
+        response: new Response(),
+        body: { result: { number: "0x10", timestamp: "0x64", hash: `0x${"b".repeat(64)}` } },
+      });
+
+    const plan = await pinnedBlockPlan({ ...options, fallbackRpcUrl: "https://fallback.example" });
+    expect(plan.observedBlock).toEqual({ chain: "rootstock", number: 16, timestamp: 100 });
+    expect(fetchJsonWithRetryMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://primary.example", "https://primary.example", "https://fallback.example",
+    ]);
+    for (const call of fetchJsonWithRetryMock.mock.calls.slice(1)) {
+      expect(JSON.parse(call[1].body).params).toEqual(["0x10", false]);
+    }
+  });
+
+  it("preserves injected anchor authority and does not rewrite the retained historical discrepancy", async () => {
+    // RS3 E3 independently retained Rootstock header; this does not attribute
+    // the production discrepancy to a particular transport response.
+    const retained = { chain: "rootstock", number: 9305511, timestamp: 1791404146 };
+    const ctx = { observedBlock: retained };
+    const injected = await pinnedBlockPlan({ ...options, ctx });
+    expect(injected.observedBlock).toBe(retained);
+    expect(injected.ctx).toBe(ctx);
+    expect(fetchJsonWithRetryMock).not.toHaveBeenCalled();
+
+    fetchJsonWithRetryMock
+      .mockResolvedValueOnce({
+        response: new Response(),
+        body: { result: `0x${retained.number.toString(16)}` },
+      })
+      .mockResolvedValueOnce({
+        response: new Response(),
+        body: {
+          result: {
+            number: `0x${retained.number.toString(16)}`,
+            timestamp: `0x${(1791404113).toString(16)}`,
+            hash: "0xaf6b1778d69d7b3374c4588f36ef521eaddcc53a920e754aa866ad3d24bde23f",
+          },
+        },
+      });
+    const fresh = await pinnedBlockPlan(options);
+    expect(fresh.observedBlock.timestamp).toBe(1791404113);
+    expect(retained.timestamp - fresh.observedBlock.timestamp).toBe(33);
+    expect(retained.timestamp).toBe(1791404146);
+  });
+
+  it("rejects injected anchors for another chain without replacing their authority", async () => {
+    await expect(pinnedBlockPlan({
+      ...options,
+      ctx: { observedBlock: { chain: "ethereum", number: 16, timestamp: 100 } },
+    })).rejects.toThrow(/chain mismatch/);
+    expect(fetchJsonWithRetryMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("executeEvmObservationPlan", () => {
   it("constructs labeled calls, decodes values, verifies identity, accumulates warnings, and projects metadata", async () => {

@@ -2,6 +2,7 @@
   "id": "susdc-spark-v1",
   "reserves": [
     {
+      "sourceKey": "spark-usdc-v1:ethereum:susds",
       "name": "sUSDS shares held by Legacy UsdcVault",
       "pct": 99.99999943645203,
       "risk": "high",
@@ -17,6 +18,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "spark-usdc-v1:ethereum:usdc",
       "name": "Idle USDC held by Legacy UsdcVault",
       "pct": 5.620471151816011e-7,
       "risk": "low",
@@ -27,6 +29,7 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "spark-usdc-v1:ethereum:usds",
       "name": "USDS rounding dust held by Legacy UsdcVault",
       "pct": 1.5008597053488657e-9,
       "risk": "high",
@@ -35,9 +38,21 @@
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky USDS protocol",
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:ethereum:dai",
+      "name": "Idle DAI held by Legacy UsdcVault",
+      "pct": 0,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky",
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
+    "compositionSource": "live-adapter",
     "reviewedAt": "2026-10-05",
     "reviewer": "W3R34 native sUSDS liquidity review; W2R05 gross inventory retained",
     "confidence": "verified",

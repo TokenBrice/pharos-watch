@@ -5,6 +5,7 @@ import {
   buildUnknownExposureWarning,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
+  fetchOnchainMulticall3,
   makeOnchainCallers,
   reconcileRowsWithSourceTotal,
   reserveInfoWarning,
@@ -13,11 +14,17 @@ import {
   requireJsonInputFromConfig,
 } from "./helpers";
 import { classifyBucketedValues, type ValueBucketRule } from "./classification";
-import { decodeStrictAddressWord, decodeStrictBoolWord } from "./abi-decode";
+import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { PAUSED_SELECTOR } from "../../lib/evm-selectors";
 import { wrapperAssetMeta } from "./wrapper-assets";
 import { fetchWithBrowserFallback } from "./request";
 import { rethrowIfAborted } from "../../lib/abort";
+import { encodeFunctionData, parseAbi } from "viem/utils";
+import {
+  boolObservation, executeEvmObservationPlan, pinnedBlockPlan, rawObservation, uint256Observation,
+  type AnyEvmObservationField, type EvmObservationValues,
+} from "./evm-observation-plan";
+import { buildRedemptionSnapshotMetadata } from "./redemption";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -36,7 +43,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "prime-unverified" | "usdat";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "prime-unverified" | "usdat" | "usdg";
 
 
 // Stable buckets that provide broader balance-sheet liquidity context. This
@@ -56,6 +63,16 @@ const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
 // labels (e.g. "PYUSD/USDC") the first matching rule wins, so wrappers
 // (USD1/PYUSD/RLUSD/GHO) are listed before USDT/USDC.
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
+  {
+    key: "usdg",
+    name: "USDG deposited in Morpho Gauntlet USDG Premium vault",
+    risk: "high",
+    sourceKey: "reservoir:gauntlet-usdg-premium",
+    coinId: "usdg-paxos",
+    depType: "collateral",
+    match: (item) => item.chainId === 42161
+      && item.address?.toLowerCase() === "0x390c1bb01f3f627144a40617e287d4ce3d5abcfa",
+  },
   {
     key: "prime",
     name: "PYUSD deposited in Morpho Sentora PRIME vault",
@@ -187,32 +204,147 @@ const RESERVOIR_PSM_DOC_URL = "https://docs.reservoir.xyz/protocol-architecture/
 const RESERVOIR_SAVING_MODULE_ADDRESS = "0x5475611dffb8ef4d697ae39df9395513b6e947d7";
 const RESERVOIR_REDEEM_FEE_DENOMINATOR = 1_000_000n;
 
-// Only srUSD and wsrUSD exit through the SavingModule; wsrUSD unwraps at NAV
-// into srUSD and then takes the same redeem path. rUSD holders redeem straight
-// at the PSM and never pay this fee, so it must not be attributed to them.
-const SAVING_MODULE_EXIT_COIN_IDS = new Set(["srusd-reservoir", "wsrusd-reservoir"]);
+const RESERVOIR_RUSD_ADDRESS = "0x09d4214c03d01f49544c0448dbe3a27f768f2b34";
+const RESERVOIR_SRUSD_ADDRESS = "0x738d1115b90efa71ae468f1287fc864775e23a31";
+const RESERVOIR_WSRUSD_ADDRESS = "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094";
+const SHARED_PSM_RESOURCE_KEY = `ethereum:reservoir-psm:${RESERVOIR_USDC_PSM_ADDRESS}`;
+const RESERVOIR_PROBE_ABI = parseAbi([
+  "function underlying() view returns (address)",
+  "function underlyingBalance() view returns (uint256)",
+  "function paused() view returns (bool)",
+  "function rusd() view returns (address)",
+  "function srusd() view returns (address)",
+  "function asset() view returns (address)",
+  "function decimals() view returns (uint8)",
+  "function DECIMAL_FACTOR() view returns (uint8)",
+  "function redeemFee() view returns (uint256)",
+  "function currentPrice() view returns (uint256)",
+  "function previewRedeem(uint256) view returns (uint256)",
+  "function previewWithdraw(uint256) view returns (uint256)",
+  "function MINTER() view returns (bytes32)",
+  "function hasRole(bytes32,address) view returns (bool)",
+]);
 
-// underlying() / underlyingBalance()
-const PSM_UNDERLYING_SELECTOR = "0x6f307dc3";
-const PSM_UNDERLYING_BALANCE_SELECTOR = "0x59356c5c";
-// redeemFee()
-const SAVING_MODULE_REDEEM_FEE_SELECTOR = "0x965fa21e";
+const getter = (functionName: "underlying" | "underlyingBalance" | "rusd" | "srusd" | "asset" |
+  "decimals" | "DECIMAL_FACTOR" | "redeemFee" | "currentPrice" | "MINTER") =>
+  encodeFunctionData({ abi: RESERVOIR_PROBE_ABI, functionName });
+const RESERVOIR_PSM_FIELDS = [
+  rawObservation({ label: "underlying", contract: RESERVOIR_USDC_PSM_ADDRESS, data: getter("underlying") }),
+  rawObservation({ label: "balance", contract: RESERVOIR_USDC_PSM_ADDRESS, data: getter("underlyingBalance") }),
+  rawObservation({ label: "paused", contract: RESERVOIR_USDC_PSM_ADDRESS, data: PAUSED_SELECTOR }),
+  rawObservation({ label: "usdcDecimals", contract: RESERVOIR_PSM_UNDERLYING_ADDRESS, data: getter("decimals") }),
+  rawObservation({ label: "decimalFactor", contract: RESERVOIR_USDC_PSM_ADDRESS, data: getter("DECIMAL_FACTOR") }),
+  rawObservation({ label: "rusd", contract: RESERVOIR_USDC_PSM_ADDRESS, data: getter("rusd") }),
+  rawObservation({ label: "rusdDecimals", contract: RESERVOIR_RUSD_ADDRESS, data: getter("decimals") }),
+] as const;
+const RESERVOIR_MINTER_FIELD = rawObservation({
+  label: "minter", contract: RESERVOIR_RUSD_ADDRESS, data: getter("MINTER"), optional: true, allowFailure: true,
+});
+// Optional savings fields preserve a valid terminal PSM observation when only
+// the preceding leg fails; the wrapper itself still fails every guard closed.
+const RESERVOIR_WSRUSD_FIELDS = [
+  ...RESERVOIR_PSM_FIELDS, RESERVOIR_MINTER_FIELD,
+  rawObservation({ label: "wrapperAsset", contract: RESERVOIR_WSRUSD_ADDRESS, data: getter("asset"), optional: true, allowFailure: true }),
+  rawObservation({ label: "wrapperDecimals", contract: RESERVOIR_WSRUSD_ADDRESS, data: getter("decimals"), optional: true, allowFailure: true }),
+  rawObservation({ label: "unitOutput", contract: RESERVOIR_WSRUSD_ADDRESS,
+    data: encodeFunctionData({ abi: RESERVOIR_PROBE_ABI, functionName: "previewRedeem", args: [10n ** 18n] }),
+    optional: true, allowFailure: true }),
+] as const;
+const RESERVOIR_SRUSD_FIELDS = [
+  ...RESERVOIR_PSM_FIELDS, RESERVOIR_MINTER_FIELD,
+  rawObservation({ label: "savingsRusd", contract: RESERVOIR_SAVING_MODULE_ADDRESS, data: getter("rusd"), optional: true, allowFailure: true }),
+  rawObservation({ label: "savingsSrusd", contract: RESERVOIR_SAVING_MODULE_ADDRESS, data: getter("srusd"), optional: true, allowFailure: true }),
+  rawObservation({ label: "savingsFee", contract: RESERVOIR_SAVING_MODULE_ADDRESS, data: getter("redeemFee"), optional: true, allowFailure: true }),
+  rawObservation({ label: "savingsPrice", contract: RESERVOIR_SAVING_MODULE_ADDRESS, data: getter("currentPrice"), optional: true, allowFailure: true }),
+  rawObservation({ label: "savingsDecimals", contract: RESERVOIR_SRUSD_ADDRESS, data: getter("decimals"), optional: true, allowFailure: true }),
+] as const;
+type ReservoirIdentityValues = EvmObservationValues<
+  typeof RESERVOIR_PSM_FIELDS | typeof RESERVOIR_WSRUSD_FIELDS | typeof RESERVOIR_SRUSD_FIELDS
+>;
 
-/**
- * Same-run read of the srUSD exit fee, in basis points. Returns `null` when the
- * read fails or the value breaches the contract's own `1e6 > fee` bound, so the
- * caller falls back to the reviewed cost model instead of publishing a fee it
- * could not observe.
- */
-async function probeSavingModuleRedeemFeeBps(signal: AbortSignal, ctx?: AdapterContext): Promise<number | null> {
-  const onchain = makeOnchainCallers({ chain: "ethereum" }, { signal, ctx });
+async function readReservoirBatch<const Fields extends readonly AnyEvmObservationField[]>(
+  fields: Fields,
+  signal: AbortSignal,
+  ctx: AdapterContext,
+): Promise<EvmObservationValues<Fields>> {
+  return (await executeEvmObservationPlan({
+    adapterKey: "reservoir", fields,
+    read: (calls) => fetchOnchainMulticall3({ chain: "ethereum", calls, signal, ctx }),
+  })).values;
+}
+
+interface ReservoirSavingsProbe {
+  feeBps: number;
+  previewAmountRaw: string;
+  burnAmountRaw: string;
+  conversionRateRaw: string;
+}
+
+/** Bind the exact preceding leg, not merely the common terminal PSM. */
+async function probeReservoirSavings(
+  coinId: string,
+  psm: ReservoirPsmProbe,
+  signal: AbortSignal,
+  ctx: AdapterContext,
+  identity: ReservoirIdentityValues,
+): Promise<ReservoirSavingsProbe | null> {
+  const amount = BigInt(psm.capacityRaw) * 10n ** 12n;
+  const preview = (shares: bigint) => encodeFunctionData({
+    abi: RESERVOIR_PROBE_ABI, functionName: "previewRedeem", args: [shares],
+  });
   try {
-    const raw = await onchain.uint256(RESERVOIR_SAVING_MODULE_ADDRESS, SAVING_MODULE_REDEEM_FEE_SELECTOR);
-    if (raw == null || raw < 0n || raw >= RESERVOIR_REDEEM_FEE_DENOMINATOR) return null;
-    // Keep the fraction: at the current 134/1e6 the fee is 1.34 bps, and
-    // rounding here would understate it by a quarter.
-    const feeBps = (Number(raw) / Number(RESERVOIR_REDEEM_FEE_DENOMINATOR)) * 10_000;
-    return Number.isFinite(feeBps) && feeBps >= 0 ? feeBps : null;
+    const minter = identity.minter;
+    if (!minter || !/^0x[a-fA-F0-9]{64}$/.test(minter)) return null;
+    const wrapped = coinId === "wsrusd-reservoir";
+    const unitOutput = wrapped ? decodeUint256Word(identity.unitOutput) : null;
+    const fee = wrapped ? 0n : decodeUint256Word(identity.savingsFee);
+    const price = wrapped ? null : decodeUint256Word(identity.savingsPrice);
+    if (wrapped) {
+      // Current verified Savingcoin burns its shares and mints rUSD directly;
+      // it does not transit srUSD/SavingModule or incur that module's fee.
+      if (decodeStrictAddressWord(identity.wrapperAsset) !== RESERVOIR_RUSD_ADDRESS ||
+        decodeUint256Word(identity.wrapperDecimals) !== 18n || unitOutput == null || unitOutput <= 0n) return null;
+    } else if (
+      decodeStrictAddressWord(identity.savingsRusd) !== RESERVOIR_RUSD_ADDRESS ||
+      decodeStrictAddressWord(identity.savingsSrusd) !== RESERVOIR_SRUSD_ADDRESS ||
+      decodeUint256Word(identity.savingsDecimals) !== 18n ||
+      fee == null || fee < 0n || fee >= RESERVOIR_REDEEM_FEE_DENOMINATOR || price == null || price < 100_000_000n
+    ) return null;
+    // Only the role argument and full-notional preview depend on the first
+    // batch's observed MINTER word and PSM cash. Read them together at its pin.
+    const { authorized, previewAmount } = await readReservoirBatch([
+      boolObservation({ label: "authorized", contract: RESERVOIR_RUSD_ADDRESS,
+        data: encodeFunctionData({ abi: RESERVOIR_PROBE_ABI, functionName: "hasRole",
+          args: [minter as `0x${string}`, wrapped ? RESERVOIR_WSRUSD_ADDRESS : RESERVOIR_SAVING_MODULE_ADDRESS] }) }),
+      uint256Observation({ label: "previewAmount",
+        contract: wrapped ? RESERVOIR_WSRUSD_ADDRESS : RESERVOIR_SAVING_MODULE_ADDRESS,
+        data: wrapped
+          ? encodeFunctionData({ abi: RESERVOIR_PROBE_ABI, functionName: "previewWithdraw", args: [amount] })
+          : preview(amount) }),
+    ] as const, signal, ctx);
+    if (!authorized) return null;
+    if (wrapped) {
+      const onchain = makeOnchainCallers({ chain: "ethereum" }, { signal, ctx });
+      // The verified wrapper ignores rounding direction. This is the only
+      // genuinely dependent ladder: the adjacent share input depends on the
+      // measured floor output. Reuse that output rather than querying it twice.
+      const floorOutput = await onchain.uint256(RESERVOIR_WSRUSD_ADDRESS, preview(previewAmount));
+      if (floorOutput == null) return null;
+      const shares = floorOutput >= amount ? previewAmount : previewAmount + 1n;
+      const adjacentOutput = await onchain.uint256(RESERVOIR_WSRUSD_ADDRESS,
+        preview(floorOutput >= amount ? (shares > 0n ? shares - 1n : 0n) : shares));
+      if (adjacentOutput == null) return null;
+      const output = floorOutput >= amount ? floorOutput : adjacentOutput;
+      const previousOutput = floorOutput >= amount ? adjacentOutput : floorOutput;
+      if (output < amount || (shares > 0n && previousOutput >= amount)) return null;
+      return { feeBps: 0, previewAmountRaw: amount.toString(), burnAmountRaw: shares.toString(), conversionRateRaw: unitOutput!.toString() };
+    }
+    if (price == null || fee == null || previewAmount !== (amount * 100_000_000n + price - 1n) / price) return null;
+    const burnWithFee = previewAmount * (RESERVOIR_REDEEM_FEE_DENOMINATOR + fee) / RESERVOIR_REDEEM_FEE_DENOMINATOR;
+    return {
+      feeBps: Number(fee) / Number(RESERVOIR_REDEEM_FEE_DENOMINATOR) * 10_000,
+      previewAmountRaw: amount.toString(), burnAmountRaw: burnWithFee.toString(), conversionRateRaw: price.toString(),
+    };
   } catch (error) {
     rethrowIfAborted(error, signal);
     return null;
@@ -231,26 +363,25 @@ interface ReservoirPsmProbe {
  * so the caller can withhold redemption telemetry rather than publish an
  * unproven route.
  */
-async function probeReservoirUsdcPsm(signal: AbortSignal, ctx?: AdapterContext): Promise<ReservoirPsmProbe | null> {
-  const onchain = makeOnchainCallers({ chain: "ethereum" }, { signal, ctx });
+async function probeReservoirUsdcPsm(
+  coinId: string, signal: AbortSignal, ctx: AdapterContext,
+): Promise<{ psm: ReservoirPsmProbe; identity: ReservoirIdentityValues } | null> {
   try {
-    const [underlyingHex, balanceRaw, pausedHex] = await Promise.all([
-      onchain.raw(RESERVOIR_USDC_PSM_ADDRESS, PSM_UNDERLYING_SELECTOR),
-      onchain.uint256(RESERVOIR_USDC_PSM_ADDRESS, PSM_UNDERLYING_BALANCE_SELECTOR),
-      onchain.raw(RESERVOIR_USDC_PSM_ADDRESS, PAUSED_SELECTOR),
-    ]);
-
-    const underlying = underlyingHex ? decodeStrictAddressWord(underlyingHex as `0x${string}`) : null;
-    if (underlying !== RESERVOIR_PSM_UNDERLYING_ADDRESS) return null;
-
-    const paused = decodeStrictBoolWord(pausedHex);
-    if (paused == null) return null;
-
-    if (balanceRaw == null || balanceRaw < 0n) return null;
+    const identity = await readReservoirBatch(
+      coinId === "rusd-reservoir" ? RESERVOIR_PSM_FIELDS :
+        coinId === "wsrusd-reservoir" ? RESERVOIR_WSRUSD_FIELDS : RESERVOIR_SRUSD_FIELDS,
+      signal, ctx,
+    );
+    if (decodeStrictAddressWord(identity.underlying) !== RESERVOIR_PSM_UNDERLYING_ADDRESS ||
+      decodeStrictAddressWord(identity.rusd) !== RESERVOIR_RUSD_ADDRESS ||
+      decodeUint256Word(identity.usdcDecimals) !== 6n ||
+      decodeUint256Word(identity.decimalFactor) !== 6n || decodeUint256Word(identity.rusdDecimals) !== 18n) return null;
+    const paused = decodeStrictBoolWord(identity.paused);
+    const balanceRaw = decodeUint256Word(identity.balance);
+    if (paused == null || balanceRaw == null || balanceRaw < 0n) return null;
     const capacityUsd = decimalNumberFromBigInt(balanceRaw, RESERVOIR_PSM_UNDERLYING_DECIMALS);
     if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
-
-    return { capacityUsd, capacityRaw: balanceRaw.toString(), paused };
+    return { psm: { capacityUsd, capacityRaw: balanceRaw.toString(), paused }, identity };
   } catch (error) {
     rethrowIfAborted(error, signal);
     return null;
@@ -383,11 +514,24 @@ export async function fetchReservoirReserves(
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "reservoir");
 
-  const [payload, psm, redeemFeeBps] = await Promise.all([
+  const [payload, observed] = await Promise.all([
     fetchReservoirPayload(primaryInput.url, signal, ctx),
-    probeReservoirUsdcPsm(signal, ctx),
-    SAVING_MODULE_EXIT_COIN_IDS.has(coin.id) ? probeSavingModuleRedeemFeeBps(signal, ctx) : Promise.resolve(null),
+    (async () => {
+      try {
+        const plan = await pinnedBlockPlan({ chain: "ethereum", signal, ctx });
+        const terminal = await probeReservoirUsdcPsm(coin.id, signal, plan.ctx);
+        const savings = terminal && coin.id !== "rusd-reservoir"
+          ? await probeReservoirSavings(coin.id, terminal.psm, signal, plan.ctx, terminal.identity)
+          : null;
+        return { ...plan, psm: terminal?.psm ?? null, savings };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        return null;
+      }
+    })(),
   ]);
+  const psm = observed?.psm ?? null;
+  const routeObserved = psm != null && (coin.id === "rusd-reservoir" || observed?.savings != null);
   const adapted = adaptReservoirReserves(payload);
   const totalAssetsUsd = Number(payload.totalAssets);
   const totalLiabilitiesUsd = Number(payload.totalLiabilities);
@@ -436,21 +580,16 @@ export async function fetchReservoirReserves(
     );
   }
 
-  // The PSM's own USDC balance is the only observed exit capacity. Withhold the
-  // whole redemption surface when the same-run reads fail rather than falling
-  // back to the balance-sheet USDC bucket, which sits in lending vaults and is
-  // not reachable without a route this adapter does not observe.
-  const psmCapacityUsd =
-    psm == null
-      ? null
-      : adapted.supplyUsd != null
-        ? Math.min(psm.capacityUsd, adapted.supplyUsd)
-        : psm.capacityUsd;
+  if (psm && !routeObserved) {
+    warnings.push(reserveInfoWarning("reservoir-savings-unreadable",
+      "Reservoir savings identity/conversion/fee leg was not established at the pinned PSM block; wrapper capacity withheld"));
+  }
 
   return {
     slices: adapted.slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      ...(observed ? { observedBlock: observed.observedBlock } : {}),
       assetCount: payload.assets.length,
       liabilityCount: payload.liabilities.length,
       totalAssets: payload.totalAssets,
@@ -482,23 +621,30 @@ export async function fetchReservoirReserves(
             balanceSheetUsdcBucketUsd: adapted.immediateRedeemableUsd,
           }
         : {}),
-      ...(psm != null && psmCapacityUsd != null
+      ...(routeObserved && psm != null && observed != null
         ? {
             psmUnderlyingBalanceRaw: psm.capacityRaw,
-            redemption: {
-              capacityUsd: psmCapacityUsd,
-              capacityKind: "live-direct" as const,
-              freshnessKind: "same-run-onchain" as const,
-              routeStatus: psm.paused ? ("paused" as const) : ("open" as const),
-              routeStatusSource: "onchain" as const,
+            ...(observed.savings ? { savingsExit: observed.savings } : {}),
+            ...buildRedemptionSnapshotMetadata({
+              capacityUsd: psm.paused ? 0 : psm.capacityUsd,
+              capacityKind: "live-direct",
+              freshnessKind: "same-run-onchain",
+              sourceTimestamp: observed.observedBlock.timestamp,
+              blockNumber: observed.observedBlock.number,
+              outputAssetKeys: ["usdc-circle"],
+              sharedResourceKey: SHARED_PSM_RESOURCE_KEY,
+              routeObserved: true,
+              routeStatus: psm.paused ? "paused" : "open",
+              routeStatusSource: "onchain",
               routeStatusReason: psm.paused
-                ? `Reservoir USDC PSM ${RESERVOIR_USDC_PSM_ADDRESS} paused() returned true in the same run`
-                : `Reservoir USDC PSM ${RESERVOIR_USDC_PSM_ADDRESS} read in the same run: underlying() is Circle USDC, paused() is false, underlyingBalance() is ${psm.capacityRaw} (6 decimals)`,
-              holderEligibility: "any-holder" as const,
+                ? `Reservoir USDC PSM ${RESERVOIR_USDC_PSM_ADDRESS} paused() returned true at the pinned block`
+                : `Reservoir exact-output USDC exit and preceding savings leg verified at block ${observed.observedBlock.number}`,
+              holderEligibility: "any-holder",
               settlementDelaySec: 0,
-              ...(redeemFeeBps != null ? { feeBps: redeemFeeBps } : {}),
-              sourceUrls: [primaryInput.url, RESERVOIR_PSM_DOC_URL],
-            },
+              ...(observed.savings ? { feeBps: observed.savings.feeBps } : {}),
+              sourceUrls: [RESERVOIR_PSM_DOC_URL,
+                ...(coin.id !== "rusd-reservoir" ? ["https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"] : [])],
+            }),
           }
         : {}),
     },

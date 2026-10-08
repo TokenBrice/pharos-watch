@@ -22,20 +22,20 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-09-21",
-      "publishedAt": "2026-09-21",
+      "periodEnd": "2026-10-07",
+      "publishedAt": "2026-10-07",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
+      "reviewer": "RegistryActivation RS7-01 issuer API review; source date 2026-10-07T08:00:19.096Z, accessed 2026-10-07T20:47:18.580729Z",
       "confidence": "probable",
       "sources": [
         {
-          "label": "OpenEden USDO transparency dashboard (last update 2026-09-21 08:00 UTC)",
+          "label": "OpenEden USDO transparency dashboard",
           "url": "https://openeden.com/usdo/transparency"
         },
         {
-          "label": "OpenEden USDO reserve composition and supply API (snapshot accessed 2026-09-21T08:26:16Z)",
+          "label": "OpenEden USDO reserve composition and supply API (source 2026-10-07T08:00:19.096Z; accessed 2026-10-07T20:47:18.580729Z)",
           "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
         }
       ]

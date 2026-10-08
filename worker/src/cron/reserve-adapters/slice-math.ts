@@ -3,6 +3,7 @@ import type { LiveReserveAdapterKey, LiveReserveWarning } from "@shared/types/li
 import { getLiveReserveAdapterDefinition, MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/lib/live-reserve-adapters";
 import { reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";
 import { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
+import { parseDecimalNumber } from "./strict-amount";
 export { decimalNumberFromBigInt, decimalStringFromBigInt };
 
 const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
@@ -211,6 +212,11 @@ export function normalizeSlices(slices: ReserveSlice[], decimals: number | null 
     .sort((a, b) => b.pct - a.pct);
 }
 
+/** Absolute percentage-point drift before rounding or normalization repair. */
+export function calculateRawPercentageSumDeviation(percentages: readonly number[]): number {
+  return Math.abs(percentages.reduce((sum, pct) => sum + pct, 0) - 100);
+}
+
 export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals = 1): {
   slices: ReserveSlice[];
   rawSumDeviation: number;
@@ -218,7 +224,7 @@ export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals 
   const normalized = normalizeSlices(slices, decimals);
   return {
     slices: normalized,
-    rawSumDeviation: Math.abs(slices.reduce((sum, slice) => sum + slice.pct, 0) - 100),
+    rawSumDeviation: calculateRawPercentageSumDeviation(slices.map((slice) => slice.pct)),
   };
 }
 
@@ -252,18 +258,8 @@ export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUs
 }
 
 export function parsePositiveNumericLike(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-
-  return null;
+  const parsed = parseDecimalNumber(value);
+  return parsed != null && parsed > 0 ? parsed : null;
 }
 
 export function slicesFromPercentages(

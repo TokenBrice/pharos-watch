@@ -2,6 +2,7 @@
   "id": "cash-phantom",
   "reserves": [
     {
+      "sourceKey": "bridge-transparency:cash",
       "name": "Cash and deposit accounts in the BBI Reserve",
       "pct": 7,
       "risk": "very-low",
@@ -15,15 +16,18 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "U.S. Treasury bills and U.S. government money-market funds (T-bill ladders under 3-month duration)",
+      "sourceKey": "bridge-transparency:treasury",
+      "name": "U.S. Treasury and government money-market fund exposure",
       "pct": 93,
       "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury and U.S. government money-market funds (fund issuers undisclosed)",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury underlying exposure; government money-market fund counterparties undisclosed",
       "riskFactors": [
         "duration",
         "liquidity",
-        "custody"
+        "custody",
+        "counterparty",
+        "concentration"
       ],
       "liquidityHorizon": "one-day"
     }
@@ -54,7 +58,7 @@
     "compositionBasis": "Issuer-published CASH dashboard allocation at its Oct 1, 2026, 6:10 AM UTC update: Cash $9,102,116 (7.0%) and Treasury $121,441,011 (93.0%), against $130,543,126 reserve assets and 130,542,113 CASH circulating.",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dashboard fully allocates reserve assets between its two published buckets, so no notional is unclassified at the asset-class level. Residual unknowns: the dashboard is issuer self-reported with no independent attestation yet (quarterly audits are promised, none published for CASH); per-provider splits inside the Treasury bucket (direct T-bills vs specific government MMFs), the deposit banks behind the Cash bucket, and any tokenized-asset usage permitted by eligible classes (e)/(f) are not broken out; repo holdings within the eligible envelope are not separately reported.",
+    "knownUnknownExposure": "The dashboard allocates reserve assets between two published buckets, but the combined Treasury/government-MMF bucket does not establish an instrument-level asset class. It is conservatively classified as other until the direct Treasury versus MMF allocation and fund counterparties are disclosed. Other residual unknowns: issuer self-reporting with no published independent CASH attestation; deposit bank identities; any tokenized-asset usage permitted by eligible classes (e)/(f); and repo holdings within the eligible envelope. No provider weights or synthetic component split are inferred.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

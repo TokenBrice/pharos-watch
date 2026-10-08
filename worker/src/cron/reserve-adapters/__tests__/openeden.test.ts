@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { StablecoinMeta } from "@shared/types/core";
 import { adaptOpenEdenUsdo, fetchOpenEdenUsdoReserves } from "../openeden";
 import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import currentComposition from "./fixtures/openeden-reserve-composition-2026-10-07.json";
 
 const OPENEDEN_URL = "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last";
 const FIXTURE_NOW = Math.floor(Date.parse("2026-03-25T09:00:17.600Z") / 1000);
@@ -32,13 +33,13 @@ describe("adaptOpenEdenUsdo", () => {
       benjiAmount: 0,
       reserveAssetsInUsd: 62_539_444.54,
       ratio: 100.4116,
-    });
+    }, OPENEDEN_URL);
 
     expect(result.slices).toEqual([
-      { name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" },
-      { name: "OpenEden VBILL", pct: 10.2, risk: "low" },
-      { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
+      { sourceKey: "openeden-usdo:tbill", name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" },
+      { sourceKey: "openeden-usdo:vbill", name: "VanEck VBILL", pct: 10.2, risk: "low", coinId: "vbill-vaneck", depType: "collateral" },
+      { sourceKey: "openeden-usdo:usdc", name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "openeden-usdo:buidl", name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -75,9 +76,10 @@ describe("adaptOpenEdenUsdo", () => {
       pendingUsdc: 864_831.69,
       reserveAssetsInUsd: 49_084_898.00,
       ratio: 111.3399,
-    });
+    }, OPENEDEN_URL);
 
     expect(result.slices).toContainEqual({
+      sourceKey: "openeden-usdo:pending-usdc",
       name: "Pending USDC",
       pct: 1.8,
       risk: "very-low",
@@ -91,9 +93,10 @@ describe("adaptOpenEdenUsdo", () => {
   });
 
   it("includes the RLUSD component in component-total validation and slices", () => {
-    const result = adaptOpenEdenUsdo({ ...payload, usdcAmount: 10, rlusdAmount: 5 });
+    const result = adaptOpenEdenUsdo({ ...payload, usdcAmount: 10, rlusdAmount: 5 }, OPENEDEN_URL);
 
     expect(result.slices).toContainEqual({
+      sourceKey: "openeden-usdo:rlusd",
       name: "RLUSD buffer",
       pct: 5,
       risk: "low",
@@ -103,11 +106,55 @@ describe("adaptOpenEdenUsdo", () => {
   });
 
   it.each([1.005, 100.5])("normalizes decimal and percentage ratio %s", (ratio) => {
-    expect(adaptOpenEdenUsdo({ ...payload, ratio }).metadata?.reserveRatio).toBe(1.005);
+    expect(adaptOpenEdenUsdo({ ...payload, ratio }, OPENEDEN_URL).metadata?.reserveRatio).toBe(1.005);
   });
 
   it.each([Number.NaN, 0, -1])("rejects non-numeric or non-positive ratio %s", (ratio) => {
-    expect(() => adaptOpenEdenUsdo({ ...payload, ratio })).toThrow(/ratio is non-numeric/);
+    expect(() => adaptOpenEdenUsdo({ ...payload, ratio }, OPENEDEN_URL)).toThrow(/ratio is non-numeric/);
+  });
+
+  const requiredComponents = ["totalTbillAmountInUsd", "usdcAmount", "buidlAmount", "vbillAmount", "usycAmountInUsd", "benjiAmount"];
+  it.each(requiredComponents)("rejects every malformed required %s before composition normalization", (field) => {
+    for (const invalid of [undefined, null, "0", Number.NaN, Infinity, -0.01]) {
+      expect(() => adaptOpenEdenUsdo({ ...payload, [field]: invalid }, OPENEDEN_URL)).toThrow();
+    }
+  });
+
+  it.each(["rlusdAmount", "pendingUsdc", "uAmount"])("distinguishes absent/observed-zero optional %s from malformed values", (field) => {
+    expect(adaptOpenEdenUsdo({ ...payload, [field]: 0 }, OPENEDEN_URL).metadata?.componentTotalUsd).toBe(100);
+    for (const invalid of [null, "0", Number.NaN, Infinity, -1]) {
+      expect(() => adaptOpenEdenUsdo({ ...payload, [field]: invalid }, OPENEDEN_URL)).toThrow();
+    }
+  });
+
+  it.each([0.000001, 0.5, 5])("withholds unreviewed positive uAmount %s even inside the reconciliation tolerance", (uAmount) => {
+    expect(() => adaptOpenEdenUsdo({ ...payload, uAmount }, OPENEDEN_URL)).toThrow();
+  });
+
+  it("reconciles the actual October snapshot and preserves only reported-liability/current-USDC scope", () => {
+    const result = adaptOpenEdenUsdo(currentComposition, OPENEDEN_URL);
+    expect(result.metadata?.componentTotalUsd).toBe(currentComposition.reserveAssetsInUsd);
+    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Date.parse(currentComposition.date) / 1000));
+    expect(result.slices.map((slice) => slice.sourceKey).sort()).toEqual([
+      "openeden-usdo:buidl", "openeden-usdo:rlusd", "openeden-usdo:tbill", "openeden-usdo:usdc", "openeden-usdo:vbill",
+    ]);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: currentComposition.usdcAmount,
+      sourceUrls: [OPENEDEN_URL, "https://openeden.com/usdo/transparency"],
+    });
+    expect(result.metadata?.details).toMatchObject({
+      liabilityScope: "reported-usdoAmount-only", pendingUsdcExcludedFromCapacity: true,
+    });
+  });
+
+  it("preserves zero-supply semantics without inventing a coverage denominator", () => {
+    const result = adaptOpenEdenUsdo({ ...payload, usdoAmount: 0 }, OPENEDEN_URL);
+    expect(result.metadata?.supplyUsd).toBe(0);
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+  });
+
+  it("rejects positive components against an observed zero reserve aggregate", () => {
+    expect(() => adaptOpenEdenUsdo({ ...payload, reserveAssetsInUsd: 0, usdoAmount: 0 }, OPENEDEN_URL)).toThrow();
   });
 });
 
@@ -123,18 +170,18 @@ describe("fetchOpenEdenUsdoReserves", () => {
   it.each([0.999, 1.001])("enforces the 1% component boundary: %s", (delta) => {
     const candidate = { ...payload, usdcAmount: 15 + delta };
     if (delta < 1) {
-      expect(adaptOpenEdenUsdo(candidate).metadata?.componentTotalUsd).toBeCloseTo(100.999, 6);
+      expect(adaptOpenEdenUsdo(candidate, OPENEDEN_URL).metadata?.componentTotalUsd).toBeCloseTo(100.999, 6);
     } else {
-      expect(() => adaptOpenEdenUsdo(candidate)).toThrow(/components sum/);
+      expect(() => adaptOpenEdenUsdo(candidate, OPENEDEN_URL)).toThrow(/components sum/);
     }
   });
 
   it.each([0.01999, 0.02001])("enforces the 2% ratio boundary: %s", (delta) => {
     const candidate = { ...payload, usdoAmount: 100 / (1 + delta) };
     if (delta < 0.02) {
-      expect(adaptOpenEdenUsdo(candidate).metadata?.reserveRatio).toBe(1);
+      expect(adaptOpenEdenUsdo(candidate, OPENEDEN_URL).metadata?.reserveRatio).toBe(1);
     } else {
-      expect(() => adaptOpenEdenUsdo(candidate)).toThrow(/does not match derived ratio/);
+      expect(() => adaptOpenEdenUsdo(candidate, OPENEDEN_URL)).toThrow(/does not match derived ratio/);
     }
   });
   it.each(["browser", "neutral", "default"])("recovers through the %s HTTP identity", async (successfulIdentity) => {
@@ -161,7 +208,7 @@ describe("fetchOpenEdenUsdoReserves", () => {
       nowSec: FIXTURE_NOW,
     });
     expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 15 });
-    expect(result.slices).toContainEqual({ name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" });
+    expect(result.slices).toContainEqual({ sourceKey: "openeden-usdo:tbill", name: "OpenEden TBILL", pct: 70, risk: "very-low", coinId: "tbill-openeden", depType: "collateral" });
     expect(observed).toEqual(["browser", "neutral", "default"].slice(0, ["browser", "neutral", "default"].indexOf(successfulIdentity) + 1));
     expect(unexpected).toEqual([]);
   });
@@ -173,6 +220,22 @@ describe("fetchOpenEdenUsdoReserves", () => {
     const second = await fetchOpenEdenUsdoReserves(coin, config, new AbortController().signal, ctx);
     expect(second).toEqual(first);
     expect(network.fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the configured API URL in this attempt's route and reserve provenance", async () => {
+    const url = `${OPENEDEN_URL}?chainId=60000`;
+    const actualConfig = { ...config, inputs: { primary: { kind: "http-json" as const, url } } };
+    const network = installAdapterNetwork({ json: { [url]: payload } });
+    const result = await fetchOpenEdenUsdoReserves(coin, actualConfig, new AbortController().signal);
+    expect(result.metadata?.redemption?.sourceUrls).toEqual([url, "https://openeden.com/usdo/transparency"]);
+    expect(result.metadata?.details?.sourceUrls).toEqual([url, "https://openeden.com/usdo/transparency"]);
+    expect(network.requests.every((request) => request.url === url)).toBe(true);
+  });
+
+  it("labels all-identity HTTP 500 failures without publishing a snapshot", async () => {
+    const network = installAdapterNetwork({ json: { [OPENEDEN_URL]: { status: 500, body: "gateway failure" } } });
+    await expect(fetchOpenEdenUsdoReserves(coin, config, new AbortController().signal)).rejects.toThrow(/HTTP 500/);
+    expect(network.fetchSpy).toHaveBeenCalled();
   });
 
   it("retains each failed HTTP cause and adapter identity", async () => {

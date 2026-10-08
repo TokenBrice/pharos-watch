@@ -2,11 +2,13 @@
   "id": "usdfr-forest-road",
   "reserves": [
     {
+      "sourceKey": "forest-road:credit-book",
       "name": "Forest Road deployed specialty-finance credit book",
       "pct": 97.344125,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Forest Road originated facilities; borrower legal identities undisclosed",
+      "maturityDaysMax": 969,
       "riskFactors": [
         "credit",
         "duration",
@@ -15,10 +17,10 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 969
+      "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "forest-road:idle-usdc",
       "name": "USDC idle redemption reserve",
       "pct": 2.655875,
       "risk": "low",
@@ -35,6 +37,7 @@
     }
   ],
   "reserveReview": {
+    "compositionSource": "live-adapter",
     "reviewedAt": "2026-10-03",
     "reviewer": "W1R61 (contractual maximum maturity); existing composition review preserved",
     "confidence": "verified",
@@ -86,6 +89,10 @@
       {
         "label": "Verified ClaimBridge implementation: totalOriginated is nextId minus one; facility returns contractual maturity and loan state",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc63b7bf5472378abfea171793c06bd0e960b2bb7"
+      },
+      {
+        "label": "Verified ReserveManager implementation accounting; accessed 2026-10-07T21:06:45Z, separately pinned at block 26143056",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x99B4DFa4e1344273d5335bD90de1dea3A02b9C3A"
       }
     ],
     "rationale": "Existing composition remains the block 26107707 accounting observation: backing $5150523.219270193949, deployed principal $5013731.736653193831, USDC custody $136791.482617 and USDfr supply 5142565.55847783. Weights use backing value, not token supply or contractual face. Separately, at block 26114921 (2026-10-03T22:51:59Z), ClaimBridge totalOriginated=11 and every facility(1..11) is Active; all are nonrenewable. Maximum contractual maturity is 2029-05-29T00:00:00Z, giving a conservatively rounded-up remaining maximum of 969 days. This is a complete contractual maturity ceiling for the observed current facilities, not WAM, expected recovery timing, independent credit valuation or a permanent limit on future originations.",

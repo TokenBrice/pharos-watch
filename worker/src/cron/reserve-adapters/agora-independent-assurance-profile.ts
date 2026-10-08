@@ -1,10 +1,6 @@
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
+import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
-import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER_KEY = "agora-independent-assurance";
 
@@ -122,13 +118,3 @@ export const AGORA_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   prepareIndexHtml: prepareAgoraIndexHtml,
 };
 
-export async function fetchAgoraIndependentAssuranceReserves(
-  coin: ReserveAdapterCoin,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params) as
-    LiveReserveAdapterParamsByKey["agora-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, AGORA_INDEPENDENT_ASSURANCE_PROFILE, params, ctx);
-}
