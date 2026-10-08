@@ -336,11 +336,6 @@ const V9PartialEvidenceSchema = z.object({
 }).strict();
 export type V9PartialEvidence = z.infer<typeof V9PartialEvidenceSchema>;
 export const V9PillarAggregationDispositionSchema = z.enum(["included", "excluded-a-b"]);
-export const V9PillarCauseShape = {
-  aggregationDisposition: V9PillarAggregationDispositionSchema,
-  supportedComponentKeys: canonicalTextArray(), causeGapIds: canonicalTextArray(),
-  limitedEvidenceCauses: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["C", "U", "D"]))),
-};
 export const V9CompactPartialEvidenceSchema = V9PartialEvidenceSchema.pick({
   reasonCode: true, excludedPillars: true, causes: true,
 });

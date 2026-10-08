@@ -180,7 +180,7 @@ export type V9StructuralSignalKind = z.infer<typeof V9StructuralSignalKindSchema
 const V9SeveritySchema = z.enum(["low", "moderate", "high", "critical"]);
 export type V9Severity = z.infer<typeof V9SeveritySchema>;
 
-export const V9StructuralSignalSchema = z
+const V9StructuralSignalSchema = z
   .object({
     kind: V9StructuralSignalKindSchema,
     severity: V9SeveritySchema,

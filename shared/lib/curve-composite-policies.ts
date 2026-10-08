@@ -543,7 +543,7 @@ export const CURVE_GUSD_3CRV_METAPOOL_POLICY = shadowMetapoolPolicy({
   },
 });
 
-export const CURVE_LUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
+const CURVE_LUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool({
   stablecoinId: "lusd-liquity",
   poolAddress: CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
   factoryPoolIndex: 16,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const SolanaDexPublicKeySchema = /* @__PURE__ */ (() => z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/))();
+const SolanaDexPublicKeySchema = /* @__PURE__ */ (() => z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/))();
 export const SolanaDexShadowTargetSchema = /* @__PURE__ */ (() => z.object({
   chain: z.literal("solana"),
   profileId: z.enum(["orca-whirlpool-exact-v1", "raydium-clmm-exact-v1"]),

@@ -247,23 +247,6 @@ paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/(?:whirlpool
 # Wave-4 finalized-account and same-slot simulation fixtures retain public
 # input mints. Exact values and paths only; never exempt arbitrary base58 keys.
 [[allowlists]]
-description = "Reviewed input mint pubkeys in the Meteora DLMM pinned-account fixture"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "secret"
-regexes = [
-  '''^JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD$''',
-  '''^EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v$''',
-  '''^Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C$''',
-  '''^3uZLfBgY9XaLXG7C2DDdVjQWgS9x9kEb9VLpfe4yED4P$''',
-  '''^6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG$''',
-  '''^GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq$''',
-  '''^USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX$''',
-  '''^A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6$''',
-]
-paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/fixtures/meteora-dlmm-pinned\.json$''']
-
-[[allowlists]]
 description = "Reviewed USDC input mint in the wave-4 Raydium simulation and Solana CLMM fixtures"
 targetRules = ["generic-api-key"]
 condition = "AND"

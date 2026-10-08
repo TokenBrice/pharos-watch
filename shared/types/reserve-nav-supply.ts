@@ -20,9 +20,8 @@ export const ReserveNavSupplyAdmissionReviewSchema = z.object({
   evidenceRef: z.string().url(),
   perimeterRef: z.string().url(),
 }).strict();
-export type ReserveNavSupplyAdmissionReview = z.output<typeof ReserveNavSupplyAdmissionReviewSchema>;
 
-export const RESERVE_NAV_SUPPLY_SCOPE_REASON_VALUES = [
+const RESERVE_NAV_SUPPLY_SCOPE_REASON_VALUES = [
   "class-assets-unavailable",
   "native-share-observation-unavailable",
   "native-share-precision-unsupported",
