@@ -13,7 +13,7 @@ import { deriveBaseCriticalOwnership, collectOwningTests } from "../lib/critical
 import { CRITICAL_FILES, CRITICAL_OWNERSHIP } from "../lib/critical-coverage.mjs";
 import { getPrLane, buildPrLaneCommandArgs } from "../lib/pr-lanes.mts";
 import { PR_TEST_PLAN_PATH, readPrTestPlan, type PrTestPlan } from "../lib/pr-test-plan.mts";
-import { buildPrStaticCheckPlan } from "./run-pr-static-checks.ts";
+import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
 import { runLocalTrustedGitleaks } from "../ci/run-gitleaks.ts";
 
 const RESULT_PATH = ".tmp/ci-parity-result.json";
@@ -264,7 +264,7 @@ export async function runCiParityClone({ env = process.env, repoRoot = process.c
       if (!code) continue;
       const group = lane.id === "static-compile" ? "compile" : "guards";
       for (const command of buildPrStaticCheckPlan(files, { group, skipDocSync: classification.docsChanged }).commands) {
-        const args = command.name === "lint:changed" ? [`--base=${baseSha}`, `--head=${headSha}`] : command.args ?? [];
+        const args = prStaticLeafArgs(command, { base: baseSha, head: headSha });
         await execute(`${lane.id}:${command.name}`, "npm", ["run", command.name, ...(args.length ? ["--", ...args] : [])], lane.timeoutMinutes);
       }
     }

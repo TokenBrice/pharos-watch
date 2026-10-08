@@ -212,6 +212,18 @@ export function resolvePrDependencyAuditBase(
   }
 }
 
+/** Binds frozen refs into the static leaves that need them. Every runner that
+ * expands the static plan (check:pr:static, check:pr, --ci-parity) uses this one
+ * owner, so a leaf cannot silently lose its range or audit base. */
+export function prStaticLeafArgs(
+  command: { name: string; args?: readonly string[] },
+  refs: { base: string; head: string; auditBase?: () => string },
+): string[] {
+  if (command.name === "lint:changed") return [`--base=${refs.base}`, `--head=${refs.head}`];
+  if (command.name === "check:dependency-audit") return [`--new-since=${refs.auditBase ? refs.auditBase() : refs.base}`];
+  return [...(command.args ?? [])];
+}
+
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
@@ -244,12 +256,7 @@ export async function runPrStaticChecks({
   );
   const runnableCommands = commands.map((command) => ({
     ...command,
-    args:
-      command.name === "lint:changed"
-        ? [`--base=${base}`, `--head=${head}`]
-        : command.name === "check:dependency-audit"
-          ? [`--new-since=${resolvePrDependencyAuditBase(env, head)}`]
-          : (command.args ?? []),
+    args: prStaticLeafArgs(command, { base, head, auditBase: () => resolvePrDependencyAuditBase(env, head) }),
   }));
   const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
