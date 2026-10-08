@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "./exit-route";
 import { canonicalExitRouteScopedId } from "./exit-route-identity";
-import { SolanaDexNativePointSchema } from "./solana-dex-bank";
+import type { SolanaDexNativePoint } from "./solana-dex-bank";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
 // constructor arguments; annotating only the outer call leaves those allocated.
@@ -22,26 +22,25 @@ export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_0
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 
 /** Diagnostic-only native reader vocabulary, separate from EVM profiles and score gates. */
-const DexNativeExecutionDiagnosticSchema = /* @__PURE__ */ (() => z.object({
-  profileId: z.enum(["orca-whirlpool-exact-v1", "raydium-clmm-exact-v1"]),
-  status: z.enum(["current", "missing", "stale", "failed", "unavailable"]),
-  reason: z.string().min(1),
-  generationId: z.string().nullable(),
-  sourceGenerationId: z.string().nullable(),
-  publishedAt: z.number().int().nonnegative().nullable(),
-  freshnessMaxSec: z.number().int().positive(),
-  scoreEligible: z.literal(false),
-  quotes: z.array(z.object({
-    targetId: z.string(),
-    stablecoinId: z.string(),
-    poolAddress: z.string(),
-    slot: z.number().int().positive().safe().nullable(),
-    status: z.enum(["current", "stale", "failed", "unavailable"]),
-    reason: z.string().min(1),
-    points: z.array(SolanaDexNativePointSchema),
-  })),
-}))();
-export type DexNativeExecutionDiagnostic = z.output<typeof DexNativeExecutionDiagnosticSchema>;
+export interface DexNativeExecutionDiagnostic {
+  profileId: "orca-whirlpool-exact-v1" | "raydium-clmm-exact-v1";
+  status: "current" | "missing" | "stale" | "failed" | "unavailable";
+  reason: string;
+  generationId: string | null;
+  sourceGenerationId: string | null;
+  publishedAt: number | null;
+  freshnessMaxSec: number;
+  scoreEligible: false;
+  quotes: Array<{
+    targetId: string;
+    stablecoinId: string;
+    poolAddress: string;
+    slot: number | null;
+    status: "current" | "stale" | "failed" | "unavailable";
+    reason: string;
+    points: SolanaDexNativePoint[];
+  }>;
+}
 const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = /* @__PURE__ */ (() => z.string().regex(/^0x[a-f0-9]{40}$/))();

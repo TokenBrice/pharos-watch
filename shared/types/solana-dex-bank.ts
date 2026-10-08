@@ -44,7 +44,7 @@ export const SolanaDexNativeTargetSchema = /* @__PURE__ */ (() => SolanaDexShado
 export type SolanaDexNativeTarget = z.output<typeof SolanaDexNativeTargetSchema>;
 
 const NativeReferenceSchema = /* @__PURE__ */ (() => z.string().min(1).max(640))();
-export const SolanaDexNativePointSchema = /* @__PURE__ */ (() => z.discriminatedUnion("status", [
+const SolanaDexNativePointSchema = /* @__PURE__ */ (() => z.discriminatedUnion("status", [
   z.object({
     status: z.literal("full-fill"),
     notionalUsd: z.number().finite().positive(),
