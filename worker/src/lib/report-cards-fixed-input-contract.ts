@@ -162,7 +162,10 @@ export function createFixedInputPayloadFields<
     safetyScoreV9SupplyAttributionById: z
       .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
       .default({}),
-    // Both journals are diagnostic-only and excluded from base-input identity.
+    // Both journals are retained accepted enrichment, excluded from the base digest.
+    // Reserve evidence supplies captured failure/gap causes (fact-set-context);
+    // supply attribution supplies cause/responsibility/rejection metadata (extension-supply).
+    // Enrichment identity does not imply a scalar score effect on every capture.
     evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
     supplyAttributionJournalById: SupplyAttributionJournalByIdV1Schema.default({}),
     // Optional only for proof-free historical captures. Never enrich this at compute time.

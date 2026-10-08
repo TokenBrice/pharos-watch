@@ -14,8 +14,12 @@
  *     [--manifest <manifest.json>] [--markdown] [--json <path>] [--assert-declared]
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
-import { categorizeReplayChanges, diffReplayArtifacts, type ReplayChangeCategory, type ReplayDiffEntry } from "../../worker/scripts/diff-safety-score-v9-replays";
+import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
+import { categorizeReplayChanges, diffReplayArtifacts, type ReplayChangeCategory, type ReplayDiffEntry } from "./diff-safety-score-v9-replays";
+import { validateReplayCardProjection } from "./lib/safety-score-v9-replay-validation";
+import { z } from "zod";
+import { V9GradeSchema } from "@shared/types/safety-score-v9";
+import { V9RatingStatusSchema } from "@shared/types/safety-score-v9-causes";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -73,23 +77,32 @@ export interface Mover {
   declared: ManifestEntry | null;
 }
 
-function readCards(parsed: unknown, path: string): Map<string, ReplayCard> {
-  if (parsed === null || typeof parsed !== "object" || !("pipeline" in parsed)) {
-    throw new Error(`${path}: not a replay artifact (no pipeline key)`);
+function readCards(parsed: unknown, _path: string): Map<string, ReplayCard> {
+  return new Map(validateReplayCardProjection(parsed).map(card => [card.id, card as ReplayCard]));
+}
+
+export function parseMoverManifest(value: unknown): Manifest {
+  const manifest = z.object({ movers: z.array(z.object({
+    id: z.string().trim().min(1),
+    from: V9GradeSchema.nullable(),
+    to: V9GradeSchema.nullable(),
+    ratingStatusFrom: V9RatingStatusSchema.optional(),
+    ratingStatusTo: V9RatingStatusSchema.optional(),
+    reason: z.string().trim().min(1),
+    workstream: z.string().trim().min(1),
+  }).strict()) }).strict().parse(value);
+  const seen = new Set<string>();
+  for (const entry of manifest.movers) {
+    if (seen.has(entry.id)) throw new Error(`Duplicate mover declaration: ${entry.id}`);
+    seen.add(entry.id);
+    const status = (grade: string | null) => grade === null ? "pipeline-gap" : grade === "NR" ? "not-rated" : "rated";
+    if ((entry.ratingStatusFrom !== undefined && entry.ratingStatusFrom !== status(entry.from)) ||
+      (entry.ratingStatusTo !== undefined && entry.ratingStatusTo !== status(entry.to)) ||
+      (entry.from === entry.to && entry.ratingStatusFrom === entry.ratingStatusTo)) {
+      throw new Error(`Invalid mover transition: ${entry.id}`);
+    }
   }
-  const pipeline = parsed.pipeline;
-  if (pipeline === null || typeof pipeline !== "object" || !("candidate" in pipeline)) {
-    throw new Error(`${path}: replay artifact has no pipeline.candidate`);
-  }
-  const candidate = pipeline.candidate;
-  if (candidate === null || typeof candidate !== "object" || !("cards" in candidate)) {
-    throw new Error(`${path}: replay artifact has no pipeline.candidate.cards`);
-  }
-  const cards = candidate.cards;
-  if (!Array.isArray(cards)) throw new Error(`${path}: pipeline.candidate.cards is not an array`);
-  const byId = new Map<string, ReplayCard>();
-  for (const card of cards as ReplayCard[]) byId.set(card.id, card);
-  return byId;
+  return manifest;
 }
 
 const PILLARS = ["backing", "exit", "control"] as const;
@@ -100,6 +113,11 @@ export function collectMovers(
   after: Map<string, ReplayCard>,
   manifest: Manifest | null,
 ): { movers: Mover[]; appeared: string[]; disappeared: string[] } {
+  if (manifest !== null) manifest = parseMoverManifest(manifest);
+  for (const cards of [before, after]) {
+    validateReplayCardProjection({ pipeline: { candidate: { cards: [...cards.values()] } } });
+    for (const [id, card] of cards) if (id !== card.id) throw new Error(`Card map key differs from ID: ${id}`);
+  }
   const declaredById = new Map((manifest?.movers ?? []).map((m) => [m.id, m]));
   const movers: Mover[] = [];
   for (const [id, a] of after) {
@@ -171,7 +189,7 @@ async function main(): Promise<void> {
 
   const manifest =
     typeof values.manifest === "string"
-      ? (JSON.parse(readFileSync(values.manifest, "utf8")) as Manifest)
+      ? parseMoverManifest(JSON.parse(readFileSync(values.manifest, "utf8")))
       : null;
 
   const beforeArtifact: unknown = JSON.parse(readFileSync(values.before, "utf8"));

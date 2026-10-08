@@ -22,6 +22,9 @@ ADR-38 redistributes existing work across public and heavy scripts; it adds zero
 
 The 2026-10-07 redemption review found `sync-redemption-backstops` declared `maxConnections: 0` while its source observes the earnUSD redemption queue over RPC (measured serial peak 1). Correcting the declaration moved the reviewed fetch-capable entry count by one without adding logical work, triggers, or per-trigger pressure (the four-hour reserve slot stays `3/6`, recovery `2/6`); the ceiling note in `CRON_GROWTH_HEADROOM_POLICY` records it as an accounting correction, not growth.
 
+U-DEX-CAPACITY / [ADR-39](../architecture.md#adr-39) reviews two additional hourly expressions for the existing active EVM job, not a per-run cap increase. The supplemental public slot stays 3/6, shares the existing active cursor and job lease, and does not add work to either 5/6 DEX slot. The deduplicated fetch-capable-job and headroom-full-slot ceilings remain unchanged. The [capacity design](../worker-infrastructure.md#measured-execution-capacity-expansion) records the consolidation and Queues/Workflows review, propagation/rollback behavior, and the production packet required before cohort activation.
+
+
 A sub-hourly logical cadence carrying heavy CPU work must use the paired-hourly physical form: one hourly `M * * * *` alias per logical offset, with the logical schedule and slot identity retained in `shared/lib/cron-jobs.ts`. Splitting an existing comma expression into hourly aliases is a topology rebalance of existing logical work, not new scheduled work. This qualifies the invocation for Cloudflare's hourly Cron CPU class without increasing logical cadence, fetch surface, or connection pressure; see the [Workers limits](https://developers.cloudflare.com/workers/platform/limits/). A lane killed by the sub-hourly 30-second CPU class surfaces as scheduled-slot abandonment; see [`docs/runbooks/cron-slot-abandonment.md`](../runbooks/cron-slot-abandonment.md).
 
 Before adding fetch-heavy scheduled work, the Worker operations owner is the required reviewer and must review the measured workload before one of these consolidation/rebalance paths is executed:
@@ -59,21 +62,23 @@ The 2026-09-03 execution-substrate spike reviewed Workflows against Pharos' six 
 
 The available remote-D1 `cron_runs` sample for the requested 14-day lower-bound query (retained rows span 2026-08-27 through 2026-09-03) measured p95 durations of V9 48.9 s, DEX stage 156.8 s, CL exit depth 99.5 s, live reserves 496.3 s, DDR 27.0 s, and the daily-digest intent proxy 11.4 s. D1 metadata/error text contained zero explicit `exceededMemory` or exceeded-CPU markers for every reviewed lane; Cloudflare invocation analytics is required for platform resource outcomes. Exact SQL and output are in [`docs/process/adr-26-workflows-measurements.md`](adr-26-workflows-measurements.md), with the full parity record in [ADR-26](../architecture.md#architectural-decision-records).
 
-**Disposition:** no authoritative lane cutover is approved by this spike. Run only the V9 one-week shadow first (Cron remains authoritative, no fence deletion), then require byte-identical output, replay-safe writes, a terminal `cron_runs` row, and a stable status oracle before any production Workflow cutover. Live reserves stays Cron-native while its one-pointer/write-diet work proceeds independently. The lower-complexity fallback is a request-ID-deduped Queue message for digest intent; merge DDR back into `quarterHourly` only after the planned heap reduction proves safe.
+**Terminal V9 disposition (2026-10-08):** retire the duplicate Workflow pilot, not canonical cron publication. No authoritative lane cutover is approved, no fence is deleted and no expression is freed. Stop new pilot triggering; complete history disposition/resource deletion before removing its referenced class/binding. Other Queue/DDR/DEX proposals below are historical conditional review directions, not dependencies or implementation authorization for this retirement; each needs a separately approved current capacity/heap/replay packet. Live reserves remains Cron-native.
 
 ### Conditional expression-retirement table
 
 The table is a review plan, not permission to remove an expression now. A row may retire only after its condition is observed in production and the schedule-sync and connection checks pass. Retirement removes physical aliases, not logical freshness slots.
 
-| Logical lane | Current physical expression(s) | Conditional after-review disposition | Net change |
+This is the dated pre-expansion 41-expression review, not today's inventory. ADR-39's supplemental `halfHourlyMeasuredExecutionSupplemental` expressions `20 * * * *` and `50 * * * *` bring the current union to 43; neither is freed or covered by the historical retirement proposal below. Any replacement must account for both active slots, preserved native diagnostics and the separately retained daily EVM shadow lane in a new accepted topology.
+
+| Logical lane | Dated reviewed physical expression(s) | Conditional after-review disposition | Net change |
 | --- | --- | --- | ---: |
-| `v9PublicationOffset` | `22 * * * *` + `52 * * * *` (2) | Retire both only after the V9 shadow/cutover gate and terminal-row proof; no retirement approved yet. | −2 |
+| `v9PublicationOffset` | `22 * * * *` + `52 * * * *` (2) | Retain canonical publication aliases. Terminal Workflow no-go retires only the duplicate substrate, not this lane. | 0 |
 | `halfHourlyOffset` + `halfHourlyMeasuredExecution` | `10 * * * *` + `5 * * * *` + `35 * * * *` (3) | Retire the two measured-execution aliases and retain the hourly `:10` trigger only after the reduced DEX/CL Workflow scope proves six-fetch compliance and replay safety. | −2 |
 | `fiveMinuteReserveRecovery` | `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` (1) | Retain; this is the independent recovery path for reserve failures and is not a Workflow candidate. | 0 |
 | `depegResolverOffset` | `13 * * * *` + `28 * * * *` + `43 * * * *` + `58 * * * *` (4) | Retire only after DDR write replay and status-oracle shadow proof; if the gate stays closed, merge it back into `quarterHourly` after the planned 0.2/2.x heap reduction. | −4 |
 | `digestTriggerPoll` | `*/5 * * * *` (1) | Retire after a request-ID-deduped Queue consumer is production-observed; do not replace this poll with a Workflow. | −1 |
 | Heavy cron lanes (`quarterHourly`, V9 supply attribution, status self-check, mint/burn, charts) | 18 expressions | Retain; they remain the measured native execution substrate in this review. | 0 |
 | Unaffected lanes | 12 expressions | Retain; no Workflows evidence or change is part of this review. | 0 |
-| **Reviewed topology** | **41 expressions** | **Conditional total after V9, DEX/CL, DDR, and digest gates: 32; if only the independent reserve cleanup lands: 41.** | **−9 / 0** |
+| **Dated reviewed topology** | **41 expressions** | **Excluding the retired V9 cutover proposal, the other historical conditional gates would yield 34; no current expression removal is authorized by this table.** | **−7 / 0** |
 
 This table does not authorize a new trigger. Any future retirement or migration must update the single schedule metadata source, preserve logical slot identity, and rerun `npm run check:cron-sync` and `npm run check:cron-connections`.

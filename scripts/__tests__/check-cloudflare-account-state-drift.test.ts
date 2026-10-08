@@ -51,10 +51,10 @@ interface FixtureLiveState {
     exists: boolean;
     sharedDatabase: boolean;
     workflowBinding: boolean;
+    publicWorkflowBinding: boolean;
+    workflowAbsent: boolean;
     workersDev: boolean;
     previewUrls: boolean;
-    workflowOwner: string;
-    workflowClass: string;
     routes: string[];
   };
 }
@@ -63,8 +63,8 @@ function readFixture(name: string): FixtureLiveState {
   return {
     ...JSON.parse(readFileSync(resolve(process.cwd(), "scripts/__tests__/fixtures/cloudflare-account-state", name), "utf8")),
     heavyWorker: {
-      exists: true, sharedDatabase: true, workflowBinding: true, workersDev: false, previewUrls: false,
-      workflowOwner: "stablecoin-heavy", workflowClass: "SafetyScoreV9PublicationWorkflow", routes: [],
+      exists: true, sharedDatabase: true, workflowBinding: false, publicWorkflowBinding: false,
+      workflowAbsent: true, workersDev: false, previewUrls: false, routes: [],
     },
   } as FixtureLiveState;
 }
@@ -81,20 +81,30 @@ function createFixtureFetch(
     const heavy = liveState.heavyWorker;
     const databaseId = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a";
     const extra: Record<string, unknown> = {
-      [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [{ type: "d1", name: "DB", id: databaseId }] },
+      [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [
+        { type: "d1", name: "DB", id: databaseId },
+        ...(heavy.publicWorkflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
+      ] },
       [`${account}/workers/scripts/stablecoin-heavy/settings`]: { bindings: [
         { type: "d1", name: "DB", id: heavy.sharedDatabase ? databaseId : "wrong-database" },
         ...(heavy.workflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
         { type: "secret_text", name: "COINGECKO_API_KEY", text: "heavy-secret-sentinel" },
       ] },
       [`${account}/workers/scripts/stablecoin-heavy/subdomain`]: { enabled: heavy.workersDev, previews_enabled: heavy.previewUrls },
-      [`${account}/workflows/safety-score-v9-publication`]: { script_name: heavy.workflowOwner, class_name: heavy.workflowClass },
+      [`${account}/workflows/safety-score-v9-publication`]: {
+        name: "safety-score-v9-publication", script_name: "stablecoin-heavy", class_name: "SafetyScoreV9PublicationWorkflow",
+      },
       ["/client/v4/zones/zone-id-not-in-manifest/workers/routes"]: heavy.routes.map((pattern) => ({ script: "stablecoin-heavy", pattern })),
     };
     if (Object.hasOwn(extra, url.pathname)) {
       if (!heavy.exists && url.pathname.endsWith("/stablecoin-heavy/settings")) return new Response("missing", { status: 404 });
       const result = extra[url.pathname];
-      return override?.(url.pathname, result) ?? Response.json({ success: true, result });
+      const overridden = override?.(url.pathname, result);
+      if (overridden) return overridden;
+      if (heavy.workflowAbsent && url.pathname.endsWith("/workflows/safety-score-v9-publication")) {
+        return Response.json({ success: false, errors: [{ code: 1, message: "Workflow not found" }] }, { status: 404 });
+      }
+      return Response.json({ success: true, result });
     }
     if (!["/client/v4/zones", project, `${project}/domains`, `${account}/access/apps`, `${account}/workers/domains`, ruleset].includes(url.pathname)) {
       throw new Error(`Unexpected fixture URL: ${url}`);
@@ -181,9 +191,9 @@ describe("Cloudflare account-state drift comparison", () => {
   });
 
   it.each([
-    ["exists", false], ["sharedDatabase", false], ["workflowBinding", false],
-    ["workersDev", true], ["previewUrls", true], ["workflowOwner", "stablecoin-api"],
-    ["workflowClass", "WrongWorkflow"], ["routes", ["pharos.watch/heavy/*"]],
+    ["exists", false], ["sharedDatabase", false], ["workflowBinding", true],
+    ["publicWorkflowBinding", true], ["workflowAbsent", false],
+    ["workersDev", true], ["previewUrls", true], ["routes", ["pharos.watch/heavy/*"]],
   ] as const)("detects heavy %s drift from real GET response shapes", async (field, value) => {
     const fixture = readFixture("healthy-live-state.json");
     Object.assign(fixture.heavyWorker, { [field]: value });
@@ -202,7 +212,7 @@ describe("Cloudflare account-state drift comparison", () => {
     });
     const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
     expect(compareCloudflareAccountState(manifest, state)).toEqual(expect.arrayContaining([
-      "heavyWorker.customDomains: expected none", "heavyWorker.workflowBinding: expected true, found false",
+      "heavyWorker.customDomains: expected none", "heavyWorker.publicWorkflowBinding: expected false, found true",
     ]));
   });
 
@@ -211,6 +221,30 @@ describe("Cloudflare account-state drift comparison", () => {
       path.endsWith("/workers/routes") ? Response.json({ success: true, result: {} }) : undefined);
     await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
       .rejects.toThrow("malformed route list");
+  });
+
+  it("treats an existing unbound named Workflow as drift", async () => {
+    const fixture = readFixture("healthy-live-state.json");
+    fixture.heavyWorker.workflowAbsent = false;
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: createFixtureFetch(fixture) });
+    expect(state.heavyWorker.workflowBinding).toBe(false);
+    expect(state.heavyWorker.publicWorkflowBinding).toBe(false);
+    expect(compareCloudflareAccountState(manifest, state)).toContain("heavyWorker.workflowAbsent: expected true, found false");
+  });
+
+  it.each([
+    [404, "not JSON"],
+    [404, JSON.stringify({ success: false, errors: [] })],
+    [404, JSON.stringify({ success: false, errors: [{ code: 1, message: "Unauthorized" }] })],
+    [403, JSON.stringify({ success: false, errors: [{ code: 1, message: "Workflow not found" }] })],
+    [200, JSON.stringify({ success: true, result: null })],
+    [200, JSON.stringify({ success: true, result: {} })],
+    [200, JSON.stringify({ success: true, result: { name: "other", script_name: "worker", class_name: "Class" } })],
+  ])("does not interpret unreadable Workflow response %s as absence", async (status, body) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/workflows/safety-score-v9-publication") ? new Response(body, { status }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("Cloudflare Workflow lookup");
   });
 
   it("fetches live state with GET only and removes account IDs and secret values before comparison", async () => {
@@ -223,6 +257,8 @@ describe("Cloudflare account-state drift comparison", () => {
 
     expect(compareCloudflareAccountState(manifest, liveState)).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock.mock.calls.some(([request]) =>
+      new URL(String(request)).pathname.endsWith("/workflows/safety-score-v9-publication"))).toBe(true);
     for (const [request, init] of fetchMock.mock.calls) {
       expect(new URL(String(request)).pathname).toContain("/client/v4/");
       expect(init?.method).toBe("GET");

@@ -85,7 +85,7 @@
   "databaseId": "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a",
   "workflowName": "safety-score-v9-publication",
   "workflowBinding": "SAFETY_SCORE_V9_WORKFLOW",
-  "workflowClass": "SafetyScoreV9PublicationWorkflow"
+  "workflowAbsent": true
  },
  "rateLimitRules": [
   {

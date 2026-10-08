@@ -1,8 +1,7 @@
 name: Protocol API Mechanism Refresh
 
-# Producer-only evidence for synthetic/yield mechanism reviews. These files do
-# not alter the active score identity; a reviewed identity rotation owns any
-# later scoring adoption.
+# Permanent non-publishing evidence tooling for reviewed synthetic/yield
+# mechanism facts. Direct score adoption remains blocked.
 
 on:
   schedule:
@@ -42,12 +41,19 @@ jobs:
       - name: Capture protocol API mechanism evidence
         env:
           ASSET_ID: ${{ matrix.asset }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_MEASUREMENTS_ACCESS_KEY_ID: ${{ secrets.R2_MEASUREMENTS_ACCESS_KEY_ID }}
+          R2_MEASUREMENTS_SECRET_ACCESS_KEY: ${{ secrets.R2_MEASUREMENTS_SECRET_ACCESS_KEY }}
         run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset "$ASSET_ID"
 
       - name: Validate producer and deterministic derivation
         run: npm exec vitest -- scripts/__tests__/measure-protocol-api-mechanism-metrics.test.ts --run
 
       - name: Replay all protocol API evidence
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_MEASUREMENTS_ACCESS_KEY_ID: ${{ secrets.R2_MEASUREMENTS_ACCESS_KEY_ID }}
+          R2_MEASUREMENTS_SECRET_ACCESS_KEY: ${{ secrets.R2_MEASUREMENTS_SECRET_ACCESS_KEY }}
         run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all
 
       - name: Detect additions-only evidence diff

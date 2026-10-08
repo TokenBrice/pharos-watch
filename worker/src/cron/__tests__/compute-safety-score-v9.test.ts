@@ -13,6 +13,8 @@ import {
   buildSafetyScoreV9CaptureControl, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
 } from "../../lib/safety-score-v9/capture-control";
 import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-capture-control";
+import { createReportCardsFixedInput, buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
+import type * as NativeInputModule from "../../lib/safety-score-v9/native-input";
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
@@ -349,6 +351,41 @@ describe("computeSafetyScoreV9", () => {
       stage: "input-load",
       reason: "exact-input-invalid",
     });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it.each(["raw", "envelope"] as const)("rejects valid offline V3 %s input on live publication", async (format) => {
+    const actualNativeInput = await vi.importActual<typeof NativeInputModule>(
+      "../../lib/safety-score-v9/native-input",
+    );
+    const { baseInputGenerationId: _nativeGeneration, ...legacyDraft } = fixedInput;
+    const legacy = createReportCardsFixedInput({
+      ...legacyDraft,
+      captureKind: "exact-publication-inputs",
+      bluechipMap: {},
+      resolvedBlacklistStatuses: Object.fromEntries(fixedInput.activeAssetIds.map((id) => [id, false])),
+      chainCirculatingById: {},
+      collateralDriftCoins: [],
+      dexLiqMap: Object.fromEntries(fixedInput.activeAssetIds.map((id) => [id, {
+        liquidityScore: null, concentrationHhi: null, poolCount: 0, chainCount: 0,
+        methodologyVersion: "1.0", updatedAt: fixedInput.dexLiqMap[id]!.updatedAt,
+      }])),
+    });
+    const value = format === "raw" ? JSON.stringify(legacy)
+      : (await buildReportCardsFixedInputCacheEntry(legacy)).value;
+    const offlineInput = format === "raw"
+      ? actualNativeInput.normalizeSafetyScoreV9CompilerInput(JSON.parse(value))
+      : await actualNativeInput.parseSafetyScoreV9InputCacheValue(value);
+    expect(offlineInput).toMatchObject({ schemaVersion: 3 });
+    mocks.parseFixedInput.mockImplementationOnce(actualNativeInput.parseNativeV9InputCacheArtifact);
+    mocks.getCaches.mockResolvedValueOnce(new Map([
+      ["report-cards:fixed-input:exact", { value }],
+      ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
+      ["safety-score-v9:supply-attribution-generation:v1", { value: "supply-generation" }],
+    ]));
+    const result = await computeSafetyScoreV9({} as D1Database);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ stage: "input-load", reason: "exact-input-invalid" });
     expect(mocks.runPublication).not.toHaveBeenCalled();
   });
 

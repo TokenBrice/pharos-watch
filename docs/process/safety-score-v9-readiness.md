@@ -47,6 +47,8 @@ raw body leaves `captures/`, but a new replay or an integrity mismatch fails
 closed. Registries and attestations therefore remain byte-stable while the raw
 retention policy is enforced.
 
+Protocol-API collection and reviewed weekly automation are permanent non-publishing evidence tooling. Strict replay distinguishes canonical raw-byte V2, the exact hash-verified normalized-only V1 exception, and unavailable evidence. Recognizing the frozen V1 hash in summary metadata does not verify its original bytes. Missing account/access or absent/corrupt bodies fail `--replay` and `--replay-all`; no unavailable V2 is counted as V1 or as a passed replay. Network-free verification requires local original bytes or the verified cache; otherwise signed R2 reads and a cache write occur. Original-byte hash readback is required before claiming preservation.
+
 ## Test-owned replay fixtures
 
 Offline replay coverage needs original capture bodies, which no longer live in

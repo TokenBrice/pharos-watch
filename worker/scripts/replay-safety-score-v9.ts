@@ -96,6 +96,9 @@ Options:
   --registry-ref <git-sha>         Verified capture-time registry from a trusted local Git commit.
                                   Otherwise uses an embedded registry snapshot, then the local registry.
   --release-candidate-id <id>     Optional v9-rc-N publication identity override
+  --rederive-current-redemption   Explicit current-curation scenario: rederive captured
+                                  undisclosed-reviewed fee observations. Incompatible
+                                  with accepted captures or capture-time registry modes.
   --allow-future-reviews          Replay even when curated review dates postdate the capture
                                   clock. Those reviews are rejected at that clock, silently
                                   dropping the asset's curated reserve composition, so their
@@ -117,6 +120,10 @@ export interface SafetyScoreV9ReplayArtifact {
     reason: "v9-replay-only";
   };
   pipeline: Readonly<SafetyScoreV9CandidatePipelineResult>;
+  replayScenario?: {
+    kind: "current-redemption-rederivation";
+    sourceBaseInputGenerationId: string;
+  };
 }
 
 const CAPTURE_SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -249,16 +256,8 @@ export async function parseSafetyScoreV9ReplayFixedInput(
   return input;
 }
 
-/**
- * SIM-EXIT-L2 replay-lane emulation: a captured supply-model redemption row
- * carries the observation the producer derived with the code that was live at
- * capture time, and the shadow pipeline never re-derives when a native
- * observation exists. Re-derive exactly the lever class (undisclosed-reviewed
- * fee) with the current shared derivation so the frozen capture reflects what
- * the producer republishes after this code ships. Every other row keeps its
- * captured observation byte-for-byte.
- */
-function rederiveUndisclosedFeeObservations(
+/** Explicit current-curation scenario; all other producer observations stay captured. */
+export function rederiveUndisclosedFeeObservations(
   fixedInput: SafetyScoreV9CompilerInput,
 ): SafetyScoreV9CompilerInput | Omit<SafetyScoreV9CompilerInput, "baseInputGenerationId"> {
   const map: SafetyScoreV9CompilerInput["redemptionBackstopMap"] = { ...fixedInput.redemptionBackstopMap };
@@ -349,6 +348,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       "release-candidate-id": { type: "string" },
       "allow-registry-mismatch": { type: "boolean" },
       "allow-future-reviews": { type: "boolean" },
+      "rederive-current-redemption": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -384,9 +384,15 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const capturedInput = await parseSafetyScoreV9ReplayFixedInput(
     capture.kind === "safety-score-v9-registry-capture" || acceptedCapture ? capture.fixedInput : raw, registrySnapshot,
   );
-  // Capture-time replay must retain producer bytes and their base generation.
-  // The legacy current-curation lane retains its SIM-EXIT-L2 emulation.
-  const fixedInput = registrySnapshot || acceptedCapture ? capturedInput : rederiveUndisclosedFeeObservations(capturedInput);
+  assertCliUsage(
+    !(values["rederive-current-redemption"] === true &&
+      (acceptedCapture || embedded !== undefined || values["registry-ref"] !== undefined)),
+    "--rederive-current-redemption cannot be combined with accepted captures or capture-time registry modes",
+  );
+  // Captured producer bytes are the default, even with current checkout curation.
+  const fixedInput = values["rederive-current-redemption"] === true
+    ? rederiveUndisclosedFeeObservations(capturedInput)
+    : capturedInput;
   if (values["allow-future-reviews"] !== true) {
     const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec, registrySnapshot
       ? new Map(registrySnapshot.activeStablecoins.map((coin) => [coin.id, coin]))
@@ -403,6 +409,12 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),
     ...(values["allow-registry-mismatch"] === true ? { allowRegistryMismatch: true } : {}),
   });
+  if (values["rederive-current-redemption"] === true) {
+    artifact.replayScenario = {
+      kind: "current-redemption-rederivation",
+      sourceBaseInputGenerationId: capturedInput.baseInputGenerationId,
+    };
+  }
   writeFileSync(values.output, serializeSafetyScoreV9ReplayArtifact(artifact), "utf8");
 }
 

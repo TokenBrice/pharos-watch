@@ -66,13 +66,6 @@ describe("hourly corroboration before the next publication", () => {
     });
   }
 
-  it.each(["off", "shadow"])("propagates Workflow mode %s to both status oracles", async (mode) => {
-    const ctx = runtime([]);
-    ctx.env.WORKER_V9_WORKFLOW_MODE = mode;
-    await runStatusSelfCheckSlot(ctx);
-    expect(mocks.runStatusSelfCheck).toHaveBeenCalledWith(ctx.db, expect.objectContaining({ v9WorkflowMode: mode }));
-    expect(mocks.runCronSentinel).toHaveBeenCalledWith(ctx.db, expect.objectContaining({ v9WorkflowMode: mode }));
-  });
 
   it.each([false, true])("runs after monitors and persists slot/version (provider failed: %s)", async (failed) => {
     const order: string[] = [];

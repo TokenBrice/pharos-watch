@@ -81,12 +81,12 @@ Start with [Agent Start Here](./process/agent-start-here.md), then open only the
 | [Feature Flags](./process/feature-flags.md) | policy | none | `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev` | `npm run check:stale-flags` |
 | [Font Assets](./process/font-assets.md) | runbook | none | `npm run subset:fonts` | `npm run subset:fonts -- --check` |
 | [Mechanism-overlay Evidence Standard](./process/mechanism-overlay-evidence-standard.md) | methodology | `stablecoin-addition-orchestrator` | none; apply the evidence standard | pinned-envelope replay and attributed mover review |
-| [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) | runbook | none | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset <asset>` | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all` |
+| [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) | runbook | none | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset <asset>` | `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all` — strict original-byte readback; unavailable bodies fail (local/cache or signed R2 reads) |
 | [Safety Score Curation-Expiry Sweep](./process/safety-score-curation-expiry-sweep.md) | runbook | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | complete the five closeout gates in the runbook |
 | [Safety Score Equivalence Harness](./process/safety-score-equivalence-harness.md) | methodology | none | `npm run safety-score-v9:replay -- --input <capture> --output <replay> --published-at <clock>` | `npm run safety-score-v9:diff -- --baseline <baseline> --candidate <candidate> --assert-empty` |
 | [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) | runbook | `pharos-ci-failure-triage` | `npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset <asset>` | `node --import tsx scripts/ci/check-shock-coverage-freshness.ts` |
 | [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md) | runbook | `compliance-research`, `reserve-research`, `stablecoin-addition-orchestrator` | `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` | `npm run check:stablecoin-data` |
-| [Worker Runtime Experiments](./process/worker-runtime-experiments.md) | runbook | none | `npm run ops:benchmark-worker-compatibility -- --candidate-date YYYY-MM-DD` | compare both bundle/startup checks and local smoke runs |
+| [Worker Runtime Experiments](./process/worker-runtime-experiments.md) | runbook | `worker-cron-change` | `npm run ops:benchmark-worker-compatibility -- --candidate-date YYYY-MM-DD` (permanent tooling; replication benchmark retired) | all four role/date bundle/startup/smoke outcomes; future replication evaluation separately approved |
 
 ## Methodology History
 

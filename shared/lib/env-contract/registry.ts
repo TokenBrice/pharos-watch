@@ -302,60 +302,6 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "VAULTS_FYI_API_KEY",
-    valueType: "string",
-    description: "Optional vaults.fyi credential for the disabled-by-default supplemental yield integration.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "VAULTS_FYI_ENABLED",
-    valueType: "string",
-    description: "Optional vaults.fyi supplemental yield integration flag; unset, false, or malformed values keep the integration disabled.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "VAULTS_FYI_RANKABLE_VAULTS",
-    valueType: "string",
-    description: "Optional CSV allowlist of vaults.fyi `network:vaultId` entries allowed to publish rankable supplemental yield rows.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "VAULTS_FYI_MAX_CREDITS_PER_RUN",
-    valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run. Production uses 13 at the four-hour cadence and can lower the effective allowance to keep the UTC-month forecast within the monthly cap.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "VAULTS_FYI_MAX_CREDITS_PER_MONTH",
-    valueType: "string",
-    description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month. Fetches reserve credit allowance before provider work; telemetry warns before 75 percent projected or actual utilization.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "VAULTS_FYI_MAX_PAGES_PER_RUN",
-    valueType: "string",
-    description: "Optional positive integer page cap for the audit-only vaults.fyi inventory probe.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
     key: "GITHUB_PAT",
     valueType: "string",
     description: "GitHub personal access token used by the feedback -> issue bridge (required to keep `POST /api/feedback` available) and by the pre-digest Safety Score map producer kick, which dispatches `safety-map-refresh.yml`; it needs classic `repo` scope or fine-grained Issues and Actions write access on the repository.",
@@ -466,17 +412,8 @@ export const ENV_BINDINGS = [
   {
     key: "TELEGRAM_RECAP_ROLLOUT_MODE",
     valueType: "string",
-    description: "Personalized recap rollout mode: `off` (default), `dark` (DB-only projection), `canary` (exact chat-ID allowlist), or `public`.",
+    description: "Personalized recap availability: `off` (default when unset, malformed, or a retired mode) or `public`.",
     example: { section: "workerOptional", value: "off" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "TELEGRAM_RECAP_ROLLOUT_CHAT_IDS",
-    valueType: "string",
-    description: "Comma-separated exact Telegram chat IDs eligible for personalized recap canary controls and delivery; ignored outside `canary` mode.",
-    example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
     },
@@ -629,16 +566,7 @@ export const ENV_BINDINGS = [
   {
     key: "WORKER_CANARY_MODE",
     valueType: "string",
-    description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "WORKER_V9_WORKFLOW_MODE",
-    valueType: "string",
-    description: "Safety Score V9 Workflow pilot mode: `off` keeps the cron-only path; `shadow` creates a replay-safe shadow instance after the authoritative cron publication settles.",
+    description: "Permanent data-invariant diagnostics: `off` skips, `status` publishes findings separately from failed execution, with no paging. Pending deployed-override inventory, `shadow` retains hidden collection and `alert` stronger terminal errors (not a sender).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

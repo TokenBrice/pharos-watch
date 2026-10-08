@@ -439,6 +439,10 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
     },
   },
   {
+    // Operator decision 2026-10-08: close the special admission investigation
+    // on 2026-11-24 unless an independent five-gate packet passes. Preserve
+    // pending findings and audit sources as ordinary conservative exclusion;
+    // neither elapsed time nor source access renews or admits this review.
     chainSlug: "tron",
     displayName: "TRON",
     admission: "exclude",

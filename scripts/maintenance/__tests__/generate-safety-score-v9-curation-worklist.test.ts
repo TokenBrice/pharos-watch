@@ -5,6 +5,7 @@ import {
   V9_MISSING_DATA_WORK_TYPES,
 } from "../../lib/safety-score-v9-missing-data-work-types";
 import { classifyV9CurationWorklistStream } from "../generate-safety-score-v9-missing-data-registry";
+import { renderCurationWorklist } from "../generate-safety-score-v9-curation-worklist.mjs";
 
 describe("Safety Score v9 curation worklist routing", () => {
   it("routes reserve refresh work through the typed missing-data registry", () => {
@@ -57,6 +58,54 @@ describe("Safety Score v9 curation worklist routing", () => {
     );
     expect(resolutionModeAction("agent-curation", "contextual-agent-action")).toBe(
       "contextual-agent-action",
+    );
+  });
+
+  it("renders mixed known, null, missing and zero supplies without false coverage or smallest-asset ordering", () => {
+    const supplies = [
+      { id: "zero", supply: 0 },
+      { id: "unknown-z", supply: null },
+      { id: "known", supply: 2_000_000 },
+      { id: "unknown-a", supply: undefined },
+    ];
+    const cards = supplies.map(({ id }) => ({ id, ratingStatus: "rated", grade: "B", score: 75 }));
+    const replay = {
+      pipeline: {
+        candidate: { cards },
+        evaluatedSet: {
+          assets: supplies.map(({ id, supply }) => ({
+            assetId: id,
+            ...(supply === undefined ? {} : { stressState: { exitPortfolio: { circulatingUsd: supply } } }),
+            scoreInput: {
+              pillars: {
+                backing: { reasons: [{ code: "missing-reserve-composition", path: "reserve" }] },
+                exit: { reasons: [] },
+                control: { reasons: [] },
+              },
+              peg: { reasons: [] },
+              dependencyReasons: [],
+            },
+            backing: { archetype: "fiat-cash", contributions: [] },
+          })),
+        },
+      },
+    };
+    const registry = {
+      summary: { stablecoinCount: 4, warnings: [] },
+      stablecoins: supplies.map(({ id }) => ({ assetId: id, missingItems: [] })),
+    };
+    const markdown = renderCurationWorklist(replay, registry, "capture.json");
+    expect(markdown).toContain("2 known (including observed zero), 2 unavailable");
+    expect(markdown).toContain("Known-supply subtotal: $2.0M; not a full-cohort total");
+    expect(markdown).toContain("Rated share of known supply only: 100.00%; not full-cohort supply coverage");
+    expect(markdown).toContain("| RESV-zero | P3 | $0 |");
+    expect(markdown).toContain("| RESV-unknown-a | unknown supply | unavailable (missing-captured-supply) |");
+    expect(markdown.indexOf("RESV-unknown-a")).toBeLessThan(markdown.indexOf("RESV-unknown-z"));
+    expect(markdown.indexOf("RESV-unknown-z")).toBeLessThan(markdown.indexOf("RESV-known"));
+    expect(markdown.indexOf("RESV-known")).toBeLessThan(markdown.indexOf("RESV-zero"));
+    replay.pipeline.evaluatedSet.assets[2].stressState!.exitPortfolio.circulatingUsd = 0;
+    expect(renderCurationWorklist(replay, registry, "capture.json")).toContain(
+      "Rated share of known supply only: unavailable (zero known-supply denominator)",
     );
   });
 });

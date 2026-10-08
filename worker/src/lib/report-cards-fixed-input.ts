@@ -90,7 +90,7 @@ const LegacyReportCardsFixedInputV3Schema = z
   })
   .strict();
 
-const ReportCardsFixedInputSchema = LegacyReportCardsFixedInputV3Schema.extend({
+export const ReportCardsFixedInputSchema = LegacyReportCardsFixedInputV3Schema.extend({
   baseInputGenerationId: BaseInputGenerationIdSchema,
 }).strict();
 const ReportCardsFixedInputIntakeSchema = ReportCardsFixedInputSchema.omit({

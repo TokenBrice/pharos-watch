@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Reviewed transitive reserve-access graphs. Empty until exact deployment, claim applicability and dated evidence are authored; no numeric reserve or supply overrides.",
+  "note": "Four scoped diagnostic-only reserve-access graphs (NUSD, NXUSD, SYZUSD, YZUSD), with unresolved priced receiving-book or strategy scope. Exact deployment, claim applicability and dated evidence are required; no numeric reserve or supply overrides.",
   "reviews": [
     {
       "assetId": "nusd-nexus",

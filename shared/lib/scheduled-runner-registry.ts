@@ -86,6 +86,10 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     worker: "public",
     jobChains: [["sync-cl-exit-depth"]],
   },
+  halfHourlyMeasuredExecutionSupplemental: {
+    worker: "public",
+    jobChains: [["sync-cl-exit-depth"]],
+  },
   halfHourlyOffset: {
     worker: "public",
     jobChains: [["sync-dex-liquidity-stage"]],
@@ -268,9 +272,6 @@ export function listScheduledExpressionsForWorker(role: ScheduledWorkerRole): st
  * among genuinely off-slot work.
  */
 export const OFF_SLOT_SCHEDULED_PRODUCERS = {
-  // Dispatched by the V9 publication slot; the Cloudflare Workflow instance
-  // executes it and logs its own run.
-  "compute-safety-score-v9-workflow": "v9PublicationOffset",
 } as const satisfies Record<string, CronScheduleKey>;
 
 export { SHARED_SCHEDULED_JOB_IDENTITIES };

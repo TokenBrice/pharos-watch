@@ -93,7 +93,6 @@ export interface WorkerVersionRouteFields {
 
 export interface WorkerStatusConfigRouteFields {
   workerCanaryMode: WorkerCanaryMode;
-  v9WorkflowMode: string;
 }
 
 export interface RouteDependencyFieldMap {

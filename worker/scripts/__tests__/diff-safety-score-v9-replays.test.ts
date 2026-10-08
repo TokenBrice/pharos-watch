@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   diffReplayArtifacts,
@@ -8,20 +9,50 @@ import {
   runSafetyScoreV9DiffCli,
   categorizeReplayChanges,
 } from "../diff-safety-score-v9-replays";
-import { collectMovers } from "../../../scripts/maintenance/diff-safety-score-v9-movers";
+import { collectMovers, parseMoverManifest } from "../diff-safety-score-v9-movers";
 
 // Minimal artifact shape. The card array lives at `pipeline.candidate.cards`
 // (`SafetyScoreV9CandidatePipelineResult.candidate` is the
 // `SafetyScoreV9CurrentResponse` built by `buildSafetyScoreV9Response`).
 function artifact(cards: unknown[], volatile: Record<string, unknown> = {}) {
   return {
-    schemaVersion: 1,
-    kind: "safety-score-v9-candidate-replay",
     pipeline: { candidate: { cards, ...volatile } },
   };
 }
 
 describe("diffReplayArtifacts", () => {
+  it("keeps the movers entrypoint and registration inside the Worker tooling boundary", () => {
+    const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../../../package.json", import.meta.url).href), "utf8"));
+    expect(pkg.scripts["safety-score-v9:movers"]).toBe("node --import tsx worker/scripts/diff-safety-score-v9-movers.ts");
+    expect(existsSync(fileURLToPath(new URL("../../../scripts/maintenance/diff-safety-score-v9-movers.ts", import.meta.url).href))).toBe(false);
+    const policy = readFileSync(fileURLToPath(new URL("../../../scripts/lib/cli-argv-policy.mjs", import.meta.url).href), "utf8");
+    expect(policy).toContain('strict("worker/scripts/diff-safety-score-v9-movers.ts")');
+    expect(policy).not.toContain('strict("scripts/maintenance/diff-safety-score-v9-movers.ts")');
+  });
+
+  it.each([
+    {}, { pipeline: { candidate: {} } },
+    artifact([{ id: "", grade: "A", score: 90 }]),
+    artifact([{ id: "a", grade: "A", score: 90 }, { id: "a", grade: "B", score: 70 }]),
+    artifact([{ id: "a", grade: "A", score: null }]),
+    artifact([{ id: "a", grade: "A", score: 90, ratingStatus: "pipeline-gap" }]),
+  ])("rejects malformed equivalence inputs %#", (value) => {
+    expect(() => diffReplayArtifacts(value, value)).toThrow();
+    expect(() => extractCardGrades(value)).toThrow();
+  });
+
+  it("accepts valid reordered live-card projections", () => {
+    const cards = [{ id: "a", grade: "A", score: 90 }, { id: "b", grade: "NR", score: null }];
+    expect(diffReplayArtifacts(artifact(cards), artifact([...cards].reverse())).equal).toBe(true);
+  });
+
+  it("rejects malformed, duplicate and unreviewed mover declarations", () => {
+    const entry = { id: "a", from: "B", to: "A", reason: "reviewed evidence", workstream: "curation" };
+    expect(parseMoverManifest({ movers: [entry] }).movers).toHaveLength(1);
+    for (const movers of [[entry, entry], [{ ...entry, from: "bogus" }], [{ ...entry, reason: "" }], [{ ...entry, ratingStatusTo: "pipeline-gap" }]]) {
+      expect(() => parseMoverManifest({ movers })).toThrow();
+    }
+  });
   it("self-diff is empty even when volatile identity fields differ", () => {
     const a = artifact([{ id: "usdt-tether", grade: "B+", score: 72 }], {
       publishedAt: 1,
@@ -82,7 +113,7 @@ describe("diffReplayArtifacts", () => {
   ])("ignores %s at the candidate and nested card levels", (key) => {
     for (const nested of [false, true]) {
       const make = (value: string) => artifact(
-        [{ id: "usdc-circle", score: 85, ...(nested ? { evidence: [{ [key]: value }] } : {}) }],
+        [{ id: "usdc-circle", grade: "A", score: 85, ...(nested ? { evidence: [{ [key]: value }] } : {}) }],
         nested ? {} : { [key]: value },
       );
       expect(diffReplayArtifacts(make("before"), make("after"))).toEqual({ equal: true, entries: [] });

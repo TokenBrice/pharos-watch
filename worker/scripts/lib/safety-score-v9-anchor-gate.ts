@@ -12,7 +12,7 @@ import type { V9Grade, V9ValidatedPolicyEnvelope } from "@shared/types/safety-sc
  * calibration anchors and adverse controls coherent during iteration.
  */
 
-const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 1;
+export const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 2;
 
 export type V9RatedGrade = Exclude<V9Grade, "NR">;
 
@@ -25,11 +25,6 @@ export interface V9AnchorGateCard {
   archetype: string | null;
 }
 
-export interface V9AnchorPendingRuling {
-  decisionId: string;
-  alternativeMinGrade: V9RatedGrade;
-  note: string;
-}
 
 /**
  * A time-boxed anchor amendment. The eased `minGrade` holds only until
@@ -48,7 +43,6 @@ export interface V9AnchorRule {
   id: string;
   minGrade: V9RatedGrade;
   label: string;
-  pendingRuling?: V9AnchorPendingRuling;
   timeBox?: V9AnchorTimeBox;
 }
 
@@ -267,18 +261,10 @@ export interface V9AnchorGateVerdict {
 }
 
 export interface V9AnchorGateReport {
-  schemaVersion: 1;
+  schemaVersion: 2;
   decision: "gate-passed" | "no-go";
   policyId: string;
   policyDigest: string;
-  appliedRulings: string[];
-  pendingRulings: Array<{
-    decisionId: string;
-    anchorId: string;
-    currentMinGrade: V9RatedGrade;
-    alternativeMinGrade: V9RatedGrade;
-    applied: boolean;
-  }>;
   gradeThresholds: Array<{ grade: V9RatedGrade; minScore: number }>;
   verdicts: V9AnchorGateVerdict[];
 }
@@ -338,7 +324,6 @@ function missingOrUnrated(
 export function evaluateSafetyScoreV9AnchorGate(input: {
   cards: readonly V9AnchorGateCard[];
   policy?: V9ValidatedPolicyEnvelope;
-  applyRulings?: readonly string[];
   contract?: V9AnchorContract;
   /**
    * Publication clock the cards were scored at. Required whenever the contract
@@ -351,18 +336,6 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
   const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
   const contract: V9AnchorContract = input.contract ?? SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1;
   const thresholds = gradeThresholdMap(policy);
-  const declaredRulings = new Map(
-    contract.anchors.flatMap((anchor) =>
-      anchor.pendingRuling ? [[anchor.pendingRuling.decisionId, anchor] as const] : [],
-    ),
-  );
-  const appliedRulings = [...new Set(input.applyRulings ?? [])].sort(compareText);
-  for (const decisionId of appliedRulings) {
-    if (!declaredRulings.has(decisionId)) {
-      throw new Error(`Unknown anchor-gate pending ruling: ${decisionId}`);
-    }
-  }
-  const appliedSet = new Set(appliedRulings);
 
   const timeBoxed = contract.anchors.filter((anchor) => anchor.timeBox !== undefined);
   if (timeBoxed.length > 0 && input.asOfSec === undefined) {
@@ -381,16 +354,9 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
 
   for (const anchor of contract.anchors) {
     const rule = `anchor:${anchor.id}`;
-    const rulingApplied = anchor.pendingRuling !== undefined && appliedSet.has(anchor.pendingRuling.decisionId);
-    // An expired time box restores the stricter grade with no further edit. The
-    // pending-ruling path still wins: an explicitly applied ruling is a live
-    // owner decision, where a lapsed easement is only an absent one.
+    // An expired time box restores the stricter reviewed grade.
     const timeBoxExpired = anchor.timeBox !== undefined && input.asOfSec !== undefined && input.asOfSec >= anchor.timeBox.untilSec;
-    const minGrade = rulingApplied && anchor.pendingRuling
-      ? anchor.pendingRuling.alternativeMinGrade
-      : timeBoxExpired && anchor.timeBox
-        ? anchor.timeBox.restoreMinGrade
-        : anchor.minGrade;
+    const minGrade = timeBoxExpired && anchor.timeBox ? anchor.timeBox.restoreMinGrade : anchor.minGrade;
     const minScore = thresholds.get(minGrade);
     if (minScore === undefined) throw new Error(`Policy carries no grade threshold for ${minGrade}`);
     const required = `score ≥ ${minScore} (${minGrade})`;
@@ -409,8 +375,8 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
       observed: `${card!.score} (${card!.grade})`,
       required,
       detail: passes
-        ? `${anchor.id} meets the ${anchor.label} threshold${rulingApplied ? ` (ruling ${anchor.pendingRuling!.decisionId} applied)` : ""}`
-        : `${anchor.id} scores ${card!.score}, below the ${anchor.label} threshold of ${minScore}${rulingApplied ? ` (ruling ${anchor.pendingRuling!.decisionId} applied)` : ""}`,
+        ? `${anchor.id} meets the ${anchor.label} threshold`
+        : `${anchor.id} scores ${card!.score}, below the ${anchor.label} threshold of ${minScore}`,
     });
   }
 
@@ -507,20 +473,6 @@ export function evaluateSafetyScoreV9AnchorGate(input: {
     decision: verdicts.every((verdict) => verdict.status === "pass") ? "gate-passed" : "no-go",
     policyId: policy.policy.policyId,
     policyDigest: policy.semanticDigest,
-    appliedRulings,
-    pendingRulings: contract.anchors.flatMap((anchor) =>
-      anchor.pendingRuling
-        ? [
-            {
-              decisionId: anchor.pendingRuling.decisionId,
-              anchorId: anchor.id,
-              currentMinGrade: anchor.minGrade,
-              alternativeMinGrade: anchor.pendingRuling.alternativeMinGrade,
-              applied: appliedSet.has(anchor.pendingRuling.decisionId),
-            },
-          ]
-        : [],
-    ),
     gradeThresholds: [...thresholds.entries()]
       .map(([grade, minScore]) => ({ grade, minScore }))
       .sort((left, right) => right.minScore - left.minScore),

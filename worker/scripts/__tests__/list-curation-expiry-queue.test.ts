@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eligibleReserveMeta } from "../../src/lib/__tests__/safety-score-v9-reserve-admission.test-support";
 import type { StablecoinMeta } from "@shared/types/core";
-import { buildCurationExpiryQueue } from "../list-curation-expiry-queue";
+import { buildCurationExpiryQueue, renderCurationExpiryQueue } from "../list-curation-expiry-queue";
 
 // 2026-08-20T13:17:29Z, the clock of the incident capture this queue was built for.
 const CLOCK_SEC = 1_787_231_849;
@@ -127,12 +127,32 @@ describe("buildCurationExpiryQueue", () => {
     );
 
     expect(rows.map((row) => [row.assetId, row.supplyUsd])).toEqual([
+      ["unknown-supply-expiring", null],
       ["big-expiring", 5_000_000],
       ["small-expiring", 10_000],
-      ["unknown-supply-expiring", 0],
     ]);
     expect(rows.every((row) => row.hasCollateralLinks)).toBe(true);
     expect(rows.every((row) => row.adapterState === "none")).toBe(true);
+  });
+
+  it("distinguishes null, missing and observed zero supply in deterministic ordering and rendered totals", () => {
+    const ids = ["zero", "unknown-z", "known", "unknown-a"];
+    const rows = buildCurationExpiryQueue(
+      replayFixture({ supplyById: { zero: 0, "unknown-z": null, known: 42 } }),
+      10,
+      new Map(ids.map((id) => [id, curatedMeta(id, isoDaysAgo(30))])),
+    );
+    expect(rows.map((row) => [row.assetId, row.supplyUsd, row.supplyAvailability])).toEqual([
+      ["unknown-a", null, "unavailable"],
+      ["unknown-z", null, "unavailable"],
+      ["known", 42, "known"],
+      ["zero", 0, "known"],
+    ]);
+    expect(rows[0].supplyUnavailableReason).toBe("missing-captured-supply");
+    const markdown = renderCurationExpiryQueue(rows, 10);
+    expect(markdown).toContain("2 known, 2 unavailable; known-supply subtotal USD 42 (not a full-cohort total)");
+    expect(markdown).toContain("| unknown-a | unavailable | missing-captured-supply |");
+    expect(markdown).toContain("| zero | 0 | known |");
   });
 
   it("keeps named-firm fallback admitted before 120 days and lists only newly expired eligible reports", () => {

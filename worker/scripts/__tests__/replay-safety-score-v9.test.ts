@@ -19,6 +19,7 @@ import {
   resolveSafetyScoreV9ReplayInput,
   runSafetyScoreV9ReplayCli,
   serializeSafetyScoreV9ReplayArtifact,
+  rederiveUndisclosedFeeObservations,
 } from "../replay-safety-score-v9";
 import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements-client";
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
@@ -30,6 +31,10 @@ import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBL
 import { createSafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
 import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
 import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
+import { makeSupplyFullRedemption } from "../../src/lib/__tests__/redemption-backstops-store.test-support";
+import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-exit-route-observations";
+import { computeRedemptionPayloadFingerprint, projectReportCardsFixedInputMethodologyVersions } from "@shared/lib/report-cards-fixed-input-identity";
+import { normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
 
 const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
@@ -45,6 +50,51 @@ function exactFixedInput() {
 }
 
 describe("Safety Score v9 deterministic replay CLI", () => {
+  it("requires explicit current-redemption mode and reseals only targeted captured rows", async () => {
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-redemption-scenario-"));
+    try {
+      const entry = makeSupplyFullRedemption({ feeModelKind: "undisclosed-reviewed", feeBps: null, updatedAt: CLOCK_SEC - 100 });
+      const observation = deriveSupplyModelExitRouteObservation(entry, CLOCK_SEC)!;
+      entry.capacityProfile = { ...entry.capacityProfile!, exitRouteObservations: [{ ...observation, executableUsd: 0 }] };
+      const captured = exactFixedInput();
+      const draft = {
+        ...captured,
+        redemptionBackstopMap: { "usdc-circle": entry },
+        redemptionGenerationId: "redemption:scenario",
+        redemptionStale: false,
+        inputFreshness: {
+          ...captured.inputFreshness,
+          redemptionBackstops: { updatedAt: entry.updatedAt, ageSeconds: CLOCK_SEC - entry.updatedAt, stale: false },
+        },
+      };
+      const { baseInputGenerationId: _stale, ...unsealed } = draft;
+      unsealed.redemptionPayloadFingerprint = computeRedemptionPayloadFingerprint(draft.redemptionBackstopMap, draft.redemptionGenerationId);
+      unsealed.inputMethodologyVersions = projectReportCardsFixedInputMethodologyVersions(unsealed);
+      const input = normalizeSafetyScoreV9CompilerInput(unsealed);
+      const next = normalizeSafetyScoreV9CompilerInput(rederiveUndisclosedFeeObservations(input));
+      expect(input.redemptionBackstopMap["usdc-circle"]!.capacityProfile!.exitRouteObservations![0]!.executableUsd).toBe(0);
+      expect(next.redemptionBackstopMap["usdc-circle"]!.capacityProfile!.exitRouteObservations![0]!.executableUsd).toBeGreaterThan(0);
+      expect(next.redemptionPayloadFingerprint).not.toBe(input.redemptionPayloadFingerprint);
+      expect(next.baseInputGenerationId).not.toBe(input.baseInputGenerationId);
+      expect(rederiveUndisclosedFeeObservations(exactFixedInput())).toEqual(exactFixedInput());
+
+      const capture = resolve(dir, "capture.json"), output = resolve(dir, "output.json");
+      writeFileSync(capture, JSON.stringify(input));
+      const args = ["--input", capture, "--output", output, "--published-at", String(CLOCK_SEC), "--allow-future-reviews"];
+      await runSafetyScoreV9ReplayCli(args);
+      const ordinary = JSON.parse(readFileSync(output, "utf8"));
+      expect(ordinary.pipeline.fixedInput.redemptionBackstopMap).toEqual(input.redemptionBackstopMap);
+      expect(ordinary.replayScenario).toBeUndefined();
+      await runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"]);
+      const scenario = JSON.parse(readFileSync(output, "utf8"));
+      expect(scenario.pipeline.fixedInput.redemptionBackstopMap).toEqual(next.redemptionBackstopMap);
+      expect(scenario.replayScenario).toEqual({ kind: "current-redemption-rederivation", sourceBaseInputGenerationId: input.baseInputGenerationId });
+      writeFileSync(capture, JSON.stringify({ kind: "safety-score-v9-registry-capture", fixedInput: input, registrySnapshot: localRegistrySnapshot() }));
+      await expect(runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"])).rejects.toThrow("capture-time registry modes");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
   it("exports and replays an accepted retained pair with rejected transfer observations and embedded registry", async () => {
     const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-accepted-capture-"));
     try {
@@ -84,6 +134,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         publishedAtSec: base.clockSec,
       });
       expect(readFileSync(replayPath, "utf8")).toBe(serializeSafetyScoreV9ReplayArtifact(expected));
+      await expect(runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"])).rejects.toThrow("accepted captures");
       capture.registrySnapshot.fingerprint = "0".repeat(64);
       writeFileSync(capturePath, JSON.stringify(capture));
       await expect(runSafetyScoreV9ReplayCli(args)).rejects.toThrow("snapshot fingerprint does not match");

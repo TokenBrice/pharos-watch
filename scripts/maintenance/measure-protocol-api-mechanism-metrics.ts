@@ -35,15 +35,20 @@ const FROZEN_LEGACY_V1_PATH =
 const FROZEN_LEGACY_V1_SHA256 = "cdcbc2f806fcf6def97a2870d262a821ece9636efcd5a9d80c29518ae1a2589f";
 const USAGE = `Usage: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts [options]
 
-Captures raw-byte, schema-validated protocol API mechanism evidence. These
-measurements are producer evidence only; score adoption remains identity-bound.
+Captures permanent, non-publishing protocol API evidence. Direct score adoption
+remains blocked; economic facts require human-reviewed curation.
 
 Options:
   --asset <id>      Live target id (repeatable; required for live capture)
   --out-dir <path>  Evidence root (default: ${DEFAULT_OUT_DIR})
-  --replay <path>   Offline-replay an artifact (repeatable; exclusive)
-  --replay-all      Replay and validate every protocol API artifact in the evidence root
-  -h, --help        Show this help`;
+  --replay <path>   Strictly replay an artifact (repeatable; exclusive)
+  --replay-all      Strictly replay and validate every protocol API artifact
+  -h, --help        Show this help
+
+Replay reads original local bytes or a hash-verified local cache; otherwise it
+uses signed R2 GETs (pinned/ then captures/) and caches verified original bytes.
+Missing access, expired objects or corrupt bytes fail replay. The single frozen
+V1 exception verifies original normalized bytes, never raw-source replay.`;
 
 interface CliOptions {
   assets: ProtocolApiAssetId[];
@@ -243,25 +248,30 @@ function discoverProtocolArtifacts(root: string): string[] {
   return paths.sort();
 }
 
-async function readArtifact(
+export type ProtocolApiArchiveResult =
+  | { status: "verified-v2"; artifact: ProtocolApiMechanismMeasurement }
+  | { status: "verified-normalized-v1"; schemaVersion: 1 }
+  | { status: "unavailable"; schemaVersion: number | null; reason: string; frozenV1MetadataRecognized: boolean };
+
+export async function readProtocolApiArtifact(
   path: string,
   r2Client?: R2MeasurementsClient,
-  summaryOnly = false,
   rootDir: string = process.cwd(),
-  io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
-): Promise<ProtocolApiMechanismMeasurement | null> {
+): Promise<ProtocolApiArchiveResult> {
   const absolutePath = resolve(rootDir, path);
-  if (absolutePath === resolve(rootDir, FROZEN_LEGACY_V1_PATH) && !existsSync(absolutePath)) {
-    const summaryPath = `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
-    if (existsSync(summaryPath)) {
-      const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
-      if (summary.sha256 !== FROZEN_LEGACY_V1_SHA256) {
+  const summaryPath = `${absolutePath.slice(0, -".json".length)}${CAPTURE_SUMMARY_SUFFIX}`;
+  let schemaVersion: number | null = null;
+  let summarySha256: string | null = null;
+  let frozenV1MetadataRecognized = false;
+  if (existsSync(summaryPath)) {
+    const summary = parseMechanismCaptureSummary(JSON.parse(readFileSync(summaryPath, "utf8")), summaryPath);
+    schemaVersion = typeof summary.summary.schemaVersion === "number" ? summary.summary.schemaVersion : null;
+    summarySha256 = summary.sha256;
+    if (absolutePath === resolve(rootDir, FROZEN_LEGACY_V1_PATH)) {
+      if (summary.sha256 !== FROZEN_LEGACY_V1_SHA256 || schemaVersion !== 1) {
         throw new Error(`Unknown or modified legacy protocol API artifact: ${absolutePath}`);
       }
-      io.log(
-        `[protocol-api-measurement] frozen legacy V1 fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`,
-      );
-      return null;
+      frozenV1MetadataRecognized = true;
     }
   }
   let sourceBytes: Buffer;
@@ -272,45 +282,49 @@ async function readArtifact(
       rootDir,
     });
   } catch (error) {
-    if (
-      summaryOnly &&
-      error instanceof Error &&
-      error.message === "Missing CLOUDFLARE_ACCOUNT_ID for R2 measurements"
-    ) {
-      io.log(`[protocol-api-measurement] summary-only replay (raw body unavailable) -> ${absolutePath}`);
-      return null;
-    }
-    throw error;
+    return {
+      status: "unavailable",
+      schemaVersion,
+      reason: error instanceof Error ? error.message : String(error),
+      frozenV1MetadataRecognized,
+    };
+  }
+  const fingerprint = createHash("sha256").update(sourceBytes).digest("hex");
+  if (summarySha256 !== null && fingerprint !== summarySha256) {
+    throw new Error(absolutePath === resolve(rootDir, FROZEN_LEGACY_V1_PATH)
+      ? `Unknown or modified legacy protocol API artifact: ${absolutePath}`
+      : `Protocol API capture ${summarySha256} integrity mismatch: ${absolutePath}`);
   }
   const source = sourceBytes.toString("utf8");
   const parsed = JSON.parse(source) as unknown;
   if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 1) {
-    const fingerprint = createHash("sha256").update(source).digest("hex");
     if (absolutePath !== resolve(rootDir, FROZEN_LEGACY_V1_PATH) || fingerprint !== FROZEN_LEGACY_V1_SHA256) {
       throw new Error(`Unknown or modified legacy protocol API artifact: ${absolutePath}`);
     }
-    io.log(
-      `[protocol-api-measurement] frozen legacy V1 fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`,
-    );
-    return null;
+    return { status: "verified-normalized-v1", schemaVersion: 1 };
   }
   const replayed = replayProtocolApiMeasurement(parsed);
   if (serializeProtocolApiMeasurement(replayed) !== source) {
     throw new Error(`Protocol API artifact is not canonical: ${absolutePath}`);
   }
-  return replayed;
+  return { status: "verified-v2", artifact: replayed };
 }
 
 async function replayEvidence(
   path: string,
   io: ProtocolApiMeasurementCliIo = DEFAULT_CLI_IO,
   rootDir: string = process.cwd(),
-): Promise<ProtocolApiMechanismMeasurement | null> {
+): Promise<ProtocolApiArchiveResult> {
   const absolutePath = resolve(rootDir, path);
-  const replayed = await readArtifact(absolutePath, undefined, false, rootDir, io);
-  if (!replayed) return null;
-  io.log(`[protocol-api-measurement] ${replayed.assetId}: offline raw-byte replay passed -> ${absolutePath}`);
-  return replayed;
+  const result = await readProtocolApiArtifact(absolutePath, undefined, rootDir);
+  if (result.status === "unavailable") {
+    io.error(`[protocol-api-measurement] unavailable schema=${result.schemaVersion ?? "unknown"} frozen-V1-metadata=${result.frozenV1MetadataRecognized}: ${result.reason} -> ${absolutePath}\n`);
+  } else if (result.status === "verified-normalized-v1") {
+    io.log(`[protocol-api-measurement] frozen legacy V1 original-byte fingerprint passed (normalized-only; raw replay unavailable) -> ${absolutePath}`);
+  } else {
+    io.log(`[protocol-api-measurement] ${result.artifact.assetId}: offline raw-byte replay passed -> ${absolutePath}`);
+  }
+  return result;
 }
 
 async function acceptExistingSnapshot(
@@ -320,9 +334,10 @@ async function acceptExistingSnapshot(
   rootDir: string = process.cwd(),
 ): Promise<boolean> {
   try {
-    const existing = await readArtifact(path, undefined, false, rootDir, io);
-    if (!existing) throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
-    if (!isSameProtocolApiSourceSnapshot(existing, incoming)) {
+    const result = await readProtocolApiArtifact(path, undefined, rootDir);
+    if (result.status === "unavailable") throw new Error(result.reason);
+    if (result.status !== "verified-v2") throw new Error(`Legacy V1 evidence cannot occupy a V2 snapshot path: ${path}`);
+    if (!isSameProtocolApiSourceSnapshot(result.artifact, incoming)) {
       throw new Error(`Evidence ${path} exists with different source content or derivation`);
     }
     io.log(`[protocol-api-measurement] identical source snapshot already recorded at ${path}`);
@@ -339,8 +354,9 @@ async function existingArtifacts(outDir: string): Promise<ProtocolApiMechanismMe
   try {
     const artifacts: ProtocolApiMechanismMeasurement[] = [];
     for (const path of discoverProtocolArtifacts(outDir)) {
-      const artifact = await readArtifact(path);
-      if (artifact) artifacts.push(artifact);
+      const result = await readProtocolApiArtifact(path);
+      if (result.status === "unavailable") throw new Error(result.reason);
+      if (result.status === "verified-v2") artifacts.push(result.artifact);
     }
     return artifacts;
   } catch (error) {
@@ -400,27 +416,24 @@ export async function runProtocolApiMeasurementCli(
   try {
     const options = parseOptions([...argv]);
     if (!options) return 0;
-    if (options.replayPaths.length > 0) {
+    if (options.replayPaths.length > 0 || options.replayAll) {
+      const paths = options.replayAll
+        ? discoverProtocolArtifacts(resolve(cwd, DEFAULT_OUT_DIR))
+        : options.replayPaths;
       const artifacts: ProtocolApiMechanismMeasurement[] = [];
-      for (const path of options.replayPaths) {
-        const artifact = await replayEvidence(path, io, cwd);
-        if (artifact) artifacts.push(artifact);
-      }
-      validateProtocolApiArtifactSet(artifacts);
-      return 0;
-    }
-    if (options.replayAll) {
-      const paths = discoverProtocolArtifacts(resolve(cwd, DEFAULT_OUT_DIR));
-      const artifacts: ProtocolApiMechanismMeasurement[] = [];
+      let normalizedV1Count = 0;
+      let unavailableCount = 0;
       for (const path of paths) {
-        const artifact = await readArtifact(path, undefined, true, cwd, io);
-        if (artifact) artifacts.push(artifact);
+        const result = await replayEvidence(path, io, cwd);
+        if (result.status === "verified-v2") artifacts.push(result.artifact);
+        else if (result.status === "verified-normalized-v1") normalizedV1Count += 1;
+        else unavailableCount += 1;
       }
       validateProtocolApiArtifactSet(artifacts);
       io.log(
-        `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,
+        `[protocol-api-measurement] ${options.replayAll ? "replay-all" : "replay"} ${unavailableCount > 0 ? "incomplete" : "passed"}: ${artifacts.length} verified V2 artifact(s), ${normalizedV1Count} hash-verified normalized-only V1 artifact(s), ${unavailableCount} unavailable artifact(s)`,
       );
-      return 0;
+      return unavailableCount > 0 ? 1 : 0;
     }
     for (const asset of options.assets) await measureTarget(options.outDir, asset, io);
     return 0;

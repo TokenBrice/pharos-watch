@@ -104,11 +104,15 @@ export function evaluateWorkerWranglerConfig(
   expectValue("observability", "enabled", "true");
   expectValue("observability.logs", "enabled", "true");
   expectValue("observability.logs", "invocation_logs", "true");
-  expectValue("vars", "WORKER_V9_WORKFLOW_MODE", '"off"');
+  if (values.has(assignmentKey("vars", "WORKER_V9_WORKFLOW_MODE"))) {
+    issues.push(`${role} must not declare retired WORKER_V9_WORKFLOW_MODE.`);
+  }
   const workflows = assignments.filter(({ section }) => section === "workflows");
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
     expectValue("root", "preview_urls", "false");
+    // The named resource still references this class. Remove these requirements
+    // only after the reviewed history export and resource deletion.
     expectValue("workflows", "name", '"safety-score-v9-publication"');
     expectValue("workflows", "binding", '"SAFETY_SCORE_V9_WORKFLOW"');
     expectValue("workflows", "class_name", '"SafetyScoreV9PublicationWorkflow"');

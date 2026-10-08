@@ -15,6 +15,9 @@ Applies to curated and generated Safety Score V9 evidence under `shared/data/saf
 - Publication fails closed: missing, malformed, stale, or incompatible score-bearing input holds the last accepted ratings.
 - Never hand-edit `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts`; artifact `safety-score-v9-evaluation-build` is registry-generated and checked.
 - Methodology version changes follow [ADR-3](../../../docs/architecture.md#architectural-decision-records) across every listed target.
+- Protocol API journals and reviewed weekly/manual automation are permanent non-publishing evidence tools, not automatic overlay importers. Direct adoption remains blocked. Strict replay requires original-byte readback: canonical raw-byte V2 or the one path/hash-pinned normalized-only V1; summary recognition and unavailable bodies are not verification success.
+- Access-lookthrough's four scoped graphs are public diagnostics, not economic loss estimates. The retained nullable supply reporting state and private legacy-backfill-excluded peg scenario cannot change scoring authority; unknown supply is never zero.
+- TRON remains excluded pending independent finality/control proof. Close the special admission investigation on 2026-11-24 unless a gate-complete packet passes; retain pending evidence/audit sources, never date-bump, auto-admit or invent a failed gate.
 
 ## Entrypoints & generation
 
