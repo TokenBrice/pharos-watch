@@ -94,7 +94,10 @@ async function readResponseByteStreamWithSignal(
   let intakeBytes = 0;
   const declaredBytes = declaredResponseLength(response);
   try {
-    const { bytes } = await bufferReadableStream(response.body!, {
+    // Fetch response bodies emit bytes; the Workers declaration leaves the
+    // stream chunk generic unspecified.
+    const body = response.body as ReadableStream<Uint8Array>;
+    const { bytes } = await bufferReadableStream(body, {
       maxBytes,
       signal,
       overflowMode,

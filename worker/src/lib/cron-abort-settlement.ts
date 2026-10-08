@@ -25,7 +25,7 @@ export async function settleAfterAbort<T>(
     return start();
   }).then(
     (value) => ({ status: "fulfilled" as const, value }),
-    (error) => ({ status: "rejected" as const, error }),
+    (error: unknown) => ({ status: "rejected" as const, error }),
   );
   try {
     const first = await Promise.race([work, aborted]);

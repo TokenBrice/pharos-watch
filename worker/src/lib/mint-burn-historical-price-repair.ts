@@ -130,8 +130,8 @@ function normalizePricePoints(points: unknown): HistoricalPricePoint[] {
   const normalized: HistoricalPricePoint[] = [];
   for (const point of points) {
     if (!Array.isArray(point) || point.length < 2) continue;
-    const timestampMs = point[0];
-    const price = point[1];
+    const timestampMs: unknown = point[0];
+    const price: unknown = point[1];
     if (
       typeof timestampMs !== "number" ||
       !Number.isFinite(timestampMs) ||
@@ -151,8 +151,8 @@ function normalizeDefiLlamaPoints(points: unknown): HistoricalPricePoint[] {
   const normalized: HistoricalPricePoint[] = [];
   for (const point of points) {
     if (!point || typeof point !== "object") continue;
-    const timestamp = Reflect.get(point, "timestamp");
-    const price = Reflect.get(point, "price");
+    const timestamp: unknown = Reflect.get(point, "timestamp");
+    const price: unknown = Reflect.get(point, "price");
     if (
       typeof timestamp !== "number" ||
       !Number.isFinite(timestamp) ||
@@ -469,7 +469,7 @@ async function buildCoinRepairContexts(
     contexts.set(event.stablecoin_id, {
       meta: TRACKED_META_BY_ID.get(event.stablecoin_id) ?? null,
       events: [event],
-      supplyHistory: supplyHistory.get(event.stablecoin_id) ?? new Map(),
+      supplyHistory: supplyHistory.get(event.stablecoin_id) ?? new Map<number, number>(),
       sourceResults: [],
     });
   }

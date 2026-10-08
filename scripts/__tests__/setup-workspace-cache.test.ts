@@ -160,11 +160,15 @@ describe("setup-workspace caches", () => {
       expect(index).toBeGreaterThan(-1);
       expect(index).toBeLessThan(save);
       expect(nightly[index]["continue-on-error"]).toBeUndefined();
-      expect(nightly[index].if).toBeUndefined();
+      // Still executes independently of earlier mandatory failures.
+      expect(nightly[index].if).toContain("!cancelled()");
+      expect(nightly[index].if).toContain("steps.workspace.outcome == 'success'");
+      // The cache publishes only once this command's state is validated.
+      expect(nightly[save].if).toContain(`steps.${nightly[index].id}.outcome == 'success'`);
     }
     expect(nightly[save - 1].run).toBe("npm run typecheck:worker");
     expect(nightly[save + 1].run).toBe("npm run lint:typed");
-    expect(nightly[save].if).toBeUndefined();
+    expect(nightly[save].if).toContain("!cancelled()");
     expect(nightly[save]["continue-on-error"]).toBeUndefined();
     expect(nightly[save].with.key).toBe("${{ steps.workspace.outputs.static-cache-key }}");
     expect(steps.some((step) => step.uses?.startsWith("actions/cache/save@"))).toBe(false);

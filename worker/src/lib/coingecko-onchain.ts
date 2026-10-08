@@ -216,7 +216,7 @@ export async function fetchCgTokenPoolsWithStatus(
         schemaDegraded = true;
         return { pageFailed: true };
       }
-      return json.data;
+      return json.data as unknown[];
     },
   });
   const pools = paged.rows.filter((pool): pool is CgPool => {

@@ -11,7 +11,7 @@ import { documentText } from "../verify-failure-scenarios";
 const records = FailureScenariosByIdSchema.parse(JSON.parse(readFileSync("data/failure-scenarios.json", "utf8")));
 const record = records["usds-sky"]!;
 const watch = scenarioDocumentWatch("terms", "Fixture terms", [{ sourceId: "terms", publisher: "Fixture" }], "Human review required.");
-const documentRecord = { ...record, sources: [{ id: "terms", label: "Fixture terms", url: "https://example.com/terms", observedAt: "2026-10-07" }] };
+const documentRecord = { ...record, sources: [{ id: "terms", label: "Fixture terms", url: "https://example.com/terms" as const, observedAt: "2026-10-07" }] };
 
 function document(html: string, metadata: Partial<NonNullable<ScenarioDocument["fingerprint"]>> = {}): ScenarioDocument {
   const normalizedText = documentText(html);

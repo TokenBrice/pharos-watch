@@ -147,7 +147,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const reportCardById = new Map((input.reportCards.data?.cards ?? []).map((card) => [card.id, card]));
   const dependencyFacts = input.reportCards.data
     ? buildV9DependencyCoverageFacts(activeStablecoins, input.reportCards.data)
-    : new Map();
+    : new Map<string, NonNullable<Parameters<typeof buildCoverageRow>[0]["dependencyCoverage"]>>();
 
   const rows = activeStablecoins.map((coin) => {
     const pegCoin = pegCoinById.get(coin.id);

@@ -71,11 +71,13 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
           const method = target[property];
           return (...args: unknown[]) => {
             reasons.add(`${property}-no-meta`);
-            return observe(1, () => Reflect.apply(method, target, args), () => {});
+            return observe(1, () => Reflect.apply(method, target, args) as Promise<unknown>, () => {});
           };
         }
-        const value = Reflect.get(target, property, target);
-        return typeof value === "function" ? value.bind(target) : value;
+        const value: unknown = Reflect.get(target, property, target);
+        if (typeof value !== "function") return value;
+        const bound: unknown = value.bind(target);
+        return bound;
       },
     });
     originalStatements.set(wrapped, statement);
@@ -108,8 +110,10 @@ export function createD1CostTracker(database: D1Database, exclusions: readonly s
             return target.dump();
           };
         }
-        const value = Reflect.get(target, property, target);
-        return typeof value === "function" ? value.bind(target) : value;
+        const value: unknown = Reflect.get(target, property, target);
+        if (typeof value !== "function") return value;
+        const bound: unknown = value.bind(target);
+        return bound;
       },
     });
   }

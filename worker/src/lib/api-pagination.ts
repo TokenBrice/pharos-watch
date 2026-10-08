@@ -125,7 +125,7 @@ function parseCursorValues<TRow>(
     const values: CursorPrimitive[] = [];
     for (let i = 0; i < config.columns.length; i++) {
       const column = config.columns[i]!;
-      const value = payload.values[i];
+      const value: unknown = payload.values[i];
       if (column.type === "number") {
         if (typeof value !== "number" || !Number.isFinite(value)) {
           return null;

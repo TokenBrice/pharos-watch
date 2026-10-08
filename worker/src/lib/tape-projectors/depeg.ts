@@ -183,8 +183,10 @@ async function loadPeakSeenMap(db: D1Database): Promise<PeakWorsenedSeenMap> {
   const row = await getCache(db, PEAK_WORSENED_CACHE_KEY);
   if (!row) return {};
   try {
-    const parsed = JSON.parse(row.value);
+    const parsed: unknown = JSON.parse(row.value);
+    // A corrupt cached peak must not suppress a future peak-worsened event.
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      && Object.values(parsed).every((value: unknown) => typeof value === "number" && Number.isFinite(value))
       ? (parsed as PeakWorsenedSeenMap)
       : {};
   } catch {

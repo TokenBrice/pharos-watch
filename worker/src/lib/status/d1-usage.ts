@@ -291,7 +291,7 @@ function parseAnalyticsEnvelope(
     throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing accounts");
   }
 
-  const account = payload.data.viewer.accounts[0];
+  const account: unknown = payload.data.viewer.accounts[0];
   if (!isRecord(account)) {
     throw new D1UsagePayloadError("Cloudflare D1 analytics response was missing account");
   }

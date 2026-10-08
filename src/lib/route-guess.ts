@@ -47,8 +47,8 @@ function levenshtein(a: string, b: string): number {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
 
-  const prev = new Array(b.length + 1);
-  const next = new Array(b.length + 1);
+  const prev = new Array<number>(b.length + 1);
+  const next = new Array<number>(b.length + 1);
   for (let j = 0; j <= b.length; j++) prev[j] = j;
 
   for (let i = 1; i <= a.length; i++) {

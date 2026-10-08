@@ -5,6 +5,10 @@ import { CRON_STABILITY_INDEX } from "@/lib/cron-intervals";
 import { defineApiQuery } from "@/lib/api-query-contract";
 import type { SchemaLike, SchemaLikeResult } from "@shared/lib/schema-like";
 
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 function invalid(path: readonly PropertyKey[], message: string): SchemaLikeResult<StabilityIndexResponse> {
   return { success: false, error: { issues: [{ path, message }] } };
 }
@@ -29,7 +33,7 @@ function validateComponents(value: unknown): readonly [readonly PropertyKey[], s
 export const StabilityIndexLightResponseSchema: SchemaLike<StabilityIndexResponse> = {
   safeParse(value) {
     if (!isRecord(value)) return invalid([], "Expected object");
-    if (!Array.isArray(value.history)) return invalid(["history"], "Expected array");
+    if (!isUnknownArray(value.history)) return invalid(["history"], "Expected array");
 
     if (value.current !== null) {
       if (!isRecord(value.current)) return invalid(["current"], "Expected object or null");

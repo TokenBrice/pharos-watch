@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ApiMeta } from "@/lib/api";
 
 /**
@@ -65,6 +65,24 @@ export function useQuerySlice<TData>(query: QueryResultLike<TData>): QuerySlice<
   );
 }
 
+interface QuerySlicesMemo<T> {
+  deps: readonly unknown[];
+  slices: T;
+}
+
+function createQuerySlicesMemo<T>() {
+  let previous: QuerySlicesMemo<T> | null = null;
+  return (deps: readonly unknown[], buildSlices: () => T): T => {
+    if (previous && previous.deps.length === deps.length
+      && deps.every((value, index) => Object.is(value, previous?.deps[index]))) {
+      return previous.slices;
+    }
+    const slices = buildSlices();
+    previous = { deps, slices };
+    return slices;
+  };
+}
+
 /**
  * Record form of {@link useQuerySlice}. Both the container and each member keep their
  * identity while their inputs are unchanged, so a whole query group is one dependency.
@@ -76,8 +94,8 @@ export function useQuerySlices<TQueries extends Record<string, QueryResultLike<u
 ): { [K in keyof TQueries]: QuerySlice<QuerySliceData<TQueries[K]>> } {
   type Slices = { [K in keyof TQueries]: QuerySlice<QuerySliceData<TQueries[K]>> };
   const entries = Object.entries(queries) as [keyof TQueries, QueryResultLike<unknown>][];
-  // One dependency per transported field, in a stable order — the record's key set is static
-  // per call site, so the array length never changes between renders.
+  // One dependency per transported field, in a stable order. The key set is
+  // static per call site, so the dependency count stays fixed between renders.
   const deps = entries.flatMap(([key, query]) => [
     key,
     query.data,
@@ -88,15 +106,14 @@ export function useQuerySlices<TQueries extends Record<string, QueryResultLike<u
     query.meta,
     query.enabled,
   ]);
-  return useMemo(
-    () => {
-      const slices = {} as Slices;
-      for (const [key, query] of entries) {
-        slices[key] = toQuerySlice(query) as Slices[keyof TQueries];
-      }
-      return slices;
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- derived above, one entry per field
-    deps,
-  );
+  // Keep a per-hook memo function, not render-phase state: fresh upstream
+  // transport references must not schedule another render to update this cache.
+  const [memoize] = useState(() => createQuerySlicesMemo<Slices>());
+  return memoize(deps, () => {
+    const slices = {} as Slices;
+    for (const [key, query] of entries) {
+      slices[key] = toQuerySlice(query) as Slices[keyof TQueries];
+    }
+    return slices;
+  });
 }

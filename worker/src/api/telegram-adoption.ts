@@ -50,7 +50,7 @@ async function readBoundedJson(request: Request): Promise<unknown | null> {
   if (!request.body) return null;
 
   try {
-    const { bytes } = await bufferReadableStream(request.body, { maxBytes: MAX_BODY_BYTES });
+    const { bytes } = await bufferReadableStream(request.body as ReadableStream<Uint8Array>, { maxBytes: MAX_BODY_BYTES });
     return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;

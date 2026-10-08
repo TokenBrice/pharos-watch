@@ -44,6 +44,24 @@ describe("Worker full stablecoin catalog", () => {
     expect(() => decodeWorkerStablecoinCatalog(oversized)).toThrow("Invalid packed stablecoin record");
   });
 
+  it("rejects invalid base64 alphabets, lengths and padding before decoding", () => {
+    for (const payload of ["AAA!", "AAA_", "AAA ", "AAA\n", "AAA", "=AAA", "A===", "AA=A", "AAAA===="]) {
+      expect(() => decodeWorkerStablecoinCatalog({
+        version: 1,
+        maxUncompressedBytes: 1,
+        coins: [["fixture", 1, payload]],
+      }), payload).toThrow("Invalid packed stablecoin base64");
+    }
+    // Syntactically valid encodings reach the separate gzip-length check.
+    for (const payload of ["", "AAAA", "AA==", "AAA="]) {
+      expect(() => decodeWorkerStablecoinCatalog({
+        version: 1,
+        maxUncompressedBytes: 1,
+        coins: [["fixture", 1, payload]],
+      }), payload).toThrow("length mismatch");
+    }
+  });
+
   it("rejects duplicate ids and unsupported manifests", () => {
     const duplicate = fixture({ id: "fixture" });
     duplicate.coins.push(duplicate.coins[0]);

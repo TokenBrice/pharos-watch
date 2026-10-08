@@ -11,8 +11,10 @@ const LEGACY_YIELD_KEY = "pharos:yield-watchlist:v1";
 export const EMPTY_WATCHLIST_IDS: readonly string[] = Object.freeze([]);
 
 function normalize(raw: unknown): string[] {
-  if (!Array.isArray(raw) || !raw.every((entry) => typeof entry === "string" && entry.length > 0)) return [];
-  return Array.from(new Set(raw));
+  if (!Array.isArray(raw)) return [];
+  const entries: unknown[] = raw;
+  if (!entries.every((entry): entry is string => typeof entry === "string" && entry.length > 0)) return [];
+  return Array.from(new Set(entries));
 }
 
 function readLegacy(storage: Storage | null, key: string): string[] {

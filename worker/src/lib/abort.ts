@@ -1,5 +1,5 @@
 export function abortError(signal?: AbortSignal): Error {
-  const reason = signal?.reason;
+  const reason: unknown = signal?.reason;
   if (reason instanceof Error) return reason;
   if (typeof reason === "string" && reason.length > 0) return new Error(reason);
   return new Error("Operation aborted");

@@ -31,15 +31,19 @@ export function useCountUp(target: number | null | undefined, options: UseCountU
   const [displayValue, setDisplayValue] = useState<number | null>(target ?? null);
   const displayRef = useRef<number | null>(target ?? null);
 
+  const settleImmediately = target != null && Number.isFinite(target)
+    && (reduceMotion || durationMs <= 0 || displayValue === target);
+  if (settleImmediately && !Object.is(displayValue, target)) {
+    setDisplayValue(target);
+  }
+
   useEffect(() => {
     if (target == null || !Number.isFinite(target)) return;
     const from = displayRef.current ?? 0;
     if (reduceMotion || from === target || durationMs <= 0) {
       displayRef.current = target;
-      // One-shot settle, not a subscription — same false positive as the
-      // IntersectionObserver fallback in use-near-viewport.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDisplayValue(target);
+      // Immediate values are reconciled during render; this effect only
+      // synchronizes the starting point for the next animation.
       return;
     }
     let frame = 0;

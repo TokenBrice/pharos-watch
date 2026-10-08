@@ -21,6 +21,7 @@ import {
   type V9FactStatusV2,
 } from "../../types/safety-score-v9-facts";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -37,11 +38,12 @@ const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V3 = "safety-score-v9.evidence-gap-key.v3
 
 function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
   const mechanismStatuses = asset.mechanismRiskReview.review
-    ? Object.values(asset.mechanismRiskReview.review).flatMap((value) =>
-        value !== null && typeof value === "object" && "status" in value
-          ? [value.status as V9FactStatusV2, ...("scopedAssessments" in value && Array.isArray(value.scopedAssessments) ? value.scopedAssessments.map((fragment: { status: V9FactStatusV2 }) => fragment.status) : [])]
-          : [],
-      )
+    ? Object.values<unknown>(asset.mechanismRiskReview.review).flatMap((value) => {
+        if (value === null || typeof value !== "object" || !("status" in value)) return [];
+        // The asset schema has already validated mechanism component facts.
+        const fact = value as V9MechanismFactV1;
+        return [fact.status, ...(fact.scopedAssessments ?? []).map((fragment) => fragment.status)];
+      })
     : [];
   return [
     asset.implementation.status,

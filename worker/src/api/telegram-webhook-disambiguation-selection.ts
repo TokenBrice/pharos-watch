@@ -116,7 +116,7 @@ function parseStoredCoinIds(value: unknown): string[] | null {
   if (
     !Array.isArray(value)
     || value.length > 512
-    || !value.every((id) => typeof id === "string" && TRACKED_META_BY_ID.has(id))
+    || !value.every((id: unknown): id is string => typeof id === "string" && TRACKED_META_BY_ID.has(id))
   ) {
     return null;
   }
@@ -143,7 +143,7 @@ export function parseStoredCommandSelectionIntent(
   if (intent.kind === "command:subscribe") {
     if (
       !Array.isArray(payload.alertTypes)
-      || !payload.alertTypes.every((entry) => (
+      || !payload.alertTypes.every((entry: unknown): entry is string => (
         entry === "dews" || entry === "depeg" || entry === "safety" || entry === "launch"
       ))
       || !Array.isArray(payload.presetIds)

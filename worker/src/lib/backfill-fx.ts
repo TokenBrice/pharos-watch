@@ -39,7 +39,7 @@ function normalizeSecondaryFxYearCache(
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
 
   const normalized: Record<string, Record<string, number>> = {};
-  for (const [date, rawRates] of Object.entries(parsed)) {
+  for (const [date, rawRates] of Object.entries(parsed as Record<string, unknown>)) {
     if (!isValidSecondaryFxCacheDate(date, year)) continue;
     if (!rawRates || typeof rawRates !== "object" || Array.isArray(rawRates)) continue;
 

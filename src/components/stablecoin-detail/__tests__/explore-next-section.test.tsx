@@ -127,7 +127,7 @@ describe("Explore Next peer ranking", () => {
     const candidates = [
       peer("usd-vault", "USD", "protocol-position"),
       peer("eur-cdp", "EUR", "cdp"),
-      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "fiat-backed" }),
+      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "rwa-backed" }),
       peer("chf-cdp-first", "CHF", "cdp", { governance: "centralized" }),
       peer("chf-cdp-second", "CHF", "cdp", { governance: "centralized" }),
       peer("chf-cdp-best", "CHF", "cdp"),
@@ -140,7 +140,7 @@ describe("Explore Next peer ranking", () => {
   it("fills remaining slots with the existing candidates when currency matches are scarce", () => {
     const candidates = [
       ...Array.from({ length: 6 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position")),
-      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "fiat-backed" }),
+      peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "rwa-backed" }),
     ];
     expect(getRelatedStablecoins(current, { candidates }).map((entry) => entry.id)).toEqual([
       "chf-fiat", "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3", "usd-vault-4",

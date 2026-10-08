@@ -256,19 +256,20 @@ export function deriveEffectiveDependencySet(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id" | "liveReservesConfig">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[]; rejectionReasons?: readonly DependencyRejectionReason[] },
 ): DerivedDependencySet {
-  if (Array.isArray(options?.liveReserveSlices)) {
-    const liveSlices = options.liveReserveSlices.some((slice) => slice.coinId && !slice.depType)
-      ? options.liveReserveSlices.map((slice) => {
+  const liveReserveSlices = options?.liveReserveSlices;
+  if (options && liveReserveSlices && Array.isArray(options.liveReserveSlices)) {
+    const liveSlices = liveReserveSlices.some((slice) => slice.coinId && !slice.depType)
+      ? liveReserveSlices.map((slice) => {
           if (!slice.coinId || slice.depType) return slice;
           const depType = reviewedTypeForLiveIdentity(slice, meta);
           return depType ? { ...slice, depType } : slice;
         })
-      : options.liveReserveSlices;
+      : liveReserveSlices;
     const liveDependencies = aggregateReserveDependencies(liveSlices, meta.id);
     const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
     const rejectionReasons: DependencyRejectionReason[] = options.rejectionReasons
       ? [...options.rejectionReasons]
-      : options.liveReserveSlices.flatMap((slice, sliceIndex) =>
+      : liveReserveSlices.flatMap((slice, sliceIndex) =>
           !slice.coinId || slice.coinId === meta.id ? [{ sliceIndex, reason: "no-match" as const }] : [],
         );
     const missingTypes = liveSlices.flatMap((slice, sliceIndex) =>

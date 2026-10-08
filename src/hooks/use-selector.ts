@@ -95,16 +95,18 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     | { kind: "miss"; sid: string }
     | { kind: "error"; sid: string; reason: string }
   >(sid ? { kind: "loading", sid } : { kind: "idle" });
+  const [snapshotSid, setSnapshotSid] = useState(sid);
+  if (snapshotSid !== sid) {
+    setSnapshotSid(sid);
+    setSnapshotState(sid ? { kind: "loading", sid } : { kind: "idle" });
+  }
 
   useEffect(() => {
     const requests = snapshotRequests.current;
     if (!sid) {
       requests.cancel();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- snapshot state follows the URL snapshot identity
-      setSnapshotState({ kind: "idle" });
       return;
     }
-    setSnapshotState({ kind: "loading", sid });
     void requests
       .run((signal) => defaultFetchSnapshot(sid, signal))
       .then((result) => {

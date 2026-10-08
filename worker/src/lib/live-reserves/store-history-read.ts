@@ -67,7 +67,7 @@ function parseWarningCodes(value: string | null | undefined): string[] {
   }
   if (!Array.isArray(parsed)) return [];
   const codes: string[] = [];
-  for (const item of parsed) {
+  for (const item of parsed as unknown[]) {
     if (item == null || typeof item !== "object" || !("code" in item)) continue;
     const code = item.code;
     if (typeof code === "string") codes.push(code);
@@ -132,8 +132,8 @@ export async function loadLatestNonSkippedReserveAttempt(
   if (row.warnings) {
     try {
       const warnings: unknown = JSON.parse(row.warnings);
-      if (!Array.isArray(warnings) || warnings.some((warning) =>
-        warning == null || typeof warning !== "object" || typeof warning.code !== "string")) return null;
+      if (!Array.isArray(warnings) || warnings.some((warning: unknown) =>
+        warning == null || typeof warning !== "object" || !("code" in warning) || typeof warning.code !== "string")) return null;
     } catch { return null; }
   }
   return mapTimelineRow(row);

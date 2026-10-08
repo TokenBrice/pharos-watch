@@ -561,7 +561,7 @@ function derivePoolBalanceMetrics(
     return weight != null && Number.isFinite(weight) && weight > 0 ? weight : 0;
   });
   const hasMeasuredWeights = rawWeights.every((weight) => weight > 0);
-  const normalizedWeights = hasMeasuredWeights ? rawWeights : new Array(pool.tokens.length).fill(1);
+  const normalizedWeights = hasMeasuredWeights ? rawWeights : new Array<number>(pool.tokens.length).fill(1);
   const totalWeight = normalizedWeights.reduce((sum, value) => sum + value, 0);
   if (!Number.isFinite(totalWeight) || totalWeight <= 0) return null;
 

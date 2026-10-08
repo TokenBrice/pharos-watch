@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 interface UseTablePaginationOptions {
   pageSize: number;
@@ -81,14 +81,12 @@ export function useTablePagination<T>(
     resetPageOnTotalChange
   );
 
-  useEffect(() => {
-    // Persist the reset so a filtered table stays on page 1 even if the row
-    // count later grows back to the previous size.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPageState((previous) =>
-      reconcilePaginationStateOnTotalChange(previous, totalRows, resetPageOnTotalChange)
-    );
-  }, [resetPageOnTotalChange, totalRows]);
+  // Persist the reset before commit so a filtered table stays on page 1 even
+  // if the row count later grows back to the previous size.
+  const reconciledState = reconcilePaginationStateOnTotalChange(pageState, totalRows, resetPageOnTotalChange);
+  if (reconciledState !== pageState) {
+    setPageState(reconciledState);
+  }
 
   const paginatedRows = useMemo(
     () => rows.slice(pageStartIndex, pageStartIndex + pageSize),

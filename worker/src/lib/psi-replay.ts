@@ -89,7 +89,7 @@ export function replayHistoricalPsiForDay(
         dewsStressBreadth: computeHistoricalDewsStressBreadth(
           input.day,
           input.supplyByCoin,
-          input.dewsByDay ?? new Map(),
+          input.dewsByDay ?? new Map<number, PsiHistoricalDewsRow[]>(),
           input.universeCache,
         ),
       }

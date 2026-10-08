@@ -51,12 +51,16 @@ export async function loadClientStablecoinDetail(id: string): Promise<Stablecoin
   if (!listMeta) return null;
   // The runtime-selected ID is required here: a static import would eagerly
   // include all 406 detail files in every browser chunk.
-  const detailAsset = await import(`../../data/stablecoins/coins.client.detail/${id}.generated.json`);
-  const detail = detailAsset.default as Partial<StablecoinClientDetailMeta>;
-  if (detail.id !== id) {
+  const detailAsset: unknown = await import(`../../data/stablecoins/coins.client.detail/${id}.generated.json`);
+  if (detailAsset === null || typeof detailAsset !== "object" || !("default" in detailAsset)) {
     throw new Error(`[client-registry] detail projection ID mismatch for ${id}`);
   }
-  return { ...listMeta, ...detail };
+  const detail = detailAsset.default;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail) || !("id" in detail) || detail.id !== id) {
+    throw new Error(`[client-registry] detail projection ID mismatch for ${id}`);
+  }
+  // Projection fields are authored and validated by the client-data generator.
+  return { ...listMeta, ...(detail as Partial<StablecoinClientDetailMeta>) };
 }
 
 export type {

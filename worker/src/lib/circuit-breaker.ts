@@ -324,9 +324,10 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
   for (const row of result.results ?? []) {
     const source = row.key.replace("circuit:", "");
     try {
-      const parsed = JSON.parse(row.value);
-      if (CircuitRecordSchema.safeParse(parsed).success) {
-        states[source] = parsed;
+      const parsed: unknown = JSON.parse(row.value);
+      const decoded = CircuitRecordSchema.safeParse(parsed);
+      if (decoded.success) {
+        states[source] = decoded.data;
       }
     } catch {
       // skip malformed

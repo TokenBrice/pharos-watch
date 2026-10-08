@@ -252,7 +252,7 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
     }
     const current = await loadWatchlistPortableState(ctx.db, ctx.chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
     const preview = buildWatchlistImportPreview(current.state, decoded.state);
-    const totalChanges = Object.values(preview).reduce((sum, ids) => sum + ids.length, 0);
+    const totalChanges = Object.values(preview as Record<keyof typeof preview, string[]>).reduce((sum, ids) => sum + ids.length, 0);
     if (totalChanges === 0) {
       await ctx.replyToChat("This chat's portable watchlist state already matches that token. Nothing changed.");
       return;
