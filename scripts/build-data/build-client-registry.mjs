@@ -50,6 +50,7 @@ const CLIENT_LIST_FIELDS_EXPORT = "STABLECOIN_CLIENT_LIST_FIELDS";
 const CLIENT_DETAIL_FIELDS_EXPORT = "STABLECOIN_CLIENT_DETAIL_FIELDS";
 const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
 const GENIUS_COMPLIANCE_FIELDS_EXPORT = "GENIUS_COMPLIANCE_PROFILE_FIELDS";
+const GENIUS_COMPLIANCE_SUMMARY_FIELDS_EXPORT = "GENIUS_COMPLIANCE_SUMMARY_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const MINT_AUTHORITY_STATUS_FIELD = "mintAuthorityStatus";
@@ -167,8 +168,13 @@ export function readGeniusComplianceFields(sourcePath = CLIENT_META_TS_ABS) {
   return readStringLiteralArrayExport(GENIUS_COMPLIANCE_FIELDS_EXPORT, sourcePath);
 }
 
+export function readGeniusComplianceSummaryFields(sourcePath = CLIENT_META_TS_ABS) {
+  return readStringLiteralArrayExport(GENIUS_COMPLIANCE_SUMMARY_FIELDS_EXPORT, sourcePath);
+}
+
 const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
 const DEFAULT_GENIUS_COMPLIANCE_FIELDS = readGeniusComplianceFields();
+const DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS = readGeniusComplianceSummaryFields();
 
 function projectRawCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   const projected = {};
@@ -574,7 +580,7 @@ export function validateGeniusComplianceProjection(
   entry,
   sourceCoin,
   index,
-  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS,
+  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS,
 ) {
   if (typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error(`[client-registry] compliance entry ${index}: invalid or missing id`);
@@ -713,7 +719,7 @@ export function buildClientRegistryOutput({
 export function buildComplianceRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
   sourceCoins = readSourceCoins(sourceJsonPath),
-  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS,
+  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_SUMMARY_FIELDS,
 } = {}) {
   const parsed = sourceCoins;
 
@@ -745,7 +751,7 @@ export function buildComplianceRegistryOutput({
   });
 
   return {
-    output: `${JSON.stringify(complianceEntries, null, 2)}\n`,
+    output: `${JSON.stringify(complianceEntries)}\n`,
     complianceEntries,
     geniusEntries,
   };

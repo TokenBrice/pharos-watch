@@ -49,7 +49,7 @@ Absent `regime` selects Overview unless a legacy deep link can infer a regime fr
 
 ## Data Projection
 
-The global client registry carries compact compliance fields used across the site. `/compliance/` additionally consumes the generated compliance projection for the public posture, regulator, disclosure, review, notes, negative-evidence, and reference fields shown in its table. That projection carries `proofOfReserves.latestReport` from the base catalog as the single report-date authority: period end and publication are labelled separately, and uncertain legacy dates remain dated review references.
+The global client registry carries compact compliance fields used across the site. `/compliance/` additionally bundles the generated compliance summary projection for public posture, regulator, and disclosure columns; MiCA retains its existing references. The GENIUS summary omits `references`, `negativeEvidenceReview`, `applicabilityBasis`, and `notes`. Opening a GENIUS row fold loads its full evidence from the per-coin detail projection through `loadClientStablecoinDetail(id)`, with session caching, a calm loading state, and a retryable error state; summary columns do not wait for that import. The summary projection still carries `proofOfReserves.latestReport` from the base catalog as the single report-date authority: period end and publication are labelled separately, and uncertain legacy dates remain dated review references.
 
 Source links combine top-level and nested references and de-duplicate them before presentation. Schema and projection changes must keep the generated client artifacts aligned.
 

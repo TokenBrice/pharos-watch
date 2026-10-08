@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildClientRegistryOutput,
+  buildComplianceRegistryOutput,
   buildWorkerRuntimeRegistryOutput,
   projectCoin,
   projectWorkerRuntimeCoin,
@@ -18,11 +19,14 @@ import {
   readCanonicalClientDetailFields,
   readGeniusComplianceFields,
   readGeniusClientFields,
+  readGeniusComplianceSummaryFields,
+  validateGeniusComplianceProjection,
 } from "../build-data/build-client-registry.mjs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
+  GENIUS_COMPLIANCE_SUMMARY_FIELDS,
   STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
@@ -141,6 +145,10 @@ describe("client registry field contract", () => {
 
   it("reads the GENIUS compliance field list from the shared TypeScript contract", () => {
     expect(readGeniusComplianceFields()).toEqual([...GENIUS_COMPLIANCE_PROFILE_FIELDS]);
+  });
+
+  it("reads the GENIUS compliance summary list from the shared TypeScript contract", () => {
+    expect(readGeniusComplianceSummaryFields()).toEqual([...GENIUS_COMPLIANCE_SUMMARY_FIELDS]);
   });
 
   it("projects client registry fields in canonical order", () => {
@@ -341,7 +349,7 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("2026-05-24");
   });
 
-  it("projects compact GENIUS status in detail data and full compliance evidence separately", () => {
+  it("keeps full GENIUS evidence in per-coin detail and omits it from the compliance summary", () => {
     const coin = {
       id: "genius-usd",
       name: "GENIUS USD",
@@ -354,7 +362,7 @@ describe("client registry field contract", () => {
       genius: {
         applicability: "apparent-payment-stablecoin",
         applicabilityBasis: {
-          summary: "Long applicability basis stays server-side.",
+          summary: "Long applicability basis loads with per-coin detail.",
         },
         authorizationStatus: "no-public-authorization-found",
         issuerPathway: "unknown",
@@ -384,7 +392,7 @@ describe("client registry field contract", () => {
         references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
         negativeEvidenceReview: {
           sourcesChecked: ["OCC public releases"],
-          summary: "Long negative evidence review stays server-side.",
+          summary: "Long negative evidence review loads with per-coin detail.",
           reviewer: "pharos",
           reviewedAt: "2026-05-27",
         },
@@ -395,13 +403,25 @@ describe("client registry field contract", () => {
 
     const projected = projectDetailCoin(coin, readCanonicalClientDetailFields());
     const complianceProfile = projectGeniusProfile(coin.genius, readGeniusComplianceFields());
+    const { complianceEntries } = buildComplianceRegistryOutput({ sourceCoins: [coin] });
+    const summary = complianceEntries[0].genius;
+    expect(summary).toEqual(projectGeniusProfile(coin.genius, readGeniusComplianceSummaryFields()));
+    expect(summary.authorizationStatus).toBe("no-public-authorization-found");
+    for (const field of ["references", "negativeEvidenceReview", "applicabilityBasis", "notes"]) {
+      expect(summary).not.toHaveProperty(field);
+      expect(projected.genius).toHaveProperty(field);
+    }
+    expect(() => validateGeniusComplianceProjection(complianceEntries[0], coin, 0)).not.toThrow();
+    expect(() => validateGeniusComplianceProjection(
+      { ...complianceEntries[0], genius: { ...summary, notes: coin.genius.notes } }, coin, 0,
+    )).toThrow("genius profile diverges from source");
 
     expect(projectGeniusProfile(null)).toBeNull();
     expect(projected.genius).toEqual(complianceProfile);
     expect(complianceProfile).toEqual({
       applicability: "apparent-payment-stablecoin",
       applicabilityBasis: {
-        summary: "Long applicability basis stays server-side.",
+        summary: "Long applicability basis loads with per-coin detail.",
       },
       authorizationStatus: "no-public-authorization-found",
       issuerPathway: "unknown",
@@ -431,7 +451,7 @@ describe("client registry field contract", () => {
       references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
       negativeEvidenceReview: {
         sourcesChecked: ["OCC public releases"],
-        summary: "Long negative evidence review stays server-side.",
+        summary: "Long negative evidence review loads with per-coin detail.",
         reviewer: "pharos",
         reviewedAt: "2026-05-27",
       },
