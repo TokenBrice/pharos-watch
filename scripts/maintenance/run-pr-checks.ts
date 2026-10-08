@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { runLocalTrustedGitleaks } from "../ci/run-gitleaks.ts";
 import { assertPinnedRuntime, readRuntimeVersions, type RuntimeVersions } from "../lib/runtime-guard.mts";
 import { computeReceiptOutcome, firstActionableError, writePrCheckReceipt, type PrCheckReceiptLeaf } from "../lib/pr-check-receipt.mts";
-import { buildPrStaticCheckPlan } from "./run-pr-static-checks.ts";
+import { buildPrStaticCheckPlan, prStaticLeafArgs } from "./run-pr-static-checks.ts";
 import { runCiParity } from "./run-ci-parity.ts";
 import { localBin } from "../lib/local-bin.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
@@ -281,9 +281,7 @@ function expandStaticLeaves(
 ): PrCheckCommand[] {
   return commands.flatMap((command) => command.lane !== "pr-static" ? [command] :
     buildPrStaticCheckPlan(changedFiles, { skipDocSync }).commands.map((leaf) => ({
-      ...createNpmScriptCommand(leaf.name, leaf.name === "lint:changed"
-        ? [`--base=${base}`, `--head=${head}`]
-        : leaf.name === "check:dependency-audit" ? [`--new-since=${base}`] : leaf.args),
+      ...createNpmScriptCommand(leaf.name, prStaticLeafArgs(leaf, { base, head })),
       lane: `pr-static:${leaf.name}`,
     })));
 }

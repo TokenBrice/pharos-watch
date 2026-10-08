@@ -196,6 +196,14 @@ describe("CI-shaped readiness leaves on the merge checkout", () => {
     expect(f.calls.find((call) => call.id === "prerequisite:firefox")?.args).toEqual(["--no-install", "playwright", "install", "--with-deps", "firefox"]);
   });
 
+  it("audits dependency changes only for advisories absent at the frozen base", async () => {
+    const f = cloneFixture(["package.json", "package-lock.json"]);
+    expect((await runCiParityClone(f.options)).outcome).toBe("passed");
+    const audit = f.calls.find((call) => call.id === "static-guards:check:dependency-audit");
+    expect(audit?.args).toEqual(["run", "check:dependency-audit", "--", `--new-since=${BASE}`]);
+    expect(f.calls.find((call) => call.id === "static-compile:lint:changed")?.args).toEqual(["run", "lint:changed", "--", `--base=${BASE}`, `--head=${HEAD}`]);
+  });
+
   it("reports a clear prerequisite reason for missing Firefox", async () => {
     const f = cloneFixture(["scripts/maintenance/build-og-editorial.mjs"], "prerequisite:firefox");
     const receipt = await runCiParityClone(f.options);
