@@ -10,7 +10,6 @@ import {
   PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
 } from "../../lib/yield-ranking-helpers";
-import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import {
   COMPOUND_V3_COMETS,
@@ -21,12 +20,9 @@ import {
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
-  fetchVaultsFyiSources,
   fetchYearnKongSources,
   type AaveV3RateTarget,
   type OptionalRpcFamilyTelemetry,
-  type VaultsFyiSourceResult,
-  type VaultsFyiTelemetry,
 } from "./sources";
 import type { SupplementalFamilyFetchResult } from "./sources-optional-protocols-supplemental";
 import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
@@ -71,7 +67,6 @@ interface SupplementalSourceFamilyContext {
   startSec: number;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
-  vaultsFyi?: VaultsFyiRuntimeConfig;
 }
 
 export interface SupplementalSourceFamilyResult {
@@ -164,18 +159,6 @@ const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
 export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 1;
 
 
-function shouldPublishVaultsFyiFamilyCache(
-  telemetry: VaultsFyiTelemetry | undefined,
-  candidateCount: number,
-): boolean {
-  if (!telemetry) return false;
-  if (telemetry.status === "ok") return true;
-  if (telemetry.status === "partial") {
-    return telemetry.skipReason === "credit-cap" && candidateCount > 0;
-  }
-  return telemetry.skipReason === "disabled"
-    || telemetry.skipReason === "no-key";
-}
 
 export function getSupplementalCandidateFamily(
   sourceKey: string | null | undefined,
@@ -189,7 +172,6 @@ function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
     pendle: 0,
     yearnKong: 0,
     beefy: 0,
-    vaultsFyi: 0,
     compoundV3: 0,
     aaveV3: 0,
     roycoDawn: 0,
@@ -202,7 +184,6 @@ function buildSourceFamilyExampleRecord(): SourceFamilyExampleRecord {
     pendle: [],
     yearnKong: [],
     beefy: [],
-    vaultsFyi: [],
     compoundV3: [],
     aaveV3: [],
     roycoDawn: [],
@@ -570,34 +551,6 @@ async function runSimpleSupplementalFamily(
   };
 }
 
-async function runVaultsFyiFamily(
-  context: SupplementalSourceFamilyContext,
-): Promise<SupplementalSourceFamilyResult> {
-  const { value, status } = await runOptionalSupplementalFamily<VaultsFyiSourceResult | null>(
-    "vaults.fyi supplemental family",
-    context.signal,
-    () =>
-      fetchVaultsFyiSources({
-        db: context.db,
-        config: context.vaultsFyi,
-        signal: context.signal,
-        startSec: context.startSec,
-      }),
-    null,
-  );
-  const candidates = value?.candidates ?? [];
-  const telemetry = value?.telemetry;
-  const canPublish = status === "ok" && shouldPublishVaultsFyiFamilyCache(telemetry, candidates.length);
-  return {
-    key: "vaultsFyi",
-    candidates,
-    sourceFamilyCount: candidates.length,
-    inventoryCount: telemetry?.rawVaultCount,
-    status: canPublish ? "ok" : "failed",
-    degraded: status !== "ok" || !canPublish,
-    provider: telemetry ? { vaultsFyi: telemetry } : undefined,
-  };
-}
 
 async function runCompoundFamily(
   context: SupplementalSourceFamilyContext,
@@ -702,7 +655,6 @@ const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
     runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
   (context: SupplementalSourceFamilyContext) =>
     runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.beefy),
-  runVaultsFyiFamily,
   runCompoundFamily,
   runAaveFamily,
   (context: SupplementalSourceFamilyContext) =>

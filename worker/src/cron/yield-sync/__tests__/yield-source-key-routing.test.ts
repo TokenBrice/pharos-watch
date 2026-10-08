@@ -7,6 +7,7 @@ import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../source-risk"
 import type { EvaluatedYieldSource } from "../evaluation-types";
 import { getSupplementalCandidateFamily } from "../supplemental-source-families";
 import { DIRECT_PROTOCOL_API_SOURCE_KEYS } from "../../../lib/yield-config/yield-config-rate-sources";
+import { resolveEvidenceClass } from "../evaluation-arbitration";
 
 /**
  * Audit R-080: the prefix-routing consumers (the venue resolver,
@@ -27,7 +28,7 @@ describe("yield source-key routing table", () => {
     { sourceKey: "protocol-api:kong:base:0x222", venueProtocol: "kong", family: "yearnKong", chain: "base" },
     { sourceKey: "protocol-api:k3:ethereum:0x333", venueProtocol: "k3", family: "yearnKong", chain: "ethereum" },
     { sourceKey: "protocol-api:beefy:optimism:0x444", venueProtocol: "beefy", family: "beefy", chain: "optimism" },
-    { sourceKey: "protocol-api:vaults-fyi:base:0x777", venueProtocol: "vaults-fyi", family: "vaultsFyi", chain: "base" },
+    { sourceKey: "protocol-api:vaults-fyi:base:0x777", venueProtocol: "vaults-fyi", family: null, chain: "base" },
     { sourceKey: "protocol-api:compound-v3-supply:ethereum:0x555", venueProtocol: "compound-v3", family: "compoundV3", chain: "ethereum" },
     { sourceKey: "aave-v3-onchain:base:0x666", venueProtocol: "aave-v3", family: "aaveV3", chain: "base" },
     { sourceKey: "royco-dawn:ethereum:tranche-1", venueProtocol: "royco-dawn", family: "roycoDawn", chain: "ethereum" },
@@ -75,6 +76,23 @@ describe("yield source-key routing table", () => {
     expect(resolveYieldSourceKeyRoute("onchain:lusd-liquity")).not.toBeNull();
     expect(resolveYieldSourceKeyRoute("onchain:bold-liquity")).not.toBeNull();
     expect(resolveYieldSourceKeyRoute("onchain:bd-basedollar")).not.toBeNull();
+  });
+
+  it.each([
+    ["protocol-api:vaults-fyi:base:0x777", "curated-observation"],
+    ["protocol-api:bima-susbd", "direct-first-party"],
+    ["protocol-api:etherfuse-cetes-current-issuance", "direct-first-party"],
+  ])("preserves retained historical evidence class for %s", (sourceKey, evidenceClass) => {
+    expect(resolveEvidenceClass({
+      currentApy: 4,
+      apyBase: 4,
+      apyReward: null,
+      sourcePool: null,
+      sourceTvlUsd: null,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey,
+    })).toBe(evidenceClass);
   });
 
   it("never publishes the row's derivation method as a venue", () => {

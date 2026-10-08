@@ -3,7 +3,6 @@ export type SupplementalSourceFamilyKey =
   | "pendle"
   | "yearnKong"
   | "beefy"
-  | "vaultsFyi"
   | "compoundV3"
   | "aaveV3"
   | "roycoDawn";
@@ -19,7 +18,6 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "pendle",
   "yearnKong",
   "beefy",
-  "vaultsFyi",
   "compoundV3",
   "aaveV3",
   "roycoDawn",

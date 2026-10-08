@@ -4,14 +4,13 @@ import type { AaveV3RateTarget } from "../yield-sync/sources-rpc";
 
 vi.mock("../yield-sync/sources", async () => {
   // Vitest hoists this factory before static fixture imports initialize.
-  const { emptyRpcTelemetry, emptyVaultsFyiResult, healthyFamilyFetch } = await import("./sync-yield-supplemental.test-support");
+  const { emptyRpcTelemetry, healthyFamilyFetch } = await import("./sync-yield-supplemental.test-support");
   return {
     COMPOUND_V3_COMETS: [],
     createOptionalRpcFamilyTelemetry: (targetCount: number) => ({ ...emptyRpcTelemetry(), targetCount }),
     fetchMorphoVaultSources: async () => healthyFamilyFetch(),
     fetchPendleMarketSources: async () => healthyFamilyFetch(),
     fetchRoycoDawnSources: async () => ({ candidates: [], degraded: false }),
-    fetchVaultsFyiSources: async () => emptyVaultsFyiResult(),
     fetchYearnKongSources: async () => healthyFamilyFetch(),
     fetchBeefySources: async () => healthyFamilyFetch(),
     fetchCompoundV3SupplyRates: async () => ({ results: [], telemetry: emptyRpcTelemetry() }),

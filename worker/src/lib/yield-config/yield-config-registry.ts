@@ -71,7 +71,6 @@ export interface YieldRegistryEntry {
   rateDerived?: RateDerivedConfig;
   autoLendingPoolId?: string;
   bypassesAutoLendingSafety?: boolean;
-  deterministicQuarantineReason?: string;
   intentionalGapReason?: string;
 }
 
@@ -110,7 +109,6 @@ export interface YieldAdapterManifestEntry {
   rateDerived?: RateDerivedConfig;
   autoLendingPoolId?: string;
   bypassesAutoLendingSafety?: boolean;
-  deterministicQuarantineReason?: string;
 }
 
 export function deriveYieldRegistry(args: {
@@ -126,14 +124,11 @@ export function deriveYieldRegistry(args: {
   rateDerivedConfigs: RateDerivedConfig[];
   autoLendingPoolMap: Record<string, string>;
   autoLendingSafetyBypassIds: Set<string>;
-  quarantinedDeterministicAdapters: Record<string, string>;
   intentionalGapReasons: Record<string, string>;
   /**
    * Typed lifecycle state per stablecoin ID. Unlisted IDs default to
    * `{ lifecycle: "active" }`. Quarantines and intentional gaps carry a
-   * structured reason that supersedes the legacy free-form rationale strings in
-   * `quarantinedDeterministicAdapters` / `intentionalGapReasons`; those string
-   * maps stay so the manifest descriptor `rationale` fields keep their copy.
+   * structured reason for intentional gaps; the string map retains manifest copy.
    */
   adapterLifecycle: Record<string, YieldAdapterLifecycleEntry>;
 }): {
@@ -159,7 +154,6 @@ export function deriveYieldRegistry(args: {
     ...args.rateDerivedConfigs.map((config) => config.stablecoinId),
     ...Object.keys(args.autoLendingPoolMap),
     ...args.autoLendingSafetyBypassIds,
-    ...Object.keys(args.quarantinedDeterministicAdapters),
     ...Object.keys(args.intentionalGapReasons),
   ]);
 
@@ -178,7 +172,6 @@ export function deriveYieldRegistry(args: {
       rateDerived: args.rateDerivedConfigs.find((config) => config.stablecoinId === stablecoinId),
       autoLendingPoolId: args.autoLendingPoolMap[stablecoinId],
       bypassesAutoLendingSafety: args.autoLendingSafetyBypassIds.has(stablecoinId) || undefined,
-      deterministicQuarantineReason: args.quarantinedDeterministicAdapters[stablecoinId],
       intentionalGapReason: args.intentionalGapReasons[stablecoinId],
     }));
 
@@ -283,19 +276,6 @@ export function deriveYieldRegistry(args: {
           priority: 70,
         });
       }
-      if (entry?.deterministicQuarantineReason) {
-        const lifecycleEntry = args.adapterLifecycle[stablecoinId] ?? { lifecycle: "active" };
-        strategies.push({
-          kind: "quarantined",
-          label: "Quarantined deterministic reader",
-          sourceKey: null,
-          sourceKeyPattern: buildOnChainSourceKey(stablecoinId),
-          rationale: entry.deterministicQuarantineReason,
-          lifecycle: "quarantined",
-          lifecycleReason: lifecycleEntry.lifecycle === "quarantined" ? lifecycleEntry.reason : undefined,
-          priority: 80,
-        });
-      }
       if (entry?.intentionalGapReason) {
         const lifecycleEntry = args.adapterLifecycle[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
@@ -321,7 +301,6 @@ export function deriveYieldRegistry(args: {
         rateDerived: entry?.rateDerived,
         autoLendingPoolId: entry?.autoLendingPoolId,
         bypassesAutoLendingSafety: entry?.bypassesAutoLendingSafety,
-        deterministicQuarantineReason: entry?.deterministicQuarantineReason,
       };
     })
     .sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));

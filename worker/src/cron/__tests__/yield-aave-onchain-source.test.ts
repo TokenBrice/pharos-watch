@@ -19,7 +19,6 @@ vi.mock("../yield-sync/sources", async (importOriginal) => {
     fetchPendleMarketSources: failingFamilyFetch,
     fetchYearnKongSources: failingFamilyFetch,
     fetchBeefySources: failingFamilyFetch,
-    fetchVaultsFyiSources: failingFamilyFetch,
     fetchRoycoDawnSources: failingFamilyFetch,
     fetchCompoundV3SupplyRates: failingFamilyFetch,
   };

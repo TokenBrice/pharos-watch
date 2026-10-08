@@ -7,8 +7,6 @@ export {
   type LiquityV2SpSourceConfig,
 } from "./sources-optional-protocols-onchain";
 export {
-  fetchBimaSusbdSource,
-  fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
@@ -16,11 +14,6 @@ export {
 } from "./sources-optional-protocols-protocol-api";
 export { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 export { fetchRoycoDawnSources } from "./royco-dawn";
-export {
-  fetchVaultsFyiSources,
-  type VaultsFyiSourceResult,
-  type VaultsFyiTelemetry,
-} from "./vaults-fyi";
 export {
   fetchBeefySources,
   fetchMorphoVaultSources,

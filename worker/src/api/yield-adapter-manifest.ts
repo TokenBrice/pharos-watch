@@ -140,7 +140,7 @@ function buildPublicEntries(
 
       const lifecycle = strategy.lifecycle ?? "active";
       const quarantineReason = lifecycle === "quarantined"
-        ? strategy.lifecycleReason?.note ?? strategy.rationale ?? manifestEntry.deterministicQuarantineReason ?? null
+        ? strategy.lifecycleReason?.note ?? strategy.rationale ?? null
         : null;
 
       entries.push({
