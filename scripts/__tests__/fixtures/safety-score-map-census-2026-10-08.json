@@ -1,0 +1,2950 @@
+{
+  "source": {
+    "capturedAt": "2026-10-08T13:32:32.658Z",
+    "endpoints": [
+      "https://api.pharos.watch/api/report-cards/v9",
+      "https://api.pharos.watch/api/stablecoins"
+    ],
+    "asOfSec": 1791465443,
+    "catalogCount": 624,
+    "description": "Read-only GET projection of all graded cards joined to circulating USD supply. No credential or ungraded card retained."
+  },
+  "coins": [
+    {
+      "id": "a7a5-old-vector",
+      "symbol": "A7A5",
+      "grade": "F",
+      "score": 19,
+      "tier": "F",
+      "mcap": 545901109.2144213
+    },
+    {
+      "id": "aa-falconx-mev-capital",
+      "symbol": "AA_FalconXUSDC",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 127240990.83412564
+    },
+    {
+      "id": "acrdx-anemoy-apollo",
+      "symbol": "ACRDX",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 51047023.76784801
+    },
+    {
+      "id": "acred-apollo-securitize",
+      "symbol": "ACRED",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 95311686.0620511
+    },
+    {
+      "id": "aid-gaib",
+      "symbol": "AID",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 17039289.955658462
+    },
+    {
+      "id": "alusd-alchemix",
+      "symbol": "ALUSD",
+      "grade": "F",
+      "score": 31,
+      "tier": "F",
+      "mcap": 9894061.637866724
+    },
+    {
+      "id": "apxusd-apyx",
+      "symbol": "apxUSD",
+      "grade": "F",
+      "score": 26,
+      "tier": "F",
+      "mcap": 310299673.5500807
+    },
+    {
+      "id": "apyusd-apyx",
+      "symbol": "apyUSD",
+      "grade": "F",
+      "score": 16,
+      "tier": "F",
+      "mcap": 167485286.44167107
+    },
+    {
+      "id": "arcusdc-galaxy",
+      "symbol": "arcUSDC",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 89703580.69193903
+    },
+    {
+      "id": "armusdcs-wintermute",
+      "symbol": "armUSDCs",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 45412294.040731244
+    },
+    {
+      "id": "asusdf-astherus",
+      "symbol": "asUSDF",
+      "grade": "F",
+      "score": 33,
+      "tier": "F",
+      "mcap": 5954743.020252325
+    },
+    {
+      "id": "audd-novatti",
+      "symbol": "AUDD",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 6970175.3804179095
+    },
+    {
+      "id": "audf-forte",
+      "symbol": "AUDF",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 4015955.4610226145
+    },
+    {
+      "id": "audm-macropod",
+      "symbol": "AUDM",
+      "grade": "C",
+      "score": 57,
+      "tier": "C",
+      "mcap": 2151892.5049639456
+    },
+    {
+      "id": "audm-mento",
+      "symbol": "AUDm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 5989.656791479901
+    },
+    {
+      "id": "audx-aussie-dollar-token",
+      "symbol": "AUDX",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 2464670.0929154754
+    },
+    {
+      "id": "ausd-agora",
+      "symbol": "AUSD",
+      "grade": "B-",
+      "score": 66,
+      "tier": "B",
+      "mcap": 247469054.4840959
+    },
+    {
+      "id": "autousd-auto-finance",
+      "symbol": "autoUSD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 7626783.180776844
+    },
+    {
+      "id": "avusd-avant",
+      "symbol": "avUSD",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 125089770.378293
+    },
+    {
+      "id": "bbqusdc-steakhouse",
+      "symbol": "bbqUSDC",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 12680094.21857886
+    },
+    {
+      "id": "bbqusdc-steakhouse-v2",
+      "symbol": "bbqUSDC",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 47968577.5522467
+    },
+    {
+      "id": "bc3m-backed",
+      "symbol": "bC3M",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 9660018.212645033
+    },
+    {
+      "id": "bd-basedollar",
+      "symbol": "BD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 119411.91486258408
+    },
+    {
+      "id": "bnusd-balanced",
+      "symbol": "BNUSD",
+      "grade": "F",
+      "score": 34,
+      "tier": "F",
+      "mcap": 938236.4048849028
+    },
+    {
+      "id": "bold-liquity",
+      "symbol": "BOLD",
+      "grade": "A",
+      "score": 84,
+      "tier": "A",
+      "mcap": 37864653.522176
+    },
+    {
+      "id": "brl1-brl1",
+      "symbol": "BRL1",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 3305309.376151143
+    },
+    {
+      "id": "brla-brla-digital",
+      "symbol": "BRLA",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 30927961.699594967
+    },
+    {
+      "id": "brlm-mento",
+      "symbol": "BRLm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 203147.55582143387
+    },
+    {
+      "id": "brsrv-blackrock",
+      "symbol": "BRSRV",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 50319373.279999994
+    },
+    {
+      "id": "brz-transfero",
+      "symbol": "BRZ",
+      "grade": "F",
+      "score": 24,
+      "tier": "F",
+      "mcap": 56837434.00660467
+    },
+    {
+      "id": "btcusd-btcfi",
+      "symbol": "BtcUSD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 5271866.5906879855
+    },
+    {
+      "id": "buck-bucket-protocol",
+      "symbol": "BUCK",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 25870016.862824574
+    },
+    {
+      "id": "buidl-blackrock",
+      "symbol": "BUIDL",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 2208351994.947649
+    },
+    {
+      "id": "cadc-cad-coin",
+      "symbol": "CADC",
+      "grade": "C",
+      "score": 57,
+      "tier": "C",
+      "mcap": 1699152.913638796
+    },
+    {
+      "id": "cadd-cad-digital",
+      "symbol": "CADD",
+      "grade": "B+",
+      "score": 79,
+      "tier": "B",
+      "mcap": 866673.3691863746
+    },
+    {
+      "id": "cadm-mento",
+      "symbol": "CADm",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 681.1459605794843
+    },
+    {
+      "id": "cash-phantom",
+      "symbol": "CASH",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 127817885.58904912
+    },
+    {
+      "id": "cdp-enosys",
+      "symbol": "CDP",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 4855617.397616921
+    },
+    {
+      "id": "ceur-celo",
+      "symbol": "EURm",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 1616130.9660656033
+    },
+    {
+      "id": "cgo-comtech",
+      "symbol": "CGO",
+      "grade": "F",
+      "score": 34,
+      "tier": "F",
+      "mcap": 3175113.6020538183
+    },
+    {
+      "id": "cgusd-cygnus-finance",
+      "symbol": "cgUSD",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 75784095.65698527
+    },
+    {
+      "id": "chfau-allunity",
+      "symbol": "CHFAU",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 42012599.398977876
+    },
+    {
+      "id": "chfm-mento",
+      "symbol": "CHFm",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 88820.99714414129
+    },
+    {
+      "id": "chfsafo-spiko",
+      "symbol": "CHFSAFO",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 10741034.075073361
+    },
+    {
+      "id": "cjpy-yamato",
+      "symbol": "CJPY",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 475886.2497958022
+    },
+    {
+      "id": "cngn-compliant-naira",
+      "symbol": "cNGN",
+      "grade": "F",
+      "score": 35,
+      "tier": "F",
+      "mcap": 2788851.9370452617
+    },
+    {
+      "id": "copm-mento",
+      "symbol": "COPm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 25610.40898780557
+    },
+    {
+      "id": "crvusd-curve",
+      "symbol": "crvUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 244450142.8576582
+    },
+    {
+      "id": "cscbusdc-clearstar",
+      "symbol": "CSCBUSDC",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 33700364.83059402
+    },
+    {
+      "id": "ctusd-citrea",
+      "symbol": "ctUSD",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 3642538.694184
+    },
+    {
+      "id": "cusd-cap",
+      "symbol": "CUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 78708490.23591504
+    },
+    {
+      "id": "cusd-celo",
+      "symbol": "USDm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 16412155.365785792
+    },
+    {
+      "id": "cusdo-openeden",
+      "symbol": "cUSDO",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 12197109.884791112
+    },
+    {
+      "id": "dai-makerdao",
+      "symbol": "DAI",
+      "grade": "B",
+      "score": 74,
+      "tier": "B",
+      "mcap": 4761653569.115228
+    },
+    {
+      "id": "deuro-deuro",
+      "symbol": "dEURO",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 1397966.4957512328
+    },
+    {
+      "id": "dgld-gold-token-sa",
+      "symbol": "DGLD",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 9975381.086292751
+    },
+    {
+      "id": "djed-coti",
+      "symbol": "DJED",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 1446378.2941840414
+    },
+    {
+      "id": "dllr-sovryn",
+      "symbol": "DLLR",
+      "grade": "F",
+      "score": 19,
+      "tier": "F",
+      "mcap": 1504304.8854417421
+    },
+    {
+      "id": "doc-money-on-chain",
+      "symbol": "DOC",
+      "grade": "B-",
+      "score": 69,
+      "tier": "B",
+      "mcap": 2850847.9376004427
+    },
+    {
+      "id": "dola-inverse-finance",
+      "symbol": "DOLA",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 108539749.98670255
+    },
+    {
+      "id": "dusd-alto",
+      "symbol": "DUSD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 1316955.8848752494
+    },
+    {
+      "id": "dusd-dialectic",
+      "symbol": "DUSD",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 1903971.4870561538
+    },
+    {
+      "id": "dusd-dtrinity",
+      "symbol": "dUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 1304970.6694563923
+    },
+    {
+      "id": "dusd-standx",
+      "symbol": "DUSD",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 52788110.350356296
+    },
+    {
+      "id": "earnusd-lido",
+      "symbol": "earnUSD",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 52791969.628375396
+    },
+    {
+      "id": "eearn-ember",
+      "symbol": "eEARN",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 13699696.576427927
+    },
+    {
+      "id": "ethenausdc-steakhouse",
+      "symbol": "ethenaUSDC",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 31351389.551360436
+    },
+    {
+      "id": "eur0-usual",
+      "symbol": "EUR0",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 214203.78749089772
+    },
+    {
+      "id": "eurau-allunity",
+      "symbol": "EURAU",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 347300.75209641195
+    },
+    {
+      "id": "eurc-circle",
+      "symbol": "EURC",
+      "grade": "B+",
+      "score": 79,
+      "tier": "B",
+      "mcap": 484038734.9163501
+    },
+    {
+      "id": "eurcv-societe-generale-forge",
+      "symbol": "EURCV",
+      "grade": "C",
+      "score": 57,
+      "tier": "C",
+      "mcap": 189145730.74202713
+    },
+    {
+      "id": "eure-monerium",
+      "symbol": "EURE",
+      "grade": "C",
+      "score": 55,
+      "tier": "C",
+      "mcap": 32901858.484567758
+    },
+    {
+      "id": "euri-banking-circle",
+      "symbol": "EURI",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 37035400.47083128
+    },
+    {
+      "id": "euro3-3a-dao",
+      "symbol": "EURO3",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 22820.180154108955
+    },
+    {
+      "id": "europ-schuman",
+      "symbol": "EUROP",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 17290459.528987706
+    },
+    {
+      "id": "eurot-token-teknoloji",
+      "symbol": "EUROT",
+      "grade": "F",
+      "score": 33,
+      "tier": "F",
+      "mcap": 179254.69402965865
+    },
+    {
+      "id": "eurq-quantoz",
+      "symbol": "EURQ",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 9439545.406726886
+    },
+    {
+      "id": "eurs-stasis",
+      "symbol": "EURS",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 7658351.329061995
+    },
+    {
+      "id": "eursafo-spiko",
+      "symbol": "EURSAFO",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 1584446332.4365728
+    },
+    {
+      "id": "eurspkcc-spiko",
+      "symbol": "EURSPKCC",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 30886325.470071368
+    },
+    {
+      "id": "eusd-electronic-usd",
+      "symbol": "EUSD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 23193864.804508757
+    },
+    {
+      "id": "eusd-telcoin",
+      "symbol": "eUSD",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 10008050.22975798
+    },
+    {
+      "id": "eutbl-spiko",
+      "symbol": "EUTBL",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 637854323.4605328
+    },
+    {
+      "id": "fdusd-first-digital",
+      "symbol": "FDUSD",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 323988110.71279055
+    },
+    {
+      "id": "feusd-felix",
+      "symbol": "FEUSD",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 9681957.66471417
+    },
+    {
+      "id": "fidd-fidelity",
+      "symbol": "FIDD",
+      "grade": "B+",
+      "score": 78,
+      "tier": "B",
+      "mcap": 49898063.3005958
+    },
+    {
+      "id": "fiusd-sygnum",
+      "symbol": "FIUSD",
+      "grade": "F",
+      "score": 18,
+      "tier": "F",
+      "mcap": 18291976.565
+    },
+    {
+      "id": "fpi-frax",
+      "symbol": "FPI",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 7033012.241467294
+    },
+    {
+      "id": "frax-frax",
+      "symbol": "FRAX",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 153475242.1860957
+    },
+    {
+      "id": "frnt-wyoming",
+      "symbol": "FRNT",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 968516.3976226152
+    },
+    {
+      "id": "frxusd-frax",
+      "symbol": "FRXUSD",
+      "grade": "B",
+      "score": 70,
+      "tier": "B",
+      "mcap": 103659440.1961184
+    },
+    {
+      "id": "ftusd-flying-tulip",
+      "symbol": "ftUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 4399237.336725139
+    },
+    {
+      "id": "fusd-finchain",
+      "symbol": "FUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 1890468.9659593687
+    },
+    {
+      "id": "fusd-freedom-dollar",
+      "symbol": "fUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 11992931.296690632
+    },
+    {
+      "id": "fxd-fathom",
+      "symbol": "FXD",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 739555.0131618667
+    },
+    {
+      "id": "fxsave-f-x-protocol",
+      "symbol": "fxSAVE",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 84211387.34314995
+    },
+    {
+      "id": "fxusd-f-x-protocol",
+      "symbol": "fxUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 90770216.56403826
+    },
+    {
+      "id": "gbpa-agant",
+      "symbol": "GBPA",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 2505468.5131144864
+    },
+    {
+      "id": "gbpe-monerium",
+      "symbol": "GBPe",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 720765.1961953939
+    },
+    {
+      "id": "gbpm-mento",
+      "symbol": "GBPm",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 309903.4345272823
+    },
+    {
+      "id": "gbpsafo-spiko",
+      "symbol": "GBPSAFO",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 50136134.040547796
+    },
+    {
+      "id": "ggbr-goldfish-gold",
+      "symbol": "GGBR",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 82675519.32701553
+    },
+    {
+      "id": "gho-aave",
+      "symbol": "GHO",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 698363299.4682242
+    },
+    {
+      "id": "ghsm-mento",
+      "symbol": "GHSm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 23316.937372780136
+    },
+    {
+      "id": "gldt-gold-dao",
+      "symbol": "GLDT",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 697953.276320267
+    },
+    {
+      "id": "gldy-streamex",
+      "symbol": "GLDY",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 12672801.913883232
+    },
+    {
+      "id": "gtusdc-gauntlet",
+      "symbol": "gtUSDC",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 22048861.012213875
+    },
+    {
+      "id": "gtusdcp-gauntlet",
+      "symbol": "gtUSDCp",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 117582443.1290768
+    },
+    {
+      "id": "gtusdtp-gauntlet",
+      "symbol": "gtUSDTp",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 302884.07412549946
+    },
+    {
+      "id": "gusd-gate",
+      "symbol": "GUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 319326840.90353423
+    },
+    {
+      "id": "gusd-gemini",
+      "symbol": "GUSD",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 38169054.652570404
+    },
+    {
+      "id": "gusdcq-galaxy",
+      "symbol": "gUSDCq",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 10174957.92985519
+    },
+    {
+      "id": "gusdtq-galaxy",
+      "symbol": "gUSDTq",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 10774044.016942069
+    },
+    {
+      "id": "hbd-hive",
+      "symbol": "HBD",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 33648337.425596714
+    },
+    {
+      "id": "hbusdt-hyperbeat",
+      "symbol": "hbUSDT",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 2481269.267399394
+    },
+    {
+      "id": "hchf-hedera-swiss-franc",
+      "symbol": "HCHF",
+      "grade": "B",
+      "score": 73,
+      "tier": "B",
+      "mcap": 57582.36742595946
+    },
+    {
+      "id": "hlscope-hamilton-lane",
+      "symbol": "HLSCOPE",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 4209302.59656846
+    },
+    {
+      "id": "hollar-hydrated",
+      "symbol": "HOLLAR",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 13655719.358727181
+    },
+    {
+      "id": "home-homecoin",
+      "symbol": "HOME",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 6054616.856988159
+    },
+    {
+      "id": "honey-berachain",
+      "symbol": "BUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 8579045.08815699
+    },
+    {
+      "id": "hyusd-hylo",
+      "symbol": "HYUSD",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 26160440.141331
+    },
+    {
+      "id": "idrt-rupiah-token",
+      "symbol": "IDRT",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 5091624.338102336
+    },
+    {
+      "id": "idrx-idrx",
+      "symbol": "IDRX",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 1038806.0107543779
+    },
+    {
+      "id": "inalpha-nest",
+      "symbol": "inALPHA",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 1.8890182896
+    },
+    {
+      "id": "isc-international-stable-currency",
+      "symbol": "ISC",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 2385121.0643860563
+    },
+    {
+      "id": "iusd-indigo-protocol",
+      "symbol": "IUSD",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 1382032.1984369785
+    },
+    {
+      "id": "iusd-infinifi",
+      "symbol": "IUSD",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 45616416.50444878
+    },
+    {
+      "id": "iusd-initia",
+      "symbol": "iUSD",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 1654468.990699
+    },
+    {
+      "id": "jaaa-janus-henderson-anemoy",
+      "symbol": "JAAA",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 583106160.2382778
+    },
+    {
+      "id": "jpyc-jpyc",
+      "symbol": "JPYC",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 22417709.378514662
+    },
+    {
+      "id": "jpym-mento",
+      "symbol": "JPYm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 99708.81614578718
+    },
+    {
+      "id": "jpysc-sbi-startale",
+      "symbol": "JPYSC",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 127102748.93670806
+    },
+    {
+      "id": "jpyt-dephaser",
+      "symbol": "JPYT",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 45142.88165894133
+    },
+    {
+      "id": "jtrsy-anemoy",
+      "symbol": "JTRSY",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 326402399.4071339
+    },
+    {
+      "id": "jupusd-jupiter",
+      "symbol": "JUPUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 47746498.62189201
+    },
+    {
+      "id": "kag-kinesis",
+      "symbol": "KAG",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 218665147.35786316
+    },
+    {
+      "id": "kau-kinesis",
+      "symbol": "KAU",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 528953119.92385024
+    },
+    {
+      "id": "kesm-mento",
+      "symbol": "KESm",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 67961.35053991449
+    },
+    {
+      "id": "kpkusdcprime-kpk",
+      "symbol": "KPK_USDC_Prime",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 28818697.6255659
+    },
+    {
+      "id": "kpkusdcyield-kpk",
+      "symbol": "KPK_USDC_Yield",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 9417295.454517778
+    },
+    {
+      "id": "krusdc-keyrock",
+      "symbol": "krUSDC",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 75007684.08807261
+    },
+    {
+      "id": "krwq-iq",
+      "symbol": "KRWQ",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 545534.6575662182
+    },
+    {
+      "id": "lisusd-lista",
+      "symbol": "LISUSD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 75660211.83020978
+    },
+    {
+      "id": "lusd-liquity",
+      "symbol": "LUSD",
+      "grade": "B+",
+      "score": 78,
+      "tier": "B",
+      "mcap": 26225319.159614015
+    },
+    {
+      "id": "lvusd-leverup",
+      "symbol": "LVUSD",
+      "grade": "F",
+      "score": 34,
+      "tier": "F",
+      "mcap": 1398549.8760201212
+    },
+    {
+      "id": "m-m0",
+      "symbol": "M",
+      "grade": "C",
+      "score": 57,
+      "tier": "C",
+      "mcap": 203052047.72432
+    },
+    {
+      "id": "mai-qidao",
+      "symbol": "MAI",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 11812242.87706194
+    },
+    {
+      "id": "mantrausd-mantra",
+      "symbol": "mantraUSD",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 434546.5885718196
+    },
+    {
+      "id": "meusd-mezo",
+      "symbol": "MUSD",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 29771996.55588599
+    },
+    {
+      "id": "mglobal-midas-fasanara",
+      "symbol": "mGLOBAL",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 34064145.83613529
+    },
+    {
+      "id": "money-defi-money",
+      "symbol": "MONEY",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 13992416.797617845
+    },
+    {
+      "id": "moveusd-cfx",
+      "symbol": "MOVEUSD",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 124379121.96232446
+    },
+    {
+      "id": "mre7yield-midas",
+      "symbol": "mRe7YIELD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 8193481.08584838
+    },
+    {
+      "id": "msusd-metronome",
+      "symbol": "MSUSD",
+      "grade": "F",
+      "score": 21,
+      "tier": "F",
+      "mcap": 45685539.21166908
+    },
+    {
+      "id": "mtbill-midas",
+      "symbol": "mTBILL",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 76413686.6712248
+    },
+    {
+      "id": "musd-metamask",
+      "symbol": "MUSD",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 37822815.06554834
+    },
+    {
+      "id": "mxne-real-mxn",
+      "symbol": "MXNe",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 79801.68286212879
+    },
+    {
+      "id": "mxnt-tether",
+      "symbol": "MXNT",
+      "grade": "F",
+      "score": 19,
+      "tier": "F",
+      "mcap": 1084342.071384
+    },
+    {
+      "id": "myrc-blox",
+      "symbol": "MYRC",
+      "grade": "B+",
+      "score": 75,
+      "tier": "B",
+      "mcap": 1308524.998773332
+    },
+    {
+      "id": "nbasis-nest",
+      "symbol": "nBASIS",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 145055.2865680279
+    },
+    {
+      "id": "nect-beraborrow",
+      "symbol": "NECT",
+      "grade": "D",
+      "score": 46,
+      "tier": "D",
+      "mcap": 291263.0284187166
+    },
+    {
+      "id": "nopal-nest",
+      "symbol": "nOPAL",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 112770069.39851364
+    },
+    {
+      "id": "ntbill-nest",
+      "symbol": "nTBILL",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 4434977.590543438
+    },
+    {
+      "id": "nusd-neutrl",
+      "symbol": "NUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 35512851.5442707
+    },
+    {
+      "id": "nusd-nexus",
+      "symbol": "NUSD",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 1967868.6909225043
+    },
+    {
+      "id": "nwisdom-nest",
+      "symbol": "nWISDOM",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 25126.199555163934
+    },
+    {
+      "id": "nxusd-nereus",
+      "symbol": "NXUSD",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 7752915.684549774
+    },
+    {
+      "id": "oned-gennius",
+      "symbol": "ONED",
+      "grade": "F",
+      "score": 18,
+      "tier": "F",
+      "mcap": 11307544.01
+    },
+    {
+      "id": "onyc-onre",
+      "symbol": "ONyc",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 106186913.09438519
+    },
+    {
+      "id": "ousd-open-standard",
+      "symbol": "OUSD",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 733121947.6759278
+    },
+    {
+      "id": "ousd-origin-protocol",
+      "symbol": "OUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 6077068.407433913
+    },
+    {
+      "id": "ousg-ondo-finance",
+      "symbol": "OUSG",
+      "grade": "B-",
+      "score": 67,
+      "tier": "B",
+      "mcap": 321502413.8268498
+    },
+    {
+      "id": "pathusd-bridge",
+      "symbol": "pathUSD",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 70932621.4329065
+    },
+    {
+      "id": "paxg-paxos",
+      "symbol": "PAXG",
+      "grade": "A-",
+      "score": 80,
+      "tier": "A",
+      "mcap": 1802048472.1821966
+    },
+    {
+      "id": "pendleusdc-pendle",
+      "symbol": "pendleUSDC",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 62379433.07088063
+    },
+    {
+      "id": "pgold-pleasing",
+      "symbol": "PGOLD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 80453833.9
+    },
+    {
+      "id": "pmusd-precious-metals",
+      "symbol": "pmUSD",
+      "grade": "F",
+      "score": 28,
+      "tier": "F",
+      "mcap": 54352318.43949516
+    },
+    {
+      "id": "pusd-plume",
+      "symbol": "pUSD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 2219451.8156764014
+    },
+    {
+      "id": "pusd-polymarket",
+      "symbol": "pUSD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 498818063.65423673
+    },
+    {
+      "id": "pyusd-paypal",
+      "symbol": "PYUSD",
+      "grade": "B",
+      "score": 72,
+      "tier": "B",
+      "mcap": 2858803296.096553
+    },
+    {
+      "id": "pyusdx-moonpay",
+      "symbol": "PYUSDx",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 96534823.00994599
+    },
+    {
+      "id": "reusd-re-protocol",
+      "symbol": "reUSD",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 289180502.62324864
+    },
+    {
+      "id": "reusd-resupply",
+      "symbol": "REUSD",
+      "grade": "F",
+      "score": 35,
+      "tier": "F",
+      "mcap": 49612711.971583016
+    },
+    {
+      "id": "rlusd-ripple",
+      "symbol": "RLUSD",
+      "grade": "B",
+      "score": 74,
+      "tier": "B",
+      "mcap": 2490099827.6018567
+    },
+    {
+      "id": "rusd-reservoir",
+      "symbol": "rUSD",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 228336.88497238857
+    },
+    {
+      "id": "rwausdi-multipli",
+      "symbol": "rwaUSDi",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 486460918.465222
+    },
+    {
+      "id": "safo-spiko-usd",
+      "symbol": "SAFO",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 217891799.7018418
+    },
+    {
+      "id": "said-gaib",
+      "symbol": "sAID",
+      "grade": "F",
+      "score": 28,
+      "tier": "F",
+      "mcap": 15793858.660563333
+    },
+    {
+      "id": "satusd-river",
+      "symbol": "satUSD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 136221004.1720183
+    },
+    {
+      "id": "savusd-avant",
+      "symbol": "savUSD",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 104985263.33658636
+    },
+    {
+      "id": "sbc-brale",
+      "symbol": "SBC",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 21672253.196250565
+    },
+    {
+      "id": "sbold-k3-capital",
+      "symbol": "sBOLD",
+      "grade": "B+",
+      "score": 77,
+      "tier": "B",
+      "mcap": 4183970.104029674
+    },
+    {
+      "id": "scrvusd-curve",
+      "symbol": "scrvUSD",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 15881284.453935178
+    },
+    {
+      "id": "scusd-rings",
+      "symbol": "SCUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 647126.9403934949
+    },
+    {
+      "id": "sdai-gnosis",
+      "symbol": "sDAI",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 42118464.03715383
+    },
+    {
+      "id": "sdai-sky",
+      "symbol": "sDAI",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 164252243.27187383
+    },
+    {
+      "id": "sdola-inverse-finance",
+      "symbol": "sDOLA",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 18196863.638792064
+    },
+    {
+      "id": "sdusd-dtrinity",
+      "symbol": "sdUSD",
+      "grade": "F",
+      "score": 27,
+      "tier": "F",
+      "mcap": 502333.8382922785
+    },
+    {
+      "id": "senpathusd-sentora",
+      "symbol": "senpathUSD",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 39738767.4829409
+    },
+    {
+      "id": "senpyusdmain-sentora",
+      "symbol": "senPYUSDmain",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 402814194.5296838
+    },
+    {
+      "id": "senpyusdmwin-sentora",
+      "symbol": "senPYUSDmWIN",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 22671633.570545856
+    },
+    {
+      "id": "senpyusdprimev2-sentora",
+      "symbol": "senPYUSDPRIMEv2",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 212937817.7042385
+    },
+    {
+      "id": "senpyusdpst-sentora",
+      "symbol": "senPYUSDPST",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 72938656.11214559
+    },
+    {
+      "id": "senrlusdv2-sentora",
+      "symbol": "senRLUSDv2",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 474050746.29500526
+    },
+    {
+      "id": "sfrax-frax",
+      "symbol": "sFRAX",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 64625859.33462738
+    },
+    {
+      "id": "sfrxusd-frax",
+      "symbol": "sfrxUSD",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 38143960.16158985
+    },
+    {
+      "id": "sgho-aave",
+      "symbol": "sGHO",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 173354611.36632478
+    },
+    {
+      "id": "sirloinusdc-steakhouse",
+      "symbol": "sirloinUSDC",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 459701053.70716935
+    },
+    {
+      "id": "skymoneyusdsflagship-sky",
+      "symbol": "skyMoneyUsdsFlagship",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 38197933.85943175
+    },
+    {
+      "id": "skymoneyusdtsavings-sky",
+      "symbol": "skyMoneyUsdtSavings",
+      "grade": "C+",
+      "score": 61,
+      "tier": "C",
+      "mcap": 60407623.864957005
+    },
+    {
+      "id": "sofid-sofi",
+      "symbol": "SOFID",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 337635358.29408365
+    },
+    {
+      "id": "sparkusdc-spark",
+      "symbol": "sparkUSDC",
+      "grade": "C+",
+      "score": 63,
+      "tier": "C",
+      "mcap": 362058766.6013119
+    },
+    {
+      "id": "sparkusdtbc-spark",
+      "symbol": "sparkUSDTbc",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 102630997.24811228
+    },
+    {
+      "id": "spkcc-spiko",
+      "symbol": "SPKCC",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 5608575.975443787
+    },
+    {
+      "id": "spusd-soulpeg",
+      "symbol": "SPUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 42945855.192630626
+    },
+    {
+      "id": "sreusd-resupply",
+      "symbol": "sreUSD",
+      "grade": "F",
+      "score": 31,
+      "tier": "F",
+      "mcap": 27796576.330372315
+    },
+    {
+      "id": "srusde-strata",
+      "symbol": "srUSDe",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 17221316.580324642
+    },
+    {
+      "id": "stac-securitize",
+      "symbol": "STAC",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 103723692.0772213
+    },
+    {
+      "id": "stbt-matrixdock",
+      "symbol": "STBT",
+      "grade": "F",
+      "score": 36,
+      "tier": "F",
+      "mcap": 23609201.544750903
+    },
+    {
+      "id": "stcusd-cap",
+      "symbol": "stcUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 76836781.57760684
+    },
+    {
+      "id": "steakcusdc-steakhouse",
+      "symbol": "steakcUSDC",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 35727959.085043795
+    },
+    {
+      "id": "steakeurcv-steakhouse",
+      "symbol": "steakEURCV",
+      "grade": "F",
+      "score": 19,
+      "tier": "F",
+      "mcap": 149132095.65899923
+    },
+    {
+      "id": "steakusdc-steakhouse",
+      "symbol": "steakUSDC",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 111055064.81707653
+    },
+    {
+      "id": "steakusdg-steakhouse",
+      "symbol": "steakUSDG",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 541392439.2266412
+    },
+    {
+      "id": "steakusdt-steakhouse",
+      "symbol": "steakUSDT",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 61432783.5319467
+    },
+    {
+      "id": "stkgho-umbrella-aave",
+      "symbol": "stkGHO.v1",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 1408020.9750983813
+    },
+    {
+      "id": "strusd-tori",
+      "symbol": "strUSD",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 47870458.27853214
+    },
+    {
+      "id": "stusd-stoneyield",
+      "symbol": "stUSD",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 2909475.2737058382
+    },
+    {
+      "id": "stusds-sky",
+      "symbol": "stUSDS",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 182764083.7036293
+    },
+    {
+      "id": "suiusde-sui",
+      "symbol": "suiUSDe",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 12367890.99343208
+    },
+    {
+      "id": "susd-hedgecore",
+      "symbol": "sUSD",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 5191572.01673438
+    },
+    {
+      "id": "susd-solayer",
+      "symbol": "sUSD",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 821820.6538116633
+    },
+    {
+      "id": "susd1plus-lorenzo",
+      "symbol": "sUSD1+",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 79598192.9489963
+    },
+    {
+      "id": "susdai-usd-ai",
+      "symbol": "sUSDai",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 479430982.3216375
+    },
+    {
+      "id": "susdat-saturn",
+      "symbol": "sUSDat",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 65375786.70852504
+    },
+    {
+      "id": "susdc-spark",
+      "symbol": "spUSDC",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 320444255.1417415
+    },
+    {
+      "id": "susdc-spark-v1",
+      "symbol": "sUSDC",
+      "grade": "C+",
+      "score": 63,
+      "tier": "C",
+      "mcap": 177975360.89717385
+    },
+    {
+      "id": "susdd-tron-dao-reserve",
+      "symbol": "sUSDD",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 213330505.49952993
+    },
+    {
+      "id": "susde-ethena",
+      "symbol": "sUSDe",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 1230579176.311096
+    },
+    {
+      "id": "susdf-falcon",
+      "symbol": "sUSDf",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 58552966.38396818
+    },
+    {
+      "id": "susds-sky",
+      "symbol": "sUSDS",
+      "grade": "C+",
+      "score": 60,
+      "tier": "C",
+      "mcap": 4948287785.367177
+    },
+    {
+      "id": "susdt-spark",
+      "symbol": "spUSDT",
+      "grade": "C+",
+      "score": 63,
+      "tier": "C",
+      "mcap": 606751929.0624418
+    },
+    {
+      "id": "susdx-axis",
+      "symbol": "sUSDx",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 42053147.146288194
+    },
+    {
+      "id": "susn-noon",
+      "symbol": "sUSN",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 34032700.12936189
+    },
+    {
+      "id": "sxsrlusd-sentora",
+      "symbol": "sxsRLUSD",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 249985809.19335324
+    },
+    {
+      "id": "syrupusdc-maple",
+      "symbol": "syrupUSDC",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 1024726712.6716144
+    },
+    {
+      "id": "syrupusdg-maple",
+      "symbol": "syrupUSDG",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 208058056.08282852
+    },
+    {
+      "id": "syrupusdt-maple",
+      "symbol": "syrupUSDT",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 254727049.23200077
+    },
+    {
+      "id": "syusd-aegis",
+      "symbol": "sYUSD",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 11454932.475628868
+    },
+    {
+      "id": "syzusd-yuzu",
+      "symbol": "syzUSD",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 66873662.215221725
+    },
+    {
+      "id": "tgbp-tokenised",
+      "symbol": "tGBP",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 26386851.316620532
+    },
+    {
+      "id": "thusd-theo",
+      "symbol": "THUSD",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 132219678.35815558
+    },
+    {
+      "id": "trusd-tori",
+      "symbol": "trUSD",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 71940323.29565005
+    },
+    {
+      "id": "tryb-bilira",
+      "symbol": "TRYB",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 4607745.359444849
+    },
+    {
+      "id": "tusd-trueusd",
+      "symbol": "TUSD",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 483904140.2212499
+    },
+    {
+      "id": "u-united-stables",
+      "symbol": "U",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 1541167147.9836354
+    },
+    {
+      "id": "uktbl-spiko",
+      "symbol": "UKTBL",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 14159880.609703662
+    },
+    {
+      "id": "umint-ubs",
+      "symbol": "UMINT",
+      "grade": "F",
+      "score": 16,
+      "tier": "F",
+      "mcap": 12151739.914425999
+    },
+    {
+      "id": "usat-tether",
+      "symbol": "USAT",
+      "grade": "B+",
+      "score": 75,
+      "tier": "B",
+      "mcap": 183185879.54523084
+    },
+    {
+      "id": "usbd-bima",
+      "symbol": "USBD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 7507153.527626624
+    },
+    {
+      "id": "uscc-superstate",
+      "symbol": "USCC",
+      "grade": "F",
+      "score": 18,
+      "tier": "F",
+      "mcap": 127871564.45929231
+    },
+    {
+      "id": "usd0-usual",
+      "symbol": "USD0",
+      "grade": "C",
+      "score": 55,
+      "tier": "C",
+      "mcap": 542211668.5419302
+    },
+    {
+      "id": "usd1-world-liberty-financial",
+      "symbol": "USD1",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 4393230955.535794
+    },
+    {
+      "id": "usd3-3jane",
+      "symbol": "USD3",
+      "grade": "B+",
+      "score": 75,
+      "tier": "B",
+      "mcap": 100761145.71151887
+    },
+    {
+      "id": "usd3-reserve-protocol",
+      "symbol": "USD3",
+      "grade": "B+",
+      "score": 79,
+      "tier": "B",
+      "mcap": 1688538.5791516742
+    },
+    {
+      "id": "usda-alpha-partner",
+      "symbol": "USDA",
+      "grade": "F",
+      "score": 31,
+      "tier": "F",
+      "mcap": 78262839.52465723
+    },
+    {
+      "id": "usda-anzens",
+      "symbol": "USDA",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 4221460.434781459
+    },
+    {
+      "id": "usda-avalon",
+      "symbol": "USDA",
+      "grade": "F",
+      "score": 35,
+      "tier": "F",
+      "mcap": 145559789.88545725
+    },
+    {
+      "id": "usdaf-asymmetry",
+      "symbol": "USDaf",
+      "grade": "B-",
+      "score": 69,
+      "tier": "B",
+      "mcap": 245870.06549366846
+    },
+    {
+      "id": "usdai-usd-ai",
+      "symbol": "USDai",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 344037295.30952716
+    },
+    {
+      "id": "usdat-saturn",
+      "symbol": "USDAT",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 94123363.3938408
+    },
+    {
+      "id": "usdb-blast",
+      "symbol": "USDB",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 10490431.776429884
+    },
+    {
+      "id": "usdc-circle",
+      "symbol": "USDC",
+      "grade": "A+",
+      "score": 89,
+      "tier": "A",
+      "mcap": 73710970794.97316
+    },
+    {
+      "id": "usdcv-societe-generale-forge",
+      "symbol": "USDCV",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 12546181
+    },
+    {
+      "id": "usdcx-movement",
+      "symbol": "USDCx",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 636980.4079702973
+    },
+    {
+      "id": "usdd-tron-dao-reserve",
+      "symbol": "USDD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 1575410692.2713633
+    },
+    {
+      "id": "usde-ethena",
+      "symbol": "USDe",
+      "grade": "C+",
+      "score": 62,
+      "tier": "C",
+      "mcap": 4861486093.475763
+    },
+    {
+      "id": "usdf-astherus",
+      "symbol": "USDF",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 111232918.01325664
+    },
+    {
+      "id": "usdf-falcon",
+      "symbol": "USDf",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 1654502310.9846797
+    },
+    {
+      "id": "usdfc-secured-finance",
+      "symbol": "USDFC",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 209695.51855383153
+    },
+    {
+      "id": "usdfr-forest-road",
+      "symbol": "USDfr",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 5399065.924063529
+    },
+    {
+      "id": "usdg-paxos",
+      "symbol": "USDG",
+      "grade": "B",
+      "score": 72,
+      "tier": "B",
+      "mcap": 3108559752.83797
+    },
+    {
+      "id": "usdglo-glo",
+      "symbol": "USDGLO",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 1018076.8534421495
+    },
+    {
+      "id": "usdgo-osl",
+      "symbol": "USDGO",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 1303649659.8586323
+    },
+    {
+      "id": "usdh-hermetica",
+      "symbol": "USDH",
+      "grade": "D",
+      "score": 40,
+      "tier": "D",
+      "mcap": 1983798.96495971
+    },
+    {
+      "id": "usdh-hubble",
+      "symbol": "USDH",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 1122395.490705333
+    },
+    {
+      "id": "usdk-kast",
+      "symbol": "USDK",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 23939622.844939
+    },
+    {
+      "id": "usdkg-gold-dollar",
+      "symbol": "USDKG",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 50000000
+    },
+    {
+      "id": "usdm-mega",
+      "symbol": "USDM",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 16796288.42157073
+    },
+    {
+      "id": "usdm-moneta",
+      "symbol": "USDM",
+      "grade": "F",
+      "score": 33,
+      "tier": "F",
+      "mcap": 13552363.125457138
+    },
+    {
+      "id": "usdn-noble",
+      "symbol": "USDN",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 1502817.709835
+    },
+    {
+      "id": "usdn-smardex",
+      "symbol": "USDN",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 805742.5352399475
+    },
+    {
+      "id": "usdnr-nerona",
+      "symbol": "USDnr",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 1497653.3037142751
+    },
+    {
+      "id": "usdo-openeden",
+      "symbol": "USDO",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 14514431.347124819
+    },
+    {
+      "id": "usdon-ondo",
+      "symbol": "USDon",
+      "grade": "C",
+      "score": 55,
+      "tier": "C",
+      "mcap": 65034756.44742989
+    },
+    {
+      "id": "usdp-parallel",
+      "symbol": "USDp",
+      "grade": "C+",
+      "score": 63,
+      "tier": "C",
+      "mcap": 745665.0213285759
+    },
+    {
+      "id": "usdp-paxos",
+      "symbol": "USDP",
+      "grade": "B-",
+      "score": 65,
+      "tier": "B",
+      "mcap": 25946910.361684345
+    },
+    {
+      "id": "usdpt-western-union",
+      "symbol": "USDPT",
+      "grade": "C+",
+      "score": 61,
+      "tier": "C",
+      "mcap": 17976743.28018102
+    },
+    {
+      "id": "usdq-quantoz",
+      "symbol": "USDQ",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 8089815.796226
+    },
+    {
+      "id": "usdq-quill",
+      "symbol": "USDQ",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 117290.89839452125
+    },
+    {
+      "id": "usdr-ring",
+      "symbol": "USDR",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 401708.7532424641
+    },
+    {
+      "id": "usdr-rise",
+      "symbol": "USDR",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 4179503.766355257
+    },
+    {
+      "id": "usdrif-rif",
+      "symbol": "USDRIF",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 2168677.9390369314
+    },
+    {
+      "id": "usds-sky",
+      "symbol": "USDS",
+      "grade": "B",
+      "score": 71,
+      "tier": "B",
+      "mcap": 7114110733.356234
+    },
+    {
+      "id": "usdsc-startale",
+      "symbol": "USDSC",
+      "grade": "C-",
+      "score": 54,
+      "tier": "C",
+      "mcap": 4470154.340657943
+    },
+    {
+      "id": "usdso-somnia",
+      "symbol": "USDso",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 3665106.731008212
+    },
+    {
+      "id": "usdsui-sui",
+      "symbol": "USDSUI",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 80061412.13022348
+    },
+    {
+      "id": "usdt-tether",
+      "symbol": "USDT",
+      "grade": "B-",
+      "score": 69,
+      "tier": "B",
+      "mcap": 184259846638.7077
+    },
+    {
+      "id": "usdtb-ethena",
+      "symbol": "USDTB",
+      "grade": "B",
+      "score": 73,
+      "tier": "B",
+      "mcap": 499351941.20803285
+    },
+    {
+      "id": "usdu-unitas",
+      "symbol": "USDU",
+      "grade": "C-",
+      "score": 53,
+      "tier": "C",
+      "mcap": 52537920.972785816
+    },
+    {
+      "id": "usdu-universal",
+      "symbol": "USDU",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 30759928.73
+    },
+    {
+      "id": "usdu-usdu-finance",
+      "symbol": "USDU",
+      "grade": "C-",
+      "score": 51,
+      "tier": "C",
+      "mcap": 257532.71491015735
+    },
+    {
+      "id": "usdv-solomon",
+      "symbol": "USDV",
+      "grade": "F",
+      "score": 34,
+      "tier": "F",
+      "mcap": 1514736.240837068
+    },
+    {
+      "id": "usdx-axis",
+      "symbol": "USDx",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 63630769.4050136
+    },
+    {
+      "id": "usdx-hex-trust",
+      "symbol": "USDX",
+      "grade": "F",
+      "score": 27,
+      "tier": "F",
+      "mcap": 21860312.65997068
+    },
+    {
+      "id": "usdx-kava",
+      "symbol": "USDX",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 9943280
+    },
+    {
+      "id": "usdxl-last",
+      "symbol": "USDXL",
+      "grade": "F",
+      "score": 33,
+      "tier": "F",
+      "mcap": 112217.88815813833
+    },
+    {
+      "id": "usdz-anzen",
+      "symbol": "USDz",
+      "grade": "F",
+      "score": 34,
+      "tier": "F",
+      "mcap": 7734144.7303040465
+    },
+    {
+      "id": "usg-tangent",
+      "symbol": "USG",
+      "grade": "D",
+      "score": 42,
+      "tier": "D",
+      "mcap": 3762104.149329011
+    },
+    {
+      "id": "usn-noon",
+      "symbol": "USN",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 36773932.08628481
+    },
+    {
+      "id": "usp-pikudao",
+      "symbol": "USP",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 5017773.439123772
+    },
+    {
+      "id": "ussd-sonic-labs",
+      "symbol": "USSD",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 972047.2727021009
+    },
+    {
+      "id": "ustb-superstate",
+      "symbol": "USTB",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 796905387.167051
+    },
+    {
+      "id": "ustbl-spiko",
+      "symbol": "USTBL",
+      "grade": "C-",
+      "score": 52,
+      "tier": "C",
+      "mcap": 166376148.26935568
+    },
+    {
+      "id": "usx-solstice",
+      "symbol": "USX",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 211805001.7410244
+    },
+    {
+      "id": "usyc-hashnote",
+      "symbol": "USYC",
+      "grade": "C+",
+      "score": 61,
+      "tier": "C",
+      "mcap": 2402473796.5451894
+    },
+    {
+      "id": "uty-xsy",
+      "symbol": "UTY",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 20981410.5591686
+    },
+    {
+      "id": "uusd-anything-labs",
+      "symbol": "UUSD",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 41429133.050231315
+    },
+    {
+      "id": "uusd-youves",
+      "symbol": "UUSD",
+      "grade": "F",
+      "score": 29,
+      "tier": "F",
+      "mcap": 1074778.7541543473
+    },
+    {
+      "id": "vbill-vaneck",
+      "symbol": "VBILL",
+      "grade": "D",
+      "score": 48,
+      "tier": "D",
+      "mcap": 59085879.76965499
+    },
+    {
+      "id": "vchf-vnx",
+      "symbol": "VCHF",
+      "grade": "D",
+      "score": 41,
+      "tier": "D",
+      "mcap": 2560420.0091736587
+    },
+    {
+      "id": "vcred-vcred",
+      "symbol": "VCRED",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 12600000
+    },
+    {
+      "id": "wbrl-ripio",
+      "symbol": "WBRL",
+      "grade": "F",
+      "score": 38,
+      "tier": "F",
+      "mcap": 1681300.6532788991
+    },
+    {
+      "id": "wclp-ripio",
+      "symbol": "WCLP",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 69848.8854055134
+    },
+    {
+      "id": "wcop-ripio",
+      "symbol": "WCOP",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 417303.70483845816
+    },
+    {
+      "id": "weusd-picwe",
+      "symbol": "WEUSD",
+      "grade": "F",
+      "score": 35,
+      "tier": "F",
+      "mcap": 490369.79984
+    },
+    {
+      "id": "witry-brix",
+      "symbol": "wiTRY",
+      "grade": "D",
+      "score": 46,
+      "tier": "D",
+      "mcap": 6526209.615314863
+    },
+    {
+      "id": "wm-m0",
+      "symbol": "wM",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 81426443.4402
+    },
+    {
+      "id": "wmxn-ripio",
+      "symbol": "WMXN",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 478390.62699755584
+    },
+    {
+      "id": "wpen-ripio",
+      "symbol": "WPEN",
+      "grade": "F",
+      "score": 32,
+      "tier": "F",
+      "mcap": 42887.012599073474
+    },
+    {
+      "id": "wsrusd-reservoir",
+      "symbol": "wsrUSD",
+      "grade": "D",
+      "score": 43,
+      "tier": "D",
+      "mcap": 113429580.80339465
+    },
+    {
+      "id": "wusd-worldwide",
+      "symbol": "WUSD",
+      "grade": "F",
+      "score": 37,
+      "tier": "F",
+      "mcap": 599283.6509050614
+    },
+    {
+      "id": "xaum-matrixdock",
+      "symbol": "XAUm",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 68697212.72502175
+    },
+    {
+      "id": "xdai-gnosis",
+      "symbol": "xDAI",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 44930969.026068784
+    },
+    {
+      "id": "xgz-goldzip",
+      "symbol": "XGZ",
+      "grade": "F",
+      "score": 16,
+      "tier": "F",
+      "mcap": 5180180.668916263
+    },
+    {
+      "id": "xmd-metal-dollar",
+      "symbol": "XMD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 826234.3624581154
+    },
+    {
+      "id": "xo-exodus",
+      "symbol": "XO",
+      "grade": "D",
+      "score": 47,
+      "tier": "D",
+      "mcap": 6521014.812675
+    },
+    {
+      "id": "xofm-mento",
+      "symbol": "XOFm",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 9163.310004265468
+    },
+    {
+      "id": "xsgd-straitsx",
+      "symbol": "XSGD",
+      "grade": "A-",
+      "score": 82,
+      "tier": "A",
+      "mcap": 12941212.524452748
+    },
+    {
+      "id": "xusd-babelfish",
+      "symbol": "XUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 1914775.8756756508
+    },
+    {
+      "id": "xusd-straitsx",
+      "symbol": "XUSD",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 41131500.25483151
+    },
+    {
+      "id": "ybold-yearn",
+      "symbol": "yBOLD",
+      "grade": "C+",
+      "score": 64,
+      "tier": "C",
+      "mcap": 6876422.089473675
+    },
+    {
+      "id": "ylds-figure",
+      "symbol": "YLDS",
+      "grade": "C-",
+      "score": 50,
+      "tier": "C",
+      "mcap": 499999117.93316025
+    },
+    {
+      "id": "yousd-yield-optimizer",
+      "symbol": "yoUSD",
+      "grade": "B+",
+      "score": 76,
+      "tier": "B",
+      "mcap": 7930558.609069135
+    },
+    {
+      "id": "yusd-aegis",
+      "symbol": "YUSD",
+      "grade": "C",
+      "score": 56,
+      "tier": "C",
+      "mcap": 34359499.13908307
+    },
+    {
+      "id": "yusd-yieldfi",
+      "symbol": "YUSD",
+      "grade": "F",
+      "score": 39,
+      "tier": "F",
+      "mcap": 10860095.603891123
+    },
+    {
+      "id": "yvusdc-yearn",
+      "symbol": "yvUSDC-1",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 19308303.12352744
+    },
+    {
+      "id": "yzusd-yuzu",
+      "symbol": "YZUSD",
+      "grade": "C",
+      "score": 59,
+      "tier": "C",
+      "mcap": 59018765.63980646
+    },
+    {
+      "id": "zarm-mento",
+      "symbol": "ZARm",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 667.5741822763848
+    },
+    {
+      "id": "zarp-zarp",
+      "symbol": "ZARP",
+      "grade": "D",
+      "score": 49,
+      "tier": "D",
+      "mcap": 4444725.970819812
+    },
+    {
+      "id": "zarsc-supercoin",
+      "symbol": "ZARsc",
+      "grade": "D",
+      "score": 44,
+      "tier": "D",
+      "mcap": 452522.9042858862
+    },
+    {
+      "id": "zaru-blocktower",
+      "symbol": "ZARU",
+      "grade": "D",
+      "score": 45,
+      "tier": "D",
+      "mcap": 3615698.947933107
+    },
+    {
+      "id": "zchf-frankencoin",
+      "symbol": "ZCHF",
+      "grade": "B+",
+      "score": 77,
+      "tier": "B",
+      "mcap": 42053619.861172296
+    },
+    {
+      "id": "zeusd-zoth",
+      "symbol": "ZeUSD",
+      "grade": "F",
+      "score": 17,
+      "tier": "F",
+      "mcap": 27590272.304864738
+    },
+    {
+      "id": "zkusd-goal3",
+      "symbol": "zkUSD",
+      "grade": "F",
+      "score": 15,
+      "tier": "F",
+      "mcap": 1176725.374890188
+    },
+    {
+      "id": "zsd-zephyr-protocol",
+      "symbol": "ZSD",
+      "grade": "C",
+      "score": 58,
+      "tier": "C",
+      "mcap": 385624.0768847935
+    },
+    {
+      "id": "zys-zephyr-protocol",
+      "symbol": "ZYS",
+      "grade": "C",
+      "score": 55,
+      "tier": "C",
+      "mcap": 321721.75911631325
+    }
+  ]
+}
