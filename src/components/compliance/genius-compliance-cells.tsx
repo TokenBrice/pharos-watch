@@ -5,7 +5,7 @@ import {
   GENIUS_FOREIGN_EXCEPTION_STATUS_LABELS,
   GENIUS_ISSUER_PATHWAY_LABELS,
 } from "@shared/lib/genius";
-import type { ComplianceRow } from "@/lib/compliance-model";
+import type { ComplianceRow, GeniusComplianceEvidence } from "@/lib/compliance-model";
 import { ComplianceStatusBadge, EmptyCell } from "./compliance-row-primitives";
 
 type GeniusComplianceRow = Extract<ComplianceRow, { regime: "genius" }>;
@@ -85,7 +85,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
   );
 }
 
-export function GeniusReviewDetails({ row }: { row: GeniusComplianceRow }) {
+export function GeniusReviewDetails({ evidence: row }: { evidence: GeniusComplianceEvidence }) {
   return (
     <div className="min-w-0 space-y-2 text-xs text-muted-foreground">
       <p className="pharos-kicker">Review Details</p>
