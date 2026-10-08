@@ -53,7 +53,7 @@ import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-anal
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  isTelegramRecapAvailableToChat,
+  isTelegramRecapAvailable,
   type TelegramRecapRolloutPolicy,
 } from "@shared/lib/telegram-recap-rollout";
 
@@ -500,7 +500,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
 
     if (
       parsed.operation.kind === "set-recap" &&
-      !isTelegramRecapAvailableToChat(recapRollout, auth.userId)
+      !isTelegramRecapAvailable(recapRollout)
     ) {
       return miniAppError(404, "recap-unavailable", "Daily recap is not available for this chat");
     }

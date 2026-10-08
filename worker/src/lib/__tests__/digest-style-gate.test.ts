@@ -34,4 +34,10 @@ describe("digest style gate mode resolution", () => {
     await expect(resolveDigestStyleGateMode(db, "daily")).resolves.toBe("enforce");
     await expect(resolveDigestStyleGateMode(db, "weekly")).resolves.toBe("shadow");
   });
+
+  it.each(["daily", "weekly"] as const)("propagates a %s D1 read failure rather than defaulting to shadow", async (kind) => {
+    const error = new Error("D1 read failed");
+    const db = mockD1([{ ...modeTable(kind, null), throwError: error }]);
+    await expect(resolveDigestStyleGateMode(db, kind)).rejects.toThrow(error);
+  });
 });

@@ -4,7 +4,7 @@ import type { WebhookCommandContext } from "../webhook-commands/context";
 import { handleRecapCallback } from "../webhook-callbacks/recap";
 import type { CallbackContext } from "../webhook-callbacks/_shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import { resolveTelegramRecapRolloutPolicy, type TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 function commandContext(policy: TelegramRecapRolloutPolicy): WebhookCommandContext {
   return {
@@ -39,11 +39,9 @@ function callbackContext(policy: TelegramRecapRolloutPolicy): CallbackContext {
   };
 }
 
-const deniedPolicies: readonly TelegramRecapRolloutPolicy[] = [
-  { mode: "off", allowedChatIds: new Set() },
-  { mode: "dark", allowedChatIds: new Set() },
-  { mode: "canary", allowedChatIds: new Set(["0042"]) },
-];
+const deniedPolicies = [undefined, "off", "dark", "canary", "invalid"].map((mode) =>
+  resolveTelegramRecapRolloutPolicy({ TELEGRAM_RECAP_ROLLOUT_MODE: mode }),
+);
 
 describe("Telegram recap rollout ingress gates", () => {
   it.each(deniedPolicies)("denies /recap before preference reads in %s mode", async (policy) => {
@@ -64,18 +62,14 @@ describe("Telegram recap rollout ingress gates", () => {
     expect((ctx.db as ReturnType<typeof mockD1>).getHistory()).toHaveLength(0);
   });
 
-  it("allows exact canary IDs and public users through both ingress gates", async () => {
-    for (const policy of [
-      { mode: "canary" as const, allowedChatIds: new Set(["42"]) },
-      { mode: "public" as const, allowedChatIds: new Set<string>() },
-    ]) {
-      const command = commandContext(policy);
-      await handleRecap(command, "invalid");
-      expect(command.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
+  it("allows public users through both ingress gates", async () => {
+    const policy = resolveTelegramRecapRolloutPolicy({ TELEGRAM_RECAP_ROLLOUT_MODE: "public" });
+    const command = commandContext(policy);
+    await handleRecap(command, "invalid");
+    expect(command.replyToChat).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
 
-      const callback = callbackContext(policy);
-      await handleRecapCallback(callback);
-      expect(callback.answerCallback).toHaveBeenCalledWith({ text: "Action not recognized." });
-    }
+    const callback = callbackContext(policy);
+    await handleRecapCallback(callback);
+    expect(callback.answerCallback).toHaveBeenCalledWith({ text: "Action not recognized." });
   });
 });

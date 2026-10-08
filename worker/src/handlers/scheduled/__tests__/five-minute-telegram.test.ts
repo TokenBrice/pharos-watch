@@ -117,22 +117,17 @@ describe("runFiveMinuteTelegramSlot", () => {
     expect(summary.jobs.filter((job) => job.job === "telegram-personalized-recap-planner")).toHaveLength(1);
   });
 
-  it("runs dark recap projection without a bot token and does not report a token skip", async () => {
-    const runtime = buildRuntime(undefined, "dark");
-
+  it.each(["dark", "canary", "malformed"])("fails retired/invalid mode %s to off even without a bot token", async (mode) => {
+    const runtime = buildRuntime(undefined, mode);
     await runFiveMinuteTelegramSlot(runtime);
-
-    expect(planTelegramPersonalizedRecaps).toHaveBeenCalledWith(
-      runtime.db,
-      expect.any(AbortSignal),
-      expect.objectContaining({ rolloutPolicy: expect.objectContaining({ mode: "dark" }) }),
+    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
+      runtime.db, expect.objectContaining({ mode: "off" }), 0,
     );
-    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
-      "dispatch-telegram-alerts",
-    ]);
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual(["dispatch-telegram-alerts"]);
   });
 
-  it.each(["off", "canary"])(
+  it.each(["off", "dark", "canary"])(
     "cleans queued recaps before pending dispatch in %s mode",
     async (mode) => {
       const order: string[] = [];

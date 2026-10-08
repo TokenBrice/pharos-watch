@@ -329,14 +329,6 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Signed Telegram initData and current request fields are authoritative; this only suppresses duplicate logs.",
   },
   {
-    sourcePath: "worker/src/cron/dispatch-telegram-alerts.ts",
-    stateNames: ["COUNTED_STATEMENT_ORIGINALS"],
-    owner: "Telegram planning rows-written attribution",
-    kind: "cache",
-    resetOrTtl: "WeakMap keyed by counted prepared statements; entries live only while a batch holds the statement and reset with the isolate.",
-    durableTruth: "D1 meta.rows_written on each executed statement is authoritative; the map only pairs counted wrappers with their originals for batch attribution.",
-  },
-  {
     sourcePath: "worker/src/lib/authoritative-price-sources/mento-broker.ts",
     stateNames: ["validatedHeads"],
     owner: "Mento Broker Celo head reuse",

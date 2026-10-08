@@ -60,7 +60,7 @@ import {
 } from "../../lib/telegram/digest-outbox";
 import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { DIGEST_MODEL } from "../../lib/constants";
+import { ANTHROPIC_TIMEOUT_MS, DIGEST_MODEL } from "../../lib/constants";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
 import {
   digestSafetyContextFromPersistedInput,
@@ -427,6 +427,52 @@ describe("generateWeeklyRecap", () => {
     });
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       channels: { telegram: { status: "skipped: quality-gate", disposition: "terminal-unsent" } },
+    });
+  });
+
+  it("publishes weekly hard style copy only after a successful bounded correction", async () => {
+    const db = mockD1(makeTables({ styleGateModes: { daily: "shadow", weekly: "enforce" } }));
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(weeklyClaudeResponse({ text: "USDT held — watch next week." }))
+      .mockResolvedValueOnce(weeklyClaudeResponse());
+    await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
+      editorialStyleGate: { firstPassWouldBlock: true, retry: { attempted: true, outcome: "resolved" } },
+    });
+  });
+
+  it("does not retry weekly advisory style findings under enforce", async () => {
+    const db = mockD1(makeTables({ styleGateModes: { daily: "shadow", weekly: "enforce" } }));
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(weeklyClaudeResponse({ text: "The plumbing flinched while USDT held near peg." }));
+    await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({ editorialStyleGate: { firstPassWouldBlock: false } });
+  });
+
+  it.each(["time", "token"] as const)("blocks weekly hard style copy without channel effects when the %s budget is spent", async (budget) => {
+    const db = mockD1(makeTables({ styleGateModes: { daily: "shadow", weekly: "enforce" } }));
+    vi.mocked(fetchWithRetry).mockImplementationOnce(async () => {
+      if (budget === "time") vi.setSystemTime(new Date(Date.now() + ANTHROPIC_TIMEOUT_MS * 0.5 + 30_000));
+      const response = weeklyClaudeResponse({ text: "USDT held — watch next week." });
+      if (budget === "time") return response;
+      return new Response((await response.text()).replace('"output_tokens":400', '"output_tokens":17000'), {
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    });
+    await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
+      qualityGate: "blocked",
+      editorialStyleGate: { retry: { eligible: false, attempted: false, outcome: `skipped-${budget}-budget` } },
     });
   });
 

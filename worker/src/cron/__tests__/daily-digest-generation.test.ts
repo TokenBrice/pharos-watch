@@ -97,6 +97,52 @@ describe("generateDailyDigest publication contract", () => {
     const blocked = await invoke(enforceDb); expect(blocked.status).toBe("degraded"); expect(fetchWithRetry).toHaveBeenCalledTimes(2); expect(postDigestTweet).not.toHaveBeenCalled(); expect(bindJson(enforceDb, 5)).toMatchObject({ qualityGate: "blocked", styleGateMode: "enforce", editorialStyleGate: { retry: { attempted: true, outcome: "unresolved" } } });
   });
 
+  it("publishes hard style copy only after one successful correction", async () => {
+    const db = makeDailyDigestScenario({ db: { prependTables: styleGateModeTables({ daily: "enforce", weekly: "shadow" }) } }).db;
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(makeStreamResponse(withClauseDash(ANTHROPIC_OK_TEXT)))
+      .mockResolvedValueOnce(makeStreamResponse(ANTHROPIC_OK_TEXT));
+    expect((await invoke(db)).itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(bindJson(db, 5)).toMatchObject({
+      editorialStyleGate: { firstPassWouldBlock: true, retry: { attempted: true, outcome: "resolved" } },
+    });
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+    expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry advisory style findings in enforce mode", async () => {
+    const db = makeDailyDigestScenario({ db: { prependTables: styleGateModeTables({ daily: "enforce", weekly: "shadow" }) } }).db;
+    const advisory = JSON.parse(ANTHROPIC_OK_TEXT);
+    advisory.text = "The plumbing flinched while USDT held near peg.";
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(makeStreamResponse(JSON.stringify(advisory)));
+    expect((await invoke(db)).itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(bindJson(db, 5)).toMatchObject({ editorialStyleGate: { firstPassWouldBlock: false } });
+    expect(postDigestTweet).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["time", "token"] as const)("holds unresolved enforced style copy when the %s budget prevents correction", async (budget) => {
+    const db = makeDailyDigestScenario({ db: { prependTables: styleGateModeTables({ daily: "enforce", weekly: "shadow" }) } }).db;
+    vi.mocked(fetchWithRetry).mockImplementationOnce(async () => {
+      if (budget === "time") vi.setSystemTime(new Date(Date.now() + ANTHROPIC_TIMEOUT_MS * 0.5 + 30_000));
+      const response = makeStreamResponse(withClauseDash(ANTHROPIC_OK_TEXT));
+      if (budget === "time") return response;
+      return new Response((await response.text()).replace('"output_tokens":500', '"output_tokens":17000'), {
+        headers: { "Content-Type": "text/event-stream" },
+      });
+    });
+    expect((await invoke(db)).status).toBe("degraded");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(bindJson(db, 5)).toMatchObject({
+      qualityGate: "blocked",
+      editorialStyleGate: { firstPassWouldBlock: true, retry: { eligible: false, attempted: false, outcome: `skipped-${budget}-budget` } },
+    });
+    expect(postDigestTweet).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
   it("retries a bound numeric contradiction once and holds the unrepaired edition", async () => {
     const contradictory = JSON.stringify({
       ...JSON.parse(ANTHROPIC_OK_TEXT),

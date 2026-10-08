@@ -219,7 +219,7 @@ function buildTelegramSlotGroups(
       },
     });
   }
-  const shouldRunRecap = recapRollout.mode === "off" || recapRollout.mode === "dark" || Boolean(botToken);
+  const shouldRunRecap = recapRollout.mode === "off" || Boolean(botToken);
   if (shouldRunRecap) {
     tasks.push({
       job: "telegram-personalized-recap-planner",
@@ -237,7 +237,7 @@ function buildTelegramSlotGroups(
             }),
           };
         }
-        if (!botToken && recapRollout.mode !== "dark") {
+        if (!botToken) {
           return {
             status: "skipped_neutral" as const,
             metadata: JSON.stringify({
@@ -362,7 +362,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
   const reconciliationStartedMs = Date.now();
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
-    const recapRequiresBotToken = recapRollout.mode === "canary" || recapRollout.mode === "public";
+    const recapRequiresBotToken = recapRollout.mode === "public";
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
     const skippedJobs = [
       {
