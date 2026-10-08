@@ -236,7 +236,9 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
 }
 
 export function buildAltPegTrendStats(points?: readonly NonUsdSharePoint[]): AltPegTrendStats | null {
-  if (!Array.isArray(points) || points.length === 0) return null;
+  // Keep the runtime array check without widening the readonly element type.
+  const isArray = Boolean(Array.isArray(points));
+  if (!isArray || !points || points.length === 0) return null;
 
   const latest = points[points.length - 1];
   if (!latest) return null;

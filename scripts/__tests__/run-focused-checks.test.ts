@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { SpawnCommand } from "../lib/command-runner.mts";
+import * as changeContract from "../ci/pharos-change-contract.ts";
 
 import {
   buildFocusedCheckPlan,
@@ -119,20 +120,76 @@ describe("focused checks", () => {
     expect(runCommandImpl).not.toHaveBeenCalled();
   });
 
-  it("rejects an unmatched explicit path even when another path has checks", async () => {
+  it.each([false, true])("reports incomplete routing before any checks (planOnly=%s)", async (planOnly) => {
     const runCommandImpl = vi.fn();
+    const stdout = writer();
     const warning = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
       await expect(runFocusedChecks({
-        argv: ["--file", "src/app/page.tsx", "--file", "__unmapped__/planned.ts"],
+        argv: ["--file", "src/app/page.tsx", "--file", "worker/new-runtime/producer.ts", "--json", ...(planOnly ? ["--plan-only"] : [])],
         runCommandImpl,
-        stdout: writer(),
+        stdout,
         stderr: writer(),
-      })).rejects.toThrow("No ownership mapping for explicit path(s): __unmapped__/planned.ts");
+      })).resolves.toBe(1);
+      expect(JSON.parse(stdout.output())).toMatchObject({
+        status: "routing-incomplete",
+        unmappedPaths: ["worker/new-runtime/producer.ts"],
+        planOnly,
+        lanes: expect.arrayContaining([expect.objectContaining({ status: "skipped" })]),
+      });
       expect(runCommandImpl).not.toHaveBeenCalled();
     } finally {
       warning.mockRestore();
     }
+  });
+
+  it.each([
+    ["--staged"], ["--staged", "--plan-only"],
+    ["--base", "frozen-base"], ["--base", "frozen-base", "--plan-only"],
+    [], ["--plan-only"],
+  ])("fails closed for unmapped Git-selected paths with %j", async (...selection) => {
+    const readChangedFiles = vi.spyOn(changeContract, "readChangedFiles").mockReturnValue(["worker/new-runtime/producer.ts"]);
+    const runCommandImpl = vi.fn();
+    const stdout = writer();
+    try {
+      expect(await runFocusedChecks({
+        argv: [...selection, "--json"], runCommandImpl, stdout, stderr: writer(),
+      })).toBe(1);
+      expect(JSON.parse(stdout.output())).toMatchObject({
+        status: "routing-incomplete", unmappedPaths: ["worker/new-runtime/producer.ts"],
+      });
+      expect(runCommandImpl).not.toHaveBeenCalled();
+    } finally {
+      readChangedFiles.mockRestore();
+    }
+  });
+
+  it.each([false, true])("distinguishes mapped no-check plans from verification (planOnly=%s)", async (planOnly) => {
+    const stdout = writer();
+    const runCommandImpl = vi.fn();
+    expect(await runFocusedChecks({
+      argv: ["--file", "docs/testing.md", "--json", ...(planOnly ? ["--plan-only"] : [])],
+      runCommandImpl, stdout, stderr: writer(),
+    })).toBe(0);
+    expect(JSON.parse(stdout.output())).toMatchObject({
+      status: "intentional-no-check", unmappedPaths: [], checks: [], planOnly,
+    });
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it("gives generic Worker and shared runtime changes baseline compiler and lint obligations", () => {
+    const worker = "worker/src/lib/safe-error-message.ts";
+    expect(buildFocusedCheckPlan([worker]).checks.map((check) => check.command)).toEqual(expect.arrayContaining([
+      `npm run lint:changed -- --file ${worker}`, "npm run typecheck:worker",
+    ]));
+    expect(buildFocusedCheckPlan(["shared/lib/format.ts"]).checks.map((check) => check.command)).toEqual(expect.arrayContaining([
+      "npm run lint:changed -- --file shared/lib/format.ts", "npm run typecheck", "npm run typecheck:worker",
+    ]));
+  });
+
+  it("exposes unmapped production inputs in all selection plans", () => {
+    expect(buildFocusedCheckPlan(["worker/new-runtime/producer.ts"]).classification.unmappedPaths)
+      .toEqual(["worker/new-runtime/producer.ts"]);
   });
 
   it("uses the collapsed frontend defaults for an unclassified source path", () => {
@@ -252,6 +309,43 @@ describe("focused checks", () => {
 });
 
 describe("sensitive selection boundaries", () => {
+  it.each([
+    {
+      run: "37733701624",
+      files: [
+        "docs/report-cards.md",
+        "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
+        "worker/src/lib/__tests__/safety-score-v9-capture.test.ts",
+        "worker/src/lib/__tests__/safety-score-v9-redemption-reserve-quarantine.test.ts",
+        "worker/src/lib/safety-score-v9/capture.ts",
+        "worker/src/lib/safety-score-v9/fact-set-exit.ts",
+        "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
+      ],
+    },
+    {
+      run: "37727521161",
+      files: [
+        "worker/src/lib/__tests__/redemption-exit-route-observations.test.ts",
+        "worker/src/lib/redemption-exit-route-observations.ts",
+      ],
+    },
+  ])("includes lint, Worker compilation, and evaluation identity for historical run $run", ({ files, run }) => {
+    const plan = buildFocusedCheckPlan(files);
+    const commands = plan.checks.map((check) => check.command);
+    expect(plan.classification.unmappedPaths, run).toEqual([]);
+    expect(commands, run).toContain("npm run typecheck:worker");
+    expect(plan.checks.find((check) => check.argv?.includes("lint:changed"))?.argv, run)
+      .toEqual(["npm", "run", "lint:changed", "--", ...files.filter((file) => file.endsWith(".ts")).sort().flatMap((file) => ["--file", file])]);
+    expect(commands.some((command) => command.startsWith("npm run check:generated-artifacts -- --only=")
+      && command.split("--only=")[1].split(",").includes("safety-score-v9-evaluation-build")), run).toBe(true);
+    if (run === "37733701624") {
+      expect(commands).toEqual(expect.arrayContaining([
+        "npm run check:doc-sync", "npm run audit:mint-authority-review",
+        "npx vitest run shared/lib/safety-score-v9 worker/src/lib",
+      ]));
+    }
+  });
+
   it.each([
     ["worker/src/cron/reserve-adapters/3jane-usd3.ts"],
     ["worker/src/cron/sync-yield-data.ts"],

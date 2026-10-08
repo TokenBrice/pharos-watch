@@ -127,7 +127,7 @@ export class RedemptionBackstopSnapshotUnavailableError extends Error {
 }
 
 function pickStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) return undefined;
+  if (!Array.isArray(value) || !value.every((item: unknown): item is string => typeof item === "string")) return undefined;
   return value;
 }
 

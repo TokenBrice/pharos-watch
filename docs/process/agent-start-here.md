@@ -24,7 +24,7 @@ Use native read, grep, glob, and edit tools first. Use Bash for real commands. I
 
 ## 2. Route A Task
 
-The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ownership.json). Its `mappings` array is the only authored source-to-document model; the registry loader derives the runtime path-family projection from it. Each mapping declares an id, label, risk, source globs, exact docs, and optional background references, scoped context, rules, and hints. A document reference is either a path string or `{ "path": "...", "anchor": "..." }`; long documents use verified heading anchors. Retained high-risk mappings carry focused checks; the generic frontend route carries short defaults, while the generic worker-runtime, shared-runtime, and low-risk documentation routes intentionally declare no checks and rely on the adaptive runner's path-derived checks.
+The machine-readable routing source of truth is [`doc-ownership.json`](../doc-ownership.json). Its `mappings` array is the only authored source-to-document model; the registry loader derives the runtime path-family projection from it. Each mapping declares an id, label, risk, source globs, exact docs, and optional background references, scoped context, rules, checks, `testOwnership`, and hints. A document reference is either a path string or `{ "path": "...", "anchor": "..." }`; long documents use verified heading anchors. Generic Worker/shared routes and sensitive owners carry baseline typing, lint, and generated-artifact obligations. `testOwnership` adds explicit suites for contracts invisible to the import graph, such as closure inventories and capture schemas; consult the live mapping rather than inferring ownership from imports alone.
 
 The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--file` input accepts repository-relative paths, `./` paths, absolute paths under the repository, and absolute paths under the current linked worktree; separators are normalized before routing. A missing explicit path is routed as a planned new file with a warning; add repeatable `--new-file` to suppress those warnings for the invocation. Selection precedence is `--file` > `--staged` > `--base-ref`/`--head-ref` flags > `PHAROS_CHANGE_CONTRACT_*_REF` environment range > working tree.
 
@@ -51,6 +51,8 @@ Then:
 ### When Routing Misses
 
 A path with no matching mapping emits a `Missing documentation owner` warning, including planned paths passed with `--new-file`; that flag suppresses only the filesystem-existence warning. A generic runtime match is context, not proof that every domain contract was found. For stale producer output, use the [symptom selector](../README.md#stale-output-diagnosis) and the routed observation background rather than treating scheduling guidance as an incident runbook.
+
+An unmapped production path makes `check:focused` fail with machine-readable `routing-incomplete`, including in plan-only mode. A zero-plan is not verification. A mapped deliberate no-check plan is reported separately as `intentional-no-check`; neither focused result is final readiness proof. Missing declared `testOwnership` tests separately fail PR executable-test validation.
 
 Search by source path or product term:
 
@@ -79,7 +81,11 @@ Do not create a branch, worktree, or pull request unless requested. Do not expos
 
 ## 6. Verification
 
-Choose the smallest adequate checks from [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-check-per-area). Preserve nearby formatting because the repository has no canonical formatter, and finish with `git diff --check`. For larger committed batches, use `npm run check:pr -- --base=<ref>`; GitHub Actions remains the authoritative release gate.
+Use [Testing: Smallest adequate check per area](../testing.md#smallest-adequate-check-per-area) for authoring feedback, not readiness proof. Preserve nearby formatting because the repository has no canonical formatter, and finish with `git diff --check`.
+
+Before every authorized push, first or replacement, follow the canonical ordered [Pre-push readiness](../testing.md#pre-push-readiness) sequence. Use mise shims reading `.nvmrc`: first enable `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`; `check:pr` enforces exact `.nvmrc` Node and npm 11.x. Refresh the target refs and finish source/integration commits, run full `npm run check:generated-artifacts` convergence, then full plain `npm run check:pr` on the final committed state with no skip/filter/plan-only flags. The proof is a fresh passing `.tmp/pr-check-receipts/<HEAD>.json`; repeat readiness after subsequent edits, commits, or integration. GitHub Actions remains the authoritative release gate.
+
+Opt into `npm run check:pr -- --ci-parity` after a remote failure the local gate did not reproduce, and for lockfile/setup/security-policy changes. If CI fails, collect every failed leaf, reproduce narrowly, fix all causal defects in one revision, rerun full readiness, and push once. Do not treat a focused rerun as replacement-push authorization.
 
 Passing deployment proves activation, not runtime health. Cron, scheduler, ingestion, migration, and other operationally risky changes also require the first relevant production execution or observation before being called operationally complete.
 
@@ -96,7 +102,7 @@ Plan: agents/<YYYY-MM-DD>-<slug>/IMPLEMENTATION-PLAN.md
 Tasks: W2.6
 ```
 
-The pre-commit hook may regenerate and stage registered artifacts marked `autoStage`; inspect that result as part of the same source commit. Publishing uses the protected-main branch and pull-request path. Never direct-push `main`.
+The pre-commit hook is partial artifact synchronization, never a test gate or proof of full generated convergence. It may regenerate and stage affected registered artifacts marked `autoStage`; inspect that result as part of the same source commit. It skips merge, rebase, cherry-pick, revert, an empty index, or `PHAROS_SKIP_ARTIFACT_HOOK=1`; selection and unsafe-overlap rejection are owned by [Scripts: Operational notes](../scripts.md#operational-notes). No pre-push test hook enforces readiness. Publishing uses the protected-main branch and pull-request path. Never direct-push `main`.
 
 ## 9. Methodology Changes
 

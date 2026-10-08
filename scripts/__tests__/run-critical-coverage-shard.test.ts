@@ -11,6 +11,20 @@ const temporary: string[] = [];
 afterEach(() => { for (const directory of temporary.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 
 describe("critical coverage shard runner", () => {
+  it.each([
+    {},
+    { PR_BASE_SHA: "frozen-base" },
+    { PR_HEAD_SHA: "frozen-head" },
+  ])("rejects missing frozen CI refs before executing coverage: %j", async (refs) => {
+    const runCommand = vi.fn((_command: SpawnCommand) => 0);
+    await expect(runCriticalCoverageShard({
+      env: { NODE_ENV: "test", GITHUB_ACTIONS: "true", CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/lib/auth.ts", ...refs },
+      argv: ["--shard=1/4"],
+      runCommand,
+    })).rejects.toThrow("requires frozen base and head refs");
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
   it("uses unique blob filenames after explicit partitioning and publishes timings even for a failed shard", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-coverage-timing-test-"));
     temporary.push(directory);

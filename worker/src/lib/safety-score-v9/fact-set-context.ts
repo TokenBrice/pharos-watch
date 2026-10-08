@@ -138,7 +138,7 @@ export function normalizeCompiledFailureDomains<T>(value: T): T {
   if (Array.isArray(value)) {
     let normalized: unknown[] | undefined;
     for (let index = 0; index < value.length; index++) {
-      const entry = normalizeCompiledFailureDomains(value[index]);
+      const entry: unknown = normalizeCompiledFailureDomains<unknown>(value[index]);
       if (entry !== value[index]) normalized ??= value.slice();
       if (normalized) normalized[index] = entry;
     }

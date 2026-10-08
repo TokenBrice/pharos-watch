@@ -28,9 +28,16 @@ jobs:
           bootstrap-history: "true"
           static-cache: "true"
       - run: npm run lint
+        id: lint
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - run: npm run typecheck
+        id: typecheck
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - run: npm run typecheck:worker
+        id: typecheck-worker
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        if: ${{ !cancelled() && steps.lint.outcome == 'success' && steps.typecheck.outcome == 'success' && steps.typecheck-worker.outcome == 'success' }}
         with:
           path: |
             .cache/eslint
@@ -38,8 +45,43 @@ jobs:
             worker/*.tsbuildinfo
           key: ${{ steps.workspace.outputs.static-cache-key }}
       - run: npm run lint:typed
+        id: lint-typed
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - run: npm run typecheck:tests
+        id: typecheck-tests
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - run: npm run check:structural
+        id: structural
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - name: Report mandatory static outcomes
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          WORKER_OUTCOME: ${{ steps.typecheck-worker.outcome }}
+          TYPED_LINT_OUTCOME: ${{ steps.lint-typed.outcome }}
+          TEST_TYPES_OUTCOME: ${{ steps.typecheck-tests.outcome }}
+          STRUCTURAL_OUTCOME: ${{ steps.structural.outcome }}
+        run: |
+          failed=()
+          for leaf in \
+            "lint:$LINT_OUTCOME" \
+            "typecheck:$TYPECHECK_OUTCOME" \
+            "typecheck:worker:$WORKER_OUTCOME" \
+            "lint:typed:$TYPED_LINT_OUTCOME" \
+            "typecheck:tests:$TEST_TYPES_OUTCOME" \
+            "check:structural:$STRUCTURAL_OUTCOME"; do
+            outcome="${leaf##*:}"
+            command="${leaf%:*}"
+            printf '%s: %s\n' "$command" "$outcome"
+            if [[ "$outcome" != "success" ]]; then
+              failed+=("$command ($outcome)")
+            fi
+          done
+          if (( ${#failed[@]} > 0 )); then
+            printf '::error::Mandatory static checks failed: %s\n' "${failed[*]}"
+            exit 1
+          fi
 
   full-tests:
     name: Full test suite (${{ matrix.shard }}/2)
@@ -76,3 +118,31 @@ jobs:
           static-cache: "true"
       - run: npm run typecheck
       - run: npm run typecheck:worker
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [full-static, full-tests]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: nightly-validation.yml
+          needs-json: ${{ toJSON(needs) }}
+          job-names-json: '{"full-static":"Full lint and typecheck","full-tests":"Full test suite"}'
+          github-token: ${{ github.token }}
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

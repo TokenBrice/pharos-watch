@@ -26,6 +26,8 @@ describe("tokenized issuer route evidence boundaries", () => {
   it("retains HLUSD's manual alternatives and OTC fee without inventing a sell minimum", () => {
     const config = getRedemptionBackstopConfig("hlusd-hela")!;
     expect(config).toMatchObject({ accessModel: "manual", executionModel: "opaque", outputAssets: ["usdc-circle", "usdt-tether"] });
+    expect(config.costModel.kind).toBe("fee-bps");
+    if (config.costModel.kind !== "fee-bps") throw new Error("Expected HLUSD's fixed OTC fee");
     expect(config.costModel.feeBps).toBe(100);
     expect(config.v9RouteReviewTerms?.minRedeemUsd).toBeUndefined();
   });
@@ -43,6 +45,8 @@ describe("tokenized issuer route evidence boundaries", () => {
     const config = getRedemptionBackstopConfig("mtbill-midas")!;
     expect(config.capacityModel).toEqual({ kind: "supply-ratio", ratio: 0.02, confidence: "heuristic", basis: "hot-buffer" });
     expect(config.outputAssets).toEqual(["usdc-circle"]);
+    expect(config.costModel.kind).toBe("fee-bps");
+    if (config.costModel.kind !== "fee-bps") throw new Error("Expected mTBILL's fixed instant fee");
     expect(config.costModel.feeBps).toBe(7);
     expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement"]);
     expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
@@ -112,6 +116,8 @@ describe("tokenized issuer route evidence boundaries", () => {
     const nestBefore = structuredClone(NEST_NAV_VAULT_CONFIGS);
     const ondoConfig = NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS["iauon-ondo"];
     const nestConfig = NEST_NAV_VAULT_CONFIGS["ntbill-nest"];
+    expect(nestConfig.costModel.kind).toBe("fee-bps");
+    if (nestConfig.costModel.kind !== "fee-bps") throw new Error("Expected a mutable fixed-fee fixture");
     try {
       ondoConfig.outputAssets!.push("usdc-circle");
       ondoConfig.v9RouteReviewTerms!.missingScoringFields!.push("cost");

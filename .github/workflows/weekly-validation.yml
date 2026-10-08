@@ -121,7 +121,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -130,7 +129,7 @@ jobs:
       - name: Capture production dependency coverage
         env:
           DEPENDENCY_COVERAGE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
-        run: npm run audit:coverage -- --domain=dependency-coverage --prod --format=json --report=.tmp/dependency-coverage/audit.json
+        run: npm run audit:coverage -- --domain=dependency-coverage --prod --json --report .tmp/dependency-coverage/audit.json
       - name: Evaluate published dependency structure
         run: |
           node --import tsx --input-type=module <<'JS'
@@ -160,25 +159,30 @@ jobs:
           path: .tmp/dependency-coverage/
           retention-days: 90
           if-no-files-found: warn
-      - name: Alert on weekly production failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SNAPSHOT_URL: ${{ steps.snapshots.outputs.artifact-url }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          body=$(mktemp)
-          printf '%s\n' \
-            '<!-- dependency-coverage-weekly -->' \
-            '# Dependency coverage weekly failure' \
-            'Review the dependency-coverage drain queue. Findings never authorize edges automatically.' \
-            "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            "Full audit and advisory reconciliation: ${SNAPSHOT_URL:-artifact unavailable; inspect run logs}." \
-            'This weekly gate does not block releases.' > "$body"
-          issue_number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "Dependency coverage weekly failure"' --json number,title --jq '[.[] | select(.title == "Dependency coverage weekly failure")][0].number // empty')
-          if [ -n "$issue_number" ]; then
-            gh issue edit "$issue_number" --repo "$GITHUB_REPOSITORY" --body-file "$body"
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "Dependency coverage weekly failure" --body-file "$body"
-          fi
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [audit, html-fixture-age, gitleaks, all-critical-ratchet, telegram-load, compare-account-state, dependency-coverage]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: weekly-validation.yml
+          needs-json: ${{ toJSON(needs) }}
+          github-token: ${{ github.token }}
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

@@ -350,7 +350,7 @@ export function buildDexLiquidityWarning(
   let qualityDriftFlags: string[] = [];
   if (latestCron.metadata) {
     try {
-      const raw = JSON.parse(latestCron.metadata);
+      const raw: unknown = JSON.parse(latestCron.metadata);
       const parsed = DexLiquidityCronMetadataSchema.parse(raw);
       failedSources = parsed.failedSources;
       nearCoverageGuard = parsed.sourceCoverage.nearCoverageGuard;

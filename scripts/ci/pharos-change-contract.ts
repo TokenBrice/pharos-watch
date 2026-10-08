@@ -81,6 +81,7 @@ interface ChangeContract {
   mappings: MatchedMapping[];
   scopedContext: string[];
   source: ChangeSource;
+  unmappedPaths: string[];
   warnings: string[];
 }
 
@@ -420,10 +421,9 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
   const hints = unique(matchedFamilies.flatMap((family) => family.hints));
   const warnings = buildWarnings(changedFiles);
   const ownedFiles = new Set(matchedFamilies.flatMap((family) => family.matchedFiles));
-  for (const file of changedFiles) {
-    if (!ownedFiles.has(file)) {
-      warnings.push(`Missing documentation owner for ${file}; search docs/ and add the recurring source area to docs/doc-ownership.json before relying on this route.`);
-    }
+  const unmappedPaths = changedFiles.filter((file) => !ownedFiles.has(file));
+  for (const file of unmappedPaths) {
+    warnings.push(`Missing documentation owner for ${file}; search docs/ and add the recurring source area to docs/doc-ownership.json before relying on this route.`);
   }
 
   return {
@@ -447,6 +447,7 @@ function classifyChangedFilesWithSource(files: readonly string[], source: Change
     })),
     scopedContext,
     source,
+    unmappedPaths,
     warnings,
   };
 }

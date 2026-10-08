@@ -18,7 +18,7 @@ async function context(path: string, bytes = png, overrides: Record<string, unkn
   };
   const imageSha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", png)), (b) => b.toString(16).padStart(2, "0")).join("");
   const manifest = { schemaVersion: 1, snapshot, imageSha256, tweetText: buildDailySocialTweetText(snapshot), altText: buildDailySocialAltText(snapshot), ...overrides };
-  const get = vi.fn(async (key: string) => new Response(key.endsWith(".json") ? JSON.stringify(manifest) : new Uint8Array(bytes)).body);
+  const get = vi.fn(async (key: string): Promise<ReadableStream<unknown> | null> => new Response(key.endsWith(".json") ? JSON.stringify(manifest) : new Uint8Array(bytes)).body);
   return { request: new Request(`https://pharos.watch/social-posts/${path}`), env: { SELECTOR_SNAPSHOTS: { get } as unknown as KVNamespace }, get, imageSha256 };
 }
 describe("daily social artifacts", () => {
@@ -53,6 +53,25 @@ describe("daily social artifacts", () => {
       expect(response.status).toBe(502);
       expect(response.headers.get("cache-control")).toBe("no-store");
     }
+  });
+  it.each(["manifest", "image"])("rejects malformed %s stream chunks", async (artifact) => {
+    const ctx = await context("2026-09-14.png");
+    const cancel = vi.fn();
+    const malformed = new ReadableStream<unknown>({
+      start(controller) { controller.enqueue("not bytes"); },
+      cancel,
+    });
+    if (artifact === "image") {
+      const manifest = await ctx.get(`daily-social:2026-09-14.json`);
+      ctx.get.mockClear();
+      ctx.get.mockResolvedValueOnce(manifest);
+    }
+    ctx.get.mockResolvedValueOnce(malformed);
+    const response = await onRequest(ctx);
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(ctx.get).toHaveBeenCalledTimes(artifact === "manifest" ? 1 : 2);
   });
   it("rejects corrupted manifest copy", async () => {
     expect((await onRequest(await context("2026-09-14.json", png, { tweetText: "manipulated" }))).status).toBe(502);

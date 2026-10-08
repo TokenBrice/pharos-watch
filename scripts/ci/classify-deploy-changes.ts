@@ -16,6 +16,7 @@ import { CRITICAL_FILES, selectChangedCriticalSources } from "../lib/critical-co
 import { deriveBaseCriticalOwnership, type BaseBlobExec, type CriticalOwnership } from "../lib/critical-ownership.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 const ZERO_SHA: RegExp = /^0+$/;
 const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
@@ -47,6 +48,7 @@ interface DeployClassification {
   deployRequired: boolean;
   docsChanged: boolean;
   docsOnly: boolean;
+  pagesArtifactRequired: boolean;
   pagesChanged: boolean;
   pagesDeployRequired: boolean;
   playwrightFirefoxRequired: boolean;
@@ -99,10 +101,11 @@ export function classifyChangedFiles(
     deployRequired: hasDeployImpact(normalizedFiles),
     docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
+    pagesArtifactRequired: pagesChanged,
     pagesChanged,
     pagesDeployRequired,
-    playwrightFirefoxRequired: generatedArtifactIds.some(
-      (id) => id === "og-editorial" || id === "og-case-studies",
+    playwrightFirefoxRequired: GENERATED_ARTIFACT_REGISTRY.some(
+      (artifact) => generatedArtifactIds.includes(artifact.id) && artifact.requiredBrowsers?.includes("firefox"),
     ),
     reason:
       reason ??
@@ -126,6 +129,7 @@ export function classifyDeployChanges({
     deployRequired: true,
     docsChanged: false,
     docsOnly: false,
+    pagesArtifactRequired: true,
     pagesChanged: true,
     pagesDeployRequired: true,
     playwrightFirefoxRequired: true,
@@ -169,6 +173,7 @@ export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("docs_changed", classification.docsChanged ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
+  writeGithubOutputLine("pages_artifact_required", classification.pagesArtifactRequired ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
   writeGithubOutputLine(

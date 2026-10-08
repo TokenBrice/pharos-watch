@@ -69,6 +69,7 @@ interface ProtocolApiTransportProvenance {
   bodyBytes: number;
   bodySha256: string;
   bodyClass: ProtocolApiBodyClass;
+  reason: "http-error" | "non-json-media-type" | "unexpected-body-class" | null;
   headers: Record<string, string>;
 }
 
@@ -181,6 +182,7 @@ function transportProvenance(
     bodyBytes: rawBody.byteLength,
     bodySha256: createHash("sha256").update(rawBody).digest("hex"),
     bodyClass: classifyBody(rawBody),
+    reason: null,
     headers: diagnosticHeaders(response),
   };
 }
@@ -195,15 +197,19 @@ async function fetchRawObservation(
   });
   const rawBody = new Uint8Array(await response.arrayBuffer());
   const provenance = transportProvenance(source, response, rawBody);
-  const serializedProvenance = JSON.stringify(provenance);
-  log(`[protocol-api-measurement] transport=${serializedProvenance}`);
-
   let rejection: string | null = null;
-  if (!response.ok) rejection = `HTTP ${response.status}`;
-  else if (!isJsonMediaType(provenance.mediaType)) rejection = "non-JSON media type";
-  else if (provenance.bodyClass !== "json-object" && provenance.bodyClass !== "json-array") {
+  if (!response.ok) {
+    provenance.reason = "http-error";
+    rejection = `HTTP ${response.status}`;
+  } else if (!isJsonMediaType(provenance.mediaType)) {
+    provenance.reason = "non-json-media-type";
+    rejection = "non-JSON media type";
+  } else if (provenance.bodyClass !== "json-object" && provenance.bodyClass !== "json-array") {
+    provenance.reason = "unexpected-body-class";
     rejection = `unexpected ${provenance.bodyClass} body`;
   }
+  const serializedProvenance = JSON.stringify(provenance);
+  log(`[protocol-api-measurement] transport=${serializedProvenance}`);
   if (rejection) throw new Error(`${source.sourceId} response rejected (${rejection}): ${serializedProvenance}`);
 
   return {

@@ -554,6 +554,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     publicApiAccess: "exempt",
     strictContract: true,
     probeGroup: "public",
+    routeDependencies: ["workerVersion"],
   }),
   publicGet({
     key: "depeg-resolver",

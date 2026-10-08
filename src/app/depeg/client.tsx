@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
-import { useQuerySlices } from "@/hooks/use-query-slice";
+import { useQuerySlice } from "@/hooks/use-query-slice";
 import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
@@ -104,10 +104,8 @@ export function DepegClient() {
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
-  const { resolverSlice, resolverReviewSlice } = useQuerySlices({
-    resolverSlice: resolver,
-    resolverReviewSlice: resolverReview,
-  });
+  const resolverSlice = useQuerySlice(resolver);
+  const resolverReviewSlice = useQuerySlice(resolverReview);
   const resolverData = resolverSlice.data;
   const resolverReviewData = resolverReviewSlice.data;
   const logos = logosById;

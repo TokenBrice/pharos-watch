@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
@@ -23,23 +25,29 @@ describe("adaptive PR checks", () => {
   it("emits the stable check:pr JSON envelope through the adaptive harness", async () => {
     const stdout = { write: vi.fn<(chunk: string) => unknown>() };
     const stderr = { write: vi.fn<(chunk: string) => unknown>() };
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     const runCommandImpl = vi.fn(async (command: { cmd: string }) => {
-      if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: "HEAD\n" };
+      if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: `${headSha}\n` };
       if (command.cmd.startsWith("git show")) return { status: 0, aborted: false, output: "0\n" };
       return { status: 0, aborted: false, output: "" };
     });
 
-    await expect(runPrChecks(["--json", "--base=HEAD", "--head=HEAD", "--no-fetch"], process.env, {
+    await expect(runPrChecks(["--json", "--base=HEAD", "--head=HEAD", "--no-fetch"], { NODE_ENV: "test" }, {
+      repoRoot: resolve(import.meta.dirname, "../.."),
+      inspectCheckout: () => ({ headSha, requestedHeadSha: headSha, mergeBase: headSha, treeClean: true }),
       now: () => 0,
       runCommandImpl: runCommandImpl as never,
       stderr,
       stdout,
+      runtimeVersions: () => ({ node: "24.16.0", npm: "11.13.0" }),
+      runSecrets: async () => ({ ok: true, exitCode: 0, summary: "Trusted scan clean." }),
+      writeReceipt: vi.fn(() => ""),
     })).resolves.toBe(0);
 
     const report = JSON.parse(stdout.write.mock.calls.map(([chunk]) => chunk).join("")) as Record<string, unknown>;
     expect(report).toMatchObject({
-      base: "HEAD",
-      head: "HEAD",
+      base: headSha,
+      head: headSha,
       changedFiles: [],
       status: "passed",
       durationMs: expect.any(Number),
@@ -64,7 +72,7 @@ describe("adaptive PR checks", () => {
 
     await expect(runPrStaticChecks({
       argv: ["--json", "--base=HEAD", "--head=HEAD"],
-      env: process.env,
+      env: { NODE_ENV: "test" },
       runCommandImpl: runCommandImpl as never,
       stderr,
       stdout,
@@ -90,7 +98,7 @@ describe("adaptive PR checks", () => {
   });
 
   it("parses diff arguments without swallowing downstream options", () => {
-    expect(parseChangedFileArgs(["--base=abc", "--head", "def", "--shard=1/2"], {} as NodeJS.ProcessEnv)).toEqual({
+    expect(parseChangedFileArgs(["--base=abc", "--head", "def", "--shard=1/2"], { NODE_ENV: "test" })).toEqual({
       base: "abc",
       head: "def",
       rest: ["--shard=1/2"],
@@ -187,6 +195,35 @@ describe("adaptive PR checks", () => {
       "check:critical-coverage-completeness",
       "check:generated-artifacts",
     ]);
+  });
+
+  it.each([
+    "package.json",
+    "package-lock.json",
+    ".npmrc",
+    "scripts/ci/verify-dependency-audit.ts",
+    "scripts/ci/dependency-audit-exceptions.json",
+  ])("selects the full reviewed dependency audit for %s", (path) => {
+    expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:dependency-audit");
+    expect(buildPrStaticCheckPlan([path], { group: "guards" }).commands.map((command) => command.name))
+      .toContain("check:dependency-audit");
+    expect(buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name))
+      .not.toContain("check:dependency-audit");
+  });
+
+  it.each(["html", "json", "txt"])("selects stable capture validation for a changed %s fixture, never calendar age", (ext) => {
+    const path = `worker/src/cron/reserve-adapters/__tests__/fixtures/capture.${ext}`;
+    const names = buildPrStaticCheckPlan([path], { group: "guards" }).commands.map((command) => command.name);
+    expect(names).toContain("check:html-fixture-metadata");
+    expect(names).not.toContain("check:html-fixture-age");
+    expect(buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name))
+      .not.toContain("check:html-fixture-metadata");
+  });
+
+  it("does not select scheduled-producer checks for unrelated changes", () => {
+    const names = buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name);
+    expect(names).not.toContain("check:html-fixture-metadata");
+    expect(names).not.toContain("check:dependency-audit");
   });
 
   it("selects doc-sync when a changed source has an owning documentation mapping", () => {

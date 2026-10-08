@@ -1,3 +1,5 @@
+import { isRecord } from "@shared/lib/type-guards";
+
 export type BlacklistDecodeFailureReason = "invalid-log-identity" | "invalid-address" | "invalid-direction-bool" | "invalid-address-array";
 
 export class BlacklistDecodeError extends Error {
@@ -53,9 +55,10 @@ export async function quarantineBlacklistDecodeFailure(
       : identity;
     const key = `blacklist:decode-retry:${configKey}:${evidenceId}`;
     const prior = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(key).first<{ value: string }>();
-    const state = prior ? JSON.parse(prior.value) : null;
+    const parsed: unknown = prior ? JSON.parse(prior.value) : null;
+    const state = isRecord(parsed) ? parsed : null;
     if (state?.quarantined === true) return true;
-    const attempts = (Number.isSafeInteger(state?.attempts) ? state.attempts : 0)
+    const attempts = (typeof state?.attempts === "number" && Number.isSafeInteger(state.attempts) ? state.attempts : 0)
       + (state?.observation === observation ? 0 : 1);
     const quarantined = attempts >= BLACKLIST_DECODE_RETRY_LIMIT;
     // Retain bounded identity/payload evidence indefinitely for repair, without

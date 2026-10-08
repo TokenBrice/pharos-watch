@@ -398,7 +398,7 @@ function buildPerCoinQuarterlyEventTypes(
   for (const row of rows) {
     if (!isBlacklistStablecoin(row.stablecoin)) continue;
     const symbol = row.stablecoin;
-    const coinBuckets = perCoinBucketMap.get(symbol) ?? new Map();
+    const coinBuckets = perCoinBucketMap.get(symbol) ?? new Map<number, { blacklist: number; unblacklist: number; destroy: number }>();
     const bucket = coinBuckets.get(row.quarter_sort_key) ?? { blacklist: 0, unblacklist: 0, destroy: 0 };
     if (row.event_type === "blacklist") bucket.blacklist += row.n;
     else if (row.event_type === "unblacklist") bucket.unblacklist += row.n;

@@ -59,7 +59,7 @@ function isBudgetSurfaceOutcome(value: unknown): value is BudgetSurfaceOutcome {
 
 function sanitizeMetadata(value: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
-  const entries = Object.entries(value).slice(0, 24).map(([key, entry]) => {
+  const entries: (readonly [string, unknown])[] = Object.entries(value).slice(0, 24).map(([key, entry]) => {
     if (entry == null || typeof entry === "number" || typeof entry === "boolean") return [key, entry] as const;
     if (typeof entry === "string") return [key, entry.slice(0, 500)] as const;
     if (Array.isArray(entry)) return [key, entry.slice(0, 24)] as const;

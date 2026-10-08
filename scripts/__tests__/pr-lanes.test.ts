@@ -6,8 +6,9 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
-import { PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_LANES, buildPrLaneCommandArgs, getPrLane, isPrLaneSelected } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { DECLARED_TEST_OWNERSHIP } from "../lib/doc-ownership-registry.mts";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrCoverageMatrix, buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
 
@@ -36,6 +37,7 @@ describe("PR lane manifest", () => {
       "tests",
       "critical-coverage-shards",
       "critical-coverage",
+      "pages-artifact",
       "docs",
       "gate",
     ]);
@@ -88,6 +90,29 @@ describe("PR lane manifest", () => {
     expect(buildPrCoverageMatrix({
       criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: true, docsOnly: true,
     })).toEqual({ include: [] });
+  });
+
+  it("runs documentation-input invariants in the composed docs lane even for docs-only PRs", () => {
+    const lane = getPrLane("docs");
+    expect(isPrLaneSelected(lane, {
+      criticalCoverageChanged: false, criticalCoverageShards: 0, docsChanged: true, docsOnly: true,
+    })).toBe(true);
+    const invariantCommand = lane.commands.find((command) => command.id === "doc-ownership-invariants");
+    expect(invariantCommand).toMatchObject({ program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] });
+    const declaredDocsTests = DECLARED_TEST_OWNERSHIP
+      .filter((declaration) => declaration.sources.some((source) => source.startsWith("docs/") || source === "README.md"))
+      .flatMap((declaration) => declaration.tests);
+    expect(invariantCommand?.args).toEqual(expect.arrayContaining(declaredDocsTests));
+  });
+
+  it("selects Pages artifact independently without duplicating it in validation", () => {
+    const selection = {
+      criticalCoverageChanged: false, criticalCoverageShards: 0,
+      docsChanged: false, docsOnly: false, pagesArtifactRequired: true,
+    };
+    expect(isPrLaneSelected(getPrLane("pages-artifact"), selection)).toBe(true);
+    expect(isPrLaneSelected(getPrLane("pages-artifact"), { ...selection, pagesArtifactRequired: false })).toBe(false);
+    expect(buildPrWorkflowMatrix(selection).include.some((entry) => entry.lane === "pages-artifact")).toBe(false);
   });
 
   it("gives the docs lane sole doc-sync ownership in the mixed matrix", () => {
@@ -180,13 +205,15 @@ describe("PR lane manifest", () => {
       SECRETS_RESULT: "success", PREPARE_RESULT: "success", VALIDATION_RESULT: "success",
       DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false", CRITICAL_COVERAGE_CHANGED: "false",
       CRITICAL_COVERAGE_SHARDS_RESULT: "skipped", CRITICAL_COVERAGE_RESULT: "skipped",
+      PAGES_ARTIFACT_REQUIRED: "false", PAGES_ARTIFACT_RESULT: "skipped",
     };
     const covered = { ...code, CRITICAL_COVERAGE_CHANGED: "true", CRITICAL_COVERAGE_SHARDS_RESULT: "success", CRITICAL_COVERAGE_RESULT: "success" };
     const docs = { ...code, DOCS_ONLY: "true", DOCS_INLINE_SUCCEEDED: "true", VALIDATION_RESULT: "skipped" };
+    const pages = { ...code, PAGES_ARTIFACT_REQUIRED: "true", PAGES_ARTIFACT_RESULT: "success" };
     const run = (env: Record<string, string>) => execFileSync("bash", ["-e", "-c", gate], {
       cwd: REPO_ROOT, env: { ...process.env, ...env }, stdio: "pipe",
     });
-    for (const env of [code, covered, docs]) expect(() => run(env)).not.toThrow();
+    for (const env of [code, covered, docs, pages]) expect(() => run(env)).not.toThrow();
     for (const key of ["SECRETS_RESULT", "PREPARE_RESULT", "VALIDATION_RESULT", "CRITICAL_COVERAGE_SHARDS_RESULT", "CRITICAL_COVERAGE_RESULT"]) {
       for (const result of ["failure", "cancelled", "skipped"]) {
         expect(() => run({ ...covered, [key]: result }), `${key}=${result}`).toThrow();
@@ -196,6 +223,13 @@ describe("PR lane manifest", () => {
     expect(() => run({ ...docs, VALIDATION_RESULT: "cancelled" })).toThrow();
     expect(() => run({ ...code, CRITICAL_COVERAGE_RESULT: "failure" })).toThrow();
     expect(() => run({ ...code, CRITICAL_COVERAGE_SHARDS_RESULT: "cancelled" })).toThrow();
+    for (const result of ["failure", "cancelled", "skipped", ""]) {
+      expect(() => run({ ...pages, PAGES_ARTIFACT_RESULT: result })).toThrow();
+    }
+    for (const required of ["", "unknown", "true"]) {
+      expect(() => run({ ...code, PAGES_ARTIFACT_REQUIRED: required })).toThrow();
+    }
+    expect(() => run({ ...code, PAGES_ARTIFACT_RESULT: "success" })).toThrow();
   });
 
   it("transports every ignored bootstrap output through the required archive, not optional caches", () => {

@@ -89,6 +89,8 @@ export interface CloudflareD1StatusRouteFields {
 
 export interface WorkerVersionRouteFields {
   workerVersion: string | null;
+  /** Exact deployment UUID; workerVersion retains its existing tag-first display identity. */
+  workerVersionId: string | null;
 }
 
 export interface WorkerStatusConfigRouteFields {

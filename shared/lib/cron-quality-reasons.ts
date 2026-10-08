@@ -12,7 +12,7 @@ export function getCronQualityReasons(metadata: unknown): string[] {
     }
   }
   if (record.sources && typeof record.sources === "object" && !Array.isArray(record.sources)) {
-    for (const [source, sourceQuality] of Object.entries(record.sources)) {
+    for (const [source, sourceQuality] of Object.entries(record.sources as Record<string, unknown>)) {
       for (const reason of getCronQualityReasons({ quality: sourceQuality })) {
         reasons.push(`${source}:${reason}`);
       }

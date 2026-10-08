@@ -305,6 +305,8 @@ describe("classifyChangedFiles", () => {
   it("warns for each missing owner even alongside an owned path", () => {
     const contract = classifyChangedFiles(["planned-domain/new-source.ts", "src/app/page.tsx"]);
     expect(contract.warnings.some((warning) => warning.includes("planned-domain/new-source.ts"))).toBe(true);
+    expect(contract.unmappedPaths).toEqual(["planned-domain/new-source.ts"]);
+    expect(classifyChangedFiles(["src/app/page.tsx"]).unmappedPaths).toEqual([]);
     expect(classifyChangedFiles(["src/app/page.tsx"]).warnings).toEqual([]);
   });
 

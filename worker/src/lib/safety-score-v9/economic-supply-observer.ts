@@ -173,13 +173,14 @@ export async function observeCurveLzPending(input: {
         if (!Array.isArray(logs) || logs.length > 2048) fail("history-unavailable");
         let previousPosition = -1;
         for (const raw of logs as Array<Record<string, unknown>>) {
-          const { address, topics, data, blockNumber, blockHash, transactionHash, logIndex, removed } = raw;
-          if (typeof address !== "string" || !Array.isArray(topics) || topics.some(topic => typeof topic !== "string") ||
+          const { address, topics: rawTopics, data, blockNumber, blockHash, transactionHash, logIndex, removed } = raw;
+          if (typeof address !== "string" || !Array.isArray(rawTopics) || !rawTopics.every((topic: unknown): topic is string => typeof topic === "string") ||
             typeof data !== "string" || !/^0x[0-9a-f]*$/i.test(data) || data.length % 2 !== 0 || data.length > 8194 ||
             typeof blockNumber !== "string" || !/^0x[0-9a-f]+$/i.test(blockNumber) ||
             typeof logIndex !== "string" || !/^0x[0-9a-f]+$/i.test(logIndex) ||
             typeof blockHash !== "string" || !CURVE_WORD.test(blockHash) ||
             typeof transactionHash !== "string" || !CURVE_WORD.test(transactionHash) || removed !== false) fail("log-invalid");
+          const topics: string[] = rawTopics;
           const height = Number(BigInt(blockNumber as string)), index = Number(BigInt(logIndex as string));
           const position = height * 1_000_000 + index;
           if (!Number.isSafeInteger(position) || index >= 1_000_000 || height < from || height > end || position <= previousPosition) fail("history-gap");
@@ -234,7 +235,7 @@ export async function observeCurveLzPending(input: {
             }
             direction.sentNonce = nonce.toString();
           } else {
-            if (address !== side.bridgeAddress || topics.length !== 3 || !CURVE_EVENT_TOPICS.includes(topics[0]) ||
+            if (address !== side.bridgeAddress || topics.length !== 3 || !CURVE_EVENT_TOPICS.some(topic => topic === topics[0]) ||
               !CURVE_WORD.test(topics[1]) || !CURVE_ADDRESS_WORD.test(topics[2]) || !CURVE_WORD.test(data as string)) fail("log-invalid");
             const nonce = BigInt(topics[1]).toString(), receiver = `0x${topics[2].slice(-40)}`;
             const message = direction.messages.find(row => row.nonce === nonce);

@@ -21,7 +21,7 @@ export function checkWorkerPackage({ run = spawnSync }: WorkerPackageOptions = {
     rmSync(outputDirectory, { force: true, recursive: true });
     const result = run(
       "npx",
-      ["--no-install", "wrangler", "deploy", "--config", config, "--dry-run", "--outdir", outputDirectory],
+      ["--no-install", "wrangler", "deploy", "--strict", "--config", config, "--dry-run", "--outdir", outputDirectory],
       { cwd: resolve(repoRoot, "worker"), stdio: "inherit" },
     );
     if (result.error || result.status !== 0) return { status: result.status ?? 1 };

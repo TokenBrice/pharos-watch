@@ -1,5 +1,5 @@
 import { gzipSync, gunzipSync } from "node:zlib";
-import { Buffer } from "node:buffer";
+import { Buffer as NodeBuffer } from "node:buffer";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { getCache, setCache } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -25,6 +25,15 @@ import {
   type RpcParityLatestFreshness,
   type RpcParityChainSkip,
 } from "./types";
+
+// Workers' ambient Buffer declaration shadows Node's exported value and its
+// encoded toString overload. Type the native nodejs_compat surface used here.
+type NativeBuffer = Uint8Array & { toString(encoding: "base64" | "utf8"): string };
+const Buffer = NodeBuffer as {
+  from(bytes: number[]): NativeBuffer;
+  from(value: string, encoding: "base64" | "utf8"): NativeBuffer;
+  from(buffer: ArrayBufferLike, byteOffset: number, byteLength: number): NativeBuffer;
+};
 
 /**
  * Storage for the Dwellir parity window.
@@ -344,11 +353,13 @@ function readWireNumber(field: string | undefined): number | null {
 }
 
 function decodeCompactFreshness(
-  f: unknown,
+  raw: unknown,
   base: number,
   version: number,
 ): RpcParityLatestFreshness | null {
-  if (!Array.isArray(f) || (f.length !== 5 && f.length !== 7 && f.length !== 12 && !(version >= 5 && f.length === 15))
+  if (!Array.isArray(raw)) return null;
+  const f: unknown[] = raw;
+  if ((f.length !== 5 && f.length !== 7 && f.length !== 12 && !(version >= 5 && f.length === 15))
     || !RPC_PARITY_LATEST_FRESHNESS_VERDICTS[f[0] as number] || !RPC_PARITY_LATEST_FRESHNESS_REASONS[f[1] as number]
     || !f.slice(2, 5).every((value) => value === null || Number.isSafeInteger(value))) return null;
   const freshness: RpcParityLatestFreshness = {
@@ -358,7 +369,7 @@ function decodeCompactFreshness(
     matchedBlock: f[4] === null ? null : base + Number(f[4]),
   };
   if (f.length >= 12) {
-    if ((f[7] !== null && (!Number.isInteger(f[7]) || !RPC_PARITY_LATEST_PROBE_METHODS[f[7]]))
+    if ((f[7] !== null && (typeof f[7] !== "number" || !Number.isInteger(f[7]) || !RPC_PARITY_LATEST_PROBE_METHODS[f[7]]))
       || (f[8] !== null && typeof f[8] !== "boolean")
       || !f.slice(9, 12).every((value) => value === null || Number.isSafeInteger(value))) return null;
     if (f[7] !== null && typeof f[8] !== "boolean") return null;
@@ -384,7 +395,9 @@ function decodeCompactFreshness(
   if (f.length === 7 || (f.length >= 12 && (f[5] !== null || f[6] !== null))) {
     if ((f[5] !== null && typeof f[5] !== "string") || !Array.isArray(f[6])
       || f[6].length > (f.length === 15 ? RPC_PARITY_LATEST_MAX_NUMERIC_CALLS : 4)
-      || !f[6].every((entry) => entry && Number.isSafeInteger(entry.block) && typeof entry.value === "string")) return null;
+      || !f[6].every((entry: unknown): entry is { block: number; value: string } =>
+        entry !== null && typeof entry === "object" && "block" in entry && "value" in entry
+        && typeof entry.block === "number" && Number.isSafeInteger(entry.block) && typeof entry.value === "string")) return null;
     freshness.latestValue = f[5];
     freshness.numericValues = f[6];
   }
@@ -459,15 +472,16 @@ function decodeSample(
   let telemetry: Pick<RpcParityChainSample, "calls" | "latestFreshness" | "logsComparator" | "sentinelFreshness" | "tokenFreshness"> = {};
   if (fields[9]) {
     try {
-      const data: unknown = JSON.parse(fields[9]);
-      if (!Array.isArray(data) || (data.length !== 3 && !(version >= 4 && data.length === 4))) return null;
+      const parsed: unknown = JSON.parse(fields[9]);
+      if (!Array.isArray(parsed) || (parsed.length !== 3 && !(version >= 4 && parsed.length === 4))) return null;
+      const data: unknown[] = parsed;
       let logsComparator: RpcParityComparatorRef | null | undefined;
       if (data.length === 4) {
         if (data[3] === null) {
           logsComparator = null;
           if (flags & (FLAG_LOG_CHECKED | FLAG_LOG_MATCHED | FLAG_PRUNED_CHECKED | FLAG_PRUNED_TRAP)) return null;
         } else {
-          if (!Number.isInteger(data[3]) || data[3] < 0 || !comparators[data[3]]) return null;
+          if (typeof data[3] !== "number" || !Number.isInteger(data[3]) || data[3] < 0 || !comparators[data[3]]) return null;
           logsComparator = comparators[data[3]];
         }
       }

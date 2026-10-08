@@ -1,4 +1,4 @@
-import { Buffer } from "node:buffer";
+import { Buffer as NodeBuffer } from "node:buffer";
 import type { SafetyScoreCaptureArchiveCacheRows, SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { createTimeoutSignal, type TimeoutSignalHandle } from "@shared/lib/timeout-signal";
@@ -7,6 +7,10 @@ import { executeAtomicBatch } from "../db";
 import { sha256Hex } from "../hash";
 import { logWorkerEvent } from "../structured-log";
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES } from "./publication-codec";
+
+// Correct the ambient Workers Buffer declaration without encoding payloads
+// solely to count bytes; nodejs_compat supplies the native Node constructor.
+const Buffer = NodeBuffer as BufferConstructor;
 
 export const SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES = 8_000_000;
 export const SAFETY_SCORE_CAPTURE_ARCHIVE_WAIT_MS = 15_000;
@@ -150,7 +154,7 @@ export async function archiveSafetyScoreCapture(input: {
     };
     // Values are already gzip-base64 envelopes. Never inflate or re-encode them.
     const value = JSON.stringify(object);
-    const objectBytes: number = Buffer.byteLength(value, "utf8");
+    const objectBytes = Buffer.byteLength(value, "utf8");
     bytes = objectBytes;
     if (objectBytes > SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES) {
       return { status: "skipped", reason: "capture-too-large", bytes };

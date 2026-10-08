@@ -55,6 +55,8 @@ describe("frontend API query descriptors", () => {
   it("retains restored supply provenance through the registered response schema", async () => {
     const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary("usdt-tether");
     const schema = await resolveSchemaLike(descriptor.schema);
+    expect(schema).toBeDefined();
+    if (!schema) throw new Error("Expected the registered live summary response schema");
     const parsed = schema.safeParse({
       currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: 1_790_793_000,
       currentSupplyRestored: true,

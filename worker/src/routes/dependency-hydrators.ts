@@ -58,6 +58,7 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
   },
   workerVersion(routeCtx, env) {
     routeCtx.workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
+    routeCtx.workerVersionId = env.CF_VERSION_METADATA?.id || null;
   },
   telegram(routeCtx, env) {
     routeCtx.telegramCreds = buildTelegramCreds(env);

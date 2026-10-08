@@ -56,8 +56,8 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
     if (row.score_index === null) return unavailable("safety-score-index-missing");
     let index;
     try {
-      const storedIndex = JSON.parse(row.score_index);
-      if (storedIndex?.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
+      const storedIndex: unknown = JSON.parse(row.score_index);
+      if (storedIndex && typeof storedIndex === "object" && "schemaVersion" in storedIndex && storedIndex.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
       index = SafetyScoreIndexSchema.parse(storedIndex);
       if (stableJsonStringifyV1(index) !== row.score_index) return unavailable("safety-score-index-invalid");
     } catch {
@@ -72,8 +72,8 @@ export async function loadActiveSafetyScoreIndex(db: D1Database, signal?: AbortS
       return unavailable("safety-score-index-publication-mismatch");
     }
     if (row.health === null) return unavailable("safety-score-index-health-unavailable");
-    const storedHealth = JSON.parse(row.health);
-    if (storedHealth?.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
+    const storedHealth: unknown = JSON.parse(row.health);
+    if (storedHealth && typeof storedHealth === "object" && "schemaVersion" in storedHealth && storedHealth.schemaVersion === 1) return unavailable("publication-schema-cutover-pending");
     const health = V9PublicationHealthSchema.parse(storedHealth);
     if (stableJsonStringifyV1(health) !== row.health || row.health_updated_at !== health.attemptedAtSec) {
       return unavailable("safety-score-index-health-unavailable");

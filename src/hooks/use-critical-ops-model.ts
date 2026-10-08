@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHealth } from "@/hooks/api-hooks";
-import { useQuerySlices } from "@/hooks/use-query-slice";
+import { useQuerySlice } from "@/hooks/use-query-slice";
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useStatus } from "@/hooks/admin-api-hooks";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
@@ -64,11 +64,9 @@ export function useCriticalOpsModel() {
   const statusQuery = useStatus();
   const healthQuery = useHealth();
   const probesQuery = useEndpointProbes({ mode: "critical" });
-  const { status, health, probes } = useQuerySlices({
-    status: statusQuery,
-    health: healthQuery,
-    probes: probesQuery,
-  });
+  const status = useQuerySlice(statusQuery);
+  const health = useQuerySlice(healthQuery);
+  const probes = useQuerySlice(probesQuery);
   const nowMs = useStalenessBoundaryNow([status.dataUpdatedAt, health.dataUpdatedAt, probes.dataUpdatedAt]);
 
   const handleRefresh = useCallback(() => {

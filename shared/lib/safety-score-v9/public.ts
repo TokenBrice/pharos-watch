@@ -908,26 +908,6 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
         reason: signal.reason,
       };
     });
-  const responsibilitySummaries = RESPONSIBILITIES.map((responsibility) => {
-    const facts = trace.unresolvedFacts.filter((fact) => {
-      if (fact.responsibility === undefined) {
-        throw new Error(
-          `Safety Score v9 ${trace.assetId} unresolved fact ${fact.code} lacks evidence responsibility`,
-        );
-      }
-      return fact.responsibility === responsibility;
-    });
-    return {
-      responsibility,
-      ...countV9EvidenceObligations(
-        facts,
-        (fact) => fact.sourceGapId ?? null,
-        (fact) => fact.causeGapIds ?? [],
-        (fact) => fact.critical,
-      ),
-      reasonCodes: uniqueSorted(facts.map((fact) => fact.code)),
-    };
-  });
   const responsibilityFacts = trace.unresolvedFacts.map((fact) => {
     if (fact.path === undefined) {
       throw new Error(
@@ -946,6 +926,28 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       cause: fact.cause,
       causeGapIds: uniqueSorted(fact.causeGapIds ?? (fact.sourceGapId ? [fact.sourceGapId] : [])),
       scoringDisposition: fact.scoringDisposition,
+    };
+  });
+  const responsibilitySummaries = RESPONSIBILITIES.map((responsibility) => {
+    const facts = responsibilityFacts.filter((fact) => {
+      if (fact.responsibility === undefined) {
+        throw new Error(
+          `Safety Score v9 ${trace.assetId} unresolved fact ${fact.reasonCode} lacks evidence responsibility`,
+        );
+      }
+      return fact.responsibility === responsibility;
+    });
+    return {
+      responsibility,
+      ...countV9EvidenceObligations(
+        facts,
+        (fact) => fact.sourceGapId,
+        // Count the same canonical causal roots emitted in responsibilityFacts.
+        // Repeated witnesses for one root are not a multi-root obligation.
+        (fact) => fact.causeGapIds,
+        (fact) => fact.critical,
+      ),
+      reasonCodes: uniqueSorted(facts.map((fact) => fact.reasonCode)),
     };
   });
   const deploymentAdjustmentPoints =

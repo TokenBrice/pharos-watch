@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { collectGitPaths } from "../lib/changed-files.mts";
+import { parseCriticalCoverageRefs } from "../lib/critical-coverage-refs.mts";
 import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mts";
 import { createExecutionUnit, createLocalVitestCommand, runExecutionUnit, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
 import { parseShardCoordinates, publishShardTimings } from "../lib/shard-timings.mts";
@@ -17,14 +18,14 @@ export async function runCriticalCoverageShard({
   env?: NodeJS.ProcessEnv;
   runCommand?: CommandImplementation<SpawnCommand>;
 } = {}): Promise<number> {
-  const { base, head, rest } = parseChangedFileArgs(argv, env);
+  const { base, head, rest } = parseCriticalCoverageRefs(argv, env);
   const explicitChanged = (env.CRITICAL_COVERAGE_CHANGED_FILES ?? "")
     .split(/\r?\n|,/g)
     .map((file) => file.trim())
     .filter(Boolean);
   const changedFiles = explicitChanged.length > 0
     ? explicitChanged
-    : env.CI
+    : env.CI || env.GITHUB_ACTIONS
       ? collectGitPaths({ kind: "range", base, head, noRenames: true })
       : undefined;
   const timingsFile = env.PR_SHARD_TIMINGS_FILE;

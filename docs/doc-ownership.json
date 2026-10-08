@@ -457,7 +457,29 @@
         { "path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it" },
         "docs/process/safety-score-curation-expiry-sweep.md"
       ],
-      "checks": ["npm run check:doc-sync", "npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts -- --only=safety-score-v9-evaluation-build", "npm run check:doc-sync", "npm run audit:mint-authority-review", "npx vitest run shared/lib/safety-score-v9 worker/src/lib"],
+      "testOwnership": [
+        {
+          "sources": ["shared/**", "worker/src/lib/**", "worker/wrangler*.toml", "package.json", "scripts/lib/safety-score-v9-evaluation-inputs.mts", "scripts/lib/package-imports.mts", "scripts/lib/automation-registry.mjs", "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts"],
+          "tests": ["scripts/__tests__/veritas-ver-010-v9-evaluation-build-identity.test.ts", "scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
+        },
+        {
+          "sources": ["shared/lib/safety-score-v9/**", "worker/src/lib/safety-score-v9/**", "worker/src/cron/compute-safety-score-v9.ts"],
+          "tests": ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts"]
+        },
+        {
+          "sources": ["shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9/native-input.ts", "worker/src/lib/safety-score-v9/capture.ts", "worker/src/cron/prepare-safety-score-v9-input.ts"],
+          "tests": ["worker/src/lib/__tests__/safety-score-v9-native-input.test.ts", "worker/src/lib/__tests__/safety-score-v9-capture.test.ts", "worker/src/cron/__tests__/prepare-safety-score-v9-input.test.ts"]
+        },
+        {
+          "sources": ["shared/types/safety-score-capture-archive.ts", "shared/types/safety-score-v9-capture-control.ts", "worker/src/lib/safety-score-v9/publication-replay-capture.ts", "worker/src/lib/safety-score-v9/capture-archive.ts", "worker/src/lib/safety-score-v9/capture-control.ts"],
+          "tests": ["worker/src/lib/__tests__/safety-score-v9-publication-replay-capture.test.ts", "worker/src/lib/__tests__/safety-score-capture-archive.test.ts", "worker/src/lib/__tests__/safety-score-v9-capture-control.test.ts"]
+        },
+        {
+          "sources": ["scripts/lib/mechanism-measurement/capture-summary.ts", "scripts/lib/mechanism-measurement/shock-schema.ts", "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json"],
+          "tests": ["scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts"]
+        }
+      ],
       "rules": [
         "Current consumers fail closed when the accepted V9 publication is unavailable or held.",
         "Safety Score V9 Economic Control owns the sole published mint score."
@@ -672,6 +694,13 @@
       ],
       "background": [{ "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }],
       "alsoRead": ["worker/AGENTS.md"],
+      "checks": ["npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts"],
+      "testOwnership": [
+        {
+          "sources": ["worker/src/**/*.{ts,tsx}", "shared/lib/**/*.{ts,tsx}", "functions/**/*.{ts,tsx}", "scripts/lib/isolate-local-state-registry-check.ts"],
+          "tests": ["scripts/__tests__/isolate-local-state-registry.test.ts"]
+        }
+      ],
       "rules": ["Consume Worker response bodies before opening more fetches."]
     },
     {
@@ -682,6 +711,7 @@
       "docs": [{ "path": "docs/architecture.md", "anchor": "file-tree-guide" }],
       "background": [{ "path": "docs/data-flow-map.md", "anchor": "publication-and-consumer-flows" }],
       "alsoRead": ["shared/AGENTS.md"],
+      "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:generated-artifacts"],
       "rules": ["Use @shared/lib/... and @shared/types... for shared runtime imports; avoid relative cross-boundary imports."]
     },
     {
@@ -691,6 +721,12 @@
       "tier": "fallback",
       "sources": ["docs/**", "README.md", "CONTRIBUTING.md"],
       "docs": ["docs/README.md", "docs/doc-ownership.json"],
+      "testOwnership": [
+        {
+          "sources": ["docs/**", "README.md", "scripts/lib/doc-ownership-registry.mts", "scripts/lib/doc-markdown.mts", "package.json"],
+          "tests": ["scripts/__tests__/doc-ownership-registry.test.ts"]
+        }
+      ],
       "rules": ["Treat docs/ and README.md as the verified documentation corpus."]
     }
   ],

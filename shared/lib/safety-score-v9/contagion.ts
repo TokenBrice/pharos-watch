@@ -1,5 +1,7 @@
 import { ContagionScenarioSchema, type ContagionScenario, type V9ContagionScenarioResult } from "../../types/contagion";
-import type { V9FactSetCoreV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import type { CompiledV9FactSetV3, V9FactSetCoreV3, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
+import { V9AssetFactsV3Schema } from "../../types/safety-score-v9-facts";
+import { deepFreeze } from "../../types/safety-score-v9-immutable";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { compileV9FactSetV3 } from "./compile";
 import { evaluateValidatedV9FactSet, projectV9EffectiveBackingPillarScore, type V9EvaluatedAsset } from "./evaluate-set";
@@ -14,18 +16,44 @@ export interface V9ContagionInput {
   publicationGenerationId: string;
 }
 
+interface PreparedV9ContagionBaseline {
+  baselineFacts: CompiledV9FactSetV3;
+  baseline: {
+    policyDigest: string;
+    evaluationBuildDigest: string;
+    factSetDigest: string;
+    assets: Array<{
+      assetId: string;
+      score: number | null;
+      grade: V9ContagionScenarioResult["rows"][number]["baselineGrade"];
+      dimensions: { final: number | null; backing: number | null; exit: number | null; control: number | null };
+      ratingStatus: V9ContagionScenarioResult["rows"][number]["baselineRatingStatus"];
+      partialEvidence: V9ContagionScenarioResult["rows"][number]["baselinePartialEvidence"];
+    }>;
+  };
+}
+
+const dimensions = (asset: V9EvaluatedAsset) => ({ final: asset.trace.finalScore, backing: projectV9EffectiveBackingPillarScore(asset), exit: asset.scoreInput.pillars.exit.score, control: asset.scoreInput.pillars.control.score });
+
 /** A full production-engine rerun. No hypothetical facts or cards escape this boundary. */
 export function evaluateV9ContagionScenario(input: V9ContagionInput, definition: ContagionScenario): V9ContagionScenarioResult {
-  const scenario = ContagionScenarioSchema.parse(definition);
+  return createV9ContagionScenarioEvaluator(input)(definition);
+}
+
+/** Run-local immutable baseline; each shock still evaluates the complete cohort. */
+export function createV9ContagionScenarioEvaluator(input: V9ContagionInput): (definition: ContagionScenario) => V9ContagionScenarioResult {
   if (!input.publicationGenerationId || input.clock !== input.rawCompileInput.asOfSec) {
     throw new Error("Contagion requires a publication identity and its exact evaluation clock");
   }
-  const dimensions = (asset: V9EvaluatedAsset) => ({ final: asset.trace.finalScore, backing: projectV9EffectiveBackingPillarScore(asset), exit: asset.scoreInput.pillars.exit.score, control: asset.scoreInput.pillars.control.score });
-  for (const shock of scenario.shocks) {
-    if (!input.rawCompileInput.activeAssetIds.includes(shock.assetId)) throw new Error(`Unknown scenario root: ${shock.assetId}`);
-  }
+  const prepared = prepareV9ContagionBaseline(input);
+  // Snapshot admitted facts and primitive identities, not the caller's mutable DTO.
+  const admittedInput = { ...input, rawCompileInput: prepared.baselineFacts };
+  return (definition) => evaluatePreparedV9ContagionScenario(admittedInput, definition, prepared);
+}
+
+function prepareV9ContagionBaseline(input: V9ContagionInput): PreparedV9ContagionBaseline {
   const baselineFacts = compileV9FactSetV3(input.rawCompileInput);
-  // Release full baseline traces before constructing the hypothetical set.
+  // Release full baseline traces before constructing any hypothetical set.
   const baseline = (() => {
     const result = evaluateValidatedV9FactSet(baselineFacts, input.policy);
     return {
@@ -39,6 +67,18 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
       })),
     };
   })();
+  return { baselineFacts, baseline: deepFreeze(baseline) };
+}
+
+function evaluatePreparedV9ContagionScenario(
+  input: V9ContagionInput,
+  definition: ContagionScenario,
+  { baselineFacts, baseline }: PreparedV9ContagionBaseline,
+): V9ContagionScenarioResult {
+  const scenario = ContagionScenarioSchema.parse(definition);
+  for (const shock of scenario.shocks) {
+    if (!baselineFacts.activeAssetIds.includes(shock.assetId)) throw new Error(`Unknown scenario root: ${shock.assetId}`);
+  }
   // Only fact-changing roots need mutable DTOs. The other compiler-admitted
   // rows are immutable and can retain their admission proof. JSON cloning each
   // changed root also breaks interned aliases between its fields before writes.
@@ -46,7 +86,11 @@ export function evaluateV9ContagionScenario(input: V9ContagionInput, definition:
   const { v9FactSetDigest: _digest, assets, ...envelope } = baselineFacts;
   const raw: V9FactSetCoreV3 = {
     ...envelope,
-    assets: changedRoots.size === 0 ? assets : assets.map((asset) => changedRoots.has(asset.assetId) ? JSON.parse(JSON.stringify(asset)) : asset),
+    assets: changedRoots.size === 0 ? assets : assets.map((asset) => {
+      if (!changedRoots.has(asset.assetId)) return asset;
+      const clone: unknown = JSON.parse(JSON.stringify(asset));
+      return V9AssetFactsV3Schema.parse(clone);
+    }),
   };
   for (const shock of scenario.shocks) {
     const asset = raw.assets.find((row) => row.assetId === shock.assetId)!;

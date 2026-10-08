@@ -210,7 +210,8 @@ describe("redemption backstop config consistency", () => {
     const violations = entries
       .filter(
         ([, c]) =>
-          c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0),
+          "confidence" in c.capacityModel && c.capacityModel.confidence === "documented-bound" &&
+          (!c.reviewedAt || !c.docs || c.docs.length === 0),
       )
       .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
     expect(violations).toEqual([]);

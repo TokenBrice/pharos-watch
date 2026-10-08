@@ -43,7 +43,7 @@ function defaultAbortReason(signal: AbortSignal): unknown {
 }
 
 async function cancelReaderQuietly(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
+  reader: ReadableStreamDefaultReader<unknown>,
   reason?: unknown,
 ): Promise<void> {
   await reader.cancel(reason).catch(() => undefined);
@@ -55,7 +55,7 @@ export interface BoundedByteBufferResult {
 }
 
 export async function bufferReadableStream(
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<unknown>,
   options: {
     maxBytes: number;
     signal?: AbortSignal;
@@ -95,7 +95,7 @@ export async function bufferReadableStream(
 
   try {
     while (true) {
-      let result: ReadableStreamReadResult<Uint8Array>;
+      let result: ReadableStreamReadResult<unknown>;
       try {
         result = abortPromise
           ? await Promise.race([reader.read(), abortPromise])
@@ -105,6 +105,11 @@ export async function bufferReadableStream(
         throw error;
       }
       if (result.done) break;
+      if (!(result.value instanceof Uint8Array)) {
+        const error = new TypeError("Stream returned a non-byte chunk");
+        await cancelReaderQuietly(reader, error);
+        throw error;
+      }
       options.onChunk?.(result.value.byteLength);
 
       const observedBytes = totalBytes + result.value.byteLength;

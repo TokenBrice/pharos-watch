@@ -96,7 +96,7 @@ describe("EVM blacklist contiguous coverage", () => {
     vi.mocked(getChainRpc).mockReturnValue(undefined);
   });
 
-  it("holds malformed state for two scans then durably quarantines it without losing valid rows", async () => {
+  it.each([null, "[]", "42"])("holds malformed state with prior %s for two scans then durably quarantines it without losing valid rows", async (priorValue) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
     const db = { prepare(sql: string) {
@@ -110,6 +110,11 @@ describe("EVM blacklist contiguous coverage", () => {
       address: config.contractAddress, topics: [TOPIC_A, ADDRESS_WORD], data: "0x",
       blockNumber: "0x64", timeStamp: "0x3e8", transactionHash: "0x" + "55".repeat(32), logIndex: "0x0",
     };
+    if (priorValue != null) {
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+        `blacklist:decode-retry:${config.configKey}:0x69:${valid.transactionHash}:0x1`, priorValue, 0,
+      );
+    }
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
       logs: [valid, { ...valid, blockNumber: "0x69", logIndex: "0x1", topics: [TOPIC_A] }],
       complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0,

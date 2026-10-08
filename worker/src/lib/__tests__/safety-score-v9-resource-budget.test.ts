@@ -93,6 +93,10 @@ const CONTAGION_HEAP_LIMIT_MIB = 256;
 // measured 60,496.228465 ms in the full-suite run (2026-10-07).
 // This is not a Worker CPU, byte, heap, or catalog-admission ceiling.
 const CONTAGION_WALL_BUDGET_MS = 90_000;
+// Node 24 profiling found the probe retaining a second full extension through
+// publication, and the matrix rebuilding its identical baseline nine times.
+// Release fixture-only graphs and share the admitted baseline, not shock results;
+// plain and coverage runs keep the same child workloads and every budget.
 let temporaryDirectory = "";
 let bundledProbe = "";
 let bundledInputs: string[] = [];
@@ -107,6 +111,7 @@ describe("Safety Score V9 canonical publication resource budget", {
       stdin: {
         contents: `
           import { readFileSync } from "node:fs";
+          import { setImmediate as yieldTurn } from "node:timers/promises";
           import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
           import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
           import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
@@ -118,7 +123,7 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
-          import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+          import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
           import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
           import { buildSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture.ts";
           import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
@@ -179,16 +184,17 @@ describe("Safety Score V9 canonical publication resource budget", {
             const policy = loadV9CandidateMethodologyPolicy(input.clockSec);
             const counts = [];
             const started = performance.now();
+            const evaluateScenario = createV9ContagionScenarioEvaluator({
+              rawCompileInput, policy, clock: input.clockSec,
+              publicationGenerationId: "resource-fixture",
+            });
             for (const assetId of ["usdc-circle", "usdt-tether", "usds-sky"]) {
               for (const shock of [
                 { kind: "score-limit", assetId, dimension: "final", limit: 40 },
                 { kind: "depeg", assetId, activeDepegBps: 1000, template: "one-day-history-and-exit-held" },
                 { kind: "mint-control-compromise", assetId },
               ]) {
-                const result = evaluateV9ContagionScenario({
-                  rawCompileInput, policy, clock: input.clockSec,
-                  publicationGenerationId: "resource-fixture",
-                }, { id: assetId + ":" + shock.kind, shocks: [shock] });
+                const result = evaluateScenario({ id: assetId + ":" + shock.kind, shocks: [shock] });
                 counts.push(result.manifest);
                 globalThis.gc?.();
               }
@@ -214,12 +220,15 @@ describe("Safety Score V9 canonical publication resource budget", {
               candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes }));
             process.exit(0);
           }
+          // The production builder owns its extension; retaining the fixture's
+          // separate graph defeats its release-before-evaluation memory path.
+          extension = null;
+          await yieldTurn();
+          globalThis.gc?.();
           let prior = buildSafetyScoreV9PublicationFromNormalizedInput({
             fixedInput: input,
-            extension,
             publishedAtSec: input.clockSec,
           });
-          extension = null;
           let acceptedStored = await serializeSafetyScoreV9Publication(prior.candidate);
           prior = null;
           await new Promise((resolve) => setImmediate(resolve));

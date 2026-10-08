@@ -150,14 +150,14 @@ export function parseWarnings(value: string | null): LiveReserveWarning[] {
     normalize: (parsed) => ({
       ok: true,
       payload: Array.isArray(parsed)
-        ? parsed.flatMap((item) => {
-            if (!item || typeof item !== "object") return [];
+        ? parsed.flatMap((item: unknown) => {
+            if (!item || typeof item !== "object" || !("code" in item) || !("message" in item)) return [];
             const code = typeof item.code === "string" ? item.code : null;
             const message = typeof item.message === "string" ? item.message : null;
             if (!code || !message) return [];
-            const severity = item.severity === "info" ? "info" : "warning";
+            const severity = "severity" in item && item.severity === "info" ? "info" : "warning";
             const effect =
-              typeof item.effect === "string" && LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect as LiveReserveWarning["effect"])
+              "effect" in item && typeof item.effect === "string" && LIVE_RESERVE_WARNING_EFFECT_VALUES.includes(item.effect as LiveReserveWarning["effect"])
                 ? (item.effect as LiveReserveWarning["effect"])
                 : severity === "info"
                   ? "info"

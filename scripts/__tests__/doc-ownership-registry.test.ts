@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { collectMarkdownReferences, requiresDocNavigation } from "../lib/doc-markdown.mts";
 import { createOwnershipGlobMatcher } from "../lib/doc-ownership-registry.mts";
+import { assertExecutableTestFiles } from "../lib/critical-ownership.mts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const COVERAGE_ROOTS = ["src/", "shared/", "worker/", "functions/", "scripts/", "docs/", ".github/"];
@@ -19,6 +20,7 @@ type RegistryMapping = {
   id: string;
   sources: string[];
   tier?: "specific" | "fallback";
+  testOwnership?: Array<{ sources: string[]; tests: string[] }>;
 };
 type RegistryExclusion = { reason: string; sources: string[] };
 type OwnershipRegistry = {
@@ -87,8 +89,12 @@ describe("doc-ownership registry integrity", () => {
       "npm run typecheck",
       "npx vitest run src",
     ]);
-    expect(mappings.filter((mapping) => ["worker-runtime", "shared-runtime", "documentation"].includes(mapping.id))
-      .every((mapping) => mapping.checks === undefined)).toBe(true);
+    expect(mappings.find((mapping) => mapping.id === "documentation")?.checks).toBeUndefined();
+    for (const id of ["worker-runtime", "shared-runtime"]) {
+      expect(mappings.find((mapping) => mapping.id === id)?.checks).toEqual(expect.arrayContaining([
+        "npm run lint:changed", "npm run typecheck:worker", "npm run check:generated-artifacts",
+      ]));
+    }
   });
 
   it.each([
@@ -200,6 +206,18 @@ describe("doc-ownership registry integrity", () => {
         for (const match of check.matchAll(/\bnpm run\s+([^\s]+)/g)) {
           expect(Object.hasOwn(packageScripts, match[1]), `${mapping.id}: ${match[1]}`).toBe(true);
         }
+      }
+    }
+  });
+
+  it("keeps declared invariant inputs live and their tests executable", () => {
+    for (const mapping of mappings) {
+      for (const declaration of mapping.testOwnership ?? []) {
+        expect(declaration.sources.length, mapping.id).toBeGreaterThan(0);
+        for (const source of declaration.sources) {
+          expect(trackedFiles.some((file) => matchesAny(file, [source])), `${mapping.id}: ${source}`).toBe(true);
+        }
+        expect(() => assertExecutableTestFiles(declaration.tests, { cwd: REPO_ROOT })).not.toThrow();
       }
     }
   });

@@ -182,6 +182,27 @@ describe("blacklist execution evidence", () => {
     sqlite.close();
   });
 
+  it.each(["[]", "42"])("replaces parseable corrupt retry state %s and requires three distinct observations", async (priorValue) => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
+      const key = "blacklist:decode-retry:config:block:tx:log";
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(key, priorValue, 0);
+      const db = memoryD1(sqlite);
+      for (const [scan, attempts, admitted] of [[1, 1, false], [1, 1, false], [2, 2, false], [3, 3, true]] as const) {
+        expect(await quarantineBlacklistDecodeFailure(
+          db, "config", "block:tx:log", "invalid-address", { data: "0x" }, scan,
+        )).toBe(admitted);
+        const state: unknown = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)!.value));
+        expect(state).toMatchObject({
+          attempts, observation: scan, quarantined: admitted, reason: "invalid-address", evidence: { data: "0x" },
+        });
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("does not consume failed durable writes", async () => {
     const sqlite = new DatabaseSync(":memory:");
     expect(await quarantineBlacklistDecodeFailure(memoryD1(sqlite), "config", "log", "invalid-address", {}, 1)).toBe(false);

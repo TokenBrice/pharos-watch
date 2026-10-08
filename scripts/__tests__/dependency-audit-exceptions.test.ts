@@ -1,13 +1,17 @@
-import type { SpawnSyncReturns } from "node:child_process";
+import type { SpawnSyncOptionsWithStringEncoding, SpawnSyncReturns } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
 import {
   DEPENDENCY_AUDIT_EXCEPTION_REGISTRY,
   runFullLockfileDependencyAudit,
+  runNewSinceDependencyAudit,
+  verifyDependencyAuditDelta,
   verifyDependencyAuditReport,
 } from "../ci/verify-dependency-audit.ts";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
+import { buildPrStaticCheckPlan, resolvePrDependencyAuditBase } from "../maintenance/run-pr-static-checks.ts";
 
 type AuditVulnerability = {
   effects: string[];
@@ -204,6 +208,88 @@ describe("dependency-audit exceptions", () => {
       ["audit", "--json", "--audit-level=high"],
       expect.objectContaining({ encoding: "utf8" }),
     );
+  });
+
+  it("reports pre-existing advisory/package pairs while passing a PR delta audit", () => {
+    const baseSha = "a".repeat(40);
+    let auditCount = 0;
+    let snapshotDirectory = "";
+    const stdout = { write: vi.fn() };
+    const spawn = vi.fn((command: string, args: string[], options: SpawnSyncOptionsWithStringEncoding): SpawnSyncReturns<string> => {
+      let output = "{}";
+      if (command === "git") {
+        expect(args[0]).toBe("show");
+        expect([`${baseSha}:package.json`, `${baseSha}:package-lock.json`]).toContain(args[1]);
+        expect(args).toHaveLength(2);
+      } else {
+        expect(command).toBe("npm");
+        expect(args).toEqual(["audit", "--package-lock-only", "--json", "--audit-level=high", "--include=dev"]);
+        auditCount++;
+        if (auditCount === 1) {
+          snapshotDirectory = String(options.cwd);
+          expect(readFileSync(join(snapshotDirectory, "package.json"), "utf8")).toBe("{}");
+          expect(readFileSync(join(snapshotDirectory, "package-lock.json"), "utf8")).toBe("{}");
+        } else {
+          expect(options.cwd).toBe("/current-repo");
+        }
+        output = JSON.stringify(reviewedReport());
+      }
+      return { pid: 0, output: [], stdout: output, stderr: "", status: command === "npm" ? 1 : 0, signal: null };
+    });
+    const result = runNewSinceDependencyAudit({ baseSha, cwd: "/current-repo", spawn, stdout });
+    expect(result.preExisting).toEqual([
+      { advisoryId: exception.advisoryId, package: "brace-expansion" },
+      { advisoryId: exception.advisoryId, package: "minimatch" },
+    ]);
+    expect(stdout.write.mock.calls.map(([chunk]) => chunk).join("")).toContain("pre-existing, tracked by weekly audit");
+    expect(auditCount).toBe(2);
+    expect(existsSync(snapshotDirectory)).toBe(false);
+  });
+
+  it("fails on a new advisory even when its package already exists at base", () => {
+    const current = reviewedReport();
+    current.vulnerabilities["brace-expansion"].via.push({
+      ...(current.vulnerabilities["brace-expansion"].via[0] as object),
+      url: "https://github.com/advisories/GHSA-new-advisory",
+    });
+    expect(() => verifyDependencyAuditDelta(current, reviewedReport())).toThrow("GHSA-new-advisory affects brace-expansion");
+  });
+
+  it("fails when a pre-existing advisory reaches a new package", () => {
+    const current = reviewedReport();
+    current.vulnerabilities["new-parent"] = {
+      name: "new-parent", severity: "high", via: ["minimatch"], effects: [], nodes: ["node_modules/new-parent"],
+    };
+    expect(() => verifyDependencyAuditDelta(current, reviewedReport())).toThrow(`${exception.advisoryId} affects new-parent`);
+  });
+
+  it("fails explicitly for missing base evidence without auditing the current tree", () => {
+    const spawn = vi.fn((): SpawnSyncReturns<string> => ({
+      pid: 0, output: [], stdout: "", stderr: "missing object", status: 128, signal: null,
+    }));
+    expect(() => runNewSinceDependencyAudit({ baseSha: "a".repeat(40), spawn }))
+      .toThrow("Cannot read package.json at base");
+    expect(spawn).toHaveBeenCalledOnce();
+    expect(() => runNewSinceDependencyAudit({ baseSha: "", spawn })).toThrow("--new-since requires a full base commit SHA");
+  });
+
+  it.each([
+    {},
+    { vulnerabilities: { risk: { severity: "high", via: ["missing"] } } },
+    { vulnerabilities: { risk: { severity: "high", via: ["risk"] } } },
+    { vulnerabilities: { risk: { severity: "high", via: [{}] } } },
+  ])("fails closed for malformed base/current audit evidence %j", (report) => {
+    expect(() => verifyDependencyAuditDelta(report, reviewedReport())).toThrow();
+    expect(() => verifyDependencyAuditDelta(reviewedReport(), report)).toThrow();
+  });
+
+  it("uses the frozen PR base without Git fallback and resolves merge-base otherwise", () => {
+    const execGit = vi.fn(() => `${"b".repeat(40)}\n`);
+    expect(resolvePrDependencyAuditBase({ NODE_ENV: "test", PR_BASE_SHA: "a".repeat(40) }, "HEAD", execGit)).toBe("a".repeat(40));
+    expect(execGit).not.toHaveBeenCalled();
+    expect(resolvePrDependencyAuditBase({ NODE_ENV: "test" }, "selected-head", execGit)).toBe("b".repeat(40));
+    expect(execGit).toHaveBeenCalledWith(["merge-base", "selected-head", "origin/main"]);
+    expect(() => resolvePrDependencyAuditBase({ NODE_ENV: "test" }, "HEAD", () => "")).toThrow("Cannot resolve dependency-audit base");
   });
 
   it("adds the production audit only to guards for root dependency inputs", () => {

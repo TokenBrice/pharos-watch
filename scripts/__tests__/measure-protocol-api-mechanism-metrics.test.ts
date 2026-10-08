@@ -114,10 +114,10 @@ describe("protocol API response transport", () => {
   };
 
   it.each([
-    ["text/html", "<!doctype html><title>body-sentinel</title>", "non-JSON media type"],
-    ["application/json", "<html>body-sentinel</html>", "unexpected html-like body"],
-    ["application/json", "   \n\t", "unexpected empty body"],
-  ])("rejects %s non-JSON responses without logging body bytes", async (contentType, body, expected) => {
+    ["text/html", "<!doctype html><title>body-sentinel</title>", "non-JSON media type", "non-json-media-type"],
+    ["application/json", "<html>body-sentinel</html>", "unexpected html-like body", "unexpected-body-class"],
+    ["application/json", "   \n\t", "unexpected empty body", "unexpected-body-class"],
+  ])("rejects %s non-JSON responses without logging body bytes", async (contentType, body, expected, reason) => {
     const logs: string[] = [];
     let error = "";
     try {
@@ -136,7 +136,45 @@ describe("protocol API response transport", () => {
       bodyBytes: Buffer.byteLength(body),
       sourceId: source.sourceId,
       status: 200,
+      reason,
     });
+  });
+
+  it.each([
+    ["text/html; charset=utf-8", "non-json-media-type"],
+    ["application/json", "unexpected-body-class"],
+  ])("rejects restricted HTML advertised as %s with a machine-readable reason", async (contentType, reason) => {
+    const body = readFileSync(new URL("./fixtures/ethena-restricted.html", import.meta.url), "utf8");
+    const upstream = response(body, {
+      headers: { "content-type": contentType },
+      redirected: true,
+      status: 200,
+      url: "https://ethena.fi/restricted",
+    });
+    const fetchImpl = vi.fn(async () => upstream);
+    const arrayBuffer = vi.spyOn(upstream, "arrayBuffer");
+    const logs: string[] = [];
+    const request = fetchProtocolApiObservation(source, { fetchImpl, log: (message) => logs.push(message) });
+
+    await expect(request).rejects.toThrow();
+    const error = await request.catch((caught: Error) => caught.message);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(arrayBuffer).toHaveBeenCalledTimes(1);
+    expect(logs).toHaveLength(1);
+    expect(transportRecord(logs[0]!)).toMatchObject({
+      sourceId: source.sourceId,
+      configuredUrl: source.url,
+      finalUrl: "https://ethena.fi/restricted",
+      status: 200,
+      redirected: true,
+      mediaType: contentType.split(";", 1)[0],
+      bodyBytes: Buffer.byteLength(body),
+      bodySha256: createHash("sha256").update(body).digest("hex"),
+      bodyClass: "html-like",
+      reason,
+    });
+    expect(error).toContain(`"reason":"${reason}"`);
+    expect(`${logs.join("\n")}\n${error}`).not.toMatch(/Access Restricted|not available in your country/);
   });
 
   it("consumes non-success responses once and reports bounded provenance", async () => {
@@ -160,6 +198,7 @@ describe("protocol API response transport", () => {
       bodyClass: "other",
       headers: { server: "Vercel" },
       status: 403,
+      reason: "http-error",
     });
   });
 

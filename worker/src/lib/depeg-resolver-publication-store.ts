@@ -256,8 +256,8 @@ function parsePositiveIntegerArrayJson(value: string, name: string): number[] {
   if (!Array.isArray(parsed)) {
     throw new Error(`${name} must be a JSON array`);
   }
-  return parsed.map((id) => {
-    if (!Number.isSafeInteger(id) || id <= 0) {
+  return parsed.map((id: unknown) => {
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
       throw new Error(`${name} must contain positive integers`);
     }
     return id;
@@ -426,8 +426,8 @@ function publicPredictionIdsFromPayload(payload: Record<string, unknown>): numbe
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) return [];
   const ids = (meta as Record<string, unknown>).publicPredictionIds;
   if (!Array.isArray(ids)) return [];
-  return ids.map((id) => {
-    if (!Number.isSafeInteger(id) || id <= 0)
+  return ids.map((id: unknown) => {
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0)
       throw new Error("basePayload _meta.publicPredictionIds must be positive integers");
     return id;
   });

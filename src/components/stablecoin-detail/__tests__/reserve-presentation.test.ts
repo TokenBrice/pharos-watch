@@ -426,6 +426,7 @@ describe("buildReserveFeedStatus", () => {
           freshness: {
             stale: true, staleReasons: ["source-age"], assessedAt: 1_790_000_000, fetchedAt: 1_789_900_000,
             attemptId: null, fetchAgeSec: 100_000, fetchBudgetSec: 172_800,
+            freshnessMode: "verified", sourceFreshnessInvalid: false,
             sourceTimestamp: Date.parse("2026-09-20T00:00:00Z") / 1000, sourceAgeSec: 691_200,
             sourceAgeBudgetSec: 345_600, sourceAgeBudgetCap: "adapter",
           },

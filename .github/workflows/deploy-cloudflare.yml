@@ -229,23 +229,58 @@ jobs:
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-api
       - id: verify-heavy-identity
         name: Re-verify active heavy Worker release identity
-        if: ${{ needs.deploy-worker.result == 'success' }}
+        if: ${{ always() && needs.deploy-worker.result == 'success' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts --script-name stablecoin-heavy
       - name: Require unchanged heavy activation identity
-        if: ${{ needs.deploy-worker.result == 'success' }}
+        if: ${{ always() && needs.deploy-worker.result == 'success' }}
         env:
           EXPECTED_HEAVY_VERSION: ${{ needs.deploy-worker.outputs.heavy_worker_version }}
           OBSERVED_HEAVY_VERSION: ${{ steps.verify-heavy-identity.outputs.worker_version }}
         run: test -n "${EXPECTED_HEAVY_VERSION}" && test "${EXPECTED_HEAVY_VERSION}" = "${OBSERVED_HEAVY_VERSION}"
       - id: acceptance
-        name: Record read-only operational acceptance
+        name: Record deployment identity and operational acceptance
+        if: ${{ always() }}
         env:
           PAGES_DEPLOYED: ${{ needs.pages-release.result == 'success' }}
           WORKER_DEPLOYED: ${{ needs.deploy-worker.result == 'success' }}
           EXPECTED_PAGES_COMMIT: ${{ github.sha }}
           EXPECTED_WORKER_VERSION: ${{ needs.deploy-worker.outputs.worker_version }}
           OBSERVED_WORKER_VERSION: ${{ steps.verify-worker-identity.outputs.worker_version }}
+          EXPECTED_HEAVY_WORKER_VERSION: ${{ needs.deploy-worker.outputs.heavy_worker_version }}
+          OBSERVED_HEAVY_WORKER_VERSION: ${{ steps.verify-heavy-identity.outputs.worker_version }}
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-post-deploy-acceptance.ts
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [plan, deploy-worker, pages-prepare, pages-release, post-deploy-acceptance]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: deploy-cloudflare.yml
+          needs-json: ${{ toJSON(needs) }}
+          allowed-skips: >-
+            ${{ format('{0},{1},{2}',
+                needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'false' && 'deploy-worker' || '',
+                needs.plan.result == 'success' && needs.plan.outputs.pages_required == 'false' && 'pages-prepare,pages-release' || '',
+                needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'false' && needs.plan.outputs.pages_required == 'false' && 'post-deploy-acceptance' || '') }}
+          github-token: ${{ github.token }}
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

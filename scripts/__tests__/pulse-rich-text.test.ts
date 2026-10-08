@@ -32,8 +32,18 @@ describe("pulse editorial rich text", () => {
         ...["launches", "stress", "market"].map(id => ({ id, title: id, items: ["Item"] }))],
       annex: { title: "Evidence", methodology: "Method", blocks: [{ tag: "Tag", heading: "Heading", body: "Body", sources: [{ label: "Source", url: "https://example.com" }] }] } };
     if (field === "tldr" || field === "watch") content[field][0] = payload;
-    if (field === "mover") content.sections[0]!.rows![0]!.why = payload;
-    if (field === "compact") content.sections[1]!.items![0] = payload;
+    if (field === "mover") {
+      const section = content.sections[0];
+      expect(section).toBeDefined();
+      if (!section || !("rows" in section)) throw new Error("Expected a movers section");
+      section.rows[0]!.why = payload;
+    }
+    if (field === "compact") {
+      const section = content.sections[1];
+      expect(section).toBeDefined();
+      if (!section || !("items" in section)) throw new Error("Expected a compact section");
+      section.items[0] = payload;
+    }
     if (field === "body") content.annex.blocks[0]!.body = payload;
     if (field === "methodology") content.annex.methodology = payload;
     try {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { trackEvent } from "@/lib/analytics";
 import type { ToastType } from "@/hooks/use-toast";
 
@@ -9,12 +9,22 @@ interface ThemeToggleOptions {
   toast?: (message: string, type?: ToastType, duration?: number) => void;
 }
 
+const getMountedServerSnapshot = () => false;
+
 export function useThemeToggle(options?: ThemeToggleOptions) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setMounted(true), []);
+  const [mountStore] = useState(() => {
+    let mounted = false;
+    return {
+      getSnapshot: () => mounted,
+      subscribe: (listener: () => void) => {
+        mounted = true;
+        listener();
+        return () => {};
+      },
+    };
+  });
+  const mounted = useSyncExternalStore(mountStore.subscribe, mountStore.getSnapshot, getMountedServerSnapshot);
 
   const isDark = mounted ? theme === "dark" : false;
   const nextTheme = isDark ? "light" : "dark";

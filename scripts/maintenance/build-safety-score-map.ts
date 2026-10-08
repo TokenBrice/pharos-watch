@@ -546,8 +546,29 @@ export function radiusForMcap(tier: Tier, mcap: number, k: number, gravelFloor: 
 }
 
 export type DemandOrbitZoneResult =
-  | { ok: true; zones: Record<Tier, OrbitZone>; requiredThickness: Record<Tier, number> }
+  | { ok: true; zones: Record<Tier, OrbitZone>; ringZones: Record<Tier, OrbitZone[]>; requiredThickness: Record<Tier, number> }
   | { ok: false; detail: string; requiredThickness: Record<Tier, number> };
+
+function splitPopulation<T>(items: readonly T[], count: number): T[][] {
+  const groups = Array.from({ length: count }, () => [] as T[]);
+  items.forEach((item, index) => groups[index % count].push(item));
+  return groups;
+}
+
+function splitBandZone(zone: OrbitZone, thicknesses: readonly number[]): OrbitZone[] {
+  const total = thicknesses.reduce((sum, value) => sum + value, 0);
+  let fraction = 0;
+  return thicknesses.map((thickness) => {
+    const start = fraction;
+    fraction += thickness / total;
+    return {
+      innerRx: zone.innerRx + (zone.outerRx - zone.innerRx) * start,
+      innerRy: zone.innerRy + (zone.outerRy - zone.innerRy) * start,
+      outerRx: zone.innerRx + (zone.outerRx - zone.innerRx) * fraction,
+      outerRy: zone.innerRy + (zone.outerRy - zone.innerRy) * fraction,
+    };
+  });
+}
 
 /**
  * Allocate the bounded B-F radial span from the actual bubble footprint. The
@@ -564,52 +585,44 @@ export type DemandOrbitZoneResult =
  * leave two giants in different outer bands (USDT in B and USDC in C on
  * 2026-09-28) unplaceable at any scale.
  *
- * Each band is a single guide ring, so its census must also fit around the
- * guide's circumference. D and F sit against the fixed outer bound, so the
- * only way to lengthen C's guide is to move it outward: B takes the least
- * share of the surplus that closes every ring, and C keeps the rest.
+ * Dense bands may use multiple concentric guides of the same grade. Each
+ * guide retains its own complete census and is linted independently; the
+ * grade-band stack still stays inside the fixed poster body.
  */
 export function computeDemandOrbitZones(
   radiiByTier: Readonly<Record<Tier, readonly number[]>>,
   modifierLanesByTier: Readonly<Partial<Record<Tier, boolean>>> = {},
+  ringCounts: Readonly<Partial<Record<Tier, number>>> = {},
 ): DemandOrbitZoneResult {
   const availableThickness = OUTER_RY - OUTER_INNER_RY - BAND_GAP_Y * (OUTER_TIERS.length - 1);
   const availableThicknessX = OUTER_RX - OUTER_INNER_RX - BAND_GAP_X * (OUTER_TIERS.length - 1);
   const longAxisRatio = availableThicknessX / availableThickness;
   const baseThickness = Object.fromEntries(TIER_ORDER.map((tier) => [tier, 0])) as Record<Tier, number>;
-  const rings = {} as Record<(typeof OUTER_TIERS)[number], { count: number; length: number; widestPair: number }>;
+  const rings = {} as Record<(typeof OUTER_TIERS)[number], { radii: number[][]; thicknesses: number[] }>;
   for (const tier of OUTER_TIERS) {
     const radii = radiiByTier[tier];
     if (radii.some((radius) => !Number.isFinite(radius) || radius < 0)) {
       return { ok: false, detail: `Band ${tier} has an invalid radius demand`, requiredThickness: baseThickness };
     }
-    const footprint = radii.reduce((sum, radius) => sum + Math.PI * (radius + BUBBLE_GAP / 2) ** 2, 0);
+    const groups = splitPopulation([...radii].sort((a, b) => b - a), ringCounts[tier] ?? 1);
     const baseline = BASE_ORBIT_ZONES[tier];
     const perimeter = approximateEllipsePerimeter(
       (baseline.innerRx + baseline.outerRx) / 2,
       (baseline.innerRy + baseline.outerRy) / 2,
     );
-    let largest = 0;
-    let runnerUp = 0;
-    for (const radius of radii) {
-      if (radius > largest) {
-        runnerUp = largest;
-        largest = radius;
-      } else if (radius > runnerUp) {
-        runnerUp = radius;
-      }
-    }
-    baseThickness[tier] = Math.max(
-      BAND_SEMANTIC_MIN,
-      (largest * 2) / longAxisRatio + BAND_SEMANTIC_MIN,
-      runnerUp * 2 + BAND_SEMANTIC_MIN,
-      footprint / (perimeter * BAND_PACKING_EFFICIENCY) + BAND_SEMANTIC_MIN,
-    );
-    rings[tier] = {
-      count: radii.length,
-      length: radii.reduce((sum, radius) => sum + radius * 2 + BUBBLE_GAP, 0),
-      widestPair: largest + runnerUp + BUBBLE_GAP,
-    };
+    const thicknesses = groups.map((group) => {
+      const footprint = group.reduce((sum, radius) => sum + Math.PI * (radius + BUBBLE_GAP / 2) ** 2, 0);
+      const largest = group[0] ?? 0;
+      const runnerUp = group[1] ?? 0;
+      return Math.max(
+        BAND_SEMANTIC_MIN,
+        (largest * 2) / longAxisRatio + BAND_SEMANTIC_MIN,
+        runnerUp * 2 + BAND_SEMANTIC_MIN,
+        footprint / (perimeter * BAND_PACKING_EFFICIENCY) + BAND_SEMANTIC_MIN,
+      );
+    });
+    baseThickness[tier] = thicknesses.reduce((sum, value) => sum + value, 0);
+    rings[tier] = { radii: groups, thicknesses };
   }
 
   const baseTotal = OUTER_TIERS.reduce((sum, tier) => sum + baseThickness[tier], 0);
@@ -642,23 +655,34 @@ export function computeDemandOrbitZones(
     }
     return zones;
   };
-  // `packEllipticalOrbit` spreads its arc slack evenly and then requires every
-  // neighbour chord to clear the pair's centre distance. No guide curves more
-  // tightly than its short-axis circle of curvature, so (Schur) each pair needs
-  // at most the arc that subtends the widest pair's distance on that circle.
-  const ringShortfall = (tier: (typeof OUTER_TIERS)[number], zone: OrbitZone): number => {
-    const ring = rings[tier];
-    if (ring.count < 2) return 0;
+  // Bound chord-to-arc correction per mark, not widestPair * census. The
+  // correction is convex in pair distance, so Jensen bounds every cyclic
+  // order by the sum of arcs for (2 * radius + gap). A single supply giant
+  // must not charge its curvature correction to hundreds of small markers.
+  const ringShortfall = (radii: readonly number[], zone: OrbitZone): number => {
+    if (radii.length < 2) return 0;
     const guideRx = (zone.innerRx + zone.outerRx) / 2;
     const guideRy = (zone.innerRy + zone.outerRy) / 2;
     const tightestRadius = Math.min(guideRx, guideRy) ** 2 / Math.max(guideRx, guideRy);
-    if (ring.widestPair >= 2 * tightestRadius) return Number.POSITIVE_INFINITY;
-    const pairArc = 2 * tightestRadius * Math.asin(ring.widestPair / (2 * tightestRadius));
-    const demand = ring.length + ring.count * (pairArc - ring.widestPair);
+    let demand = 0;
+    for (const radius of radii) {
+      const distance = radius * 2 + BUBBLE_GAP;
+      if (distance >= 2 * tightestRadius) return Number.POSITIVE_INFINITY;
+      demand += 2 * tightestRadius * Math.asin(distance / (2 * tightestRadius));
+    }
     return demand - approximateEllipsePerimeter(guideRx, guideRy);
   };
-  const firstOpenRing = (zones: Readonly<Record<Tier, OrbitZone>>) =>
-    OUTER_TIERS.map((tier) => ({ tier, shortfall: ringShortfall(tier, zones[tier]) })).find(({ shortfall }) => shortfall > 0);
+  const ringZonesFor = (zones: Readonly<Record<Tier, OrbitZone>>): Record<Tier, OrbitZone[]> => ({
+    A: [zones.A],
+    ...Object.fromEntries(OUTER_TIERS.map((tier) => [tier, splitBandZone(zones[tier], rings[tier].thicknesses)])),
+  }) as Record<Tier, OrbitZone[]>;
+  const firstOpenRing = (zones: Readonly<Record<Tier, OrbitZone>>) => {
+    const ringZones = ringZonesFor(zones);
+    return OUTER_TIERS.flatMap((tier) => rings[tier].radii.map((radii, index) => ({
+      tier,
+      shortfall: ringShortfall(radii, ringZones[tier][index]),
+    }))).find(({ shortfall }) => shortfall > 0);
+  };
 
   let ringFailure: string | null = null;
   for (let laneStep = SUBGRADE_LANE_DEGRADE_STEPS; laneStep >= 0; laneStep--) {
@@ -701,7 +725,8 @@ export function computeDemandOrbitZones(
         else closed = middle;
       }
     }
-    return { ok: true, zones: withBShare(closed), requiredThickness };
+    const zones = withBShare(closed);
+    return { ok: true, zones, ringZones: ringZonesFor(zones), requiredThickness };
   }
   return {
     ok: false,
@@ -851,10 +876,14 @@ export function packEllipticalOrbit(
     return [{ x: GALAXY_CX + orbitRx * Math.cos(phase), y: GALAXY_CY + orbitRy * Math.sin(phase) }];
   }
 
-  // Equal arc lengths, not equal angles: the latter crowds the short-axis ends.
+  // Equal surplus arc lengths avoid bare arcs; each neighbour gets its own
+  // curvature allowance instead of the largest pair's allowance everywhere.
   const { perimeter, pointAtArc } = createEllipseArcSampler(orbitRx, orbitRy);
   const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length]! + BUBBLE_GAP);
-  const requiredLength = required.reduce((sum, distance) => sum + distance, 0);
+  const tightestRadius = Math.min(orbitRx, orbitRy) ** 2 / Math.max(orbitRx, orbitRy);
+  if (required.some((distance) => distance >= 2 * tightestRadius)) return null;
+  const requiredArcs = required.map((distance) => 2 * tightestRadius * Math.asin(distance / (2 * tightestRadius)));
+  const requiredLength = requiredArcs.reduce((sum, distance) => sum + distance, 0);
   if (!Number.isFinite(perimeter) || requiredLength > perimeter) return null;
   const slack = (perimeter - requiredLength) / radii.length;
 
@@ -862,7 +891,7 @@ export function packEllipticalOrbit(
   let arc = (((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2)) * perimeter;
   for (let i = 0; i < radii.length; i++) {
     centers.push(pointAtArc(arc));
-    arc += required[i]! + slack;
+    arc += requiredArcs[i]! + slack;
   }
   for (let i = 0; i < centers.length; i++) {
     const next = centers[(i + 1) % centers.length]!;
@@ -1046,6 +1075,7 @@ function layoutBands(
   scale: number,
   gravelFloor: number,
   diag?: FitDiagnostic[],
+  maxPerRing = Number.POSITIVE_INFINITY,
 ): { bands: BandLayout[]; k: number; gravelFloor: number } | null {
   const maxMcap = Math.max(...graded.map((coin) => coin.mcap));
   const k = (R_MAX_TARGET * scale) / Math.sqrt(maxMcap);
@@ -1064,7 +1094,10 @@ function layoutBands(
     tier,
     graded.some((coin) => coin.tier === tier && subgradeLaneForGrade(coin.grade) !== "base"),
   ])) as Record<Tier, boolean>;
-  const zoneResult = computeDemandOrbitZones(radiiByTier, modifierLanesByTier);
+  const ringCounts = Object.fromEntries(TIER_ORDER.map((tier) => [
+    tier, tier === "A" ? 1 : Math.max(1, Math.ceil(radiiByTier[tier].length / maxPerRing)),
+  ])) as Record<Tier, number>;
+  const zoneResult = computeDemandOrbitZones(radiiByTier, modifierLanesByTier, ringCounts);
   if (!zoneResult.ok) {
     diag?.push({ tier: "B-F", count: OUTER_TIERS.reduce((sum, tier) => sum + radiiByTier[tier].length, 0), placed: 0, radius: Math.max(...OUTER_TIERS.flatMap((tier) => radiiByTier[tier]), 0), reason: zoneResult.detail });
     return null;
@@ -1072,24 +1105,24 @@ function layoutBands(
 
   const bands: BandLayout[] = [];
   const placedAcrossTiers: Bubble[] = [];
-  for (const tier of TIER_ORDER) {
-    // Supply order is retained inside each published sub-grade. Outer tiers
-    // interleave those discrete populations around the guide so adjacent
-    // marks can separate radially without turning angle into another metric,
-    // then rotate that cyclic order so the band's supply leader comes first
-    // and lands on its long-axis anchor, the only thickness the demand model
-    // reserved for it.
+  const ringPopulations = TIER_ORDER.flatMap((tier) => {
     const supplySorted = graded
       .filter((coin) => coin.tier === tier)
       .sort((a, b) => b.mcap - a.mcap || b.score - a.score || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    let coins = supplySorted;
-    if (tier !== "A" && supplySorted.length > 0) {
-      const interleaved = interleaveSubgradeLanes(supplySorted);
-      const leader = interleaved.indexOf(supplySorted[0]);
+    return splitPopulation(supplySorted, ringCounts[tier]).map((population, ringIndex) => ({
+      tier, population, zone: zoneResult.ringZones[tier][ringIndex],
+    }));
+  });
+  for (const { tier, population, zone } of ringPopulations) {
+    // Within each guide, interleave published subgrades and anchor its supply
+    // leader on the long axis where the demand model reserved room for it.
+    let coins = population;
+    if (tier !== "A" && population.length > 0) {
+      const interleaved = interleaveSubgradeLanes(population);
+      const leader = interleaved.indexOf(population[0]);
       coins = [...interleaved.slice(leader), ...interleaved.slice(0, leader)];
     }
     if (coins.length === 0) continue;
-    const zone = zoneResult.zones[tier];
     const bubbles: Bubble[] = [];
     let laneOffsetY = 0;
     const radii = coins.map(radiusOf);
@@ -1345,8 +1378,8 @@ function annotationSceneForBands(bands: readonly BandLayout[], annotations: read
       { id: "header-rule", x1: MARGIN_X, y1: HEADER_RULE_Y, x2: WIDTH - MARGIN_X, y2: HEADER_RULE_Y, role: "decoration" },
       { id: "footer-rule", x1: MARGIN_X, y1: FOOTER_RULE_Y, x2: WIDTH - MARGIN_X, y2: FOOTER_RULE_Y, role: "decoration" },
     ],
-    orbits: bands.map((band) => ({
-      id: `band-${band.tier}`,
+    orbits: bands.map((band, index) => ({
+      id: `band-${band.tier}-${index}`,
       cx: GALAXY_CX,
       cy: GALAXY_CY,
       ...band.zone,
@@ -1992,14 +2025,27 @@ async function fetchAndValidateMapData(
   return { reportCardsResult, reportCards, psi, graded, unjoined, notRatedCount, tiers, lanes, bands, k, gravelFloor, logos, missingLogos };
 }
 
-function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number; gravelFloor: number } {
+export class SafetyMapCapacityError extends Error {
+  readonly code = "layout-capacity-exhausted";
+
+  constructor(detail: string) {
+    super(`layout-capacity-exhausted: Could not fit the orbital map above the footer with readable markers and adaptive guide rings (tried floors ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`);
+    this.name = "SafetyMapCapacityError";
+  }
+}
+
+export function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number; gravelFloor: number } {
   let diag: FitDiagnostic[] = [];
   // Large bubbles may shrink to protect the composition, but the publication
   // floor is fixed: recognizability must not silently degrade to make it fit.
-  for (const gravelFloor of GRAVEL_FLOORS) {
-    for (let scale = 1; scale >= 0.55; scale *= 0.96) {
+  const configurations = [Number.POSITIVE_INFINITY, 120, 90, 60].flatMap((maxPerRing) =>
+    GRAVEL_FLOORS.map((gravelFloor) => ({ maxPerRing, gravelFloor })),
+  );
+  for (const { maxPerRing, gravelFloor } of configurations) {
+    const minScale = Math.min(R_MIN_A, gravelFloor) / R_MAX_TARGET;
+    for (let scale = 1; ; scale = Math.max(minScale, scale * 0.96)) {
       diag = [];
-      const layout = layoutBands(graded, scale, gravelFloor, diag);
+      const layout = layoutBands(graded, scale, gravelFloor, diag, maxPerRing);
       if (layout) {
         const annotationViolations = validateAnnotationScene(annotationSceneForBands(layout.bands), {
           bubbleGap: BUBBLE_GAP,
@@ -2020,14 +2066,13 @@ function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number
         const details = [...annotationViolations.map((item) => `${item.code}: ${item.ids.join(" / ")}`), ...compositionViolations];
         diag.push({ tier: "scene", count: graded.length, placed: 0, radius: 0, reason: details.slice(0, 3).join(", ") });
       }
+      if (scale === minScale) break;
     }
   }
   const detail = diag
     .map((d) => d.reason ?? `${d.tier}: placed ${d.placed}/${d.count} coins before radius ${d.radius.toFixed(1)} stopped fitting`)
     .join("; ");
-  throw new Error(
-    `Could not fit the orbital map above the footer at any scale or gravel floor (tried ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`,
-  );
+  throw new SafetyMapCapacityError(detail);
 }
 
 export interface SafetyScoreMapCliIo {

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
@@ -26,6 +27,14 @@ import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-regist
 import { runDirectCli } from "../lib/cli-args.mjs";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
+const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
+  "package.json": true,
+  "package-lock.json": true,
+  ".npmrc": true,
+  "scripts/ci/verify-dependency-audit.ts": true,
+  "scripts/ci/dependency-audit-exceptions.json": true,
+};
+const RESERVE_FIXTURE_PREFIX = "worker/src/cron/reserve-adapters/__tests__/fixtures/";
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
 const STRUCTURAL_TEST_PATH_PATTERNS = [
@@ -120,6 +129,17 @@ export function buildPrStaticCheckPlan(
     commands.push({ name: "audit:deps" });
   }
 
+  if (changedFiles.some((file) => Object.hasOwn(REVIEWED_DEPENDENCY_AUDIT_PATHS, file))) {
+    commands.push({ name: "check:dependency-audit" });
+  }
+  if (changedFiles.some((file) =>
+    (file.startsWith(RESERVE_FIXTURE_PREFIX) && /\.(html|json|txt)$/.test(file)) ||
+    file === "scripts/ci/check-html-fixture-age.ts" ||
+    file === "scripts/maintenance/refresh-reserve-html-fixtures.ts"
+  )) {
+    commands.push({ name: "check:html-fixture-metadata" });
+  }
+
   // `skipDocSync` is the composition-context option passed by `check:pr` and
   // the CI matrix when the docs lane already owns `check:doc-sync` in the same
   // plan; standalone runs never set it, so source-owned docs stay validated.
@@ -177,6 +197,21 @@ export function buildPrStaticCheckPlan(
   };
 }
 
+export function resolvePrDependencyAuditBase(
+  env: NodeJS.ProcessEnv,
+  head: string,
+  execGit: (args: string[]) => string = (args) => execFileSync("git", args, { encoding: "utf8" }),
+): string {
+  if (env.PR_BASE_SHA) return env.PR_BASE_SHA;
+  try {
+    const baseSha = execGit(["merge-base", head, "origin/main"]).trim();
+    if (!/^[a-f0-9]{40}$/i.test(baseSha)) throw new Error("merge-base did not return a commit SHA");
+    return baseSha;
+  } catch {
+    throw new Error("Cannot resolve dependency-audit base; fetch origin/main or set the frozen PR_BASE_SHA.");
+  }
+}
+
 export async function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
@@ -212,7 +247,9 @@ export async function runPrStaticChecks({
     args:
       command.name === "lint:changed"
         ? [`--base=${base}`, `--head=${head}`]
-        : (command.args ?? []),
+        : command.name === "check:dependency-audit"
+          ? [`--new-since=${resolvePrDependencyAuditBase(env, head)}`]
+          : (command.args ?? []),
   }));
   const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);

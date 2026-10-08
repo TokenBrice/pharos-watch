@@ -13,12 +13,16 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   sweep:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      # Explicit domain-publisher exception: the sweep's review worklist issue
+      # is not a workflow incident and must remain independently maintained.
+      issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -241,3 +245,30 @@ jobs:
             --path .github/artifacts/safety-score-missing-data-registry-summary.json \
             --title "chore(v9): refresh missing-data registry snapshot" \
             --body "$PR_BODY"
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [sweep]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: curation-expiry-sweep.yml
+          needs-json: ${{ toJSON(needs) }}
+          github-token: ${{ github.token }}
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

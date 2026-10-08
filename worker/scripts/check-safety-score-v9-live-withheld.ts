@@ -6,6 +6,8 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { V9GradeSchema } from "@shared/types/safety-score-v9";
 import { V9RatingStatusSchema } from "@shared/types/safety-score-v9-causes";
+import { V9AccessClaimGraphSchema } from "@shared/types/safety-score-v9-access-lookthrough";
+import type { SafetyScoreV9FactSetExtensionV2 } from "../src/lib/safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
@@ -159,7 +161,25 @@ function withLiveReserveWithheld(
   return normalizeSafetyScoreV9CompilerInput(draft);
 }
 
-function buildCounterfactualPipeline(
+/** Static admitted reviews are unchanged by withholding a reserve observation. */
+export function readmitCounterfactualAccessGraph(
+  graphValue: unknown,
+  sourceInput: { clockSec: number; baseInputGenerationId: string },
+  counterfactualInput: { clockSec: number; baseInputGenerationId: string },
+) {
+  const graph = V9AccessClaimGraphSchema.parse(graphValue);
+  if (graph.clockSec !== sourceInput.clockSec || graph.generationId !== sourceInput.baseInputGenerationId ||
+      counterfactualInput.clockSec !== sourceInput.clockSec) {
+    throw new Error("Access graph must match the admitted clock and input generation");
+  }
+  // The builder derives these static nodes/statuses solely from the review and
+  // clock. Reserve-dependent shares are evaluated later against the new facts.
+  // Re-validate the entire graph; final fact-set admission still validates every
+  // status/evidence reference against the full new input generation.
+  return V9AccessClaimGraphSchema.parse({ ...graph, generationId: counterfactualInput.baseInputGenerationId });
+}
+
+export function buildCounterfactualPipeline(
   replay: Replay,
   fixedInput: SafetyScoreV9CompilerInput,
   assetId: string,
@@ -173,13 +193,11 @@ function buildCounterfactualPipeline(
       metaById,
     });
   } else {
-    const original = structuredClone(replayExtension) as {
-      assets?: Array<{ assetId: string }>;
-      [key: string]: unknown;
-    };
+    const original = structuredClone(replayExtension) as SafetyScoreV9FactSetExtensionV2;
     if (!Array.isArray(original.assets)) throw new Error("Replay extension has no asset set");
     let rebuiltFixedInput = fixedInput;
-    if (fixedInput.captureKind === "native-v9-inputs") {
+    const hasGraphs = original.assets.some((asset) => asset.accessReview?.freeze.claimGraph !== undefined);
+    if (fixedInput.captureKind === "native-v9-inputs" && !hasGraphs) {
       const narrowFixedInput = structuredClone(fixedInput) as SafetyScoreV9CompilerInput & {
         activeAssetIds: string[];
       };
@@ -200,7 +218,27 @@ function buildCounterfactualPipeline(
     if (!target) {
       throw new Error(`Counterfactual extension rebuild did not produce ${assetId}`);
     }
-    original.assets = original.assets.map((asset) => (asset.assetId === assetId ? target : asset));
+    original.assets = original.assets.map((asset) => {
+      let next = asset.assetId === assetId ? target : asset;
+      const graph = asset.accessReview?.freeze.claimGraph;
+      if (graph === undefined) return next;
+      const admitted = readmitCounterfactualAccessGraph(graph, replay.pipeline.fixedInput, fixedInput);
+      if (next === target) {
+        next = structuredClone(target);
+        // Keep captured access overlays and their evidence, not today's review
+        // registry, while rebuilding the target's reserve-dependent facts.
+        next.accessReview = structuredClone(asset.accessReview);
+        const evidenceByKey = new Map(next.researchEvidence.map((entry) => [entry.evidenceKey, entry]));
+        for (const entry of asset.researchEvidence) evidenceByKey.set(entry.evidenceKey, entry);
+        next.researchEvidence = [...evidenceByKey.values()];
+        next.componentEvidence = [
+          ...next.componentEvidence.filter((entry) => !entry.componentKey.startsWith("access:")),
+          ...asset.componentEvidence.filter((entry) => entry.componentKey.startsWith("access:")),
+        ];
+      }
+      next.accessReview!.freeze.claimGraph = admitted;
+      return next;
+    });
     extension = original;
   }
   return buildSafetyScoreV9Candidate({

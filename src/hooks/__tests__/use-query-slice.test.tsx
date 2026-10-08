@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { useQuerySlice, useQuerySlices, type QueryResultLike } from "@/hooks/use-query-slice";
+import { act, render, renderHook } from "@testing-library/react";
+import { startTransition, Suspense, useLayoutEffect, useMemo } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { useQuerySlice, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
 import type { ApiMeta } from "@/lib/api";
 
 const META: ApiMeta = { updatedAt: 1_700_000_000, ageSeconds: 12, status: "fresh" };
@@ -18,6 +19,45 @@ function makeQueryResult<TData>(overrides: Partial<QueryResultLike<TData>> = {})
     meta: null,
     ...overrides,
   };
+}
+
+function useOptionalQueryGroup(enabled: boolean) {
+  const optional = useQuerySlice({ dataUpdatedAt: 0, enabled });
+  return useMemo(() => ({ optional }), [optional]);
+}
+
+function useQueryPair<TList, TPeg>(listQuery: QueryResultLike<TList>, pegQuery: QueryResultLike<TPeg>) {
+  const list = useQuerySlice(listQuery);
+  const peg = useQuerySlice(pegQuery);
+  return useMemo(() => ({ list, peg }), [list, peg]);
+}
+
+type NumberQueryPair = { list: QuerySlice<number>; peg: QuerySlice<number> };
+const pendingQueryPair = new Promise<never>(() => {});
+
+function SuspendedQueryPair({
+  updatedAt,
+  suspend,
+  onCommit,
+  onSuspend,
+}: {
+  updatedAt: number;
+  suspend: boolean;
+  onCommit: (group: NumberQueryPair) => void;
+  onSuspend: () => void;
+}) {
+  const group = useQueryPair(
+    makeQueryResult({ data: 1, dataUpdatedAt: updatedAt }),
+    makeQueryResult({ data: 2, dataUpdatedAt: 20 }),
+  );
+  useLayoutEffect(() => {
+    onCommit(group);
+  });
+  if (suspend) {
+    onSuspend();
+    throw pendingQueryPair;
+  }
+  return <span>{group.list.dataUpdatedAt}</span>;
 }
 
 describe("useQuerySlice", () => {
@@ -105,10 +145,10 @@ describe("useQuerySlice", () => {
   });
 });
 
-describe("useQuerySlices", () => {
+describe("caller-local query groups", () => {
   it("preserves query enablement and updates it even when transport fields are unchanged", () => {
     const { result, rerender } = renderHook(
-      ({ enabled }) => useQuerySlices({ optional: { dataUpdatedAt: 0, enabled } }),
+      ({ enabled }) => useOptionalQueryGroup(enabled),
       { initialProps: { enabled: false } },
     );
 
@@ -123,10 +163,10 @@ describe("useQuerySlices", () => {
     const listData = { peggedAssets: [] };
     const pegData = { coins: [] };
     const { result, rerender } = renderHook(() =>
-      useQuerySlices({
-        list: makeQueryResult({ data: listData, dataUpdatedAt: 10, meta: META }),
-        peg: makeQueryResult({ data: pegData, dataUpdatedAt: 20 }),
-      }),
+      useQueryPair(
+        makeQueryResult({ data: listData, dataUpdatedAt: 10, meta: META }),
+        makeQueryResult({ data: pegData, dataUpdatedAt: 20 }),
+      ),
     );
 
     const first = result.current;
@@ -142,10 +182,10 @@ describe("useQuerySlices", () => {
     const pegError = new Error("peg down");
     const { result, rerender } = renderHook(
       (props: { updatedAt: number }) =>
-        useQuerySlices({
-          list: makeQueryResult({ data: listData, dataUpdatedAt: props.updatedAt }),
-          peg: makeQueryResult({ dataUpdatedAt: 20, error: pegError }),
-        }),
+        useQueryPair(
+          makeQueryResult({ data: listData, dataUpdatedAt: props.updatedAt }),
+          makeQueryResult({ dataUpdatedAt: 20, error: pegError }),
+        ),
       { initialProps: { updatedAt: 10 } },
     );
 
@@ -160,5 +200,32 @@ describe("useQuerySlices", () => {
     expect(result.current.peg.error).toBe(pegError);
     expect(result.current.peg.dataUpdatedAt).toBe(20);
     expect(result.current.peg.meta).toBeNull();
+  });
+
+  it("preserves committed group identities after abandoning a suspended transition", async () => {
+    const onCommit = vi.fn<(group: NumberQueryPair) => void>();
+    const onSuspend = vi.fn<() => void>();
+    const view = (updatedAt: number, suspend = false) => (
+      <Suspense fallback={<span>Loading</span>}>
+        <SuspendedQueryPair updatedAt={updatedAt} suspend={suspend} onCommit={onCommit} onSuspend={onSuspend} />
+      </Suspense>
+    );
+    const { rerender, unmount } = render(view(10));
+    const first = onCommit.mock.calls[0][0];
+
+    await act(async () => {
+      startTransition(() => rerender(view(11, true)));
+    });
+    expect(onSuspend).toHaveBeenCalled();
+    expect(onCommit).toHaveBeenCalledTimes(1);
+
+    rerender(view(10));
+    const resumed = onCommit.mock.calls[onCommit.mock.calls.length - 1][0];
+    expect(resumed).toBe(first);
+    expect(resumed.list).toBe(first.list);
+    expect(resumed.peg).toBe(first.peg);
+    rerender(view(10));
+    expect(onCommit.mock.calls[onCommit.mock.calls.length - 1][0]).toBe(first);
+    unmount();
   });
 });

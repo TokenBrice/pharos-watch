@@ -83,7 +83,7 @@ export async function parseOptionalRequestJsonObject(request?: Request): Promise
   if (!rawBody.trim()) return {};
 
   try {
-    const parsed = JSON.parse(rawBody);
+    const parsed: unknown = JSON.parse(rawBody);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return errorResponse(400, "Invalid JSON body");
     }
