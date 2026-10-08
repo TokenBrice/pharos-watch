@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
 import { capabilityForPool, requiresP4DexScoreEligibleCapabilityCoverage } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
@@ -29,10 +29,15 @@ vi.mock("../uniswap-v4", async () => {
 });
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { type SolanaDexNativeGeneration } from "@shared/types/solana-dex-bank";
+import { buildNativeDexExecutionTarget } from "../inventory";
+import { publishNativeDexGeneration } from "../native-generation-store";
 import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
+  loadNativeDexExecutionDiagnostic,
   releaseDexMeasuredExecutionProofFields,
   stripDexMeasuredExecutionInternalFields,
   type DexMeasuredExecutionJoinDiagnostics,
@@ -1136,5 +1141,78 @@ describe("measured execution join AMM invariants", () => {
       expect.objectContaining({ targetId: target.targetId, detail: "atomic-direction-missing" }),
     ));
     expect(diagnostics).toMatchObject({ targetCount: 2, measuredCount: 0, gatedCount: 2 });
+  });
+});
+
+const nativeFixtures = createLatestSchemaFixtureTracker();
+afterEach(() => nativeFixtures.closeAll());
+
+function failedNativeGeneration(status: "failed" | "unavailable", clock = 1_000): SolanaDexNativeGeneration {
+  return {
+    schemaVersion: "solana-dex-generation-v1", generationId: `native-${clock}`, profileId: "orca-whirlpool-exact-v1",
+    sourceGenerationId: "native-retained-source", startedAt: clock, publishedAt: clock + 60, scoreEligible: false,
+    quotes: [{ target: buildNativeDexExecutionTarget({ chain: "solana", profileId: "orca-whirlpool-exact-v1",
+      stablecoinId: "usdc-circle", poolAddress: "A".repeat(32), tokenMintIn: "B".repeat(32), tokenMintOut: "C".repeat(32) }),
+      scoreEligible: false, bank: null, bankRef: null, proofRef: null,
+      programId: "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", arrayAddresses: [], dependencyAddresses: [],
+      inputPriceUsd: 1, inputDecimals: 6, points: [{ status, notionalUsd: 1_000, quotedAt: clock + 30,
+        reason: status === "failed" ? "native-array-exhausted" : "native-bank-unavailable" }] }],
+  };
+}
+
+describe("native diagnostic reader isolation", () => {
+  it("does not read an EVM publication as a missing native pointer", async () => {
+    const { db, sqlite } = nativeFixtures.open();
+    sqlite.prepare(`INSERT INTO surface_publication_generations
+      (surface, generation_id, started_at, published_at, state, expected_rows, published_rows)
+      VALUES ('dex-measured-execution-quotes', 'evm-current', 1000, 1060, 'published', 0, 0)`).run();
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_060 }))
+      .toMatchObject({ status: "missing", reason: "native-pointer-missing", generationId: null, scoreEligible: false, quotes: [] });
+  });
+
+  it.each(["failed", "unavailable"] as const)("preserves current %s point outcomes without native or EVM fallback", async (status) => {
+    const { db } = nativeFixtures.open();
+    await publishNativeDexGeneration(db, failedNativeGeneration("failed"));
+    const value = failedNativeGeneration(status, 2_000);
+    await publishNativeDexGeneration(db, value);
+    const diagnostic = await loadNativeDexExecutionDiagnostic({ db, profileId: value.profileId, nowSec: 2_060 });
+    expect(diagnostic).toMatchObject({ status, generationId: value.generationId, scoreEligible: false,
+      freshnessMaxSec: 10_800, quotes: [{ status, slot: null, points: [{ status }] }] });
+    expect(diagnostic.quotes[0]!.points[0]).not.toHaveProperty("amountOutRaw");
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "raydium-clmm-exact-v1", nowSec: 2_060 }))
+      .toMatchObject({ status: "missing", generationId: null });
+  });
+
+  it("uses original observation clocks and the inclusive three-hour bound", async () => {
+    const { db } = nativeFixtures.open();
+    await publishNativeDexGeneration(db, failedNativeGeneration("failed"));
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_030 + 10_800 }))
+      .toMatchObject({ status: "failed", publishedAt: 1_060, generationId: "native-1000" });
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_031 + 10_800 }))
+      .toMatchObject({ status: "stale", reason: "native-observation-stale", quotes: [{ status: "stale" }] });
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_061 + 10_800 }))
+      .toMatchObject({ status: "stale", reason: "native-generation-stale" });
+  });
+
+  it("does not fall back when current evidence is torn, unreadable or future-clocked", async () => {
+    const { db, sqlite } = nativeFixtures.open();
+    await publishNativeDexGeneration(db, failedNativeGeneration("failed"));
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_000 }))
+      .toMatchObject({ status: "unavailable", reason: "native-generation-future" });
+    sqlite.prepare("DELETE FROM dex_native_generation_quotes").run();
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_060 }))
+      .toMatchObject({ status: "unavailable", reason: "native-generation-unavailable", quotes: [] });
+    sqlite.exec("DROP TABLE dex_native_publication_pointers");
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: "orca-whirlpool-exact-v1", nowSec: 1_060 }))
+      .toMatchObject({ status: "unavailable", reason: "native-generation-unavailable", generationId: null });
+  });
+
+  it("reports a current empty diagnostic generation as missing targets, not measured zero", async () => {
+    const { db } = nativeFixtures.open();
+    const value = failedNativeGeneration("failed");
+    value.quotes = [];
+    await publishNativeDexGeneration(db, value);
+    expect(await loadNativeDexExecutionDiagnostic({ db, profileId: value.profileId, nowSec: 1_060 }))
+      .toMatchObject({ status: "missing", reason: "native-target-missing", generationId: value.generationId, quotes: [] });
   });
 });

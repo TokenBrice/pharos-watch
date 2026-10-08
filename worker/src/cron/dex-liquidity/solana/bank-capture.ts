@@ -1,7 +1,7 @@
 import { SolanaDexBankCaptureSchema, type SolanaDexBankCapture, type SolanaDexBankCaptureSink } from "@shared/types/solana-dex-bank";
 import type { SolanaAccount } from "../../reserve-adapters/solana";
 
-/** Offline proof plumbing: no raw-byte copies or serialized graph on the scheduled path. */
+/** Bounded final-bank bytes for native diagnostic authority and offline proof packets. */
 export async function captureSolanaDexBank(input: {
   profileId: SolanaDexBankCapture["profileId"];
   poolAddress: string;

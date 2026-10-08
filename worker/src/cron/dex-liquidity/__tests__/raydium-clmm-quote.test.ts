@@ -11,6 +11,7 @@ function replay(): RaydiumSnapshot {
   return {
     pool, poolAddress: fixture.poolAddress, slot: fixture.slot, configSlot: fixture.slot, bitmapSlot: fixture.slot,
     feeRate: new DataView(bytes(pool.config).buffer).getUint32(47, true), initializedStarts: [-60, 0],
+    dependencyAddresses: [pool.config, ...Object.keys(accounts).filter((address) => bytes(address).length === 1832)],
     tickArrays: Object.keys(accounts).filter((address) => bytes(address).length === 10240).map((address) => decodeRaydiumTickArray(bytes(address), address, fixture.poolAddress, pool.tickSpacing, fixture.slot)),
     mints: [pool.tokenMintA, pool.tokenMintB].map((address) => ({ slot: fixture.slot, address, account: { owner: accounts[address].owner, data: bytes(address) } })),
   };
@@ -23,6 +24,7 @@ function replaySimulation(capture: typeof pinned.snapshots[number]): RaydiumSnap
   return {
     pool, poolAddress: capture.poolAddress, slot: capture.slot, configSlot: capture.slot, bitmapSlot: capture.slot,
     feeRate: capture.feeRate, initializedStarts: capture.initializedStarts,
+    dependencyAddresses: [pool.config, ...Object.keys(raw).filter((address) => data(address).length === 1832)],
     tickArrays: Object.keys(raw).filter((address) => data(address).length === 10240).map((address) =>
       decodeRaydiumTickArray(data(address), address, capture.poolAddress, pool.tickSpacing, capture.slot)),
     mints: [pool.tokenMintA, pool.tokenMintB].map((address) => ({ slot: capture.slot, address, account: { owner: raw[address].owner, data: data(address) } })),
@@ -108,6 +110,8 @@ describe("native Raydium CLMM exact-in", () => {
     vi.stubGlobal("fetch", fetch);
     const snapshot = await fetchRaydiumSnapshot(fixture.poolAddress, replay().pool, fixture.tokenMintIn, new AbortController().signal);
     expect(quoteRaydiumExactIn(snapshot, fixture.tokenMintIn, BigInt(fixture.amountIn))).toEqual({ amountOut: 999152114n, slot: fixture.slot });
+    expect(snapshot.dependencyAddresses).toContain(snapshot.pool.config);
+    expect(snapshot.dependencyAddresses).toHaveLength(2);
     expect(peak).toBe(1);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
