@@ -22,7 +22,7 @@ export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_0
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 
 /** Diagnostic-only native reader vocabulary, separate from EVM profiles and score gates. */
-export const DexNativeExecutionDiagnosticSchema = /* @__PURE__ */ (() => z.object({
+const DexNativeExecutionDiagnosticSchema = /* @__PURE__ */ (() => z.object({
   profileId: z.enum(["orca-whirlpool-exact-v1", "raydium-clmm-exact-v1"]),
   status: z.enum(["current", "missing", "stale", "failed", "unavailable"]),
   reason: z.string().min(1),

@@ -32,7 +32,7 @@ export const SolanaDexBankCaptureSchema = /* @__PURE__ */ (() => z.object({
 export type SolanaDexBankCapture = z.output<typeof SolanaDexBankCaptureSchema>;
 export type SolanaDexBankCaptureSink = (capture: SolanaDexBankCapture) => void | Promise<void>;
 
-export const SOLANA_DEX_NATIVE_PROGRAM_IDS = {
+const SOLANA_DEX_NATIVE_PROGRAM_IDS = {
   "orca-whirlpool-exact-v1": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
   "raydium-clmm-exact-v1": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
 } as const;
@@ -64,7 +64,7 @@ export const SolanaDexNativePointSchema = /* @__PURE__ */ (() => z.discriminated
 export type SolanaDexNativePoint = z.output<typeof SolanaDexNativePointSchema>;
 
 /** Local-model output and final RPC bytes, explicitly not independent program execution. */
-export const SolanaDexNativeQuoteSchema = /* @__PURE__ */ (() => z.object({
+const SolanaDexNativeQuoteSchema = /* @__PURE__ */ (() => z.object({
   target: SolanaDexNativeTargetSchema,
   scoreEligible: z.literal(false),
   bank: SolanaDexBankCaptureSchema.nullable(),
