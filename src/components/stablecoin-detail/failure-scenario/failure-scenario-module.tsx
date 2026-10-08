@@ -44,7 +44,7 @@ import {
 } from "./scenario-model";
 
 /** Anchor of the module; steps anchor as `failure-scenario-<stageId>`. */
-export const FAILURE_SCENARIO_MODULE_ID = "failure-scenario";
+const FAILURE_SCENARIO_MODULE_ID = "failure-scenario";
 
 const CHIP_CLASS = "text-[11px] font-medium";
 const NEUTRAL_CHIP_CLASS = cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill);
@@ -95,7 +95,7 @@ function DraftNotice({ note }: { note?: string }) {
  * the full text opens the attack-path fold; the "Hypothetical scenario" chip
  * still frames the module.
  */
-export function summaryPremise(premise: string): string | null {
+function summaryPremise(premise: string): string | null {
   const first = premise.split(/(?<=\.)\s+/)[0] ?? "";
   if (/\b0x[0-9a-f]/i.test(first)) return null;
   return findSummaryBudgetViolations(first, SUMMARY_PROSE_MAX_WORDS).length === 0 ? first : null;

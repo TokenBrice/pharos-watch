@@ -215,7 +215,7 @@ export interface ScenarioClockModel {
 }
 
 /** "T+7d", "T+36h", "T+45m". */
-export function formatClockPoint(hours: number): string {
+function formatClockPoint(hours: number): string {
   if (hours === 0) return "T+0";
   if (hours >= 24 && Number.isInteger(hours / 24)) return `T+${hours / 24}d`;
   if (hours >= 1) return `T+${Number(hours.toFixed(1))}h`;
