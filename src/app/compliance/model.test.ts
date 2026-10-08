@@ -123,9 +123,31 @@ function ids(rows: readonly ComplianceRow[]): string[] {
 
 beforeEach(() => {
   fixtures.isGeniusRegimeEffective.mockReturnValue(false);
+  fixtures.metas.find(({ id }) => id === "future-coin")!.status = "pre-launch";
 });
 
 describe("Compliance model", () => {
+  it.each([
+    ["pre-launch", false, false, true],
+    ["pre-launch", true, false, true],
+    ["active", false, false, true],
+    ["active", true, true, false],
+    ["frozen", false, false, false],
+    ["frozen", true, false, false],
+    ["quarantined", false, false, false],
+    ["quarantined", true, false, false],
+    ["delisted", false, false, false],
+    ["delisted", true, false, false],
+  ] as const)("routes the same %s asset with effective=%s without changing its authorization", (status, effective, main, watch) => {
+    fixtures.metas.find(({ id }) => id === "future-coin")!.status = status;
+    fixtures.isGeniusRegimeEffective.mockReturnValue(effective);
+    const model = viewModel({ regime: "genius" });
+    expect(ids(model.rows).includes("future-coin")).toBe(main);
+    expect(ids(model.watchRows).includes("future-coin")).toBe(watch);
+    const row = [...model.rows, ...model.watchRows].find(({ id }) => id === "future-coin");
+    if (main || watch) expect(row?.status).toBe("official-application-pending");
+  });
+
   it("admits only active assets to the main table and keeps pre-launch GENIUS rows in watch", () => {
     const { rows, watchRows, totalTracked } = viewModel();
 

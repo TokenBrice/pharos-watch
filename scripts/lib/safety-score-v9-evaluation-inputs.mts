@@ -207,7 +207,6 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/exit-route-capacity-point.ts",
   "worker/src/lib/redemption-exit-route-observations.ts",
   "worker/src/lib/exit-execution/runtime.ts",
-  "worker/src/lib/exit-execution/orderbooks.ts",
   "worker/src/lib/exit-execution/securitize-offramp.ts",
   "worker/src/lib/redemption-backstop/sources.ts",
   "worker/src/lib/redemption-backstop-capacity/profile.ts",

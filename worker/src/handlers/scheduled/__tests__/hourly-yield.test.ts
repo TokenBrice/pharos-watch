@@ -55,7 +55,6 @@ describe("runHourlyYieldSlot", () => {
     await runYieldSupplementalSlot(runtime);
     expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
       runtime.db, signal, runtime.chainRpcs, reportProgress,
-      expect.objectContaining({ enabled: false }),
     );
   });
 
@@ -64,7 +63,6 @@ describe("runHourlyYieldSlot", () => {
     await runHourlyYieldSlot(runtime);
     expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
       runtime.db, signal, runtime.chainRpcs, reportProgress,
-      expect.objectContaining({ enabled: false }),
       { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
   });
@@ -103,7 +101,6 @@ describe("runHourlyYieldSlot", () => {
       signal,
       runtime.chainRpcs,
       reportProgress,
-      expect.objectContaining({ enabled: false }),
       { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
     expect(mocks.fetchTbillRate).toHaveBeenCalledWith(runtime.db, signal, runtime.env, {

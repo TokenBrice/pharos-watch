@@ -64,7 +64,6 @@ function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquid
     weakCoverageCoinsBeforeFallback: 0,
     dlYieldsAvailable: true,
     dlProtocolsAvailable: true,
-    directCexOrderbookDepth: null,
     criticalSourceFailures: [],
     ...overrides,
   };

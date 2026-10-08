@@ -26,13 +26,4 @@ describe("discovery provider registry", () => {
     expect(isCensusProviderSetSupersededByRegistry("arc", address, 0)).toBe(true);
   });
 
-  it("retains disabled provider descriptors without crawler leaves", () => {
-    expect(DEX_DISCOVERY_PROVIDER_REGISTRY
-      .filter((entry) => entry.providerId === "soroban-exhaustive" || entry.providerId === "btcusd-public-https")
-      .map((entry) => [entry.providerId, entry.lifecycle, entry.crawlerLeaf]))
-      .toEqual([
-        ["soroban-exhaustive", "disabled", undefined],
-        ["btcusd-public-https", "disabled", undefined],
-      ]);
-  });
 });

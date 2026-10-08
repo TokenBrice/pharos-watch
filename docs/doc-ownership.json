@@ -52,7 +52,7 @@
         "shared/lib/stablecoins/**",
         "shared/lib/stablecoin-id-registry.ts",
         "shared/lib/classification.ts",
-        "shared/lib/shadow-stablecoins.ts"
+        "shared/lib/psi-historical-assets.ts"
       ],
       "docs": [
         { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
@@ -148,6 +148,7 @@
         { "path": "docs/runbooks/dependency-network.md", "anchor": "scope-and-commands" },
         { "path": "docs/live-reserves.md", "anchor": "adding-a-new-adapter" },
         { "path": "docs/live-reserves.md", "anchor": "registry-defined-adapter-classes" },
+        { "path": "docs/live-reserves.md", "anchor": "adapter-specific-evidence-boundaries" },
         { "path": "docs/live-reserves.md", "anchor": "snapshot-admission-gates" }
       ],
       "background": [
@@ -321,7 +322,8 @@
         { "path": "docs/telegram-architecture.md", "anchor": "1-ingress" },
         { "path": "docs/telegram-alerts.md", "anchor": "commands" },
         { "path": "docs/telegram-alerts.md", "anchor": "dispatch" },
-        "docs/telegram-mini-app.md"
+        { "path": "docs/telegram-alerts.md", "anchor": "dispatch-routing-and-formatting" },
+        { "path": "docs/telegram-mini-app.md", "anchor": "overview" }
       ],
       "background": ["docs/runbooks/telegram-no-delivery.md", "docs/runbooks/telegram-rate-limit-storm.md"],
       "checks": ["npm run lint:changed", "npm run typecheck", "npm run typecheck:worker", "npm run check:telegram-load", "npm run check:cron-sync", "npx vitest run worker/src/api worker/src/cron"],
@@ -457,11 +459,13 @@
       ],
       "docs": [
         { "path": "docs/worker-infrastructure.md", "anchor": "env-interface" },
+        { "path": "docs/worker-infrastructure.md", "anchor": "binding-inventory" },
         { "path": "docs/operator-origin-access.md", "anchor": "runtime-origin-bindings" },
         { "path": "docs/deployment-process.md", "anchor": "github-deploy-inputs" },
-        "docs/scripts.md",
+        { "path": "docs/scripts.md", "anchor": "operational-notes" },
         "README.md"
       ],
+      "background": [{ "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" }],
       "checks": ["npm run check:env-contract"],
       "rules": ["Environment documentation names variables only; never print or copy secret values."]
     },
@@ -479,6 +483,7 @@
       ],
       "docs": [
         { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
+        { "path": "docs/status-dashboard.md", "anchor": "cron-health-model" },
         { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" },
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries" }
       ],
@@ -643,7 +648,10 @@
       "label": "Worker runtime implementation",
       "risk": "medium",
       "sources": ["worker/src/**", "worker/scripts/**", "worker/*.ts", "worker/AGENTS.md", "worker/tsconfig.json", "worker/wrangler.toml"],
-      "docs": [{ "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" }],
+      "docs": [
+        { "path": "docs/worker-infrastructure.md", "anchor": "module-initialization" },
+        { "path": "docs/worker-infrastructure.md", "anchor": "runtime-feature-contracts" }
+      ],
       "background": [{ "path": "docs/worker-and-api-limits.md", "anchor": "connection-budget-operating-assumption" }],
       "alsoRead": ["worker/AGENTS.md"],
       "rules": ["Consume Worker response bodies before opening more fetches."]

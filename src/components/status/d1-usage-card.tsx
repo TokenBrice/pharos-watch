@@ -7,7 +7,7 @@ import { StatusCardEmptyState } from "@/components/status/page-primitives";
 function formatBytes(value: number | null): string {
   if (value == null || !Number.isFinite(value) || value < 0) return "—";
   if (value < 1024) return `${Math.round(value)} B`;
-  const units = ["KB", "MB", "GB", "TB"];
+  const units = ["KiB", "MiB", "GiB", "TiB"];
   let scaled = value;
   let unitIndex = -1;
   while (scaled >= 1024 && unitIndex < units.length - 1) {

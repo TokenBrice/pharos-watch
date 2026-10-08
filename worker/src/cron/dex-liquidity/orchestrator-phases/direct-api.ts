@@ -92,11 +92,8 @@ export interface DexPoolSourceRegistrationSlot {
     | "orca-clmm"
     | "aerodrome-slipstream"
     | "uniswap-v3-bsc-shadow"
-    | "velodrome-slipstream"
-    | "evm-v4"
-    | "soroban-exhaustive"
-    | "btcusd-provider-investigation";
-  platform: "evm" | "solana" | "soroban" | "offchain";
+    | "velodrome-slipstream";
+  platform: "evm" | "solana";
   lifecycle: "active" | "shadow" | "disabled";
   implementationModule: string;
 }
@@ -112,9 +109,6 @@ export const DEX_POOL_SOURCE_REGISTRY: readonly DexPoolSourceRegistrationSlot[] 
   { slotId: "aerodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
   { slotId: "uniswap-v3-bsc-shadow", platform: "evm", lifecycle: "shadow", implementationModule: "../fetch-uniswap-v3-bsc" },
   { slotId: "velodrome-slipstream", platform: "evm", lifecycle: "active", implementationModule: "../fetch-slipstream" },
-  { slotId: "evm-v4", platform: "evm", lifecycle: "disabled", implementationModule: "../subgraph-source-families" },
-  { slotId: "soroban-exhaustive", platform: "soroban", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
-  { slotId: "btcusd-provider-investigation", platform: "offchain", lifecycle: "disabled", implementationModule: "@shared/lib/dex-deployment-coverage" },
 ] as const;
 
 export interface DirectApiFetchPhaseEntry {

@@ -3,7 +3,6 @@ import type { CronResult } from "../../lib/cron-logger";
 import { syncRpcProviderParity } from "../../cron/rpc-provider-parity";
 import { syncYieldData } from "../../cron/sync-yield-data";
 import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
-import { resolveVaultsFyiConfig } from "../../lib/env";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
@@ -40,7 +39,6 @@ function buildDeferredTbillResult(): CronResult {
 }
 
 function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
-  const vaultsFyi = resolveVaultsFyiConfig(runtime.env);
   // YBH-3: the catch-up runs first in this serial chain, so its result decides
   // whether the benchmark retry is allowed to spend this slot's remaining
   // budget in front of the publication.
@@ -55,7 +53,7 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
     chainLabels: ["post-V9 yield publication", "dwellir parity observation"],
     implementations: {
       "sync-yield-supplemental": async (signal, reportProgress) => {
-        const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, vaultsFyi, {
+        const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, {
           catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC,
         });
         supplementalCatchUpRan = result.status !== "skipped_neutral";

@@ -164,7 +164,7 @@ describe("pipeline coverage summaries", () => {
     const data = degraded(base, {
       sectionErrors: {
         coingeckoPriceDiff: { code: "cg_query_failed", message: "Comparison timed out" },
-        classificationWarnings: { code: "class_query_failed", message: "Classification query timed out" },
+        reserveDrift: { code: "reserve_drift_computation_failed", message: "Reserve query timed out" },
         dependencyHealth: { code: "dependency_query_failed", message: "Dependency inventory timed out" },
       },
     });
@@ -172,9 +172,9 @@ describe("pipeline coverage summaries", () => {
     expect(collectPipelineLoaderErrors(data)).toEqual([
       expect.objectContaining({ label: "CoinGecko comparison", rawKey: "coingeckoPriceDiff", code: "cg_query_failed" }),
       expect.objectContaining({
-        label: "Classification warnings",
-        rawKey: "classificationWarnings",
-        code: "class_query_failed",
+        label: "Reserve drift",
+        rawKey: "reserveDrift",
+        code: "reserve_drift_computation_failed",
       }),
       expect.objectContaining({ label: "Dependency health", rawKey: "dependencyHealth" }),
     ]);
@@ -208,7 +208,11 @@ describe("pipeline coverage summaries", () => {
     );
     expect(model.publicationRows).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: "DEX Liquidity", rawCode: "dex-liquidity", state: "critical" }),
+        expect.objectContaining({
+          label: "DEX Liquidity", rawCode: "dex-liquidity", state: "unknown",
+          currentValue: "Unavailable",
+          detail: expect.stringContaining("publication_query_failed"),
+        }),
       ]),
     );
     expect(model.dependencyRows).toEqual(

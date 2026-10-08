@@ -45,6 +45,30 @@ describe("check-stale-flags", () => {
     expect(result.oldest).toEqual(expect.objectContaining({ flag: "SOON_FLAG", daysUntil: 1 }));
   });
 
+  it("accepts the surviving four temporary flags without the retired overlay", () => {
+    const result = evaluateStaleFlags([
+      "export const FEATURE_FLAGS = {",
+      "heroVerdict: true,",
+      "// expiresAt: 2026-11-15 — exact-build visual review",
+      "quietDeviations: false,",
+      "// expiresAt: 2026-11-15 — real-device review",
+      "mobileStickySummary:",
+      "false,",
+      "// expiresAt: 2026-12-15 — rollback evidence",
+      "depegResolver: true,",
+      "// expiresAt: 2027-01-05 — populated reviewer evidence",
+      "depegResolverReviewer:",
+      "true,",
+      "};",
+    ].join("\n"), new Date("2026-10-08T00:00:00Z"));
+
+    expect(result.status).toBe(0);
+    expect(result.flags.map(({ flag }) => flag)).toEqual([
+      "quietDeviations", "mobileStickySummary", "depegResolver", "depegResolverReviewer",
+    ]);
+    expect(result.expired).toEqual([]);
+  });
+
   it("fails closed when the expiration convention is absent", () => {
     const result = runStaleFlags([], {
       source: "const featureFlags = {};",

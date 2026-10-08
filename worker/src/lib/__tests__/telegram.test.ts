@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 let fetchSpy = mockFetch([], { requireMatch: true });
 
@@ -76,22 +77,19 @@ describe("sendToChat", () => {
   });
 
   it("only advertises the private recap CTA in public rollout", () => {
-    const publicPolicy = { mode: "public" as const, allowedChatIds: new Set<string>() };
-    const canaryPolicy = { mode: "canary" as const, allowedChatIds: new Set(["channel-1"]) };
+    const publicPolicy = { mode: "public" as const };
 
     expect(buildTelegramRecapCta(publicPolicy)).toBe(
       '<a href="https://t.me/PharosWatchBot">Open @PharosWatchBot for a private /recap →</a>',
     );
-    expect(buildTelegramRecapCta(canaryPolicy)).toBeNull();
-    expect(buildTelegramRecapCta({ mode: "dark", allowedChatIds: new Set() })).toBeNull();
-    expect(buildTelegramRecapCta({ mode: "off", allowedChatIds: new Set() })).toBeNull();
+    for (const mode of ["dark", "canary", "unknown"]) {
+      expect(buildTelegramRecapCta(resolveTelegramRecapRolloutPolicy({ TELEGRAM_RECAP_ROLLOUT_MODE: mode }))).toBeNull();
+    }
+    expect(buildTelegramRecapCta({ mode: "off" })).toBeNull();
     expect(buildTelegramRecapCta(undefined)).toBeNull();
 
     const publicBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, publicPolicy);
-    const offBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, {
-      mode: "off",
-      allowedChatIds: new Set(),
-    });
+    const offBody = buildTelegramMessage("Daily Digest", "PSI held steady.", "2026-03-21", null, null, null, { mode: "off" });
     expect(publicBody).toContain("private /recap");
     expect(offBody).not.toContain("private /recap");
   });

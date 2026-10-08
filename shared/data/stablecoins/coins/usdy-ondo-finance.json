@@ -136,30 +136,6 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "usdy-holdings-report",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "scoring": {
-      "maxSourceAgeSec": 432000
-    },
-    "breakerScope": "usdy-ondo",
-    "suspended": {
-      "reason": "Newest daily Ankura report cannot be reliably discovered from the Dropbox archive as a dated HTML/JSON listing. Server probes returned ZIP downloads or Edison HTML with proprietary base64 protobuf data. The September 3 reviewed manifest is retained as static evidence only; a pinned PDF cannot validate daily-series freshness.",
-      "since": "2026-09-09",
-      "reviewBy": "2026-10-09"
-    },
-    "display": {
-      "url": "https://ondo.finance/usdy",
-      "label": "Ankura-reviewed USDY LLC holdings"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-html",
-        "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Ondo T-bill fund",
     "yieldType": "nav-appreciation"

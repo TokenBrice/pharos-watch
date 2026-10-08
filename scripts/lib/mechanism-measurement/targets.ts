@@ -439,6 +439,9 @@ const ADDITIONAL_MEASUREMENT_TARGETS: readonly CdpMeasurementTarget[] = [
     parentAssetId: "fxusd-f-x-protocol",
     maxAccountingDeltaPct: 1,
     complete: false,
+    // Historical journal text is replay-bound. This standalone local subcapture
+    // does not attach parent evidence; the reviewed asset-wide dossier already
+    // links separately dated parent and local observations. Keep complete:false.
     blocker:
       "Local wrapper accounting is reproducible, but the parent fxUSD mechanism evidence must be attached before an asset-wide review can clear.",
     overlaySources: [

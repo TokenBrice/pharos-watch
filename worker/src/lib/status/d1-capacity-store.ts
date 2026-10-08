@@ -90,12 +90,26 @@ export async function refreshD1CapacityAssessment(
   return assessment;
 }
 
+export type D1CapacityCacheRead =
+  | { assessment: D1CapacityAssessment; reason: null }
+  | { assessment: null; reason: "missing" | "malformed" | "expired" | "future-clock" };
+
 export async function loadCachedD1CapacityAssessment(
   db: D1Database,
   now: number,
   maxAgeSec = 26 * 60 * 60,
-): Promise<D1CapacityAssessment | null> {
+): Promise<D1CapacityCacheRead> {
   const cached = await getCache(db, D1_CAPACITY_CACHE_KEY);
-  if (!cached || now - cached.updatedAt > maxAgeSec) return null;
-  return parseCapacityCache(cached.value);
+  if (!cached) return { assessment: null, reason: "missing" };
+  const assessment = parseCapacityCache(cached.value);
+  if (!assessment || !Number.isFinite(cached.updatedAt)) {
+    return { assessment: null, reason: "malformed" };
+  }
+  if (cached.updatedAt > now || assessment.observedAt > now) {
+    return { assessment: null, reason: "future-clock" };
+  }
+  if (now - cached.updatedAt > maxAgeSec || now - assessment.observedAt > maxAgeSec) {
+    return { assessment: null, reason: "expired" };
+  }
+  return { assessment, reason: null };
 }

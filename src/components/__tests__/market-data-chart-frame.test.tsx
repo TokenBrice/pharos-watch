@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
 import { McapChart } from "@/components/mcap-chart";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
 
@@ -17,34 +17,37 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
   useChartContainerReady: () => ({ ref: vi.fn(), ready: true, width: 640, height: 350 }),
 }));
 
-vi.mock("@/hooks/use-chart-annotations", () => ({
-  useChartAnnotations: () => ({ data: [{ ts: hoveredTs, kind: "depeg", label: "Test depeg" }] }),
-}));
 
 vi.mock("@/components/chart-primitives/sync", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/chart-primitives/sync")>()),
   useMarketDataChartSync: () => ({ hoveredTs, setHoveredTs: vi.fn(), brushedRange: null, setBrushedRange: vi.fn() }),
 }));
 
-it("preserves both chart variants, shared overlays, controls, legends, and DOM order", () => {
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it("preserves ordinary chart variants, crosshairs and controls without event overlays or reads", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     const { container } = render(
       <div>
         <McapChart data={data} stablecoinId="test-coin" controlledRange="all" />
-        <PegDeviationChart data={data} pegCurrency="USD" stablecoinId="test-coin" controlledRange="all" />
+        <PegDeviationChart data={data} pegCurrency="USD" controlledRange="all" />
       </div>,
     );
 
     const mcap = screen.getByRole("figure", { name: "Market cap chart showing 3 data points" });
     const peg = screen.getByRole("figure", { name: "Peg deviation chart showing 3 data points" });
-    const density = screen.getByLabelText("Annotation event density by quarter");
-    const legends = screen.getAllByRole("list", { name: "Chart events" });
+    expect(screen.queryByLabelText("Annotation event density by quarter")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Chart events" })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByRole("radiogroup", { name: "Y-axis scale" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
     expect(container.querySelector(".recharts-area")).toBeTruthy();
     expect(container.querySelector(".recharts-line")).toBeTruthy();
     expect(container.querySelectorAll(".pointer-events-none.absolute")).toHaveLength(2);
     expect(mcap.parentElement?.className).toBe("relative h-[250px] sm:h-[350px]");
-    expect(density.className).toBe("absolute");
-    expect(peg.compareDocumentPosition(density) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(density.compareDocumentPosition(legends[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(peg.parentElement?.className).toBe("relative h-[250px] sm:h-[350px]");
 });

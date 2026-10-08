@@ -273,7 +273,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
   it("rejects unsupported adapter semantics", () => {
     const result = LiveReservesConfigSchema.safeParse({
       adapter: "chainlink-por",
-      version: 1,
+      version: 3,
       semantics: "collateral-mix",
       inputs: {
         primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
@@ -299,7 +299,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
 
 describe("single-asset probe authoring boundaries", () => {
   const base = {
-    adapter: "single-asset", version: 1, semantics: "single-asset",
+    adapter: "single-asset", version: 2, semantics: "single-asset",
     inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
     params: { label: "Configured reserve label", risk: "low" },
   };
@@ -311,8 +311,9 @@ describe("single-asset probe authoring boundaries", () => {
     reserveUnit: "CAD",
   };
 
-  it("accepts a configured-chain liveness label without HTTP probes", () => {
+  it("accepts a configured-chain v2 liveness label without HTTP probes and rejects v1", () => {
     expect(LiveReservesConfigSchema.safeParse(base).success).toBe(true);
+    expect(LiveReservesConfigSchema.safeParse({ ...base, version: 1 }).success).toBe(false);
   });
 
   it.each(Array.from({ length: 31 }, (_, index) => index + 1))("rejects ignored onchain probe mask %s", (mask) => {
@@ -320,9 +321,11 @@ describe("single-asset probe authoring boundaries", () => {
     expect(LiveReservesConfigSchema.safeParse({ ...base, params: { ...base.params, ...ignored } }).success).toBe(false);
   });
 
-  it("preserves generic HTTP v1 probes and admits the paired native-CAD v2 lane", () => {
+  it("admits generic HTTP probes only under v2 and keeps the paired CAD lane diagnostic-only", () => {
     const http = { ...base, inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } } };
-    expect(LiveReservesConfigSchema.safeParse({ ...http, params: { ...base.params, reserveProbe: probes.reserveProbe } }).success).toBe(true);
+    const generic = { ...http, params: { ...base.params, reserveProbe: probes.reserveProbe } };
+    expect(LiveReservesConfigSchema.safeParse(generic).success).toBe(true);
+    expect(LiveReservesConfigSchema.safeParse({ ...generic, version: 1 }).success).toBe(false);
     const native = Object.fromEntries(Object.entries(probes).filter(([field]) => field !== "timestampProbe"));
     const config = { ...http, version: 2, params: { ...base.params, ...native } };
     expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);

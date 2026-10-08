@@ -183,10 +183,7 @@ describe("telegram recap store on latest SQLite schema", () => {
       (chat_id, message_html, created_at, updated_at, dedupe_key, source_type)
       VALUES ('risk-chat', 'risk', ?, ?, 'risk:1', 'risk_alert')`).run(NOW, NOW);
 
-    await expect(cancelQueuedTelegramRecapsForRollout(db, {
-      mode: "off",
-      allowedChatIds: new Set(),
-    }, NOW + 1)).resolves.toEqual({ targetRowsCancelled: 2, pendingRowsDeleted: 2 });
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "off" }, NOW + 1)).resolves.toEqual({ targetRowsCancelled: 2, pendingRowsDeleted: 2 });
 
     expect(sqlite.prepare("SELECT status, terminal_reason FROM telegram_recap_targets ORDER BY chat_id").all()).toEqual([
       { status: "cancelled", terminal_reason: "recap_rollout_disabled" },
@@ -194,6 +191,38 @@ describe("telegram recap store on latest SQLite schema", () => {
     ]);
     expect(sqlite.prepare("SELECT source_type FROM telegram_pending_alerts").all()).toEqual([
       { source_type: "risk_alert" },
+    ]);
+  });
+
+  it("preserves risk, in-flight, sent and execution-unknown evidence during off cleanup", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["queued", "in-flight", "sent", "unknown"]) {
+      subscriber(sqlite, chatId);
+      await setTelegramRecapPreference(db, preferenceInput(chatId));
+      await queueTelegramRecapTarget(db, target(chatId));
+    }
+    sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sending' WHERE chat_id = 'in-flight'").run();
+    sqlite.prepare("UPDATE telegram_recap_targets SET status = 'sent' WHERE chat_id = 'sent'").run();
+    sqlite.prepare("UPDATE telegram_recap_targets SET status = 'execution_unknown' WHERE chat_id = 'unknown'").run();
+    sqlite.prepare(`INSERT INTO telegram_pending_alerts
+      (chat_id, message_html, created_at, updated_at, dedupe_key, source_type)
+      VALUES ('risk', 'risk', ?, ?, 'risk:protected', 'risk_alert')`).run(NOW, NOW);
+
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "public" }, NOW + 1))
+      .resolves.toEqual({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
+    await expect(cancelQueuedTelegramRecapsForRollout(db, { mode: "off" }, NOW + 2))
+      .resolves.toEqual({ targetRowsCancelled: 1, pendingRowsDeleted: 1 });
+    expect(sqlite.prepare("SELECT chat_id, status FROM telegram_recap_targets ORDER BY chat_id").all()).toEqual([
+      { chat_id: "in-flight", status: "queued" },
+      { chat_id: "queued", status: "cancelled" },
+      { chat_id: "sent", status: "sent" },
+      { chat_id: "unknown", status: "execution_unknown" },
+    ]);
+    expect(sqlite.prepare("SELECT chat_id, delivery_state FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual([
+      { chat_id: "in-flight", delivery_state: "sending" },
+      { chat_id: "risk", delivery_state: "pending" },
+      { chat_id: "sent", delivery_state: "pending" },
+      { chat_id: "unknown", delivery_state: "pending" },
     ]);
   });
 

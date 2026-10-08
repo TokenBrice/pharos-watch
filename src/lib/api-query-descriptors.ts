@@ -275,7 +275,6 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     }),
   ),
   latestEvents: defineTapeEventsQuery(),
-  chartAnnotationEvents: defineTapeEventsQuery(),
   blacklistSummary: defineApiQuery(
     {
       queryKey: ["blacklist-summary"] as const,

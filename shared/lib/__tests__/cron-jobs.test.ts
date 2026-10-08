@@ -9,7 +9,6 @@ import {
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
-  isCronJobExpected,
 } from "../cron-jobs";
 
 function isHourlyCpuTrigger(schedule: string): boolean {
@@ -17,15 +16,19 @@ function isHourlyCpuTrigger(schedule: string): boolean {
 }
 
 describe("cron job schedule metadata", () => {
-  it.each([undefined, "off", "shadow", "invalid"])("gates only the off-slot Workflow in mode %s", (mode) => {
-    for (const definition of CRON_JOB_DEFINITIONS) {
-      expect(isCronJobExpected(definition.job, mode)).toBe(
-        definition.job !== "compute-safety-score-v9-workflow" || mode === "shadow",
-      );
-    }
+  it("excludes the retired Workflow observer from the registered cohort", () => {
+    expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
+    expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");
   });
   it("accounts for redemption's serial RPC observers", () => {
     expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({ maxConnections: 1 });
+  });
+
+  it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
+    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
+    expect(CRON_TRIGGER_SCHEDULES.statusSelfCheckOffset).toEqual(["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"]);
   });
 
   it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
@@ -44,27 +47,6 @@ describe("cron job schedule metadata", () => {
     });
   });
 
-  it("registers the V9 shadow workflow with its real cadence and connection pressure", () => {
-    expect(
-      CRON_JOB_DEFINITIONS.find(
-        (definition) =>
-          definition.job === "compute-safety-score-v9-workflow",
-      ),
-    ).toMatchObject({
-      intervalSec: 30 * 60,
-      statusImpact: "watch",
-      maxConnections: 0,
-    });
-    expect(CRON_INTERVALS["compute-safety-score-v9-workflow"]).toBe(30 * 60);
-    expect(
-      CRON_CONNECTION_BUDGET_ENTRIES.find(
-        (entry) => entry.job === "compute-safety-score-v9-workflow",
-      ),
-    ).toMatchObject({
-      maxConnections: 0,
-      statusTracked: true,
-    });
-  });
 
   // Cloudflare caps Cron expressions with an interval below one hour at 30
   // seconds of CPU time, and 15 minutes at hourly or longer. These lanes carry
@@ -84,6 +66,7 @@ describe("cron job schedule metadata", () => {
       halfHourlyMintBurnCritical: ["4 * * * *", "34 * * * *"],
       halfHourlyMintBurnExtended: ["18 * * * *", "48 * * * *"],
       halfHourlyMeasuredExecution: ["5 * * * *", "35 * * * *"],
+      halfHourlyMeasuredExecutionSupplemental: ["20 * * * *", "50 * * * *"],
     } as const;
 
     for (const [scheduleKey, triggerSchedules] of Object.entries(hourlyCpuClassLanes)) {
@@ -106,6 +89,12 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18,48 * * * *");
 
     expect(CRON_SCHEDULES.halfHourlyMeasuredExecution).toBe("0,30 * * * *");
+    expect(CRON_SCHEDULES.halfHourlyMeasuredExecutionSupplemental).toBe("15,45 * * * *");
+    for (const [minute, logicalMinute] of [["20", "15"], ["50", "45"]] as const) {
+      expect(getCronSlotStartedAtForSchedule(
+        "halfHourlyMeasuredExecutionSupplemental", Date.parse(`2026-10-08T19:${minute}:03Z`),
+      )).toBe(Date.parse(`2026-10-08T19:${logicalMinute}:00Z`) / 1000);
+    }
 
     // Every physical alias must normalize to the logical slot it fired in.
     for (const [key, minute, second] of [
@@ -120,8 +109,8 @@ describe("cron job schedule metadata", () => {
     }
 
     const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(41);
-    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(41);
+    expect(physicalTriggers).toHaveLength(43);
+    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {

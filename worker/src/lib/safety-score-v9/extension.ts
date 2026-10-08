@@ -106,7 +106,7 @@ import {
   safetyScoreV9ChainSupplySourceGenerationId,
 } from "./supply-attribution";
 import { adaptBridgeReview } from "./extension-bridge";
-import { adaptOracleReview, deriveOracleBranchMateriality } from "./extension-oracle";
+import { adaptOracleReview } from "./extension-oracle";
 import {
   addReserveClassificationEvidence,
   addReviewedStaticReserveEvidence,
@@ -139,7 +139,6 @@ import {
 
 // The registry-meta projection now lives beside the adapters that read it.
 export type { V9ExtensionRegistryMeta } from "./extension-shared";
-export { deriveOracleBranchMateriality };
 export {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedAuditedFallbackReserveRows,

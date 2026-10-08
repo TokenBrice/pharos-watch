@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
+import { computeCentralizedCustodyFraction } from "./classification-invariants.test-support";
 
 const MAJORITY_THRESHOLD = 0.50;
 
+// C11 retires the runtime warning, not the catalog's custody invariant.
 describe("classification invariants", () => {
   it("does not allow decentralized coins with >50% centralized-custody exposure", () => {
     const warnings: string[] = [];

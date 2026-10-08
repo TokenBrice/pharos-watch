@@ -14,13 +14,13 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; a family row absent entirely (missing cache with zero sources) means the lane was never provisioned and does not degrade the core run — the hourly chain provisions it. The acceptance bound is per-family and cadence-derived: the lane default is 1.5× the 4-hour producer cadence (6 hours); the Pendle daily lane fetches at most once per day on the free unkeyed quota and accepts its retained row through 48 hours (two daily cycles), so a `skipped-not-due` / `skipped-backoff` Pendle run is healthy, not degraded, while that row is inside the bound.
 
-Applied `sync-yield-data` remains `ok`; input findings live in `metadata.quality`, not top-level `fallbackMode`. Pendle-only loss goes in `quality.advisoryReasons`, leaving `quality.degraded` false: stale candidates are excluded and the admin supplemental tile remains degraded, but public producer quality stays clean. Aggregate `partial-family-cache` is suppressed only when exactly Pendle is unavailable. Other required-family failures affect producer quality. vaults.fyi is optional and never degrades the run.
+Applied `sync-yield-data` remains `ok`; input findings live in `metadata.quality`, not top-level `fallbackMode`. Pendle-only loss goes in `quality.advisoryReasons`, leaving `quality.degraded` false: stale candidates are excluded and the admin supplemental tile remains degraded, but public producer quality stays clean. `partial-family-cache` is suppressed only when exactly Pendle is unavailable. Other required-family failures affect producer quality. vaults.fyi is retired; no missing-family alarm should require its cache.
 
 Aave refreshes three pinned Aave V3 reserves on every successful run: Ethereum USDC, Arbitrum USDT, and Base USDC, plus three rotating tracked-contract targets. Six targets run in two concurrency-three batches within the unchanged 28-second deadline. A successful generation replaces the family snapshot; old rotation windows are not accumulated or renewed with substituted timestamps. Failed/degraded fetches retain the prior snapshot under the usual rules. Rotating targets are discovery probes, not a promise of listed reserves or continuous coverage.
 
 Beefy, Royco, and Aave each cap concurrent outbound work at three. The standalone supplemental peak is three; hourly catch-up alongside parity is declared at four. Do not restore nested fan-out that can exceed these limits.
 
-Rankable vaults.fyi candidates need a parseable upstream observation timestamp no later than assessment time and no older than the six-hour supplemental budget. Missing, invalid, future, or stale observations remain audit-only; run time never substitutes for an upstream observation.
+The unsuffixed aggregate `yield:supplemental-sources:v1` and retired vaults family/budget/circuit rows remain pending separate cleanup. Do not delete them during normal deployment. First archive exact payloads/timestamps in durable R2 retained indefinitely, record a D1 Time Travel bookmark, and close the compatible rollback floor after healthy first primary/catch-up runs plus 48 hours. Aggregate deletion is exact-key only with a 0-to-1-row bound; preserve surviving suffixed family rows and `yield:supplemental-source-run:v1`. SQL `length(value)` measures text characters, not physical D1 shrinkage.
 
 ## First Checks
 
@@ -55,7 +55,7 @@ ORDER BY rows DESC;
 ## Common Causes
 
 - All supplemental families emitted zero candidates. The cron publishes explicit empty rows for successful families; the loader treats the all-empty current snapshot as valid with zero supplemental candidates.
-- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache` instead of dropping all optional coverage. Only the required families raise that flag; a degraded audit-only `vaultsFyi` family cache leaves it `null`.
+- One per-family cache is malformed or stale. The post-V9 publisher should still load other fresh family caches and report `sourceCoverage.supplementalFallbackMode` as `partial-family-cache` instead of dropping independent coverage. The live family list comes from `SUPPLEMENTAL_SOURCE_FAMILY_KEYS`; retired vaults rows are not a required input.
 - One successful per-family run emitted zero candidates. That family may intentionally publish an empty per-family cache to clear a previous non-empty family snapshot.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
@@ -68,7 +68,7 @@ ORDER BY rows DESC;
 ## Remediation
 
 - If the latest supplemental run is a single `empty-snapshot`, verify that successful family rows were published. The resulting all-empty family snapshot is valid and should remain available with zero supplemental candidates until the next 4-hour run.
-- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the post-V9 publisher.
+- If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented. Do not move heavy family fetches onto the post-V9 publisher.
 - If the job is stale due to a stuck lease, clear it per [`lease-and-breaker-recovery.md`](./lease-and-breaker-recovery.md), job `sync-yield-supplemental`, and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
@@ -81,7 +81,7 @@ ORDER BY rows DESC;
 ## Validation
 
 - `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`, and `sourceCoverage.sourceFamilySummaries` explains any empty, failed, or budget-exhausted family.
-- The `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows; all eight current empty rows are valid state.
+- The registry-enumerated `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A per-family row with `sourceCount: 0` is valid when that family completed successfully with no deduplicated candidates. A single malformed family row should not block other fresh family rows; an all-empty surviving family snapshot remains valid.
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"`; `supplementalSourceCount` may be zero when the current family snapshot is explicitly all-empty.
 - Public rankings/source board show expected optional family rows or alternatives.
 

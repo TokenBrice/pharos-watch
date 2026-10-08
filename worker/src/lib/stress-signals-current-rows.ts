@@ -22,7 +22,7 @@ export type PublishedStressSignalGenerationResult =
       rows: StressSignalCurrentRow[];
       exactCoverageVerified: boolean;
     }
-  | { status: "unavailable"; reason: string };
+  | { status: "unavailable"; sourceStatus: "missing" | "read-failed" | "invalid"; reason: string };
 
 export interface PreviousStressSignalCurrentRow {
   stablecoin_id: string;
@@ -184,7 +184,11 @@ export async function loadPublishedStressSignalGeneration(
       : pointer.status === "invalid-pointer"
         ? pointer.reason
         : "publication pointer is missing";
-    return { status: "unavailable", reason: `${pointer.status}:${detail}` };
+    return {
+      status: "unavailable",
+      sourceStatus: pointer.status === "read-failed" ? "read-failed" : pointer.status === "invalid-pointer" ? "invalid" : "missing",
+      reason: `${pointer.status}:${detail}`,
+    };
   }
 
   let rows: StressSignalCurrentRow[];
@@ -202,12 +206,13 @@ export async function loadPublishedStressSignalGeneration(
   } catch (error) {
     return {
       status: "unavailable",
+      sourceStatus: "read-failed",
       reason: `generation-read-failed:${toErrorMessage(error)}`,
     };
   }
 
   if (rows.length === 0) {
-    return { status: "unavailable", reason: `published generation ${pointer.computedAt} has no rows` };
+    return { status: "unavailable", sourceStatus: "missing", reason: `published generation ${pointer.computedAt} has no rows` };
   }
   if (pointer.expectedRowCount == null || pointer.stablecoinIdsDigest == null) {
     return {
@@ -222,6 +227,7 @@ export async function loadPublishedStressSignalGeneration(
   if (rows.length !== pointer.expectedRowCount || actualDigest !== pointer.stablecoinIdsDigest) {
     return {
       status: "unavailable",
+      sourceStatus: "invalid",
       reason: `published generation coverage mismatch: rows=${rows.length}/${pointer.expectedRowCount}`,
     };
   }

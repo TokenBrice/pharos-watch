@@ -21,7 +21,6 @@ The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag,
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
-| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) |
 
@@ -60,12 +59,17 @@ has been completed.
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
 - [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current one-liner coverage is owned by `scripts/__tests__/weekly-curation-digest.test.ts`; `src/lib/__tests__/term-markup.test.ts` owns summary term wiring. TL;DR-first top-60 editorial QA remains in flight.**
 
-### `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`
+### Retired chart annotation overlay
 
-- [x] Phase 2 wire-up: `useChartAnnotations` fetches `/api/events`, maps tape rows, clamps to range.
-- [x] Curated annotation layer at `shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`.
-- [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
-- [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
+The overlay, its flag/getter, chart legends and exclusive browser Tape reads have been removed. The curated annotation corpus, corpus-integrity tests, review dispositions, deferrals and permanent intake tooling remain. No editor appointment or curation cadence blocks the approved retirement, and candidates never publish automatically. The former GitHub repository Variable is no longer consumed; deleting it is a separately authorized operator action after release.
+
+### 2026-10-08 approved retirement gates
+
+Quiet deviations and mobile sticky summary remain gated until tokenbrice or a named reviewer accepts the exact build by **2026-11-15**. Quiet review covers USDC, USDe and a real incident in light/dark and narrow/wide home, table, depeg and hero views, including severity/trend boundaries. Sticky review requires iOS Safari and Android Chrome device/browser/SHA receipts for cold hashes, anchors, lazy folds, toolbar collapse, rotation, long text, 200% zoom and genuine missing-price/grade cases. Its viewport-only observation and height cleanup must be proven before deletion; source tests or an older enabled build do not certify device acceptance.
+
+Both DDR/DDRR rollback controls remain until **30 consecutive deployed rollback-free days** on an accepted semantic baseline, a current DDR snapshot and at least one stored DDRR assessment are evidenced. The earliest possible closure is **2026-10-28**, conditional on a proven September 28 deployment; a later deployment, semantic change or rollback restarts the window. Missing, empty, stale and failed reads stay distinct. Lifecycle expiry dates are review deadlines, not automatic evidence or removal authority.
+
+After acceptance, remove each flag, getter, alternate branch and matching Pages build input in the same change. Retain permanent `heroVerdict`, shared query infrastructure and backend chronology. The generic inlining/stale guards currently cover the four remaining temporary flags; accepting a valid inventory with no temporary entries is the final shared-checker cutover after all four close, not permission to skip missing-source or lifecycle validation.
 
 ### `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`
 
@@ -145,6 +149,5 @@ likely to be needed.
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Human visual review of USDC, USDe, and an active depeg still outstanding. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Real-device iOS Safari and Android Chrome scrollspy review still outstanding. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Configuration retained; the unmounted banner and hook have since been removed. Retirement requires a separate owner decision. | 2026-12-01 |
-| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | No curation owner or cadence assigned; product decision, not a QA gap. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Rollback lever for `/depeg/` retained through the DDR 4.3 continuity release. | 2026-12-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Rollback lever for the DDRR module retained through the DDR 4.3 continuity release. | 2026-12-01 |

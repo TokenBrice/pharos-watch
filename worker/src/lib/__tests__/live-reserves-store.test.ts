@@ -10,9 +10,9 @@ import {
 } from "./live-reserves-store.test-support";
 import {
   computeReserveCompositionOverview,
-  getMaxSyncAge,
   loadFreshIndependentLiveReserveMap,
-} from "../live-reserves/store";
+} from "../live-reserves/store-overview";
+import { getMaxSyncAge } from "../live-reserves/store-read";
 import { resolveReserveResult } from "../live-reserves/store-views";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";

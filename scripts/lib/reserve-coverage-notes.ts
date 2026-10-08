@@ -26,10 +26,10 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "usdy-ondo-finance": {
     sourceUrl: "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/ABoF-avpNclglsNxAeWZO_k/2026/09%20September?rlkey=4icqn1z9bez725wywr30fx52a&dl=0",
     sourceQuality: "static-validated",
-    expectedAdapterFamily: "usdy-holdings-report after complete daily discovery and tracked issuance attribution",
-    freshnessEvidence: "Reviewed 2026-10-07: Dropbox returns a proprietary JavaScript listing; newest complete daily inventory discovery is unverified. The authored config is suspended, not missing.",
+    expectedAdapterFamily: "runtime discovery retired 2026-10-08; manual reviewed holdings refresh retained",
+    freshnessEvidence: "Reviewed 2026-10-07: Dropbox returns a proprietary JavaScript listing; newest complete daily inventory discovery is unverified. The suspended runtime config and executable were retired on October 8.",
     scoreGradePlausible: false,
-    note: "Require reliable complete daily archive discovery and the full tracked liability perimeter, including BVI rather than only LLC scope. Neither HTTP 200 nor unsuspending the static-validated report reader establishes independent eligible composition.",
+    note: "A future source requires reliable complete daily archive discovery and the full tracked liability perimeter, including BVI rather than only LLC scope. Neither HTTP 200 nor a manual static generation establishes independent eligible composition.",
   },
   "cumiu-chinaamc": {
     sourceUrl: "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN",
@@ -202,10 +202,10 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "usdo-openeden": {
     sourceUrl: "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last",
     sourceQuality: "independent",
-    expectedAdapterFamily: "openeden-usdo after normalizer hardening and admissible Worker-origin fetch",
+    expectedAdapterFamily: "executable retired 2026-10-08; a new complete reserve source and admissible Worker-origin fetch are required",
     freshnessEvidence: "Reviewed 2026-10-07: ordinary-client JSON date 2026-10-07T08:00:19.096Z reports reserves 15537989.483383574 and USDO 15275117.334802557; eight current component USD fields reconcile. Worker egress recovery is unverified.",
     scoreGradePlausible: true,
-    note: "Require strict finite nonnegative component validation, keyed asset identity and successful Worker-origin admission before counting coverage. No alternate valid host was found. PendingReserveAssetsRedeem and signed gap semantics remain unresolved: reserve/usdoAmount is not whole-economic-liability assurance or route openness. Remove the note only on effective activation; production first-attempt observation remains separate.",
+    note: "The operator retired the parked adapter on October 8; the October 7 ordinary-client capture remains historical evidence, not an access revival. PendingReserveAssetsRedeem and signed gap semantics remain unresolved: reserve/usdoAmount is not whole-economic-liability assurance or route openness. Any new source needs strict finite nonnegative components, keyed asset identity, complete liabilities and Worker-origin admission.",
   },
   "hollar-hydrated": {
     sourceUrl: "https://docs.hydration.net/products/hollar/",
@@ -354,10 +354,10 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "stusd-stoneyield": {
     sourceUrl: "https://docs.stoneyield.io/docs/protocol/contract-design",
     sourceQuality: "weak-proof",
-    expectedAdapterFamily: "stoneyield-router-pool after corrected USDC/Venus identity and full book reconciliation",
-    freshnessEvidence: "Reviewed 2026-10-07: official design describes an 18-decimal BSC USDC/Venus route. Historical September 30 sidecar reads show vault asset()=USDC; parked adapter requires vUSDC. No fresh complete accounting pin was established.",
+    expectedAdapterFamily: "executable retired 2026-10-08; new reconciled whole-book source required",
+    freshnessEvidence: "Reviewed 2026-10-07: official design describes an 18-decimal BSC USDC/Venus route. Historical September 30 sidecar reads show vault asset()=USDC; the retired adapter required vUSDC. No fresh complete accounting pin was established.",
     scoreGradePlausible: false,
-    note: "Repair the incorrect vault identity model, separately value vault-held vUSDC at observed exchange rate and reconcile complete router/strategy assets with stUSD/sUSDC liabilities. No activation until fresh full accounting exists; deleting the identity guard, idle-only accounting or naive ERC-4626 binding is insufficient.",
+    note: "Retirement does not resolve the adverse ledger. A new source must correct the vault identity model, separately value vault-held vUSDC at observed exchange rate and reconcile complete router/strategy assets with stUSD/sUSDC liabilities. Deleting the identity guard, idle-only accounting or naive ERC-4626 binding is insufficient.",
   },
   "gbpa-agant": {
     sourceUrl: "https://security.agant.io/",
@@ -402,7 +402,7 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "usdv-solomon": {
     sourceUrl: "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
     sourceQuality: "weak-proof",
-    expectedAdapterFamily: "solomon-protocol remains parked for the tracked legacy mint",
+    expectedAdapterFamily: "legacy executable retired 2026-10-08; new mint-specific reserve source required",
     freshnessEvidence: "Reviewed 2026-10-07: API headline TVL describes the replacement product; the tracked legacy mint has a distinct program/reserve perimeter.",
     scoreGradePlausible: false,
     note: "Require dated legacy-mint-specific reconciled reserves and liabilities. Do not bind replacement TVL to Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C, or treat futures custody notional as reserve NAV. Product migration prose does not establish an automatic conversion.",

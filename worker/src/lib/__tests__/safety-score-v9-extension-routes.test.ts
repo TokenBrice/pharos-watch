@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, resolveV9DistinctExitCapacity } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -34,7 +35,7 @@ function singleObservationDexLiquidity(route: ExitRouteObservation): Record<stri
     exitRouteObservations: [route],
     exitRouteObservationCoverage: {
       status: "populated",
-      capabilityMatrixVersion: "p4a.9",
+      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleObservationCount: 1,

@@ -90,19 +90,23 @@ Each edition stores `digest_meta.editorialStyleGate`, and the same bounded objec
 
 Each findings array is capped at 12 entries and each excerpt at 160 characters. `firstPassWouldBlock` remains safe for the flip metric even if details were truncated; `retry.eligible` separately records whether time and token budgets allowed a corrective generation. LLM attempts, latency, token use, `editorialStyleVersion`, and `editorialStyleHash` remain adjacent fields in `digest_meta` and cron metadata rather than being duplicated inside the bounded gate object.
 
-For daily enforcement, count each edition with a first-pass hard finding as one `would-block` event. Advisory findings never enter the blocking count. The daily hard-flip criterion is at most one would-block in a 30-edition window. Weekly enforcement flips after seven consecutive clean daily editions have fed the weekly profile. Keep daily and weekly windows separate.
+For daily enforcement, count each distinct scheduled edition with a first-pass hard finding as one `would-block` event. Advisory findings never enter the blocking count. The daily criterion is at most one event in the latest 30 distinct scheduled daily editions, with complete boolean telemetry. The ratified weekly criterion is **eight consecutive distinct scheduled weekly editions after the cleft prompt cutover, complete boolean telemetry, and zero first-pass hard events**. Keep kinds separate; seven clean daily inputs and the five old-prompt weekly samples do not qualify weekly readiness.
 
-This query reports the measurable first-pass would-block edition count for the latest 30 stored editions of each type. It uses the uncapped `firstPassWouldBlock` boolean and excludes pre-policy rows:
+Select the editions before inspecting telemetry. Include blocked and missing-policy rows; exclude only internal sentinel artifacts. Missing or non-boolean `firstPassWouldBlock` is a metadata gap, not a clean observation. Set explicit observation bounds covering the required scheduled window (the dates below are an example), inspect at most 200 rows, and widen/review separately if the cap is reached. Reconcile duplicate UTC dates against scheduled invocation evidence rather than counting retriggers as new scheduled editions. Check expected daily dates/Mondays for absent editions as well as the reported per-row gaps.
 
 ```bash
 cd worker
+WINDOW_START=2026-09-01
+WINDOW_END=2026-10-08
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-  "WITH ranked AS (SELECT CASE WHEN json_extract(digest_meta, '\$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END AS edition_type, generated_at, COALESCE(json_extract(digest_meta, '\$.editorialStyleGate.firstPassWouldBlock'), 0) AS would_block, ROW_NUMBER() OVER (PARTITION BY CASE WHEN json_extract(digest_meta, '\$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END ORDER BY generated_at DESC) AS edition_rank FROM daily_digest WHERE json_type(digest_meta, '\$.editorialStyleGate') = 'object') SELECT edition_type, COUNT(*) AS editions_observed, SUM(would_block) AS first_pass_would_block_editions, MIN(generated_at) AS window_start, MAX(generated_at) AS window_end FROM ranked WHERE edition_rank <= 30 GROUP BY edition_type ORDER BY edition_type;"
+  "SELECT id, generated_at, CASE WHEN json_extract(digest_meta, '\$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END AS edition_type, date(generated_at, 'unixepoch') AS edition_date, json_extract(digest_meta, '\$.qualityGate') AS quality_gate, json_extract(digest_meta, '\$.editorialStyleVersion') AS style_version, json_extract(digest_meta, '\$.editorialStyleHash') AS style_hash, json_type(digest_meta, '\$.editorialStyleGate.firstPassWouldBlock') AS would_block_type, CASE WHEN json_type(digest_meta, '\$.editorialStyleGate.firstPassWouldBlock') IN ('true', 'false') THEN 0 ELSE 1 END AS metadata_gap, json_extract(digest_meta, '\$.editorialStyleGate.firstPassWouldBlock') AS would_block, json_extract(digest_meta, '\$.editorialStyleGate') AS style_gate, json_extract(digest_meta, '\$.llm') AS llm FROM daily_digest WHERE generated_at >= unixepoch('${WINDOW_START} 00:00:00') AND generated_at < unixepoch('${WINDOW_END} 00:00:00') AND (digest_meta IS NULL OR json_extract(digest_meta, '\$.internal') IS NULL OR json_extract(digest_meta, '\$.internal') NOT IN (1, 'true')) ORDER BY generated_at DESC, id DESC LIMIT 200;"
 ```
+
+Record edition IDs, schedule/invocation identities, observation bounds, policy version/hash, rendered prompt and generation configuration, and requested/served model and effort from LLM provenance. Review raw copy and findings for omissions and known false positives; a detail truncation flag cannot certify per-rule incidence. Relevant prompt/model changes restart continuity unless the readiness owner records an explicit exception. After each failed readiness window, the owner records an explicit reject/retry decision; there is no automatic cancellation policy.
 
 ## Promote or roll back enforcement
 
-Daily and weekly use independent D1-backed controls at `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly`. A kind reads only its own key; a missing or invalid value fails safe to `shadow`. Daily can therefore promote as soon as its 30-edition criterion passes while weekly remains in shadow, and weekly can promote later without changing daily. For each kind, that one value also controls the U+2012 through U+2015 compatibility repair: shadow enables the post-scan repair, while enforce disables it and activates hard blocking.
+Daily and weekly use independent D1-backed controls at `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly`. A kind reads only its own key; a missing or invalid value fails safe to `shadow`, but a D1 read error propagates and is not evidence of shadow. Daily enforcement is approved conditional on the mode-only control and focused checks; weekly remains shadow until its ratified packet and separate approval pass. For each kind, that one value also controls the U+2012 through U+2015 compatibility repair: shadow enables the post-scan repair, while enforce disables it and activates hard blocking.
 
 Promote daily:
 
@@ -152,22 +156,24 @@ curl -fsS -X POST "https://ops-api.pharos.watch/api/trigger-digest" \
   --data '{"styleGateMode":{"weekly":"shadow"}}'
 ```
 
-The response returns both effective modes and queues the normal digest force-run intent. Confirm the targeted value changed and the other kind remained unchanged. A weekly mode update applies to the next eligible weekly generation or recovery; it does not force an out-of-slot weekly recap.
+These mode-only actions return both effective modes and write only the targeted mode key. They do **not** write `digest:force-run-request`, alter an existing force intent, or queue any additional daily/weekly generation. Confirm the other kind remained unchanged. The first enforced observation is the next scheduled edition of that kind; weekly mode changes never force an out-of-slot recap. An explicit separate empty-body/`{}` trigger is the only way to request a daily force-run.
+
+A mode write can commit before an effective-mode read or response fails. Treat an errored/ambiguous action as a potential partial commit: inspect both exact mode keys and the original idempotency record before any new mutation, following ADR-27. Do not assume HTTP failure rolled back the key or blindly issue a new force-run. Reconcile an existing force intent separately if one was explicitly requested.
 
 After changing the mode:
 
 1. Confirm the next edition of the targeted kind has matching `digest_meta.styleGateMode` and `digest_meta.editorialStyleGate.mode` values. For rollback, both metadata fields must report `shadow`.
 2. Confirm behavior matches the targeted mode: shadow records hard findings without blocking, while enforce blocks an unresolved hard finding after at most one corrective retry.
 3. Preserve existing blocked rows and their metadata. Do not retag or rewrite archived editions.
-4. Retrigger one reviewed edition and verify its row, edition number, channel statuses, and style telemetry.
+4. For daily promotion, inspect the first enforced scheduled edition and seven subsequent daily editions before the approved cleft detector/prompt retirement. Prompt retirement is a separate cutover; review seven subsequent daily copies and begin the fresh eight-weekly readiness window there. After weekly promotion, inspect two naturally scheduled enforced weekly generations and ordinary recovery. Capture row/edition number, both stored mode fields, retry/budget/quality results, and channel outcomes without manufacturing editions.
 
 The kill switch changes editorial style enforcement only. Existing hard content checks, channel safety checks, and delivery controls remain active.
 
 ## Verification
 
-After the next poll or scheduled generation:
+After an explicit trigger or a scheduled generation:
 
-1. Confirm `digest:last-trigger-result` has the expected `requestId` and terminal outcome.
+1. For an explicit force-run only, confirm `digest:last-trigger-result` has the expected `requestId` and terminal outcome. A mode-only update produces no force request ID or poll result.
 2. Confirm a successful row appears in the relevant public read path and carries its edition number and style provenance.
 3. Confirm X and Telegram statuses match the intended delivery outcome. A channel-local failure does not require another model call.
 4. Confirm the blocked row remains retained for inspection and absent from public reads when the block remains unresolved.

@@ -18,6 +18,36 @@ describe("StatusResponseSchema reserve composition contract", () => {
       expect(StatusResponseSchema.safeParse({ ...statusResponse(), workerVersions: { public: null, heavy } }).success).toBe(false);
     }
   });
+  it("preserves unavailable discrepancy evidence in both admin wire contracts", () => {
+    const fixture = statusResponse();
+    const discrepancy = { ...fixture.discrepancy, consecutiveDivergent: null };
+    expect(StatusResponseSchema.parse({ ...fixture, discrepancy }).discrepancy.consecutiveDivergent).toBeNull();
+    const history = StatusHistoryResponseSchema.parse({
+      timestamp: fixture.timestamp, state: fixture.state, staleness: fixture.staleness,
+      probe: fixture.probe, discrepancy, transitions: [], reserveComposition: null,
+      sectionErrors: { discrepancy: { code: "status_discrepancy_streak_failed", message: "Status persistence degraded." } },
+    });
+    expect(history.discrepancy.consecutiveDivergent).toBeNull();
+    expect(history.sectionErrors?.discrepancy.code).toBe("status_discrepancy_streak_failed");
+  });
+
+  it.each(["completed", "failed", null, undefined])("keeps canary execution separate from severe findings (%s)", (executionStatus) => {
+    const parsed = StatusResponseSchema.parse({
+      ...statusResponse(),
+      canaries: {
+        checkedAt: 100, status: "degraded", latestRunAt: 100, maxAgeSec: 7200,
+        totalChecks: 1, okCount: 0, degradedCount: 0, errorCount: 1, skippedCount: 0, staleCount: 0,
+        checks: { corruption: {
+          checkId: "corruption", label: "Corruption", description: "Measured invariant",
+          status: "error", severity: "error", executionStatus,
+          executionFailureReason: executionStatus === "failed" ? "read-failed" : null,
+          observedAt: 100, durationMs: 1,
+        } },
+      },
+    });
+    expect(parsed.canaries?.checks.corruption).toMatchObject({ status: "error", severity: "error" });
+    expect(parsed.canaries?.checks.corruption.executionStatus).toBe(executionStatus);
+  });
   it("validates one resource block for terminal and progress metadata while retaining job keys", () => {
     const resourcePressure = {
       phase: "intake", observedAt: 100,
@@ -106,7 +136,6 @@ describe("StatusResponseSchema reserve composition contract", () => {
     ["d1Usage", {}],
     ["mintBurnReconciliation", {}],
     ["reserveDrift", [{}]],
-    ["classificationWarnings", [{}]],
   ] as const)("rejects malformed %s section", (section, value) => {
     const result = StatusResponseSchema.safeParse({
       ...statusResponse(),

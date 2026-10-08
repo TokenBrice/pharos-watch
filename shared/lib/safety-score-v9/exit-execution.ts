@@ -68,7 +68,7 @@ export function admitExitExecutionCertificate(args: {
   if (certificate.sourceMaxAgeSec !== model.sourceMaxAgeSec || certificate.priceMaxAgeSec !== model.priceMaxAgeSec || !fresh(certificate.observedAtSec, model.sourceMaxAgeSec) || !fresh(certificate.source.timestamp, model.sourceMaxAgeSec)) return unavailable("execution-source-stale");
   const point = resolveExitExecutionRequestPoint(certificate, args.request);
   if (!point) return unavailable("execution-exact-request-missing");
-  const outputDeployment = review.producer.kind === "kraken" ? review.producer.outputDeployment : `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`;
+  const outputDeployment = `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`;
   if (certificate.inputReference.decimals !== review.producer.inputDecimals ||
       point.outputs.some((leg) => leg.decimals !== review.producer.outputDecimals || leg.deployment !== outputDeployment)) {
     return unavailable("execution-output-deployment-mismatch", "method-unsupported");

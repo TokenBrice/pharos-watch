@@ -10,6 +10,8 @@ Read `docs/editorial-style.md`; its `technical-evidence` register governs prose.
 
 `npm run candidates:annotations` writes machine-found events to ignored `agents/annotation-candidates.{md,json}`. Editorially classify each row as promote, drop, or defer; never auto-publish a producer signal.
 
+This is permanent editorial intake, not a pending chart feature. The live chart overlay is retired; keep the curated corpus, review decisions, deferrals, legacy backup, and downloaded snapshots. A reviewed corpus edit does not restore the overlay or authorize automatic publication. Hosted artifacts expire, so retain the reviewer handoff separately.
+
 Use `npm run research:dwellir-rpc --` for supplemental pinned on-chain evidence reads; see `docs/process/agent-artifacts.md#pinned-on-chain-evidence`.
 Cite its provenance record (keyless URL, block, timestamp); never cite `latest` reads as evidence.
 
@@ -41,7 +43,7 @@ Live collection overlaps 14 days of tape history and follows cursors serially wi
 1. Read the recovered queue oldest-first, its source coverage and existing `annotation-review.json`, `shared/types/chart-annotation.ts`, `shared/data/annotations/curated-annotations.ts`, and each referenced `shared/data/annotations/coins/<id>.json`. Source files own shape, enum, severity, and validation. Match distinct same-day events by their printed `id`, not just date/coin/kind.
 2. Promote only a discrete event supported by a primary source (issuer post-mortem, regulator filing, methodology changelog, transaction/on-chain proof) and not already represented within the same incident window. Secondary reporting may corroborate, not replace missing primary evidence.
 3. Drop duplicates, low-signal/promotional items, unsupported chatter, and announcements without a live transition. Defer real events whose decisive source is not yet available; include the reason.
-4. A producer `launch` hint is not an annotation enum. Use the established governance precedent only after runtime chart coverage exists.
+4. A producer `launch` hint is not an annotation enum. Use an established curated kind only when primary-source evidence supports that classification; do not invent a new kind or require the retired chart overlay to exist.
 
 ## Apply
 

@@ -395,6 +395,28 @@ export function SafetyScoresOverview() {
         Attributable asset-local producer failures are technical pipeline gaps, never fabricated issuer NR or
         measured danger. Current consumers use the accepted publication and status, not a fallback scorer.
       </p>
+      <p>
+        Since methodology v10.12, exact orderbook execution is research-only with diagnostic certification.
+        The dormant Kraken request observer is retired: a public book does not prove same-run account access,
+        deposits, withdrawals, fees or maximum settlement. Ordinary exchange spot prices and generic CoinGecko
+        synthetic books remain separate evidence; reviewed Securitize and synchronous ERC-4626 routes keep
+        their existing admission. A neutral captured-input replay is required before release, not assumed.
+      </p>
+      <p>
+        The same release preserves source-native reserve quantities and original clocks: CAD/QCAD and GBP/tGBP
+        are not USD, and an ETH supply check does not refresh an entire reserve. Ratios without a reviewed
+        reserve-versus-circulation time allowance are withheld. BC3M now has a source-reviewed inclusive
+        86,400-second allowance from its own Chainlink heartbeat and Backed daily/10% reporting disclosure,
+        applied to every pinned circulation block. Its ratio requires complete same-run inventory-adjusted
+        on-chain circulation/API reconciliation and is withheld beyond that allowance. Original clocks remain;
+        this is not simultaneous reserve/liability attestation, production observation or scoring activation.
+        BIB01 remains quarantined with no policy change, and no TUSD allowance is borrowed.
+        Reserve snapshots no longer invent redemption
+        terms or capacity; actual River exits and Origin vault/redemption remain. Static/weak source evidence
+        does not activate independent scoring. MYRC retains its upstream released independent-assurance adapter
+        and original report clocks, with no further promotion in this release. Fresh admitted inputs can change
+        availability or scores and require their own attributed comparison.
+      </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
         <Link href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</Link>

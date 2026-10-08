@@ -96,7 +96,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "cetes-etherfuse",
     "display": {

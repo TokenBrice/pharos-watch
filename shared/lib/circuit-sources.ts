@@ -64,7 +64,6 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   ANTHROPIC: { key: "anthropic-api", scope: "source-wide" },
   BLUECHIP: { key: "bluechip-api", scope: "source-wide" },
   CG_TICKER: { key: "coingecko-ticker", scope: "source-wide" },
-  VAULTS_FYI: { key: "vaults-fyi", scope: "source-wide" },
   KINESIS_KAU: { key: "kinesis-kau-horizon", scope: "source-wide" },
   KINESIS_KAG: { key: "kinesis-kag-horizon", scope: "source-wide" },
   COINGECKO_CONFIRM: { key: "coingecko-confirm", scope: "source-wide" },

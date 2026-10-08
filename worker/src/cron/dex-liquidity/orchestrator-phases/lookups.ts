@@ -4,7 +4,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types/market";
+import type { DexAmmExecutionToken, StablecoinData } from "@shared/types/market";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
@@ -13,6 +13,7 @@ import {
 export interface TrackedStablecoinMaps {
   stablecoinPriceById: Map<string, number>;
   stablecoinMcapById: Map<string, number>;
+  stablecoinPriceProvenanceById: Map<string, Required<Pick<DexAmmExecutionToken, "referencePriceSourceId" | "referencePriceObservedAt">>>;
 }
 
 /** A navToken's guarded NAV reference for measured-execution input legs: the
@@ -45,6 +46,7 @@ export async function loadTrackedStablecoinMaps(
 ): Promise<TrackedStablecoinMaps> {
   const stablecoinPriceById = new Map<string, number>();
   const stablecoinMcapById = new Map<string, number>();
+  const stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"] = new Map();
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
     let skippedWeakTrackedPrices = 0;
@@ -60,6 +62,14 @@ export async function loadTrackedStablecoinMaps(
         )
       ) {
         stablecoinPriceById.set(asset.id, asset.price);
+        const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+        if (asset.priceSource && Number.isSafeInteger(observedAt) && observedAt! > 0 &&
+          observedAt! <= syncStartSec && syncStartSec - observedAt! <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
+          stablecoinPriceProvenanceById.set(asset.id, {
+            referencePriceSourceId: asset.priceSource,
+            referencePriceObservedAt: observedAt!,
+          });
+        }
       } else {
         skippedWeakTrackedPrices++;
       }
@@ -79,5 +89,5 @@ export async function loadTrackedStablecoinMaps(
     );
   }
 
-  return { stablecoinPriceById, stablecoinMcapById };
+  return { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById };
 }

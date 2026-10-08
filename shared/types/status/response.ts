@@ -25,7 +25,6 @@ import { TelegramBotStatsSchema } from "./telegram";
 import { HealthResponseSchema, SchedulerLivenessSchema } from "./public-health";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
-  ClassificationWarningSchema,
   CoinGeckoPriceDiffSchema,
   LiquidityHealthSchema,
   MintBurnReconciliationSummarySchema,
@@ -52,7 +51,6 @@ export type StatusSectionKey =
   | "scheduledSlots"
   | "mintBurnReconciliation"
   | "reserveDrift"
-  | "classificationWarnings"
   | "producerHistory";
 
 const StatusSectionErrorSchema = z.object({ code: z.string(), message: z.string() });
@@ -195,7 +193,6 @@ const StatusResponseObjectSchema = z
     mintBurnReconciliation: MintBurnReconciliationSummarySchema.nullable(),
     reserveComposition: StatusReserveCompositionSchema,
     reserveDrift: z.array(ReserveDriftEntrySchema).optional(),
-    classificationWarnings: z.array(ClassificationWarningSchema).optional(),
   })
   .passthrough();
 
@@ -217,5 +214,6 @@ export const StatusHistoryResponseSchema = z.object({
   transitions: z.array(StatusTransitionSchema),
   hasMore: z.boolean().nullable().default(null),
   reserveComposition: StatusReserveCompositionSchema.nullable(),
+  sectionErrors: z.record(z.string(), StatusSectionErrorSchema).optional(),
 });
 export type StatusHistoryResponse = z.output<typeof StatusHistoryResponseSchema>;

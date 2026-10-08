@@ -72,6 +72,7 @@ describe("sodax-sonic", () => {
     expect(result.metadata).toMatchObject({ totalReserveUsd: 800, unknownExposurePct: 0, supplyCoverageComplete: false, observedBlock: { number: 78_947_506 }, details: { activeBorrowerCount: 2, borrowerCensusComplete: true } });
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expectWarningEffect(result, "supply-inventory-unverified", "info");
+    expect(result.metadata?.details?.omittedSupplyChains).toEqual(expect.arrayContaining(["icon", "archway", "havah", "injective"]));
     expect(observed.rpcCalls.filter((c) => c.selector === "0x70a08231").every((c) => !c.data.endsWith(CLOSED.slice(2)) && c.block === `0x${(78_947_506).toString(16)}`)).toBe(true);
   });
 

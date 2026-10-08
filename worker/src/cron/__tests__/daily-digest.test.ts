@@ -88,6 +88,19 @@ describe("response and editorial contracts", () => {
     expect(validateDigestModelOutput(extended("USDT held.\n\nThe plumbing flinched.\n\nWatch the next trigger."), { kind: "daily" })).toContainEqual(expect.objectContaining({ ruleId: "scoped-decorative-word", severity: "soft" }));
   });
 
+  it.each(["daily", "weekly"] as const)("keeps raw hard findings separate from advisories in %s enforce mode", (kind) => {
+    const parsed = parseDigestModelResponse(JSON.stringify({
+      title: "Calm Market",
+      text: "USDT held — watch the next print tomorrow.",
+      extended: "The plumbing flinched.\n\nUSDT held its peg.\n\nWatch the next trigger.",
+    }), { register: kind, styleGateMode: "enforce" });
+    expect(parsed.digestText).toContain("—");
+    const findings = validateDigestModelOutput(parsed, { kind, styleGateMode: "enforce" })
+      .filter((issue) => issue.code === "editorial-style");
+    expect(findings).toContainEqual(expect.objectContaining({ ruleId: "no-clause-dash", severity: "hard" }));
+    expect(findings).toContainEqual(expect.objectContaining({ ruleId: "scoped-decorative-word", severity: "soft" }));
+  });
+
   it.each([
     ["sardonic streak", fixture({ tone: "sardonic" }), [{ meta: { lead: "depeg", tone: "sardonic" }, title: "Prior" }], "consecutive-sardonic-tone"],
     ["tone cluster", fixture({ tone: "dry" }), ["dry", "dry", "dry", "dry", "dry"].map((tone, i) => ({ meta: { lead: "depeg", tone }, title: String(i) })), "tone-cluster"],

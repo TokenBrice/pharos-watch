@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { fixedFee, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
@@ -44,6 +45,8 @@ import {
   v9ExitRouteObservation,
   v9Status,
 } from "../../test-helpers/v9-fixed-input";
+import { buildRoutes } from "../safety-score-v9/fact-set-exit";
+import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 describe("explicit route factor gaps and source chronology", () => {
   it.each([
@@ -577,7 +580,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
             ...original.dexLiqMap.alpha!,
             exitRouteObservationCoverage: {
               status: "populated",
-              capabilityMatrixVersion: "p4a.9",
+              capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
               retainedPoolCount: 2_380 + exactCapabilityPoolCount,
               observationCount: 1,
               scoreEligibleObservationCount: 1,
@@ -927,5 +930,72 @@ describe("compiled Control causal minimum regressions", () => {
     }
     expect(result.score).toBe(Math.min(...result.components
       .filter((component) => component.binding && component.score !== null).map((component) => component.score!)));
+  });
+});
+
+describe("direct exit fact builder", () => {
+  it.each([199, 200, 201])("admits measured redemption capacity only within the 200 bps budget (cost %s)", (costBps) => {
+    const fixed = queuedRedemptionFixedInput();
+    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const review = reviewed.assets[0]!.routeReviews.find((route) => route.lane === "redemption")!;
+    review.executionCosts = review.executionCosts.map((point) => ({ ...point, executionCostBps: costBps }));
+    const result = buildRoutes(factBuilderContext(fixed, reviewed));
+    const route = result.exitRoutes.find((entry) => entry.lane === "redemption")!;
+    expect(route.capacityCurve).toEqual([
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: costBps <= 200 ? 100_000 : 0,
+        completionRatio: costBps <= 200 ? 1 : 0, executionCostBps: costBps },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: costBps <= 200 ? 1_000_000 : 0,
+        completionRatio: costBps <= 200 ? 1 : 0, executionCostBps: costBps },
+    ]);
+  });
+
+  it("preserves unavailable live-only redemption as a rejected diagnostic, never executable capacity", () => {
+    const draft = structuredClone(queuedRedemptionFixedInput());
+    const redemption = draft.redemptionBackstopMap.alpha!;
+    redemption.provider = "reserve-sync-metadata";
+    redemption.resolutionState = "missing-capacity";
+    redemption.capacityBasis = "live-direct-telemetry";
+    redemption.capacityProfile = undefined;
+    redemption.routeStatus = "open";
+    const fixed = rebuildFixed(draft);
+    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    const context = factBuilderContext(fixed, reviewed);
+    const route = buildRoutes(context).exitRoutes.find((entry) => entry.lane === "redemption")!;
+    expect(route).toMatchObject({
+      status: { observationState: "missing" },
+      scoreEligible: false, request: null, capacityCurve: [],
+      output: { kind: "unknown", valuation: null },
+    });
+    expect(context.evidence.get(route.status.evidenceRefIds[0]!)).toMatchObject({
+      disposition: "rejected", sourceGenerationId: fixed.redemptionGenerationId,
+      rejection: { code: "live-direct-capacity-unavailable" },
+    });
+    expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
+      gapId: route.status.gapIds[0],
+      causeProof: expect.objectContaining({ cause: "A", rejectionCode: "live-direct-capacity-unavailable" }),
+    }));
+  });
+
+  it("reports absent exit observations as missing, not a known zero-exit market", () => {
+    const fixed = exactFixedInput({ includeDexObservations: false, includeDexCoverage: false });
+    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+    reviewed.assets[0]!.routeReviews = [];
+    const context = factBuilderContext(fixed, reviewed);
+    const result = buildRoutes(context);
+    expect(result.exitRoutes).toEqual([]);
+    expect(result.exitStatus.observationState).toBe("missing");
+    expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
+      reasonCode: "missing-runtime-route-evidence", observationState: "missing",
+    }));
+  });
+
+  it("rejects a review for an observation that was not captured", () => {
+    const fixed = exactFixedInput();
+    const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+    reviewed.assets[0]!.routeReviews.push(routeReview("dex:absent"));
+    expect(() => buildRoutes(factBuilderContext(fixed, reviewed)))
+      .toThrow(/Route reviews do not match captured observations/);
   });
 });

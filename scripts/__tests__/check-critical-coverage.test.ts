@@ -148,7 +148,12 @@ describe("critical coverage changed-file detection", () => {
     expect(
       findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
         criticalFiles: ["worker/src/cron/sync-stablecoins/enrolled.ts"],
-        waivers: { "worker/src/cron/sync-stablecoins/waived.ts": "2026-09-05" },
+        waivers: { "worker/src/cron/sync-stablecoins/waived.ts": {
+          reviewAfter: "2026-09-05",
+          reason: "Forwarding facade",
+          owner: "worker/src/cron/sync-stablecoins/enrolled.ts",
+          ownerTest: "worker/src/cron/__tests__/sync-stablecoins.test.ts",
+        } },
       }),
     ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
   });
@@ -174,77 +179,95 @@ describe("critical coverage changed-file detection", () => {
     expect(exits).toEqual([1]);
     expect(errors).toContain("[coverage] Enrolled critical sources missing importing owner tests:");
   });
-  it("validates waiver metadata and rejects waivers for enrolled files", () => {
-    expect(
-      validateCriticalCoverageWaiverMetadata(
-        { "worker/src/lib/price-consensus.ts": "2026-09-05" },
-        {
-          candidateFiles: ["worker/src/lib/price-consensus.ts"],
-          criticalFiles: ["worker/src/lib/price-consensus.ts"],
-        },
-      ),
-    ).toEqual(["worker/src/lib/price-consensus.ts: already enrolled in critical coverage; remove waiver"]);
+  it("validates facade rationale and executable implementation ownership", () => {
+    const file = "worker/src/lib/new-price-helper.ts";
+    const owner = "worker/src/lib/price-consensus.ts";
+    const ownerTest = "worker/src/lib/__tests__/price-consensus.test.ts";
+    const waiver = { reviewAfter: "2026-09-05", reason: "Only forwards the covered implementation", owner, ownerTest };
+    const options = {
+      candidateFiles: [file, owner],
+      criticalFiles: [owner],
+      ownership: new Map([[owner, [ownerTest]]]),
+    };
 
-    expect(
-      validateCriticalCoverageWaiverMetadata(
-        {
-          "worker/src/lib/new-price-helper.ts": "not-a-date",
-          "worker/src/lib/old-review-helper.ts": "2026-09-05",
-        },
-        {
-          candidateFiles: ["worker/src/lib/new-price-helper.ts", "worker/src/lib/old-review-helper.ts"],
-          criticalFiles: [],
-        },
-      ),
-    ).toEqual([
-      "worker/src/lib/new-price-helper.ts: missing or invalid waiver reviewAfter",
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: waiver }, options)).toEqual([]);
+    expect(validateCriticalCoverageWaiverMetadata({ [owner]: waiver }, options)).toEqual([
+      `${owner}: already enrolled in critical coverage; remove waiver`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: { ...waiver, reviewAfter: "not-a-date" } }, options)).toEqual([
+      `${file}: missing or invalid waiver reviewAfter`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: { ...waiver, reason: " " } }, options)).toEqual([
+      `${file}: missing coverage waiver reason`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: { ...waiver, owner: file } }, options)).toEqual([
+      `${file}: coverage waiver owner is not an enrolled implementation`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: waiver }, { ...options, ownership: new Map() })).toEqual([
+      `${file}: coverage waiver ownerTest does not import its implementation owner`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: { ...waiver, ownerTest: "mock-only.test.ts" } }, options)).toEqual([
+      `${file}: coverage waiver ownerTest does not import its implementation owner`,
+    ]);
+    expect(validateCriticalCoverageWaiverMetadata({ [file]: "2026-09-05" } as never, options)).toEqual([
+      `${file}: missing or invalid waiver reviewAfter`,
+      `${file}: missing coverage waiver reason`,
+      `${file}: coverage waiver owner is not an enrolled implementation`,
     ]);
   });
 
-  it("reports overdue waiver reviews without failing the merge gate", () => {
+  it("reports due facade reviews within grace and rejects expired reviews", () => {
+    const owner = "worker/src/lib/price-consensus.ts";
+    const ownerTest = "worker/src/lib/__tests__/price-consensus.test.ts";
+    const facade = (reviewAfter: string) => ({
+      reviewAfter, reason: "Forwards to the enrolled implementation", owner, ownerTest,
+    });
     const waivers = {
-      "worker/src/lib/overdue-price-helper.ts": "2026-06-10",
-      "worker/src/lib/upcoming-price-helper.ts": "2026-06-30",
+      "worker/src/lib/overdue-price-helper.ts": facade("2026-06-10"),
+      "worker/src/lib/upcoming-price-helper.ts": facade("2026-06-30"),
     };
-    const candidateFiles = Object.keys(waivers);
+    const candidateFiles = [...Object.keys(waivers), owner];
 
-    expect(
-      collectCriticalCoverageWaiverReviewQueue(waivers, {
-        candidateFiles,
-        today: new Date("2026-06-20T00:00:00.000Z"),
-        lookaheadDays: 14,
-      }),
-    ).toEqual({
+    expect(collectCriticalCoverageWaiverReviewQueue(waivers, {
+      candidateFiles,
+      today: new Date("2026-06-20T00:00:00.000Z"),
+      lookaheadDays: 14,
+    })).toEqual({
       due: [{ file: "worker/src/lib/overdue-price-helper.ts", reviewAfter: "2026-06-10" }],
       upcoming: [{ file: "worker/src/lib/upcoming-price-helper.ts", reviewAfter: "2026-06-30" }],
     });
 
-    const logs: string[] = [];
-    const errors: string[] = [];
-    const exits: number[] = [];
-    expect(
-      runCriticalCoverageCompletenessGuard({
+    const run = (reviewToday: string) => {
+      const logs: string[] = [];
+      const errors: string[] = [];
+      const exits: number[] = [];
+      const passed = runCriticalCoverageCompletenessGuard({
         candidateFiles,
-        criticalFiles: [],
+        criticalFiles: [owner],
         waivers,
-        ownership: new Map(),
+        ownership: new Map([[owner, [ownerTest]]]),
         ownershipWaivers: {},
-        reviewToday: new Date("2026-06-20T00:00:00.000Z"),
+        reviewToday: new Date(reviewToday),
         consoleImpl: mockConsole({
           error: (message: string) => errors.push(message),
           log: (message: string) => logs.push(message),
         }),
-        exit: captureProcessExit((code) => {
-          if (code !== undefined) exits.push(code);
-        }),
-      }),
-    ).toBe(true);
+        exit: captureProcessExit((code) => { if (code !== undefined) exits.push(code); }),
+      });
+      return { passed, logs, errors, exits };
+    };
+    const current = run("2026-06-20T00:00:00.000Z");
+    expect(current.passed).toBe(true);
+    expect(current.exits).toEqual([]);
+    expect(current.errors).toEqual([]);
+    expect(current.logs).toContain("[coverage] Critical coverage waiver reviews due or overdue:");
+    expect(current.logs).toContain("  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10");
+    expect(current.logs).toContain("[coverage] Critical coverage waiver reviews due soon:");
 
-    expect(exits).toEqual([]);
-    expect(errors).toEqual([]);
-    expect(logs).toContain("[coverage] Critical coverage waiver reviews due or overdue:");
-    expect(logs).toContain("  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10");
-    expect(logs).toContain("[coverage] Critical coverage waiver reviews due soon:");
+    const expired = run("2026-07-11T00:00:00.000Z");
+    expect(expired.passed).toBe(false);
+    expect(expired.exits).toEqual([1]);
+    expect(expired.errors).toContain("[coverage] 1 critical-coverage waiver review(s) are more than 30 days overdue:");
   });
 
   it("runs ownership waivers through metadata validation and the ordinary review grace period", () => {

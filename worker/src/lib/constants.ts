@@ -100,8 +100,6 @@ export const BOJ_CALL_RATE_JSON_BASE_URL = "https://www.stat-search.boj.or.jp/ap
 export const RBA_F1_MONEY_MARKET_CSV_URL = "https://www.rba.gov.au/statistics/tables/csv/f1-data.csv";
 /** Banxico SIE API — CETES 28-day primary auction yield (series SF43936). Requires Bmx-Token header. */
 export const BANXICO_CETES_28D_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno";
-/** Etherfuse app route whose Next data exposes the current CETES Stablebond issuance rate. */
-export const ETHERFUSE_CETES_BOND_PAGE_URL = "https://app.etherfuse.com/bonds/cetes";
 /** Banco Central do Brasil SGS — SELIC over (series 11), latest daily observation as JSON. */
 export const BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json";
 /** Bank of Canada Valet — overnight repo rate (V122530), latest observation as JSON. */

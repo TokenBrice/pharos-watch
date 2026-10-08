@@ -88,7 +88,7 @@ export function runPrTests({
   });
   const wallMs = Date.now() - startedAt;
   if (result.error) throw result.error;
-  if (timingsFile) publishShardTimings(timingsFile, shard ?? { shard: 1, shardCount: 1 }, wallMs, env);
+  if (timingsFile) publishShardTimings(timingsFile, shard ?? { shard: 1, shardCount: 1 }, wallMs, env, "plain-test");
   return result.status ?? 1;
 }
 

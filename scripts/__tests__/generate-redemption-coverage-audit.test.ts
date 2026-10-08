@@ -341,6 +341,46 @@ describe("generate-redemption-coverage-audit", () => {
     expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 
+  it.each(["reviewed", "missing", "invalid", "stale"] as const)(
+    "keeps default/check exit parity for %s dispositions",
+    (kind) => {
+      const cwd = roots.makeRoot();
+      const build = () => generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "reviewed-gap" })],
+        activeCoins: [coin({ id: "reviewed-gap" })],
+        configs: kind === "stale" ? { "reviewed-gap": configuredRoute } : {},
+        generatedAt: "2026-10-08T00:00:00.000Z",
+        reviewedDispositions: kind === "missing" ? [] : [
+          review("reviewed-gap", kind === "invalid" ? { reviewer: "" } : {}),
+        ],
+      });
+      const expected = kind === "reviewed" ? 0 : 1;
+      expect(runCli(["--json", "--report", "default.json"], cwd, build)).toBe(expected);
+      expect(runCli(["--json", "--check", "--report", "check.json"], cwd, build)).toBe(expected);
+      expect(JSON.parse(readFileSync(join(cwd, "check.json"), "utf8"))).toEqual(
+        JSON.parse(readFileSync(join(cwd, "default.json"), "utf8")),
+      );
+      if (kind === "reviewed") expect(build().activeUnconfigured).toHaveLength(1);
+    },
+  );
+
+  it("keeps strict active-gap escalation independent of check presentation", () => {
+    const cwd = roots.makeRoot();
+    const build = () => {
+      const audit = generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "reviewed-gap" })],
+        activeCoins: [coin({ id: "reviewed-gap" })],
+        configs: {}, reviewedDispositions: [review("reviewed-gap")],
+      });
+      audit.summary.activeDefaultClassified = 1;
+      return audit;
+    };
+    for (const presentation of [[], ["--check"]]) {
+      expect(runCli(["--json", "--report", "plain.json", ...presentation], cwd, build)).toBe(0);
+      expect(runCli(["--json", "--report", "strict.json", "--strict-active-gaps", ...presentation], cwd, build)).toBe(1);
+    }
+  });
+
   it("strict CLI mode accepts durably reviewed active gaps", () => {
     const cwd = roots.makeRoot();
     const reviewedGapAudit = () =>

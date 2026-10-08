@@ -7,7 +7,7 @@ export const content: ArchetypeContent = {
     "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
   lead: [
     "An algorithmic stablecoin keeps its peg through a programmatic mint/burn rule and an arbitrage loop, not through 1:1 collateral. In the canonical form (UST/LUNA), a user burns a governance token to mint a dollar's worth of the stablecoin, and the loop is reversible. The whole mechanism rests on confidence in the governance token, which is precisely what evaporates first in a crisis. \"Reflexive\" describes that feedback: the peg holds because the governance token has value, and the governance token has value partly because the peg holds.",
-    "Pharos taxonomy no longer treats `algorithmic` as a live backing bucket. The remaining tokens carrying this archetype tag are either historical shadow assets retained for PSI continuity, or current designs that pair algorithmic peg-defense with some real collateral. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
+    "Pharos taxonomy no longer treats `algorithmic` as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The distinct algorithmic mechanism archetype also describes current designs with programmatic peg defense and real collateral. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
     {

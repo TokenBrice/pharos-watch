@@ -1,7 +1,7 @@
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type {
-  DexAmmExecutionModel,
+  DexStoredAmmExecutionModel,
   DexExecutionCapabilityGate,
   ExitRouteCapacityPoint,
   ExitRouteConfidence,
@@ -20,10 +20,13 @@ import {
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
-import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "./measured-execution-deployment-policies";
+import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_REVIEWED_DEPLOYMENTS } from "./measured-execution-deployment-policies";
 import type { ExitExecutionAdmission } from "./safety-score-v9/exit-execution";
+import { getCurveCompositePolicy, isCurveCompositeAdapterProfileId } from "./curve-composite-policies";
+import { SOLIDLY_V2_DEPLOYMENTS } from "./solidly-v2-deployments";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "../types/exit-route-identity";
 
-export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
+export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.10";
 export const REFERENCE_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.referenceNotionalUsd;
 export const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap;
 export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg;
@@ -123,9 +126,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
   }),
   ...[
     { profileId: "hyperswap-v3-quoter-v2", chain: "hyperevm" },
-    { profileId: "hybra-v3-quoter-v2", chain: "hyperevm" },
     { profileId: "kodiak-v3-quoter-v2", chain: "berachain" },
-    { profileId: "xswap-v3-quoter-v2", chain: "xdc" },
   ].map(({ profileId, chain }) => capabilityRegistration({
     profileId,
     capabilityId: "measured-adapter-shadow",
@@ -141,8 +142,8 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4,
     platform: "evm",
     lifecycle: "active",
-    eligibleChains: ["ethereum"],
-    shadowChains: UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment) => deployment.chain),
+    eligibleChains: UNISWAP_V4_REVIEWED_DEPLOYMENTS.filter((deployment) => deployment.mode === "active" && deployment.scoreEligible).map((deployment) => deployment.chain),
+    shadowChains: UNISWAP_V4_REVIEWED_DEPLOYMENTS.filter((deployment) => deployment.mode === "shadow").map((deployment) => deployment.chain),
     proofKind: "evm-state-and-call-proof",
   }),
   capabilityRegistration({
@@ -175,7 +176,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
   }),
   capabilityRegistration({
     profileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveRateBearing,
-    capabilityId: "measured-adapter-shadow",
+    capabilityId: "curve-rate-bearing-measured-exact",
     adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite,
     platform: "evm",
     lifecycle: "shadow",
@@ -184,7 +185,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
   }),
   capabilityRegistration({
     profileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
-    capabilityId: "measured-adapter-shadow",
+    capabilityId: "curve-metapool-underlying-measured-exact",
     adapterId: DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite,
     platform: "evm",
     lifecycle: "shadow",
@@ -253,7 +254,8 @@ export function getDexExecutionCapabilityRegistration(
   return DEX_EXECUTION_CAPABILITY_REGISTRY.find((entry) => entry.profileId === profileId) ?? null;
 }
 
-type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain">;
+type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain"> &
+  Partial<Pick<DexMeasuredExecutionPublicProfile, "poolId" | "tokenIn" | "tokenOut">>;
 
 export function isDexExecutionProfileAdmittedForScoring(
   profile: DexExecutionProfileAdmissionInput,
@@ -263,6 +265,16 @@ export function isDexExecutionProfileAdmittedForScoring(
   const chain = profile.chain.trim().toLowerCase();
   if (profileId !== registration.profileId || registration.lifecycle !== "active") return false;
   if (!registration.eligibleChains.includes(chain)) return false;
+  if (isCurveCompositeAdapterProfileId(profileId)) {
+    const prefix = `${chain}:`;
+    if (chain !== "ethereum" || !profile.poolId?.startsWith(prefix)) return false;
+    const policy = getCurveCompositePolicy(chain, profile.poolId.slice(prefix.length));
+    if (!policy || policy.adapterProfileId !== profileId || policy.mode !== "active" || !policy.scoreEligible) return false;
+    const input = policy.executionTokens[policy.inputIndex]!;
+    const output = policy.executionTokens[policy.outputIndex]!;
+    if (profile.tokenIn?.address !== input.address || profile.tokenOut?.address !== output.address ||
+      profile.tokenIn.trackedAssetId !== policy.stablecoinId) return false;
+  }
   if (!registration.eligibleDeploymentKeys) return true;
   return registration.eligibleDeploymentKeys.includes(`${profileId}:${chain}`);
 }
@@ -445,6 +457,40 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     ],
   },
   {
+    id: "curve-rate-bearing-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: ["Exact current policy, ERC-4626 provider and implementation proof required; profile lifecycle remains shadow until reviewed activation."],
+  },
+  {
+    id: "curve-metapool-underlying-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: ["Exact current Ethereum policy, ordered underlying tokens and base redemption proof required; profile lifecycle remains shadow until reviewed activation."],
+  },
+  {
     id: "measured-adapter-shadow",
     sourceFamilies: ["direct_api", "dl"],
     model: "measured-quote",
@@ -501,8 +547,8 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
       "Untracked counter-asset reference prices are pool-implied from same-block reserves and the tracked input's market price.",
     ],
   },
-  {
-    id: "solidly-v2-exact-shadow",
+  ...SOLIDLY_V2_DEPLOYMENTS.map((deployment): DexRouteSourceCapability => ({
+    id: deployment.capabilityId,
     sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
     model: "solidly-v2",
     tokenIdentity: "exact",
@@ -510,18 +556,18 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     poolInvariantParameters: "exact",
     outputIdentity: "exact",
     fees: "exact",
-    observationTime: "producer-run",
+    observationTime: "source-observed",
     outputEvidenceKind: "reserve-based-amm-simulation",
     confidence: "high",
-    outputKinds: ["tracked-stablecoin", "collateral"],
+    outputKinds: ["tracked-stablecoin"],
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: false,
     limitations: [
-      "Collection-only Solidly V2 stable/volatile exact integer invariant with same-block getAmountOut equivalence.",
-      "Reviewed Aerodrome Base, Velodrome Optimism and Shadow legacy Sonic factories; CL pools never inherit this capability.",
-      "Activation requires post-deploy drift/capture/replay and publication review; current observations are diagnostic only.",
+      `Collection-only ${deployment.protocol} ${deployment.chain} stable invariant; no volatile, Sonic or Slipstream inheritance.`,
+      "Requires pinned state, original reference clocks and independently verified request/refined endpoints.",
+      "Deployment-specific value, drift, resource, replay and accepted-publication review remains required before scoring.",
     ],
-  },
+  })),
   {
     id: "balancer-weighted-constant-mean-exact",
     sourceFamilies: ["direct_api"],
@@ -713,7 +759,7 @@ export interface P4DexRoutePoolInput {
       decayed?: boolean;
     };
     executionCapabilityGate?: DexExecutionCapabilityGate;
-    ammExecutionModel?: DexAmmExecutionModel;
+    ammExecutionModel?: DexStoredAmmExecutionModel;
     measuredExecution?: DexMeasuredExecutionPublicProfile;
     measuredExecutions?: DexMeasuredExecutionPublicProfile[];
     measuredExecutionPhysicalPoolId?: string;
@@ -890,8 +936,18 @@ export function capabilityForPool(
   ) {
     return capabilityById("cg-tickers-orderbook-depth-2pct");
   }
+  if (pool.extra?.ammExecutionModel?.source === "retired-solidly-v2") {
+    return capabilityById("discovery-pool-shaped");
+  }
   if (pool.extra?.ammExecutionModel?.source === "solidly-v2") {
-    return capabilityById("solidly-v2-exact-shadow");
+    const state = pool.extra.ammExecutionModel.solidlyState;
+    const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) =>
+      row.chain === canonicalExitRouteChain(pool.chain) && row.variant === state?.variant &&
+      [row.protocol, `${row.protocol}-${row.chain}`, `${row.protocol}-v2`].includes(normalizedKey(pool.project)) &&
+      state?.stable === true && state.factoryAddress.toLowerCase() === row.factoryAddress &&
+      canonicalExitRouteAssetKey(pool.chain, state.poolAddress) === pool.poolId.toLowerCase() &&
+      !/(v3|v4|concentrated|clmm|cg-cl-|slipstream)/i.test(pool.poolType));
+    return capabilityById(deployment?.capabilityId ?? "discovery-pool-shaped");
   }
   if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
     return capabilityById(

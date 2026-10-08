@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
@@ -13,16 +12,16 @@ export interface MarketDataTimePoint {
 }
 
 export function useMarketDataChartFrame<T extends MarketDataTimePoint>({
-  chartData, controlledRange, stablecoinId,
+  chartData, controlledRange,
 }: {
-  chartData: T[]; controlledRange?: TimeRangeOption; stablecoinId: string;
+  chartData: T[]; controlledRange?: TimeRangeOption;
 }) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
     externalRange: controlledRange,
   });
   const margin = useMemo(() => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }), [range]);
-  const chartWindow = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
+  const chartWindow = useMarketDataChartWindow({ filteredData, margin, range });
   const crosshair = chartWindow.sync
     ? {
         hoveredTs: chartWindow.sync.hoveredTs, domain: chartWindow.xDomain,
@@ -41,12 +40,10 @@ export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
   filteredData,
   margin,
   range,
-  stablecoinId,
 }: {
   filteredData: T[];
   margin: ChartMargin;
   range: TimeRangeOption;
-  stablecoinId: string;
 }) {
   const sync = useMarketDataChartSync();
   const brushedRange = sync?.brushedRange ?? null;
@@ -56,10 +53,6 @@ export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
     const [lo, hi] = brushedRange;
     return filteredData.filter((d) => d.ts >= lo && d.ts <= hi);
   }, [filteredData, brushedRange]);
-
-  const fromMs = visibleData[0]?.ts ?? null;
-  const toMs = visibleData[visibleData.length - 1]?.ts ?? null;
-  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
   const xTicks = useMemo(() => {
     // Month-oriented labels need a matching monthly tick cadence. Letting
@@ -81,7 +74,6 @@ export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
   const syncHandlers = useChartSyncHandlers(sync);
 
   return {
-    annotations,
     brushedRange,
     sync,
     visibleData,

@@ -29,6 +29,8 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
     import("./scheduled/twenty-minute-mint-burn-extended").then((mod) => mod.runHalfHourlyMintBurnExtendedSlot),
   halfHourlyMeasuredExecution: () =>
     import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runHalfHourlyMeasuredExecutionSlot),
+  halfHourlyMeasuredExecutionSupplemental: () =>
+    import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runSupplementalMeasuredExecutionSlot),
   halfHourlyOffset: () => import("./scheduled/half-hourly").then((mod) => mod.runHalfHourlySlot),
   halfHourlyChartsOffset: () =>
     import("./scheduled/half-hourly-charts").then((mod) => mod.runHalfHourlyChartsSlot),

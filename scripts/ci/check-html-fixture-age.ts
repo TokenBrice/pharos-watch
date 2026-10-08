@@ -61,8 +61,6 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable Poppler extraction of https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf, accessed 2026-10-07T21:01:31.379205Z and refetched byte-identical 2026-10-08; SHA-256 95cd46d41af13d63eece4439c00af9d158e893fdf21993e842d09e4bfa557aa2 freezes the August31 examined amounts, three-cent discrepancy and circulation criterion.",
   "qcad-balances-2026-10-07.json":
     "Immutable liability-perimeter replay captured 2026-10-07T21:05:24.151150Z from https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json; freezes native CAD amounts, positive unreviewed ARC, absent Solana and liability-only clocks without a fiat reserve observation date.",
-  "openeden-reserve-composition-2026-10-07.json":
-    "Immutable accounting replay captured 2026-10-07T20:47:18.580729Z from https://prod-gw.openeden.com/usdo/sys/reserve-composition-last; freezes the dated eight-component reserve book, zero unmapped uAmount and unresolved signed-gap/queued-claim scope for fail-closed boundary tests.",
   "accountable-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from cache.accountable.capital/dashboard/yuzu and axis.accountable.capital:8443/dashboard; freezes signed-book residual and anonymous venue composition defects.",
   "usdai-oct7-2026.json":
@@ -83,8 +81,6 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "Immutable adverse-state context captured 2026-10-07 from api.pharos.watch/api/stablecoin-reserves/usd0-usual; historical external balances and oracle valuations are explicitly distinct from independent circular-claim wire evidence.",
   "leverup-oct7-2026.json":
     "Immutable adverse-state replay captured 2026-10-07 from api-monad-mainnet-full.n.dwellir.com at Monad block 111423307; preserves six state responses proving the designated-reserve deficit.",
-  "matrixdock-stbt-stats.json":
-    "captured 2026-10-06 from the official Matrixdock STBT /bond/anon/website/api/v1/stats JSON API; frozen issuer USD NAV census has no observation timestamp and cannot carry an HTML-comment capture header",
   "midas-mtbill-transparency.json":
     "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":

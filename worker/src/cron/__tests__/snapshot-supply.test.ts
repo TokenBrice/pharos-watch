@@ -16,8 +16,8 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => ({
   ],
 }));
 
-vi.mock("@shared/lib/shadow-stablecoins", () => ({
-  SHADOW_IDS: new Set(["eurt-test"]),
+vi.mock("@shared/lib/psi-historical-assets", () => ({
+  PSI_HISTORICAL_IDS: new Set(["eurt-test"]),
 }));
 
 import { snapshotSupply } from "../snapshot-supply";

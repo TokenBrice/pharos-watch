@@ -14,10 +14,8 @@ import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS, type DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
-import {
-  CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, getCurveCompositePolicy,
-  type CurveCompositePoolPolicy,
-} from "./curve-composite-policies";
+import { CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, getCurveCompositePolicy,
+type CurveCompositePoolPolicy, } from "@shared/lib/curve-composite-policies";
 import type { CurveFamilyVerificationDependencies } from "./curve-stableswap-execution-pipeline";
 
 const POOL_ABI = parseAbi([

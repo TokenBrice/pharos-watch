@@ -15,7 +15,7 @@ import {
 import {
   CURVE_METAPOOL_ADAPTER_PROFILE_ID,
   CURVE_R3_METAPOOL_POLICIES,
-} from "../../measured-execution/curve-composite";
+} from "@shared/lib/curve-composite-policies";
 import type {
   PoolProcessingContext,
   PoolProtocolEnrichment,

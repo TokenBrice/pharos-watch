@@ -10,7 +10,7 @@ import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  isTelegramRecapAvailableToChat,
+  isTelegramRecapAvailable,
   type TelegramRecapRolloutPolicy,
 } from "@shared/lib/telegram-recap-rollout";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram/presets";
@@ -111,10 +111,7 @@ export async function loadTelegramMiniAppState(
   const mutationBlockReason = auth.canMutatePrivateChat
     ? mutationAuthExpired ? "stale-auth" : null
     : "not-private";
-  const recapAvailable = chatId != null && isTelegramRecapAvailableToChat(
-    options.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-    chatId,
-  );
+  const recapAvailable = chatId != null && isTelegramRecapAvailable(options.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY);
 
   const [subscriber, subscriptions, presets, health, pending, recap] = chatId
     ? await (async () => {

@@ -5,9 +5,9 @@ import {
 } from "./enrich-prices.test-support";
 import {
   applyResolvedPrice,
-  fetchPrimaryPrices,
   type PeggedAsset,
 } from "../sync-stablecoins/enrich-prices";
+import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices-primary";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 

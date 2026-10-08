@@ -88,8 +88,11 @@ function buildErrorDescriptor(
   return visit(error, 0);
 }
 
-export function toErrorMessage(error: unknown): string {
+export function toErrorMessage(
+  error: unknown,
+  sanitize: (value: string) => string = (value) => value,
+): string {
   // Reading a lazy stack materializes V8's retained script line index, even
   // when the caller only needs a message. Keep message-only diagnostics lazy.
-  return buildErrorDescriptor(error, (value) => value, false).message;
+  return buildErrorDescriptor(error, sanitize, false).message;
 }

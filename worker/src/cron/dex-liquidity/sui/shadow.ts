@@ -23,7 +23,7 @@ export function selectSuiShadowPools(rows: readonly RetainedSuiPool[], cursor: s
   const unique = new Map<string, RetainedSuiPool>();
   for (const row of rows) {
     const poolId = suiClmmPoolId(row.pool_id);
-    if (!poolId || !suiClmmFamily(row.project) || !Number.isFinite(row.tvl_usd) || row.tvl_usd <= 0 || !ACTIVE_META_BY_ID.has(row.stablecoin_id)) continue;
+    if (!poolId || suiClmmFamily(row.project) !== "cetus" || !Number.isFinite(row.tvl_usd) || row.tvl_usd <= 0 || !ACTIVE_META_BY_ID.has(row.stablecoin_id)) continue;
     const key = `${poolId}:${row.stablecoin_id}`;
     const prior = unique.get(key);
     if (!prior || prior.tvl_usd < row.tvl_usd) unique.set(key, { ...row, pool_id: poolId });
@@ -126,7 +126,7 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
       AND dl.publication_generation_id = (SELECT publication_generation_id FROM dex_liquidity
         WHERE stablecoin_id = '__global__' AND publication_state = 'published')
       AND lower(json_extract(pool.value, '$.chain')) = 'sui'
-      AND json_extract(pool.value, '$.project') IN ('cetus', 'cetus-clmm', 'bluefin', 'bluefin-spot')
+      AND json_extract(pool.value, '$.project') IN ('cetus', 'cetus-clmm')
     ORDER BY json_extract(pool.value, '$.tvlUsd') DESC LIMIT 256`).bind(nowSec - 24 * 60 * 60).all<RetainedSuiPool>();
   const window = selectSuiShadowPools(retained.results ?? [], state.cursor);
   const { stablecoinPriceById } = await loadTrackedStablecoinMaps(input.db, nowSec);

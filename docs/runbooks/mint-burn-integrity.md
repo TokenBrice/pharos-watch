@@ -7,20 +7,20 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-On-chain supply divergence or stale-snapshot ratio exceeds the configured threshold, or the global on-chain supply monitor is unavailable. Mint/burn reconciliation can also flag material drift for assets in `MINT_BURN_CONFIGS`, but that is a separate coverage surface from `onchain_monitor_unavailable`.
+On-chain supply divergence/staleness causes remain a separate supply-monitor surface. The Mint/Burn Integrity card instead diagnoses exact native-token conservation over reviewed matched-block ranges; a verified mismatch is critical, while missing, stale, malformed or unsupported proof remains unverified. USD circulation differences are retired and cannot diagnose ingestion integrity.
 
 Public mint/burn availability causes (`mint_burn_public_degraded`, `mint_burn_public_stale`) are emitted from the critical-lane freshness/health path and currently do not attach a dedicated runbook link. Use this runbook for on-chain integrity causes and the `/flows` / cron diagnostics when the public mint/burn lane is implicated.
 
 ## First checks
 
-1. **Admin page → Pipeline section → Mint/Burn Reconciliation card:** which coins are flagged? What's the divergence magnitude?
-2. **`sync-mint-burn` + `sync-mint-burn-extended` crons:** healthy? Running on cadence?
-3. **`/api/status` → `mintBurnReconciliation`:** detailed per-coin deltas.
+1. **Pipeline → Mint/Burn Integrity:** inspect the exact affected contract, config fingerprint, reviewed law, block range/hashes and raw residual. A one-base-unit mismatch matters.
+2. **Critical/extended crons:** inspect each contract's lane, observed head and stored cursor. A passing record requires a completed fresh scan covering its audited blocks; an unrelated new run cannot renew it.
+3. **`mintBurnReconciliation`:** inspect `conservationIssue`, per-record reason, both audit/checkpoint ages and `coverageStatus`. Missing supply-cache data must not hide native records. Unsupported identities require reviewed admission, not a fabricated pass.
 
 ## Remediation
 
-- **Backfill mint/burn events:** Admin page → Recommended now → `backfill-mint-burn`. Idempotent.
-- **Backfill mint/burn prices:** if divergence is USD-side, `backfill-mint-burn-prices` repopulates price columns.
+- **Native mismatch:** investigate exact identity, reviewed conservation law, fetched/parsed/stored native event completeness and checkpoint hashes before choosing any repair. A mismatch stays unresolved until a verified pass replaces it; do not clear audit caches to make it green.
+- **Coverage/backfill:** use the existing bounded mint/burn backfill only after identifying missing events/cursor coverage. Price backfill repairs valuation debt, never the native residual.
 - **On-chain monitor unavailable:** usually indicates the recent `onchain_supply` monitor rows are missing or unreadable globally. Check the relevant supply-monitoring cron/status sections before treating it as a mint/burn config issue.
 
 ### Historical price debt

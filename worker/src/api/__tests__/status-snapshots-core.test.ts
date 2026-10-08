@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -105,20 +107,37 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
-  it.each(["off", "shadow"])("bypasses snapshots from the opposite Workflow mode (%s)", async (v9WorkflowMode) => {
+  it.each([false, true])("recomputes an incompatible observer OOM snapshot without hiding current failure (%s)", async (currentProducerFails) => {
     const now = Math.floor(Date.now() / 1000);
     const job = "compute-safety-score-v9-workflow";
-    const priorCrons = v9WorkflowMode === "off" ? {
-      [job]: { lastRun: null, recentRuns: [], expectedIntervalSec: 1800, healthy: false },
-    } : {};
+    const priorCrons = Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
+      id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+    ]));
+    priorCrons[job] = {
+      lastRun: null, recentRuns: [], expectedIntervalSec: 1800, healthy: false,
+    };
+    const liveRows = makeMinimalLiveStatusRows(now, null, true);
+    if (currentProducerFails) {
+      liveRows.unshift({ match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((id) =>
+        makeCronRow(id, id === "sync-stablecoins" ? "error" : "ok", 30)) });
+    }
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
-        rows: [makeRawStatusSnapshotRow(now, 60, { crons: priorCrons })] },
-      ...makeMinimalLiveStatusRows(now, null, true),
+        rows: [makeRawStatusSnapshotRow(now, 60, {
+          crons: priorCrons, availabilityStatus: "degraded", rawOverallStatus: "degraded",
+          causes: { availability: [{ code: "observer-oom", message: "Worker exceeded memory limit" }], dataQuality: [], overall: [] },
+        })] },
+      ...liveRows,
     ]);
-    const response = await handleStatus({ db, trustedAdmin: true, v9WorkflowMode });
-    const body = await readJsonResponse<{ crons: Record<string, unknown> }>(response, 200);
-    expect(job in body.crons).toBe(v9WorkflowMode === "shadow");
+    const response = await handleStatus({ db, trustedAdmin: true });
+    const body = await readJsonResponse<{
+      crons: Record<string, unknown>; availabilityStatus: string; rawOverallStatus: string;
+      causes: { availability: Array<{ code: string }> };
+    }>(response, 200);
+    expect(body.crons).not.toHaveProperty(job);
+    expect(body.causes.availability.map((cause) => cause.code)).not.toContain("observer-oom");
+    expect(body.availabilityStatus).toBe(currentProducerFails ? "degraded" : "healthy");
+    expect(body.rawOverallStatus).toBe(currentProducerFails ? "degraded" : "healthy");
     expect(db.getHistory().some((entry) => entry.sql.includes("SELECT 1"))).toBe(true);
   });
 
@@ -199,8 +218,13 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
         makeRawStatusSnapshotRow(now, 120, {
-          crons: { [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
-            expectedIntervalSec: 300, healthy: false, telemetryUnknown: false } },
+          crons: {
+            ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([id, expectedIntervalSec]) => [
+              id, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+            ])),
+            [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
+              expectedIntervalSec: 300, healthy: false, telemetryUnknown: false },
+          },
           sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
         }),
       ] },
@@ -330,11 +354,16 @@ describe("handleStatus", () => {
     expect(body.confidence).toBe(0.72);
     expect(body.causes.availability[0]?.code).toBe("snapshot-availability");
 
-    const nonCircuitBatchCacheReads = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("cache WHERE key IN"))
-      .filter((entry) => !entry.binds.every((bind) => typeof bind === "string" && (bind.startsWith("circuit:") || bind.startsWith("cron:event:"))));
-    expect(nonCircuitBatchCacheReads).toEqual([]);
+    const batchCacheReads = db.getHistory().filter((entry) => entry.sql.includes("cache WHERE key IN"));
+    const conservationReads = batchCacheReads.filter((entry) =>
+      entry.binds.every((bind) => typeof bind === "string" && bind.startsWith("mint-burn:conservation:")));
+    expect(conservationReads.length).toBeGreaterThan(0);
+    expect(conservationReads.flatMap((entry) => entry.binds))
+      .toEqual([...new Set(MINT_BURN_CONFIGS.map(mintBurnConservationCacheKey))]);
+    const nonSupplementalBatchCacheReads = batchCacheReads.filter((entry) =>
+      !entry.binds.every((bind) => typeof bind === "string" &&
+        (bind.startsWith("circuit:") || bind.startsWith("cron:event:") || bind.startsWith("mint-burn:conservation:"))));
+    expect(nonSupplementalBatchCacheReads).toEqual([]);
     const sql = db
       .getHistory()
       .map((entry) => entry.sql)
@@ -1055,6 +1084,7 @@ describe("handleStatus", () => {
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      ...makeMinimalLiveStatusRows(now).filter((entry) => entry.matchBinds?.includes("ops:d1-capacity:v1")),
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
     ]);

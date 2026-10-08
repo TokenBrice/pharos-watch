@@ -101,7 +101,6 @@ const D1_TABLE_GROWTH_TIMESTAMP_COLUMNS: Record<string, string> = {
   dex_liquidity_history: "snapshot_date",
   dex_measured_execution_quotes: "quoted_at",
   dex_measured_execution_targets: "captured_at",
-  dex_pool_staging: "refreshed_at",
   dex_price_challenger_snapshots: "snapshot_at",
   dex_price_challengers: "snapshot_at",
   dex_prices: "updated_at",
@@ -417,16 +416,19 @@ export async function refreshD1TableGrowthSnapshot(
     if (typeof tableName !== "string") continue;
     try {
       const measurement = await readD1TableGrowthMeasurement(db, tableName);
-      if (!measurement) continue;
-      const rowCount = Math.max(0, toNumber(measurement.row_count) ?? 0);
+      const rowCount = measurement?.row_count;
+      if (typeof rowCount !== "number" || !Number.isSafeInteger(rowCount) || rowCount < 0) {
+        failedTables.push(tableName);
+        continue;
+      }
       const previousRow = previousByTable.get(tableName);
       tables.push({
         tableName,
         rowCount,
         previousRowCount: previousRow?.rowCount ?? null,
         rowCountDelta: previousRow && baselineIsComparable ? rowCount - previousRow.rowCount : null,
-        oldestTimestamp: toNumber(measurement.oldest_timestamp),
-        newestTimestamp: toNumber(measurement.newest_timestamp),
+        oldestTimestamp: toNumber(measurement?.oldest_timestamp),
+        newestTimestamp: toNumber(measurement?.newest_timestamp),
       });
     } catch {
       failedTables.push(tableName);
@@ -510,7 +512,7 @@ async function assessDatabaseCapacity(
       nowSeconds,
       D1_CAPACITY_OBSERVATION_INTERVAL_SEC,
     );
-    if (cached) return cached;
+    if (cached.assessment) return cached.assessment;
     return await refreshD1CapacityAssessment(db, databaseSizeBytes, nowSeconds);
   } catch (error) {
     logWorkerEvent({

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
 const { isMobileStickySummaryEnabledMock } = vi.hoisted(() => ({
   isMobileStickySummaryEnabledMock: vi.fn(),
@@ -55,6 +56,7 @@ const REPORT_CARD = makeV9Card({
 });
 
 const HEIGHT_VAR = "--pharos-sticky-summary-h";
+let viewportWidth = 390;
 
 type IOTrigger = (isIntersecting: boolean) => void;
 
@@ -163,10 +165,12 @@ function renderSummary() {
 describe("MobileStickySummary", () => {
   beforeEach(() => {
     isMobileStickySummaryEnabledMock.mockReset();
+    viewportWidth = 390;
+    installMatchMediaMock((query) => query === "(max-width: 1023px)" && viewportWidth < 1024);
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    cleanupFrontendTest();
     vi.restoreAllMocks();
     document.documentElement.style.removeProperty(HEIGHT_VAR);
   });
@@ -178,6 +182,41 @@ describe("MobileStickySummary", () => {
 
     expect(view.sticky()).toBeNull();
     expect(io.ioObserve).not.toHaveBeenCalled();
+  });
+
+  it("installs no observers or height at the desktop boundary even while enabled", () => {
+    isMobileStickySummaryEnabledMock.mockReturnValue(true);
+    viewportWidth = 1024;
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
+    expect(io.ioObserve).not.toHaveBeenCalled();
+    expect(io.roObserve).not.toHaveBeenCalled();
+  });
+
+  it("clears both observers, visibility and height when leaving mobile and rechecks the hero on return", () => {
+    isMobileStickySummaryEnabledMock.mockReturnValue(true);
+    const io = makeObserverHook(57.6);
+    const view = renderSummary();
+    io.fireIntersecting(false);
+    expect(view.publishedHeight()).toBe("58px");
+
+    viewportWidth = 1024;
+    act(() => view.rerender());
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
+    expect(io.ioDisconnect).toHaveBeenCalledTimes(1);
+    expect(io.roDisconnect).toHaveBeenCalledTimes(1);
+
+    viewportWidth = 1023;
+    act(() => view.rerender());
+    expect(io.ioObserve).toHaveBeenCalledTimes(2);
+    expect(view.sticky()).toBeNull();
+    expect(view.publishedHeight()).toBe("");
+    io.fireIntersecting(false);
+    expect(view.publishedHeight()).toBe("58px");
   });
 
   it("returns null while the observe target is in view (no IO fire yet)", () => {

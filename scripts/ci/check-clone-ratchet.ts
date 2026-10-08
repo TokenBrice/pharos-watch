@@ -41,8 +41,9 @@ function isScannableFile(rel: string): boolean {
 }
 
 /**
- * Strips comments and blank lines and collapses interior whitespace so that
- * re-indentation or a reflowed comment cannot hide or invent a clone.
+ * Skips blank lines, whole-line // comments and leading block-comment spans,
+ * then collapses whitespace. Inline/trailing comments remain significant;
+ * this deliberately bounded normalization is not a full comment parser.
  */
 export function significantLines(source: string): string[] {
   const out: string[] = [];

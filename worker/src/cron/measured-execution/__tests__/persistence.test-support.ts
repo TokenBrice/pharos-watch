@@ -4,6 +4,38 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 
 export const databases = createLatestSchemaFixtureTracker();
 
+/** Exact scheduled-owner history used by candidate retention and attribution tests. */
+export function seedMeasuredProducerAttempt(sqlite: DatabaseSync, input: {
+  job: string;
+  scheduleKey: string;
+  invocationId: string;
+  clockSec: number;
+  terminal?: boolean;
+}) {
+  const terminal = input.terminal ?? true;
+  sqlite.prepare(`INSERT INTO cron_slot_executions
+    (slot_key, slot_started_at, state, execution_owner, started_at, updated_at, invocation_id, execution_generation)
+    VALUES (?, ?, ?, 'slot-owner', ?, ?, ?, 1)`)
+    .run(input.scheduleKey, input.clockSec, terminal ? "completed" : "running", input.clockSec, input.clockSec, input.invocationId);
+  sqlite.prepare(`INSERT INTO scheduled_child_attempts
+    (attempt_key, schedule_key, slot_started_at, job, producer_path, producer_kind, invocation_id, attempt_no,
+     execution_schedule_key, execution_slot_started_at, execution_invocation_id, execution_generation, execution_owner,
+     lease_owner, terminal_source, terminal_token, terminal_at)
+    VALUES (?, ?, ?, ?, ?, 'scheduled-job', ?, 1, ?, ?, ?, 1, 'slot-owner', 'owner', ?, ?, ?)`)
+    .run(`attempt:${input.invocationId}`, input.scheduleKey, input.clockSec, input.job, input.scheduleKey,
+      input.invocationId, input.scheduleKey, input.clockSec, input.invocationId,
+      terminal ? "synthetic" : null, terminal ? `terminal:${input.invocationId}` : null, terminal ? input.clockSec : null);
+  if (terminal) {
+    sqlite.prepare(`INSERT INTO cron_runs
+      (job, started_at, duration_ms, status, schedule_key, producer_path, producer_kind, invocation_id)
+      VALUES (?, ?, 0, 'error', ?, ?, 'scheduled-job', ?)`)
+      .run(input.job, input.clockSec, input.scheduleKey, input.scheduleKey, input.invocationId);
+  } else {
+    sqlite.prepare(`INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+      VALUES (?, 'owner', ?, ?, ?)`).run(input.job, input.clockSec + 900, input.clockSec, input.clockSec);
+  }
+}
+
 export function seedGeneration(sqlite: DatabaseSync, input: {
   generationId: string;
   targetGenerationId: string;

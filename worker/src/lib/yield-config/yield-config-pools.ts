@@ -86,7 +86,7 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
   // SMARDEX USDN - native rebasing vault, Ethereum, $1M+ TVL
   "usdn-smardex": "f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
-  // HedgeCore sUSD's Venus USDC pin is quarantined (2026-09-27): documented
+  // HedgeCore sUSD's gross Venus USDC pin is permanently excluded (2026-09-27):
   // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
   // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
   // no measurable holder exchange-rate history proves equivalence.

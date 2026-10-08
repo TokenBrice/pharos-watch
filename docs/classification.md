@@ -30,9 +30,9 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `rwa-backed`    | Backed by real-world assets (fiat reserves, treasuries, gold)                                                                                                       |
 | `crypto-backed` | Backed by on-chain crypto collateral                                                                                                                                |
-| `algorithmic`   | Legacy / shadow-only — still a valid `BACKING_TYPE_VALUES` member but no longer assigned to any tracked coin; retained only for PSI shadow assets (see prose below) |
+| `algorithmic`   | Historical off-catalog metadata only — valid in `BACKING_TYPE_VALUES` for PSI historical assets, never assigned to tracked catalog coins |
 
-Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing bucket. Coins with programmatic peg controls are classified by their actual collateral base instead. Historical shadow assets kept only for PSI continuity can still carry legacy `algorithmic` metadata.
+Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing bucket. Programmatic peg controls are classified by actual collateral. UST/IRON retain historical `algorithmic` backing metadata for PSI continuity; do not coerce those facts into a modern backing category. This historical backing label is distinct from DDR's `mechanismArchetype: "algorithmic"` and does not change that mechanism rule.
 
 ### Peg Currency
 

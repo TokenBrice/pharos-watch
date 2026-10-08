@@ -6,20 +6,9 @@ import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntr
 
 const reviewedAt = Date.UTC(2026, 9, 7, 14, 19, 23) / 1000;
 const expiresAt = reviewedAt + RESERVE_FEED_REVIEW_MAX_AGE_SEC;
-const staleReport = (stablecoinId: string, url: string, evidenceDate: string): ReserveFeedReview => ({
-  stablecoinId, adapterKey: "attestation-pdf-index", failureCategory: "validation",
-  warningCodes: ["stale-redemption-source-timestamp"], errorPrefix: "Validation failed: Redemption source timestamp",
-  owner: "ops", reason: `2026-10-07 official index and report check confirms balance-date ${evidenceDate} remains outside the unchanged 33-day source-age budget; the latest attempt still fails stale-redemption-source-timestamp. Evidence remains quarantined pending issuer publication.`,
-  sources: [{ url, evidenceDate }], reviewedAt, expiresAt,
-});
 
 /** Dated operational acknowledgements: no snapshot, scoring, or freshness authority. */
 export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
-  ...["wars-argentine-peso", "wbrl-ripio", "wcop-ripio", "wmxn-ripio"].map((id) =>
-    staleReport(id, "https://action.ripio.com/en/wfiat-attestations", "2026-06-30")),
-  staleReport("usdu-universal", "https://www.universal.ae/transparency", "2026-08-31"),
-  staleReport("zarp-zarp", "https://www.zarpstablecoin.com/transparency/", "2026-08-31"),
-  staleReport("zarsc-supercoin", "https://www.supercoin.co.za/assurance-reports", "2026-08-31"),
   {
     stablecoinId: "gusd-gemini", adapterKey: "gemini-independent-assurance", failureCategory: "unknown",
     warningCodes: [], errorPrefix: "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index",

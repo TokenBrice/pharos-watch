@@ -395,6 +395,22 @@ it("runs the mechanism-refresh verifier only from a trusted snapshot inside the 
   for (const lib of imports) expect(run).toContain(`scripts/lib/${lib}`);
 });
 
+it("scopes protocol archive read credentials to trusted capture and strict replay only", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
+  const steps = workflow.jobs.refresh.steps as Array<{ name?: string; env?: Record<string, string> }>;
+  expect(workflow.jobs.refresh.env).toBeUndefined();
+  const archiveSteps = steps.filter((step) => step.env?.R2_MEASUREMENTS_ACCESS_KEY_ID !== undefined);
+  expect(archiveSteps.map((step) => step.name)).toEqual([
+    "Capture protocol API mechanism evidence", "Replay all protocol API evidence",
+  ]);
+  for (const step of archiveSteps) {
+    expect(step.env?.CLOUDFLARE_ACCOUNT_ID).toBe("${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+    expect(step.env?.R2_MEASUREMENTS_ACCESS_KEY_ID).toBe("${{ secrets.R2_MEASUREMENTS_ACCESS_KEY_ID }}");
+    expect(step.env?.R2_MEASUREMENTS_SECRET_ACCESS_KEY).toBe("${{ secrets.R2_MEASUREMENTS_SECRET_ACCESS_KEY }}");
+    expect(step.env?.GH_TOKEN).toBeUndefined();
+  }
+});
+
 describe("external scheduler delivery monitor", () => {
   function runMonitor(overrides: Record<string, unknown> = {}) {
     const workflow = parseYaml(readRepoFile(".github/workflows/cron-liveness.yml"));

@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
-vi.mock("../../lib/evm-rpc", () => ({
-  fetchEvmUint256AtBlock: vi.fn(),
-}));
 vi.mock("../yield-sync/sources", () => ({
   loadDlStablecoinPools: vi.fn(),
 }));
@@ -15,7 +12,6 @@ vi.mock("../../lib/safety-scores", () => ({
   computeSafetyScoresSnapshot: vi.fn(),
 }));
 
-import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { getCache, setCache } from "../../lib/db-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
@@ -37,7 +33,6 @@ import {
   YIELD_VARIANT_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../../lib/yield-config/yield-config";
-import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
@@ -48,7 +43,6 @@ import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards
 import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
 import { findStaleVenueRiskScores, type StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
 
-const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
 const mockGetCache = vi.mocked(getCache);
 const mockSetCache = vi.mocked(setCache);
@@ -86,7 +80,6 @@ function protocolBasket(project: string, thirdSymbol: string, thirdTvlUsd: numbe
 }
 
 afterEach(() => {
-  mockFetchEvmUint256AtBlock.mockReset();
   mockLoadDlStablecoinPools.mockReset();
   mockGetCache.mockReset();
   mockSetCache.mockReset();
@@ -328,7 +321,7 @@ describe("runYieldCoverageAudit", () => {
       }] : [],
     }]);
     const progressUpdates: CronProgressUpdate[] = [];
-    const result = await runYieldCoverageAudit(db, undefined, undefined, async (update) => {
+    const result = await runYieldCoverageAudit(db, undefined, async (update) => {
       progressUpdates.push(update);
     });
 
@@ -362,12 +355,11 @@ describe("runYieldCoverageAudit", () => {
         "pool-load",
         "protocol-category-load",
         "safety-supply-load",
-        "quarantine-probe",
         "cache-write",
         "complete",
       ]),
     );
-    expect(progressUpdates.every((update) => update.itemsTotal === 6)).toBe(true);
+    expect(progressUpdates.every((update) => update.itemsTotal === 5)).toBe(true);
     expect(progressUpdates.find((update) => update.stage === "pool-load" && update.itemsDone === 1)).toMatchObject({
       metadata: {
         providerFamily: "yield-coverage-audit",
@@ -402,19 +394,10 @@ describe("runYieldCoverageAudit", () => {
         },
       });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(db);
-    expect(progressUpdates.find((update) => update.stage === "quarantine-probe" && update.itemsDone === 4))
-      .toMatchObject({
-        metadata: {
-          providerFamily: "yield-coverage-audit",
-          phase: "quarantine-probe",
-          countTotals: {
-            quarantineProbeAttempted: 0,
-          },
-        },
-      });
+    expect(progressUpdates.some((update) => update.stage === "quarantine-probe")).toBe(false);
     expect(progressUpdates[progressUpdates.length - 1]).toMatchObject({
       stage: "complete",
-      itemsDone: 6,
+      itemsDone: 5,
       metadata: {
         cacheKey: "yield-coverage-audit",
       },
@@ -504,7 +487,7 @@ describe("runYieldCoverageAudit", () => {
 
     expect(result.status).toBe("ok");
     const report = JSON.parse(String(mockSetCache.mock.calls[0]?.[2])) as {
-      queueTotals: { byKind: Record<string, number>; suppressedItemCount: number; truncated: boolean };
+      queueTotals: { byKind: Record<string, number>; byKindScope: string; totalItemCount: number; publishedItemCount: number; truncatedItemCount: number; suppressedItemCount: number; truncated: boolean };
       operatorQueue: {
         allowedActions: string[];
         headlineGaps: Array<{ kind: string }>;
@@ -520,12 +503,11 @@ describe("runYieldCoverageAudit", () => {
       ...report.operatorQueue.headlineGaps,
       ...report.operatorQueue.recommendationCandidates,
     ];
-    const expectedByKind: Record<string, number> = {};
-    for (const item of publishedItems) expectedByKind[item.kind] = (expectedByKind[item.kind] ?? 0) + 1;
-
-    expect(report.queueTotals.byKind).toEqual(expectedByKind);
+    expect(report.queueTotals.byKindScope).toBe("full-visible");
     expect(Object.values(report.queueTotals.byKind).reduce((total, count) => total + count, 0))
-      .toBe(publishedItems.length);
+      .toBe(report.queueTotals.totalItemCount);
+    expect(report.queueTotals.publishedItemCount).toBe(publishedItems.length);
+    expect(report.queueTotals.totalItemCount).toBe(report.queueTotals.publishedItemCount + report.queueTotals.truncatedItemCount);
     // Publication caps each class at 20 items, and this snapshot leaves every
     // curated pin and ranking row uncovered, so the queue must report truncation.
     expect(report.queueTotals.truncated).toBe(true);
@@ -1291,42 +1273,6 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
-  it("queues quarantine-ready-to-restore candidates as manual accept actions", () => {
-    const queue = buildCoverageAuditOperatorQueue({
-      gaps: {
-        unmatchedHighTvlPools: [],
-        missingProtocols: [],
-        protocolRecommendations: [],
-        nativeExactPoolRecommendations: [],
-        sourceFamilyAdapterRecommendations: [],
-        lendingAllowlistRecommendations: [],
-        venueRiskConfigMissing: [],
-      },
-      manifestMissingIds: [],
-      yieldBearingMissingFromRankings: [],
-      quarantineReadyToRestore: [{
-        stablecoinId: "reusd-re-protocol",
-        code: "convert-to-assets-empty",
-        since: "2026-03-15",
-        nextReviewAt: "2026-08-09",
-        sourceKey: "onchain:reusd-re-protocol",
-        chain: "ethereum",
-        contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-        exchangeRate: 1.5,
-      }],
-    });
-
-    expect(queue.recommendationCandidates).toContainEqual(
-      expect.objectContaining({
-        id: "quarantine-ready-to-restore:reusd-re-protocol",
-        kind: "quarantine-ready-to-restore",
-        title: "reusd-re-protocol",
-        detail: "ethereum onchain:reusd-re-protocol probe returned 1.5",
-        actionHint: "accept",
-        stablecoinIds: ["reusd-re-protocol"],
-      }),
-    );
-  });
 });
 
 describe("identifyDeadCuratedPins", () => {
@@ -1363,11 +1309,12 @@ describe("identifyDeadCuratedPins", () => {
       .toMatchObject({ coverage: "coverage-outage" });
   });
 
-  it("keeps a variant pin resolved while a single-exposure pool matches its identity", () => {
-    const variant = YIELD_VARIANT_MAP["usbd-bima"];
+  it("keeps surviving variants resolved and never enqueues the retired BIMA variant", () => {
+    expect(YIELD_VARIANT_MAP["usbd-bima"]).toBeUndefined();
+    const variant = YIELD_VARIANT_MAP["nusd-neutrl"];
     const pins = identifyDeadCuratedPins([makeDlYieldPool({
-      pool: "susbd-live",
-      project: "bima",
+      pool: "snusd-live",
+      project: "pendle",
       symbol: variant.variantSymbol,
       stablecoin: false,
     })]);
@@ -1375,7 +1322,7 @@ describe("identifyDeadCuratedPins", () => {
     expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "usbd-bima"))
       .toBeUndefined();
     expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "nusd-neutrl"))
-      .toMatchObject({ pin: "sNUSD on ethereum", reasons: ["missing-pool"] });
+      .toBeUndefined();
   });
 
   it("reports the absent legs of a weighted pool group and the ones still present", () => {
@@ -1434,38 +1381,6 @@ describe("identifyDeadCuratedPins", () => {
   });
 });
 
-describe("probeQuarantinedDeterministicAdapters", () => {
-  const quarantinedAdapters = [
-    {
-      stablecoinId: "reusd-re-protocol",
-      code: "convert-to-assets-empty",
-      since: "2026-03-15",
-      nextReviewAt: "2026-08-09",
-    },
-    {
-      stablecoinId: "scrvusd-curve",
-      code: "wrapper-not-yet-supported",
-      since: "2026-04-11",
-      nextReviewAt: "2026-10-09",
-    },
-  ];
-  it("does not probe retired deterministic adapters", async () => {
-    const result = await probeQuarantinedDeterministicAdapters({
-      quarantinedAdapters,
-      chainRpcs: new Map(),
-    });
-
-    expect(result.readyToRestore).toEqual([]);
-    expect(result.summary).toEqual({
-      configuredProbeCount: 0,
-      attemptedCount: 0,
-      readyToRestoreCount: 0,
-      skippedCount: 0,
-      failureCounts: {},
-    });
-    expect(mockFetchEvmUint256AtBlock).not.toHaveBeenCalled();
-  });
-});
 
 describe("summarizeAdapterLifecycle", () => {
   const syntheticRegistry: Record<string, YieldAdapterLifecycleEntry> = {

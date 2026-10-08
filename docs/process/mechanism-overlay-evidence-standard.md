@@ -28,10 +28,12 @@ are now admissible only under the rules below.
 - Component and metric applicability on cdp, synthetic-delta-neutral and rwa-credit-fund
   overlays supports `measured`, `not-applicable` and `unavailable`; wave-7 decision D2
   ratified sdn/rwa, and V10 extends sourced unavailable metrics to cdp.
-- Native `ucits-trs-fund`, `shared-reserve`, and `protocol-position` reviews in unreleased
-  methodology 10.0 use the [native-family contract](#native-family-admission-and-grading)
+- Native `ucits-trs-fund`, `shared-reserve`, and `protocol-position` reviews in active
+  methodology V10 use the [native-family contract](#native-family-admission-and-grading)
   below. Every component remains applicable; no generic PoR or audit metadata auto-grades
   these families.
+
+fxSAVE illustrates the local-versus-dossier boundary: the standalone July 15 wrapper journal remains `complete:false`, with CDP metrics N/A, at Ethereum block 25,536,894. The reviewed July 20 overlay already attaches dated parent fxUSD mechanism evidence and independently pinned local wrapper accounting at block 25,572,053. Preserve each citation/hash/block clock; local ERC-4626 accounting is not parent solvency, liquidation or stressed-recovery proof, and attaching metadata grants no additional score credit.
 
 ## Evidence classes
 
@@ -263,6 +265,8 @@ liabilities/encumbrances with explicit reasons and separate signed derivative le
 packet or producer is admitted here. Later data authoring must be a uniform Mento cohort
 cutover, not an AUDm/CADm-only restoration; token-specific grades may differ under one rule.
 
+This is a future position-feed admission specification, not a disabled producer or flag. Before any packet/admission, resolve two separate exact-token prerequisites: the JPYm reviewed overlay identifies current CDP backing and inactive legacy BiPoolManager supply, so its retained FPMM conversion target is not current backing proof and needs independent evidence of any present exit-diagnostic role; CHFm separately has a CDP label conflicting with N/A/no-independent-vault/conversion-only review reasoning. Reconcile CHFm's actual issuing/backing contracts and liabilities independently; neither copy JPYm's ruling nor invent CDP metrics. Preserve existing bounded reviews while those external evidence questions remain open. A future same-date whole-pool packet must count shared liabilities (including PHPm/NGNm) once, cover every shared-reserve coin uniformly, and establish valuation, encumbrance and current claim identity before prospective movers and accepted-capture equality.
+
 ## Mixed allocation and legal-layer scope
 
 `shared/types/safety-score-v9-allocation.ts` owns the strict `scopeKind` union:
@@ -299,7 +303,7 @@ or supply changes. Per-coin facts are deferred to the later authoring wave.
 
 ## Bounded reserve maturity and liquidity facts
 
-Unreleased methodology 10.0 admits B12 through `ReserveBoundedFactSchema` and the
+Active methodology V10 admits B12 through `ReserveBoundedFactSchema` and the
 asset-keyed `reserve-bound-facts-v1.json` registry (initially empty), or the same
 payload on a live reserve slice's `boundedFacts`. These are independent scoped
 facts, not reserve composition, dependency weights, supply or Exit capacity.

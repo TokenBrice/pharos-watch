@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbCacheMocks = vi.hoisted(() => ({
-  setCache: vi.fn(async () => {}),
+  setCache: vi.fn<(_db: D1Database, key: string, value: string) => Promise<void>>(async () => {}),
   getCache: vi.fn<(_db: D1Database, key: string) => Promise<{ value: string; updatedAt: number } | null>>(async () => null),
   deleteCache: vi.fn(async () => {}),
 }));
@@ -17,6 +17,7 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
 });
 
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
@@ -35,7 +36,8 @@ function makeRequest(body?: string): Request {
 describe("trigger-digest route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dbCacheMocks.getCache.mockResolvedValue(null);
+    dbCacheMocks.getCache.mockReset().mockResolvedValue(null);
+    dbCacheMocks.setCache.mockReset().mockResolvedValue(undefined);
   });
 
   it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
@@ -84,11 +86,12 @@ describe("trigger-digest route", () => {
     expect(ctx.waitUntil).not.toHaveBeenCalled();
   });
 
-  it("updates weekly mode while preserving the stored daily mode", async () => {
+  it.each(["daily", "weekly"] as const)("updates only %s mode without queuing a force-run", async (kind) => {
+    const otherKind = kind === "daily" ? "weekly" : "daily";
     dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
-      key === DIGEST_STYLE_GATE_MODE_CACHE_KEYS.daily ? { value: "enforce", updatedAt: 1 } : null);
+      key === DIGEST_STYLE_GATE_MODE_CACHE_KEYS[otherKind] ? { value: "shadow", updatedAt: 1 } : null);
     const response = await handleTriggerDigest({
-      request: makeRequest(JSON.stringify({ styleGateMode: { weekly: "enforce" } })),
+      request: makeRequest(JSON.stringify({ styleGateMode: { [kind]: "enforce" } })),
       db: mockD1(),
       execCtx: makeExecutionContext().ctx,
       trustedAdmin: true,
@@ -96,21 +99,78 @@ describe("trigger-digest route", () => {
 
     expect(response?.status).toBe(202);
     expect(await response?.json()).toMatchObject({
-      styleGateMode: { daily: "enforce", weekly: "enforce" },
+      styleGateMode: { [kind]: "enforce", [otherKind]: "shadow" },
     });
     expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
       1,
       expect.anything(),
-      DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly,
+      DIGEST_STYLE_GATE_MODE_CACHE_KEYS[kind],
       "enforce",
     );
-    expect(dbCacheMocks.setCache).toHaveBeenNthCalledWith(
-      2,
-      expect.anything(),
-      "digest:force-run-request",
-      expect.any(String),
-    );
-    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(2);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    expect(dbCacheMocks.setCache.mock.calls.some((call) => call[1] === "digest:force-run-request")).toBe(false);
+  });
+
+  it("retains a committed scoped mode when the subsequent effective-mode read fails", async () => {
+    const stored = new Map<string, string>([[DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly, "shadow"]]);
+    dbCacheMocks.setCache.mockImplementation(async (_db, key, value) => { stored.set(key, value); });
+    dbCacheMocks.getCache.mockRejectedValue(new Error("D1 unavailable after commit"));
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ styleGateMode: { daily: "enforce" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(500);
+    expect(stored.get(DIGEST_STYLE_GATE_MODE_CACHE_KEYS.daily)).toBe("enforce");
+    expect(stored.get(DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly)).toBe("shadow");
+    expect(stored.has("digest:force-run-request")).toBe(false);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+  });
+
+  it("replays a successful mode-only action without another mode write or force intent", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const invoke = async () => {
+        const request = makeRequest('{"styleGateMode":{"daily":"enforce"}}');
+        request.headers.set("Idempotency-Key", "digest-mode-replay-123");
+        return handleTriggerDigest({ request, db, execCtx: makeExecutionContext().ctx, trustedAdmin: true });
+      };
+      const first = await invoke();
+      const replay = await invoke();
+      expect(first.status).toBe(202);
+      expect(replay.status).toBe(202);
+      expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+      expect(await replay.json()).toEqual(await first.json());
+      expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+      expect(dbCacheMocks.setCache.mock.calls[0]?.[1]).toBe(DIGEST_STYLE_GATE_MODE_CACHE_KEYS.daily);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("requires reconciliation after an idempotent mode write commits but its response is unknown", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      dbCacheMocks.getCache.mockRejectedValueOnce(new Error("post-commit read failed"));
+      const invoke = async () => {
+        const request = makeRequest('{"styleGateMode":{"weekly":"enforce"}}');
+        request.headers.set("Idempotency-Key", "digest-mode-unknown-123");
+        return handleTriggerDigest({ request, db, execCtx: makeExecutionContext().ctx, trustedAdmin: true });
+      };
+      const first = await invoke();
+      const replay = await invoke();
+      expect(first.status).toBe(503);
+      expect(replay.status).toBe(503);
+      expect(await replay.json()).toMatchObject({ error: "execution_unknown" });
+      expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+      expect(dbCacheMocks.setCache.mock.calls[0]?.[1]).toBe(DIGEST_STYLE_GATE_MODE_CACHE_KEYS.weekly);
+      expect(sqlite.prepare("SELECT response_status FROM admin_idempotency_keys WHERE idempotency_key = ?")
+        .get("digest-mode-unknown-123")).toMatchObject({ response_status: -2 });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it.each([

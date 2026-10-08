@@ -342,15 +342,6 @@ export const ExitExecutionModelReviewSchema = z.object({
   sourceUrls: z.array(z.string().url()).min(1),
   producer: z.discriminatedUnion("kind", [
     z.object({
-      kind: z.literal("kraken"), market: z.string().min(1), base: z.string().min(1), quote: z.string().min(1),
-      inputDecimals: z.number().int().min(0).max(18), outputDecimals: z.number().int().min(0).max(18),
-      outputDeployment: z.string().min(1), settlementEndpoint: z.string().min(1),
-      feeSchedule: z.object({
-        url: z.string().url(), contentSha256: z.string().regex(/^[a-f0-9]{64}$/),
-        applicableTakerFeeBps: z.number().finite().nonnegative().lt(10_000),
-      }).strict().optional(),
-    }).strict(),
-    z.object({
       kind: z.literal("securitize-offramp"), chain: z.string().min(1),
       contract: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
       implementation: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
@@ -435,6 +426,23 @@ const ExitRouteObservationBaseSchema = z.object({
   outputUnitValueSourceId: z.string().min(1).optional(),
   /** Source observation time for a pinned output valuation. */
   outputUnitValueObservedAt: z.number().int().nonnegative().optional(),
+  /** Original pinned Solidly state/reference identity, retained through DEX and exact Safety capture. */
+  ammExecutionEvidence: z.object({
+    sourceGenerationId: z.string().min(1),
+    blockNumber: z.number().int().positive(),
+    blockHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    blockTimestamp: z.number().int().positive(),
+    inputReference: z.object({
+      priceUsd: z.number().finite().positive(),
+      sourceId: z.string().min(1),
+      observedAt: z.number().int().positive(),
+    }),
+    outputReference: z.object({
+      priceUsd: z.number().finite().positive(),
+      sourceId: z.string().min(1),
+      observedAt: z.number().int().positive(),
+    }),
+  }).optional(),
   /** Total input-value loss after execution cost and output-asset valuation. */
   allInCostBps: z.number().finite().nonnegative().optional(),
   /** Confidence in the route execution model, distinct from observation freshness/confidence. */

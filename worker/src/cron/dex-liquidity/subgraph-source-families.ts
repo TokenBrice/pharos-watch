@@ -287,9 +287,9 @@ export async function fetchUniV3Data(
             lookups.uniV3ExecutionCandidates.set(executionKey, candidates);
           }
 
-          // BSC is a shadow measured-execution source. Until a later activation
-          // review, its subgraph rows cannot alter fee-quality enrichment or DEX
-          // price consensus.
+          // BSC is a permanent execution-only input of its measured cohort.
+          // Measured admission never grants these rows fee-quality enrichment
+          // or DEX price-consensus authority; local candidate marks remain.
           if (executionOnly) return [];
 
           if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];

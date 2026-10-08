@@ -14,7 +14,6 @@ import {
   verifiedFreshnessMetadata,
 } from "./helpers";
 import { fetchWithBrowserFallback, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
-import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
@@ -25,7 +24,7 @@ import {
 const ADAPTER_NAME = "attestation-pdf-index";
 const COMPOSITION_MODE = "configured-static-slices";
 const COMPOSITION_NOTE =
-  "Reserve composition is emitted from adapter params; the selected PDF is used for report and freshness metadata only until full PDF parsing is implemented.";
+  "Configured reviewed composition; the PDF index validates report identity and date, not the PDF body or reserve composition.";
 const NEUTRAL_FIRST_HTML_HOSTS = new Set(["schuman.io", "www.schuman.io"]);
 
 function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
@@ -348,7 +347,6 @@ export function adaptAttestationPdfIndex(
           compositionMode: COMPOSITION_MODE,
           compositionSource: COMPOSITION_MODE,
           compositionNote: COMPOSITION_NOTE,
-          redemption: buildDocumentedRedemptionTelemetry(),
         },
       };
     }
@@ -386,7 +384,6 @@ export function adaptAttestationPdfIndex(
       compositionMode: COMPOSITION_MODE,
       compositionSource: COMPOSITION_MODE,
       compositionNote: COMPOSITION_NOTE,
-      redemption: buildDocumentedRedemptionTelemetry(sourceTimestamp),
     },
   };
 }

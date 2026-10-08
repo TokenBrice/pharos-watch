@@ -25,6 +25,7 @@ export const CRON_SCHEDULE_CADENCES = {
   twoHourlyDexDiscovery: { intervalSec: 2 * 3600, offsetSec: 6 * 60 },
   halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { intervalSec: 1800, offsetSec: 0 },
+  halfHourlyMeasuredExecutionSupplemental: { intervalSec: 1800, offsetSec: 15 * 60 },
   halfHourlyOffset: { intervalSec: 3600, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },

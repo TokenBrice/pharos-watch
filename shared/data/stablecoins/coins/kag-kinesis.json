@@ -69,7 +69,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
-    "version": 1,
+    "version": 3,
     "semantics": "attestation-mix",
     "breakerScope": "kag-kinesis",
     "display": {

@@ -50,72 +50,36 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
-// Waived high-stakes candidates mapped to their review deadline. The
-// completeness guard reports due reviews and fails for invalid, stale, missing,
-// or more-than-30-days-overdue waiver metadata/enrollment.
-/** @type {Record<string, string>} */
+// Reviewed denominator exclusions, not a backlog of substantive untested logic.
+// Every facade names an enrolled implementation and its executable importing
+// contract. Runtime decisions belong in coverage even when extracted from a
+// previously excluded path. Review dates are not automatically renewed.
+/** @type {Record<string, { reviewAfter: string, reason: string, owner: string, ownerTest: string }>} */
 export const CRITICAL_COVERAGE_WAIVERS = {
-  // These scheduled-path facades and extracted compatibility surfaces are
-  // intentionally excluded from the generated enrollment set; their owning
-  // implementation modules remain covered by direct import contracts.
-  "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts": "2026-12-15",
-  "worker/src/lib/safety-score-v9/transfer-materiality.ts": "2026-12-15",
-  "worker/src/cron/sync-live-reserves-config.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/cache-publication.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-pass-common.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/fallback-enrichment.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/fallback-intake.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/fallback.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/intake.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/metadata.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/phase-helpers.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/post-enrichment.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/publication.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/runtime.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/shared.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/stages.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/onchain-supply.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts": "2026-12-15",
-  "worker/src/cron/sync-stablecoins/zephyr-zsd.ts": "2026-12-15",
-  "worker/src/api/safety-score-history.ts": "2026-12-15",
-  "worker/src/lib/address-price-providers/coingecko-onchain.ts": "2026-12-15",
-  "worker/src/lib/authoritative-price-sources.ts": "2026-12-15",
-  "worker/src/lib/coingecko-simple-price.ts": "2026-12-15",
-  "worker/src/lib/dex-api-token-pricing.ts": "2026-12-15",
-  "worker/src/lib/live-reserves/store.ts": "2026-12-15",
-  "worker/src/lib/native-peg-implied-prices.ts": "2026-12-15",
-  "worker/src/lib/pricing-provider-diagnostics.ts": "2026-12-15",
-  "worker/src/lib/pricing-provider-lifecycle.ts": "2026-12-15",
-  "worker/src/lib/psi-history-universe.ts": "2026-12-15",
-  "worker/src/lib/psi-recompute.ts": "2026-12-15",
-  "worker/src/lib/psi-replay.ts": "2026-12-15",
-  // Extracted from the already-waived shared/lib/redemption-backstop-scoring.ts
-  // and carries the same review deadline; the extraction did not change what is
-  // covered on either side of it.
-  "shared/lib/exit-route-scoring.ts": "2026-12-15",
-  "shared/lib/psi-contribution.ts": "2026-12-15",
-  "shared/lib/psi-eligible-client.ts": "2026-12-15",
-  "shared/lib/psi-view-model.ts": "2026-12-15",
-  "shared/lib/redemption-backstop-scoring.ts": "2026-12-15",
+  "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts": {
+    reviewAfter: "2026-12-15",
+    reason: "Static reviewed address overrides only; phase-helpers applies them to admitted assets and its contract checks the m-m0 consumer override.",
+    owner: "worker/src/cron/sync-stablecoins/phase-helpers.ts",
+    ownerTest: "worker/src/cron/__tests__/sync-stablecoins-stages.test.ts",
+  },
+  "worker/src/lib/authoritative-price-sources.ts": {
+    reviewAfter: "2026-12-15",
+    reason: "One-line export facade with no local runtime decisions; historical provider replay directly exercises the defining index implementation.",
+    owner: "worker/src/lib/authoritative-price-sources/index.ts",
+    ownerTest: "worker/src/lib/__tests__/authoritative-price-sources-replay.test.ts",
+  },
+  "worker/src/lib/live-reserves/store.ts": {
+    reviewAfter: "2026-12-15",
+    reason: "Export-only reserve-store facade; overview and freshness admission are exercised through direct defining-module imports, with separate read/write/history contracts.",
+    owner: "worker/src/lib/live-reserves/store-overview.ts",
+    ownerTest: "worker/src/lib/__tests__/live-reserves-store.test.ts",
+  },
+  "shared/lib/psi-eligible-client.ts": {
+    reviewAfter: "2026-12-15",
+    reason: "Slim client metadata projection only, with no PSI scoring decisions; the eligibility contract checks exact parity with the server monitoring universe.",
+    owner: "shared/lib/psi-eligible.ts",
+    ownerTest: "shared/lib/__tests__/psi-eligible.test.ts",
+  },
 };
 export const CRITICAL_OWNERSHIP = deriveCriticalOwnership();
 export const CRITICAL_FILES = collectCriticalCoverageCandidates()
@@ -240,27 +204,36 @@ export function findStaleCriticalCoverageWaivers(candidateFiles, waivers = CRITI
 }
 
 /**
- * @param {Record<string, string>} waivers
- * @param {{ candidateFiles?: string[], criticalFiles?: string[] }} [options]
+ * @param {Record<string, { reviewAfter?: unknown, reason?: unknown, owner?: unknown, ownerTest?: unknown }>} waivers
+ * @param {{ candidateFiles?: string[], criticalFiles?: string[], ownership?: ReadonlyMap<string, readonly string[]> }} [options]
  */
 export function validateCriticalCoverageWaiverMetadata(
   waivers,
   {
     candidateFiles,
     criticalFiles = CRITICAL_FILES,
+    ownership = CRITICAL_OWNERSHIP,
   } = {},
 ) {
   const errors = [];
   const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
   const criticalSet = new Set(criticalFiles);
 
-  for (const [file, reviewAfter] of Object.entries(waivers)) {
+  for (const [file, waiver] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
     if (criticalSet.has(file)) {
       errors.push(`${file}: already enrolled in critical coverage; remove waiver`);
     }
-    if (!isValidIsoDateOnly(reviewAfter)) {
+    if (!waiver || typeof waiver !== "object" || !isValidIsoDateOnly(waiver.reviewAfter)) {
       errors.push(`${file}: missing or invalid waiver reviewAfter`);
+    }
+    if (!waiver || typeof waiver !== "object" || typeof waiver.reason !== "string" || waiver.reason.trim() === "") {
+      errors.push(`${file}: missing coverage waiver reason`);
+    }
+    if (!waiver || typeof waiver !== "object" || typeof waiver.owner !== "string" || !criticalSet.has(waiver.owner)) {
+      errors.push(`${file}: coverage waiver owner is not an enrolled implementation`);
+    } else if (typeof waiver.ownerTest !== "string" || !(ownership.get(waiver.owner) ?? []).includes(waiver.ownerTest)) {
+      errors.push(`${file}: coverage waiver ownerTest does not import its implementation owner`);
     }
   }
 
@@ -299,7 +272,7 @@ export function validateCriticalOwnershipWaiverMetadata(
 }
 
 /**
- * @param {Record<string, string | { reviewAfter?: unknown }>} waivers
+ * @param {Record<string, { reviewAfter?: unknown }>} waivers
  * @param {{ today?: Date, lookaheadDays?: number, candidateFiles?: string[] }} [options]
  */
 export function collectCriticalCoverageWaiverReviewQueue(
@@ -320,7 +293,7 @@ export function collectCriticalCoverageWaiverReviewQueue(
 
   for (const [file, waiver] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
-    const reviewAfter = typeof waiver === "string" ? waiver : waiver?.reviewAfter;
+    const reviewAfter = waiver?.reviewAfter;
     if (!isValidIsoDateOnly(reviewAfter)) continue;
     const row = { file, reviewAfter };
     if (reviewAfter <= todayString) {

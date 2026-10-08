@@ -23,6 +23,9 @@ const SOURCE_RISK_COVERAGE_FIELDS = [
   ["sourceRiskScore", "Score"],
   ["observationCount30d", "Observations"],
   ["sourceSwitchCount30d", "Switches"],
+  ["deploymentPlace", "Deployment place"],
+  ["venueProtocol", "Venue protocol"],
+  ["venueChain", "Venue chain"],
 ] satisfies Array<[YieldSourceRiskCoverageField, string]>;
 
 function statusClassName(status: YieldHealthFieldStatus): string {
@@ -313,8 +316,7 @@ export function YieldHealthCard({
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs font-medium text-muted-foreground">Coverage audit operator queue</div>
             <div className="text-xs text-muted-foreground">
-              Actions: {health.coverageAudit.allowedActions.join(", ")}
-              {health.coverageAudit.queueDisplayOnly ? " (display-only)" : ""}
+              Review vocabulary: {health.coverageAudit.allowedActions.join(", ")} (display-only)
             </div>
           </div>
           <div className="grid gap-3 xl:grid-cols-2">
@@ -323,7 +325,11 @@ export function YieldHealthCard({
           </div>
           {health.coverageAudit.queueTotals ? (
             <div className="mt-2 text-[11px] text-muted-foreground">
-              Queue totals:{" "}
+              {health.coverageAudit.queueTotals.totalItemCount ?? "unknown"} total visible ·{" "}
+              {health.coverageAudit.queueTotals.publishedItemCount ?? "unknown"} producer-published ·{" "}
+              {health.coverageAudit.queueTotals.truncatedItemCount ?? "unknown"} producer-truncated ·{" "}
+              {health.coverageAudit.headlineGaps.length + health.coverageAudit.recommendationCandidates.length} shown here.
+              {" "}By-kind {health.coverageAudit.queueTotals.byKindScope === "full-visible" ? "full visible totals" : "published sample only"}:{" "}
               {Object.entries(health.coverageAudit.queueTotals.byKind)
                 .map(([kind, count]) => `${kind} ${count}`)
                 .join(" · ") || "none"}
@@ -356,6 +362,8 @@ export function YieldHealthCard({
               </span>
               {health.liveSafetyHydration.reason ? ` (${health.liveSafetyHydration.reason})` : ""}
               {health.liveSafetyHydration.fallback ? ` · ${health.liveSafetyHydration.fallback}` : ""}
+              {" · "}yield {ageLabel(health.liveSafetyHydration.cachedAgeSec)} / safety {ageLabel(health.liveSafetyHydration.safetyAgeSec ?? null)}
+              {" · "}fallback budget {formatElapsedSeconds(health.liveSafetyHydration.staleCoherentMaxAgeSec)}
             </span>
           ) : null}
           {health.pysInputs ? (
@@ -365,6 +373,8 @@ export function YieldHealthCard({
                 {health.pysInputs.persistedCount ?? "unknown"}
               </span>{" "}
               persisted · {health.pysInputs.nullCount ?? "unknown"} null
+              {" · "}{health.pysInputs.status}
+              {health.pysInputs.reason ? ` (${health.pysInputs.reason})` : ""}
             </span>
           ) : null}
           <span>

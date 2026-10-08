@@ -11,6 +11,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { computeDexDeploymentSupplyCoverage } from "../../lib/report-cards-snapshot-inputs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -604,7 +605,7 @@ describe("dex-liquidity persistence", () => {
             exitRouteObservations: [],
             exitRouteObservationCoverage: {
               status: "unknown",
-              capabilityMatrixVersion: "p4a.9",
+              capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
               retainedPoolCount: 0,
               observationCount: 0,
               scoreEligibleObservationCount: 0,

@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchProtocolApiObservation,
   parseProtocolApiCliOptions,
+  readProtocolApiArtifact,
   runProtocolApiMeasurementCli,
 } from "../maintenance/measure-protocol-api-mechanism-metrics";
 
@@ -25,6 +26,7 @@ import {
   type ProtocolApiMechanismMeasurement,
   type RawProtocolApiObservationInput,
 } from "../lib/mechanism-measurement/protocol-api";
+import { buildMechanismCaptureSummary, summaryPathForCapture } from "../lib/mechanism-measurement/capture-summary";
 
 const CAPTURED_AT = new Date("2026-07-22T20:05:00.000Z");
 
@@ -561,10 +563,11 @@ describe("protocol API CLI policy", () => {
       mkdirSync(dirname(join(directory, legacyPath)), { recursive: true });
       const localSummary = join(directory, summaryPath);
       writeFileSync(localSummary, JSON.stringify(frozenSummary));
-      const accepted = await runCli(["--replay", legacyPath], directory);
-      expect(accepted.status, accepted.stderr).toBe(0);
-      expect(accepted.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
-      expect(accepted.stdout).toMatch(/raw replay unavailable/);
+      vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+      const unavailable = await runCli(["--replay", legacyPath], directory);
+      expect(unavailable.status).toBe(1);
+      expect(unavailable.stderr).toMatch(/frozen-V1-metadata=true/);
+      expect(unavailable.stdout).toContain("0 hash-verified normalized-only V1 artifact(s), 1 unavailable artifact(s)");
 
       writeFileSync(localSummary, JSON.stringify({ ...frozenSummary, sha256: "0".repeat(64) }));
       const changedSummary = await runCli(["--replay", legacyPath], directory);
@@ -577,6 +580,7 @@ describe("protocol API CLI policy", () => {
       expect(changedBody.status).toBe(1);
       expect(changedBody.stderr).toMatch(/Unknown or modified legacy protocol API artifact/);
     } finally {
+      vi.unstubAllEnvs();
       rmSync(directory, { recursive: true, force: true });
     }
   });
@@ -597,7 +601,7 @@ describe("protocol API CLI policy", () => {
       // No summary present: acceptance must come from the artifact bytes.
       const accepted = await runCli(["--replay", legacyPath], directory);
       expect(accepted.status, accepted.stderr).toBe(0);
-      expect(accepted.stdout).toMatch(/frozen legacy V1 fingerprint passed/);
+      expect(accepted.stdout).toMatch(/frozen legacy V1 original-byte fingerprint passed/);
 
       // Path identity is checked independently of content integrity: the exact
       // frozen bytes under any other capture name stay rejected.
@@ -625,7 +629,7 @@ describe("protocol API CLI policy", () => {
       writeFileSync(join(unrelated, "invalid-protocol-api.json"), "{invalid unrelated artifact");
       const accepted = await runCli(["--replay-all"], directory);
       expect(accepted.status, accepted.stderr).toBe(0);
-      expect(accepted.stdout).toContain("1 V2 artifact(s), 0 frozen legacy V1 artifact(s)");
+      expect(accepted.stdout).toContain("1 verified V2 artifact(s), 0 hash-verified normalized-only V1 artifact(s), 0 unavailable artifact(s)");
 
       // The selected target is actually read, not merely counted during discovery.
       writeFileSync(artifactPath, JSON.stringify(artifact, null, 2));
@@ -633,6 +637,71 @@ describe("protocol API CLI policy", () => {
       expect(corrupted.status).toBe(1);
       expect(corrupted.stderr).toContain(artifactPath);
       expect(corrupted.stderr).toMatch(/not canonical/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("counts mixed verified V2, hash-verified V1 and unavailable V2 without claiming success", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-mixed-"));
+    vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+    try {
+      const root = "shared/data/safety-score-v9/mechanism-measurements";
+      const legacyPath = join(root, "usde-ethena/2026-07-22T20-00-16.250Z-protocol-api.json");
+      mkdirSync(dirname(join(directory, legacyPath)), { recursive: true });
+      writeFileSync(join(directory, legacyPath), readFileSync(join(__dirname, "fixtures/usde-ethena-frozen-legacy-protocol-api-v1.json")));
+      const artifact = buildProtocolApiMeasurement("usde-ethena", usdeInputs(), CAPTURED_AT);
+      writeFileSync(join(directory, root, "usde-ethena", protocolApiEvidenceFilename(artifact)), serializeProtocolApiMeasurement(artifact));
+      const unavailable = buildProtocolApiMeasurement("usdf-falcon", falconInput(), CAPTURED_AT);
+      const unavailablePath = join(directory, root, "usdf-falcon", protocolApiEvidenceFilename(unavailable));
+      mkdirSync(dirname(unavailablePath), { recursive: true });
+      writeFileSync(summaryPathForCapture(unavailablePath), JSON.stringify(
+        buildMechanismCaptureSummary(Buffer.from(serializeProtocolApiMeasurement(unavailable)), unavailablePath, directory),
+      ));
+      const result = await runCli(["--replay-all"], directory);
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("replay-all incomplete: 1 verified V2 artifact(s), 1 hash-verified normalized-only V1 artifact(s), 1 unavailable artifact(s)");
+      expect(result.stdout).not.toContain("replay-all passed");
+      expect(result.stderr).toContain("schema=2");
+      expect(result.stderr).toContain("Missing CLOUDFLARE_ACCOUNT_ID");
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("hash-checks cached and R2 original bytes before reporting archive verification", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-protocol-readback-"));
+    try {
+      const artifact = buildProtocolApiMeasurement("usdf-falcon", falconInput(), CAPTURED_AT);
+      const bytes = Buffer.from(serializeProtocolApiMeasurement(artifact));
+      const path = join(directory, "artifact-protocol-api.json");
+      const summary = buildMechanismCaptureSummary(bytes, path, directory);
+      writeFileSync(summaryPathForCapture(path), JSON.stringify(summary));
+      const cachePath = join(directory, "agents/.cache/measurements", `${summary.sha256}.json`);
+      const missingClient = { get: vi.fn(async (_key: string) => null), put: vi.fn(), head: vi.fn() };
+      expect(await readProtocolApiArtifact(path, missingClient, directory)).toMatchObject({
+        status: "unavailable", schemaVersion: 2, reason: expect.stringContaining("expired: non-replayable"),
+      });
+      expect(missingClient.get.mock.calls.map(([key]) => key)).toEqual([
+        summary.r2Key.replace(/^captures\//, "pinned/"), summary.r2Key,
+      ]);
+      const corruptClient = { get: vi.fn(async () => Buffer.from("corrupt")), put: vi.fn(), head: vi.fn() };
+      expect(await readProtocolApiArtifact(path, corruptClient, directory)).toMatchObject({
+        status: "unavailable", schemaVersion: 2, reason: expect.stringContaining("integrity mismatch"),
+      });
+      const client = { get: vi.fn(async () => bytes), put: vi.fn(), head: vi.fn() };
+      expect(await readProtocolApiArtifact(path, client, directory)).toMatchObject({ status: "verified-v2", artifact });
+      expect(client.get).toHaveBeenCalledWith(summary.r2Key.replace(/^captures\//, "pinned/"));
+      expect(readFileSync(cachePath)).toEqual(bytes);
+      client.get.mockClear();
+      expect(await readProtocolApiArtifact(path, client, directory)).toMatchObject({ status: "verified-v2" });
+      expect(client.get).not.toHaveBeenCalled();
+      writeFileSync(cachePath, "corrupt");
+      expect(await readProtocolApiArtifact(path, client, directory)).toMatchObject({
+        status: "unavailable", reason: expect.stringContaining("integrity mismatch"),
+      });
+      expect(client.get).not.toHaveBeenCalled();
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

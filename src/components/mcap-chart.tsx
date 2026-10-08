@@ -28,13 +28,6 @@ interface McapChartProps {
   data: SupplyHistoryPoint[];
   stablecoinId: string;
   /**
-   * Suppress the inline annotation legend (`<ChartAnnotationLegend>`) below
-   * the card. Reference-line markers are still drawn. Used when the chart is
-   * paired with `PegDeviationChart` in a side-by-side grid and a single
-   * shared legend is rendered by the parent.
-   */
-  hideAnnotationLegend?: boolean;
-  /**
    * When provided, the chart uses this range and hides its internal
    * time-range buttons. Used by `MarketDataSection` to drive both charts
    * from a single header-level selector.
@@ -74,8 +67,6 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
 
 function McapChartBody({
   data,
-  stablecoinId,
-  hideAnnotationLegend = false,
   controlledRange,
   onControlledRangeChange,
   cardClassName,
@@ -96,7 +87,7 @@ function McapChartBody({
       }));
   }, [data]);
 
-  const frame = useMarketDataChartFrame({ chartData, controlledRange, stablecoinId });
+  const frame = useMarketDataChartFrame({ chartData, controlledRange });
   const {
     brushedRange,
     options,
@@ -203,7 +194,6 @@ function McapChartBody({
       emptyMessage="No market cap data available"
       frame={frame}
       header={header}
-      hideAnnotationLegend={hideAnnotationLegend}
       label="Market cap"
       beforeAxes={
         <defs>

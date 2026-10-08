@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { makePythDepegPrice, makeSoftAgreementDepegPrice } from "./depeg-price.test-support";
 import {
   chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
@@ -55,36 +56,26 @@ describe("classifyPrimaryDepegTrust", () => {
   });
 
   it("allows fresh hard single-source prices to remain authoritative", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 0.998,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
       priceObservedAtMode: "upstream",
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("authoritative");
+    }), nowSec)).toBe("authoritative");
   });
 
   it("requires confirmation for future-dated primary observations", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 0.998,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
       priceObservedAt: nowSec + 60,
       priceObservedAtMode: "upstream",
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("confirm_required");
+    }), nowSec)).toBe("confirm_required");
   });
 
   it("uses source observation time rather than sync-write time for freshness", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 1,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
       priceObservedAt: nowSec - (31 * 60),
       priceUpdatedAt: nowSec - 30,
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("confirm_required");
+    }), nowSec)).toBe("confirm_required");
   });
 
   it("requires confirmation for composite soft-source agreement labels", () => {
@@ -102,13 +93,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
   const nowSec = 1_700_000_000;
 
   it("accepts fresh high-confidence corroborated independent-family agreement", () => {
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(true);
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec), nowSec)).toBe(true);
   });
 
   it("rejects non-high-confidence or fallback-only agreement", () => {
@@ -130,23 +115,15 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
   });
 
   it("rejects low-confidence clusters", () => {
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceConfidence: "low",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(false);
+    }), nowSec)).toBe(false);
   });
 
   it.each([[1800, true], [1801, false]] as const)("checks corroborated agreement age at %s seconds", (age, accepted) => {
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceObservedAt: nowSec - age,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(accepted);
+    }), nowSec)).toBe(accepted);
   });
 });
 

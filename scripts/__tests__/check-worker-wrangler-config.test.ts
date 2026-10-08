@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { evaluateWorkerWranglerConfig } from "../ci/check-worker-wrangler-config";
+import { checkWorkerWranglerConfig, evaluateWorkerWranglerConfig } from "../ci/check-worker-wrangler-config";
 
 const VALID_CONFIG = `
 name = "stablecoin-api"
@@ -39,7 +41,6 @@ invocation_logs = true
 
 [vars]
 ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
-WORKER_V9_WORKFLOW_MODE = "off"
 
 [[rules]]
 type = "Data"
@@ -92,18 +93,34 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('[alias]', 'routes = []\n[alias]'),
       `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
       toml.replace('binding = "SAFETY_SCORE_V9_WORKFLOW"', 'binding = "WRONG_WORKFLOW"'),
-      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "shadow"'),
-      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "invalid"'),
-      toml.replace('WORKER_V9_WORKFLOW_MODE = "off"', ""),
+      `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "shadow"\n`,
+      `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "off"\n`,
     ]) {
       expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
     }
   });
-  it("rejects re-enabling the paused Workflow expectation on public", () => {
+  it("rejects the retired Workflow mode on public", () => {
     const report = evaluateWorkerWranglerConfig(
-      VALID_CONFIG.replace('WORKER_V9_WORKFLOW_MODE = "off"', 'WORKER_V9_WORKFLOW_MODE = "shadow"'),
+      VALID_CONFIG.replace('[vars]', '[vars]\nWORKER_V9_WORKFLOW_MODE = "shadow"'),
     );
-    expect(report.issues).toContain('public [vars].WORKER_V9_WORKFLOW_MODE must be "off".');
+    expect(report.issues).toContain('public must not declare retired WORKER_V9_WORKFLOW_MODE.');
+  });
+
+  it("rejects a compatibility-date mismatch between the source-owned Worker roles", () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-paired-date-test-"));
+    try {
+      const publicPath = join(directory, "public.toml");
+      const heavyPath = join(directory, "heavy.toml");
+      writeFileSync(publicPath, readFileSync("worker/wrangler.toml", "utf8"));
+      writeFileSync(heavyPath, readFileSync("worker/wrangler.heavy.toml", "utf8").replace(
+        /^compatibility_date\s*=\s*"[^"]+"/m, 'compatibility_date = "2026-10-08"',
+      ));
+      const report = checkWorkerWranglerConfig(publicPath, heavyPath);
+      expect(report.failed).toBe(true);
+      expect(report.issues.some((issue) => issue.includes("Paired runtime configuration differs") && issue.includes("compatibility_date"))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
   it("rejects a missing lossless Worker catalog alias", () => {
     const report = evaluateWorkerWranglerConfig(VALID_CONFIG.replace(

@@ -3,10 +3,8 @@ import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import {
   BASEDOLLAR_SP_CONFIG,
   LIQUITY_V2_SP_CONFIG,
-  fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
-  fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchLiquityV2StabilityPoolSource,
   fetchOndoUsdyOracleSource,
@@ -22,8 +20,6 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BASEDOLLAR_BD_ID = "bd-basedollar";
 const SCRVUSD_CURVE_ID = "scrvusd-curve";
-const BIMA_USBD_ID = "usbd-bima";
-const CETES_ETHERFUSE_ID = "cetes-etherfuse";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const MIDAS_MMEV_ID = "mmev-midas";
 const ONDO_USDY_ID = "usdy-ondo-finance";
@@ -172,23 +168,6 @@ export const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
     "Curve scrvUSD current-rate source",
     (budgetSignal, context) =>
       fetchCurveScrvusdCurrentRateSource(context.startSec, budgetSignal, context.chainRpcs),
-  ),
-  timedOptionalSourceEntry(
-    BIMA_USBD_ID,
-    "protocol-api:bima-susbd",
-    "BIMA sUSBD source",
-    (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
-    // B15 — usbd-bima carries no `flags.yieldBearing`, so `sync-yield-data` never
-    // iterates the coin and this adapter cannot run. Dormant by intent, not broken.
-    "usbd-bima is not yieldBearing in the stablecoin registry, so the active yield cohort never resolves it",
-  ),
-  timedOptionalSourceEntry(
-    CETES_ETHERFUSE_ID,
-    "protocol-api:etherfuse-cetes-current-issuance",
-    "Etherfuse CETES current-issuance source",
-    (budgetSignal) => fetchEtherfuseCetesSource(budgetSignal),
-    // B15 — the coin is quarantined, so it is absent from ACTIVE_YIELD_BEARING_STABLECOINS.
-    "cetes-etherfuse is quarantined and therefore outside the active yield cohort",
   ),
   timedOptionalSourceEntry(
     HASHNOTE_USYC_ID,

@@ -36,4 +36,4 @@ npx --no-install wrangler d1 execute stablecoin-db --remote --command \
   "DELETE FROM cache WHERE key = 'circuit:<source>';"
 ```
 
-Delete only the affected source row. `cache["provider:circuit:index"]` is best-effort aggregate telemetry and is rebuilt by the next breaker write.
+Delete only the affected source row. Admin provider summaries enumerate active sources and read bounded direct `circuit:<source>` rows; no aggregate rebuild is needed. The obsolete `provider:circuit:index` has no runtime reader/writer. Its orphan row may be deleted only in a separately authorized destructive release after current/deployed/rollback/external zero-use proof, rollback-floor closure, an exact-row durable R2 export retained indefinitely and a recorded Time Travel bookmark. Never clear all circuits or shared registries/ledgers/history as index cleanup.

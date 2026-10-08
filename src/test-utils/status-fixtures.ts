@@ -263,7 +263,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
       authoritativeFreshCoverageRatio: 1,
     }),
     reserveDrift: [],
-    classificationWarnings: [],
   };
 }
 

@@ -72,7 +72,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "idrt-rupiah-token",
     "display": {

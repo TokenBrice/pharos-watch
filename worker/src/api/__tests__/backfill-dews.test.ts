@@ -175,12 +175,14 @@ describe("handleBackfillDEWS", () => {
             snapshot_date: day,
             liquidity_score: 81,
             total_tvl_usd: 2_200_000,
+            coverage_confidence: 0.5,
           },
           {
             stablecoin_id: "usdt-tether",
             snapshot_date: day - 7 * 86400,
             liquidity_score: 77,
             total_tvl_usd: 2_000_000,
+            coverage_confidence: 0.5,
           },
         ],
       },
@@ -208,6 +210,35 @@ describe("handleBackfillDEWS", () => {
     expect(historyReads).toHaveLength(2);
     expect(historyReads.every((entry) => entry.sql.includes("snapshot_date BETWEEN ? AND ?"))).toBe(true);
     expect(historyReads.every((entry) => entry.binds.length === 2)).toBe(true);
+    expect(historyReads.find((entry) => entry.sql.includes("FROM supply_history"))?.binds)
+      .toEqual([day - 14 * 86400, day + 2 * 86400]);
+    expect(historyReads.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds)
+      .toEqual([day - 15.5 * 86400, day + 2 * 86400]);
+  });
+
+  it.each([0.5, 0.499, null])("replays the earliest weekly anchor with confidence %s and unchanged supply bounds", async (confidence) => {
+    vi.mocked(computeDEWS).mockClear();
+    const day = 20000 * 86400;
+    const evaluation = day - 7 * 86400;
+    const db = mockD1([
+      { match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", started_at: day + 3600, ended_at: day + 7200, peak_deviation_bps: -150 }] },
+      { match: "FROM supply_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: evaluation, circulating_usd: 100_000_000 }] },
+      { match: "FROM dex_liquidity_history", rows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: day - 15 * 86400, liquidity_score: 70, total_tvl_usd: 100, coverage_confidence: confidence },
+        { stablecoin_id: "usdt-tether", snapshot_date: day - 14 * 86400, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49 },
+        { stablecoin_id: "usdt-tether", snapshot_date: evaluation, liquidity_score: 80, total_tvl_usd: 200, coverage_confidence: 0.5 },
+      ] },
+    ], { requireMatch: true });
+    const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
+    await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true, request });
+    expect(computeDEWS).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      liquidityScore: 80, tvlCurrent: 200,
+      liquidityScore7dAgo: confidence === 0.5 ? 70 : null,
+      tvl7dAgo: confidence === 0.5 ? 100 : null,
+    }));
+    const history = db.getHistory();
+    expect(history.find((entry) => entry.sql.includes("FROM dex_liquidity_history"))?.binds).toEqual([day - 15.5 * 86400, day + 2 * 86400]);
+    expect(history.find((entry) => entry.sql.includes("FROM supply_history"))?.binds).toEqual([day - 14 * 86400, day + 2 * 86400]);
   });
 
   it("rejects GET repair mutations without dry-run", async () => {
@@ -320,7 +351,7 @@ describe("handleBackfillDEWS", () => {
     ]);
   });
 
-  it("accepts PSI shadow IDs for prune-history repair filters", async () => {
+  it("accepts PSI historical IDs for prune-history repair filters", async () => {
     const db = mockD1([
       {
         match: "SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date >= ? AND snapshot_date <= ? AND stablecoin_id = ?",

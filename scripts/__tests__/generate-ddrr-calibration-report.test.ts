@@ -309,6 +309,23 @@ describe("generate-ddrr-calibration-report", () => {
     }
   });
 
+  it.each([
+    [true, false, ["degraded-snapshot"]],
+    [false, true, ["truncated-population"]],
+    [true, true, ["degraded-snapshot", "truncated-population"]],
+  ] as const)("holds a sufficient but incomplete population (%s/%s)", (degraded, truncated, reasons) => {
+    const payload = response(Array.from({ length: 50 }, (_, index) => prediction({ stablecoinId: `coin-${index % 20}` })));
+    payload._meta.degraded = degraded;
+    payload._meta.publicRowsTruncated = truncated;
+    const report = buildDdrrCalibrationReport(payload, { generatedAt: "fixture", source: { mode: "input", detail: "fixture" } });
+    expect(report.durationCalibration.populationEligible).toBe(false);
+    expect(report.durationCalibration.populationIneligibilityReasons).toEqual(reasons);
+    for (const segment of [report.durationCalibration.overall, ...report.durationCalibration.byStratum, ...report.durationCalibration.byDirection]) {
+      expect(segment.recommendation).toBe("hold");
+    }
+    expect(report.recommendations[0]!.severity).toBe("hold");
+  });
+
   it("keeps signed bias boundaries and empty scored samples distinct", () => {
     for (const [error, bias] of [[-3600, "too_slow"], [-3599, "balanced"], [3599, "balanced"], [3600, "too_fast"]] as const) {
       const report = buildDdrrCalibrationReport(response([prediction({ signedDurationErrorSec: error, absoluteDurationErrorSec: Math.abs(error) })]),

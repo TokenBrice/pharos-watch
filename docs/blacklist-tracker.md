@@ -212,9 +212,13 @@ The migration files and `worker/migrations/MANIFEST.md` are the exact schema and
 - `blacklist`, `unblacklist`, and `destroy` transitions;
 - stablecoin, chain, contract/config, transaction, block, and event-signature provenance;
 - authoritative `amount_native` and justified `amount_usd_at_event` values;
-- the deployed legacy `amount` column remains in place pending a separate coordinated schema cleanup; current ingestion and repair paths no longer write it;
+- the deployed legacy `amount` column remains pending a separately operated schema cleanup; normal ingestion/recovery and all three operator tools (`worker/scripts/repair-tron-blacklist-amounts.ts`, `worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts`, `worker/scripts/reconcile-night-watch-blacklist.ts`) now read/write canonical amount fields only;
 - amount source, resolution status, recovery attempts, provider, and bounded error diagnostics;
 - optional suppression reason for audit-only rows.
+
+The 2026-10-08 canonical-tool cutover removes the TRON repair's legacy-null predicate, not its exact identity, canonical-null/state/suppression, evidence freshness, hash, atomic row-count audit or Time Travel guards. Re-review previously approved repair plans where legacy `amount` is populated but canonical values are null; old signed/generated SQL plans are not approved under the changed eligibility. Preserve JS repair input `amount` as the evidence-derived numeric quantity, not a database alias. Never infer event-time USD from an old legacy value or a current balance.
+
+Before any column drop, reconcile/export legacy-only identity/value tuples, obtain external SQL/schema-owner signoff, retain a durable R2 export indefinitely and record a pre-window Time Travel bookmark. The compatible tool/Worker release must establish the rollback floor and pass its first six-hourly sync/API soak. DROP or a rehearsed identity/default/index/FK/repair-queue-preserving rebuild is a separate destructive release, not part of this cutover. Post-drop rollback requires compatible tools or verified schema/data restoration; Worker rollback alone cannot restore the column.
 
 Normal EVM row identity is `{chainId}-{txHash}-{logIndex}`; expanded arrays add their element index so every affected address remains distinct and idempotent.
 

@@ -69,6 +69,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+
   "launchDate": "2026-02-11",
   "priceBasis": "contractual-par",
   "exitMechanism": "discretionary",

@@ -10,6 +10,8 @@ import {
   yieldFallbackTableMatches,
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
+  testSafetyScoreIdentity,
+  testSafetyScoresSnapshot,
   cleanupSyncYieldDataTest,
   makeEthereumRpcHandler,
   makeEthereumRpcMap,
@@ -29,39 +31,11 @@ import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-family-keys";
-import type { ResolvedYieldCandidate } from "../yield-sync/types";
+import { morphoCandidate, supplementalCandidate } from "./yield-candidate.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());
-
-function supplementalCandidate(
-  sourceKey: string,
-  observedAt: number,
-  overrides: Partial<ResolvedYieldCandidate["yield"]> = {},
-): ResolvedYieldCandidate {
-  return {
-    stablecoinId: "100",
-    symbol: "sDAI",
-    chain: "ethereum",
-    address: null,
-    yield: {
-      currentApy: 6.1,
-      apyBase: 6.1,
-      apyReward: null,
-      sourcePool: "fixture-pool",
-      sourceTvlUsd: 50_000_000,
-      dataSource: "protocol-api",
-      exchangeRate: null,
-      sourceKey,
-      yieldSource: "Fixture supplemental source",
-      yieldType: "lending-vault",
-      sourceObservedAt: observedAt,
-      comparisonAnchorObservedAt: null,
-      ...overrides,
-    },
-  };
-}
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -71,7 +45,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...morphoCandidate(nowSec), stablecoinId: undefined }], nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
@@ -96,7 +70,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...morphoCandidate(nowSec), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -118,14 +92,14 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...morphoCandidate(nowSec), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1": cacheRow({
             version: 1,
             updatedAt: nowSec,
             source: "sync-yield-supplemental",
             sourceCount: 2,
             data: [
-              { ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined },
+              { ...morphoCandidate(nowSec), stablecoinId: undefined },
               { ...supplementalCandidate("protocol-api:beefy:ethereum:beefy-sdai", nowSec, { currentApy: 5.8, apyBase: 5.8, sourcePool: "beefy-sdai", sourceTvlUsd: 20_000_000, yieldSource: "Beefy: sDAI" }), stablecoinId: undefined },
             ],
           }, nowSec),
@@ -169,7 +143,6 @@ describe("syncYieldData", () => {
         [supplementalCandidate("protocol-api:yearn:fixture", nowSec - 13 * 3600)],
         nowSec - 13 * 3600,
       ),
-      [getYieldSupplementalFamilyCacheKey("vaultsFyi")]: supplementalFamilyCacheRow([], nowSec),
       [getYieldSupplementalFamilyCacheKey("compoundV3")]: supplementalFamilyCacheRow([], nowSec),
       [getYieldSupplementalFamilyCacheKey("aaveV3")]: supplementalFamilyCacheRow([], nowSec),
       [getYieldSupplementalFamilyCacheKey("roycoDawn")]: supplementalFamilyCacheRow([], nowSec),
@@ -460,7 +433,7 @@ describe("syncYieldData", () => {
     } as never);
 
     installYieldCacheReader(vi.mocked(getCache), {
-      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
+      "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...morphoCandidate(nowSec), stablecoinId: undefined }], nowSec),
       "yield:onchain-health:v1": cacheRow({
             version: 1,
             consecutiveAllFailRuns: 2,
@@ -622,25 +595,15 @@ describe("syncYieldData", () => {
       },
     ];
 
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 5,
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(testSafetyScoresSnapshot({
       trackedCount: 5,
-      coverageRatio: 1,
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
+      safetyScoreIdentity: testSafetyScoreIdentity({
         methodologyVersion: "vTEST",
-        policyId: "safety-score-v9",
         policyDigest: "c".repeat(64),
         evaluationBuildDigest: "a".repeat(64),
         baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
         publicationGenerationId: "report-cards-test",
-      },
-      publicationGenerationId: "report-cards-test",
-      methodologyVersion: "vTEST",
+      }),
       publishedAt: Math.floor(Date.now() / 1000),
       scores: new Map([
         ["100", { score: 80, grade: "B+" }],
@@ -649,7 +612,7 @@ describe("syncYieldData", () => {
         ["lusd-liquity", { score: 86, grade: "A-" }],
         ["xaut-tether", { score: 82, grade: "B+" }],
       ]),
-    } as never);
+    }));
 
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
@@ -785,25 +748,15 @@ describe("syncYieldData", () => {
 
     vi.mocked(getChainRpc).mockReturnValue(makeEthereumRpcMap().get("ethereum"));
 
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 4,
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(testSafetyScoresSnapshot({
       trackedCount: 4,
-      coverageRatio: 1,
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
+      safetyScoreIdentity: testSafetyScoreIdentity({
         methodologyVersion: "vTEST",
-        policyId: "safety-score-v9",
         policyDigest: "c".repeat(64),
         evaluationBuildDigest: "a".repeat(64),
         baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
         publicationGenerationId: "report-cards-test",
-      },
-      publicationGenerationId: "report-cards-test",
-      methodologyVersion: "vTEST",
+      }),
       publishedAt: Math.floor(Date.now() / 1000),
       scores: new Map([
         ["100", { score: 80, grade: "B+" }],
@@ -811,7 +764,7 @@ describe("syncYieldData", () => {
         ["u-united-stables", { score: 55, grade: "C" }],
         ["lusd-liquity", { score: 86, grade: "A-" }],
       ]),
-    } as never);
+    }));
 
     let activeRpcCalls = 0;
     let maxActiveRpcCalls = 0;

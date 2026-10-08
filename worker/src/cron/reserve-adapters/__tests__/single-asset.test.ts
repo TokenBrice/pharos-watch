@@ -50,6 +50,9 @@ describe("fetchSingleAssetReserves", () => {
         reserveSourceLabel: "ETH collateral",
       },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.supplyUsd).toBeUndefined();
   });
 
   it("preserves optional coinId and depType in the slice", async () => {
@@ -107,6 +110,8 @@ describe("fetchSingleAssetReserves", () => {
         scopedTokenQuantityRaw: "1000000",
       },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
   });
 
   it("keeps the pinned CAD book native and diagnoses ARC/missing Solana without a reserve clock", async () => {
@@ -215,7 +220,7 @@ describe("fetchSingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("redemption");
   });
 
-  it("marks timestamp-backed liveness probes as freshness-verified even without reserve totals", async () => {
+  it("keeps a chain timestamp diagnostic instead of certifying whole-reserve freshness", async () => {
     const { result } = await runJson("tgbp-tokenised", {
       data: {
         price: "1.120735576038699094",
@@ -230,13 +235,50 @@ describe("fetchSingleAssetReserves", () => {
       reserveSourceLabel: "Treasury reserve",
     }, 1_774_874_255);
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: 1_774_874_195,
-      freshnessMode: "verified",
+      freshnessMode: "unverified",
       details: {
         proofKind: "single-asset-liveness-probe",
         reserveSourceLabel: "Treasury reserve",
+        chainSupplyObservedAt: 1_774_874_195,
       },
     });
+  });
+
+  it.each([undefined, {
+    reserveUnit: { kind: "token", unit: "ETH" },
+    supplyToken: "unrelated",
+    nominalValuePerToken: 1,
+    reviewedAt: "2026-03-19",
+    evidenceRef: "https://example.com/units",
+  }])("withholds a ratio without a supported matching native relation", async (nativeQuantityBasis) => {
+    const { result } = await runJson("tgbp-tokenised", {
+      result: { collateral: "105", total_supply: "100" },
+    }, { nativeQuantityBasis });
+    expect(result.metadata?.totalReserveQuantity).toBe(105);
+    expect(result.metadata?.supplyTokens).toBe(100);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
+
+  it("retains reviewed GBP-native quantities while the binding remains suspended", async () => {
+    const { result } = await runJson("tgbp-tokenised", {
+      result: { collateral: "101", total_supply: "100" },
+    });
+    expect(result.metadata).toMatchObject({
+      totalReserveQuantity: 101,
+      supplyTokens: 100,
+      nativeQuantityBasis: { reserveUnit: { kind: "currency", unit: "GBP" } },
+      collateralizationRatio: 1.01,
+      freshnessMode: "unverified",
+    });
+    expect(result.metadata?.totalReserveUsd).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
+
+  it.each([null, "unreadable", "0"])("rejects a malformed configured chain clock: %j", async (lastSyncedAt) => {
+    await expect(runJson("tgbp-tokenised", {
+      result: { collateral: "100", total_supply: "100" }, lastSyncedAt,
+    }, { timestampProbe: { kind: "json-path", path: ["lastSyncedAt"] } })).rejects.toThrow("unreadable timestamp");
   });
 
   it.each([0n, null])("fails closed on missing/nonpositive scoped token reads: %s", async (quantity) => {

@@ -1,10 +1,19 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchLiveOverrides,
   freshParent,
+  makeHistoricalMeta,
+  makeHistoricalPriceSeries,
   resetAuthoritativePriceSourceMocks,
   unpricedChild,
 } from "./authoritative-price-sources.test-support";
+import { inheritedTrackedPriceProvider } from "../authoritative-price-sources/inherited-tracked";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+
+const fetchMarketBackfillPriceSeriesMock = vi.fn();
+vi.mock("../../api/backfill-price-sources", () => ({
+  fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
+}));
 
 describe("reviewed issuer conversion price references", () => {
   beforeEach(() => {
@@ -58,5 +67,95 @@ describe("reviewed issuer conversion price references", () => {
 
     expect(overrides.get("oned-gennius")?.price).toBe(0.9997);
     expect(overrides.has("pyusdx-moonpay")).toBe(false);
+  });
+});
+
+describe("inheritedTrackedPriceProvider", () => {
+  const nowSec = 1_800_000_000;
+
+  beforeEach(() => {
+    resetAuthoritativePriceSourceMocks();
+    fetchMarketBackfillPriceSeriesMock.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1_000);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("applies the WEUSD missing-price redemption floor without rounding the parent's market price to par", async () => {
+    const parent = freshParent("usdc-circle", 0.98, "coingecko+pyth", { nowSec });
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild("weusd-picwe"), { assetsById: new Map([[parent.id, parent]]) },
+    )).resolves.toMatchObject({
+      price: 0.9702,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: nowSec - 60,
+      metadata: { inheritedFrom: "usdc-circle", parentReplaySafe: true },
+    });
+  });
+
+  it("keeps an own market discount at the freshness boundary but uses the floor once its observation is stale", async () => {
+    const maxAge = getPricingSourceRegistryEntry("coingecko")!.maxTrustedAgeSec!;
+    const parent = freshParent("usdc-circle", 0.98, "coingecko+pyth", { nowSec });
+    const context = { assetsById: new Map([[parent.id, parent]]) };
+    const child = freshParent("weusd-picwe", 0.8, "coingecko", {
+      nowSec, observedAt: nowSec - maxAge, priceSyncedAt: nowSec,
+    });
+
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(child, context)).resolves.toBeNull();
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!({
+      ...child, priceObservedAt: nowSec - maxAge - 1,
+    }, context)).resolves.toMatchObject({ price: 0.9702, source: "protocol-redeem" });
+  });
+
+  it("does not treat protocol-derived incumbent provenance as a competing market quote", async () => {
+    const parent = freshParent("usdc-circle", 0.98, "coingecko+pyth", { nowSec });
+    const child = freshParent("weusd-picwe", 1, "protocol-redeem", { nowSec });
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      child, { assetsById: new Map([[parent.id, parent]]) },
+    )).resolves.toMatchObject({ price: 0.9702, source: "protocol-redeem" });
+  });
+
+  it("requires reported single-source confidence for M rather than upgrading a thin high-confidence parent", async () => {
+    const parent = freshParent("wm-m0", 0.98, "coingecko", { nowSec });
+    const context = { assetsById: new Map([[parent.id, parent]]) };
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild("m-m0"), context,
+    )).resolves.toBeNull();
+    context.assetsById.set(parent.id, { ...parent, priceConfidence: "single-source" });
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild("m-m0"), context,
+    )).resolves.toMatchObject({
+      price: 0.98, source: "coingecko", confidence: "single-source",
+      metadata: { inheritedFrom: "wm-m0", parentReplaySafe: true },
+    });
+  });
+
+  it("does not publish a derived price with a missing or cached redemption parent", async () => {
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild("weusd-picwe"), { assetsById: new Map() },
+    )).resolves.toBeNull();
+    const parent = freshParent("usdc-circle", 0.98, "cached", { nowSec });
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild("weusd-picwe"), { assetsById: new Map([[parent.id, parent]]) },
+    )).resolves.toBeNull();
+  });
+
+  it("replays the tracked parent's historical market observations and preserves unavailable history", async () => {
+    const meta = makeHistoricalMeta("usdai-usd-ai", "USD AI", "USDAI");
+    const points = [{ timestamp: nowSec - 3_600, price: 0.97 }, { timestamp: nowSec, price: 0.99 }];
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue(makeHistoricalPriceSeries(points));
+    await expect(inheritedTrackedPriceProvider.fetchHistoricalPrices!(
+      meta, { candidateTimestamps: [] },
+    )).resolves.toEqual(points);
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
+      ...makeHistoricalPriceSeries([]), prices: null,
+    });
+    await expect(inheritedTrackedPriceProvider.fetchHistoricalPrices!(
+      meta, { candidateTimestamps: [] },
+    )).resolves.toBeNull();
   });
 });

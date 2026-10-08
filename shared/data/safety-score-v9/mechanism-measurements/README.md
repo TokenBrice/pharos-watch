@@ -1,7 +1,7 @@
 # Mechanism measurements — write-once evidence archive
 
 This directory is an **evidence archive**, not a data source that gets refactored.
-Every file is a point-in-time measurement taken against a pinned block, and its
+Every file is a point-in-time measurement taken against a pinned block or source observation clock, and its
 repo path is quoted elsewhere as the citation for a published claim. Moving,
 renaming, reformatting, or "tidying" a file here silently breaks that citation.
 
@@ -20,12 +20,8 @@ mechanism-measurements/<assetId>/<YYYY-MM-DD>-<label>.json                      
   hashed, and projected into `../shock-coverage-measurements-v1.json` with a
   `journalSha256` pin. Editing a byte of one of these files changes its pin and
   requires regenerating the registry in the same commit.
-- Files ending in `-protocol-api.json` are **protocol-API evidence**. Inside the
-  producer's allowlisted asset directories they are discovered and byte-replayed
-  by `scripts/maintenance/measure-protocol-api-mechanism-metrics.ts` — on
-  `--replay-all` (which CI runs) and again on every live capture — so each must
-  stay canonical, and the pinned legacy USDe artifact is additionally checked
-  against an inlined sha256. Editing a byte of one fails the run.
+- Files ending in `-protocol-api.json` are **permanent non-publishing protocol-API evidence**. Reviewed weekly/manual automation remains supported; direct score adoption is blocked. Target-directory V2 bodies must be canonical and raw-byte replayable. The single frozen USDe V1 path verifies original normalized bytes and its exact SHA-256, never raw-source replay. Summary metadata alone is not byte verification. Strict `--replay`/`--replay-all` separate verified V2, hash-verified normalized-only V1 and unavailable outcomes; unavailable evidence exits nonzero.
+- Original bytes resolve locally, then from a hash-checked `agents/.cache/measurements/` cache, otherwise by signed R2 GET (`pinned/`, then `captures/`) with hash verification and a local cache write. Network-free replay requires local original bytes/cache; missing access, expired objects and corrupt bodies are not preservation success.
 - Files with neither suffix have **no programmatic reader**. They are still
   load-bearing: many are cited by repo path in the `notes` / evidence fields of
   the V9 overlay files in the parent directory. Treat "no importer" as "no
@@ -43,6 +39,8 @@ mechanism-measurements/<assetId>/<YYYY-MM-DD>-<label>.json                      
    the registry generator so the pins and attestations stay coherent, and has to
    preserve the historical replay window (the 2021/2022 Liquity stress dates are
    deliberate evidence, not stale files).
-4. **The runtime reads only the latest measurement per asset.** That is a
-   statement about the score path, not a licence to delete the rest; the older
-   files are the auditability of the published number.
+4. **Score authority is producer-specific.** Shock registries project admitted latest measurements; protocol-API journals remain evidence for human review and are never automatically imported into scores. Older original bytes, summaries, pins and citations remain the audit trail.
+
+## Local wrapper evidence
+
+The fxSAVE wrapper capture deliberately remains `complete:false`, with CDP metrics N/A and local backing accounting analogous-only. Its July 15 local capture pins Ethereum block 25,536,894; the reviewed July 20 dossier combines separate local accounting at block 25,572,053 with the dated July 15 parent fxUSD evidence. Parent attachment is already present in the reviewed overlay, not in the standalone local journal. Keep both original hashes, paths and clocks distinct; metadata linkage cannot grant new reserve, liquidation or recovery credit.

@@ -178,7 +178,7 @@ describe("classifyChangedFiles", () => {
       docs: [
         "docs/telegram-architecture.md#1-ingress",
         "docs/telegram-alerts.md#dispatch",
-        "docs/telegram-mini-app.md",
+        "docs/telegram-mini-app.md#overview",
       ],
       checks: ["npm run typecheck"],
     },

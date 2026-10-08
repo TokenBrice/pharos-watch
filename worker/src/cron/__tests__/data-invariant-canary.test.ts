@@ -47,12 +47,14 @@ describe("runDataInvariantCanary", () => {
           checkId: "ok-check",
           status: "ok",
           severity: "info",
+          executionStatus: "completed", executionFailureReason: null,
           durationMs: 4,
         },
         {
           checkId: "warn-check",
           status: "degraded",
           severity: "warning",
+          executionStatus: "completed", executionFailureReason: null,
           durationMs: 7,
           error: "warning",
         },
@@ -102,6 +104,7 @@ describe("runDataInvariantCanary", () => {
         skippedCount: 0, worstStatus: "ok", worstSeverity: "info",
         results: ACTIVE_CANARY_CHECK_IDS.map(() => ({
           checkId: ACTIVE_CANARY_CHECK_IDS[0], status: "ok", severity: "info", durationMs: 1,
+          executionStatus: "completed", executionFailureReason: null,
         })),
       });
       const result = await runDataInvariantCanary(mockD1(), { mode });
@@ -119,12 +122,60 @@ describe("runDataInvariantCanary", () => {
       skippedCount: 0, worstStatus: "ok", worstSeverity: "info",
       results: ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
         checkId, status: "ok", severity: "info", durationMs: 1,
+        executionStatus: "completed", executionFailureReason: null,
       })),
     });
     const result = await runDataInvariantCanary(mockD1(), { mode: "status" });
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata!)).toMatchObject({ observedStatus: "ok", missingCheckIds: [] });
   });
+
+  it.each(["shadow", "status", "alert"])("keeps completed informational skips neutral in %s mode", async (mode) => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      mode, observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 0, errorCount: 0, skippedCount: 1,
+      completedCount: ACTIVE_CANARY_CHECK_IDS.length, failedCount: 0,
+      worstStatus: "ok", worstSeverity: "info",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+        checkId, status: index === 0 ? "skipped" : "ok", severity: "info", durationMs: 1,
+        executionStatus: "completed", executionFailureReason: null,
+        ...(index === 0 ? { error: "dex_liquidity has no current rows" } : {}),
+      })),
+    });
+    const result = await runDataInvariantCanary(mockD1(), { mode });
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata).toMatchObject({
+      observedStatus: "ok", skippedCount: 1, failedCount: 0,
+      outputPublishedAt: 1_775_900_000, reason: "canary-checks-completed",
+      checks: [
+        expect.objectContaining({ status: "skipped", severity: "info", executionStatus: "completed" }),
+        ...ACTIVE_CANARY_CHECK_IDS.slice(1).map(() => expect.anything()),
+      ],
+    });
+    expect(metadata.quality).toBeUndefined();
+  });
+
+  it("does not let a skipped finding hide failed required measurement work", async () => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 0, errorCount: 0, skippedCount: 1,
+      completedCount: ACTIVE_CANARY_CHECK_IDS.length - 1, failedCount: 1,
+      worstStatus: "ok", worstSeverity: "info",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+        checkId, status: index === 0 ? "skipped" : "ok", severity: "info", durationMs: 1,
+        executionStatus: index === 0 ? "failed" : "completed",
+        executionFailureReason: index === 0 ? "read-failed" : null,
+      })),
+    });
+    const result = await runDataInvariantCanary(mockD1(), { mode: "status" });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      observedStatus: "degraded", failedCount: 1, outputPublishedAt: null,
+      reason: "canary-measurement-failed",
+    });
+  });
+
   it("applies mode precedence to the same error summary", async () => {
     for (const [mode, status] of [["shadow", "ok"], ["status", "degraded"], ["alert", "error"]] as const) {
       runAndPersistCanaryChecks.mockResolvedValueOnce({
@@ -133,6 +184,7 @@ describe("runDataInvariantCanary", () => {
         errorCount: 1, skippedCount: 0, worstStatus: "error", worstSeverity: "warning",
         results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
           checkId, status: index === 0 ? "error" : "ok", severity: "warning", durationMs: 1,
+          executionStatus: index === 0 ? "failed" : "completed", executionFailureReason: index === 0 ? "read-failed" : null,
         })),
       });
       expect((await runDataInvariantCanary(mockD1(), { mode })).status).toBe(status);
@@ -146,9 +198,30 @@ describe("runDataInvariantCanary", () => {
       errorCount: 0, skippedCount: 0, worstStatus: "degraded", worstSeverity: "critical",
       results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
         checkId, status: index === 0 ? "degraded" : "ok", severity: index === 0 ? "critical" : "info", durationMs: 1,
+        executionStatus: "completed", executionFailureReason: null,
       })),
     });
     expect((await runDataInvariantCanary(mockD1(), { mode: "alert" })).status).toBe("error");
+  });
+
+  it("publishes completed severe findings as quality without claiming observer failure", async () => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 0, errorCount: 1, skippedCount: 0,
+      completedCount: ACTIVE_CANARY_CHECK_IDS.length, failedCount: 0,
+      worstStatus: "error", worstSeverity: "error",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+        checkId, status: index === 0 ? "error" : "ok", severity: index === 0 ? "error" : "info",
+        executionStatus: "completed", executionFailureReason: null, durationMs: 1,
+      })),
+    });
+    const result = await runDataInvariantCanary(mockD1(), { mode: "status" });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      outputPublishedAt: 1_775_900_000, failedCount: 0,
+      quality: { reason: "canary-error", errorCount: 1 },
+      checks: [expect.objectContaining({ status: "error", severity: "error", executionStatus: "completed" }), ...ACTIVE_CANARY_CHECK_IDS.slice(1).map(() => expect.anything())],
+    });
   });
 
   it("reports persistence rejection according to operational mode", async () => {

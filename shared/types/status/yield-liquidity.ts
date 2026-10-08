@@ -88,6 +88,7 @@ const YieldComparisonAnchorFreshnessExampleSchema = z.object({
   dataSource: z.string(),
   anchorAgeSeconds: z.number(),
   comparisonAnchorObservedAt: z.number(),
+  maxAgeSeconds: z.number().nullable().optional(),
 });
 
 const YieldComparisonAnchorFreshnessSummarySchema = z.object({
@@ -99,6 +100,7 @@ const YieldComparisonAnchorFreshnessSummarySchema = z.object({
   oldestAnchorSourceKey: z.string().nullable(),
   staleAnchorExamples: z.array(YieldComparisonAnchorFreshnessExampleSchema),
   staleAnchorExamplesTruncated: z.boolean(),
+  sourceRunStartedAt: z.number().nullable().optional(),
 });
 
 const YieldBenchmarkHealthEntrySchema = z.object({
@@ -263,9 +265,13 @@ export const YieldHealthSummarySchema = z.object({
     recommendationCandidates: z.array(YieldCoverageAuditQueueItemSchema),
     allowedActions: z.array(z.enum(YIELD_COVERAGE_AUDIT_QUEUE_ACTIONS)),
     queuePersistence: z.enum(["deferred", "durable"]),
-    /** Whole-queue accounting from the producer: per-kind counts, suppression, truncation (C8). */
+    /** Full post-disposition counts, distinct from producer-published and UI-rendered samples. */
     queueTotals: z.object({
       byKind: z.record(z.string(), z.number()),
+      totalItemCount: z.number().nullable().optional(),
+      publishedItemCount: z.number().nullable().optional(),
+      truncatedItemCount: z.number().nullable().optional(),
+      byKindScope: z.enum(["full-visible", "published-sample"]).optional(),
       suppressedItemCount: z.number(),
       truncated: z.boolean(),
     }).nullable().optional(),
@@ -275,7 +281,7 @@ export const YieldHealthSummarySchema = z.object({
       recommendationCandidates: z.number(),
     }).optional(),
     queueBudgetBasis: z.enum(["post-disposition", "raw-detectors"]).optional(),
-    /** The rendered queue performs no writes until the admin disposition route lands (C8). */
+    /** Permanent nonactionable evidence display; no disposition UI/API. */
     queueDisplayOnly: z.boolean().optional(),
   }),
   sourceRiskCoverage: YieldSourceRiskCoverageSummarySchema,
@@ -289,6 +295,9 @@ export const YieldHealthSummarySchema = z.object({
     fallback: z.string().nullable(),
     staleCoherentMaxAgeSec: z.number(),
     cachedAgeSec: z.number().nullable(),
+    yieldPublishedAt: z.number().nullable().optional(),
+    safetyPublishedAt: z.number().nullable().optional(),
+    safetyAgeSec: z.number().nullable().optional(),
   }).optional(),
   /** `pys_inputs_at_publish` persistence from the latest publisher run (C3). */
   pysInputs: z.object({
@@ -297,6 +306,8 @@ export const YieldHealthSummarySchema = z.object({
     nullCount: z.number().nullable(),
     nullRate: z.number().nullable(),
     threshold: z.number(),
+    reason: z.string().nullable().optional(),
+    sourceRunStartedAt: z.number().nullable().optional(),
   }).optional(),
 });
 export type YieldHealthSummary = z.output<typeof YieldHealthSummarySchema>;
@@ -333,13 +344,9 @@ export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRec
 export const MintBurnReconciliationRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
-  flowNet24hUsd: z.number(),
-  chainSupplyDelta24hUsd: z.number().nullable(),
-  absoluteDiffUsd: z.number().nullable(),
-  diffRatio: z.number().nullable(),
   status: z.enum(["ok", "critical", "insufficient-source"]),
   coverageStatus: z.union([MintBurnCoverageStatusSchema, z.literal("unknown")]),
-  comparisonIssue: z.string().optional(),
+  conservationIssue: z.string().optional(),
   conservation: z.array(MintBurnConservationRecordSchema).optional(),
 });
 export type MintBurnReconciliationRow = z.output<typeof MintBurnReconciliationRowSchema>;
@@ -347,9 +354,7 @@ export type MintBurnReconciliationRow = z.output<typeof MintBurnReconciliationRo
 export const MintBurnReconciliationSummarySchema = z.object({
   conservationVersion: z.literal(1).optional(),
   checkedAt: z.number(),
-  comparedCoins: z.number(),
   criticalCount: z.number(),
-  insufficientCount: z.number(),
   rows: z.array(MintBurnReconciliationRowSchema),
 });
 export type MintBurnReconciliationSummary = z.output<typeof MintBurnReconciliationSummarySchema>;
@@ -362,13 +367,6 @@ export const ReserveDriftEntrySchema = z.object({
 });
 export type ReserveDriftEntry = z.output<typeof ReserveDriftEntrySchema>;
 
-export const ClassificationWarningSchema = z.object({
-  coinId: z.string(),
-  governance: z.string(),
-  centralizedCustodyPct: z.number(),
-  threshold: z.number(),
-});
-export type ClassificationWarning = z.output<typeof ClassificationWarningSchema>;
 
 const CoinGeckoPriceDiffRowSchema = z.object({
   stablecoinId: z.string(),

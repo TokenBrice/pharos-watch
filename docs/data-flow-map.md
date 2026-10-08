@@ -75,8 +75,12 @@ metadata therefore cannot choose physical quote indices alone. The prior
 retained-pool target generation is
 stored in `dex_measured_execution_targets`; raw proof and validated quote
 profiles are generation-fenced in `dex_measured_execution_quotes`. Score-bearing
-active EVM targets and quotes remain on the half-hour lane; the shadow EVM lane
-runs daily at 08:10 UTC. Quote generations write
+active EVM quotes run at `:05/:20/:35/:50` through the original and supplemental
+public slots, sharing one whole-asset cursor, global job lease and active surfaces.
+Each generation records its actual producer schedule/path; per-run proof and
+request budgets remain unchanged. Native diagnostics retain the original
+`:05/:35` cadence, and the isolated shadow EVM lane still runs daily at 08:10 UTC.
+Quote generations write
 only measured outcomes and real failures; a target-count and target-ID digest
 proves omitted `budget-deferred` outcomes so readers can reconstruct them.
 
@@ -98,10 +102,16 @@ capability gates and actual measured/exact conflicts still fail closed. Only
 active measured EVM profiles enter the P4 capacity compiler and physical-pool completeness
 denominator; shadow measured adapters retain `activation-pending` and cannot
 satisfy completeness.
+
+The daily EVM onboarding lane stays live until every C01–C03 writer has an accepted deployed disposition, including the six Curve observers' funded capacity re-decision. Direct Binance/Coinbase/Kraken depth telemetry and the dormant Kraken exact-request observer are retired; exchange spot pricing, CoinGecko synthetic orderbook pools and redemption-lane ERC-4626 execution remain separate and unchanged. `dex_pool_registry` remains pool-observation authority; the obsolete `dex_pool_staging` status growth-clock reference is removed, but its DDL survives until a separately operated export/bookmark/drop release and later approved squash. Measured retention keeps its four-hour floor; abandoned active candidates need exact completed invocation and no live owner/lease/reference proof, with physical-row-bounded oldest-first draining.
 The Ethereum hook-free V4 cohort enters P4 only after the EVM join revalidates
 the pinned runtimes, PoolManager bindings, exact PoolId state, and current quote;
-hooked pools and every other V4 chain remain unsupported. The separate shadow
-surfaces remain available for future cohorts and rollback comparison.
+hooked pools remain unsupported. Base, BSC, Arbitrum, Polygon and Tempo V4
+still collect reviewed exact shadow evidence without scoring admission.
+Unichain V4 and Hybra/XSwap V3 measured identities are retired; ordinary discovery
+continues. The persisted catalog reader revalidates current reviewed lane membership
+before quote admission, preserving named non-observed exclusions for old pointers.
+Hooked candidate metadata remains permanent negative identity/collision evidence.
 
 ### Safety Score publication flow
 
@@ -194,9 +204,9 @@ Freshness badges use producer `updatedAt` as their canonical clock and classify 
 - **Abort-aware high-volume publication**: DEX liquidity and DEWS persistence pass the cron `AbortSignal` into chunked D1 batches, retrying D1 operations, and final freshness-sentinel guards. If timeout or lease-loss aborts the run after a partial batch, the run fails before publishing `freshness:dex-liquidity`, `freshness:dews`, or the exact DEWS publication pointer. Durable DEWS consumers, canaries, and freshness reporting use the pointer rather than raw `MAX(computed_at)` rows.
 - Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
 - Chain profile pages read a single authoritative Worker payload: `GET /api/chains?chain=<id>` returns both the summary card and the `chainDetail` composition through `useChainDetail`. The page no longer re-aggregates `/api/stablecoins` or reconciles two independently refreshed snapshots.
-- `chain_supply_history` remains a forward-only internal dataset until the post-2026-04-08 baseline. Earlier rows were written before shared chain-label canonicalization and are not approved for public charting.
+- `chain_supply_history` is an actively collected, forward-only internal baseline, not a live `/api/chains` input. Collection continues; public history/chart activation requires scope, provenance and bounded capacity approval with an explicit UTC baseline strictly after 2026-04-08. Post-fix dates and the latest completion marker do not certify older archive rows. Retain prebaseline rows internally and represent missing days as gaps.
 - `/api/dex-liquidity` is meta-aware on the frontend: the page uses worker freshness metadata (and degraded-run `Warning` headers) rather than client fetch time to assess staleness.
-- Liquidity history now carries `coverageClass` / `coverageConfidence`; trend and durability consumers should treat low-confidence snapshots as informational, not authoritative baselines.
+- Liquidity history remains public evidence with `coverageClass` / `coverageConfidence`, including weak observations. Admission is purpose-specific: trend baselines (including DEWS weekly anchors) require positive TVL, confidence ≥0.5 and the caller's date tolerance (36h for weekly anchors); durability and digest comparisons retain their ≥0.75 rules. An inadmissible DEWS historical anchor is unavailable, not zero risk. These rules do not promote source-shadow collectors or retag stored history.
 - `dex_liquidity_history` is retained for the public 365-day history window; older daily snapshots are pruned during successful `sync-dex-liquidity` persistence instead of living as an indefinite research archive.
 - Transient measured-execution, scoring-stage, liquidity-run, price-run, and pool-staging rows are pruned by their owning producers in bounded oldest-first D1 passes. Cleanup telemetry is additive to cron metadata and cleanup failure cannot invalidate an already successful publication.
 - Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints/`.

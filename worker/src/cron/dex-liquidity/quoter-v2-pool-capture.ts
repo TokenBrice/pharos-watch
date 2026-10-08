@@ -3,7 +3,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { encodeFunctionData, parseAbi } from "viem/utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
-import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmRpcOptions } from "../../lib/evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, type EvmRpcOptions } from "../../lib/evm-rpc";
 import { getDexMeasuredExecutionDeployment, isTickSpacingQuoterV2Profile } from "../measured-execution/registry";
 import { createDexMeasuredExecutionRpcBudget, type DexMeasuredExecutionRpcBudget } from "../measured-execution/profiles";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
@@ -24,7 +24,6 @@ const POOL_ABI = parseAbi([
 const V3_FACTORY_ABI = parseAbi(["function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)"]);
 const SLIPSTREAM_FACTORY_ABI = parseAbi(["function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)"]);
 export const QUOTER_V2_CAPTURE_MAX_POOLS = 128;
-export const QUOTER_V2_CAPTURE_XDC_MAX_POOLS = 12;
 export const QUOTER_V2_CAPTURE_MAX_REQUESTS = 160;
 export const QUOTER_V2_CAPTURE_MAX_WALL_MS = 90_000;
 const MULTICALL_BATCH_SIZE = 60;
@@ -48,8 +47,7 @@ export async function captureQuoterV2Pools(input: {
   try {
     const deployment = getDexMeasuredExecutionDeployment(input.adapterProfileId, input.chain);
     if (!deployment) throw new Error("quoter-v2-deployment-unreviewed");
-    const maxPools = input.chain === "xdc" ? QUOTER_V2_CAPTURE_XDC_MAX_POOLS : QUOTER_V2_CAPTURE_MAX_POOLS;
-    if (input.candidates.length > maxPools) throw new Error("quoter-v2-capture-pool-budget");
+    if (input.candidates.length > QUOTER_V2_CAPTURE_MAX_POOLS) throw new Error("quoter-v2-capture-pool-budget");
     const candidates = input.candidates;
     if (candidates.length === 0) return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
     // Enforce a bound here as well as in the enrichment caller: direct capture
@@ -65,13 +63,6 @@ export async function captureQuoterV2Pools(input: {
     };
     const blockNumber = await fetchEvmBlockNumber(input.chain, options);
     if (blockNumber == null) throw new Error("quoter-v2-block-unavailable");
-    if (input.chain === "xdc") {
-      const header = await fetchEvmBlockHeader(input.chain, blockNumber, options);
-      if (!header || header.number !== blockNumber) throw new Error("quoter-v2-block-identity-unavailable");
-      // XDC has no canonical Multicall3. The shared transport permits direct
-      // reads only after explicit code absence at this canonical block hash.
-      options.multicallFallbackBlockHash = header.hash;
-    }
     const slipstream = isTickSpacingQuoterV2Profile(deployment.adapterProfileId);
     const parameterName = slipstream ? "tickSpacing" : "fee";
     const stateCalls = candidates.flatMap((candidate, index) =>

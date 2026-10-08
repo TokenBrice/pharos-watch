@@ -39,12 +39,6 @@ export interface Env {
   JUPITER_API_KEY?: string;
   M0_API_KEY?: string;
   COINGECKO_API_KEY?: string;
-  VAULTS_FYI_API_KEY?: string;
-  VAULTS_FYI_ENABLED?: string;
-  VAULTS_FYI_RANKABLE_VAULTS?: string;
-  VAULTS_FYI_MAX_CREDITS_PER_RUN?: string;
-  VAULTS_FYI_MAX_CREDITS_PER_MONTH?: string;
-  VAULTS_FYI_MAX_PAGES_PER_RUN?: string;
   GITHUB_PAT?: string;
   FEEDBACK_IP_SALT?: string;
   TWITTER_API_KEY?: string;
@@ -58,7 +52,6 @@ export interface Env {
   TELEGRAM_WEBHOOK_SECRET?: string;
   TELEGRAM_WEBHOOK_SECRET_PREVIOUS?: string;
   TELEGRAM_RECAP_ROLLOUT_MODE?: string;
-  TELEGRAM_RECAP_ROLLOUT_CHAT_IDS?: string;
   MINT_BURN_DISABLED_IDS?: string;
   MINT_BURN_DISABLED_SYMBOLS?: string;
   MINT_BURN_MAJOR_SYMBOLS?: string;
@@ -76,7 +69,6 @@ export interface Env {
   DDR_REPAIR_TASK_RUNNER_ENABLED?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_CANARY_MODE?: string;
-  WORKER_V9_WORKFLOW_MODE?: string;
 }
 
 /** Scheduled execution has no HTTP CORS or rate-limit bindings. */
@@ -124,25 +116,6 @@ export interface CloudflareD1StatusConfig {
   databaseId: string;
 }
 
-export type VaultsFyiRuntimeConfig =
-  | {
-      enabled: false;
-      disabledReason: "not-enabled" | "no-key" | "invalid-enabled-flag";
-      apiKey: null;
-      rankableVaults: [];
-      maxCreditsPerRun: null;
-      maxCreditsPerMonth: null;
-      maxPagesPerRun: null;
-    }
-  | {
-      enabled: true;
-      disabledReason: null;
-      apiKey: string;
-      rankableVaults: string[];
-      maxCreditsPerRun: number | null;
-      maxCreditsPerMonth: number | null;
-      maxPagesPerRun: number | null;
-    };
 
 import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
 import { getRuntimeActiveEnvKeys, getRuntimeEnvKeys } from "@shared/lib/env-contract";
@@ -168,13 +141,6 @@ function parseBooleanEnv(value: string | undefined): boolean | null {
   return null;
 }
 
-function parsePositiveIntegerEnv(value: string | undefined): number | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed <= 0) return null;
-  return parsed;
-}
 
 export interface DdrRepairTaskRunnerWarning {
   code: "invalid-ddr-repair-task-runner-enabled";
@@ -210,46 +176,6 @@ export function resolveDdrRepairTaskRunnerConfig(
   };
 }
 
-export function resolveVaultsFyiConfig(
-  env: Pick<
-    Env,
-    | "VAULTS_FYI_API_KEY"
-    | "VAULTS_FYI_ENABLED"
-    | "VAULTS_FYI_RANKABLE_VAULTS"
-    | "VAULTS_FYI_MAX_CREDITS_PER_RUN"
-    | "VAULTS_FYI_MAX_CREDITS_PER_MONTH"
-    | "VAULTS_FYI_MAX_PAGES_PER_RUN"
-  >,
-): VaultsFyiRuntimeConfig {
-  const enabledFlag = parseBooleanEnv(env.VAULTS_FYI_ENABLED);
-  const explicitlyEnabled = enabledFlag === true;
-  const apiKey = getConfiguredValue(env.VAULTS_FYI_API_KEY);
-  if (!explicitlyEnabled || !apiKey) {
-    const hasEnableValue = Boolean(env.VAULTS_FYI_ENABLED?.trim());
-    return {
-      enabled: false,
-      disabledReason: explicitlyEnabled
-        ? "no-key"
-        : hasEnableValue && enabledFlag === null
-          ? "invalid-enabled-flag"
-          : "not-enabled",
-      apiKey: null,
-      rankableVaults: [],
-      maxCreditsPerRun: null,
-      maxCreditsPerMonth: null,
-      maxPagesPerRun: null,
-    };
-  }
-  return {
-    enabled: true,
-    disabledReason: null,
-    apiKey,
-    rankableVaults: parseCsvEnv(env.VAULTS_FYI_RANKABLE_VAULTS),
-    maxCreditsPerRun: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_CREDITS_PER_RUN),
-    maxCreditsPerMonth: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_CREDITS_PER_MONTH),
-    maxPagesPerRun: parsePositiveIntegerEnv(env.VAULTS_FYI_MAX_PAGES_PER_RUN),
-  };
-}
 
 export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {
   return (

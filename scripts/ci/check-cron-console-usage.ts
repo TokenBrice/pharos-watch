@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
-import { relative } from "node:path";
-import { runCountRatchet } from "../lib/count-ratchet.mts";
+import { existsSync, readFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import { readCountRatchetBaseline, runCountRatchet } from "../lib/count-ratchet.mts";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 
@@ -139,6 +139,18 @@ export function collectWorkerConsoleUsage(
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
+export function collectStaleConsoleBaselineEntries(baselinePath = BASELINE_PATH, cwd = process.cwd()): string[] {
+  let baseline: Record<string, unknown> | null;
+  try {
+    baseline = readCountRatchetBaseline(baselinePath, cwd);
+  } catch {
+    // The ratchet reports unreadable baselines; do not conceal that failure.
+    return [];
+  }
+  if (!baseline) return [];
+  return Object.keys(baseline).filter((rel) => !existsSync(resolve(cwd, rel))).sort();
+}
+
 
 export function checkCronConsoleUsage({
   roots = DEFAULT_ROOTS,
@@ -148,6 +160,14 @@ export function checkCronConsoleUsage({
   stdout = process.stdout,
   stderr = process.stderr,
 }: CheckCronConsoleUsageOptions = {}): number {
+  if (!updateBaseline) {
+    const stale = collectStaleConsoleBaselineEntries(baselinePath, cwd);
+    if (stale.length > 0) {
+      stderr.write(`[cron-console] staleBaseline: ${stale.length} baseline path(s) no longer in the tree:\n`);
+      for (const rel of stale) stderr.write(`  ${rel}\n`);
+      stderr.write("Remove reviewed missing-path budgets; extant zero-call files are not missing paths.\n\n");
+    }
+  }
   return runCountRatchet({
     collectCounts: () => collectWorkerConsoleUsage(roots, cwd),
     baselinePath,

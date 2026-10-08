@@ -1,5 +1,5 @@
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
-import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
+import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 
 export interface SupplySnapshot {
@@ -15,7 +15,7 @@ export interface PsiHistoricalUniverse {
   mcapById: Map<string, number>;
   eligibleUniverseCount: number;
   coveredUniverseCount: number;
-  shadowCoverageCount: number;
+  historicalAssetCoverageCount: number;
 }
 
 /**
@@ -57,15 +57,15 @@ function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: 
   const mcapById = new Map<string, number>();
   let totalMcapUsd = 0;
   let coveredUniverseCount = 0;
-  let shadowCoverageCount = 0;
+  let historicalAssetCoverageCount = 0;
 
   for (const coinId of CORE_PSI_ELIGIBLE_IDS) {
     const nearest = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
     if (!nearest) continue;
 
     coveredUniverseCount++;
-    if (SHADOW_IDS.has(coinId)) {
-      shadowCoverageCount++;
+    if (PSI_HISTORICAL_IDS.has(coinId)) {
+      historicalAssetCoverageCount++;
     }
     totalMcapUsd += nearest.mcap;
     mcapById.set(coinId, nearest.mcap);
@@ -76,7 +76,7 @@ function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: 
     mcapById,
     eligibleUniverseCount: CORE_PSI_ELIGIBLE_IDS.size,
     coveredUniverseCount,
-    shadowCoverageCount,
+    historicalAssetCoverageCount,
   };
 }
 

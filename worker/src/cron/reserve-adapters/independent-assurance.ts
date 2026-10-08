@@ -443,6 +443,7 @@ export function buildIndependentAssuranceReserveResult(args: {
       engagement: manifest.engagement,
       conclusion: manifest.conclusion,
       unit: manifest.unit,
+      ...(manifest.nativeQuantityBasis ? { nativeQuantityBasis: manifest.nativeQuantityBasis } : {}),
       assets: manifest.assets,
       liabilities: manifest.liabilities,
       ...(manifest.adjustments ? { adjustments: manifest.adjustments } : {}),
@@ -489,6 +490,11 @@ export function buildIndependentAssuranceReserveResult(args: {
     metadata: {
       sourceTimestamp,
       freshnessMode: "verified",
+      ...(manifest.nativeQuantityBasis ? {
+        nativeQuantityBasis: manifest.nativeQuantityBasis,
+        totalReserveQuantity: Number(reconciliation.computedAssetTotal),
+        supplyTokens: Number(reconciliation.liabilityTotal),
+      } : {}),
       ...(reconciliation.collateralizationRatio !== null
         ? { collateralizationRatio: reconciliation.collateralizationRatio }
         : {}),

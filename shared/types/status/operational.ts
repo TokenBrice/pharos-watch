@@ -173,6 +173,7 @@ export const ProviderCircuitHealthFamilySummarySchema = z.object({
   closed: z.number(),
   halfOpen: z.number(),
   open: z.number(),
+  invalid: z.number().optional(),
 });
 export type ProviderCircuitHealthFamilySummary = z.output<
   typeof ProviderCircuitHealthFamilySummarySchema
@@ -185,6 +186,8 @@ export const ProviderCircuitHealthSchema = z.object({
   closedCount: z.number(),
   halfOpenCount: z.number(),
   openCount: z.number(),
+  invalidCount: z.number().optional(),
+  invalidProviders: z.array(z.object({ providerId: z.string(), reason: z.string() })).optional(),
   openProviders: z.array(ProviderCircuitHealthEntrySchema),
   byFamily: z.record(z.string(), ProviderCircuitHealthFamilySummarySchema),
 });
@@ -198,12 +201,19 @@ export const CANARY_RUN_SEVERITY_VALUES = ["info", "warning", "error", "critical
 export const CanaryRunSeveritySchema = z.enum(CANARY_RUN_SEVERITY_VALUES);
 export type CanaryRunSeverity = z.infer<typeof CanaryRunSeveritySchema>;
 
+export const CANARY_EXECUTION_STATUS_VALUES = ["completed", "failed"] as const;
+export const CanaryExecutionStatusSchema = z.enum(CANARY_EXECUTION_STATUS_VALUES);
+export type CanaryExecutionStatus = z.infer<typeof CanaryExecutionStatusSchema>;
+
 const CanaryStatusCheckSchema = z.object({
   checkId: z.string(),
   label: z.string(),
   description: z.string(),
   status: CanaryRunStatusSchema,
   severity: CanaryRunSeveritySchema,
+  // Missing legacy metadata is unknown execution, never proof of completion.
+  executionStatus: CanaryExecutionStatusSchema.nullable().optional(),
+  executionFailureReason: z.string().nullable().optional(),
   observedAt: z.number(),
   durationMs: z.number().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional(),
@@ -225,6 +235,9 @@ export const CanaryStatusSchema = z.object({
   errorCount: z.number(),
   skippedCount: z.number(),
   staleCount: z.number(),
+  completedCount: z.number().optional(),
+  failedCount: z.number().optional(),
+  unknownExecutionCount: z.number().optional(),
   checks: z.record(z.string(), CanaryStatusCheckSchema),
 });
 export type CanaryStatus = z.output<typeof CanaryStatusSchema>;

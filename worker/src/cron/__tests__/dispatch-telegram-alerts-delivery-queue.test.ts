@@ -16,10 +16,6 @@ import {
   type CronProgressUpdate,
   type DispatchHarness,
 } from "./dispatch-telegram-alerts.test-support";
-import {
-  createTelegramPlanningDatabase,
-  type TelegramPlanningWriteCounters,
-} from "../dispatch-telegram-alerts";
 
 function seedFreezeTapeObservation(harness: DispatchHarness, now: number): void {
   // A fresh project-tape run plus a cursor behind one parseable freeze row makes
@@ -128,11 +124,8 @@ describe("dispatchTelegramAlerts", () => {
       noWorkRun: false,
       eventsDetected: { freeze: 0 },
     });
-    // The circuit-open drain writes through the counting handle, so the run
-    // reports the writes it performed instead of a measured-looking zero.
-    expect(metadata.planningRowsWritten).toBeGreaterThan(0);
-    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
-    expect(metadata.planningRowsWritten).toBeLessThanOrEqual(metadata.d1RowsWritten);
+    expect(metadata).not.toHaveProperty("planningRowsWritten");
+    expect(metadata).not.toHaveProperty("d1RowsWritten");
     expect(result.itemCount).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([
       expect.objectContaining({ chatId: "100", html: "<b>Queued alert</b>" }),
@@ -193,12 +186,8 @@ describe("dispatchTelegramAlerts", () => {
       subscribersNotified: 0,
       safetyAlertSourceState: "missing",
       safetyAlertsSuppressed: true,
-      planningRowsWritten: expect.any(Number),
-      d1RowsWritten: expect.any(Number),
       noWorkRun: false,
     });
-    expect(metadata.planningRowsWritten).toBe(0);
-    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 6 });
     expect(readCacheValue(harness.sqlite, "telegram:preset-query-failure-count")).toBe("0");
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
@@ -216,12 +205,8 @@ describe("dispatchTelegramAlerts", () => {
       eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0 },
       messagesSent: 0,
       pendingAttempted: 0,
-      planningRowsWritten: expect.any(Number),
-      d1RowsWritten: expect.any(Number),
       noWorkRun: true,
     });
-    expect(metadata.planningRowsWritten).toBe(0);
-    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
     expect(telegramDeliveryTranscript).toEqual([]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
       count: 0,
@@ -412,67 +397,11 @@ describe("dispatchTelegramAlerts", () => {
       messagesSent: 1,
       subscribersNotified: 1,
       eventsDetected: { freeze: 1 },
-      planningRowsWritten: expect.any(Number),
-      d1RowsWritten: expect.any(Number),
       noWorkRun: false,
     });
-    expect(metadata.planningRowsWritten).toBeGreaterThan(0);
-    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
     expect(result.itemCount).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: `pending-${scenario.label}` })]);
     expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
   });
 });
 
-describe("createTelegramPlanningDatabase", () => {
-  it("forwards D1 prototype methods and still measures planning writes", async () => {
-    const calls: string[] = [];
-    class PrototypeD1 {
-      bindAndPrepare(sql: string): D1PreparedStatement {
-        return {
-          bind: () => this.bindAndPrepare(sql),
-          first: async () => null,
-          all: async () => ({ results: [] }),
-          run: async () => ({ meta: { rows_written: sql.includes("telegram_alert_jobs") ? 3 : 1 } }),
-          raw: async () => [],
-        } as unknown as D1PreparedStatement;
-      }
-      prepare(sql: string): D1PreparedStatement {
-        return this.bindAndPrepare(sql);
-      }
-      batch(): Promise<never[]> {
-        return Promise.resolve([]);
-      }
-      exec(sql: string): Promise<{ count: number; duration: number }> {
-        calls.push(`exec:${sql}:${this instanceof PrototypeD1 ? "bound" : "loose"}`);
-        return Promise.resolve({ count: 0, duration: 0 });
-      }
-      withSession(): { session: boolean } {
-        calls.push("withSession");
-        return { session: true };
-      }
-      dump(): Promise<ArrayBuffer> {
-        calls.push("dump");
-        return Promise.resolve(new ArrayBuffer(0));
-      }
-    }
-    const target = new PrototypeD1() as unknown as D1Database;
-    const counters: TelegramPlanningWriteCounters = {
-      planningRowsWritten: 0,
-      d1RowsWritten: 0,
-      planningRowsWrittenAvailable: true,
-      d1RowsWrittenAvailable: true,
-    };
-    const planningDb = createTelegramPlanningDatabase(target, counters);
-
-    expect(await planningDb.exec("SELECT 1")).toEqual({ count: 0, duration: 0 });
-    expect(planningDb.withSession()).toEqual({ session: true });
-    expect((await planningDb.dump()).byteLength).toBe(0);
-    expect(calls).toEqual(["exec:SELECT 1:bound", "withSession", "dump"]);
-
-    await planningDb.prepare("INSERT INTO telegram_alert_jobs (job_id) VALUES (?)").bind("job:1").run();
-    await planningDb.prepare("INSERT INTO cache (key) VALUES (?)").bind("k").run();
-    expect(counters.planningRowsWritten).toBe(3);
-    expect(counters.d1RowsWritten).toBe(4);
-  });
-});

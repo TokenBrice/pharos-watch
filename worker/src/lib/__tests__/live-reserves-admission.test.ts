@@ -23,6 +23,49 @@ function fixture(id = "hbd-hive", metadata: Record<string, unknown> = { freshnes
 }
 
 describe("live reserve admission", () => {
+  it.each([
+    "qcad-stablecorp", "usx-solstice", "satusd-river", "usdv-solomon-v2",
+    "dgld-gold-token-sa", "xagm-matrixdock", "onyc-onre", "avusd-avant",
+    "ftusd-flying-tulip", "frnt-wyoming",
+  ])("keeps a healthy current %s observation non-independent", (id) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const config = coin.liveReservesConfig!;
+    const record = {
+      stablecoinId: id, source: config.adapter,
+      slices: [{ name: "Issuer observation", pct: 100, risk: "low" as const }],
+      fetchedAt: 1_780_000_000,
+      metadata: { freshnessMode: "verified" as const, sourceTimestamp: 1_780_000_000 },
+      warnings: [], warningCount: 0, adapterSourceModel: "single-bucket" as const,
+      adapterEvidenceClass: "weak-live-probe" as const,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
+    };
+    const admission = evaluateLiveReserveAdmission(record, null, coin, 1_780_000_001);
+    expect(admission.eligible).toBe(false);
+    expect(admission.reasons).toContain("non-independent");
+  });
+
+  it("rejects retained Sonic observations for the unconfigured legacy bnUSD identity", () => {
+    const coin = WORKER_TRACKED_META_BY_ID.get("bnusd-balanced")!;
+    expect(coin.liveReservesConfig).toBeUndefined();
+    expect(TRACKED_META_BY_ID.get(coin.id)?.liveReservesConfig).toBeUndefined();
+    const record = {
+      stablecoinId: coin.id, source: "sodax-sonic",
+      slices: [{ name: "Sonic borrower observation", pct: 100, risk: "low" as const }],
+      fetchedAt: 1_780_000_000,
+      metadata: { freshnessMode: "verified" as const, sourceTimestamp: 1_780_000_000 },
+      warnings: [], warningCount: 0, adapterSourceModel: "dynamic-mix" as const,
+      adapterEvidenceClass: "weak-live-probe" as const,
+      configFingerprint: null,
+    };
+    const sync = { lastSuccessAt: record.fetchedAt, lastSuccessAttemptId: null };
+    const admission = evaluateLiveReserveAdmission(record, sync, coin, 1_780_000_001);
+    expect(admission.eligible).toBe(false);
+    expect(admission.reasons).toEqual(["unconfigured", "non-independent"]);
+    const publicAdmission = evaluateLiveReserveAdmission(record, sync, TRACKED_META_BY_ID.get(coin.id), 1_780_000_001);
+    expect(publicAdmission.eligible).toBe(false);
+    expect(publicAdmission.reasons).toEqual(["unconfigured", "non-independent"]);
+  });
+
   it("rejects invalid admission before redemption capacity without replacing its evidence policy", async () => {
     const now = 1_780_000_000;
     const snapshot = liveSnapshot("lusd-liquity", {

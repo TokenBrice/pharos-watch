@@ -28,6 +28,7 @@ import {
   DEX_MEASURED_EMPTY_POOL_REPROBE_SEC,
   type PositiveEmptyPoolProof,
   type DexMeasuredQuoteOutcome,
+  type DexActiveMeasuredExecutionScheduleKey,
 } from "./persistence";
 import {
   buildDexMeasuredExecutionProfile,
@@ -71,13 +72,15 @@ import {
   type UniswapV4RuntimeEvidence,
 } from "./uniswap-v4";
 import {
-  MAX_ADMISSION_ROTATION_CYCLES, MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
+  MAX_ADMISSION_ROTATION_CYCLES, MAX_ACTIVE_ADMISSION_ROTATION_CYCLES,
+  MAX_EXPIRING_PRIORITY_RPC_REQUESTS, MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
   MEASURED_EXECUTION_RPC_REQUEST_LIMIT, SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
   admitTargetsWithinBudget, estimateAdmissionRotationCycles,
   estimateRemainingMeasuredQuoteRpcRequests, hasCompleteDexMeasuredQuoteProgress,
   projectMeasuredExecutionPacingStop, selectExpiringScoreBearingPriorityPacket,
   loadPublishedScoreBearingDexRoutes,
+  isDexMeasuredExecutionTargetInLane,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
 } from "./admission";
@@ -402,9 +405,12 @@ async function syncDexMeasuredExecutionLane(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
   lane: "active" | "shadow" = "active",
+  activeScheduleKey: DexActiveMeasuredExecutionScheduleKey = "halfHourlyMeasuredExecution",
 ): Promise<CronResult> {
   const startedAtMs = Date.now();
   const startedAt = Math.floor(startedAtMs / 1_000);
+  const maxAdmissionRotationCycles = lane === "active"
+    ? MAX_ACTIVE_ADMISSION_ROTATION_CYCLES : MAX_ADMISSION_ROTATION_CYCLES;
   const rpcBudget = createDexMeasuredExecutionRpcBudget({
     maxRequests: MEASURED_EXECUTION_RPC_REQUEST_LIMIT,
     deadlineMs: startedAtMs + MAX_RUNTIME_MS,
@@ -417,11 +423,14 @@ async function syncDexMeasuredExecutionLane(
       status: "degraded",
       itemCount: 0,
       metadata: {
-        reason: "target-generation-missing",
+        reason: targetGeneration ? "target-generation-empty" : "target-generation-missing",
       },
-      productivity: { productive: false, reason: "target-generation-missing" },
+      productivity: { productive: false, reason: targetGeneration ? "target-generation-empty" : "target-generation-missing" },
     });
   }
+  const policyExcluded = new Set(targetGeneration.targets
+    .filter((target) => !isDexMeasuredExecutionTargetInLane(target, lane))
+    .map((target) => target.targetId));
 
   const scoreBearingRoutes = lane === "active"
     ? await loadPublishedScoreBearingDexRoutes(db, signal)
@@ -443,6 +452,7 @@ async function syncDexMeasuredExecutionLane(
     targetGeneration.targets.map((target) => target.targetId), signal);
   const heldEmpty = new Map<string, PositiveEmptyPoolProof>();
   for (const target of targetGeneration.targets) {
+    if (policyExcluded.has(target.targetId)) continue;
     const proof = retainedEmpty.get(target.targetId);
     if (proof && proof.adapterProfileId === target.adapterProfileId
       && proof.emptyPoolObservation.poolId.toLowerCase() === target.poolId.toLowerCase()
@@ -450,9 +460,10 @@ async function syncDexMeasuredExecutionLane(
       heldEmpty.set(target.targetId, { ...proof, reused: true });
     }
   }
-  const eligibleTargets = targetGeneration.targets.filter((target) => !heldEmpty.has(target.targetId));
+  const eligibleTargets = targetGeneration.targets.filter((target) =>
+    !policyExcluded.has(target.targetId) && !heldEmpty.has(target.targetId));
   const expiringPriority = lane === "active" && scoreBearingRoutes
-    ? selectExpiringScoreBearingPriorityPacket(targetGeneration.targets, scoreBearingRoutes)
+    ? selectExpiringScoreBearingPriorityPacket(eligibleTargets, scoreBearingRoutes)
     : null;
   const priorityTargetIds = new Set(expiringPriority?.targetIds ?? []);
   const admissionState = await readDexSourcePaginationState(
@@ -511,7 +522,8 @@ async function syncDexMeasuredExecutionLane(
     curveCompositeProof: null,
     uniswapV4PoolProof: null,
     points: [],
-    failedReason: heldEmpty.has(target.targetId) ? "pool-uninitialized-or-empty" : oversized.has(target.targetId)
+    failedReason: policyExcluded.has(target.targetId) ? "current-policy-target-excluded"
+      : heldEmpty.has(target.targetId) ? "pool-uninitialized-or-empty" : oversized.has(target.targetId)
       ? "admission-coin-group-oversized"
       : deferred.has(target.targetId)
         ? "budget-deferred"
@@ -862,7 +874,7 @@ async function syncDexMeasuredExecutionLane(
         status: "failed",
         failureReason: state.failedReason ?? "deployment-unavailable",
         rawPayload: state.emptyPoolProof ?? { adapterProfileId: state.target.adapterProfileId, targetId: state.target.targetId },
-        observedThisRun: state.emptyPoolProof?.reused !== true,
+        observedThisRun: !policyExcluded.has(state.target.targetId) && state.emptyPoolProof?.reused !== true,
       };
     }
     try {
@@ -945,6 +957,7 @@ async function syncDexMeasuredExecutionLane(
         outcomes,
         quotedAt: publishedAt,
         generationId: quoteGenerationId,
+        producerScheduleKey: activeScheduleKey,
         signal,
       }));
   let cursorWriteStatus: "not-needed" | "written" | "write-failed" = "not-needed";
@@ -971,6 +984,7 @@ async function syncDexMeasuredExecutionLane(
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
     targetCount: targetGeneration.targets.length,
+    policyExcludedTargetCount: policyExcluded.size,
     measuredCount: publication.measuredCount,
     failedCount: publication.failedCount,
     attemptedFailureCount: failureSummary.attemptedFailureCount,
@@ -995,6 +1009,7 @@ async function syncDexMeasuredExecutionLane(
     expiringPriorityRpcRequestLimit:
       MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
     admissionRotationCycles,
+    maxAdmissionRotationCycles,
     admissionCursor,
     nextAdmissionCursor: nextCursor,
     cursorWriteStatus,
@@ -1006,7 +1021,7 @@ async function syncDexMeasuredExecutionLane(
       ...(budgetDeferredCount > 0 && cursorWriteStatus !== "written"
         ? ["admission-cursor-not-persisted"]
         : []),
-      ...(admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
+      ...(admissionRotationCycles === null || admissionRotationCycles > maxAdmissionRotationCycles
         ? ["admission-rotation-exceeds-freshness"]
         : []),
       ...(retention.error ? ["retention-cleanup-failed"] : []),
@@ -1015,7 +1030,7 @@ async function syncDexMeasuredExecutionLane(
       : failureSummary.scoreEligibleBlockingFailureCount > 0 ? "quote-failures"
         : cursorWriteStatus === "write-failed" ? "admission-cursor-write-failed"
           : budgetDeferredCount > 0 && cursorWriteStatus !== "written" ? "admission-cursor-not-persisted"
-            : admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
+            : admissionRotationCycles === null || admissionRotationCycles > maxAdmissionRotationCycles
               ? "admission-rotation-exceeds-freshness" : undefined,
     quoteCallCount,
     rpcRequestCount: rpcBudget.requestsUsed,
@@ -1048,6 +1063,7 @@ async function syncDexMeasuredExecutionLane(
           attemptedFailureCount: failureSummary.scoreEligibleBlockingFailureCount,
           deferredCount: budgetDeferredCount,
           admissionRotationCycles,
+          maxAdmissionRotationCycles,
           cursorWriteStatus,
         }),
     itemCount: publication.measuredCount,
@@ -1064,8 +1080,9 @@ export async function syncDexMeasuredExecution(
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
+  scheduleKey: DexActiveMeasuredExecutionScheduleKey = "halfHourlyMeasuredExecution",
 ): Promise<CronResult> {
-  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "active");
+  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "active", scheduleKey);
 }
 
 export async function syncDexShadowMeasuredExecution(

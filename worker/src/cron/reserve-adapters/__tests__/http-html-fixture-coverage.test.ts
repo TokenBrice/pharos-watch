@@ -39,7 +39,6 @@ const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "onre-holdings-csv": "Adapter parses the published Schedule of Assets CSV (RFC-4180 quoted), not an HTML page; the compact CSV payload is covered inline in tests.",
   "blackrock-brsrv-holdings": "Adapter parses BlackRock's published RSVXX holdings CSV, not an HTML page; the complete official response is covered by the stamped blackrock-brsrv-holdings.txt capture.",
-  "usdy-holdings-report": "Parses no HTML surface: evidence is the exact Ankura PDF report bytes pinned to a manifest SHA-256, and the live feed is suspended with the reviewed manifest retained as static evidence.",
 };
 
 function fixturePrefixCandidates(key: string): string[] {

@@ -1,12 +1,6 @@
 import type { YieldVariant } from "./yield-config-registry";
 
 export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
-  // USBD -> sUSBD (BIMA savings wrapper)
-  "usbd-bima": {
-    variantSymbol: "sUSBD",
-    yieldSource: "BIMA savings (sUSBD)",
-    yieldType: "lending-vault",
-  },
   // Neutrl USD -> sNUSD (savings wrapper, $188M TVL)
   "nusd-neutrl": {
     variantSymbol: "sNUSD",

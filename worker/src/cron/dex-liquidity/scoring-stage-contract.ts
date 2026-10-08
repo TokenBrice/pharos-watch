@@ -4,7 +4,6 @@ import type {
   DirectApiFetchPhaseResult,
   DirectApiIntegrationResult,
 } from "./orchestrator-phases/direct-api";
-import type { FallbackCrawlerPhaseResult } from "./orchestrator-phases/fallback";
 import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./staging-merge";
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
@@ -41,7 +40,7 @@ export interface DexLiquidityScoringSourceState {
 }
 
 export interface DexLiquidityPoolState {
-  fallback: FallbackCrawlerPhaseResult;
+  fallback: { weakCoverageCoinsBeforeFallback: number };
   metrics: Map<string, LiquidityMetrics>;
   poolRejections: PoolProcessingRejection[];
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;

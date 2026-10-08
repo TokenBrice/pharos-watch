@@ -23,10 +23,10 @@ The script reads the public DDRR response contract, validates it with `DdrrRespo
 
 ## Guardrails
 
-- The report is advisory. It does not replay today's DDR engine over historical rows.
+- `calibrate:ddrr` is a permanent advisory operator tool (the two inventory names describe one implementation). It does not replay today's DDR engine over historical rows or authorize scoring changes.
 - **Two kinds of methodology change — do not mix their gates:**
   - **Definitional corrections** validated by full-corpus replay (for example training-label stickiness, typical-range quantiles, coin-dedup median/band, quarantine boundary semantics, currency-guard ordering) are **not** DDRR-sample-fitted retunes. They may land when a corpus-level replay proves the bias/coverage improvement and support-state flips are enumerated; the 50-row / 20-coin sample gate does **not** block them.
-  - **DDRR-outcome-fitted retunes** (threshold sweeps, weight tweaks, or any change whose justification is "it improves accuracy on the current scored DDRR sample") remain gated: do not retune Stage 2 (or Stage 1 thresholds) from sample fit until the report passes at least **50 scored duration rows and 20 unique coins**.
+  - **DDRR-outcome-fitted retunes** (threshold sweeps, weight tweaks, or any change justified by current scored-sample accuracy) require a complete non-degraded, untruncated population plus at least **50 scored duration rows and 20 unique coins**. Reports publish `populationEligible` and machine-readable reasons; degraded/truncated populations hold overall and stratum/direction advice even at 50/20. Bias remains descriptive, not fit eligibility. Held-out strata and sealed/raw input joins remain required.
 - Treat no-calls, missed locks, publication failures, and data-quality gaps as coverage or input debt before changing terminality thresholds.
 - Before treating `missed_lock_terminal` rows as live lock debt, verify whether the incident was rollout-active and whether reliable terminal evidence predates the DDRv2 public prediction contract. Those rows should classify as `terminal_before_prediction` under reviewer v3+.
 - Treat factor labels as explanatory text. Raw K5, reserve, mint-authority, wind-down, and V9 exit inputs require a D1/sealed-payload/registry join before making a methodology change.

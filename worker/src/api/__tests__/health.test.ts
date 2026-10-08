@@ -13,6 +13,7 @@ import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { evaluateStablecoinActivePriceCoverage } from "../../lib/stablecoin-publication-coverage";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
@@ -184,6 +185,15 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     { match: "SELECT status", rows: [], first: { status: "ok" } },
     { match: "status = 'ok'", rows: [], first: { started_at: statusStartedAt } },
     ...extras,
+    ...(extras.some((entry) => entry.matchBinds?.includes("ops:d1-capacity:v1")) ? [] : [{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["ops:d1-capacity:v1"],
+      rows: [],
+      first: {
+        value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+        updated_at: now,
+      },
+    }]),
   ]);
 }
 
@@ -440,6 +450,15 @@ describe("handleHealth", () => {
       completePublicationEntry(now),
       dewsPublicationEntry(now),
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["ops:d1-capacity:v1"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+          updated_at: now,
+        },
+      },
+      {
         match: "cache WHERE key IN",
         rows: [
           {
@@ -574,6 +593,32 @@ describe("handleHealth", () => {
     expect(body.warnings).toContain("d1-capacity-warning");
     expect(body.warnings.join(" ")).not.toContain("75");
   });
+
+  it.each(["missing", "malformed", "expired", "future-clock"] as const)(
+    "exposes only the sanitized unavailable capacity reason (%s)",
+    async (reason) => {
+      const now = Math.floor(Date.now() / 1000);
+      const observedAt = reason === "expired" ? now - 26 * 3600 - 1 : reason === "future-clock" ? now + 3600 : now;
+      const first = reason === "missing" ? null : {
+        value: reason === "malformed" ? "{" : JSON.stringify({
+          version: 1,
+          assessment: assessD1Capacity({ observedAt, databaseSizeBytes: 1_000_000_000 }),
+        }),
+        updated_at: now,
+      };
+      const db = makeHealthyHealthDb(now, { extras: [{
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["ops:d1-capacity:v1"],
+        rows: [],
+        first,
+      }] });
+      const body = await (await handleHealth(db)).json() as HealthResponse;
+      expect(body.status).toBe("degraded");
+      expect(body.warnings).toContain(`d1-capacity-${reason}`);
+      expect(body).not.toHaveProperty("d1Capacity");
+      expect(JSON.stringify(body)).not.toContain("databaseSizeBytes");
+    },
+  );
 
   it("warns without degrading when a complete active publication has alert-eligible missing prices", async () => {
     const now = Math.floor(Date.now() / 1000);

@@ -203,7 +203,7 @@ describe("subgraph source families", () => {
     expect(buildUniV3PoolQuery(2000)).toContain("skip: 2000");
   });
 
-  it("queries the bounded six-chain Uni V3 family and creates BSC shadow candidates", async () => {
+  it("queries the bounded six-chain Uni V3 family and preserves BSC execution-only candidates", async () => {
     const configuredChains = Object.entries(UNIV3_SUBGRAPHS);
     expect(configuredChains.map(([chain]) => chain)).toEqual([
       "ethereum",

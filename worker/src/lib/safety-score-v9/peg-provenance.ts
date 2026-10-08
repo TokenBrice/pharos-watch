@@ -678,9 +678,9 @@ function assertLegacyInclusiveMatch(
 
 /**
  * Classifies the exact PegScore coverage set without changing its score.
- * The verified-only projection omits provenance-less historical backfill but
- * retains direct live measurements. It is an upper-bound diagnostic, never a
- * replacement for the legacy-inclusive result.
+ * The legacy-backfill-excluded projection omits only provenance-less historical
+ * backfill; low-provenance and unprovenanced live events remain included. It is
+ * a diagnostic scenario, not a numerical upper bound or replacement authority.
  */
 export function buildSafetyScoreV9PegProvenanceSummary(
   input: BuildSafetyScoreV9PegProvenanceSummaryInput,

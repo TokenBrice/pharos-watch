@@ -13,12 +13,12 @@ import {
   type V9AnchorGateCard,
   type V9AnchorGateReport,
 } from "./lib/safety-score-v9-anchor-gate";
+import { validateSafetyScoreV9ReplayIntegrity } from "./lib/safety-score-v9-replay-validation";
 
 const USAGE = `Usage: npm run safety-score-v9:anchor-gate -- --replay <path> [options]
 
 Options:
   --replay <path>        V9 replay artifact JSON (required)
-  --apply-ruling <id>    Apply a pending owner ruling (e.g. D-F, D-G); repeatable
   -h, --help             Show this help`;
 
 const ReplayArtifactInputSchema = z
@@ -41,6 +41,7 @@ const ReplayArtifactInputSchema = z
 
 /** Projects a replay artifact's V9 cards joined with compiled-fact archetypes. */
 export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateCard[] {
+  validateSafetyScoreV9ReplayIntegrity(input);
   const artifact = ReplayArtifactInputSchema.parse(input);
   const candidate = SafetyScoreV9ResponseSchema.parse(artifact.pipeline.candidate);
   const archetypeById = new Map(
@@ -82,7 +83,6 @@ export async function runSafetyScoreV9AnchorGateCli(
   const { values } = parseStrictCliArgs(argv, {
     options: {
       replay: { type: "string" },
-      "apply-ruling": { type: "string", multiple: true },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
@@ -91,10 +91,7 @@ export async function runSafetyScoreV9AnchorGateCli(
   const artifact = io.readJson(values.replay);
   const cards = parseSafetyScoreV9AnchorGateCards(artifact);
   const asOfSec = parseSafetyScoreV9AnchorGateAsOfSec(artifact);
-  const applyRulings = Array.isArray(values["apply-ruling"])
-    ? (values["apply-ruling"] as string[])
-    : [];
-  const report = evaluateSafetyScoreV9AnchorGate({ cards, applyRulings, asOfSec });
+  const report = evaluateSafetyScoreV9AnchorGate({ cards, asOfSec });
   io.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.decision !== "gate-passed") {
     const failed = report.verdicts.filter((verdict) => verdict.status === "fail").length;

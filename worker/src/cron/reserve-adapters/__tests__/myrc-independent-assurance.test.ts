@@ -63,6 +63,9 @@ describe("MYRC hash-pinned examination", () => {
     expect(result.metadata?.details?.examinerRelianceCaveat).toBeTypeOf("string");
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
     expect(result.metadata).not.toHaveProperty("supplyUsd");
+    for (const field of ["nativeQuantityBasis", "totalReserveQuantity", "supplyTokens"]) {
+      expect(result.metadata).not.toHaveProperty(field);
+    }
     expect(result.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "report-rounding-difference", effect: "info" })]));
     expect(manifest).not.toHaveProperty("reportIssuedAt");
     const stale = validateAdapterOutput(result, { adapter, now: Date.parse("2026-10-07T21:01:31Z") / 1000 });

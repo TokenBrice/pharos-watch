@@ -11,7 +11,10 @@ import {
   canonicalExitRouteScopedId,
 } from "../types/exit-route-identity";
 import { buildCapacityPoint } from "./p4-exit-route-capability-policy";
-import { quoteSolidlyV2Raw } from "./solidly-v2-math";
+import { quoteSolidlyV2Raw, solidlyUsdToRawAmount } from "./solidly-v2-math";
+import { SOLIDLY_V2_DEPLOYMENTS } from "./solidly-v2-deployments";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "../types/measured-execution";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "./depeg-config";
 
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
@@ -19,7 +22,7 @@ export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
 export function validateAmmExecutionModel(
   model: DexAmmExecutionModel,
-  context: { chain: string; stablecoinId: string; retainedTvlUsd: number },
+  context: { chain: string; stablecoinId: string; retainedTvlUsd: number; nowSec?: number },
 ): string[] {
   const issues: string[] = [];
   if (
@@ -55,10 +58,20 @@ export function validateAmmExecutionModel(
   }
   if (model.source === "solidly-v2") {
     const state = model.solidlyState;
-    const chain = state?.variant === "aerodrome" ? "base" : state?.variant === "velodrome" ? "optimism" : "sonic";
-    if (!state || context.chain !== chain || model.tokens.length !== 2 ||
-      model.invariant !== (state.stable ? "solidly-stable" : "constant-product") ||
-      model.feeRate !== state.fee / (state.variant === "shadow" ? 1_000_000 : 10_000) ||
+    const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) => row.chain === context.chain && row.variant === state?.variant);
+    if (!deployment || state?.factoryAddress.toLowerCase() !== deployment.factoryAddress) issues.push("invalid-solidly-deployment");
+    if (!state?.blockTimestamp || !state.sourceGenerationId || !Number.isSafeInteger(context.nowSec) ||
+      state.blockTimestamp > context.nowSec! + 60 || context.nowSec! - state.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC ||
+      model.tokens.some((token) => !token.referencePriceSourceId || !Number.isSafeInteger(token.referencePriceObservedAt) ||
+        token.referencePriceObservedAt! <= 0 || token.referencePriceObservedAt! > context.nowSec! ||
+        token.referencePriceObservedAt! > state.blockTimestamp! + 60 ||
+        context.nowSec! - token.referencePriceObservedAt! > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
+      issues.push("invalid-solidly-freshness");
+    }
+    const chain = state?.variant === "aerodrome" ? "base" : "optimism";
+    if (!state || context.chain !== chain || model.tokens.length !== 2 || state.stable !== true ||
+      !["aerodrome", "velodrome"].includes(state.variant) ||
+      model.invariant !== "solidly-stable" || model.feeRate !== state.fee / 10_000 ||
       !Array.isArray(state.quoteChecks) || state.verifiedQuoteCount !== state.quoteChecks.length ||
       state.quoteChecks.length > 32 ||
       new Set(state.quoteChecks.filter((point) => point.tokenInIndex === model.trackedTokenIndex).map((point) => point.amountIn)).size < EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.length) {
@@ -68,6 +81,31 @@ export function validateAmmExecutionModel(
         const reserves = [BigInt(state.reserve0), BigInt(state.reserve1)];
         if (reserves.some((reserve, index) => Number(reserve) / 10 ** model.tokens[index]!.decimals !== model.tokens[index]!.balance)) {
           issues.push("invalid-solidly-proof");
+        }
+        const input = model.tokens[model.trackedTokenIndex]!;
+        for (const usd of EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd) {
+          const raw = solidlyUsdToRawAmount(usd, input.decimals, input.referencePriceUsd);
+          if (!raw || !state.quoteChecks.some((point) => point.tokenInIndex === model.trackedTokenIndex && point.amountIn === raw.toString())) {
+            issues.push("invalid-solidly-proof");
+          }
+        }
+        const expected = buildSolidlyV2CapacityChecks(model);
+        if (!expected || state.capacityChecks?.length !== expected.length || expected.some((point, index) => {
+          const captured = state.capacityChecks?.[index];
+          return !captured || captured.requestedNotionalUsd !== point.requestedNotionalUsd ||
+            captured.executableUsd !== point.executableUsd || captured.selectedAmountIn !== point.selectedAmountIn ||
+            captured.selectedAmountOut !== point.selectedAmountOut || captured.rejectedAmountIn !== point.rejectedAmountIn ||
+            captured.rejectedAmountOut !== point.rejectedAmountOut;
+        })) issues.push("invalid-solidly-capacity-proof");
+        for (const point of expected ?? []) {
+          for (const [amountIn, amountOut] of [
+            [point.selectedAmountIn, point.selectedAmountOut], [point.rejectedAmountIn, point.rejectedAmountOut],
+          ]) {
+            if (amountIn && amountIn !== "0" && !state.quoteChecks.some((quote) =>
+              quote.tokenInIndex === model.trackedTokenIndex && quote.amountIn === amountIn && quote.amountOut === amountOut)) {
+              issues.push("invalid-solidly-capacity-proof");
+            }
+          }
         }
         for (const point of state.quoteChecks) {
           if ((point.tokenInIndex !== 0 && point.tokenInIndex !== 1) || !/^[1-9][0-9]{0,77}$/.test(point.amountIn)) {
@@ -165,18 +203,6 @@ function stableswapOutputBalance(
 function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number, inputAmount: number): number {
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
-  if (model.source === "solidly-v2") {
-    const state = model.solidlyState!;
-    const scaledInput = Math.floor(inputAmount * 1_000_000);
-    if (!Number.isFinite(scaledInput) || scaledInput <= 0) return 0;
-    const rawInput = BigInt(scaledInput) * 10n ** BigInt(input.decimals) / 1_000_000n;
-    const rawOutput = quoteSolidlyV2Raw({
-      reserve0: BigInt(state.reserve0), reserve1: BigInt(state.reserve1),
-      decimals0: model.tokens[0]!.decimals, decimals1: model.tokens[1]!.decimals,
-      stable: state.stable, fee: BigInt(state.fee), variant: state.variant,
-    }, rawInput, model.trackedTokenIndex as 0 | 1);
-    return rawOutput == null ? 0 : Number(rawOutput) / 10 ** output.decimals;
-  }
   const effectiveInput = inputAmount * (1 - model.feeRate);
   if (!Number.isFinite(effectiveInput) || effectiveInput <= 0) return 0;
 
@@ -282,7 +308,88 @@ function realizedAmmExecutionCostBps(
   return Math.round(Math.min(maxCostBps, realizedCostBps) * 1_000_000) / 1_000_000;
 }
 
+/** Raw endpoints defining the published cent-floored capacity, not just the request grid. */
+export function buildSolidlyV2CapacityChecks(model: DexAmmExecutionModel) {
+  const state = model.solidlyState;
+  if (!state || state.stable !== true || model.tokens.length !== 2) return null;
+  const input = model.tokens[model.trackedTokenIndex];
+  const output = model.tokens[1 - model.trackedTokenIndex];
+  if (!input || !output || !/^[1-9][0-9]{0,77}$/.test(state.reserve0) || !/^[1-9][0-9]{0,77}$/.test(state.reserve1) ||
+    !Number.isSafeInteger(state.fee) || state.fee < 0 || state.fee >= 10_000 ||
+    [input, output].some((token) => !Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 77 ||
+      !Number.isFinite(token.referencePriceUsd * 100_000_000) || token.referencePriceUsd <= 0)) return null;
+  const inputScale = 10n ** BigInt(input.decimals);
+  const outputScale = 10n ** BigInt(output.decimals);
+  const inputPrice = BigInt(Math.round(input.referencePriceUsd * 100_000_000));
+  const outputPrice = BigInt(Math.round(output.referencePriceUsd * 100_000_000));
+  if (inputPrice <= 0n || outputPrice <= 0n) return null;
+  const quoteState = {
+    reserve0: BigInt(state.reserve0), reserve1: BigInt(state.reserve1),
+    decimals0: model.tokens[0]!.decimals, decimals1: model.tokens[1]!.decimals,
+    stable: state.stable, fee: BigInt(state.fee), variant: state.variant,
+  };
+  const quote = (raw: bigint) => raw === 0n ? 0n : quoteSolidlyV2Raw(quoteState, raw, model.trackedTokenIndex as 0 | 1);
+  const qualifies = (raw: bigint, rawOutput: bigint) =>
+    rawOutput * outputPrice * inputScale * 10_000n >=
+    raw * inputPrice * outputScale * BigInt(10_000 - EXIT_ROUTE_SCORING_TABLES.request.maxCostBps);
+  const grid = EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd;
+  const maximumRequestRaw = solidlyUsdToRawAmount(grid[grid.length - 1]!, input.decimals, input.referencePriceUsd);
+  if (maximumRequestRaw == null) return null;
+  const maximumRequestOutput = quote(maximumRequestRaw);
+  if (maximumRequestOutput == null) return null;
+  let lower = maximumRequestRaw;
+  let upper = maximumRequestRaw;
+  let rejectedAmountOut: bigint | undefined;
+  if (!qualifies(maximumRequestRaw, maximumRequestOutput)) {
+    lower = 0n;
+    // One local integer search for the whole grid. Only the emitted endpoints
+    // go to RPC, never the midpoints; adjacent raw units establish the maximum.
+    while (upper - lower > 1n) {
+      const midpoint = (lower + upper) / 2n;
+      const amountOut = quote(midpoint);
+      if (amountOut == null) return null;
+      if (qualifies(midpoint, amountOut)) lower = midpoint;
+      else upper = midpoint;
+    }
+    rejectedAmountOut = quote(upper) ?? undefined;
+    if (rejectedAmountOut == null || qualifies(upper, rejectedAmountOut)) return null;
+  }
+  const capacityUsd = Number(lower * inputPrice * 100n / (inputScale * 100_000_000n)) / 100;
+  const checks: NonNullable<NonNullable<DexAmmExecutionModel["solidlyState"]>["capacityChecks"]> = [];
+  for (const requestedNotionalUsd of grid) {
+    const requestRaw = solidlyUsdToRawAmount(requestedNotionalUsd, input.decimals, input.referencePriceUsd);
+    if (requestRaw == null) return null;
+    const full = requestRaw <= lower;
+    const executableUsd = full ? requestedNotionalUsd : capacityUsd;
+    const selectedAmountIn = executableUsd === 0 ? 0n :
+      solidlyUsdToRawAmount(executableUsd, input.decimals, input.referencePriceUsd);
+    if (selectedAmountIn == null) return null;
+    const selectedAmountOut = quote(selectedAmountIn);
+    if (selectedAmountOut == null || !qualifies(selectedAmountIn, selectedAmountOut)) return null;
+    const outputUsd = Number(selectedAmountOut) / 10 ** output.decimals * output.referencePriceUsd;
+    if (executableUsd > 0 && outputUsd + 1e-9 < executableUsd * (1 - EXIT_ROUTE_SCORING_TABLES.request.maxCostBps / 10_000)) return null;
+    checks.push({
+      requestedNotionalUsd, executableUsd,
+      selectedAmountIn: selectedAmountIn.toString(), selectedAmountOut: selectedAmountOut.toString(),
+      ...(full ? {} : { rejectedAmountIn: upper.toString(), rejectedAmountOut: rejectedAmountOut!.toString() }),
+    });
+  }
+  return checks;
+}
+
 export function buildAmmCapacityCurve(model: DexAmmExecutionModel, outputTokenIndex: number): ExitRouteCapacityPoint[] {
+  if (model.source === "solidly-v2") {
+    const checks = model.solidlyState?.capacityChecks;
+    if (!checks || outputTokenIndex !== 1 - model.trackedTokenIndex) return [];
+    const output = model.tokens[outputTokenIndex]!;
+    return checks.map((check) => {
+      const point = buildCapacityPoint(check.requestedNotionalUsd, EXIT_ROUTE_SCORING_TABLES.request.maxCostBps, check.executableUsd);
+      if (point.executableUsd === 0) return point;
+      const outputUsd = Number(BigInt(check.selectedAmountOut)) / 10 ** output.decimals * output.referencePriceUsd;
+      const cost = Math.max(0, (1 - outputUsd / point.executableUsd) * 10_000);
+      return { ...point, executionCostBps: Math.round(cost * 1_000_000) / 1_000_000 };
+    });
+  }
   return EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd.map((notional) => {
     const point = buildCapacityPoint(
       notional,

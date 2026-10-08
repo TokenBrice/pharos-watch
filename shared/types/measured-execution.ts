@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "./exit-route";
+import { canonicalExitRouteScopedId } from "./exit-route-identity";
 
 // Pure scopes let bundlers omit unused schema graphs, including nested Zod
 // constructor arguments; annotating only the outer call leaves those allocated.
@@ -322,6 +323,8 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
   curveCompositeProvenance: z.object({
     blockNumber: z.number().int().nonnegative(),
     blockHash: CanonicalBytes32Schema,
+    blockCommitment: z.literal("finalized"),
+    poolIndex: z.number().int().nonnegative(),
     factoryAddress: CanonicalEvmAddressSchema,
     factoryCodeHash: CanonicalBytes32Schema,
     registeredPoolAddress: CanonicalEvmAddressSchema,
@@ -331,7 +334,11 @@ export const DexMeasuredExecutionPublicProfileSchema = /* @__PURE__ */ (() => De
     poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
     executionTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
     rateProviderAddress: CanonicalEvmAddressSchema.optional(),
+    rateProviderCodeHash: CanonicalBytes32Schema.optional(),
+    rateProviderUnderlyingAddress: CanonicalEvmAddressSchema.optional(),
     basePoolAddress: CanonicalEvmAddressSchema.optional(),
+    basePoolCodeHash: CanonicalBytes32Schema.optional(),
+    basePoolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8).optional(),
   }).optional(),
   uniswapV4PoolProvenance: z.object({
     blockNumber: z.number().int().nonnegative(),
@@ -405,6 +412,8 @@ export function toDexMeasuredExecutionPublicProfile(
           curveCompositeProvenance: {
             blockNumber: curveCompositeProof.blockNumber,
             blockHash: curveCompositeProof.blockHash,
+            blockCommitment: curveCompositeProof.blockCommitment,
+            poolIndex: curveCompositeProof.poolIndex,
             factoryAddress: curveCompositeProof.factoryAddress,
             factoryCodeHash: curveCompositeProof.factoryCodeHash,
             registeredPoolAddress: curveCompositeProof.registeredPoolAddress,
@@ -414,10 +423,18 @@ export function toDexMeasuredExecutionPublicProfile(
             poolTokenAddresses: curveCompositeProof.poolTokenAddresses,
             executionTokenAddresses: curveCompositeProof.executionTokenAddresses,
             ...(curveCompositeProof.rateProvider
-              ? { rateProviderAddress: curveCompositeProof.rateProvider.providerAddress }
+              ? {
+                  rateProviderAddress: curveCompositeProof.rateProvider.providerAddress,
+                  rateProviderCodeHash: curveCompositeProof.rateProvider.providerCodeHash,
+                  rateProviderUnderlyingAddress: curveCompositeProof.rateProvider.underlyingAddress,
+                }
               : {}),
             ...(curveCompositeProof.metapool
-              ? { basePoolAddress: curveCompositeProof.metapool.basePoolAddress }
+              ? {
+                  basePoolAddress: curveCompositeProof.metapool.basePoolAddress,
+                  basePoolCodeHash: curveCompositeProof.metapool.basePoolCodeHash,
+                  basePoolTokenAddresses: curveCompositeProof.metapool.basePoolTokenAddresses,
+                }
               : {}),
           },
         }
@@ -479,19 +496,19 @@ export function buildDexMeasuredExecutionTargetId(input: {
 }): string {
   return [
     DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    input.adapterProfileId,
-    input.stablecoinId,
-    input.chain,
-    input.protocol,
-    input.poolId,
-    input.tokenInAddress,
-    input.tokenOutAddress,
-    ...(input.poolTokenAddresses ?? []),
+    canonicalPart(input.adapterProfileId),
+    canonicalPart(input.stablecoinId),
+    canonicalPart(input.chain),
+    canonicalPart(input.protocol),
+    canonicalExitRouteScopedId(input.chain, input.poolId),
+    canonicalExitRouteScopedId(input.chain, input.tokenInAddress),
+    canonicalExitRouteScopedId(input.chain, input.tokenOutAddress),
+    ...(input.poolTokenAddresses ?? []).map((address) => canonicalExitRouteScopedId(input.chain, address)),
     input.feePips ?? "na",
     ...(input.tickSpacing != null ? [input.tickSpacing] : []),
-    ...(input.hookAddress != null ? [input.hookAddress] : []),
+    ...(input.hookAddress != null ? [canonicalExitRouteScopedId(input.chain, input.hookAddress)] : []),
   ]
-    .map((part) => canonicalPart(String(part)))
+    .map((part) => String(part).trim())
     .join("|");
 }
 

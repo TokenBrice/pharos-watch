@@ -268,8 +268,8 @@ describe("run-gitleaks", () => {
     });
     runGitleaksConfigSelfTest("/fake/gitleaks", { runBinary });
     expect(runBinary).toHaveBeenCalledTimes(3);
-    expect(fixtureCounts).toEqual([52, 51, 52]);
-    expect(reports.map((report) => report.length)).toEqual([0, 51, 52]);
+    expect(fixtureCounts).toEqual([44, 43, 44]);
+    expect(reports.map((report) => report.length)).toEqual([0, 43, 44]);
     expect(reports[1].every((finding) => finding.RuleID === "aws-access-token")).toBe(true);
     expect(reports[2].every((finding) => finding.RuleID === "generic-api-key")).toBe(true);
     for (const path of [
@@ -278,6 +278,12 @@ describe("run-gitleaks", () => {
     ]) {
       expect(reports[1]).toContainEqual({ File: path, StartLine: 1, RuleID: "aws-access-token" });
       expect(reports[2]).toContainEqual({ File: path, StartLine: 1, RuleID: "generic-api-key" });
+    }
+    expect(reports.flat().some((finding) => finding.File.endsWith("meteora-dlmm-pinned.json"))).toBe(false);
+    for (const fixture of ["raydium-wave4-simulation", "solana-clmm-wave4-pinned"]) {
+      const File = `worker/src/cron/dex-liquidity/__tests__/fixtures/${fixture}.json`;
+      expect(reports[1]).toContainEqual({ File, StartLine: 1, RuleID: "aws-access-token" });
+      expect(reports[2]).toContainEqual({ File, StartLine: 1, RuleID: "generic-api-key" });
     }
   });
 

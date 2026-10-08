@@ -57,6 +57,23 @@ describe("scheduled runner contract", () => {
     expect(getScheduledWorkerRoleForExpression("1,6,11,16,21,26,31,36,41,46,51,56 * * * *")).toBe("public");
     expect(() => getScheduledWorkerRoleForExpression("unknown")).toThrow("Unknown");
   });
+
+  it("shares the measured job lease and three-connection budget across active opportunities", () => {
+    for (const scheduleKey of ["halfHourlyMeasuredExecution", "halfHourlyMeasuredExecutionSupplemental"] as const) {
+      expect(SCHEDULED_SLOT_PLANS[scheduleKey].worker).toBe("public");
+      expect(SCHEDULED_SLOT_PLANS[scheduleKey].jobChains).toEqual([["sync-cl-exit-depth"]]);
+      expect(CRON_CONNECTION_BUDGET_ENTRIES.find(
+        (entry) => entry.job === "sync-cl-exit-depth" && entry.scheduleKey === scheduleKey,
+      )).toMatchObject({ maxConnections: 3 });
+    }
+    expect(getScheduledWorkerRoleForExpression("20 * * * *")).toBe("public");
+    expect(getScheduledWorkerRoleForExpression("50 * * * *")).toBe("public");
+    expect(SHARED_SCHEDULED_JOB_IDENTITIES["sync-cl-exit-depth"]).toEqual([
+      "halfHourlyMeasuredExecution", "halfHourlyMeasuredExecutionSupplemental", "daily0810Utc",
+    ]);
+    expect(SCHEDULED_SLOT_PLANS.daily0810Utc.jobChains).toContainEqual(["sync-cl-exit-depth"]);
+    expect(CRON_TIMEOUT_MS["sync-cl-exit-depth"]).toBe(9 * 60_000);
+  });
   it("keeps scheduled plans, slot runners, and cron definitions in sync", () => {
     const planKeys = Object.keys(SCHEDULED_SLOT_PLANS) as CronScheduleKey[];
     const runnerKeys = Object.keys(SLOT_RUNNER_LOADER_BY_KEY) as CronScheduleKey[];

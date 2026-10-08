@@ -98,6 +98,7 @@ describe("stress-signal current-row helpers", () => {
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
+      sourceStatus: "invalid",
       reason: "published generation coverage mismatch: rows=1/2",
     });
   });
@@ -570,6 +571,7 @@ describe("stress-signal current-row helpers", () => {
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
+      sourceStatus: "missing",
       reason: `published generation ${completedAt} has no rows`,
     });
   });
@@ -681,6 +683,7 @@ describe("stress-signal current-row helpers", () => {
 
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toEqual({
       status: "unavailable",
+      sourceStatus: "read-failed",
       reason: "generation-read-failed:D1 exhausted",
     });
   });

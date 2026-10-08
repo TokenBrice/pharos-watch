@@ -28,6 +28,9 @@ export const OPS_STATIC_ROUTES = [
   defineLazyStaticRoute("trigger-yield-coverage-audit", () =>
     import("../handlers/scheduled/yield-coverage-audit-manual").then(({ handleTriggerYieldCoverageAudit }) => handleTriggerYieldCoverageAudit),
   ),
+  defineLazyStaticRoute("bootstrap-jltxx-reserves", () =>
+    import("../handlers/scheduled/jltxx-reserve-bootstrap-manual").then(({ handleBootstrapJltxxReserves }) => handleBootstrapJltxxReserves),
+  ),
   defineLazyStaticRoute("admin-action-log", () =>
     import("../api/admin-action-log").then(({ handleAdminActionLog }) => handleAdminActionLog),
   ),

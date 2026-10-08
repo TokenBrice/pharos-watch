@@ -11,6 +11,7 @@ import {
   LIVE_RESERVE_FRESHNESS_MODE_VALUES,
   LIVE_RESERVE_SOURCE_MODEL_VALUES,
   RESERVE_DISPLAY_BADGE_KIND_VALUES,
+  NativeReserveQuantityBasisSchema,
 } from "./live-reserve-core";
 import { ReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
@@ -320,6 +321,8 @@ const LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES = [
   "included-supply-read-failed",
   "reserve-supply-time-skew",
   "not-comparable",
+  "zero-liability-denominator",
+  "reserve-supply-temporal-policy-unreviewed",
 ] as const;
 export type LiabilityRatioUnavailableReason = (typeof LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES)[number];
 
@@ -365,6 +368,7 @@ export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
     supplyTokens: z.number().finite().optional(),
     circulatingSupplyTokens: z.number().finite().optional(),
     totalReserveQuantity: z.number().finite().optional(),
+    nativeQuantityBasis: NativeReserveQuantityBasisSchema.optional(),
     totalAssetsUsd: z.number().finite().optional(),
     totalLiabilitiesUsd: z.number().finite().optional(),
     shareholderEquityUsd: z.number().finite().optional(),

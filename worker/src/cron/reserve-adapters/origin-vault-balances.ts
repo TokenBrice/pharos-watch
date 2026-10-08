@@ -1,8 +1,6 @@
-import { z } from "zod";
-import { ReserveBoundedFactSchema, OriginCollateralLiquidityObservationSchema } from "@shared/types/reserve-bounded-facts";
+import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { fetchJsonWithRetry } from "./request";
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -192,25 +190,4 @@ export async function fetchOriginVaultBalancesReserves(
       }),
     },
   };
-}
-
-/** Cross-chain API figures remain diagnostic until their denominator is reconciled to the vault pin. */
-export async function fetchOriginOusdCollateralLiquidityObservation(signal: AbortSignal, ctx?: AdapterContext) {
-  const sourceUrl = "https://api.originprotocol.com/api/v2/1:OUSD/collaterals";
-  const timestampUrl = "https://api.originprotocol.com/cache/last-updated?key=collaterals-1%3AOUSD";
-  const timestampSchema = z.object({ key: z.literal("collaterals-1:OUSD"), lastUpdated: z.string().datetime() });
-  const before = timestampSchema.parse(await fetchJsonWithRetry<unknown>(timestampUrl, signal, 12000, ctx));
-  const payload = await fetchJsonWithRetry<unknown>(sourceUrl, signal, 12000, ctx);
-  // A second uncached timestamp prevents joining amounts across a cache refresh.
-  const after = timestampSchema.parse(await fetchJsonWithRetry<unknown>(timestampUrl, signal, 12000, ctx ? { ...ctx, requestCache: new Map() } : undefined));
-  if (before.lastUpdated !== after.lastUpdated) throw new Error("Origin collateral snapshot changed during read");
-  const entries = z.array(z.object({ id: z.string().min(1), amount: z.number().finite().nonnegative(), liquidAmount: z.number().finite().nonnegative() }).passthrough()).min(1).parse(payload);
-  const asOfSec = Math.floor(Date.parse(before.lastUpdated) / 1000);
-  if (asOfSec > Math.floor(Date.now() / 1000)) throw new Error("Origin collateral timestamp is future");
-  return OriginCollateralLiquidityObservationSchema.parse({
-    asOfSec, sourceUrls: [sourceUrl, timestampUrl],
-    contentDigest: domainDigest("origin-ousd-api-liquidity.v1", { payload, timestamp: before }),
-    admission: "diagnostic-unreconciled",
-    positions: entries.map((entry) => ({ positionId: entry.id, totalHeld: entry.amount, currentlyWithdrawable: entry.liquidAmount })),
-  });
 }

@@ -184,6 +184,8 @@ export interface DdrrCalibrationReport {
       minRowsForRetune: number;
       minCoinsForRetune: number;
     };
+    populationEligible: boolean;
+    populationIneligibilityReasons: Array<"degraded-snapshot" | "truncated-population">;
     overall: DdrrDurationCalibrationSegment;
     byStratum: DdrrDurationCalibrationSegment[];
     byDirection: DdrrDurationCalibrationSegment[];
@@ -584,6 +586,11 @@ export function buildDdrrCalibrationReport(
   const factorAttribution = buildFactorAttribution(predictions);
   const durationRows = predictions.filter(isDurationScored);
   const durationCalibration = {
+    populationEligible: !response._meta.degraded && !response._meta.publicRowsTruncated,
+    populationIneligibilityReasons: [
+      ...(response._meta.degraded ? ["degraded-snapshot" as const] : []),
+      ...(response._meta.publicRowsTruncated ? ["truncated-population" as const] : []),
+    ],
     gates: {
       minRowsForRetune: DURATION_RETUNE_MIN_ROWS,
       minCoinsForRetune: DURATION_RETUNE_MIN_COINS,
@@ -595,6 +602,11 @@ export function buildDdrrCalibrationReport(
     ),
     byDirection: groupDurationRows(durationRows, (row) => row.direction),
   };
+  if (!durationCalibration.populationEligible) {
+    for (const segment of [durationCalibration.overall, ...durationCalibration.byStratum, ...durationCalibration.byDirection]) {
+      segment.recommendation = "hold";
+    }
+  }
   const horizonCalibration = summarizeDdrrMetrics(rows).horizonCalibration;
 
   const noCallCalibration = buildNoCallCalibration(noCalls, predictions);
@@ -646,7 +658,7 @@ export function buildDdrrCalibrationReport(
       : {
           topic: "Stage 2 duration calibration",
           severity: "hold",
-          finding: `Duration sample has ${durationCalibration.overall.rowCount} rows and ${durationCalibration.overall.coinCount} coins; gate is ${DURATION_RETUNE_MIN_ROWS}/${DURATION_RETUNE_MIN_COINS}.`,
+          finding: `Duration sample has ${durationCalibration.overall.rowCount} rows and ${durationCalibration.overall.coinCount} coins; gate is ${DURATION_RETUNE_MIN_ROWS}/${DURATION_RETUNE_MIN_COINS}. Population ${durationCalibration.populationEligible ? "complete" : `unqualified: ${durationCalibration.populationIneligibilityReasons.join(", ")}`}.`,
           nextAction: "Keep duration-landmark-v1 unchanged; use this report to monitor repeated-coin-adjusted bias.",
         };
 
@@ -830,6 +842,7 @@ export function renderDdrrCalibrationReportMarkdown(report: DdrrCalibrationRepor
     `- Verdict scored: ${report.snapshot.verdictScoredCount}`,
     `- Duration scored: ${report.snapshot.durationScoredCount}`,
     `- Public rows truncated: ${report.snapshot.publicRowsTruncated ? "yes" : "no"}`,
+    `- Outcome-fit population eligible: ${report.durationCalibration.populationEligible ? "yes" : `no (${report.durationCalibration.populationIneligibilityReasons.join(", ")})`}`,
     "",
     "## Recommendations",
     "",

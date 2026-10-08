@@ -286,7 +286,7 @@ describe("Telegram digest outbox", () => {
   it("persists the rollout-gated recap CTA inside the immutable text payload", async () => {
     const { sqlite, db } = fixtures.open();
     const enqueued = await enqueueDaily(db, {
-      recapRollout: { mode: "public", allowedChatIds: new Set() },
+      recapRollout: { mode: "public" },
     });
     expect(enqueued.chunks.join("\n")).toContain("private /recap");
 

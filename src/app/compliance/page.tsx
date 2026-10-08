@@ -21,7 +21,7 @@ const COMPLIANCE_FAQ_ITEMS = [
   {
     question: "Why are GENIUS rows separated from the main table?",
     answer:
-      "The GENIUS Act is enacted, but the general regime is not yet effective. Pharos keeps GENIUS rows in an implementation-watch section until the Act is effective or official regulator approvals can be displayed without implying current compliance.",
+      "Pharos keeps GENIUS rows in Implementation Watch until an explicitly reviewed release marks the regime effective. Active assets then become eligible for the main table; pre-launch assets remain in Watch until normal catalog activation. Issuer-specific approval evidence does not bypass the regime phase or change an asset's lifecycle.",
   },
   {
     question: "What is the difference between an EMT and an ART?",

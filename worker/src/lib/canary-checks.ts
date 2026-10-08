@@ -1,7 +1,7 @@
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { CANARY_INCIDENT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
+import type { CanaryStatus, CanaryExecutionStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
@@ -33,6 +33,8 @@ export interface CanaryCheckResult {
   description: string;
   status: CanaryRunStatus;
   severity: CanaryRunSeverity;
+  executionStatus: CanaryExecutionStatus;
+  executionFailureReason: string | null;
   observedAt: number;
   durationMs: number;
   metadata?: Record<string, unknown>;
@@ -53,6 +55,8 @@ export interface CanaryRunSummary {
   degradedCount: number;
   errorCount: number;
   skippedCount: number;
+  completedCount: number;
+  failedCount: number;
   worstStatus: CanaryRunStatus;
   worstSeverity: CanaryRunSeverity;
   results: CanaryCheckResult[];
@@ -132,8 +136,6 @@ const MAX_CANARY_ERROR_CHARS = 800;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
 const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
-const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
-const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 const USD_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 
@@ -161,23 +163,27 @@ function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
 }
 
 function okResult(metadata?: Record<string, unknown>) {
-  return { status: "ok" as const, severity: "info" as const, metadata };
+  return { status: "ok" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, metadata };
 }
 
 function degradedResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "degraded" as const, severity: "warning" as const, error, metadata };
+  return { status: "degraded" as const, severity: "warning" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
 }
 
 function errorResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "error" as const, severity: "error" as const, error, metadata };
+  return { status: "error" as const, severity: "error" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
 }
 
 function skippedResult(reason: string, metadata?: Record<string, unknown>) {
-  return { status: "skipped" as const, severity: "info" as const, error: reason, metadata };
+  return { status: "skipped" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, error: reason, metadata };
+}
+
+function failedResult(reason: string, metadata?: Record<string, unknown>) {
+  return { ...errorResult(reason, metadata), executionStatus: "failed" as const, executionFailureReason: reason };
 }
 
 function unavailableResult(error: unknown) {
-  return errorResult("canary source unavailable", { error: boundedText(toErrorMessage(error)) });
+  return failedResult("canary-source-unavailable", { error: boundedText(toErrorMessage(error)) });
 }
 
 function isFiniteScore(value: unknown): value is number {
@@ -205,7 +211,7 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
   const cache = await loadStablecoinsCache(db, { mode: "lenient" });
   const expectedActiveCount = WORKER_ACTIVE_IDS.size;
   if (!hasUsableStablecoinsPayload(cache)) {
-    return errorResult(`stablecoins cache ${cache.reason}`, {
+    return failedResult(`stablecoins-cache-${cache.reason}`, {
       expectedActiveCount,
       updatedAt: cache.updatedAt,
       reason: cache.reason,
@@ -247,13 +253,14 @@ async function loadDexCurrentSummary(db: D1Database): Promise<DexCurrentSummaryR
               ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
               LIMIT 1
            ), 0) AS row_count,
-           COALESCE(SUM(CASE WHEN state = 'staged' THEN written_row_count ELSE 0 END), 0) AS unpublished_rows,
+           (SELECT COUNT(*) FROM dex_liquidity
+             WHERE publication_state IS NULL OR publication_state != 'published') AS unpublished_rows,
            SUM(CASE WHEN state = 'published' THEN 1 ELSE 0 END) AS generation_count,
            MAX(CASE WHEN state = 'published' THEN COALESCE(published_at, started_at) END) AS latest_updated_at
          FROM dex_liquidity_publication_generations`,
       )
       .first<DexCurrentSummaryRow>(),
-  )) ?? { row_count: 0, unpublished_rows: 0, generation_count: 0, latest_updated_at: null };
+  )) ?? Promise.reject(new Error("canary-dex-current-summary-missing"));
 }
 
 async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPublishedGenerationRow | null> {
@@ -282,19 +289,24 @@ async function loadDexLatestGenerationCurrentSummary(
   db: D1Database,
   generationId: string,
 ): Promise<DexLatestGenerationSummaryRow> {
-  return (await runWithOverloadRetry(() =>
+  const row = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT /* canary-dex-latest-generation-summary */
            COUNT(*) AS live_generation_rows,
-           SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END) AS global_rows
+           COALESCE(SUM(CASE WHEN stablecoin_id = '__global__' THEN 1 ELSE 0 END), 0) AS global_rows
          FROM dex_liquidity
          WHERE publication_generation_id = ?
            AND publication_state = 'published'`,
       )
       .bind(generationId)
       .first<DexLatestGenerationSummaryRow>(),
-  )) ?? { live_generation_rows: 0, global_rows: 0 };
+  );
+  if (!row || !Number.isInteger(row.live_generation_rows) || !Number.isInteger(row.global_rows)
+    || Number(row.live_generation_rows) < 0 || Number(row.global_rows) < 0) {
+    throw new Error("canary-dex-generation-summary-unavailable");
+  }
+  return row;
 }
 
 function loadDexLatestGenerationCurrentSummaryOnce(
@@ -312,9 +324,13 @@ async function checkDexCurrentPublication(
 ) {
   try {
     const summary = await loadDexCurrentSummary(db);
-    const rowCount = Number(summary.row_count ?? 0);
-    const unpublishedRows = Number(summary.unpublished_rows ?? 0);
     const latestPublished = await loadLatestPublishedDexGenerationOnce(db, context);
+    if (!Number.isInteger(summary.unpublished_rows) || Number(summary.unpublished_rows) < 0
+      || (latestPublished != null && (!Number.isInteger(latestPublished.current_row_count) || Number(latestPublished.current_row_count) < 0))) {
+      return failedResult("canary-dex-publication-contract-unusable");
+    }
+    const rowCount = Number(latestPublished?.current_row_count ?? 0);
+    const unpublishedRows = Number(summary.unpublished_rows);
     const metadata = {
       rowCount,
       unpublishedRows,
@@ -327,14 +343,14 @@ async function checkDexCurrentPublication(
       latestGenerationPublishedRows: null as number | null,
     };
 
-    if (rowCount === 0) {
-      return skippedResult("dex_liquidity has no current rows", metadata);
-    }
     if (unpublishedRows > 0) {
       return errorResult(`${unpublishedRows} current DEX liquidity rows are not published`, metadata);
     }
     if (!latestPublished) {
       return degradedResult("DEX published generation is unavailable", metadata);
+    }
+    if (rowCount === 0) {
+      return skippedResult("dex_liquidity has no current rows", metadata);
     }
     const publishedGeneration = latestPublished;
     const latestGenerationSummary = await loadDexLatestGenerationCurrentSummaryOnce(
@@ -349,6 +365,10 @@ async function checkDexCurrentPublication(
       publishedGeneration.current_row_count != null &&
       latestGenerationPublishedRows !== publishedGeneration.current_row_count
     ) {
+      const currentPublished = await loadLatestPublishedDexGeneration(db);
+      if (currentPublished?.generation_id !== publishedGeneration.generation_id) {
+        return failedResult("dex-generation-changed-during-read", metadata);
+      }
       return errorResult(
         `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${publishedGeneration.current_row_count}`,
         metadata,
@@ -380,6 +400,12 @@ async function checkDexGlobalRow(
     const globalRows = Number(summary.global_rows ?? 0);
     metadata.currentRows = currentRows;
     metadata.globalRows = globalRows;
+    if (currentRows === 0 || globalRows !== 1) {
+      const currentPublished = await loadLatestPublishedDexGeneration(db);
+      if (currentPublished?.generation_id !== row.generation_id) {
+        return failedResult("dex-generation-changed-during-read", metadata);
+      }
+    }
     if (currentRows === 0) {
       return degradedResult("dex_liquidity has no published current rows", metadata);
     }
@@ -407,9 +433,13 @@ async function checkBlacklistNullIdentity(db: D1Database) {
                WHERE config_key IS NULL AND contract_address IS NULL) AS balance_rows`,
         )
         .first<BlacklistNullIdentitySummaryRow>(),
-    )) ?? { event_rows: 0, balance_rows: 0 };
-    const eventRows = Number(row.event_rows ?? 0);
-    const balanceRows = Number(row.balance_rows ?? 0);
+    ));
+    if (!row || !Number.isInteger(row.event_rows) || !Number.isInteger(row.balance_rows)
+      || Number(row.event_rows) < 0 || Number(row.balance_rows) < 0) {
+      return failedResult("blacklist-identity-aggregate-unavailable");
+    }
+    const eventRows = Number(row.event_rows);
+    const balanceRows = Number(row.balance_rows);
     const metadata = {
       eventRows,
       balanceRows,
@@ -467,7 +497,8 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   try {
     const published = await loadPublishedStressSignalGeneration(db, observedAt);
     if (published.status !== "ok") {
-      return degradedResult(`DEWS published generation unavailable: ${published.reason}`, {
+      const result = published.sourceStatus === "read-failed" || published.sourceStatus === "invalid" ? failedResult : degradedResult;
+      return result(`DEWS published generation unavailable: ${published.reason}`, {
         sourceTable: "stress_signals",
         publicationStatus: "unavailable",
         publicationReason: published.reason,
@@ -481,6 +512,7 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
     const metadata = {
       sourceTable: "stress_signals",
       rowCount,
+      generationComputedAt: published.computedAt,
       latestComputedAt,
       ageSec,
       maxAgeSec: DEWS_MAX_AGE_SEC,
@@ -502,10 +534,10 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   }
 }
 
-export async function checkReportCardCacheMethodology(db: D1Database) {
+export async function checkSafetyScoreV9Publication(db: D1Database) {
   const active = await loadActiveSafetyScoreSource(db);
   if (active.kind === "error") {
-    return errorResult(`active Safety Score source ${active.reason}`, {
+    return failedResult(`active Safety Score source ${active.reason}`, {
       reason: active.reason,
       maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     });
@@ -554,7 +586,7 @@ async function checkBenchmarkCurrent(
   try {
     const ratesCache = await getCache(db, "risk_free_rates");
     if (!ratesCache) {
-      return degradedResult("risk-free benchmark registry cache is missing", {
+      return failedResult("benchmark-registry-missing", {
         currency: options.currency,
         requiredFreshPublications: 2,
       });
@@ -564,9 +596,9 @@ async function checkBenchmarkCurrent(
     const streakCache = await getCache(db, options.streakCacheKey);
     const streak = parseObjectMetadata(streakCache?.value ?? null);
     const consecutiveFreshRuns = typeof streak?.consecutiveFreshRuns === "number"
-      && Number.isFinite(streak.consecutiveFreshRuns)
-      ? Math.max(0, Math.floor(streak.consecutiveFreshRuns))
-      : 0;
+      && Number.isSafeInteger(streak.consecutiveFreshRuns) && streak.consecutiveFreshRuns >= 0
+      ? streak.consecutiveFreshRuns
+      : null;
     const fetchedAgeSec = benchmark?.fetchedAt != null
       ? Math.max(0, observedAt - benchmark.fetchedAt)
       : null;
@@ -590,8 +622,9 @@ async function checkBenchmarkCurrent(
       consecutiveFreshRuns,
       requiredFreshPublications: 2,
     };
+    if (!registry || !benchmark) return failedResult("benchmark-registry-unusable", metadata);
+    if (consecutiveFreshRuns == null) return failedResult("benchmark-fresh-streak-unavailable", metadata);
     const problems: string[] = [];
-    if (!benchmark) problems.push(`${options.currency} benchmark is missing`);
     if (benchmark?.isFallback) {
       problems.push(`${options.currency} benchmark is fallback (${benchmark.fallbackMode ?? "unknown"})`);
     }
@@ -626,8 +659,8 @@ function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
   return checkBenchmarkCurrent(db, observedAt, {
     currency: "GBP",
     streakCacheKey: GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY,
-    maxFetchAgeSec: GBP_BENCHMARK_MAX_FETCH_AGE_SEC,
-    maxRecordAgeSec: GBP_BENCHMARK_MAX_RECORD_AGE_SEC,
+    maxFetchAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
+    maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP,
     requireRecordDate: true,
   });
 }
@@ -652,7 +685,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "dex-liquidity-global-row",
     label: "DEX liquidity global row",
-    description: "The published DEX current table has exactly one __global__ aggregate row when data exists.",
+    description: "The latest published DEX generation is nonempty and has exactly one actual __global__ aggregate row.",
     run: checkDexGlobalRow,
   },
   {
@@ -683,7 +716,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     checkId: "safety-score-v9-publication",
     label: "Safety Score V9 publication",
     description: "The expected active Safety Score source is fresh and matches its identity-bound publication contract.",
-    run: checkReportCardCacheMethodology,
+    run: checkSafetyScoreV9Publication,
   },
   {
     checkId: "yield-gbp-benchmark-current",
@@ -729,6 +762,8 @@ async function runOneCanaryCheck(
       description: definition.description,
       status: "error",
       severity: "error",
+      executionStatus: "failed",
+      executionFailureReason: "canary-check-exception",
       observedAt,
       durationMs: Math.max(0, Date.now() - startedAt),
       error: boundedText(toErrorMessage(error)),
@@ -753,6 +788,8 @@ export async function runCanaryChecks(
     observedAt,
     totalChecks: results.length,
     ...counts,
+    completedCount: results.filter((result) => result.executionStatus === "completed").length,
+    failedCount: results.filter((result) => result.executionStatus === "failed").length,
     worstStatus: worstOf(results.map((result) => result.status), CANARY_STATUS_ORDER, "ok"),
     worstSeverity: worstOf(results.map((result) => result.severity), CANARY_SEVERITY_ORDER, "info"),
     results,
@@ -786,12 +823,16 @@ async function persistCanaryRun(
   result: CanaryCheckResult,
   options: { mode?: WorkerCanaryMode } = {},
 ): Promise<void> {
-  const metadataJson = boundedJson({
+  // Keep execution identity outside the bounded finding detail: truncation must
+  // never turn a newly completed/failed measurement into legacy unknown evidence.
+  const metadataJson = JSON.stringify({
+    ...parseObjectMetadata(boundedJson(result.metadata, MAX_CANARY_METADATA_JSON_CHARS - 500)),
     label: result.label,
     description: result.description,
     mode: options.mode ?? "shadow",
-    ...(result.metadata ?? {}),
-  }, MAX_CANARY_METADATA_JSON_CHARS);
+    executionStatus: result.executionStatus,
+    executionFailureReason: result.executionFailureReason,
+  });
   await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -849,6 +890,9 @@ function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][str
     description,
     status: row.status,
     severity: row.severity,
+    executionStatus: metadata?.executionStatus === "completed" || metadata?.executionStatus === "failed"
+      ? metadata.executionStatus : null,
+    executionFailureReason: typeof metadata?.executionFailureReason === "string" ? metadata.executionFailureReason : null,
     observedAt: row.observed_at,
     durationMs: row.duration_ms,
     ...(publicMetadata && Object.keys(publicMetadata).length > 0 ? { metadata: publicMetadata } : {}),
@@ -871,6 +915,9 @@ function emptyCanaryStatus(now: number): CanaryStatus {
     errorCount: 0,
     skippedCount: 0,
     staleCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+    unknownExecutionCount: 0,
     checks: {},
   };
 }
@@ -913,7 +960,10 @@ export async function loadCanaryStatus(
     null,
   );
   const values = Object.values(checks);
-  const staleCount = values.filter((check) => now - check.observedAt > CANARY_STATUS_MAX_AGE_SEC).length;
+  const staleCount = values.filter((check) => !isFreshAt(check.observedAt, now, CANARY_STATUS_MAX_AGE_SEC)).length;
+  const completedCount = values.filter((check) => check.executionStatus === "completed").length;
+  const failedCount = values.filter((check) => check.executionStatus === "failed").length;
+  const unknownExecutionCount = values.length - completedCount - failedCount;
   const counts = summarizeCanaryResults(values);
   const presentCheckIds = Object.keys(checks);
   const missingCheckIds = ACTIVE_CANARY_CHECK_IDS.filter((checkId) => !(checkId in checks));
@@ -922,7 +972,8 @@ export async function loadCanaryStatus(
     status = "unknown";
   } else if (staleCount > 0) {
     status = "stale";
-  } else if (missingCheckIds.length > 0 || counts.errorCount > 0 || counts.degradedCount > 0 || counts.skippedCount > 0) {
+  } else if (missingCheckIds.length > 0 || failedCount > 0 || unknownExecutionCount > 0
+    || counts.errorCount > 0 || counts.degradedCount > 0 || counts.skippedCount > 0) {
     status = "degraded";
   } else {
     status = "healthy";
@@ -938,6 +989,9 @@ export async function loadCanaryStatus(
     missingCheckIds,
     ...counts,
     staleCount,
+    completedCount,
+    failedCount,
+    unknownExecutionCount,
     checks,
   };
 }

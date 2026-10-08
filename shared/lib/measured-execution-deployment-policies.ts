@@ -64,10 +64,13 @@ export const UNISWAP_V4_DEPLOYMENT = {
   quoterCodeHash: "0x06de58fa119c5deaa7a667fb92d3894e25d9160e62fb82c8d86d43b47eefe441",
 } as const;
 
-/** Official v4 deployments, verified by bytecode and quoter.poolManager() on 2026-09-21. */
-export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
+/** Reviewed hook-free identities. Lifecycle changes require the independent admission packet. */
+export const UNISWAP_V4_REVIEWED_DEPLOYMENTS = [
+  { ...UNISWAP_V4_DEPLOYMENT, mode: "active", scoreEligible: true },
   {
     ...UNISWAP_V4_DEPLOYMENT,
+    mode: "shadow",
+    scoreEligible: false,
     chain: "bsc",
     poolManagerAddress: "0x28e2ea090877bf75740558f6bfb36a5ffee9e9df",
     poolManagerCodeHash: "0x48752321ee7abf0d2a17c30679df9a1ddd14dc75d28b26e2509b76396145a005",
@@ -78,6 +81,8 @@ export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
   },
   {
     ...UNISWAP_V4_DEPLOYMENT,
+    mode: "shadow",
+    scoreEligible: false,
     chain: "base",
     poolManagerAddress: "0x498581ff718922c3f8e6a244956af099b2652b2b",
     poolManagerCodeHash: "0x83b2af6e9f3158defc2811cbcb0db71ecf8b2ba2abea39c39e370ac5c6f43eb6",
@@ -88,6 +93,8 @@ export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
   },
   {
     ...UNISWAP_V4_DEPLOYMENT,
+    mode: "shadow",
+    scoreEligible: false,
     chain: "arbitrum",
     poolManagerAddress: "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
     poolManagerCodeHash: "0xe4b2759e456c9c4ef763e3b4e257c5105e1ba283d7de8b131dd321197de794a4",
@@ -98,6 +105,8 @@ export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
   },
   {
     ...UNISWAP_V4_DEPLOYMENT,
+    mode: "shadow",
+    scoreEligible: false,
     chain: "polygon",
     poolManagerAddress: "0x67366782805870060151383f4bbff9dab53e5cd6",
     poolManagerCodeHash: "0xcfd0bc71e4f75b0c3e078e53baad950360d3e9f62b55c48b556f9de967aa80f7",
@@ -106,20 +115,12 @@ export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
     quoterAddress: "0xb3d5c3dfc3a7aebff71895a7191796bffc2c81b9",
     quoterCodeHash: "0x57943bde684fc70aff2a90a730bea2d5cd19031ac2abf488ae9ff827f55000e1",
   },
-  // Official addresses, runtime hashes and both PoolManager bindings verified
-  // 2026-10-05 at Unichain 60,439,586 and Tempo 42,695,467. Shadow only.
+  // Tempo runtime hashes and both PoolManager bindings verified on
+  // 2026-10-05 at block 42,695,467. Collection remains shadow only.
   {
     ...UNISWAP_V4_DEPLOYMENT,
-    chain: "unichain",
-    poolManagerAddress: "0x1f98400000000000000000000000000000000004",
-    poolManagerCodeHash: "0x0092eba5db5c7b4a3adbeb5708998d71bd09ad0ab2c299e66ea3f39075e1d249",
-    stateViewAddress: "0x86e8631a016f9068c3f085faf484ee3f5fdee8f2",
-    stateViewCodeHash: "0xa88b57f25068fe707a4d745194de91edef5c8218bf272b255c2d5bc4b832cb10",
-    quoterAddress: "0x333e3c607b141b18ff6de9f258db6e77fe7491e0",
-    quoterCodeHash: "0xf60149253e58cb69fe2b67346bc5f1ea331ff51f04c57f97e456225c5ad54119",
-  },
-  {
-    ...UNISWAP_V4_DEPLOYMENT,
+    mode: "shadow",
+    scoreEligible: false,
     chain: "tempo",
     poolManagerAddress: "0x33620f62c5b9b2086dd6b62f4a297a9f30347029",
     poolManagerCodeHash: "0xa799e0b85df402e6122bf76fdd94a910b8c509fd882ce3c567e00f0ba020dfa7",
@@ -129,6 +130,14 @@ export const UNISWAP_V4_SHADOW_DEPLOYMENTS = [
     quoterCodeHash: "0x688bcc0400bd279bad6eed0bcbe66cc2ef97ae0b558dacc925a9004370607ed8",
   },
 ] as const;
+
+export type ReviewedUniswapV4Deployment = typeof UNISWAP_V4_REVIEWED_DEPLOYMENTS[number];
+
+/** Identity validation accepts reviewed shadow pins; scoring admission is separate. */
+export function getReviewedUniswapV4Deployment(chain: string): ReviewedUniswapV4Deployment | null {
+  const normalized = chain.trim().toLowerCase();
+  return UNISWAP_V4_REVIEWED_DEPLOYMENTS.find((deployment) => deployment.chain === normalized) ?? null;
+}
 
 export const CURVE_STABLESWAP_NG_ETHERLINK_FACTORY = {
   address: "0x8271e06e5887fe5ba05234f5315c19f3ec90e8ad",

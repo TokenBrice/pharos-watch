@@ -15,15 +15,15 @@ import {
   CORE_AGGREGATE_ACTIVE_STABLECOINS,
 } from "../stablecoins/aggregate-registry";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, FROZEN_IDS, PRE_LAUNCH_STABLECOINS } from "../stablecoins/registry";
-import { SHADOW_IDS, SHADOW_STABLECOINS } from "../shadow-stablecoins";
+import { PSI_HISTORICAL_IDS, PSI_HISTORICAL_ASSETS } from "../psi-historical-assets";
 
 describe("PSI eligibility", () => {
-  it("keeps the broad monitoring universe at all active listings plus shadows", () => {
-    expect(PSI_ELIGIBLE_IDS.size).toBe(ACTIVE_IDS.size + SHADOW_IDS.size);
-    expect(PSI_ELIGIBLE_META_BY_ID.size).toBe(ACTIVE_IDS.size + SHADOW_IDS.size);
-    expect(PSI_ELIGIBLE_STABLECOINS).toHaveLength(ACTIVE_STABLECOINS.length + SHADOW_STABLECOINS.length);
+  it("keeps the broad monitoring universe at all active listings plus historical assets", () => {
+    expect(PSI_ELIGIBLE_IDS.size).toBe(ACTIVE_IDS.size + PSI_HISTORICAL_IDS.size);
+    expect(PSI_ELIGIBLE_META_BY_ID.size).toBe(ACTIVE_IDS.size + PSI_HISTORICAL_IDS.size);
+    expect(PSI_ELIGIBLE_STABLECOINS).toHaveLength(ACTIVE_STABLECOINS.length + PSI_HISTORICAL_ASSETS.length);
 
-    for (const id of [...ACTIVE_IDS, ...SHADOW_IDS]) {
+    for (const id of [...ACTIVE_IDS, ...PSI_HISTORICAL_IDS]) {
       expect(PSI_ELIGIBLE_IDS.has(id)).toBe(true);
       expect(PSI_ELIGIBLE_META_BY_ID.has(id)).toBe(true);
     }
@@ -39,11 +39,11 @@ describe("PSI eligibility", () => {
   });
 
   it("defines the core PSI calculation universe separately", () => {
-    expect(CORE_PSI_ELIGIBLE_IDS.size).toBe(CORE_AGGREGATE_ACTIVE_IDS.size + SHADOW_IDS.size);
+    expect(CORE_PSI_ELIGIBLE_IDS.size).toBe(CORE_AGGREGATE_ACTIVE_IDS.size + PSI_HISTORICAL_IDS.size);
     expect(CORE_PSI_ELIGIBLE_STABLECOINS).toHaveLength(
-      CORE_AGGREGATE_ACTIVE_STABLECOINS.length + SHADOW_STABLECOINS.length,
+      CORE_AGGREGATE_ACTIVE_STABLECOINS.length + PSI_HISTORICAL_ASSETS.length,
     );
-    for (const id of [...CORE_AGGREGATE_ACTIVE_IDS, ...SHADOW_IDS]) {
+    for (const id of [...CORE_AGGREGATE_ACTIVE_IDS, ...PSI_HISTORICAL_IDS]) {
       expect(CORE_PSI_ELIGIBLE_IDS.has(id)).toBe(true);
     }
   });

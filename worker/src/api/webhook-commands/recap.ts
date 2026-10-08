@@ -1,7 +1,7 @@
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  isTelegramRecapAvailableToChat,
+  isTelegramRecapAvailable,
 } from "@shared/lib/telegram-recap-rollout";
 import { escapeHtml } from "../../lib/telegram";
 import { formatTelegramIsoTimestamp } from "../../lib/telegram/format-age";
@@ -80,7 +80,7 @@ async function loadLastRecapOutcome(db: D1Database, chatId: string): Promise<str
 }
 
 export const handleRecap: WebhookCommandHandler = async (ctx, args) => {
-  if (!isTelegramRecapAvailableToChat(ctx.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY, ctx.chatId)) {
+  if (!isTelegramRecapAvailable(ctx.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY)) {
     await ctx.replyToChat("Daily watchlist recaps are not available for this chat.");
     return;
   }

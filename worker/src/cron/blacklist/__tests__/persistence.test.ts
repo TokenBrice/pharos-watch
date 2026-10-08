@@ -19,6 +19,7 @@ describe("insertBlacklistRows", () => {
   // migrated schema so bind/column arity drift fails here, not in the cron.
   it("persists rows through the migrated schema and ignores duplicates", async () => {
     const { db, sqlite } = fixtures.open();
+    sqlite.exec("ALTER TABLE blacklist_events DROP COLUMN amount");
     const rows = [
       makePendingBlacklistRow({ id: "usdt:ethereum:0xa:0", amount_native: 1_000, amount_usd_at_event: 975 }),
       makePendingBlacklistRow({ id: "usdt:ethereum:0xb:0" }),

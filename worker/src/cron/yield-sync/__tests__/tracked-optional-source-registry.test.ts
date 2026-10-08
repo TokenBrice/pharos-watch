@@ -7,14 +7,21 @@ import {
 } from "../tracked-optional-source-registry";
 
 /**
- * B15 — a registered optional source that hangs off a coin the sync never iterates
- * is silent dead code: `usbd-bima` (no `flags.yieldBearing`) and `cetes-etherfuse`
- * (quarantined) each stranded an adapter with no log line and no metadata. Every
- * cohort-gated entry must therefore resolve to an active yield-bearing coin or carry
- * an explicit dormancy reason, and the reason must be cleared once the coin returns.
+ * Cohort-gated optional sources must resolve to an active yield-bearing coin or
+ * carry an explicit reviewed dormancy reason. Retired BIMA/CETES adapters must
+ * not remain registered merely because catalog records still exist.
  */
 describe("tracked optional source registry coverage", () => {
   const activeYieldBearingIds = new Set(ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id));
+
+  it("does not register retired BIMA or CETES source work", () => {
+    const ids = [
+      ...TRACKED_OPTIONAL_SOURCE_REGISTRY,
+      ...STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
+    ].map((entry) => entry.stablecoinId);
+    expect(ids).not.toContain("usbd-bima");
+    expect(ids).not.toContain("cetes-etherfuse");
+  });
 
   it("resolves every cohort-gated entry: active yield-bearing coin, or intended-dormant", () => {
     for (const entry of TRACKED_OPTIONAL_SOURCE_REGISTRY) {

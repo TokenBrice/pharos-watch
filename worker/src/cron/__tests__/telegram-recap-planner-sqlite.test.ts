@@ -81,6 +81,7 @@ describe("telegram personalized recap planner", () => {
       factsRejected: 0,
       aiCalls: 0,
       externalPlanningFetches: 0,
+      rollout: { mode: "public", pendingEffects: true },
     });
 
     expect(sqlite.prepare("SELECT chat_id, source_type, priority FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual([
@@ -90,7 +91,7 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get()).toEqual({ count: 2 });
   });
 
-  it("projects dark rollout material recaps without writing targets, pending rows, or schedules", async () => {
+  it("does not plan, queue, or advance schedules when recap availability is off", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");
     sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
@@ -99,14 +100,12 @@ describe("telegram personalized recap planner", () => {
 
     const result = await planTelegramPersonalizedRecaps(db, undefined, {
       nowSec: NOW,
-      rolloutPolicy: { mode: "dark", allowedChatIds: new Set() },
+      rolloutPolicy: { mode: "off" },
     });
 
     expect(JSON.parse(result.metadata)).toMatchObject({
-      projected: 1,
-      projectedMaterial: 1,
       queued: 0,
-      rollout: { mode: "dark", pendingEffects: false },
+      rollout: { mode: "off", pendingEffects: false },
     });
     expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'direct'").get())
       .toEqual({ next_due_at: NOW - 1 });

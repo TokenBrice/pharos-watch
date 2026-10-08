@@ -514,6 +514,9 @@ export async function enrichEvmV2ExecutionModels(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
+  stablecoinPriceProvenanceById?: ReadonlyMap<string, Required<Pick<DexAmmExecutionModel["tokens"][number], "referencePriceSourceId" | "referencePriceObservedAt">>>;
+  nowSec?: number;
+  sourceGenerationId?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   dependencies?: EvmV2ExecutionDependencies;

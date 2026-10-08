@@ -1,3 +1,19 @@
+import { z } from "zod";
+import { StrictIsoDateSchema } from "./safety-schema-primitives";
+
+/** Reviewed native denominations; a nominal relation is not custody assurance. */
+export const NativeReserveQuantityBasisSchema = /* @__PURE__ */ (() => z.object({
+  reserveUnit: z.object({
+    kind: z.enum(["currency", "token"]),
+    unit: z.string().min(1),
+  }).strict(),
+  supplyToken: z.string().min(1),
+  nominalValuePerToken: z.number().finite().positive().optional(),
+  reviewedAt: StrictIsoDateSchema,
+  evidenceRef: z.string().min(1),
+}).strict())();
+export type NativeReserveQuantityBasis = z.output<typeof NativeReserveQuantityBasisSchema>;
+
 export const LIVE_RESERVE_SOURCE_MODEL_VALUES = ["dynamic-mix", "validated-static", "single-bucket"] as const;
 
 export const LIVE_RESERVE_EVIDENCE_CLASS_VALUES = ["independent", "static-validated", "weak-live-probe"] as const;

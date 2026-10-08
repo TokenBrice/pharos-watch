@@ -612,41 +612,6 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "a7a5-old-vector", spreadBps: 100, label: "CBR key-rate reserve-yield proxy (net of 1.00pp)", benchmarkCurrency: "RUB", benchmarkOverrideKey: "RUB" },
 ];
 
-/**
- * Known deterministic candidates intentionally excluded from ON_CHAIN_RATE_CONFIGS.
- *
- * These remain yield-bearing assets with other source paths, but are quarantined
- * from the generic ERC-4626 reader until they have protocol-specific adapters:
- * - scrvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
- *   generic 7-day convertToAssets deltas understate Curve's current savings APY
- * - ustb-superstate: the tracked USTB token is not an ERC-4626 vault
- */
-const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
-  "scrvusd-curve": {
-    code: "wrapper-not-yet-supported",
-    since: "2026-04-11",
-    nextReviewAt: "2026-10-09",
-    note: "2026-07-09 review: keep quarantined because the dedicated current-rate reader remains canonical; generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY",
-  },
-  "ustb-superstate": {
-    code: "token-not-erc4626",
-    since: "2026-07-15",
-    nextReviewAt: "2026-10-15",
-    note: "The tracked USTB token does not implement ERC-4626 convertToAssets; keep the generic reader disabled until a dedicated Superstate NAV-oracle adapter is implemented",
-  },
-};
-
-export const QUARANTINED_DETERMINISTIC_PROBE_CONFIGS: OnChainRateConfig[] = [];
-
-/**
- * Legacy free-form rationale map kept for backward compatibility with
- * `deriveYieldRegistry` and existing manifest `rationale` fields. New code
- * should consume `QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED` (or the typed
- * `YIELD_ADAPTER_LIFECYCLE` registry exported from yield-config-registry).
- */
-export const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = Object.fromEntries(
-  Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
-);
 
 export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "scrvusd-curve": "Curve scrvUSD current-rate reader",
@@ -654,8 +619,6 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "bd-basedollar": "Base Dollar Stability Pools (interest-only)",
   "bold-liquity": "Liquity V2 Stability Pools (interest-only)",
   "ybold-yearn": "Yearn yBOLD Stability Pool vault",
-  "usbd-bima": "BIMA savings",
-  "cetes-etherfuse": "Etherfuse CETES current issuance",
   "usyc-hashnote": "Hashnote NAV feed",
   "mmev-midas": "Midas mMEV NAV oracle",
   "usdy-ondo-finance": "Ondo USDY oracle",
@@ -669,8 +632,6 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "bd-basedollar": buildOnChainSourceKey("bd-basedollar"),
   "bold-liquity": buildOnChainSourceKey("bold-liquity"),
   "ybold-yearn": "protocol-api:yearn:ybold",
-  "usbd-bima": "protocol-api:bima-susbd",
-  "cetes-etherfuse": "protocol-api:etherfuse-cetes-current-issuance",
   "usyc-hashnote": "protocol-api:hashnote-usyc",
   "mmev-midas": "protocol-api:midas-mmev-nav-oracle",
   "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
@@ -826,19 +787,13 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntrie
 );
 
 /**
- * Typed lifecycle entries derived from the two typed reason maps above, so the
- * registry derivation, coverage audit, manifest endpoint, and any future admin
- * UI read the same source of truth without re-deriving from the legacy strings.
+ * Typed lifecycle entries for real intentional coverage gaps. Active dedicated
+ * sources default to active; incompatible generic readers are final exclusions.
  *
  * Built eagerly as a plain const: `deriveYieldRegistry` takes it as a parameter,
  * so there is no import-order hazard between this module and the registry.
  */
 export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {
-  ...Object.fromEntries(
-    Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED).map(
-      ([id, reason]) => [id, { lifecycle: "quarantined", reason }] as const,
-    ),
-  ),
   ...Object.fromEntries(
     Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(
       ([id, reason]) => [id, { lifecycle: "intentional-gap", reason }] as const,

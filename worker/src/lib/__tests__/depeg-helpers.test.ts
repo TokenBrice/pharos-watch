@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { makePythDepegPrice, makeSoftAgreementDepegPrice } from "./depeg-price.test-support";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
@@ -28,14 +29,10 @@ describe("classifyPrimaryDepegTrust", () => {
   });
 
   it("allows fresh hard single-source prices to remain authoritative", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 0.998,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
       priceObservedAtMode: "upstream",
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("authoritative");
+    }), nowSec)).toBe("authoritative");
   });
 
   it("requires confirmation for hard single-source prices with local-fetch freshness", () => {
@@ -50,13 +47,9 @@ describe("classifyPrimaryDepegTrust", () => {
   });
 
   it("requires confirmation for soft-only high-confidence agreement", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makeSoftAgreementDepegPrice(nowSec, {
       price: 1.0,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe("confirm_required");
+    }), nowSec)).toBe("confirm_required");
   });
 
   it("treats an upstream-capable hard source plus soft corroboration as authoritative", () => {
@@ -90,24 +83,15 @@ describe("classifyPrimaryDepegTrust", () => {
   });
 
   it("uses source observation time rather than sync-write time for freshness", () => {
-    expect(classifyPrimaryDepegTrust({
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec, {
       price: 1.0,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
       priceObservedAt: nowSec - (31 * 60),
       priceUpdatedAt: nowSec - 30,
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("confirm_required");
+    }), nowSec)).toBe("confirm_required");
   });
 
   it("keeps legacy null freshness mode backward-compatible for upstream-capable hard sources", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.999,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("authoritative");
+    expect(classifyPrimaryDepegTrust(makePythDepegPrice(nowSec), nowSec)).toBe("authoritative");
   });
 });
 
@@ -115,31 +99,17 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
   const nowSec = 1_700_000_000;
 
   it("accepts fresh corroborated soft-source agreement for recovery handling", () => {
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(true);
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec), nowSec)).toBe(true);
   });
 
   it("rejects stale or low-confidence price clusters", () => {
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceConfidence: "low",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(false);
+    }), nowSec)).toBe(false);
 
-    expect(hasFreshMultiSourcePrimaryAgreement({
-      price: 0.999,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
+    expect(hasFreshMultiSourcePrimaryAgreement(makeSoftAgreementDepegPrice(nowSec, {
       priceObservedAt: nowSec - (31 * 60),
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe(false);
+    }), nowSec)).toBe(false);
   });
 });
 

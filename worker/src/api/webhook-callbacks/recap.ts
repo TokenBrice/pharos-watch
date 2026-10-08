@@ -1,6 +1,6 @@
 import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
-  isTelegramRecapAvailableToChat,
+  isTelegramRecapAvailable,
 } from "@shared/lib/telegram-recap-rollout";
 import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
@@ -29,7 +29,7 @@ export const handleRecapCallback: CallbackHandler = async ({
   db, cb, chatId, recapRollout, parsed, answerCallback, planIntent, prepareMutationAppliedStatement,
   confirmAtomicMutationApplied, markMutationApplied, storedIntent, wasMutationApplied,
 }) => {
-  if (!isTelegramRecapAvailableToChat(recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY, chatId)) {
+  if (!isTelegramRecapAvailable(recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY)) {
     await answerCallback({ text: "Daily recaps are not available for this chat." });
     return;
   }

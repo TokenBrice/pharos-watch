@@ -63,7 +63,7 @@ export interface HistoricalPsiReplayResult {
     depegCount: number;
     eligibleUniverseCount: number;
     coveredUniverseCount: number;
-    shadowCoverageCount: number;
+    historicalAssetCoverageCount: number;
     historicalPriceCoverageCount: number;
     peakDeviationFallbackCount: number;
     openDepegsWithoutPrice: number;
@@ -103,7 +103,7 @@ export function replayHistoricalPsiForDay(
       depegCount: baseInput.depegCount,
       eligibleUniverseCount: baseInput.eligibleUniverseCount,
       coveredUniverseCount: baseInput.coveredUniverseCount,
-      shadowCoverageCount: baseInput.shadowCoverageCount,
+      historicalAssetCoverageCount: baseInput.historicalAssetCoverageCount,
       historicalPriceCoverageCount: baseInput.historicalPriceCoverageCount,
       peakDeviationFallbackCount: baseInput.peakDeviationFallbackCount,
       openDepegsWithoutPrice: baseInput.openDepegsWithoutPrice,

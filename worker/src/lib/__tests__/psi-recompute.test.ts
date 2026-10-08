@@ -220,7 +220,7 @@ describe("buildStabilityInputForDay", () => {
     });
   });
 
-  it("maps legacy PSI depeg ids onto canonical shadow supply snapshots", () => {
+  it("maps legacy PSI depeg ids onto canonical historical supply snapshots", () => {
     const day = 20 * DAY;
     const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "ust-terra", day, currentMcap: 18_000_000_000, priorMcap: 17_500_000_000 }), [psiDepegRow({ stablecoinId: "ust-terra-classic", day, startedOffsetSec: 0, endedOffsetSec: null, peakDeviationBps: -9900 })]);
 
@@ -321,7 +321,7 @@ describe("buildStabilityInputForDay", () => {
     expect(input.totalMcapUsd).toBe(105_000_000);
     expect(input.eligibleUniverseCount).toBeGreaterThan(input.coveredUniverseCount);
     expect(input.coveredUniverseCount).toBe(2);
-    expect(input.shadowCoverageCount).toBe(1);
+    expect(input.historicalAssetCoverageCount).toBe(1);
   });
 
   it("uses PSI-bounded market cap for depeg denominators", () => {

@@ -6,7 +6,6 @@ import { selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import reviewedModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
-import { observeKrakenExitBooks } from "./orderbooks";
 import { observeSecuritizeOffRampExit } from "./securitize-offramp";
 import { observeErc4626InstantExit } from "./erc4626-instant";
 import type { EvmRpcOptions } from "../evm-rpc";
@@ -18,7 +17,6 @@ export async function observeReviewedExitExecutionRoutes(args: {
   assetId: string;
   circulatingUsd: number | null;
   clockSec: number;
-  lane: "dex" | "redemption";
   db?: D1Database;
   stablecoinsCache?: StablecoinsCacheLoadResult;
   fxRateState?: FxRateState | null;
@@ -29,7 +27,6 @@ export async function observeReviewedExitExecutionRoutes(args: {
   nativeReference?: ExitExecutionCertificate["inputReference"];
   holderAddress?: string;
   gates?: ExitExecutionCertificate["gates"];
-  settlementMaximumSec?: number;
   signal?: AbortSignal;
   rpcOptions?: EvmRpcOptions;
   blockNumber?: number;
@@ -39,7 +36,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
     failures: [] as { modelId: string; reason: string; responsibility: "producer-failed" | "method-unsupported" }[],
   };
   const envelope = args.envelope ?? loadV9CandidateMethodologyPolicy(args.clockSec);
-  const reviews = (args.reviews ?? validateExitExecutionModelReviews(reviewedModels, envelope)).filter((review) => review.identity.assetId === args.assetId && (review.producer.kind === "kraken") === (args.lane === "dex"));
+  const reviews = (args.reviews ?? validateExitExecutionModelReviews(reviewedModels, envelope)).filter((review) => review.identity.assetId === args.assetId);
   const observations: ExitRouteObservation[] = [];
   const failures: { modelId: string; reason: string; responsibility: "producer-failed" | "method-unsupported" }[] = [];
   if (reviews.length === 0) return { observations, failures };
@@ -77,7 +74,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
             }
           }
           if (expectedUnitValueUsd !== null) outputReference = {
-            assetKey: review.identity.outputAssetKeys[0]!, deployment: review.producer.kind === "kraken" ? review.producer.outputDeployment : `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`,
+            assetKey: review.identity.outputAssetKeys[0]!, deployment: `${review.producer.chain}:${review.producer.outputToken.toLowerCase()}`,
             rawUnits: "0", decimals: review.producer.outputDecimals, unitValueUsd: output.price, expectedUnitValueUsd,
             sourceId: fxObservedAtSec === null ? output.priceSource! : `${output.priceSource!}+fx-rates:peggedEUR`,
             sourceGenerationId: fxObservedAtSec === null ? `stablecoins:${cache.updatedAt}` : domainDigest("safety-score-v10.exit-execution-eur-reference.v1", {
@@ -90,44 +87,41 @@ export async function observeReviewedExitExecutionRoutes(args: {
       }
       if (!inputReference || !outputReference) { failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue; }
       const isVault = review.producer.kind === "erc4626-instant";
-      const observed = review.producer.kind === "kraken"
-        ? await observeKrakenExitBooks({ review, inputReference, outputReference, requests, signal: args.signal })
-        : isVault
-          ? await observeErc4626InstantExit({ review, inputReference, outputReference, requests, blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
-          : await observeSecuritizeOffRampExit({ review, inputReference, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
+      const observed = isVault
+        ? await observeErc4626InstantExit({ review, inputReference, outputReference, requests, blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
+        : await observeSecuritizeOffRampExit({ review, inputReference, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
       const observedAtSec = Math.floor(Date.now() / 1000);
       const source = observed.source;
-      const isBook = review.producer.kind === "kraken";
-      const completeExecution = !isBook && observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
+      const completeExecution = observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
       const gates = policy.requiredGates.map((gateId) => args.gates?.find((gate) => gate.gateId === gateId) ?? {
-        gateId, verdict: completeExecution || (isBook && (gateId === "market-identity" || gateId === "fees")) ? "passed" as const : "unavailable" as const,
+        gateId, verdict: completeExecution ? "passed" as const : "unavailable" as const,
         evidenceId: `exit-execution:${gateId}`, observedAtSec: source.timestamp,
-        reason: completeExecution || (isBook && (gateId === "market-identity" || gateId === "fees")) ? null : isVault ? observed.points.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd)?.reason ?? "erc4626-execution-unproven" : "live-holder-or-rail-proof-unavailable",
+        reason: completeExecution ? null : isVault ? observed.points.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd)?.reason ?? "erc4626-execution-unproven" : "live-holder-or-rail-proof-unavailable",
       });
-      const settlementMaximumSec = isBook ? args.settlementMaximumSec ?? null : completeExecution ? 0 : null;
+      const settlementMaximumSec = completeExecution ? 0 : null;
       const certificate: ExitExecutionCertificate = {
         modelId: review.modelId, reviewDigest: exitExecutionReviewDigest(review), identity: review.identity,
         inputGenerationId: exitExecutionInputGenerationId(args.assetId, request, inputReference),
         observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", source),
         observedAtSec, sourceMaxAgeSec: policy.sourceMaxAgeSec, priceMaxAgeSec: policy.priceMaxAgeSec, source,
-        holder: review.holder, prerequisites: isBook ? ["eligible-account", "funded-deposit", "enabled-withdrawal"] : isVault ? ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", "network-gas-excluded-as-dex"] : ["eligible-holder", "token-balance", "approved-spender"],
+        holder: review.holder, prerequisites: isVault ? ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", "network-gas-excluded-as-dex"] : ["eligible-holder", "token-balance", "approved-spender"],
         gates, inputReference, feeReferences: args.nativeReference ? [args.nativeReference] : [], points: observed.points,
-        capacityBasis: isBook ? "observed-prefix-book-walk" : "transaction-simulation",
-        settlement: { endpoint: isBook ? review.producer.kind === "kraken" ? review.producer.settlementEndpoint : "" : outputReference.deployment, maximumCompletionSec: settlementMaximumSec, evidenceId: "exit-execution-settlement" },
+        capacityBasis: "transaction-simulation",
+        settlement: { endpoint: outputReference.deployment, maximumCompletionSec: settlementMaximumSec, evidenceId: "exit-execution-settlement" },
         resourceKeys: [`exit-resource:${review.identity.endpoint}`, ...(review.producer.kind === "securitize-offramp" ? [`inventory:${review.producer.chain}:${review.producer.provider.toLowerCase()}:${review.producer.outputToken.toLowerCase()}`] : [])],
-        failureDomainKeys: [isBook ? `venue:${review.identity.endpoint.split(":")[0]}` : `provider:${review.identity.endpoint}`],
+        failureDomainKeys: [`provider:${review.identity.endpoint}`],
       };
       const admission = admitExitExecutionCertificate({ certificate, envelope, assetId: args.assetId, clockSec: Math.max(args.clockSec, observedAtSec), inputGenerationId: certificate.inputGenerationId, observationGenerationId: certificate.observationGenerationId, request, reviews });
       const point = observed.points.find((entry) => entry.requestedNotionalUsd === request.requestedNotionalUsd)!;
       const scoreEligible = admission.state !== "unavailable";
       observations.push(ExitRouteObservationSchema.parse({
-        routeId: `execution:${exitExecutionReviewDigest(review)}`, routeFamily: isBook ? "dex-orderbook" : "issuer-redemption",
-        scope: isBook ? { kind: "venue", venue: "kraken", protocol: "kraken" } : { kind: "chain-contract", chain: review.producer.kind !== "kraken" ? review.producer.chain : "", contractOrPoolId: review.producer.kind !== "kraken" ? review.producer.contract : "", protocol: isVault ? "erc4626-instant" : "securitize-offramp" },
+        routeId: `execution:${exitExecutionReviewDigest(review)}`, routeFamily: "issuer-redemption",
+        scope: { kind: "chain-contract", chain: review.producer.chain, contractOrPoolId: review.producer.contract, protocol: isVault ? "erc4626-instant" : "securitize-offramp" },
         requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, settlementHorizonSec: Math.max(1, settlementMaximumSec ?? request.comparisonWindowSec),
         ...(settlementMaximumSec === null ? { settlementBoundUnproven: true } : {}), executableUsd: point.executableUsd, completionRatio: point.executableUsd / point.requestedNotionalUsd,
         executionCostBps: point.executionCostBps, allInCostBps: point.allInCostBps,
         output: { kind: outputReference.assetKey.startsWith("fiat:") ? "fiat" : "tracked-stablecoin", assetKeys: review.identity.outputAssetKeys, ...(outputReference.assetKey.startsWith("fiat:") ? { currency: outputReference.assetKey.slice(5) } : { trackedAssetIds: review.identity.outputAssetKeys }) },
-        evidenceKind: isBook ? "direct-orderbook-depth" : "onchain-contract-state", confidence: "medium", modelConfidence: "medium", scoreEligible,
+        evidenceKind: "onchain-contract-state", confidence: "medium", modelConfidence: "medium", scoreEligible,
         observedAt: observedAtSec, freshnessSeconds: Math.max(0, observedAtSec - source.timestamp), commonModeKeys: certificate.resourceKeys,
         // Vault grid calls are independent executions: a larger failed redeem
         // can fall back below a smaller successful request. Keep every receipt

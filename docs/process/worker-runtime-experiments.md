@@ -1,6 +1,6 @@
 # Worker Runtime Experiments
 
-Planned, gated release procedures for two runtime changes that are never bundled with schema, methodology, recovery, or data-repair work: advancing the Workers compatibility date, and evaluating D1 read replication. Each is its own release. Incident-time D1 storage pressure is a different job; use [`docs/runbooks/d1-capacity-and-runtime-experiments.md`](../runbooks/d1-capacity-and-runtime-experiments.md).
+Permanent, manual release qualification for paired Public/Heavy Workers compatibility dates, plus safe criteria for a future separately approved D1 read-replication evaluation. Neither is an active shadow runtime. Compatibility changes never share a release with schema, methodology, recovery, data repair, or replication changes. For incident-time storage pressure use [`docs/runbooks/d1-capacity-and-runtime-experiments.md`](../runbooks/d1-capacity-and-runtime-experiments.md).
 
 ## Compatibility-Date Experiment
 
@@ -10,66 +10,36 @@ The checked-in production date is not changed by the benchmark command.
 npm run ops:benchmark-worker-compatibility -- --candidate-date YYYY-MM-DD
 ```
 
-The command builds both dates with `wrangler deploy --dry-run`, runs Worker startup profiling, and checks the `/api/health` runtime contract against a fresh, fully migrated temporary local D1 for each date. This keeps stale local Wrangler state and fixture data out of the comparison. It writes a comparison under `agents/` and never deploys.
+The command qualifies **Public/Heavy × baseline/candidate**: four full-config dry-run bundles, four startup profiles, and four fresh migrated local D1 smoke outcomes. It rejects mismatched checked-in role dates. Each report names role/config/date and passed/failed/skipped outcomes, `completeness`, `promotionReady`, `localOnly:true`, and `deployed:false`; skipped or failed required evidence always leaves `promotionReady:false`.
+
+Public smoke checks `/api/health`. Heavy has no health fetch handler: its `scheduled-heavy` smoke uses the actual next UTC `:08` event within the real three-minute window with at least 60 seconds remaining. An isolated temporary config preserves runtime flags/aliases/entrypoint while omitting secrets and production bindings; outbound fetch and business writes are blocked. Empty-core proof requires a nonblank local version, child `skipped_neutral` with metadata/productivity reason `v9-core-slot-not-ready`, null core state/result/version, both publication-match booleans false, and enclosing parent `resultStatus:ok`. The producer callback is not reached; local lease/cron/slot bookkeeping is expected. This is **neutral admission proof, not successful Heavy producer acceptance**. `npm run validate:worker-heavy-runtime-smoke` exercises that same limited contract and can wait for the next hourly event.
 
 Promotion gate:
 
 1. Review Cloudflare's compatibility flags introduced between the two dates.
-2. Require both bundle/startup checks and both local smoke runs to pass.
-3. Advance `worker/wrangler.toml` in a dedicated release with no D1 migration, methodology change, data repair, or read-replication change.
+2. Require all four role/date bundle/startup/smoke outcomes and explicit complete evidence; review the Heavy neutral proof separately from actual producer acceptance.
+3. Advance **both** `worker/wrangler.toml` and `worker/wrangler.heavy.toml` together in a dedicated release with no D1 migration, methodology change, data repair, or read-replication change.
 4. Run the normal discover/push gate and production smoke.
 
-Rollback by restoring the prior Worker version or reverting only the compatibility-date release and redeploying. Cloudflare continues to support older dates; no D1 restore is required for a date-only rollback.
+Rollback restores both prior role dates/versions together. Cloudflare continues to support older dates; no D1 restore is required for a date-only rollback. The permanent tooling repair itself does not change either checked-in date.
 
 ## Read-Replication Experiment
 
-D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Before repeating it, restore the complete compatible snapshot from commit `831d75a8f`: `git:831d75a8f:worker/experiments/d1-read-replication-benchmark.ts`, its test in the same historical directory, `git:831d75a8f:worker/experiments/tsconfig.json`, `git:831d75a8f:worker/experiments/wrangler.d1-read-replication.toml`, and `git:831d75a8f:scripts/maintenance/benchmark-d1-read-replication.mjs`. The `git:<revision>:<path>` notation is verified by the documentation source-path check. Keep the Worker read-only and outside production imports. The deleted npm alias is not required; run the restored driver directly.
+**Retired 2026-08-09.** The historical benchmark bound production D1 with `workers_dev=true`; its restoration/deployment shortcut is not supported. No current benchmark implementation or production Sessions API integration is introduced by this procedure. Permanent admin `readReplicationMode` telemetry remains.
 
-Prerequisites:
+Historical Git provenance is research-only, **not a deployment recipe**: `git:831d75a8f:worker/experiments/d1-read-replication-benchmark.ts`, its test in that historical directory, `git:831d75a8f:worker/experiments/tsconfig.json`, `git:831d75a8f:worker/experiments/wrangler.d1-read-replication.toml`, and `git:831d75a8f:scripts/maintenance/benchmark-d1-read-replication.mjs`. The documentation source-path check preserves these archival references.
 
-1. Confirm the current production query shapes have completed their soak without correctness or p95 regressions.
-2. Capture a Time Travel bookmark and current D1 info/Insights baselines.
-3. Use a short-lived API token with `D1:Edit`; never write the token to a report or shell history.
+Future evaluation requires a measured read-latency problem and representative benefit hypothesis, followed by approval to build/review a new authenticated Access-only harness with `workers_dev=false`, previews off, and no production request-path import. Initial trials use a dedicated copied dataset. Any production-bound trial or replication enable/disable mutation needs separate explicit operations authorization; capacity pressure alone is not justification.
 
-Deploy the isolated benchmark Worker and provision its authentication secret:
+Retain these evaluation criteria:
 
-```bash
-cd worker
-npx wrangler deploy --config experiments/wrangler.d1-read-replication.toml
-npx wrangler secret put BENCHMARK_TOKEN --config experiments/wrangler.d1-read-replication.toml
-```
+1. Production query shapes complete their correctness/p95 soak; capture D1 info/Insights baselines and a Time Travel bookmark before separately authorized production operations.
+2. Any required `D1:Edit` credential is short-lived and never written to reports or shell history.
+3. Pair primary/session reads with identical fixed inputs, cases and `asOf`; require matching `payloadHash` values and actual `servedByPrimary=false` samples.
+4. Require material representative p95 benefit across cache, status, blacklist, depeg and Tape reads without correctness regression. Faster primary-only responses do not establish replica benefit. Production Sessions integration requires its own release.
+5. Observe control-plane mode changes. After a future disable, Cloudflare propagation can take up to 24 hours; code/doc rollback does not recreate a deleted remote Worker.
 
-Enable replication through Cloudflare's D1 control-plane API:
-
-```bash
-curl -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${CLOUDFLARE_D1_DATABASE_ID}" \
-  -H "Authorization: Bearer ${CLOUDFLARE_D1_EDIT_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"read_replication":{"mode":"auto"}}'
-```
-
-Run paired primary/session reads from the same experiment Worker. The original
-benchmark harness (`benchmark-d1-read-replication.mjs`) was removed with the
-2026-08 cleanup; recover the verified `831d75a8f` snapshot for a rerun, or issue paired
-`curl` reads against the experiment Worker's single endpoint with `mode=primary` and
-`mode=replica` (each also requires `case`, an integer `asOf`, and a `BENCHMARK_TOKEN`
-bearer header) and compare the top-level `payloadHash` and `d1.servedByPrimary` manually.
-
-Promotion requires matching payload hashes, actual `servedByPrimary=false` samples, and a material p95 improvement across the representative cache, status, blacklist, depeg, and Tape reads. A faster response that never reaches a replica is not evidence of replication benefit. Do not move the Sessions API into the production request path as part of this experiment.
-
-Disable replication and remove the isolated Worker after the measurement window:
-
-```bash
-curl -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${CLOUDFLARE_D1_DATABASE_ID}" \
-  -H "Authorization: Bearer ${CLOUDFLARE_D1_EDIT_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"read_replication":{"mode":"disabled"}}'
-
-cd worker
-npx wrangler delete pharos-d1-read-replication-benchmark
-```
-
-Cloudflare documents that disabling replica processing can take up to 24 hours. Sessions API remains safe while replication is disabled, but this experiment leaves production code unchanged.
+**Orphan-resource operation:** first perform a read-only inventory for `pharos-d1-read-replication-benchmark`, recording identity/config/ownership and absence or presence. If present, archive measurement/config evidence before a separately authorized removal after rollback-floor closure. Repository retirement and observed disabled replication do not prove resource absence. No replication mutation or remote deletion is authorized by this document.
 
 ## References
 

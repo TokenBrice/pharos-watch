@@ -26,7 +26,7 @@ describe("import-aware shard timing reporter", () => {
     } as unknown as TestModule;
     new ShardTimingReporter().onTestRunEnd([testModule], [], "passed");
     expect(JSON.parse(readFileSync(rawShardReportPath(file), "utf8")).testResults[0].endTime).toBe(2000);
-    publishShardTimings(file, { shard: 2, shardCount: 8 }, 3200, { NODE_ENV: "test" });
+    publishShardTimings(file, { shard: 2, shardCount: 8 }, 3200, { NODE_ENV: "test" }, "plain-test");
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
       fileCount: 1, files: [{ file: "worker/src/example.test.ts", durationMs: 2000, tests: 2 }],
       shard: 2, shardCount: 8, success: true, summedFileMs: 2000, testCount: 2, wallMs: 3200,

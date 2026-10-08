@@ -91,11 +91,12 @@ L2BEAT audit helpers also expose Interop-backed bridge-route review candidates f
 
 `GET /api/chains` keeps the numeric `healthFactors.chainEnvironment` field and adds `chainEnvironmentEvidence` beside it. Matched projects return the consumed L2BEAT project ID, slug, stage score, risk score, five risk fields, and snapshot source date; unmatched chains return the fallback Pharos resilience tier. This is evidence/provenance only and does not introduce live L2BEAT fetching.
 
-Maintenance commands:
+These are available manual maintenance tools; unscheduled does not mean disabled. They never automatically import upstream data into the static snapshot.
 
-- `npm run audit:coverage -- --domain=l2beat-snapshot -- --check` validates that explicit Pharos aliases still point at checked-in snapshot projects.
-- `npm run audit:coverage -- --domain=l2beat-snapshot -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
-- `npm run candidates:l2beat-bridge-routes` writes an advisory `agents/l2beat-bridge-route-candidates.md` queue for reviewed `bridgeRouteRisk` profiles. Safety Score V9 can consume a profile only after it is verified and curated into per-coin metadata.
+- `npm run audit:coverage -- --domain=l2beat-snapshot --check` validates explicit aliases against the checked-in snapshot only. Without observed input, passing does not establish current upstream parity.
+- Add `--input <saved-summary.json> --check` for consumed-field drift against a saved observation; retain its source/access date. Saved input establishes parity with that capture, not today's live API.
+- `npm run audit:coverage -- --domain=l2beat-snapshot --live --check --report agents/l2beat-snapshot-coverage.md` explicitly fetches the current L2BEAT summary for manual review. Alias-integrity and consumed-field drift fail `--check`; observed-only additions do not become authority.
+- `npm run candidates:l2beat-bridge-routes` writes heuristic research leads to `agents/l2beat-bridge-route-candidates.md`. The current Safety Score consumes only reviewed bridge evidence after exact deployed-route, control, contract, and source verification and per-coin curation. Text matches never author a profile or backing edge, and host-chain context does not prove backing exposure.
 
 ## Update Contract
 

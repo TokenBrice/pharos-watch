@@ -21,7 +21,7 @@ import {
   READABLE_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
-import { SHADOW_STABLECOINS } from "@shared/lib/shadow-stablecoins";
+import { PSI_HISTORICAL_ASSETS } from "@shared/lib/psi-historical-assets";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
@@ -31,7 +31,7 @@ const PRE_LAUNCH_ID = PRE_LAUNCH_STABLECOINS[0]?.id;
 const FROZEN_ID = FROZEN_STABLECOINS[0]?.id;
 const QUARANTINED_ID = QUARANTINED_STABLECOINS[0]?.id;
 const DELISTED_ID = DELISTED_STABLECOINS[0]?.id;
-const SHADOW_ID = SHADOW_STABLECOINS[0]?.id;
+const HISTORICAL_ID = PSI_HISTORICAL_ASSETS[0]?.id;
 
 describe("REGISTRY_BY_ID", () => {
   it("contains all tracked stablecoins", () => {
@@ -40,14 +40,14 @@ describe("REGISTRY_BY_ID", () => {
     }
   });
 
-  it("contains shadow stablecoins", () => {
-    for (const shadow of SHADOW_STABLECOINS) {
-      expect(REGISTRY_BY_ID.has(shadow.id)).toBe(true);
+  it("contains PSI historical assets", () => {
+    for (const historical of PSI_HISTORICAL_ASSETS) {
+      expect(REGISTRY_BY_ID.has(historical.id)).toBe(true);
     }
   });
 
   it("has no duplicate canonical IDs", () => {
-    expect(REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length + SHADOW_STABLECOINS.length);
+    expect(REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length + PSI_HISTORICAL_ASSETS.length);
   });
 
 });
@@ -62,7 +62,7 @@ describe("REGISTRY_BY_LLAMA_ID", () => {
   });
 
   it("has no duplicate llamaIds", () => {
-    const llamaIdCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
+    const llamaIdCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
       (stablecoin) => stablecoin.llamaId,
     ).length;
 
@@ -97,14 +97,13 @@ describe("scoped ID registries", () => {
   it("keeps tracked, readable, and PSI-inclusive ID scopes explicit", () => {
     expect(TRACKED_REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length);
     expect(READABLE_REGISTRY_BY_ID.size).toBe(READABLE_STABLECOINS.length);
-    expect(PSI_INCLUSIVE_REGISTRY_BY_ID.size).toBe(ACTIVE_STABLECOINS.length + SHADOW_STABLECOINS.length);
+    expect(PSI_INCLUSIVE_REGISTRY_BY_ID.size).toBe(ACTIVE_STABLECOINS.length + PSI_HISTORICAL_ASSETS.length);
   });
 
-  it("excludes shadow-only IDs from tracked and readable registries", () => {
-    expect(SHADOW_ID).toBeTruthy();
-    expect(TRACKED_REGISTRY_BY_ID.has(SHADOW_ID!)).toBe(false);
-    expect(READABLE_REGISTRY_BY_ID.has(SHADOW_ID!)).toBe(false);
-    expect(PSI_INCLUSIVE_REGISTRY_BY_ID.has(SHADOW_ID!)).toBe(true);
+  it.each(["ust-terra", "iron-iron-finance"])("excludes historical %s from tracked/readable scope", (id) => {
+    expect(TRACKED_REGISTRY_BY_ID.has(id)).toBe(false);
+    expect(READABLE_REGISTRY_BY_ID.has(id)).toBe(false);
+    expect(PSI_INCLUSIVE_REGISTRY_BY_ID.has(id)).toBe(true);
   });
 
   it("keeps pre-launch IDs tracked but not readable or PSI-inclusive", () => {
@@ -154,9 +153,9 @@ describe("resolveStablecoinId", () => {
 
   it("uses the readable public scope by default", () => {
     expect(PRE_LAUNCH_ID).toBeTruthy();
-    expect(SHADOW_ID).toBeTruthy();
+    expect(HISTORICAL_ID).toBeTruthy();
     expect(resolveStablecoinId(PRE_LAUNCH_ID!)).toBeNull();
-    expect(resolveStablecoinId(SHADOW_ID!)).toBeNull();
+    expect(resolveStablecoinId(HISTORICAL_ID!)).toBeNull();
   });
 });
 
@@ -168,22 +167,22 @@ describe("scoped ID resolvers", () => {
     expect(resolveTrackedStablecoinId(FROZEN_ID!)).toEqual({ canonicalId: FROZEN_ID });
     expect(resolveTrackedStablecoinId(QUARANTINED_ID!)).toEqual({ canonicalId: QUARANTINED_ID });
     expect(resolveTrackedStablecoinId(DELISTED_ID!)).toEqual({ canonicalId: DELISTED_ID });
-    expect(resolveTrackedStablecoinId(SHADOW_ID!)).toBeNull();
+    expect(resolveTrackedStablecoinId(HISTORICAL_ID!)).toBeNull();
   });
 
-  it("resolves readable IDs but excludes pre-launch and shadow-only entries", () => {
+  it("resolves readable IDs but excludes pre-launch and historical entries", () => {
     expect(FROZEN_ID).toBeTruthy();
     expect(resolveReadableStablecoinId(CANONICAL_USDT_ID)).toEqual({ canonicalId: CANONICAL_USDT_ID });
     expect(resolveReadableStablecoinId(FROZEN_ID!)).toEqual({ canonicalId: FROZEN_ID });
     expect(resolveReadableStablecoinId(QUARANTINED_ID!)).toEqual({ canonicalId: QUARANTINED_ID });
     expect(resolveReadableStablecoinId(DELISTED_ID!)).toEqual({ canonicalId: DELISTED_ID });
     expect(resolveReadableStablecoinId(PRE_LAUNCH_ID!)).toBeNull();
-    expect(resolveReadableStablecoinId(SHADOW_ID!)).toBeNull();
+    expect(resolveReadableStablecoinId(HISTORICAL_ID!)).toBeNull();
   });
 
   it("resolves PSI-inclusive IDs but excludes non-active tracked entries", () => {
     expect(resolvePsiInclusiveStablecoinId(CANONICAL_USDT_ID)).toEqual({ canonicalId: CANONICAL_USDT_ID });
-    expect(resolvePsiInclusiveStablecoinId(SHADOW_ID!)).toEqual({ canonicalId: SHADOW_ID });
+    expect(resolvePsiInclusiveStablecoinId(HISTORICAL_ID!)).toEqual({ canonicalId: HISTORICAL_ID });
     expect(resolvePsiInclusiveStablecoinId(PRE_LAUNCH_ID!)).toBeNull();
     expect(resolvePsiInclusiveStablecoinId(FROZEN_ID!)).toBeNull();
   });
@@ -195,7 +194,7 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
   });
 
   it("has no duplicate cmcSlugs", () => {
-    const cmcSlugCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
+    const cmcSlugCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
       (stablecoin) => stablecoin.cmcSlug,
     ).length;
 
@@ -203,7 +202,7 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
   });
 
   it("indexes exactly the records with populated CMC slugs", () => {
-    const expected = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS]
+    const expected = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS]
       .filter((metadata) => metadata.cmcSlug)
       .map((metadata) => [metadata.cmcSlug, metadata] as const);
     expect(REGISTRY_BY_CMC_SLUG).toEqual(new Map(expected));
@@ -218,7 +217,7 @@ describe("REGISTRY_BY_GECKO_ID", () => {
   });
 
   it("has no duplicate geckoIds", () => {
-    const geckoIdCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
+    const geckoIdCount = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS].filter(
       (stablecoin) => stablecoin.geckoId,
     ).length;
 

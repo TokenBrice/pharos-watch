@@ -71,6 +71,15 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
     const effectiveStyleGateMode = await resolveDigestStyleGateModes(db);
     if (requestedStyleGateMode) {
       effectiveStyleGateMode[requestedStyleGateMode.kind] = requestedStyleGateMode.mode;
+      return jsonResponse(
+        {
+          ok: true,
+          accepted: true,
+          styleGateMode: effectiveStyleGateMode,
+          message: "Style gate mode updated; no digest generation queued.",
+        },
+        { status: 202, noStore: true },
+      );
     }
     const requestId = `manual-digest-${crypto.randomUUID()}`;
     const requestedAt = Math.floor(Date.now() / 1000);

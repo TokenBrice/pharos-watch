@@ -18,7 +18,6 @@ const PARAMETERIZED_ARGS: Record<string, unknown[]> = {
   digestSnapshot: ["2026-07-09"],
   publicStatusHistory: ["7d"],
   latestEvents: [{ queryKey: ["events", "latest"], path: "/api/events?limit=20" }],
-  chartAnnotationEvents: [{ queryKey: ["events", "chart-annotations"], path: "/api/events?limit=200" }],
   blacklistEvents: [{ queryKey: ["blacklist-events", "all"], path: "/api/blacklist?limit=50" }],
   mintBurnFlows: [24],
   mintBurnFlowsCoin: ["usdc-circle", 168],

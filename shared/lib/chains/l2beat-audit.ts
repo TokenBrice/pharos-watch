@@ -394,7 +394,7 @@ export function buildL2BeatBridgeRouteReviewAudit(options: {
       })),
       reasons,
       notes: [
-        "Reviewed bridge controls can author Safety Score V9 scopedQuestions that bound control-gap ceilings; this queue only proposes review targets.",
+        "The current Safety Score consumes only reviewed bridge evidence; this queue proposes exact deployed-route research, never a profile or backing dependency.",
         protocols.length > 0
           ? `L2BEAT Interop snapshot ${L2BEAT_INTEROP_SNAPSHOT_META.fetchedAt} matched ${protocols.length} protocol reference(s).`
           : "No L2BEAT Interop protocol reference found; the legacy bridge source still implies bridge-route review.",

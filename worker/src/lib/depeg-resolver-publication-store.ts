@@ -834,7 +834,7 @@ async function mapReferencedPublicationManifest(
   return mapPublicationManifest({ ...row, base_payload_json: stableJsonStringifyV1(payload) });
 }
 
-async function loadPublicationManifestByToken(
+export async function loadPublicationManifestByToken(
   db: D1Database,
   snapshotToken: string,
 ): Promise<DdrPublicationManifest | null> {
@@ -1206,7 +1206,7 @@ export async function loadFirstPublicationMembership(
              JOIN depeg_resolver_publication_snapshots s ON s.snapshot_token = r.snapshot_token
              JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
             WHERE r.first_published = 1
-           UNION ALL
+           UNION
            SELECT public_prediction_id, incident_key, snapshot_token,
                   snapshot_sequence, snapshot_generation, published_at, finalized_at
              FROM depeg_resolver_first_publications_v2
@@ -1220,6 +1220,16 @@ export async function loadFirstPublicationMembership(
       )
       .bind(...binds)
       .all<FirstPublicationMembershipRow>();
+    // Temporary chronology-import bridge: SQL UNION coalesces only identical
+    // immutable tuples. A different tuple for the same prediction is corruption,
+    // not a choice of format or a later publication to prefer.
+    const seen = new Set<number>();
+    for (const row of result.results ?? []) {
+      if (seen.has(row.public_prediction_id)) {
+        throw new Error(`Conflicting DDR first-publication chronology for prediction ${row.public_prediction_id}`);
+      }
+      seen.add(row.public_prediction_id);
+    }
     return (result.results ?? []).map((row) => ({
       publicPredictionId: row.public_prediction_id,
       incidentKey: row.incident_key,

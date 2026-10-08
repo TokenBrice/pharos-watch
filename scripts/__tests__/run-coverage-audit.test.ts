@@ -6,6 +6,7 @@ import {
   runCoverageAudit,
   type RunCoverageAuditOptions,
 } from "../maintenance/run-coverage-audit";
+import { parseArgs as parseReserveAuditArgs } from "../maintenance/generate-reserve-coverage-audit";
 
 const domains = Object.keys(DOMAIN_SCRIPTS);
 
@@ -53,6 +54,18 @@ describe("run-coverage-audit", () => {
     [["--all", "--domain=reserve-coverage"], "Choose either --all or --domain"],
   ] as const)("rejects invalid selection %j", (argv, message) => {
     expect(() => parseCoverageAuditArgs(argv)).toThrow(message);
+  });
+
+  it("does not confuse dispatcher forwarding with reserve-child option support", async () => {
+    const options = quietOptions({
+      runCommandImpl: (command) => {
+        expect(command.args[0]).toBe(DOMAIN_SCRIPTS["reserve-coverage"]);
+        expect(() => parseReserveAuditArgs(command.args.slice(1))).toThrow("Unknown argument: --check");
+        return { status: 1, aborted: false };
+      },
+    });
+    await expect(runCoverageAudit(["--domain=reserve-coverage", "--check"], options)).resolves.toBe(1);
+    expect(options.error).toHaveBeenCalledWith("[audit:coverage] reserve-coverage exited with status 1");
   });
 
   it("runs every selected domain after failures and returns the last non-zero status", async () => {

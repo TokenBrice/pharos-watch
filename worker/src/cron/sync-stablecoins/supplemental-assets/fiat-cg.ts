@@ -8,7 +8,7 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
   buildSupplementalAsset,
@@ -110,14 +110,14 @@ export async function fetchFiatCoinGeckoTokens(
 
         const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
         let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
-        const needsClassScope = requiresClassScope && !mcap;
+        const needsClassScope = requiresClassScope;
         let supplySource: string = "coingecko-fallback";
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
         // This keeps preview-only plain-par fiat assets in supply coverage without inventing a live market quote.
-        if ((preferOnChainMcap || !mcap) && priceForSupply != null) {
+        if (!needsClassScope && (preferOnChainMcap || !mcap) && priceForSupply != null) {
           const aggregateOnChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
@@ -127,7 +127,7 @@ export async function fetchFiatCoinGeckoTokens(
           }
         }
 
-        if (!mcap && priceForSupply != null) {
+        if (!needsClassScope && !mcap && priceForSupply != null) {
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal, dwellirNative);
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
@@ -138,16 +138,14 @@ export async function fetchFiatCoinGeckoTokens(
         }
 
         if (needsClassScope) {
-          // Recover native shares from the chosen supply valuation, then compare at issuer NAV,
-          // even when the published valuation uses a different observed market price.
-          const onchainNavValuationUsd = ((mcap ?? 0) / (priceForSupply ?? 1)) * (reserveNav?.price ?? 0);
-          const reason = reserveNavSupplyScopeReason(reserveNav, onchainNavValuationUsd);
+          const nativeShares = await fetchPinnedNativeShares(meta, chainRpcs, signal);
+          const reason = reserveNavSupplyScopeReason(reserveNav, nativeShares, nowSec);
           if (reason) {
             logWorkerEvent({
               scope: "handler", level: "warn", event: "reserve-nav-supply-withheld",
               message: `[fiat-cg] ${meta.symbol} on-chain supply scope unproven`,
               metadata: {
-                stablecoinId: meta.id, reason, rule: "R4", onchainNavValuationUsd,
+                stablecoinId: meta.id, reason, rule: "R4", nativeShares,
                 classAssetsUsd: reserveNav?.metadata?.classAssetsUsd ?? null,
                 sourceObservedAt: reserveNav?.observedAt ?? null,
                 reserveFetchedAt: reserveNav?.metadata?.reserveFetchedAt ?? null,
@@ -155,6 +153,15 @@ export async function fetchFiatCoinGeckoTokens(
             });
             return null;
           }
+          // Admission uses the getter quantity at issuer NAV; display valuation
+          // may then use the observed market quote. A positive CG cap is ignored.
+          if (!nativeShares || priceForSupply == null) return null;
+          const nativeSupply = Number(BigInt(nativeShares.rawShares)) / 10 ** nativeShares.decimals;
+          mcap = nativeSupply * priceForSupply;
+          if (!Number.isFinite(mcap) || mcap <= 0) return null;
+          supplySource = "onchain-total-supply";
+          supplyObservedAt = nativeShares.observedAt;
+          chainCirculating = { Ethereum: { chainId: nativeShares.chain, current: mcap } };
         }
 
         if (!mcap) {

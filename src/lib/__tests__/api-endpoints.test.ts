@@ -295,6 +295,7 @@ describe("api endpoint registry", () => {
     )).toEqual([
       ["/api/trigger-digest", "POST", false, false, "communications"],
       ["/api/trigger-yield-coverage-audit", "POST", false, false, "audit"],
+      ["/api/bootstrap-jltxx-reserves", "POST", false, false, "audit"],
       ["/api/reset-blacklist-sync", "POST", true, false, "recovery"],
       ["/api/debug-sync-state", "GET", false, false, "audit"],
       ["/api/remediate-blacklist-amount-gaps", "POST", false, true, "recovery"],
@@ -315,7 +316,7 @@ describe("api endpoint registry", () => {
 
   it("requires structured operator metadata for every status-page action", () => {
     const actions = getStatusPageActions();
-    expect(actions).toHaveLength(17);
+    expect(actions).toHaveLength(18);
 
     for (const action of actions) {
       expect(action.kind).toMatch(/^(inspect|backfill|repair|reset|communication)$/);

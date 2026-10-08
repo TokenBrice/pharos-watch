@@ -27,13 +27,6 @@ vi.mock("@/components/peg-deviation-chart", () => ({
   PegDeviationChart: () => <div />,
 }));
 
-vi.mock("@/components/chart-primitives/annotations", () => ({
-  ChartAnnotationLegend: () => null,
-}));
-
-vi.mock("@/hooks/use-chart-annotations", () => ({
-  useChartAnnotations: () => ({ data: [] }),
-}));
 
 // jsdom lacks ResizeObserver; the real ChartBrush wires one up on mount.
 class ResizeObserverStub {

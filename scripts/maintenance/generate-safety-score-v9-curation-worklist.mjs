@@ -16,6 +16,7 @@ import {
   generateV9MissingDataRegistry,
 } from "./generate-safety-score-v9-missing-data-registry.ts";
 import { PRIORITY_BANDS, priorityBand } from "../lib/safety-score-v9-missing-data-work-types.ts";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const STREAMS = [
   {
@@ -75,24 +76,7 @@ const STREAMS = [
   },
 ];
 
-function arg(name) {
-  const index = process.argv.indexOf(name);
-  return index === -1 ? null : process.argv[index + 1];
-}
-
-const replayPath = arg("--replay");
-if (!replayPath) {
-  console.error("Usage: npm run safety-score-v9:curation-worklist -- --replay <replay.json> [--output <md>]");
-  process.exit(2);
-}
-const replay = JSON.parse(readFileSync(replayPath, "utf8"));
-const registry = generateV9MissingDataRegistry({
-  replay,
-  policy: JSON.parse(
-    readFileSync(new URL("../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json", import.meta.url), "utf8"),
-  ),
-  catalogEntries: loadPerCoinStablecoinEntries(),
-});
+export function renderCurationWorklist(replay, registry, replayPath) {
 const cards = replay.pipeline.candidate.cards;
 if (registry.summary.stablecoinCount !== cards.length) {
   throw new Error("Typed missing-data registry and replay card counts differ");
@@ -101,7 +85,8 @@ const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset
 const registryAssets = new Map(registry.stablecoins.map((asset) => [asset.assetId, asset]));
 
 function money(value) {
-  if (!value) return "$0";
+  if (value === null) return "unavailable (missing-captured-supply)";
+  if (value === 0) return "$0";
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
   return `$${Math.round(value / 1e3)}k`;
@@ -153,7 +138,15 @@ for (const card of cards) {
   }
 }
 
-const supplyOf = (assetId) => assets.get(assetId)?.stressState?.exitPortfolio?.circulatingUsd ?? 0;
+const supplyOf = (assetId) => {
+  const supply = assets.get(assetId)?.stressState?.exitPortfolio?.circulatingUsd;
+  return typeof supply === "number" && Number.isFinite(supply) && supply >= 0 ? supply : null;
+};
+const knownCards = cards.filter((card) => supplyOf(card.id) !== null);
+const knownSupplySubtotal = knownCards.reduce((sum, card) => sum + supplyOf(card.id), 0);
+const ratedKnownSupplySubtotal = knownCards
+  .filter((card) => card.ratingStatus === "rated")
+  .reduce((sum, card) => sum + supplyOf(card.id), 0);
 
 const lines = [];
 lines.push("# V9 evidence-curation worklist (generated — do not hand-edit rows)");
@@ -165,6 +158,9 @@ if (registry.summary.warnings.length > 0) lines.push("");
 lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} cards, ` +
   `${cards.filter((card) => card.ratingStatus === "rated").length} rated, ${cards.filter((card) => card.ratingStatus === "pipeline-gap").length} pipeline-gap). ` +
   "Regenerate after every merged batch:");
+lines.push("");
+lines.push(`Supply availability: ${knownCards.length} known (including observed zero), ${cards.length - knownCards.length} unavailable. Known-supply subtotal: ${money(knownSupplySubtotal)}; not a full-cohort total.`);
+lines.push(`Rated share of known supply only: ${knownSupplySubtotal > 0 ? `${(100 * ratedKnownSupplySubtotal / knownSupplySubtotal).toFixed(2)}%` : "unavailable (zero known-supply denominator)"}; not full-cohort supply coverage.`);
 lines.push("");
 lines.push("```bash");
 lines.push("# 0. npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts  # generated catalog aggregate is gitignored and goes stale against coin edits");
@@ -201,10 +197,15 @@ for (const stream of STREAMS) {
   const streamItems = [...items.values()]
     .filter((item) => item.streamKey === stream.key)
     .sort((left, right) => {
-      const leftPriority = priorityBand(left.critical, supplyOf(left.assetId));
-      const rightPriority = priorityBand(right.critical, supplyOf(right.assetId));
+      if (left.critical !== right.critical) return left.critical ? -1 : 1;
+      const leftSupply = supplyOf(left.assetId);
+      const rightSupply = supplyOf(right.assetId);
+      if (leftSupply === null && rightSupply !== null) return -1;
+      if (rightSupply === null && leftSupply !== null) return 1;
+      const leftPriority = priorityBand(left.critical, leftSupply);
+      const rightPriority = priorityBand(right.critical, rightSupply);
       const priorityOrder = PRIORITY_BANDS.indexOf(leftPriority) - PRIORITY_BANDS.indexOf(rightPriority);
-      return priorityOrder || supplyOf(right.assetId) - supplyOf(left.assetId);
+      return priorityOrder || (rightSupply ?? 0) - (leftSupply ?? 0) || left.assetId.localeCompare(right.assetId);
     });
   lines.push(`## ${stream.key} — ${stream.title} (${streamItems.length})`);
   lines.push("");
@@ -231,18 +232,41 @@ for (const stream of STREAMS) {
     const causes = causeRows.filter(row => row.cause !== undefined)
       .map(row => `${row.cause}: ${row.gapId}`).join("; ") || "U: score-projection-only (research required)";
     lines.push(
-      `| ☐ | ${stream.key}-${item.assetId} | ${priorityBand(item.critical, supply)} | ${money(supply)} | ` +
+      `| ☐ | ${stream.key}-${item.assetId} | ${supply === null && !item.critical ? "unknown supply" : priorityBand(item.critical, supply)} | ${money(supply)} | ` +
         `${card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : card.grade}/${card.score ?? "—"} | ${causes} | ${codes} |`,
     );
   }
   lines.push("");
 }
 
-const output = lines.join("\n");
+return lines.join("\n");
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+function arg(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? null : process.argv[index + 1];
+}
+
+const replayPath = arg("--replay");
+if (!replayPath) {
+  console.error("Usage: npm run safety-score-v9:curation-worklist -- --replay <replay.json> [--output <md>]");
+  process.exit(2);
+}
+const replay = JSON.parse(readFileSync(replayPath, "utf8"));
+const registry = generateV9MissingDataRegistry({
+  replay,
+  policy: JSON.parse(
+    readFileSync(new URL("../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json", import.meta.url), "utf8"),
+  ),
+  catalogEntries: loadPerCoinStablecoinEntries(),
+});
+const output = renderCurationWorklist(replay, registry, replayPath);
 const outputPath = arg("--output");
 if (outputPath) {
   writeFileSync(outputPath, output);
-  console.log(`Wrote ${items.size} items to ${outputPath}`);
+  console.log(`Wrote curation worklist to ${outputPath}`);
 } else {
   console.log(output);
+}
 }

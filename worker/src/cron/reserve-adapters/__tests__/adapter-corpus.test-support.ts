@@ -15,8 +15,6 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
-import MATRIXDOCK_STBT_CAPTURE from "./fixtures/matrixdock-stbt-stats.json";
-import { MATRIXDOCK_STBT_STATS_URL } from "../matrixdock-stbt";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
 import { FOREST_ACCOUNTING_NETWORK, FOREST_MANAGER, SPARK_BALANCE_CALL, SPARK_INVENTORY_NETWORK, SPARK_SUSDS } from "./fixtures/identity-bound-reserve-readers";
@@ -30,11 +28,6 @@ import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
 const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
   .replace(/<!--[^]*?-->\r?\n/g, "");
-const MATRIXDOCK_STBT_MISSING_SUPPLY_CAPTURE = {
-  ...MATRIXDOCK_STBT_CAPTURE,
-  data: Object.fromEntries(Object.entries(MATRIXDOCK_STBT_CAPTURE.data)
-    .filter(([key]) => key !== "stbt_total_supply")),
-};
 
 export interface AdapterCorpusDrift {
   /** What the upstream changed, in the words of the failure it must produce. */
@@ -65,25 +58,18 @@ function reasonsFromNames(
 }
 
 const CORPUS_NOT_REPLAYABLE_NAMES = [
-  "abracadabra", "anchorage-independent-assurance", "agora-independent-assurance", "attestation-pdf-index",
+  "anchorage-independent-assurance", "agora-independent-assurance", "attestation-pdf-index",
   "audd-independent-assurance", "audx-independent-assurance", "brla-independent-assurance", "cadd-independent-assurance",
   "europ-independent-assurance", "fdusd-independent-assurance", "fidd-independent-assurance", "gemini-independent-assurance",
-  "issuer-attested-report", "openeden-usdo", "rlusd-independent-assurance", "sbc-independent-assurance",
-  "straitsx-independent-assurance", "stoneyield-router-pool", "paxos-independent-assurance", "usdh-native-markets",
-  "usdy-holdings-report", "myrc-independent-assurance",
+  "issuer-attested-report", "rlusd-independent-assurance", "sbc-independent-assurance",
+  "straitsx-independent-assurance", "paxos-independent-assurance", "myrc-independent-assurance",
 ] as const;
-const UNBOUND_CORPUS_NAMES: Record<string, true> = {
-  abracadabra: true, "openeden-usdo": true, "stoneyield-router-pool": true, "usdh-native-markets": true,
-};
 export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
-  (name) => UNBOUND_CORPUS_NAMES[name]
-    ? `No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by ${name}.test.ts.`
-    : `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
+  (name) => `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
   {
     "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
-    "openeden-usdo": "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by its adapter test file.",
     "straitsx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
   },
 );
@@ -98,7 +84,7 @@ const CORPUS_BACKLOG_NAMES = [
   "kava-cdp", "hliquity-hedera", "krwq-custodian", "liquity-v1", "liquity-native-active-pool", "liquity-v2-branches",
   "m0", "m0-wrapper-underlying", "megausd-custody", "mento", "nest-vault-positions", "origin-vault-balances",
   "quantoz-transparency", "re-metrics", "reserve-protocol-dtf", "sgforge-coinvertible", "saturn-pyusdx",
-  "solstice-attestation", "solomon-protocol", "superstate-liquidity", "united-por", "usdgo-transparency",
+  "solstice-attestation", "superstate-liquidity", "united-por", "usdgo-transparency",
   "usdai-proof-of-reserves", "usd1-bundle-oracle", "yamato", "youves-tezos", "zephyr-scanner", "djed-cardano",
   "dgld-gold-mapper", "matrixdock-frs", "icp-gldt", "onre-holdings-csv", "avant-reserves-api", "afi-proof",
   "kerne-signed-por", "leverup-lvusd",
@@ -773,15 +759,3 @@ CORPUS_CASES["blackrock-brsrv-holdings"] = {
   },
 };
 
-CORPUS_CASES["matrixdock-stbt"] = {
-  coinId: "stbt-matrixdock",
-  nowSec: Date.parse("2026-10-03T07:00:00Z") / 1000,
-  network: { json: { [MATRIXDOCK_STBT_STATS_URL]: MATRIXDOCK_STBT_CAPTURE } },
-  drift: {
-    label: "STBT supply is removed while reserve buckets remain",
-    outcome: "error",
-    network: {
-      json: { [MATRIXDOCK_STBT_STATS_URL]: MATRIXDOCK_STBT_MISSING_SUPPLY_CAPTURE },
-    },
-  },
-};

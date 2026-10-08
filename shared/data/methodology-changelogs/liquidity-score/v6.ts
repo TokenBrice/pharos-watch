@@ -1,12 +1,7 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
-// Versioning convention (see compareMethodologyVersions in
-// @shared/lib/methodology-versions/base): each dotted segment is compared as an
-// INTEGER, so the minor segment is an open-ended integer counter within the v6
-// bucket, e.g. `6.0` ([6, 0]) < `6.1` ([6, 1]) < `6.11` ([6, 11]). Routine
-// liquidity-score changes bump the minor counter and stay in this file; create
-// a `v7.ts` only for a genuine major/breaking methodology change. Entries below
-// are newest-first by version.
+// Versions are numeric decimals with at most two decimal places under ADR-3.
+// Entries below are newest-first; use a new major file only for a major change.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
     version: "6.92",

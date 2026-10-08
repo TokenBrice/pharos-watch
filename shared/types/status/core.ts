@@ -91,9 +91,9 @@ export const StatusDiscrepancySchema = z.object({
   probeSeverity: z.number(),
   details: z.string().nullable(),
   probeAgeSeconds: z.number().nullable(),
-  consecutiveDivergent: z.number(),
+  consecutiveDivergent: z.number().nullable(),
   /**
-   * Machine-readable classification so UI and alert logic can branch without
+   * Machine-readable classification so operator diagnostics can branch without
    * parsing `details`. Disambiguates "probe never ran" vs "probe ran but
    * disagrees" vs "probe is stale".
    */

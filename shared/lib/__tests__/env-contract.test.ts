@@ -23,8 +23,7 @@ describe("env contract manifest", () => {
     expect(envExample).not.toContain("\nDB=");
     expect(envExample.match(/^SITE_API_SHARED_SECRET=/gm)).toHaveLength(1);
     expect(envExample).toContain("NEXT_PUBLIC_API_BASE=");
-    expect(envExample).toContain("VAULTS_FYI_API_KEY=");
-    expect(envExample).toContain("VAULTS_FYI_ENABLED=");
+    expect(envExample).not.toContain("VAULTS_FYI_");
     expect(envExample).toContain("SITE_API_ORIGIN=https://site-api.pharos.watch");
     expect(envExample).toContain("SELECTOR_SNAPSHOT_IP_HASH_SECRET=");
     expect(envExample).toContain("TELEGRAM_ADOPTION_IP_HASH_SECRET=");
@@ -36,8 +35,7 @@ describe("env contract manifest", () => {
 
     expect(workerBlock).toContain("| `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - |");
     expect(workerBlock).toContain("| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - |");
-    expect(workerBlock).toContain("| `VAULTS_FYI_API_KEY` | `string` | optional | - | - |");
-    expect(workerBlock).toContain("| `VAULTS_FYI_ENABLED` | `string` | optional | - | - |");
+    expect(workerBlock).not.toContain("VAULTS_FYI_");
     expect(workerBlock).toContain("| `DDR_REPAIR_TASK_RUNNER_ENABLED` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `OPS_UI_ORIGIN` | `string` | reserved | optional | optional |");
     expect(operatorBlock).toContain("| `SITE_API_SHARED_SECRET` | optional | - | required |");

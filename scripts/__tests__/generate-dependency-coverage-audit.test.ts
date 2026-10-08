@@ -18,6 +18,9 @@ import {
   renderDependencyCoverageAuditMarkdown,
   runCli,
 } from "../maintenance/generate-dependency-coverage-audit";
+import {
+  reconcileDependencyGraph, renderDependencyGraphReconciliationMarkdown,
+} from "../maintenance/reconcile-dependency-graph";
 
 function liveConfig(adapter: LiveReserveAdapterKey): LiveReservesConfig {
   return {
@@ -188,6 +191,54 @@ const stablecoinsPayload = {
 
 
 describe("generate-dependency-coverage-audit", () => {
+  it("propagates older held publication provenance separately from newer capture and checkout", () => {
+    const reportCards = reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } });
+    reportCards.publicationHealth = {
+      ...reportCards.publicationHealth, status: "held",
+      attemptedAtSec: reportCards.updatedAt + 60, heldSinceSec: reportCards.updatedAt + 60,
+      reasons: [{ code: "dex-stale" }],
+    };
+    const audit = buildDependencyCoverageAudit({
+      activeCoins, reportCards, generatedAt: "2026-10-08T12:00:00Z", checkoutRevision: "a".repeat(40),
+    });
+    expect(audit.provenance.publication).toEqual({
+      safetyScoreIdentity: reportCards.safetyScoreIdentity,
+      asOfSec: reportCards.asOfSec, updatedAt: reportCards.updatedAt,
+      source: reportCards.source, publicationHealth: reportCards.publicationHealth,
+    });
+    const serialized = JSON.parse(JSON.stringify(audit));
+    const report = reconcileDependencyGraph(serialized, "b".repeat(40));
+    expect(report.provenance).toEqual({
+      publication: audit.provenance.publication,
+      auditCheckoutRevision: "a".repeat(40), checkoutRevision: "b".repeat(40),
+      publicationComparisonStatus: audit.summary.publicationComparisonStatus,
+    });
+    const markdown = renderDependencyGraphReconciliationMarkdown(report);
+    expect(markdown).toContain("Audit capture: 2026-10-08T12:00:00Z");
+    expect(markdown).toContain(`As of: ${reportCards.asOfSec}; updated: ${reportCards.updatedAt}; health: held`);
+    expect(markdown).toContain("sourceGenerations");
+  });
+
+  it("keeps absent legacy provenance unknown and rejects malformed provided provenance", () => {
+    const audit = buildDependencyCoverageAudit({
+      activeCoins, reportCards: reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } }),
+    });
+    const legacy = JSON.parse(JSON.stringify(audit));
+    delete legacy.provenance;
+    const report = reconcileDependencyGraph(legacy, null);
+    expect(report.provenance.publication).toBeNull();
+    expect(report.provenance.auditCheckoutRevision).toBeNull();
+    expect(renderDependencyGraphReconciliationMarkdown(report)).toContain("Publication identity and clocks: unknown / legacy capture.");
+    const malformed = JSON.parse(JSON.stringify(audit));
+    malformed.provenance.publication.source.sourceGenerations = { reserves: 42 };
+    expect(() => reconcileDependencyGraph(malformed, null)).toThrow();
+    const invalidClock = reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } });
+    invalidClock.updatedAt = invalidClock.asOfSec - 1;
+    expect(() => buildDependencyCoverageAudit({ activeCoins, reportCards: invalidClock })).toThrow();
+    expect(buildDependencyCoverageAudit({ activeCoins }).provenance).toEqual({
+      publication: null, checkoutRevision: null,
+    });
+  });
   it("warns on publication skew while retaining provenance failures and deferring authored-kind checks", () => {
     const activeCoins = [
       coin({ id: "upstream" }),

@@ -144,6 +144,7 @@ export const API_PATHS = {
   apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
   triggerDigest: () => "/api/trigger-digest",
   triggerYieldCoverageAudit: () => "/api/trigger-yield-coverage-audit",
+  bootstrapJltxxReserves: () => "/api/bootstrap-jltxx-reserves",
   adminActionLog: () => "/api/admin-action-log",
   resetBlacklistSync: () => "/api/reset-blacklist-sync",
   debugSyncState: () => "/api/debug-sync-state",

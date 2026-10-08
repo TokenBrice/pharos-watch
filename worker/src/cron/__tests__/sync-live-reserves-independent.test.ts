@@ -318,7 +318,7 @@ describe("syncLiveReserves", () => {
     )).toBe(true);
   });
 
-  it("heals a reachable source's breaker without publishing stale redemption evidence", async () => {
+  it("publishes honestly stale reserve-only wARS detail without invented redemption", async () => {
     const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "wars-argentine-peso") as ConfiguredCoin;
     const { sqlite, db } = fixtures.open();
     const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope}`;
@@ -329,6 +329,37 @@ describe("syncLiveReserves", () => {
         slices: [{ name: "Reviewed ARS deposits", pct: 100, risk: "high" }],
         metadata: {
           freshnessMode: "verified", sourceTimestamp: timestamp,
+        },
+      }),
+      breakerCanFetch: new Map([[breakerKey, true]]), d1FinalizeTimeoutMs: 30_000, previousState: null,
+    });
+    expect(result).toMatchObject({ status: "synced", breakerOutcome: true });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 1 });
+    const snapshot = sqlite.prepare("SELECT metadata, warnings FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
+    if (!snapshot || typeof snapshot.metadata !== "string" || typeof snapshot.warnings !== "string") {
+      throw new Error("Missing persisted stale reserve evidence");
+    }
+    expect(JSON.parse(snapshot.metadata)).toHaveProperty("sourceTimestamp", timestamp);
+    expect(JSON.parse(snapshot.metadata)).not.toHaveProperty("redemption");
+    expect(JSON.parse(snapshot.warnings)).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000));
+    expect(overview.staleCoins).toBe(0);
+    expect(overview.degradedCoins).toBe(1);
+    expect(overview.errorCoins).toBe(0);
+    expect(overview.freshCoins).toBe(0);
+  });
+
+  it("still rejects genuine separately observed stale redemption evidence", async () => {
+    const coin = getIndependentConfiguredCoin();
+    const { sqlite, db } = fixtures.open();
+    const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 100 * 86400;
+    const result = await syncReserveCoin({
+      db, coin, signal: new AbortController().signal, adapter: adapterForCoin(coin),
+      runAdapter: async () => ({
+        slices: [{ name: "Observed reserves", pct: 100, risk: "low" }],
+        metadata: {
+          freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000),
           redemption: buildDocumentedRedemptionTelemetry(timestamp, { holderEligibility: "verified-customer" }),
         },
       }),
@@ -336,14 +367,11 @@ describe("syncLiveReserves", () => {
     });
     expect(result).toMatchObject({ status: "failed", breakerOutcome: true });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition").get()).toEqual({ count: 0 });
-    const state = sqlite.prepare("SELECT last_status, last_success_at, metadata FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id);
-    expect(state).toMatchObject({ last_status: "degraded", last_success_at: null });
-    if (!state || typeof state.metadata !== "string") throw new Error("Missing persisted stale-attempt metadata");
-    expect(JSON.parse(state.metadata)).toMatchObject({ reason: "source-stale" });
-    const overview = await computeReserveCompositionOverview(db, Math.floor(Date.now() / 1000));
-    expect(overview.staleCoins).toBe(1);
-    expect(overview.errorCoins).toBe(0);
-    expect(overview.freshCoins).toBe(0);
+    const state = sqlite.prepare("SELECT warnings FROM reserve_sync_state WHERE stablecoin_id = ?").get(coin.id);
+    if (!state || typeof state.warnings !== "string") throw new Error("Missing stale redemption warning");
+    expect(JSON.parse(state.warnings)).toContainEqual(expect.objectContaining({
+      code: "stale-redemption-source-timestamp", effect: "fatal",
+    }));
   });
 
   it("keeps an allowlisted degraded warning recorded while admitting the snapshot to scoring", async () => {

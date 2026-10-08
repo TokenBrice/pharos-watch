@@ -30,7 +30,7 @@ export const DEWS_SIGNAL_SHORT_LABELS: Record<DewsSignalKey, string> = {
 export const DEWS_SIGNAL_DESCRIPTIONS: Record<DewsSignalKey, string> = {
   supply: "rapid redemptions (bank run), measured from 1-day and 7-day supply contraction rates",
   pool: "one-sided selling pressure in DEX pools, blending balance stress, pool stress, and worst-pool imbalance",
-  liq: "LPs fleeing, measured from 7-day changes in liquidity score and TVL",
+  liq: "LPs fleeing, measured from 7-day score and TVL changes against a positive-TVL history row with confidence at least 0.5 within 36 hours of the target; missing anchors are unavailable",
   price: "N-source consensus failures across CoinGecko, DefiLlama list, GeckoTerminal, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices; maps confidence levels (high/single-source/low/fallback) to stress values",
   diverg: "fragmented pricing between multi-source consensus price, DEX price, and peg reference",
   black: "issuer emergency freeze surges for canonical stablecoin IDs with direct blacklist-tracker coverage",

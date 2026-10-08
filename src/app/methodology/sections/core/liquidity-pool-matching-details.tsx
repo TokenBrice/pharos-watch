@@ -76,10 +76,12 @@ export function LiquidityPoolMatchingDetails() {
           stay capability-gated instead of inheriting executable depth.
         </p>
         <p>
-          Classic Aerodrome execution is limited to volatile pools already present in the Base Aerodrome census. Exact
-          models require same-block reviewed factory and implementation runtimes, an exact `getPool(token0, token1,
-          false)` binding, `stable = false`, an unpaused factory, and the pool&apos;s dynamic fee. This does not admit generic
-          Solidly forks or deployments on Avalanche, Linea, or Sonic.
+          Retired legacy Sonic stable/volatile and Base/Optimism volatile Solidly diagnostics no longer augment
+          per-pool measured-balance flags. Base Aerodrome stable and Optimism Velodrome stable diagnostics require
+          original state/reference clocks and independent same-block request/refined endpoint verification,
+          but remain non-scoring for exact Exit. Unavailable or stale proof is not a measurement. These flags
+          describe diagnostic/API evidence, not the balance-ratio aggregate used by Liquidity scoring and
+          confidence. Ordinary venue discovery and TVL accounting remain; no fixed-clock neutrality is claimed.
         </p>
         <p>
           Hook-free Ethereum Uniswap V4 pools can publish measured exact-execution profiles through the separately

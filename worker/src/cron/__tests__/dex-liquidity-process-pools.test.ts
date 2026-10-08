@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
+import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
@@ -949,7 +950,7 @@ describe("processPoolMetrics", () => {
         observedAt: 1_000,
       });
       expect(routeResult.coverage, testCase.name).toMatchObject({
-        capabilityMatrixVersion: "p4a.9",
+        capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
         retainedPoolCount: 1,
         scoreEligiblePoolCount: 0,
         scoreEligibleCapabilityPoolCount: 1,

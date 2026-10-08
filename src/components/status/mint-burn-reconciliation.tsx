@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@shared/lib/format";
 import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
 import { StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
@@ -141,22 +140,8 @@ export function MintBurnReconciliationCard({ summary, error }: {
                     </div>
                   );
                 })}
-                <details className="mt-4 border-t border-border/50 pt-3 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer rounded-sm py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2">Indicative circulating-supply comparison</summary>
-                  <div className="space-y-3 pt-2">
-                    <p>Timing, filters and valuation are unverified. Classified 24h flows exclude bridge, review, atomic and below-threshold events; upstream circulating supply may use a different window or supply definition. These gaps are not integrity verdicts.</p>
-                    {row.comparisonIssue ? <p>{row.comparisonIssue}</p> : null}
-                    <p>Source coverage: {row.coverageStatus}</p>
-                    <dl className="grid grid-cols-2 gap-3">
-                      {([
-                        ["Classified flow net 24h", formatCurrency(row.flowNet24hUsd)],
-                        ["Upstream daily supply delta", row.chainSupplyDelta24hUsd == null ? "—" : formatCurrency(row.chainSupplyDelta24hUsd)],
-                        ["Indicative gap", row.absoluteDiffUsd == null ? "—" : formatCurrency(row.absoluteDiffUsd)],
-                        ["Difference ratio", row.diffRatio == null ? "—" : `${(row.diffRatio * 100).toFixed(1)}%`],
-                      ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd className="mt-1 pharos-numeric text-foreground">{value}</dd></div>)}
-                    </dl>
-                  </div>
-                </details>
+                <p className="mt-4 text-xs text-muted-foreground">Scan coverage: {row.coverageStatus}</p>
+                {row.conservationIssue ? <p className="mt-2 text-xs text-muted-foreground">{row.conservationIssue}</p> : null}
               </div>
             );
           })}

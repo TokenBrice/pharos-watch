@@ -31,18 +31,8 @@ describe("Wave 0 registration fan-out", () => {
   it("predeclares pool/source leaves needed by the fan-out", () => {
     const slots = DEX_POOL_SOURCE_REGISTRY.map((entry) => entry.slotId);
     expect(slots).toEqual(expect.arrayContaining([
-      "evm-v4",
       "raydium-clmm",
       "orca-clmm",
-      "soroban-exhaustive",
-      "btcusd-provider-investigation",
     ]));
-    expect(DEX_POOL_SOURCE_REGISTRY
-      .filter((entry) => entry.slotId === "soroban-exhaustive" || entry.slotId === "btcusd-provider-investigation")
-      .map(({ slotId, platform, lifecycle, implementationModule }) => [slotId, platform, lifecycle, implementationModule]))
-      .toEqual([
-        ["soroban-exhaustive", "soroban", "disabled", "@shared/lib/dex-deployment-coverage"],
-        ["btcusd-provider-investigation", "offchain", "disabled", "@shared/lib/dex-deployment-coverage"],
-      ]);
   });
 });

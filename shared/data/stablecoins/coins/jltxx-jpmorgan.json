@@ -67,7 +67,7 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-10-03",
-    "reason": "Supply admission requires fresh identity-bound NAV/class assets within the 0.5% scope gate. Active-only reserves exclude quarantine; bounded prerequisite bootstrap is authorized before October 10 UTC. Keep quarantined pending separate complete supply/price review.",
+    "reason": "Quarantined pending Token Class legal/native-share perimeter, hash-pinned native supply and decimals, reviewed NAV-vs-block skew, matched reserve attempt, runtime price/market-cap PASS and explicit admission. Bootstrap stages evidence only; market cap cannot bypass gates.",
     "reviewBy": "2026-10-10",
     "source": {
       "label": "JPMorgan JLTXX Token Class NAV and class assets",

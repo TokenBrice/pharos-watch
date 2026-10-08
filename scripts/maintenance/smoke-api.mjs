@@ -302,7 +302,7 @@ export const ENDPOINT_ASSERTIONS = {
     assert(result.status === 200, `/api/dependency-scenarios/v1 returned ${result.status}`);
     const body = stripMeta(result.body);
     assert(["current", "earlier-generation", "stale", "unavailable"].includes(body?.freshness?.status), "Invalid scenario freshness");
-    assert(body.freshness.status === "current" ? body.artifact?.schemaVersion === 1 && body.freshness.reason === null && body.freshness.sourcePublicationGenerationId === body.freshness.acceptedPublicationGenerationId : typeof body.freshness.reason === "string", "Scenario freshness lacks generation, artifact or reason");
+    assert(body.freshness.status === "current" ? body.artifact?.schemaVersion === 2 && body.freshness.reason === null && body.freshness.sourcePublicationGenerationId === body.freshness.acceptedPublicationGenerationId : typeof body.freshness.reason === "string", "Scenario freshness lacks generation, artifact or reason");
     assert(Number.isInteger(body.freshness.budgetSec) && body.freshness.budgetSec > 0, "Scenario freshness lacks budget");
     return `scenario artifact ${body.freshness.status}`;
   },

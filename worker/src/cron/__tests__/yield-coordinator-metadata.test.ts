@@ -211,8 +211,8 @@ describe("buildYieldDegradationReasons", () => {
       ...baseParams,
       supplementalMeta: {
         ...baseParams.supplementalMeta,
-        degradedFamilies: ["vaultsFyi"],
-        degradedFamilyReasons: { vaultsFyi: "probe-unavailable" },
+        degradedFamilies: ["retired-family"],
+        degradedFamilyReasons: { "retired-family": "historical-diagnostic" },
       },
     })).toEqual(buildYieldDegradationReasons(baseParams));
   });

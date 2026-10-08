@@ -12,11 +12,23 @@ The Mini App is the Telegram-native control panel for managing PharosWatchBot su
 
 Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a fresh admin verification path and group-scoped launch ownership model exist.
 
+Unsigned browser **preview** is a permanent launch-guidance state. With no supported Telegram launch hint, it explains how to open the Mini App and makes zero session API calls; it exposes no subscription controls or mutation authority. It is not awaiting promotion to a browser control panel. A Telegram-indicated launch with missing or failed signed data remains the distinct missing/error state, and signed `initData` validation is always the backend authorization boundary. `noindex` and robots exclusion govern discoverability, not access control.
+
+Choose the bounded contract for the affected seam before editing:
+
+- Launch behavior: [Launch Surfaces](#launch-surfaces), [Payload Scheme](#payload-scheme), and [Mini App Launch Entrypoints](#mini-app-launch-entrypoints).
+- Signed requests and state: [Seam Rules](#seam-rules), [Contract And Catalog Versioning](#contract-and-catalog-versioning), [Auth Model](#auth-model), and [Client State And Control Semantics](#client-state-and-control-semantics).
+- Subscription controls: [Daily Recap Control](#daily-recap-control), [Configuration Portability](#configuration-portability), [Bulk Watchlist Management](#bulk-watchlist-management), and [Effective Alert Source](#effective-alert-source).
+- Public surfaces: [Frontend Main Page](#frontend-main-page) and [Public Pulse Privacy And Freshness](#public-pulse-privacy-and-freshness).
+- Operations and verification: [BotFather Operator Checklist](#botfather-operator-checklist), [Debugging Workflow](#debugging-workflow), and [Test Fixtures](#test-fixtures).
+
 ## Daily Recap Control
 
 Settings includes one compact **Daily Recap** section for private subscribers. The feature is off by default. The control exposes an enable toggle, an hour selector (`0`–`23`) in the subscriber's confirmed IANA timezone, the next local delivery time, and the latest aggregate outcome. Copy states that a recap is sent only when watched assets materially changed. If no timezone is confirmed, enabling is rejected with `recap-timezone-required`; UTC is valid when explicitly selected. Quiet-hours and recap scheduling use the same subscriber timezone, and changing the timezone recomputes an enabled recap's next due instant atomically.
 
 The Mini App sends `{ kind: "set-recap", enabled, deliveryHourLocal }` through the signed mutation endpoint. The server persists the preference in `telegram_recap_preferences`, advances the shared subscriber preference generation, and returns the refreshed state. Private-chat and stale-auth gates remain authoritative; the client never optimistically flips the toggle. Recap messages link back to the Mini App with `View watchlist` and `Recap settings` buttons. Recap planning itself is DB-only and never invokes an AI or external data provider.
+
+Global recap availability is independent of private opt-in: the Worker supports `off|public`, with unset/malformed/retired modes failing closed to off. Off omits the Settings control and rejects forged `set-recap` mutations as `recap-unavailable` before preference writes; public preserves the confirmed-timezone and private-chat requirements. No per-chat rollout allowlist remains.
 
 Owned files:
 

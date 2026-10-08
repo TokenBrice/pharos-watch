@@ -12,6 +12,7 @@ import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
 import { resolveReserveFeedReviews } from "../../lib/reserve-feed-reviews";
+import { assessD1Capacity } from "@shared/lib/d1-capacity";
 
 stubCryptoForAuth();
 
@@ -81,6 +82,9 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
     },
     caches: {},
     crons: {
+      ...Object.fromEntries(Object.entries(CRON_INTERVALS).map(([job, expectedIntervalSec]) => [
+        job, { lastRun: null, recentRuns: [], expectedIntervalSec, healthy: true },
+      ])),
       "sync-stablecoins": {
         lastRun: {
           startedAt: now - 60,
@@ -158,7 +162,13 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
       ? Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 30))
       : [makeCronRow("sync-stablecoins", "ok", 30)] },
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
-    { match: "FROM cache WHERE key = ?", matchBinds: ["ops:d1-capacity:v1"], rows: [], first: null },
+    {
+      match: "FROM cache WHERE key = ?", matchBinds: ["ops:d1-capacity:v1"], rows: [],
+      first: {
+        value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: now, databaseSizeBytes: 1_000_000_000 }) }),
+        updated_at: now,
+      },
+    },
     { match: "key LIKE 'circuit:%'", rows: [] },
     { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     { match: "depeg_events", rows: [], first: { cnt: 0 } },

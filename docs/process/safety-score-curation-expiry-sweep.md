@@ -54,7 +54,8 @@ clock_sec="$(jq -r .clockSec "${capture}")"
 npm run safety-score-v9:replay -- \
   --input "${capture}" \
   --output "${replay}" \
-  --published-at "${clock_sec}"
+  --published-at "${clock_sec}" \
+  --rederive-current-redemption
 ```
 
 Do not substitute the operator's wall clock. The capture's `clockSec` is the production
@@ -65,6 +66,12 @@ fingerprint, which is the sweep's normal condition; the replay otherwise hard-fa
 on the fingerprint check. The automated workflow always passes it, because this sweep
 reads worklist items rather than score equivalence.
 
+This permanent operator workflow explicitly requests a current-redemption scenario.
+Ordinary replay retains captured observations by default; scenario replay cannot use
+accepted/embedded-registry captures or `--registry-ref`. The workflow tracks summary
+`jq` projection status along with every generator; failed projection fails the run
+and prevents the summary PR. No scoring/publication authority is implied.
+
 ## 3. Generate the worklist
 
 ```bash
@@ -74,9 +81,12 @@ npm run safety-score-v9:curation-worklist -- \
   --output "${worklist}"
 ```
 
-The generated streams are already ordered by descending circulating USD within each
-stream. Treat `DEP` and `RESV` as the first-priority lanes and drain both before moving
-to another stream:
+The generated streams put critical items first, then unavailable supply before known
+supply within the same criticality, with deterministic asset-ID ties; known supplies
+descend by priority/supply. Unknown is not observed zero or the smallest asset.
+The report names the known-supply subtotal and unavailable census; a rated share of
+known supply is not full-cohort supply coverage. Treat `DEP` and `RESV` as the
+first-priority lanes and drain both before moving to another stream:
 
 | Order | Stream | Operator rule |
 | --- | --- | --- |
@@ -99,7 +109,10 @@ The worklist reports gaps that already affect the replay. It does not list every
 admitted composition approaching expiry. Run this extraction against the same replay;
 it lists compositions that remain admitted at the capture clock but will cross the
 31-day composition window plus 7-day reporting grace within the requested lookahead,
-for assets with no live reserve snapshot in that capture, sorted by descending supply:
+for assets with no live reserve snapshot in that capture. Unknown supply sorts first
+(asset-ID ties), then known supplies descend. Null/missing rows carry unavailable
+reasons; observed zero stays zero. The queue subtotal counts only known supply and
+is not a complete supply denominator:
 
 ```bash
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
@@ -242,12 +255,13 @@ The report replays one isolated transform per live-backed asset: it removes that
 asset's live rows and provenance, adds the asset to `liveToFallbackCoins`, reseals
 `baseInputGenerationId`, and runs the normal V9 compiler/evaluator. Isolation keeps
 dependency scores from changing because an unrelated producer was withheld. Rows
-are sorted by evaluated-set circulating USD and include live/fallback scores and
-grades, the admitting fallback tier (`none` when no fallback is admitted), that
-tier's evidence ceiling, and the counterfactual binding-cap kind. Only assets
-whose counterfactual grade is strictly worse than their live grade are listed; an
-asset that holds its grade under producer silence is omitted, so an empty report
-means no live-backed asset would change grade.
+are sorted with unknown supply first (asset-ID tie breaks), then known circulating
+USD descending. Missing/null supply remains unavailable with a reason,
+distinct from observed zero. Rows include live/fallback scores/grades, fallback
+tier, evidence ceiling and binding-cap kind. Only eligible strict downgrades appear.
+The report owns its clock, assessed count and no-live/already-fallback/baseline-gap/
+fallback-gap/unchanged-or-upgrade census. An empty report means no assessed eligible
+strict downgrades, not healthy feeds or no possible changes among excluded assets.
 
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry

@@ -43,12 +43,12 @@ describe("runCronSentinel", () => {
 
   it("runs the status sources and preserves a degraded result", async () => {
     mocks.freshness.mockResolvedValue({ status: "degraded", itemCount: 2, metadata: "{\"stale\":true}" });
-    const result = await runCronSentinel(emptyDb(), { mode: "status", nowSec: 123, v9WorkflowMode: "shadow" });
+    const result = await runCronSentinel(emptyDb(), { mode: "status", nowSec: 123 });
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(2);
     expect(mocks.freshness).toHaveBeenCalledTimes(1);
     expect(mocks.freshness).toHaveBeenCalledWith(expect.anything(), undefined, {
-      operatorTelegramCreds: null, v9WorkflowMode: "shadow",
+      operatorTelegramCreds: null,
     });
     expect(mocks.digest).toHaveBeenCalledTimes(1);
     expect(mocks.duration).not.toHaveBeenCalled();

@@ -71,10 +71,6 @@ const FIXTURE_SOURCES: readonly HtmlFixtureSource[] = [
   },
 ];
 
-// Sources deliberately not refreshed:
-// - `buck-io.html`: fixture deleted with the adapter in "Remove orphaned live reserve adapters".
-// - `usdh-native-markets.html`: usdh.com sunset on 2026-07-17 and /reserves now 301s to a sunset
-//   notice, so a refresh would overwrite the archived capture the retired adapter's tests parse.
 
 /** Every fixture `npm run refresh:html-fixtures` owns, with its absolute path. */
 export const HTML_FIXTURE_REFRESH_TARGETS: readonly HtmlFixtureRefreshTarget[] = FIXTURE_SOURCES.map((source) => ({

@@ -5,7 +5,6 @@ import {
   beefyCandidate,
   degradedFamilyFetch,
   emptyRpcTelemetry,
-  emptyVaultsFyiResult,
   healthyFamilyFetch,
 } from "./sync-yield-supplemental.test-support";
 
@@ -37,7 +36,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
 vi.mock("../yield-sync/sources", async () => {
   // The hoisted mock factory runs before static fixture imports initialize, so
   // the fixture module must be loaded dynamically here (vitest hoisting).
-  const { emptyRpcTelemetry, emptyVaultsFyiResult, healthyFamilyFetch } = await import(
+  const { emptyRpcTelemetry, healthyFamilyFetch } = await import(
     "./sync-yield-supplemental.test-support"
   );
   const createOptionalRpcFamilyTelemetry = (targetCount: number) => ({
@@ -50,7 +49,6 @@ vi.mock("../yield-sync/sources", async () => {
   fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
   fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
   fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
-  fetchVaultsFyiSources: vi.fn(async () => emptyVaultsFyiResult()),
   fetchYearnKongSources: vi.fn(async () => healthyFamilyFetch()),
   fetchBeefySources: vi.fn(async () => healthyFamilyFetch()),
   fetchCompoundV3SupplyRates: vi.fn(async () => ({
@@ -82,7 +80,6 @@ import {
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
-  fetchVaultsFyiSources,
   fetchYearnKongSources,
 } from "../yield-sync/sources";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
@@ -113,7 +110,6 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchPendleMarketSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchRoycoDawnSources).mockResolvedValue({ candidates: [], degraded: false });
-    vi.mocked(fetchVaultsFyiSources).mockResolvedValue(emptyVaultsFyiResult());
     vi.mocked(fetchYearnKongSources).mockResolvedValue(healthyFamilyFetch());
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyRpcTelemetry() });
@@ -341,28 +337,12 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
-  it("threads vaults.fyi runtime config into the supplemental source family loader without persisting the key", async () => {
-    const signal = new AbortController().signal;
-    const vaultsFyi = {
-      enabled: true as const,
-      disabledReason: null,
-      apiKey: "vaults-key",
-      rankableVaults: ["base:vault-a"],
-      maxCreditsPerRun: 25,
-      maxCreditsPerMonth: null,
-      maxPagesPerRun: null,
-    };
-
-    const db = {} as D1Database;
-    const result = await syncYieldSupplemental(db, signal, new Map(), undefined, vaultsFyi);
-
-    expect(fetchVaultsFyiSources).toHaveBeenCalledWith({
-      db,
-      config: vaultsFyi,
-      signal,
-      startSec: 1_774_526_400,
-    });
-    expect(result.metadata).not.toContain("vaults-key");
+  it("does not request or publish retired vaults.fyi work", async () => {
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    expect(result.metadata).not.toContain("vaultsFyi");
+    expect(vi.mocked(setCacheIfNewer).mock.calls.some(
+      (call) => String(call[1]).includes("vaultsFyi"),
+    )).toBe(false);
   });
 
   it("keeps distinct same-chain Aave candidates by using asset-scoped source keys", async () => {
@@ -692,7 +672,6 @@ describe("syncYieldSupplemental", () => {
       undefined,
       new Map(),
       undefined,
-      undefined,
       { catchUpMinMarkerAgeSec: 4 * 3600 },
     );
 
@@ -718,7 +697,6 @@ describe("syncYieldSupplemental", () => {
       undefined,
       new Map(),
       undefined,
-      undefined,
       { catchUpMinMarkerAgeSec: 4 * 3600 },
     );
 
@@ -734,7 +712,6 @@ describe("syncYieldSupplemental", () => {
       undefined,
       new Map(),
       undefined,
-      undefined,
       { catchUpMinMarkerAgeSec: 4 * 3600 },
     );
 
@@ -742,235 +719,6 @@ describe("syncYieldSupplemental", () => {
     expect(fetchMorphoVaultSources).toHaveBeenCalled();
   });
 
-  it("registers vaults.fyi as a supplemental family with per-family cache metadata", async () => {
-    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
-      candidates: [
-        {
-          symbol: "USDC",
-          chain: "base",
-          address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
-          yield: {
-            currentApy: 4.8,
-            apyBase: 4.8,
-            apyReward: null,
-            sourcePool: "base-vault-1",
-            sourceTvlUsd: 2_500_000,
-            dataSource: "protocol-api",
-            exchangeRate: null,
-            sourceKey: "protocol-api:vaults-fyi:base:base-vault-1",
-            yieldSource: "vaults.fyi: base-vault-1",
-            yieldType: "lending-opportunity",
-            sourceObservedAt: 1_774_526_400,
-            comparisonAnchorObservedAt: null,
-          },
-        },
-      ],
-      telemetry: {
-        ...emptyVaultsFyiResult({ enabled: true, hasKey: true, rawVaultCount: 1, rankableCandidateCount: 1 }).telemetry,
-        status: "ok",
-        skipReason: null,
-      },
-    });
-
-    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
-
-    expect(result.itemCount).toBe(1);
-    expect(
-      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
-    ).toBe(true);
-
-    const vaultsFyiCall = vi
-      .mocked(setCacheIfNewer)
-      .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi");
-    const vaultsFyiPayload = JSON.parse(String(vaultsFyiCall?.[2])) as {
-      sourceCount: number;
-      data: Array<{ yield: { sourceKey: string } }>;
-    };
-    expect(vaultsFyiPayload.sourceCount).toBe(1);
-    expect(vaultsFyiPayload.data[0]?.yield.sourceKey).toBe("protocol-api:vaults-fyi:base:base-vault-1");
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, "published" | "skipped-newer" | "empty" | "empty-published">;
-      sourceCoverage?: {
-        sourceFamilyCounts?: { vaultsFyi?: number };
-        sourceFamilyInventoryCounts?: { vaultsFyi?: number };
-        sourceFamilySummaries?: {
-          vaultsFyi?: {
-            status?: string;
-            rawCandidateCount?: number;
-            candidateCount?: number;
-            inventoryCount?: number;
-            malformedDropCount?: number;
-            provider?: {
-              vaultsFyi?: {
-                status?: string;
-                rankableCandidateCount?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    expect(metadata.familyCacheResults?.vaultsFyi).toBe("published");
-    expect(metadata.sourceCoverage?.sourceFamilyCounts?.vaultsFyi).toBe(1);
-    expect(metadata.sourceCoverage?.sourceFamilyInventoryCounts?.vaultsFyi).toBe(1);
-    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
-      status: "ok",
-      rawCandidateCount: 1,
-      candidateCount: 1,
-      inventoryCount: 1,
-      malformedDropCount: 0,
-      provider: {
-        vaultsFyi: {
-          status: "ok",
-          rankableCandidateCount: 1,
-        },
-      },
-    });
-  });
-
-  it("keeps vaults.fyi audit inventory counts separate from supplemental candidate counts", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
-    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
-      candidates: [],
-      telemetry: {
-        ...emptyVaultsFyiResult({
-          enabled: true,
-          hasKey: true,
-          rawVaultCount: 8,
-          auditOnlyCount: 8,
-          creditsEstimated: 25,
-          pageCount: 1,
-          pageCapReached: true,
-        }).telemetry,
-        status: "ok",
-        skipReason: null,
-      },
-    });
-
-    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceCoverage?: {
-        sourceFamilyCounts?: { vaultsFyi?: number };
-        sourceFamilyInventoryCounts?: { vaultsFyi?: number };
-        sourceFamilySummaries?: {
-          vaultsFyi?: {
-            rawCandidateCount?: number;
-            candidateCount?: number;
-            inventoryCount?: number;
-            provider?: {
-              vaultsFyi?: {
-                pageCapReached?: boolean;
-                rawVaultCount?: number;
-                auditOnlyCount?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-
-    expect(metadata.sourceCoverage?.sourceFamilyCounts?.vaultsFyi).toBe(0);
-    expect(metadata.sourceCoverage?.sourceFamilyInventoryCounts?.vaultsFyi).toBe(8);
-    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
-      rawCandidateCount: 0,
-      candidateCount: 0,
-      inventoryCount: 8,
-      provider: {
-        vaultsFyi: {
-          pageCapReached: true,
-          rawVaultCount: 8,
-          auditOnlyCount: 8,
-        },
-      },
-    });
-  });
-
-  it("retains the vaults.fyi snapshot when the provider run fails", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
-    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
-      candidates: [],
-      telemetry: {
-        ...emptyVaultsFyiResult({ enabled: true, hasKey: true }).telemetry,
-        status: "failed",
-        skipReason: "request-failed",
-      },
-    });
-
-    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
-    expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBeGreaterThan(0);
-
-    expect(
-      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
-    ).toBe(false);
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<
-        string,
-        "published" | "skipped-newer" | "empty" | "empty-published" | "retained-previous"
-      >;
-      degradedFamilies?: string[];
-      sourceCoverage?: {
-        sourceFamilySummaries?: {
-          vaultsFyi?: {
-            status?: string;
-            provider?: {
-              vaultsFyi?: {
-                skipReason?: string | null;
-              };
-            };
-          };
-        };
-      };
-    };
-    expect(metadata.familyCacheResults?.vaultsFyi).toBe("retained-previous");
-    expect(metadata.degradedFamilies).toEqual(["vaultsFyi"]);
-    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi).toMatchObject({
-      status: "failed",
-      provider: {
-        vaultsFyi: {
-          skipReason: "request-failed",
-        },
-      },
-    });
-  });
-
-  it("retains the vaults.fyi snapshot for malformed allowlist telemetry", async () => {
-    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
-      candidates: [],
-      telemetry: {
-        ...emptyVaultsFyiResult({
-          enabled: true,
-          hasKey: true,
-          malformedDropCount: 1,
-          dropExamples: ["malformed:not-a-vault-entry"],
-        }).telemetry,
-        status: "failed",
-        skipReason: "invalid-config",
-      },
-    });
-
-    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
-
-    expect(result.status).toBe("degraded");
-    expect(
-      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
-    ).toBe(false);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      familyCacheResults?: Record<string, string>;
-      sourceCoverage?: {
-        sourceFamilySummaries?: {
-          vaultsFyi?: { provider?: { vaultsFyi?: { malformedDropCount?: number; dropExamples?: string[] } } };
-        };
-      };
-    };
-    expect(metadata.familyCacheResults?.vaultsFyi).toBe("retained-previous");
-    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi?.provider?.vaultsFyi).toMatchObject({
-      malformedDropCount: 1,
-      dropExamples: ["malformed:not-a-vault-entry"],
-    });
-  });
 
   it("bounds optional RPC missing-target examples in source family summaries", async () => {
     const missingTargets = Array.from({ length: 30 }, (_, index) => `ethereum:T${index}`);
@@ -1331,7 +1079,6 @@ describe("syncYieldSupplemental", () => {
       | "pendle"
       | "yearnKong"
       | "beefy"
-      | "vaultsFyi"
       | "compoundV3"
       | "aaveV3"
       | "roycoDawn";
@@ -1360,7 +1107,6 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", healthyFamilyFetch()));
     vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", healthyFamilyFetch()));
     vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", healthyFamilyFetch()));
-    vi.mocked(fetchVaultsFyiSources).mockImplementation(trackFamily("vaultsFyi", emptyVaultsFyiResult()));
     vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", { candidates: [], degraded: false }));
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(
       trackFamily("compoundV3", {
@@ -1398,7 +1144,7 @@ describe("syncYieldSupplemental", () => {
 
     expect(maxActive).toBeLessThanOrEqual(SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY);
     expect(result.supplementalSourceAccounting.familyExecution).toEqual({
-      familyCount: 8,
+      familyCount: SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
       concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
     });
   });

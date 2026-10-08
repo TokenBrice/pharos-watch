@@ -96,11 +96,12 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
-          JLTXX pricing uses J.P. Morgan Asset Management&apos;s exact Token Class transaction NAV. A matched successful
-          reserve snapshot must pass separate fetch-age and dealing-date checks under the five-day business-day NAV
-          policy. Positive native token supply can use that observed NAV before the asset has a previous cache row.
-          Issuer-reported class assets remain diagnostic and do not become circulating supply or independent portfolio
-          assurance.
+          Since Pricing methodology v6.43, JLTXX must pass pinned native-share admission even when CoinGecko reports a
+          positive market cap. J.P. Morgan Asset Management&apos;s exact Token Class transaction NAV retains its original
+          dealing date and separate five-day business-day freshness checks. Finalized EIP-1898 reads bind raw shares,
+          observed decimals, canonical block hash and time to a reviewed legal perimeter and NAV-versus-block allowance.
+          Issuer class assets never become circulating supply. Staged bootstrap captures evidence only; it cannot activate
+          JLTXX or publish scores. The asset remains quarantined pending approval and a real runtime price/market-cap pass.
         </p>
 
         <p>

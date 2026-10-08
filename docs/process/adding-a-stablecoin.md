@@ -32,7 +32,7 @@ Useful repo references before editing:
 - `docs/report-cards.md`
 - `docs/upcoming-page.md`
 - `docs/stablecoin-detail-page.md`
-- `docs/shadow-stablecoins.md` for PSI-only exclusions
+- `docs/shadow-stablecoins.md` for off-catalog PSI historical assets
 - `docs/bluechip-ratings.md`
 - `docs/about-page.md` when a new data source is introduced
 - `docs/deployment-process.md` when verifying the post-merge backfill path
@@ -128,7 +128,7 @@ Exclusions:
 
 Important current taxonomy note:
 
-- For active tracked assets, classify backing by actual collateral base. Pharos currently does not carry standalone active `algorithmic` registry entries; use `rwa-backed` or `crypto-backed` unless there is an explicit historical/shadow-only reason not to.
+- For active tracked assets, classify backing by actual collateral base. No tracked coin has standalone `algorithmic` backing; use `rwa-backed` or `crypto-backed`. The historical `algorithmic` enum remains solely for off-catalog PSI continuity metadata, not catalog admission.
 
 ---
 
@@ -141,7 +141,7 @@ Do the research manually, or use the maintained skills when they match the task:
 - `stablecoin-identity-contracts`: verify `geckoId`, populate known deployments, or discover missing chain coverage.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
 - `compliance-research`: research `genius`, `mica`, or both into the compliance sidecar.
-- Mint Authority does not have a publication skill yet. Use the Phase 5f review rubric below; `scripts/maintenance/audit-mint-authority.ts` is only a local candidate producer.
+- Mint Authority does not have a publication skill yet. Use the Phase 5f primary-source review rubric below and the existing `audit:mint-authority-review` / `audit:mint-bridge-ownership` QA commands.
 - `write-ai-summaries`: draft or refresh the `data/ai-summaries.json` entry.
 - `resilience-classify`: pick `collateralQuality` and `custodyModel` overrides.
 - `pre-launch-update`: refresh milestones, launch phase, and featured content for pre-launch entries.
@@ -241,8 +241,8 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 - Author only the flags that differ from the schema defaults. `StablecoinFlagsSchema` supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when the key is absent, so the parsed record and every generated aggregate still carry explicit values. `backing` and `governance` have no default and are always required.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - Every coin — including pre-launch — requires a sourced `blacklistabilityReview`. Its `reviewedStatus` is the canonical verdict and accepts `true`, `false`, `"possible"`, or `"inherited"`; `check:stablecoin-data` fails on any entry without one. Use `"inherited"` for tracked parent or wrapper exposure, full CEX custody, or reserve exposure that strictly exceeds 50% under the FreezeWatch policy rather than a direct holder-control surface. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch.
-- `mintAuthority` is curated metadata that feeds Safety Score V9 Economic Control facts and its published mint component. The separate Mint Authority scoring engine is retired. This metadata does not create selector exclusions. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.
-- `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. Safety Score V9 combines the reviewed route identity and control evidence with bounded runtime materiality; missing required evidence becomes an explicit gap or cap. Use L2BEAT Interop candidate output only as review evidence; verify route docs, contracts, and source links before authoring a sourced profile.
+- `mintAuthority` is curated metadata that feeds Safety Score V9 Economic Control facts and its published mint component. The separate Mint Authority scoring engine is retired. This metadata does not create selector exclusions. Require reviewed primary-source/control evidence, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.
+- `bridgeRouteRisk` is curated metadata for cross-chain mint, lockbox, attestation, liquidity, intent, or canonical routes. The current Safety Score consumes reviewed bridge evidence with bounded runtime materiality; missing required evidence becomes an explicit gap or cap. L2BEAT Interop matches are research leads, never sourced profiles or backing edges: verify the exact deployed route, contracts, controls, and primary sources before authoring a profile.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `pegReferenceId === variantOf`. Supported kinds are `pure-wrapper`, `savings-passthrough`, `strategy-vault`, `risk-absorption`, and `bond-maturity`. `pure-wrapper` children keep `flags.navToken === false`; every other kind must keep `flags.navToken === true`, and `risk-absorption` additionally requires `wrapperOperator`. Safety Score V9 maps the kind to a wrapper strategy form (pure / staked / vault) that feeds the parent cap in `shared/lib/safety-score-v9/evaluate-asset.ts`; the old Selector `dependencyRisk` parent-minus-N ceilings are retired. Review the variant as `"inherited"` when its exposure comes only from the parent; use a direct verdict only when the wrapper has its own holder-control surface.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
@@ -359,7 +359,7 @@ Automated backstops:
 
 Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional for direct, non-variant assets. `npm run check:stablecoin-data` validates authored `mintAuthority` profiles against the schema and requires active variants to carry an explicit inherited/wrapper review, but it does not require every high-value direct coin to have one yet.
 
-The chart-annotation stream (`shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
+Per-coin coverage in the retained annotation corpus (`shared/data/annotations/coins/*.json`, loaded by `shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates). This intake does not restore the retired chart overlay or publish candidates automatically.
 
 ---
 
@@ -525,7 +525,7 @@ Do not assume every branch applies. Evaluate each one explicitly.
 
 Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, Safety Score V9 scoreability, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
 
-If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to surface them.
+If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the permanent annotation-corpus review loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to curate them.
 
 ### 5a. Logo and summary
 
@@ -676,13 +676,14 @@ For every active asset with more than one authored deployment, also complete the
 
 `npm run check:stablecoin-data` blocks invalid ownership, missing active multi-deployment references, and active bridge vocabulary in Mint Authority. The V9 compiler also fails closed on invalid ownership rather than filtering the control into a safer-looking score.
 
-If you use the local scanner POC, run it as a candidate producer only:
+Use the reviewed-source and ownership audits after collecting primary-source native-control evidence:
 
 ```bash
-npx tsx scripts/maintenance/audit-mint-authority.ts --coin <stablecoin-id>
+npm run audit:mint-authority-review
+npm run audit:mint-bridge-ownership
 ```
 
-The scanner writes to `agents/mint-authority-candidates/` and never updates stablecoin metadata. Treat its output as a review queue, not evidence ready for publication.
+These audits check authored review breadth and ownership; they do not discover authority facts or replace pinned source, proxy, role, and Safe evidence. Historical unknown scanner candidates are archival non-evidence.
 
 ### 5g. Bluechip ratings
 
@@ -766,9 +767,9 @@ If the coin needs explicit user-facing caveats, add `notices`.
 
 Use `tags` sparingly for editorial categorization, not for core classification.
 
-### 6d. Historical chart annotations (optional)
+### 6d. Historical annotation corpus (optional)
 
-When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/coins/<stablecoin-id>.json`. The typed loader at `shared/data/annotations/curated-annotations.ts` converts the ISO dates to Unix milliseconds for the runtime API. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
+When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/coins/<stablecoin-id>.json`. The typed loader at `shared/data/annotations/curated-annotations.ts` validates the preserved editorial corpus. The chart overlay and its browser Tape reads have been retired; authoring preserves research history and human review/intake tooling, without automatic publication or live chart markers.
 
 Authoring schema (the loader maps `date` to the runtime `ts` field; `note` is
 editorial metadata retained in the source asset):
@@ -798,7 +799,7 @@ Curation rules:
 - Sort each coin's array by `date` ascending.
 - Do NOT invent dates. Drop a candidate rather than guess.
 
-Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The flag-flip gate for `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is ≥10 annotations across the top 4 coins by mcap (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
+Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The historical launch seed remains a corpus-integrity contract: ≥10 annotations across the original top 4 seed coins (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`. It is no longer a flag-flip gate.
 
 ---
 

@@ -203,7 +203,7 @@ export function toCanonicalIncidentInput(row: DdrEventDbRow): DdrCanonicalIncide
     source: row.source,
     sourceFingerprint: null,
     publicTrackedAtFirstSeen: meta != null,
-    psiShadowAtFirstSeen: meta == null,
+    psiOffCatalogAtFirstSeen: meta == null,
     registrySnapshot: buildRegistrySnapshot(meta),
   };
 }

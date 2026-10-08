@@ -12,7 +12,6 @@ import {
   CASE_STUDY_CLIENT_BY_CEMETERY_ID,
   CASE_STUDY_CLIENT_BY_COIN_ID,
   CASE_STUDY_EVENT_WINDOWS,
-  caseStudySlugForEvent as clientCaseStudySlugForEvent,
 } from "@/lib/case-study-client-index";
 import {
   CASE_STUDY_CHART_MAX_DAYS,
@@ -424,26 +423,6 @@ describe("caseStudySlugForEvent", () => {
     expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2020, 2, 12))).toBeUndefined();
   });
 
-  it("matches the generated client-safe resolver", () => {
-    for (const study of CASE_STUDY_LIST) {
-      for (const window of study.eventWindows ?? [study.eventWindow]) {
-        const ts = Date.parse(window.startISO);
-        if (study.primaryCoinId) {
-          expect(clientCaseStudySlugForEvent(study.primaryCoinId, ts)).toBe(
-            caseStudySlugForEvent(study.primaryCoinId, ts),
-          );
-        }
-        const relatedCoinIds =
-          window.relatedCoinIds ??
-          (study.relatedCoins ?? []).map((related) => related.coinId);
-        for (const coinId of relatedCoinIds) {
-          expect(clientCaseStudySlugForEvent(coinId, ts)).toBe(
-            caseStudySlugForEvent(coinId, ts),
-          );
-        }
-      }
-    }
-  });
 
   it("selects the closest overlapping related window independent of registry order", () => {
     const ts = Date.UTC(2026, 0, 15);

@@ -34,7 +34,7 @@ function conservationFixture(config = MINT_BURN_CONFIGS.find((entry) => entry.st
 }
 
 async function reconcile(options: {
-  id?: string; records?: unknown[]; coverage?: string; chainCirculating?: Record<string, unknown>; supplySource?: string;
+  id?: string; records?: unknown[]; coverage?: string;
 } = {}) {
   const id = options.id ?? "usds-sky";
   const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === id);
@@ -43,12 +43,6 @@ async function reconcile(options: {
     configs.map((config, index) => [conservationModule.mintBurnConservationCacheKey(config), records[index]]),
   ));
   const db = mockD1([
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [{ value: JSON.stringify({ peggedAssets: [{
-      id, symbol: "TEST", price: 1, circulating: { peggedUSD: 1_000_000 },
-      chainCirculating: options.chainCirculating ?? { Ethereum: { current: 300_000_100, circulatingPrevDay: 100 } },
-      supplySource: options.supplySource ?? "defillama",
-    }] }), updated_at: NOW }] },
-    { match: "pharos:status-derived:mint-burn-24h", rows: [{ stablecoin_id: id, chain_id: "ethereum", net_flow_usd: 10 }] },
     { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
     { match: "FROM mint_burn_sync_state", rows: options.coverage === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
       config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
@@ -62,17 +56,16 @@ async function reconcile(options: {
     })),
   ]);
   const result = await getMintBurnReconciliation(db, NOW);
-  expect(db.getHistory().find((entry) => entry.sql.includes("mint-burn-24h"))?.binds)
-    .toEqual([Math.floor(NOW / 3600) * 3600 - 86400, Math.floor(NOW / 3600) * 3600]);
-  expect(result?.conservationVersion).toBe(1);
-  return result!;
+  expect(db.getHistory().some((entry) => entry.sql.includes("mint-burn-24h") || entry.sql.includes("key = ?"))).toBe(false);
+  expect(result.conservationVersion).toBe(1);
+  expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId)).size);
+  return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id) };
 }
 
 describe("conservation compatibility schema", () => {
   it("accepts old status payloads without implying conservation evidence", () => {
-    const parsed = MintBurnReconciliationSummarySchema.parse({ checkedAt: NOW, comparedCoins: 1,
-      criticalCount: 1, insufficientCount: 0, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
-        flowNet24hUsd: 10, chainSupplyDelta24hUsd: 100, absoluteDiffUsd: 90, diffRatio: 0.9,
+    const parsed = MintBurnReconciliationSummarySchema.parse({ checkedAt: NOW,
+      criticalCount: 1, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
         status: "critical", coverageStatus: "full" }] });
     expect(parsed.conservationVersion).toBeUndefined();
     expect(parsed.rows[0].conservation).toBeUndefined();
@@ -84,11 +77,13 @@ describe("conservation compatibility schema", () => {
 });
 
 describe("getMintBurnReconciliation verified conservation", () => {
-  it("uses a fresh native pass, not a huge indicative USD gap", async () => {
+  it("uses native evidence without reading circulating supply or USD-flow comparisons", async () => {
     const result = await reconcile();
-    expect(result.rows[0]).toMatchObject({ status: "ok", chainSupplyDelta24hUsd: 300_000_000 });
+    expect(result.rows[0]).toMatchObject({ status: "ok" });
     expect(result.criticalCount).toBe(0);
-    expect(result.rows[0].comparisonIssue).toContain("indicative");
+    expect(result.rows[0]).not.toHaveProperty("flowNet24hUsd");
+    expect(result).not.toHaveProperty("comparedCoins");
+    expect(result).not.toHaveProperty("insufficientCount");
   });
 
   it.each([
@@ -145,20 +140,6 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect(result.rows[0].conservation?.[0].checkedAt).toBe(NOW - 86400);
   });
 
-  it("verifies current-only supply independently without inventing USD history", async () => {
-    const result = await reconcile({ supplySource: "onchain-total-supply", chainCirculating: { Ethereum: { current: 100, circulatingPrevDay: 0 } } });
-    expect(result.rows[0]).toMatchObject({ status: "ok", chainSupplyDelta24hUsd: null, absoluteDiffUsd: null });
-  });
-
-  it.each([
-    [{ Ethereum: { current: 110, circulatingPrevDay: 100 } }, 10],
-    [{ ethereum: { current: 110, circulatingPrevDay: 0 } }, 110],
-    [{ old: { chainId: "ethereum", current: 110, circulatingPrevDay: 100 } }, 10],
-    [{ Ethereum: { current: 110 } }, null],
-    [{ Ethereum: { current: 110, circulatingPrevDay: 100 }, ethereum: { current: 110, circulatingPrevDay: 100 } }, null],
-  ])("keeps indicative supply identity separate from native verdict", async (chainCirculating, delta) => {
-    expect((await reconcile({ chainCirculating })).rows[0]).toMatchObject({ status: "ok", chainSupplyDelta24hUsd: delta });
-  });
 
   it("requires every configured BUIDL contract to pass", async () => {
     const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");
@@ -174,12 +155,6 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect((await reconcile({ id: "buidl-blackrock", records: [record, undefined] })).rows[0].status).toBe("critical");
   });
 
-  it("retains old source-scope explanations as context without overriding native passes", async () => {
-    vi.spyOn(conservationModule, "getMintBurnConservationEligibility").mockReturnValue({ supported: true });
-    const result = await reconcile({ id: "dai-makerdao" });
-    expect(result.rows[0].status).toBe("ok");
-    expect(result.rows[0].comparisonIssue).toContain("DSR");
-  });
 
   it("rejects positive evidence for a currently unsupported rebasing config", async () => {
     expect((await reconcile({ id: "m-m0" })).rows[0].status).toBe("insufficient-source");

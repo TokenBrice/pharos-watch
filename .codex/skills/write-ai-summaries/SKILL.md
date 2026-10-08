@@ -21,6 +21,8 @@ Write `StablecoinAiSummary` entries in `data/ai-summaries.json`; `shared/types/e
 
 ## Queue And Workflow
 
+The permanent QA producer reads four live endpoint families (report cards, stress signals, peg summary, stablecoins). Its detectors are heuristic and skip summaries without a current card; absence from the queue does not verify the prose. Findings never approve exact text or manufacture reviewer provenance.
+
 1. Run `npm run candidates:ai-summaries` for queue work; prioritize `high`, then `medium`.
 2. For each coin, inventory current prose claims against static metadata and current live analytics. Preserve sound text/title; correct stale facts and de-brittle volatile wording rather than rewriting for variety.
 3. Draft the schema-valid entry and present it for review when approval is requested. Keep one main claim per sentence and close on the durable constraint.

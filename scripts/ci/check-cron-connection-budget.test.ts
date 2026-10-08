@@ -11,6 +11,11 @@ describe("check-cron-connection-budget", () => {
     expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "quarterHourly")?.groups.get("quarter-hourly-chain")?.peak).toBe(4);
   });
 
+  it("preserves the four-connection status trigger after the D1 two-request correction", () => {
+    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "status-self-check")?.maxConnections).toBe(2);
+    expect(reviewedReport.triggerReports.find((trigger) => trigger.scheduleKey === "statusSelfCheckOffset")?.totalConnections).toBe(4);
+  });
+
   it.each([
     // P2-03 registers the same-day PSI and public-dataset catch-ups in the declared quarter-hourly chain.
     ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
@@ -28,7 +33,7 @@ describe("check-cron-connection-budget", () => {
 
   it.each([
     ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
-    ["compute-safety-score-v9-workflow", 0], ["sync-dex-liquidity-stage", 5],
+    ["sync-dex-liquidity-stage", 5],
     ["sync-dex-liquidity", 5],
     ["prepare-safety-score-v9-input", 3],
   ] as const)("preserves reviewed %s job pressure", (job, peak) => {
