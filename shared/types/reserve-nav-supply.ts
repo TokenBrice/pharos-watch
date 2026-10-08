@@ -21,14 +21,12 @@ export const ReserveNavSupplyAdmissionReviewSchema = z.object({
   perimeterRef: z.string().url(),
 }).strict();
 
-const RESERVE_NAV_SUPPLY_SCOPE_REASON_VALUES = [
-  "class-assets-unavailable",
-  "native-share-observation-unavailable",
-  "native-share-precision-unsupported",
-  "native-share-observation-stale",
-  "native-class-temporal-review-unavailable",
-  "nav-supply-time-skew",
-  "invalid-onchain-valuation",
-  "class-assets-supply-divergence",
-] as const;
-export type ReserveNavSupplyScopeReason = (typeof RESERVE_NAV_SUPPLY_SCOPE_REASON_VALUES)[number];
+export type ReserveNavSupplyScopeReason =
+  | "class-assets-unavailable"
+  | "native-share-observation-unavailable"
+  | "native-share-precision-unsupported"
+  | "native-share-observation-stale"
+  | "native-class-temporal-review-unavailable"
+  | "nav-supply-time-skew"
+  | "invalid-onchain-valuation"
+  | "class-assets-supply-divergence";
