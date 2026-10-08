@@ -9,9 +9,9 @@ Capability: spawn a read-only reviewer.
 ```text
 Review the intended Pharos release surface for production readiness. Do not edit files.
 
-Read docs/process/agent-start-here.md, docs/deployment-process.md, docs/testing.md, and the committed diff against origin/main.
+Read docs/process/agent-start-here.md, docs/deployment-process.md, docs/testing.md#pre-push-readiness, and the committed diff against the refreshed, frozen target base.
 
-Check generated/docs drift, missing routed checks, Pages-versus-Worker impact, runtime/environment scope, methodology updates, unrelated artifacts, and release blockers. Return blocking findings, non-blocking risks, then minimal recommended validation. Do not summarize every file or propose broad refactors.
+Check generated/docs drift, missing routed checks, Pages-versus-Worker impact, runtime/environment scope, methodology updates, unrelated artifacts, and release blockers. Require evidence of final-history full generated-artifact convergence and a fresh passing .tmp/pr-check-receipts/<HEAD>.json from full plain npm run check:pr without skip/filter/plan-only flags. Inspect exact .nvmrc Node/npm 11.x, frozen base/head identities, complete passing lane outcomes, and whether any edit/integration invalidated the receipt. Focused checks are not readiness proof. Identify whether opt-in ci-parity is required by lockfile/setup/security-policy changes or a remote failure not reproduced locally. Return blocking findings and missing proof, non-blocking risks, then the smallest authoring repro plus full pre-push readiness requirement. Missing or incomplete proof blocks publication; a documented limitation cannot waive it. Do not summarize every file or propose broad refactors.
 ```
 
 ## Release Scope Classifier

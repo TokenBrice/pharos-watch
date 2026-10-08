@@ -11,7 +11,7 @@ Investigate Pharos GitHub Actions run <RUN_ID>. Do not edit files.
 
 Read the run metadata and failed logs with gh, then docs/testing.md and docs/deployment-process.md.
 
-Return: workflow/run URL/head SHA; failed job and step; first actionable error; smallest local repro and required runtime/environment; failure class; whether skipped jobs match classifier behavior; likely files. Stay evidence-backed and avoid broad fixes.
+Return: workflow/run URL/head SHA; every failed leaf job/step with its exact command and first actionable error; smallest local repro per leaf and required runtime/environment; failure classes; whether skipped jobs match classifier behavior; likely files and independent defects to batch in one causal revision. Stay evidence-backed, do not stop at the aggregate/first failure, and avoid broad fixes. Use ci:census for trend measurement only if explicitly requested, never as failure reproduction.
 ```
 
 ## CI Reproduction Mapper
@@ -21,7 +21,7 @@ Capability: spawn a read-only reviewer.
 ```text
 Map the pasted Pharos CI failure to local reproduction and ownership. Do not edit files.
 
-Read docs/testing.md, docs/deployment-process.md, docs/scripts.md, package.json scripts, and only the relevant adaptive-check or artifact-registry source.
+Read docs/testing.md#pre-push-readiness, docs/deployment-process.md, docs/scripts.md, package.json scripts, and only the relevant adaptive-check or artifact-registry source.
 
-Return: smallest repro; broader post-fix gate; likely source/scripts; affected docs; common false leads.
+Return: every failed leaf's smallest repro; likely source/scripts; affected docs; common false leads; and the mandatory post-fix readiness evidence. Narrow repro comes first, then batch all causal fixes, final-history full generated-artifact convergence, full plain npm run check:pr without skip/filter/plan-only flags, and a fresh passing .tmp/pr-check-receipts/<HEAD>.json before one authorized replacement push. Focused success is not readiness. Identify opt-in ci-parity for a remote failure not reproduced locally or lockfile/setup/security-policy changes; do not propose check:release unless production rehearsal was requested. Use ci:census only for requested trend measurement.
 ```

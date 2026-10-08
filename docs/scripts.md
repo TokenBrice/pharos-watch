@@ -16,6 +16,8 @@ Snapshot pulls using `scripts/lib/sync-from-api.ts` retain fixed-backoff retries
 
 Schema rejections use canonical diagnostics (the first failing field path and schema issue), rather than translating errors into historical map-specific wording. Valid payloads still pass the map's score/grade, duplicate-ID, supply-join, and geometry checks.
 
+The renderer in `scripts/maintenance/build-safety-score-map.ts` keeps every graded coin and fixed readable marker floors. It first tries one guide per outer grade band, then deterministically splits dense bands into adaptive rings (candidate maximum populations 120, 90, then 60), shrinking large bubbles only down to the existing floors. Geometry, annotation clearance, and composition checks still apply. Exhausting those layouts throws `SafetyMapCapacityError` with code `layout-capacity-exhausted`; capacity is not repaired by dropping coins, lowering legibility floors, or moving bubbles outside the canvas.
+
 `.github/workflows/safety-map-refresh.yml` runs at 01:20, 03:20, 05:20 UTC and on `workflow_dispatch` (`mode`: `force` renders; `ensure` skips if today's map is live). Schedules start hours late, so the Worker's [producer kick](./safety-score-map.md#pre-digest-producer-kick) dispatches `ensure` from 06:20 to 08:00 UTC; the digest can reuse a recent map.
 
 ## Daily Social Posters
@@ -37,7 +39,7 @@ New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.
 | Verification CLI | Selection contract |
 | --- | --- |
 | `lint:changed` | Repeatable `--file <path>`, `--staged`, or `--base <ref> [--head <ref>]` are exclusive selection modes. Explicit file/staged modes override PR range environment. Without flags or PR range environment, selects staged, unstaged and untracked working-tree files. Deleted paths are skipped; staged selection still reads working-tree contents. Forward ESLint options after `--`. |
-| `check:focused` | Repeatable `--file`, `--staged`, or `--base` selects the authoritative file set forwarded to lint. `--plan-only` performs no checks. Narrowed related-test plans fail when no tests are selected; cron/scheduler owner suites stay broad unless measured closure justifies narrowing. |
+| `check:focused` | Repeatable `--file`, `--staged`, or `--base` selects the authoritative file set forwarded to lint. `--plan-only` performs no checks. Unmapped paths report `routing-incomplete` and exit `1`, even in plan mode; an empty mapped plan reports `intentional-no-check`, not verification. Narrowed related-test plans fail when no tests are selected; cron/scheduler owner suites stay broad unless measured closure justifies narrowing. |
 | `check:pr:static` | Retains the explicit base/head range for child lint; rejects `--staged` rather than silently discarding it. Use `check:focused -- --staged` for index-selected checks. |
 | `check:generated-artifacts` | Explicit uncheckable IDs, including mixed `--only` requests, fail before execution with lifecycle and generation guidance. Adaptive callers filter via the registry's shared checkability selector; empty plans skip rather than imply freshness. |
 
@@ -167,15 +169,31 @@ npm run lint:typed
 npm run typecheck
 npm run typecheck:tests
 npm run typecheck:worker
-npm run check:pr -- --base=origin/main
+npm run check:pr
 npm run check:bootstrap
 npm run check:structural
 npm run check:release
+npm run check:pages-artifact
+npm run check:html-fixture-metadata
+npm run check:dependency-audit
+npm run ci:census -- --since=YYYY-MM-DD --out=agents/ci-census.json
 npm run test:a11y
 npm run test:a11y:hydrated
 ```
 
 [Testing: Commands](./testing.md#commands) owns the validation behavior behind this discoverable command roster; use `package.json` for the full live npm-script list.
+
+| Command | Contract / source |
+| --- | --- |
+| `check:pr` | `scripts/maintenance/run-pr-checks.ts` guards exact `.nvmrc` Node and npm 11.x through `scripts/lib/runtime-guard.mts`, rejects staged selection and a head other than the checkout, resolves base/head identities, and executes every independent selected leaf even after failures. `scripts/lib/pr-check-receipt.mts` writes `.tmp/pr-check-receipts/<HEAD>.json` with runtime, refs, tree state, flags, leaf status/duration/first error and `passed`, `failed`, or `incomplete` outcome. A zero exit from a weakened run is not a passing readiness receipt. |
+| `check:pr -- --plan` | Gate-wide non-executing plan: selected static/docs commands, discovered tests, CI partitions and critical owners. Test discovery may import modules; no assertions, fetch, clean install/bootstrap proof, or readiness proof. The plain runner replaces the receipt with incomplete plan evidence. |
+| `check:pr -- --ci-parity` | Opt-in independent clean clone and tested merge checkout, clean install/bootstrap immutability, trusted scans, selected browser prerequisites, serialized explicit CI test/coverage partitions and selected Pages artifact lane. `scripts/maintenance/run-ci-parity.ts` records author base/head separately from tested merge SHA/tree; it does not reproduce hosted-runner OS, GitHub artifact transport or production mutations/health. `--plan` prints this profile without executing or writing a receipt. |
+| `check:pages-artifact` | `scripts/ci/run-pages-artifact-lane.ts` replays the newest available successful trusted-main release snapshot via authenticated GitHub GETs, regenerates compile/post-refresh inputs offline, builds with production flags and clean compiler/output state, runs postbuild and every `check:pages-release` artifact gate, then restores input snapshots. Unavailable/expired release data uses committed snapshots plus offline detail bootstrap and reports `degraded-data`; empty detail payloads are weaker size evidence, not realistic release-data proof. Invalid downloaded data fails. No live refresh, production credentials or publishing. |
+| `check:release` | `scripts/maintenance/run-release-rehearsal.ts` uses that shared Pages runner without acquiring release data, preserves local build typechecking, then validates migrations and strict dry-run packages for both Workers. Default rehearsal is offline: no migration application or deployment. `--live-continuity` explicitly adds the live previous sitemap check. |
+| `check:html-fixture-metadata` | `scripts/ci/check-html-fixture-age.ts --metadata-only` validates canonical capture stamps and refresh-target inventory without calendar age/future-clock enforcement. Weekly `check:html-fixture-age` owns those time-dependent checks. |
+| `check:dependency-audit` | `scripts/ci/verify-dependency-audit.ts` audits the full lockfile, including dev dependencies, and rejects unreviewed high/critical advisories or mismatched/expired exact exceptions in `scripts/ci/dependency-audit-exceptions.json`. `audit:deps` remains the separate production-only audit. The braces advisory [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) has no patched release: full-lockfile audit remains a known open blocker, not an accepted exception. |
+| `ci:census` | `scripts/maintenance/ci-failure-census.ts` uses authenticated `gh` GETs for workflow/run/attempt/job evidence. `--since` is required; `--until` defaults to today's inclusive UTC day; optional `--cut` creates descriptive `created_at` cohorts. `--out` writes JSON and `<out>.md`, otherwise both print. Latest run-ID conclusions and retained execution attempts are separate; censored branches and cancellation provenance remain explicit. This reports evidence, not guessed causal categories. |
+| `lint:typed` | `package.json` pins an 8192 MiB Node heap and warning-as-error typed ESLint over the maintained production glob set. |
 
 ### Build And Generated Artifacts
 
@@ -185,6 +203,8 @@ The Git-history-derived projections publish two different clocks on purpose. A c
 
 Use `package.json` for artifact commands and `scripts/lib/automation-registry.mjs` for dependencies, lifecycle, outputs, checkability, and staging. Lifecycles are `compile-input`, `post-refresh`, and `maintenance-only`; standalone `prebuild` runs the first two, while Pages splits preparation/release for one live snapshot acquisition. Offline bootstrap writes empty detail envelopes before credentials/fetch; snapshots declare catalog prerequisites and an output directory. Setup rejects changed tracked checkable outputs and nonignored registered outputs absent from Git, including after restore; regenerate and commit repairs with their sources. Ignored compile outputs remain allowed. See [release ordering](./deployment-process.md#ci-deploy-sequence).
 
+Registry entries also declare `requiredBrowsers` (default `[]`). `scripts/ci/classify-deploy-changes.ts` derives Firefox setup only from selected artifacts whose registry entry requires it; a generic OG change is not sufficient. `scripts/ci/check-docs-generated-artifacts.mts` checks selected `llms-txt` only for internal-docs-only impact; it deliberately does nothing for mixed changes, whose other selected owners retain artifact responsibility.
+
 Build and release ordering is documented in [Deployment Process](./deployment-process.md#ci-deploy-sequence); failure diagnosis is documented in the [generated-artifact failure playbook](./testing.md#generated-artifact-failure-playbook); OG asset maintenance is documented in [OG Images](./og-images.md); font generation and licensing are documented in [Font Assets](./process/font-assets.md).
 
 `PHAROS_DETAIL_SNAPSHOT_SOURCE` defaults to `per-coin` (the Pages release sets `bulk`); `verify:detail-snapshot-sources` reports byte/field diffs and pass timings; `--keep-dir` retains evidence: [bulk source](./stablecoin-detail-page.md#build-snapshot-hydration).
@@ -193,7 +213,9 @@ Build and release ordering is documented in [Deployment Process](./deployment-pr
 
 ### PR And Release Gates
 
-Use `npm run check:pr -- --base=<ref>` for the adaptive local contract; [Testing](./testing.md#commands) owns command behavior and single-owned doc-sync, [CI Pipeline](./testing.md#ci-pipeline) owns lanes, and [release gates](./deployment-process.md#release-snapshot-state-machine) and [boundary waivers](./process/boundary-waivers.md) own release policy.
+Before **every** authorized first or replacement push, run full plain `npm run check:pr` on the final committed state, without skip/filter/plan-only flags, after full generated-artifact convergence. Focused checks are authoring feedback, never readiness proof. The passing receipt must describe current HEAD, clean state, and the unweakened run. There is no pre-push hook. [Pre-push readiness](./testing.md#pre-push-readiness) owns runtime activation, refs, receipt requirements and the ordered workflow; [release gates](./deployment-process.md#release-snapshot-state-machine) and [boundary waivers](./process/boundary-waivers.md) own release policy.
+
+Use `--ci-parity` additionally after a remote failure the local gate did not reproduce, and for lockfile/setup/security-policy changes; plain `check:pr` remains the everyday readiness gate. When CI fails, collect every failed leaf, fix all causes in one causal revision, rerun full readiness, then push once. A zero focused plan for unmapped production paths is a routing failure, not a pass.
 
 `scripts/lib/pr-test-plan.mts` owns one-time `test:pr --plan-out` selection and weighted 4/8-shard plans; [CI Pipeline](./testing.md#ci-pipeline) owns plan consumption and static groups.
 
@@ -292,7 +314,9 @@ git config core.hooksPath .githooks
 
 The pre-commit hook runs `npm run sync:staged-artifacts`, regenerating/staging committed artifacts affected by staged sources, including deletions. Auto-stage is offline: `autoStage` cannot be `network-derived`; regenerate `public-datasets` manually with `npm run generate:public-datasets`. All selected generators and source state are preflighted; outputs stage atomically only after every generator succeeds. The shared prebuild phase planner orders offline prerequisites before dependents (canonical catalog → packed Worker bytes → evaluation manifest). Only `autoStage` outputs enter the index; network-derived prerequisites are refused. The source guard covers unstaged/untracked inputs throughout the dependency closure and rejects dirty outputs before generation. Failure restores clean tracked outputs from the index, removes newly created registered-glob files, and restores existing ignored prerequisites' bytes; pre-existing glob members survive, though empty directories may remain. Manifest and registry share authored fixed hash inputs; recursive capture summaries/their parser trigger regeneration without adding unrelated operational code to score identity. `PHAROS_SKIP_ARTIFACT_HOOK=1` bypasses the hook, not artifact freshness proof.
 
-The hook does not run a local test/build gate; [Testing](./testing.md#commands) owns local validation behavior.
+Exact wrapper bypasses in `.githooks/pre-commit`: `PHAROS_SKIP_ARTIFACT_HOOK=1`, an in-progress `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply`, and an empty staged diff. Hook installation itself is skipped when `CI` or `GITHUB_ACTIONS` is `1`/`true`, or `PHAROS_PREPARE_SKIP_GIT_HOOKS` is `1`/`true`; `PHAROS_PREPARE_BOOTSTRAP` forces ordinary bootstrap in CI but does not install hooks or enable history bootstrap there (`scripts/maintenance/prepare-workspace.ts`).
+
+The hook is neither full artifact convergence nor a local test/build gate. After final source/integration history, including bypassed merge/rebase/cherry-pick/revert operations, run full `npm run check:generated-artifacts` before the [pre-push readiness run](./testing.md#pre-push-readiness).
 
 ### Release Ownership
 
