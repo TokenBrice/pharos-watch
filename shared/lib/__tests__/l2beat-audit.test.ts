@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "../../types/core";
 import {
   buildL2BeatChainCoverageAudit,
   buildL2BeatBridgeRouteReviewAudit,
@@ -89,6 +90,22 @@ describe("L2BEAT audit helpers", () => {
       reasons: ["bridge-route-risk-missing", "external-protocol-route-review", "l2beat-protocol-reference"],
     });
     expect(audit.reviewRows[0].protocols.map((protocol) => protocol.slug)).toContain("ccip");
+  });
+
+  it("keeps protocol matches as leads without authoring profiles or dependency edges", () => {
+    const coin: StablecoinMeta = {
+      id: "ccip-lead", name: "CCIP Lead", symbol: "LEAD",
+      flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized",
+        yieldBearing: false, rwa: false, navToken: false },
+      pegMechanism: "Research mentions Chainlink CCIP, not an exact deployed token route.",
+    };
+    const before = JSON.stringify(coin);
+    const audit = buildL2BeatBridgeRouteReviewAudit({ stablecoins: [coin] });
+    expect(audit.reviewRows[0].protocols.map((protocol) => protocol.slug)).toContain("ccip");
+    expect(audit.reviewRows[0].notes.join(" ")).toContain("never a profile or backing dependency");
+    expect(JSON.stringify(coin)).toBe(before);
+    expect(coin.bridgeRouteRisk).toBeUndefined();
+    expect(coin.dependencies).toBeUndefined();
   });
 
   it("does not match common protocol IDs as substrings inside ordinary prose", () => {

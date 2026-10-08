@@ -54,14 +54,15 @@ describe("build-l2beat-bridge-route-candidates", () => {
           url: "https://l2beat.com/interop/protocols/ccip",
         }],
         reasons: ["bridge-route-risk-missing", "l2beat-protocol-reference"],
-        notes: ["Reviewed bridgeRouteRisk can affect Safety Score v8.12."],
+        notes: ["The current Safety Score consumes only reviewed bridge evidence."],
       }],
     });
 
     expect(markdown).toContain("# L2BEAT Bridge Route Candidates");
     expect(markdown).toContain("FX (fixture)");
     expect(markdown).toContain("Chainlink CCIP");
-    expect(markdown).toContain("Safety Score v8.12");
+    expect(markdown).toContain("current Safety Score");
+    expect(markdown).toContain("heuristic matches never author a profile or backing dependency");
     expect(markdown).toContain("never mutates stablecoin metadata");
   });
 

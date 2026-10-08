@@ -9,6 +9,8 @@ Read `docs/editorial-style.md` before writing. Its universal rules and the named
 
 Turn the weekly production audit queues into reviewed dependency changes. Leads never create edges automatically. A link requires current claim identity plus a measured basket weight or reviewed serial/mechanism semantics.
 
+The queue is permanent research intake, not a shadow graph. Keep it separate from static merge enforcement and the weekly production structural audit: the weekly job can fail and alert but is not a release gate. Static-versus-published reconciliation is advisory; differences never authorize edges or overrides.
+
 ## Required Context
 
 Read routed docs and scoped instructions, `docs/dependency-map.md`, `docs/runbooks/dependency-network.md`, and `docs/runbooks/artifacts/dependency-coverage-reviewed-ledger.json`. Inspect the emitting queues in `scripts/maintenance/generate-dependency-coverage-audit.ts`, admission rules in `shared/lib/dependency-derivation.ts`, and reviews in `shared/data/coverage-dispositions/dependency-target-dispositions.ts`.
@@ -27,6 +29,8 @@ npm run audit:coverage -- --domain=dependency-coverage --prod
 ```
 
 Capture the report and static-versus-published reconciliation using the runbook. Record access date, publication generation and timestamp, supply timestamp, report counts, and whether inputs are production, local, or fixture-derived. A held publication can predate current supply and local registry changes. Do not call a static-versus-published difference a missing edge without comparing authored relationships, admitted live reserve mappings, and the accepted publication.
+
+Retain the validated upstream `provenance.publication` identity, original evaluation/publication clocks, source generations/digests, and health separately from audit `generatedAt` and capturing `checkoutRevision`. Reconciliation names both the audit checkout and current comparison checkout. Missing legacy provenance remains unknown; malformed supplied provenance rejects the report. Never treat a newer capture/check-out clock as renewed held evidence.
 
 If production is unavailable, label the local or fixture snapshot and leave production-only conclusions open. Do not manually mutate production D1 or bypass admission guards.
 
