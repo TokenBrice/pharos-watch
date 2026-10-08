@@ -269,7 +269,7 @@ function buildGeniusRow(
   };
 }
 
-export function buildGeniusComplianceEvidence(genius: GeniusComplianceProfile): GeniusComplianceEvidence {
+function buildGeniusComplianceEvidence(genius: GeniusComplianceProfile): GeniusComplianceEvidence {
   return {
     notes: genius.notes,
     applicabilitySummary: genius.applicabilityBasis?.summary,

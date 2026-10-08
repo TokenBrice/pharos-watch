@@ -9,7 +9,7 @@ import type {
   RedemptionRouteStatus,
 } from "@shared/types";
 
-export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
+const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
   "stablecoin-redeem": "Stablecoin redeem",
   "basket-redeem": "Basket redeem",
   "collateral-redeem": "Collateral redeem",
