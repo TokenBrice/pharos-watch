@@ -72,11 +72,15 @@ export async function fetchJpmorganNavReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  parseLiveReserveAdapterParams("jpmorgan-nav", config.params);
+  const params = parseLiveReserveAdapterParams("jpmorgan-nav", config.params);
   const input = requireHtmlInput(config.inputs.primary, "jpmorgan-nav");
   if (coin.id !== "jltxx-jpmorgan" || coin.symbol !== "JLTXX" || input.url !== JPMORGAN_JLTXX_PUBLISHER_URL) {
     throw new Error("jpmorgan-nav coin or publisher identity mismatch");
   }
   const body = await fetchTextWithRetry(input.url, signal, 10_000, ctx, { headers: { Accept: "text/markdown" }, maxResponseBytes: 128 * 1024 });
-  return parseJpmorganNav(body, ctx?.nowSec ?? Math.floor(Date.now() / 1000));
+  const result = parseJpmorganNav(body, ctx?.nowSec ?? Math.floor(Date.now() / 1000));
+  if (params.supplyAdmissionReview && result.metadata) {
+    result.metadata.details = { ...result.metadata.details, supplyAdmissionReview: params.supplyAdmissionReview };
+  }
+  return result;
 }

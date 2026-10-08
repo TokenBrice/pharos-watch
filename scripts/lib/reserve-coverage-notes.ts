@@ -211,7 +211,7 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "usdv-solomon": {
     sourceUrl: "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
     sourceQuality: "weak-proof",
-    expectedAdapterFamily: "solomon-protocol remains parked for the tracked legacy mint",
+    expectedAdapterFamily: "legacy executable retired 2026-10-08; new mint-specific reserve source required",
     freshnessEvidence: "Reviewed 2026-10-01: API protocolTvl is 7,234,390.481688 while legacy custodyNotionalUsd is only 74.15, vault and reserve fund are zero; issuer explicitly distinguishes legacy and new USDv.",
     scoreGradePlausible: false,
     note: "The issuer announces separate tokens/programs/reserve models and no automatic conversion. Do not bind the replacement product's TVL to legacy mint Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C or treat futures notional as reserve NAV. Reopen only on a dated legacy-specific reconciled reserve source.",
@@ -379,10 +379,10 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
   "stusd-stoneyield": {
     sourceUrl: "https://docs.stoneyield.io/docs/protocol/contract-design",
     sourceQuality: "weak-proof",
-    expectedAdapterFamily: "stoneyield-router-pool (parked; identity/layout contradiction unresolved)",
-    freshnessEvidence: "Reviewed 2026-10-01: docs describe an 18-decimal BSC USDC/Venus route; the September 30 sidecar read reports Venus vault asset() as USDC, while the parked adapter requires vUSDC.",
+    expectedAdapterFamily: "executable retired 2026-10-08; new reconciled whole-book source required",
+    freshnessEvidence: "Reviewed 2026-10-01: docs describe an 18-decimal BSC USDC/Venus route; the September 30 sidecar read reports Venus vault asset() as USDC, while the retired adapter required vUSDC.",
     scoreGradePlausible: false,
-    note: "The existing adapter's required vault identity contradicts reviewed USDC lineage. Complete router/strategy backing and stUSD/sUSDC liability attribution remain unreconciled. Resolve contract semantics and the strategy census before revival; idle balance and supply probes omit deployed assets.",
+    note: "The retired adapter's required vault identity contradicted reviewed USDC lineage. Complete router/strategy backing and stUSD/sUSDC liability attribution remain unreconciled. Retirement does not resolve the adverse ledger; a new source requires correct instrument semantics and the strategy census, not idle balance or supply probes.",
   },
   "usdh-hermetica": {
     sourceUrl: "https://blog.hermetica.fi/archive",

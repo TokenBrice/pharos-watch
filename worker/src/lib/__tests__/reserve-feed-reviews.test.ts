@@ -18,47 +18,41 @@ function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStat
 }
 
 describe("reserve feed review policy", () => {
-  it("enrolls independent and static-validated evidence, but never BNUSD or inactive yzUSD", () => {
+  it("retains unrelated reviews and removes the fabricated attestation redemption failures", () => {
     const resolved = resolveReserveFeedReviews(now);
     expect(resolved.invalidIds).toEqual([]);
-    expect(resolved.activeById.size).toBe(9);
-    expect(resolved.activeById.has("wars-argentine-peso")).toBe(true);
+    expect(resolved.activeById.size).toBe(2);
+    expect(resolved.activeById.has("wars-argentine-peso")).toBe(false);
     expect(resolved.activeById.has("bnusd-balanced")).toBe(false);
     expect(resolved.activeById.has("yzusd-yuzu")).toBe(false);
   });
-  it("renews the nine still-matching feeds through October 21 without invalid or expired reviews", () => {
+  it("retains the two still-matching October 7 reviews without invalid or expired entries", () => {
     expect(RESERVE_FEED_REVIEWS.map((item) => item.stablecoinId).sort()).toEqual([
-      "gusd-gemini", "mtbill-midas", "usdu-universal", "wars-argentine-peso", "wbrl-ripio",
-      "wcop-ripio", "wmxn-ripio", "zarp-zarp", "zarsc-supercoin",
+      "gusd-gemini", "mtbill-midas",
     ]);
     for (const item of RESERVE_FEED_REVIEWS) {
       expect(item.reviewedAt).toBe(Date.UTC(2026, 9, 7, 14, 19, 23) / 1000);
       expect(item.expiresAt - item.reviewedAt).toBe(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
     }
     const resolved = resolveReserveFeedReviews(Date.UTC(2026, 9, 13) / 1000);
-    expect(resolved.activeById.size).toBe(9);
+    expect(resolved.activeById.size).toBe(2);
     expect(resolved.expiredIds).toEqual([]);
     expect(resolved.invalidIds).toEqual([]);
   });
   it.each(RESERVE_FEED_REVIEWS)("matches only the observed October 7 failure for $stablecoinId", async (item) => {
-    const validation = !["gusd-gemini", "mtbill-midas"].includes(item.stablecoinId);
-    const failureCategory = validation ? "validation" : "unknown";
-    const errorPrefix = validation ? "Validation failed: Redemption source timestamp"
-      : item.stablecoinId === "gusd-gemini"
-        ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"
-        : "primary:http-json: midas-mtbill:stale-portfolio-timestamp";
+    const errorPrefix = item.stablecoinId === "gusd-gemini"
+      ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"
+      : "primary:http-json: midas-mtbill:stale-portfolio-timestamp";
     const observed = state({
       stablecoinId: item.stablecoinId, adapterKey: item.adapterKey,
-      lastStatus: validation ? "degraded" : "error", lastError: `${errorPrefix} observed failure`,
-      warnings: validation ? [{
-        code: "stale-redemption-source-timestamp", message: "Source remains stale", severity: "warning", effect: "fatal",
-      }] : [],
-      metadata: { failureCategory },
+      lastStatus: "error", lastError: `${errorPrefix} observed failure`,
+      warnings: [],
+      metadata: { failureCategory: "unknown" },
     });
     expect(await matchReserveFeedReview(mockD1(), observed, now)).toEqual(item);
     expect(await matchReserveFeedReview(mockD1(), { ...observed, lastStatus: "ok", lastSuccessAt: now }, now)).toBeNull();
     expect(await matchReserveFeedReview(mockD1(), {
-      ...observed, metadata: { failureCategory: validation ? "unknown" : "validation" },
+      ...observed, metadata: { failureCategory: "validation" },
     }, now)).toBeNull();
     expect(await matchReserveFeedReview(mockD1(), {
       ...observed, warnings: [...observed.warnings, {

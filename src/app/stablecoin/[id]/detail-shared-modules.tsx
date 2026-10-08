@@ -200,6 +200,7 @@ export function buildDetailSharedModules({
     liveBalanceSheetScope: liveScopeMetadata?.balanceSheetScope,
     liveSharedBookAssetIds: liveScopeMetadata?.sharedBookAssetIds,
     liveRatioBasis: resolveLiveRatioBasis(viewModel.reserves?.metadata),
+    liveMetadata: liveScopeMetadata,
     liveStale: viewModel.reserves?.mode === "live-stale",
     oracle: coin.oracleRiskSummary ?? null,
     parent: backingParent,

@@ -1,14 +1,13 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, NativeReserveQuantityBasis } from "@shared/types/live-reserves";
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
-  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
-  freshnessMetadataFromTimestamp,
+  unverifiedFreshnessMetadata,
   getJsonPath,
   isHttpJsonInput,
   parsePositiveNumericLike,
@@ -35,6 +34,7 @@ interface SingleAssetParams {
   supplyProbe?: JsonPathProbe;
   timestampProbe?: JsonPathProbe;
   reserveSourceLabel?: string;
+  nativeQuantityBasis?: NativeReserveQuantityBasis;
 }
 
 function readParams(config: LiveReservesConfig): SingleAssetParams {
@@ -48,7 +48,11 @@ function readScaledProbeValue(payload: Record<string, unknown>, probe: JsonPathP
     throw new Error(`single-asset source returned zero/empty ${label} probe value`);
   }
   const scale = probe.scale ?? 1;
-  return parsed / scale;
+  const scaled = parsed / scale;
+  if (!Number.isFinite(scaled) || scaled <= 0) {
+    throw new Error(`single-asset source returned invalid scaled ${label} probe value`);
+  }
+  return scaled;
 }
 
 export async function fetchSingleAssetReserves(
@@ -78,10 +82,10 @@ export async function fetchSingleAssetReserves(
       12_000,
       ctx,
     );
-    const totalReserveUsd = reserveProbe
+    const totalReserveQuantity = reserveProbe
       ? readScaledProbeValue(payload, reserveProbe, "reserve")
       : null;
-    const supplyUsd = params.supplyProbe
+    const supplyTokens = params.supplyProbe
       ? readScaledProbeValue(payload, params.supplyProbe, "supply")
       : null;
     const timestampRaw = params.timestampProbe
@@ -95,13 +99,14 @@ export async function fetchSingleAssetReserves(
       throw new Error("single-asset source returned unreadable timestamp probe value");
     }
 
-    const freshnessMetadata = freshnessMetadataFromTimestamp(
-      sourceTimestamp,
+    const freshnessMetadata = unverifiedFreshnessMetadata(
       "single-asset-json-probe",
-      "The configured single-asset reserve probe does not include a trustworthy source timestamp",
+      "The issuer quantity probe does not provide a whole-reserve observation clock; any configured timestamp describes chain supply only",
     );
-    const collateralizationRatio = totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
-      ? totalReserveUsd / supplyUsd
+    const basis = params.nativeQuantityBasis;
+    const nominalValue = basis?.supplyToken === coin.symbol ? basis.nominalValuePerToken : undefined;
+    const collateralizationRatio = totalReserveQuantity != null && supplyTokens != null && nominalValue != null
+      ? totalReserveQuantity / (supplyTokens * nominalValue)
       : null;
     const warnings = buildCoverageShortfallWarnings({
       code: "reserve-undercollateralized",
@@ -114,22 +119,23 @@ export async function fetchSingleAssetReserves(
       ...(warnings.length > 0 ? { warnings } : {}),
       metadata: {
         ...freshnessMetadata,
-        ...(totalReserveUsd != null ? { totalReserveUsd } : {}),
-        ...(supplyUsd != null ? { supplyUsd } : {}),
+        ...(totalReserveQuantity != null ? { totalReserveQuantity } : {}),
+        ...(supplyTokens != null ? { supplyTokens } : {}),
+        ...(basis ? { nativeQuantityBasis: basis } : {}),
         ...(collateralizationRatio != null
           ? { collateralizationRatio }
           : {}),
-        ...buildRedemptionSnapshotMetadata({
-          capacityKind: "documented-bound",
-          freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
-          ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-          routeStatus: "unknown",
-        }),
         details: {
-          proofKind: totalReserveUsd != null && supplyUsd != null
+          ...freshnessMetadata.details,
+          proofKind: totalReserveQuantity != null && supplyTokens != null
             ? "reserve-and-supply-probe"
             : "single-asset-liveness-probe",
           reserveSourceLabel: params.reserveSourceLabel ?? params.label,
+          ...(sourceTimestamp != null ? {
+            chainSupplyObservedAt: sourceTimestamp,
+            chainSupplyTimestampPath: params.timestampProbe?.path,
+          } : {}),
+          quantityScope: "issuer-reported; configured bucket is not measured portfolio composition",
         },
       },
     };
@@ -152,11 +158,6 @@ export async function fetchSingleAssetReserves(
       ...notApplicableFreshnessMetadata({
         proofKind: "erc20-total-supply-liveness",
         reserveSourceLabel: params.reserveSourceLabel ?? params.label,
-      }),
-      ...buildRedemptionSnapshotMetadata({
-        capacityKind: "documented-bound",
-        freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
       }),
     },
   };

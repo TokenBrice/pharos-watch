@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DEPENDENCY_TYPE_VALUES } from "./dependency-types";
-import { LIVE_RESERVE_RPC_MODE_VALUES } from "./live-reserve-core";
+import { LIVE_RESERVE_RPC_MODE_VALUES, NativeReserveQuantityBasisSchema } from "./live-reserve-core";
 import type {
   LiveReserveAdapterValidationPolicy,
   LiveReserveEvidenceClass,
@@ -13,6 +13,7 @@ import type {
 import { RedemptionHolderEligibilitySchema } from "./redemption";
 import type { ReserveEvidenceSourceOriginClass } from "./report-card-evidence-journal";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { ReserveNavSupplyAdmissionReviewSchema } from "./reserve-nav-supply";
 import {
   ReserveAssetClassSchema,
   ReserveRiskFactorSchema,
@@ -65,6 +66,7 @@ const CONFIG_COLLATERAL_V1_V2 = configPolicy(["collateral-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V1 = configPolicy(["attestation-mix"], [1]);
 const CONFIG_ATTESTATION_V1_V2 = configPolicy(["attestation-mix"], [1, 2]);
 const CONFIG_ATTESTATION_V2 = configPolicy(["attestation-mix"], [2]);
+const CONFIG_ATTESTATION_V3 = configPolicy(["attestation-mix"], [3]);
 const CONFIG_PROTOCOL_V1 = configPolicy(["protocol-reserve"], [1]);
 const CONFIG_PROTOCOL_V1_V2 = configPolicy(["protocol-reserve"], [1, 2]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
@@ -347,6 +349,13 @@ const assuranceParamsShape = {
 
 const paxosAssuranceParamsSchema = z.object({
   product: z.enum(["PAXG", "PYUSD", "USDP", "USDG", "GUSD"]).default("PAXG"),
+}).strict();
+
+const bloxAssuranceParamsSchema = z.object({
+  product: z.literal("MYRC"),
+  profile: z.literal("myrc-v1"),
+  indexHost: z.literal("api.blox.my"),
+  reportHosts: z.tuple([z.literal("cdn.blox.my")]),
 }).strict();
 
 const audxAssuranceParamsSchema = z
@@ -682,13 +691,27 @@ const capVaultParamsSchema = z
   })
   .strict();
 
+/**
+ * Largest reserve-vs-supply observation skew any reviewed scope may accept.
+ * Equal to chainlink-por's default oracle age cap: no reviewed perimeter
+ * compares totals observed more than two days apart.
+ */
+const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
 const chainlinkPorIssuerCirculationProbeSchema = z
   .object({
     kind: z.literal("backed-graphql"),
     url: AbsoluteUrlSchema,
     reserveSymbol: z.string().trim().min(1),
+    maxReserveSupplySkewSec: z.number().int().positive().max(MAX_RESERVE_SUPPLY_SKEW_CAP_SEC).optional(),
+    temporalReview: z.object({
+      reviewedAt: StrictIsoDateSchema,
+      evidenceRef: AbsoluteUrlSchema,
+    }).strict().optional(),
   })
-  .strict();
+  .strict()
+  .refine((probe) => (probe.maxReserveSupplySkewSec == null) === (probe.temporalReview == null), {
+    message: "Circulation skew bound and dated source review must be supplied together",
+  });
 
 const LIABILITY_SUPPLY_READER_VALUES = [
   "evm-erc20",
@@ -702,12 +725,6 @@ const LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES = [
   "third-party-bridge-representation",
 ] as const;
 
-/**
- * Largest reserve-vs-supply observation skew any reviewed scope may accept.
- * Equal to chainlink-por's default oracle age cap: no reviewed perimeter
- * compares totals observed more than two days apart.
- */
-const MAX_RESERVE_SUPPLY_SKEW_CAP_SEC = 2 * 24 * 60 * 60;
 
 /**
  * Default reserve/supply time-skew bound for a reviewed issuer-native scope
@@ -1732,6 +1749,7 @@ const singleAssetParamsSchema = z
     supplyProbe: singleAssetProbeSchema.optional(),
     timestampProbe: singleAssetProbeSchema.optional(),
     reserveSourceLabel: z.string().optional(),
+    nativeQuantityBasis: NativeReserveQuantityBasisSchema.optional(),
   })
   .strict();
 
@@ -1764,28 +1782,6 @@ const parallelizerBalancesParamsSchema = z
   })
   .strict();
 
-const abracadabraCauldronSchema = z
-  .object({
-    ...EvmAddressFields,
-    collateralSymbol: z.string(),
-    collateralAddress: EvmAddressSchema,
-    collateralDecimals: z.number().int().nonnegative(),
-    ...TrackedExposureFields,
-    // Reserved for future V2/V3/V4 selector nuance; currently unused by the adapter.
-    version: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(),
-  })
-  .strict();
-
-const abracadabraParamsSchema = z
-  .object({
-    ...OptionalEvmRpcFields,
-    // BentoBox / DegenBox contract that backs the configured cauldrons. Used to
-    // convert per-cauldron `totalCollateralShare` into underlying token amounts
-    // via `toAmount(token, share, false)`.
-    bentoBoxAddress: EvmAddressSchema,
-    cauldrons: z.array(abracadabraCauldronSchema).min(1),
-  })
-  .strict();
 
 const astherusEarnWrapperParamsSchema = z
   .object({
@@ -1816,18 +1812,6 @@ const initiaWrapperVaultParamsSchema = z
   })
   .strict();
 
-const stoneyieldRouterPoolParamsSchema = z
-  .object({
-    slice: reserveSliceDescriptorSchema,
-    stusdAddress: EvmAddressSchema,
-    usdcAddress: EvmAddressSchema,
-    susdcAddress: EvmAddressSchema,
-    routerAddress: EvmAddressSchema,
-    venusVaultAddress: EvmAddressSchema,
-    venusVTokenAddress: EvmAddressSchema,
-    ...OptionalEvmRpcFields,
-  })
-  .strict();
 
 // XPR Network (Antelope) account reads: token supply from one contract's
 // currency stats plus the treasury account's balances on the balance contract.
@@ -2116,23 +2100,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: LATEST_STATE_VALIDATION,
   },
-  abracadabra: {
-    primaryInputKinds: ["onchain-evm"],
-    paramsSchema: abracadabraParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "retired",
-      rationale:
-        "MIM entered the frozen archive on 2026-07-26 after its terminal depeg; retain the adapter only for historical review and re-evaluate if the protocol resumes active issuance.",
-      parkedSince: "2026-07-26",
-      nextReview: "2027-01-26",
-    },
-    validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
-  },
   "anchorage-independent-assurance": declareAdapter(
     anchorageAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V3,
@@ -2197,7 +2164,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
+    configValidation: configPolicy(["attestation-mix"], [2]),
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: MONTHLY_VERIFIED_VALIDATION,
     provenance: {
@@ -2205,6 +2172,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       rationale: "Bound to myrc-blox: the issuer JSON index validates the unique reviewed August 2026 period, report URL and MYR breakdown total before publishing static-validated 66.68% bank cash and 33.32% Halogen fund slices. Freshness uses the examined August 31 balances under the 33-day monthly cap, not upload time; newer reports require composition review. The MYR 0.03 assertion/breakdown discrepancy is retained, with no inferred USD total or coverage ratio.",
     },
   },
+  "blox-independent-assurance": declareAdapter(bloxAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
+    primaryInputKinds: ["http-json"],
+    configValidation: CONFIG_ATTESTATION_V2,
+    validation: MONTHLY_VERIFIED_VALIDATION,
+    provenance: {
+      status: "staged",
+      rationale: "Offline MYRC reasonable-assurance verification is implemented. No active binding until a fresh qualifying report, reviewed MYR/MYRC nominal basis, matched category keys and publication coverage proof pass; the August 31 report remains stale and cannot activate scoring.",
+    },
+  }),
   "audd-independent-assurance": declareAdapter(
     auddAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V2,
@@ -2292,7 +2268,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "jpmorgan-nav": {
     primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
+    paramsSchema: z.object({ supplyAdmissionReview: ReserveNavSupplyAdmissionReviewSchema.optional() }).strict(),
     sourceModel: "single-bucket",
     evidenceClass: "static-validated",
     sourceOriginClass: "issuer-attested",
@@ -2302,7 +2278,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     provenance: {
       status: "staged",
-      rationale: "bound to jltxx-jpmorgan, quarantined until its first class-assets snapshot; reactivates when the asset is re-admitted",
+      rationale: "quarantined JLTXX evidence capture only; catalog admission requires pinned native shares, reviewed temporal/legal class perimeter, current fingerprint/runtime price-mcap PASS and explicit approval",
       parkedSince: "2026-10-03",
       nextReview: "2026-10-10",
     },
@@ -2357,10 +2333,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    // v2: a reviewed `liabilityScope` (issuer-native perimeter or declared
-    // not-comparable basis) replaces `incompleteSupplyScope`; v1 bindings keep
-    // the unscoped roster, whose ratio now requires complete supply coverage.
-    configValidation: CONFIG_ATTESTATION_V1_V2,
+    // v3 clean cutover: exact liability roster and source-reviewed circulation
+    // clock admission. Missing circulation temporal review withholds the ratio.
+    configValidation: CONFIG_ATTESTATION_V3,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: VERIFIED_ONLY_VALIDATION,
   },
@@ -2735,7 +2710,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     provenance: {
       status: "staged",
-      rationale: "bound to pre-launch kusd-kerne; activates at launch",
+      rationale: "Bound to pre-launch kusd-kerne; retained through 2027-03-09 pending reviewed Pharos active transition with runtime-price PASS and separately proven exhaustive PSM assets/native liabilities/legal-book scope. Signature verification and selected holdings do not establish independent whole-book coverage.",
       parkedSince: "2026-09-09",
       nextReview: "2027-03-09",
     },
@@ -2859,24 +2834,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DASHBOARD_VERIFIED_VALIDATION,
   },
-  "openeden-usdo": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "Re-enable probe (2026-08-13) confirmed the issuer gateway serves ordinary clients, but the first production cron (2026-08-14) received HTTP 500 on every Worker fetch strategy; re-parked until OpenEden unblocks Cloudflare Worker egress.",
-      parkedSince: "2026-08-14",
-      nextReview: "2027-02-14",
-    },
-    validation: DASHBOARD_VALIDATION,
-  },
   "origin-vault-balances": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: originVaultBalancesParamsSchema,
@@ -2988,10 +2945,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
+    configValidation: CONFIG_SINGLE_ASSET_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    // The http-json probe emits verified or unverified depending on whether the
-    // upstream carries a timestamp; the on-chain probe is latest-state.
+    // HTTP quantities remain unverified whole-reserve observations: a chain
+    // supply clock is not a bank-reserve clock. On-chain reads prove liveness only.
     validation: { allowedFreshnessModes: ANY_FRESHNESS },
   },
   "sky-makercore": {
@@ -3019,25 +2976,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "solomon-protocol": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "independent",
-    preferredFreshnessMode: "verified",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "The protocol-data endpoint stopped describing the legacy beta mint: from the 2026-09-20 data cut its protocolTvl equals the replacement Chancery USDv mint's on-chain supply (6,059,987.4834 by getTokenSupply on USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk; 6,072,504.4834 at the 2026-09-27 probe) while the legacy itemized buckets are vestigial (custody $76.25, empty vault and reserve fund), and the adapter fails closed above the issuer-documented $3,000,000 legacy beta cap. The usdv-solomon liveReservesConfig was removed on 2026-09-27 to stop the error loop; the curated September composition is served instead and the replacement mint is tracked separately as usdv-solomon-v2. Review after the 2026-10-16 legacy wind-down endpoint: re-enable only if the issuer republishes a legacy-mint reserve envelope.",
-      parkedSince: "2026-09-27",
-      nextReview: "2026-10-31",
-    },
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
 
   "spiko-api": {
     primaryInputKinds: ["http-json"],
@@ -3054,18 +2992,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
-  "stoneyield-router-pool": declareAdapter(stoneyieldRouterPoolParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
-    // stUSD's exit is `needs-research`/`capacity-unpublished` and there is no
-    // public unwrap, so no capacity may be published from the pool read.
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "staged",
-      rationale:
-        "On-chain evidence contradicts the reviewed 100% USDC sidecar row, so the adapter must not publish yet. At BSC block 119927831 SUSDC.getProtocolStats reported totalSupply 10,020,010, totalUSDCDeposited 10, totalRewardsDistributed 10,020,000 and contractUSDCBalance 0.05; the only observed USDC egress is 4.95 (block 69663673) plus 5 (block 69664002), both to StrategyRouter 0x563f48aAD50a75Ef3662827a4d536dbd46aBb5a2, which is the sole active full-weight strategy, and the Venus look-through adds 5.098725768562729 to 4.95 idle. Against STUSD supply 2,894,743.271428093 that is coverage 0.0000034886429716375584. Park until reserve-composition curation resolves the contradiction; review when verified backing or corrected supply evidence exists.",
-      parkedSince: "2026-09-04",
-      nextReview: "2026-12-04",
-    },
-  }),
 
   "superstate-liquidity": {
     primaryInputKinds: ["onchain-evm"],
@@ -3136,27 +3062,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "usdgo-transparency": declareAdapter(usdgoAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
     configValidation: configPolicy(["attestation-mix"], [3]),
   }),
-  "usdh-native-markets": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "retired",
-      rationale:
-        "Native Markets USDH entered the frozen archive on 2026-07-11 after its USDC migration; retain the adapter only for historical review and re-evaluate if the issuer resumes the product.",
-      parkedSince: "2026-07-11",
-      nextReview: "2026-10-11",
-    },
-    validation: {
-      // Native Markets USDH publishes attestation PDFs monthly; use the 33-day window.
-      maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  },
   "usdai-proof-of-reserves": {
     primaryInputKinds: ["http-json"],
     paramsSchema: usdaiProofOfReservesParamsSchema,
@@ -3234,28 +3139,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "zephyr-scanner": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
     configValidation: CONFIG_PROTOCOL_V1_V2,
   }),
-  "usdy-holdings-report": {
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "validated-static",
-    evidenceClass: "static-validated",
-    sourceOriginClass: "independent-assurance",
-    preferredFreshnessMode: "verified",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale: "USDY is suspended until the daily Ankura archive has proven newest-report discovery. The pinned September 3 manifest remains reviewed static evidence only.",
-      parkedSince: "2026-09-09",
-      nextReview: "2026-10-09",
-    },
-    validation: {
-      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-      maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
-      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-    },
-  },
   "djed-cardano": {
     primaryInputKinds: ["http-json"],
     paramsSchema: djedCardanoParamsSchema,
@@ -3413,20 +3296,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: {
       maxSourceAgeSec: BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
-    },
-  },
-  "matrixdock-stbt": {
-    primaryInputKinds: ["http-json", "http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
-    sourceOriginClass: "issuer-attested",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: ["unverified"],
     },
   },
 } as const satisfies Record<string, LiveReserveAdapterDescriptor>;

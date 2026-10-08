@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "MYR cash at Malaysian banks",
-      "sourceKey": "blox:cash",
+      "sourceKey": "blox-independent-assurance:myrc:cash",
       "pct": 66.68,
       "risk": "very-low",
       "assetClass": "cash",
@@ -17,7 +17,7 @@
     },
     {
       "name": "Halogen Shariah MYR Liquid Fund",
-      "sourceKey": "blox:halogen-myr-liquid-fund",
+      "sourceKey": "blox-independent-assurance:myrc:halogen-myr-liquid-fund",
       "pct": 33.32,
       "risk": "very-low",
       "assetClass": "money-market-fund",

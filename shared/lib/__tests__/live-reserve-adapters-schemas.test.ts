@@ -244,7 +244,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
   it("rejects unsupported adapter semantics", () => {
     const result = LiveReservesConfigSchema.safeParse({
       adapter: "chainlink-por",
-      version: 1,
+      version: 3,
       semantics: "collateral-mix",
       inputs: {
         primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },

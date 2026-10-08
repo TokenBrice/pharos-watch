@@ -5,13 +5,16 @@ import wars from "@shared/data/stablecoins/coins/wars-argentine-peso.json";
 import wbrl from "@shared/data/stablecoins/coins/wbrl-ripio.json";
 import wcop from "@shared/data/stablecoins/coins/wcop-ripio.json";
 import wmxn from "@shared/data/stablecoins/coins/wmxn-ripio.json";
+import zarp from "@shared/data/stablecoins/coins/zarp-zarp.json";
+import usdu from "@shared/data/stablecoins/coins/usdu-universal.json";
+import zarsc from "@shared/data/stablecoins/coins/zarsc-supercoin.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adaptAttestationPdfIndex,
   fetchAttestationPdfIndexReserves,
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
-import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 import ripioJune from "./fixtures/ripio-wfiat-june-2026.json";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
@@ -102,14 +105,8 @@ describe("adaptAttestationPdfIndex", () => {
       reportLinkText: "February 2026 attestation",
       compositionMode: "configured-static-slices",
       compositionSource: "configured-static-slices",
-      redemption: {
-        capacityKind: "documented-bound",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
-        routeStatus: "unknown",
-      },
     });
-    expect(String(result.metadata?.compositionNote)).toContain("full PDF parsing");
+    expect(result.metadata).not.toHaveProperty("redemption");
   });
 
   it("preserves the complete curated reserve-slice shape", () => {
@@ -291,6 +288,27 @@ describe("adaptAttestationPdfIndex", () => {
       freshnessMode: "verified",
     });
     expect(result.warnings).toBeUndefined();
+    expect(result.metadata).not.toHaveProperty("redemption");
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
+      now: Date.UTC(2026, 9, 8) / 1000,
+    });
+    expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+    expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
+  });
+
+  it.each([zarp, usdu, zarsc])("keeps $id's reviewed reserve clock without fabricated redemption", (coin) => {
+    const config = coin.liveReservesConfig as LiveReservesConfig;
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
+    const report = params.reviewedReport!;
+    const result = adaptAttestationPdfIndex(`<a href="${report.url}">USDU Examination Attestation report August 2026</a>`, params);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.parse(`${report.balanceDate}T00:00:00Z`) / 1000,
+      reportBalanceDate: report.balanceDate, reportPdfUrl: report.url,
+    });
+    expect(result.metadata).not.toHaveProperty("redemption");
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000 });
+    expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
+    expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
   });
 
   it("preserves day-first interpretation for ambiguous numeric filenames", () => {
@@ -338,6 +356,7 @@ describe("adaptAttestationPdfIndex", () => {
     expect(result.metadata).not.toHaveProperty("reportPdfHref");
     expect(result.metadata).not.toHaveProperty("reportDate");
     expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata).not.toHaveProperty("redemption");
     expect(result.warnings).toEqual([expect.objectContaining({
       code: "attestation-pdf-index-link-unmatched",
       effect: "info",

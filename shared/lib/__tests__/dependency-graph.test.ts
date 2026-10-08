@@ -68,8 +68,8 @@ describe("dependency-graph", () => {
   it("inherits adapter-declared kinds but never chooses between conflicting reviewed kinds", () => {
     const config: NonNullable<StablecoinMeta["liveReservesConfig"]> = {
       adapter: "single-asset",
-      version: 1,
-      semantics: "protocol-reserve",
+      version: 2,
+      semantics: "single-asset",
       inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
       params: { slices: [{ sourceKey: "fixture:upstream", coinId: "upstream", depType: "mechanism" }] },
     };

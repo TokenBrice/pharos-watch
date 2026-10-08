@@ -73,14 +73,3 @@ export const V9ReserveBoundedFactSchema = z.object({ fact: ReserveBoundedFactSch
   if (value.status.observationState !== "known" && value.rejectionReason === null) ctx.addIssue({ code: "custom", message: "Unavailable bounds require a reason" });
 });
 export type V9ReserveBoundedFact = z.output<typeof V9ReserveBoundedFactSchema>;
-
-export const OriginCollateralLiquidityObservationSchema = z.object({
-  asOfSec: seconds,
-  sourceUrls: z.array(z.string().url()).min(2),
-  contentDigest: Sha256Schema,
-  admission: z.literal("diagnostic-unreconciled"),
-  positions: z.array(z.object({ positionId: text, totalHeld: z.number().finite().nonnegative(), currentlyWithdrawable: z.number().finite().nonnegative() }).strict()).min(1),
-}).strict().superRefine((observation, ctx) => {
-  if (new Set(observation.positions.map((row) => row.positionId)).size !== observation.positions.length) ctx.addIssue({ code: "custom", path: ["positions"], message: "Duplicate API position identity" });
-  if (observation.positions.some((row) => row.currentlyWithdrawable > row.totalHeld)) ctx.addIssue({ code: "custom", path: ["positions"], message: "API available amount exceeds held amount" });
-});

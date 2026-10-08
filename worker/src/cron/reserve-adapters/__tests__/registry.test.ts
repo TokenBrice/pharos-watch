@@ -124,6 +124,39 @@ describe("adapter registry completeness", () => {
     }
   });
 
+  it("retires C17 executable keys without removing archives, static research or replacement bindings", () => {
+    for (const key of ["solomon-protocol", "usdh-native-markets", "abracadabra", "stoneyield-router-pool", "openeden-usdo", "usdy-holdings-report"]) {
+      expect(Object.keys(LIVE_RESERVE_ADAPTER_FETCHERS)).not.toContain(key);
+      expect([...LIVE_RESERVE_ADAPTER_KEYS]).not.toContain(key);
+      expect(LiveReservesConfigSchema.safeParse({
+        adapter: key, version: 1, semantics: "collateral-mix",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } },
+      }).success).toBe(false);
+    }
+    const coins = new Map(TRACKED_SOURCE_COINS.map((coin) => [coin.id, coin]));
+    for (const id of ["usdv-solomon", "usdh-native-markets", "mim-abracadabra", "stusd-stoneyield", "usdo-openeden", "usdy-ondo-finance"]) {
+      expect(coins.get(id)).toBeDefined();
+      expect(coins.get(id)?.liveReservesConfig).toBeUndefined();
+    }
+    expect(coins.get("usdv-solomon-v2")?.liveReservesConfig?.adapter).toBe("solomon-chancery");
+    expect(coins.get("cusdo-openeden")?.liveReservesConfig?.adapter).toBe("erc4626-single-asset");
+    expect(coins.get("tbill-openeden")?.liveReservesConfig?.adapter).toBe("chainlink-nav");
+    expect(coins.get("usdh-native-markets")?.status).toBe("frozen");
+    expect(coins.get("mim-abracadabra")?.status).toBe("frozen");
+  });
+
+  it.each([
+    ["attestation-pdf-index", "static-validated"],
+    ["audd-independent-assurance", "static-validated"],
+    ["issuer-attested-report", "static-validated"],
+    ["zephyr-scanner", "weak-live-probe"],
+    ["afi-proof", "weak-live-probe"],
+    ["coinbase-oned-por", "weak-live-probe"],
+    ["blackrock-brsrv-holdings", "weak-live-probe"],
+  ] as const)("keeps permanent %s evidence in the non-independent %s tier", (key, evidenceClass) => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[key].evidenceClass).toBe(evidenceClass);
+  });
+
   it("active adapter provenance matches live-reserve metadata usage", () => {
     const configuredKeys = new Set(
       ACTIVE_STABLECOINS.map((coin) => coin.liveReservesConfig?.adapter).filter(

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "product": "MYRC",
+  "profile": "myrc-v1",
+  "officialIndexUrl": "https://api.blox.my/blox-admin/attestations",
+  "reportUrl": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf",
+  "reportSha256": "95cd46d41af13d63eece4439c00af9d158e893fdf21993e842d09e4bfa557aa2",
+  "reportByteLength": 372858,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:00+08:00",
+  "reportTimeZone": "GMT+8 (as printed in the report)",
+  "attestor": "Tommy Ung & Partners PLT (AF 002378)",
+  "engagement": "ISAE 3000 (Revised) reasonable assurance on MYRC Reserve Information",
+  "conclusion": "unmodified",
+  "unit": "MYR",
+  "nativeQuantityBasis": {
+    "reserveUnit": {
+      "kind": "currency",
+      "unit": "MYR"
+    },
+    "supplyToken": "MYRC",
+    "nominalValuePerToken": 1,
+    "reviewedAt": "2026-10-08",
+    "evidenceRef": "MYRC Reserve Report: MYR-denominated fair value meets or exceeds MYRC in circulation at 31 August 2026 11:59 PM GMT+8; circulation is approved-chain supply less authorized-but-not-issued tokens."
+  },
+  "assets": [
+    {
+      "code": "cash",
+      "label": "MYR cash at Malaysian banks",
+      "amount": "1200903.77"
+    },
+    {
+      "code": "halogen-myr-liquid-fund",
+      "label": "Halogen Shariah MYR Liquid Fund",
+      "amount": "600000.00"
+    }
+  ],
+  "liabilities": [
+    {
+      "code": "circulation",
+      "label": "MYRC circulation after authorized-but-not-issued exclusion",
+      "amount": "1800903.74"
+    }
+  ],
+  "reportedAssetTotal": "1800903.74",
+  "computedAssetTotal": "1800903.77",
+  "reportedLiabilityTotal": "1800903.74",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "e9801c4e7a3d11ce7895d032ff08ba74a75d53083dbc2de9e6df10d02de3fb71",
+    "pageCount": 4
+  },
+  "assuranceTier": "independent-assurance"
+}

@@ -75,6 +75,58 @@ afterEach(() => {
 });
 
 describe("buildBackingMetricsView", () => {
+  it("labels native CAD amounts and nominal coverage without implying USD", () => {
+    const metadata = {
+      nativeQuantityBasis: {
+        reserveUnit: { kind: "currency" as const, unit: "CAD" },
+        supplyToken: "QCAD", nominalValuePerToken: 1,
+        reviewedAt: "2026-07-22", evidenceRef: "https://stablecorp.ca/transparency",
+      },
+      totalReserveQuantity: 105, supplyTokens: 100,
+    };
+    const view = build({ liveRatio: 1.05, liveRatioBasis: resolveLiveRatioBasis(metadata), liveMetadata: metadata });
+    expect(view?.headline.basis).toBe("CAD-native vs QCAD (nominal)");
+    expect(view?.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "native-reserves", value: "105 CAD" }),
+      expect.objectContaining({ key: "native-supply", value: "100 QCAD" }),
+    ]));
+    expect(view?.details.some((row) => row.value.includes("$"))).toBe(false);
+  });
+
+  it("preserves MYR/MYRC nominal basis and original report clock/discrepancy without denying report assurance", () => {
+    const metadata = {
+      nativeQuantityBasis: {
+        reserveUnit: { kind: "currency" as const, unit: "MYR" }, supplyToken: "MYRC", nominalValuePerToken: 1,
+        reviewedAt: "2026-10-03", evidenceRef: "https://example.com/reviewed-test-report",
+      },
+      totalReserveQuantity: 2_477_388.98, supplyTokens: 2_458_786,
+      details: { assurance: { reportAsOf: "2026-08-31T23:59:00+08:00", reportedAssetDifference: "0.03" } },
+    };
+    const view = build({ liveRatio: 1.00756, liveRatioBasis: resolveLiveRatioBasis(metadata), liveMetadata: metadata });
+    expect(view?.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "native-nominal-basis", value: "1 MYRC = 1 MYR" }),
+      expect.objectContaining({ key: "assurance-report-asof", value: "2026-08-31T23:59:00+08:00" }),
+      expect.objectContaining({ key: "native-report-discrepancy", value: "0.03 MYR" }),
+    ]));
+    expect(view?.details.some((row) => row.note?.includes("not USD or independent assurance"))).toBe(false);
+    expect(view?.details.some((row) => row.value.includes("$"))).toBe(false);
+  });
+
+  it("renders unavailable denominator and original observation clocks without inventing a ratio", () => {
+    const view = build({ liveMetadata: {
+      ratioUnavailableReason: "not-comparable",
+      liabilityScope: { basis: "not-comparable", canonicalChain: "kinesis", reason: "Ethereum is a subset" },
+      reserveObservedAt: 1_780_000_000,
+      supplyObservedAt: { min: 1_780_000_010, max: 1_780_000_020 }, ratioSkewSec: 20,
+    } });
+    expect(view?.headline.value).toBe("Unavailable");
+    expect(view?.visual).toBeNull();
+    expect(view?.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "ratio-unavailable", value: "not-comparable", note: "Ethereum is a subset" }),
+      expect.objectContaining({ key: "ratio-observation-clocks", note: expect.stringContaining("maximum skew 20 seconds") }),
+    ]));
+  });
+
   it.each([
     { name: "live ratio", input: { liveRatio: 1.2, collateralization: reviewed, backing: synthetic }, source: "live-ratio", value: "120.0%" },
     { name: "reviewed ratio", input: { collateralization: reviewed, backing: synthetic }, source: "reviewed-ratio", value: "245.5%" },

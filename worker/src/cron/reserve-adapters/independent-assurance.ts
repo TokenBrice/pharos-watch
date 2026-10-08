@@ -464,6 +464,7 @@ export function buildIndependentAssuranceReserveResult(args: {
       engagement: manifest.engagement,
       conclusion: manifest.conclusion,
       unit: manifest.unit,
+      ...(manifest.nativeQuantityBasis ? { nativeQuantityBasis: manifest.nativeQuantityBasis } : {}),
       assets: manifest.assets,
       liabilities: manifest.liabilities,
       ...(manifest.adjustments ? { adjustments: manifest.adjustments } : {}),
@@ -510,7 +511,12 @@ export function buildIndependentAssuranceReserveResult(args: {
     metadata: {
       sourceTimestamp,
       freshnessMode: "verified",
-      ...(reconciliation.collateralizationRatio !== null
+      ...(manifest.nativeQuantityBasis ? {
+        nativeQuantityBasis: manifest.nativeQuantityBasis,
+        totalReserveQuantity: Number(reconciliation.computedAssetTotal),
+        supplyTokens: Number(reconciliation.liabilityTotal),
+      } : {}),
+      ...(reconciliation.collateralizationRatio !== null && (manifest.product !== "MYRC" || manifest.nativeQuantityBasis)
         ? { collateralizationRatio: reconciliation.collateralizationRatio }
         : {}),
       details,
@@ -543,6 +549,9 @@ export async function fetchIndependentAssuranceReserves(
   }
 
   const manifest = getIndependentAssuranceManifest(profile.product);
+  if (profile.product === "MYRC" && !manifest.nativeQuantityBasis) {
+    throw new Error("blox-independent-assurance: missing reviewed MYR/MYRC nominal basis");
+  }
   if (manifest.assuranceTier !== "independent-assurance") {
     const descriptor = getLiveReserveAdapterDefinition(config.adapter);
     if (descriptor?.evidenceClass !== "static-validated" || descriptor.sourceOriginClass !== "issuer-attested") {

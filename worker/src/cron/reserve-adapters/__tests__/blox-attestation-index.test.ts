@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptBloxAttestationIndex } from "../blox-attestation-index";
 import { BLOX_ATTESTATIONS } from "./fixtures/blox-attestations";
+import sidecar from "@shared/data/stablecoins/domains/reserves/myrc-blox.json";
 
 const AUGUST = BLOX_ATTESTATIONS[0];
 
@@ -10,6 +11,10 @@ describe("blox-attestation-index", () => {
     expect(result.slices.map(({ name, pct }) => ({ name, pct }))).toEqual([
       { name: "MYR cash at Malaysian banks", pct: 66.68 },
       { name: "Halogen Shariah MYR Liquid Fund", pct: 33.32 },
+    ]);
+    expect(result.slices.map((slice) => slice.sourceKey)).toEqual(sidecar.reserves.map((slice) => slice.sourceKey));
+    expect(result.slices.map((slice) => slice.sourceKey)).toEqual([
+      "blox-independent-assurance:myrc:cash", "blox-independent-assurance:myrc:halogen-myr-liquid-fund",
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",

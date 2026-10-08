@@ -225,10 +225,10 @@ async function deleteExactMatchesInChunks(
 
 export async function cleanupStaleLiveReserveArtifacts(
   db: D1Database,
-  activeCoinIds: readonly string[],
+  retainedCoinIds: readonly string[],
   activeBreakerKeys: ReadonlySet<string>,
 ): Promise<LiveReserveArtifactCleanupResult> {
-  const activeCoinIdSet = new Set(activeCoinIds);
+  const retainedCoinIdSet = new Set(retainedCoinIds);
   const activeCacheKeySet = new Set(
     Array.from(activeBreakerKeys, (breakerKey) => `circuit:${breakerKey}`),
   );
@@ -247,8 +247,8 @@ export async function cleanupStaleLiveReserveArtifacts(
     ),
   ]);
 
-  const staleSyncStateIds = existingSyncStateIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));
-  const staleCompositionIds = existingCompositionIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));
+  const staleSyncStateIds = existingSyncStateIds.filter((stablecoinId) => !retainedCoinIdSet.has(stablecoinId));
+  const staleCompositionIds = existingCompositionIds.filter((stablecoinId) => !retainedCoinIdSet.has(stablecoinId));
   const staleBreakerCacheKeys = existingBreakerCacheKeys.filter((cacheKey) => !activeCacheKeySet.has(cacheKey));
 
   const syncStateDeleted = await deleteExactMatchesInChunks(

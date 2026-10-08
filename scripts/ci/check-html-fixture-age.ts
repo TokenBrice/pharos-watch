@@ -55,8 +55,6 @@ const HEADER_PREFIX_BYTES = 4096;
  * gate, forcing its provenance to be recorded explicitly.
  */
 const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
-  "matrixdock-stbt-stats.json":
-    "captured 2026-10-06 from the official Matrixdock STBT /bond/anon/website/api/v1/stats JSON API; frozen issuer USD NAV census has no observation timestamp and cannot carry an HTML-comment capture header",
   "midas-mtbill-transparency.json":
     "captured 2026-09-14 from the mTBILL issuer transparency API (payload updatedAt 2026-09-14T13:06:24.130Z); frozen JSON regression input cannot carry an HTML-comment capture header",
   "tether-transparency.json":

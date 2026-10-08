@@ -434,6 +434,7 @@ export async function syncReserveCoin(args: {
       breakerKey,
       attemptedAt: attemptStartedAt,
       attemptId,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
       deadlineMs: args.deadlineMs,
       checkpoint: args.checkpoint,
     }));
@@ -522,6 +523,7 @@ export async function syncReserveCoin(args: {
       fetchedAt: attemptStartedAt,
       source: config.adapter,
       attemptId,
+      configFingerprint: computeLiveReserveConfigFingerprint(config),
       metadata: snapshotMetadata,
       warningCount: warnings.length,
       warnings,

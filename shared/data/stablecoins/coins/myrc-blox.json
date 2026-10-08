@@ -110,7 +110,7 @@
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "blox-attestation-index",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "display": {
       "url": "https://www.blox.my/myrc/transparency",

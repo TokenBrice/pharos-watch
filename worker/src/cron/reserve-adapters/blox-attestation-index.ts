@@ -52,7 +52,7 @@ export function adaptBloxAttestationIndex(payload: unknown): AdapterResult {
   return {
     slices: [
       {
-        sourceKey: "blox:cash",
+        sourceKey: "blox-independent-assurance:myrc:cash",
         name: "MYR cash at Malaysian banks",
         pct: 66.68,
         risk: "very-low",
@@ -62,7 +62,7 @@ export function adaptBloxAttestationIndex(payload: unknown): AdapterResult {
         liquidityHorizon: "unknown",
       },
       {
-        sourceKey: "blox:halogen-myr-liquid-fund",
+        sourceKey: "blox-independent-assurance:myrc:halogen-myr-liquid-fund",
         name: "Halogen Shariah MYR Liquid Fund",
         pct: 33.32,
         risk: "very-low",

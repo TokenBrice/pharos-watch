@@ -47,6 +47,31 @@ describe("reserve sync durable API resolution", () => {
     for (const id of ids) expect(await resolveReserveResult(db, id, Math.floor(Date.now() / 1000))).toMatchObject({ reserves: slices });
   });
 
+  it.each([
+    "single-asset source returned zero/empty reserve probe value",
+    "single-asset source returned zero/empty supply probe value",
+    "single-asset source returned unreadable timestamp probe value",
+  ])("records a failed latest attempt without refreshing last-good native evidence: %s", async (message) => {
+    const metadata = {
+      freshnessMode: "unverified" as const,
+      totalReserveQuantity: 100, supplyTokens: 100,
+      details: { chainSupplyObservedAt: 1_780_000_000 },
+    };
+    mockLiveReserveAdapterRegistry(async () => ({ slices, metadata }));
+    const { sqlite, db } = fixtures.open();
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const previous = sqlite.prepare("SELECT * FROM reserve_composition ORDER BY stablecoin_id").all();
+    mockLiveReserveAdapterRegistry(async () => { throw new Error(message); });
+    expect(await syncLiveReserves(db, new AbortController().signal, {})).toMatchObject({ status: "error" });
+    expect(sqlite.prepare("SELECT * FROM reserve_composition ORDER BY stablecoin_id").all()).toEqual(previous);
+    for (const id of ids) {
+      expect(sqlite.prepare("SELECT last_status, last_error FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toMatchObject({
+        last_status: "error", last_error: expect.stringContaining(message),
+      });
+      expect(await resolveReserveResult(db, id, Math.floor(Date.now() / 1000))).toMatchObject({ metadata, sync: { status: "error" } });
+    }
+  });
+
   it("shares failed outcomes within a run and retries that source on the next run", async () => {
     let failShared = true;
     const fetch = mockLiveReserveAdapterRegistry(async (_coin, config) => {
