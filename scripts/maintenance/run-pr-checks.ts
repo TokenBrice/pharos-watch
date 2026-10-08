@@ -281,7 +281,9 @@ function expandStaticLeaves(
 ): PrCheckCommand[] {
   return commands.flatMap((command) => command.lane !== "pr-static" ? [command] :
     buildPrStaticCheckPlan(changedFiles, { skipDocSync }).commands.map((leaf) => ({
-      ...createNpmScriptCommand(leaf.name, leaf.name === "lint:changed" ? [`--base=${base}`, `--head=${head}`] : leaf.args),
+      ...createNpmScriptCommand(leaf.name, leaf.name === "lint:changed"
+        ? [`--base=${base}`, `--head=${head}`]
+        : leaf.name === "check:dependency-audit" ? [`--new-since=${base}`] : leaf.args),
       lane: `pr-static:${leaf.name}`,
     })));
 }
