@@ -19,7 +19,7 @@ import {
 } from "./redemption-backstop-providers";
 
 export function resolveCapacityConfidence(model: RedemptionCapacityModel): RedemptionCapacityConfidence {
-  if (model.confidence) return model.confidence;
+  if ("confidence" in model && model.confidence) return model.confidence;
   if (model.kind === "fixed-usd") return "documented-bound";
   return REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
     getProviderIdForCapacityModelKind(model.kind)
@@ -27,6 +27,9 @@ export function resolveCapacityConfidence(model: RedemptionCapacityModel): Redem
 }
 
 export function resolveCapacitySemantics(model: RedemptionCapacityModel): RedemptionCapacitySemantics {
+  if (model.kind === "executable-observer") {
+    return model.capacityUse === "diagnostic-only" ? "eventual-only" : "immediate-bounded";
+  }
   if (model.kind === "fixed-usd") return "immediate-bounded";
   return REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[
     getProviderIdForCapacityModelKind(model.kind)

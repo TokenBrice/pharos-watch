@@ -120,6 +120,7 @@ describe("V9 common-mode publication", () => {
     delete legacy.commonModeGroups;
     expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...legacy, schemaVersion: 5 }).success).toBe(false);
     expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...report, schemaVersion: 6 }).success).toBe(false);
+    expect(ReportCardsV9CurrentResponseSchema.safeParse({ ...report, schemaVersion: 7 }).success).toBe(false);
     expect(ReportCardsV9CurrentResponseSchema.safeParse(report).success).toBe(true);
   });
 

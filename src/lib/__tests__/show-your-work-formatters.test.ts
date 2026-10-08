@@ -64,7 +64,7 @@ describe("show-your-work formatters", () => {
           maxCostBps: 100,
           comparisonWindowSec: 86_400,
         },
-        primaryRoute: { key: "route:dex", label: "Primary DEX route", routeFamily: "dex-amm", score: 84, components: [
+        primaryRoute: { key: "route:dex", routeId: "dex", lane: "dex", label: "Primary DEX route", routeFamily: "dex-amm", score: 84, components: [
           { key: "access", label: "Access", score: 80, weight: 0.2, effectiveScoringWeight: 0.2, weightedContribution: 16, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
           { key: "settlement", label: "Settlement", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
           { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
@@ -85,7 +85,7 @@ describe("show-your-work formatters", () => {
           routeLabel: "Issuer redemption",
           bonus: 2,
         },
-        alternatives: [{ key: "route:orderbook", label: "Orderbook", routeFamily: "dex-orderbook", score: 70, included: false, exclusionReason: "unsupported-same-notional-route", confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null,  }], },
+        alternatives: [{ key: "route:orderbook", routeId: "orderbook", lane: "dex", label: "Orderbook", routeFamily: "dex-orderbook", score: 70, included: false, exclusionReason: "unsupported-same-notional-route", confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null, }], },
         control: { evaluatedScore: 86, publishedScore: 86, aggregationWeight: 0.25, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [],
         method: "minimum-binding-component",
         components: [

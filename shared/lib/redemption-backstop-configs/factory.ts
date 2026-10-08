@@ -72,7 +72,14 @@ export function finalizeBackstopRegistry(
 export function configsFromBackstopEntries(
   entries: readonly RedemptionBackstopRegistryEntry[],
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.fromEntries(entries.map((entry) => [entry.id, entry.config]));
+  const configs = new Map<string, RedemptionBackstopConfig>();
+  for (const entry of entries) {
+    if (configs.has(entry.id) && !entry.overrideReason) {
+      throw new Error(`Redemption backstop config "${entry.id}" is duplicated without an override reason.`);
+    }
+    configs.set(entry.id, entry.config);
+  }
+  return Object.fromEntries(configs);
 }
 
 /**
@@ -97,7 +104,14 @@ export function defineConfigFamily<Row extends { id: string }>(
   rows: readonly Row[],
   build: (row: Row) => RedemptionBackstopConfig,
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.fromEntries(rows.map((row) => [row.id, cloneRedemptionBackstopConfig(build(row))]));
+  const configs = new Map<string, RedemptionBackstopConfig>();
+  for (const row of rows) {
+    if (configs.has(row.id)) {
+      throw new Error(`Redemption backstop config "${row.id}" is duplicated in family rows.`);
+    }
+    configs.set(row.id, cloneRedemptionBackstopConfig(build(row)));
+  }
+  return Object.fromEntries(configs);
 }
 
 /**

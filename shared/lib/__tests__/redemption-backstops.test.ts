@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
-import { getRedemptionBackstopConfig } from "../redemption-backstops";
+import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
+import { resolveDefaultHolderEligibility } from "../redemption-backstop-configs/shared";
 
 describe("getRedemptionBackstopConfig", () => {
   it("shares the Sky LitePSM capacity model across USDS and DAI", () => {
@@ -19,7 +20,6 @@ describe("getRedemptionBackstopConfig", () => {
   it("keeps Lido earnUSD queue terms without invented capacity, settlement or fee bounds", () => {
     const config = getRedemptionBackstopConfig("earnusd-lido");
     expect(config?.outputAssets).toEqual(["usdc-circle"]);
-    expect(config?.capacityModel).toEqual({ kind: "unquantified" });
     expect(resolveCapacitySemantics(config!.capacityModel)).toBe("eventual-only");
     expect(config?.settlementModel).toBe("queued");
     expect(config?.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
@@ -27,6 +27,51 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config?.costModel).toMatchObject({ confidence: "formula", feeModelKind: "formula" });
     expect(config?.costModel).not.toHaveProperty("feeBps");
     expect(config?.costModel).not.toHaveProperty("feeBpsMax");
+  });
+
+  it.each(["usdm-monetrix", "susdat-saturn"])(
+    "does not promote %s queue diagnostics into immediate capacity, completion or all-in costs",
+    (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
+      expect(config.capacityModel).not.toHaveProperty("fallbackRatio");
+      expect(config.capacityModel).not.toHaveProperty("ratio");
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+      expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+    },
+  );
+
+  it("does not turn migrated USDat backing into USDC redemption capacity or a cost bound", () => {
+    const config = getRedemptionBackstopConfig("usdat-saturn")!;
+    expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
+    expect(config.outputAssets).toEqual(["usdc-circle"]);
+    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("whitelisted-primary");
+    expect(config.capacityModel).not.toHaveProperty("ratio");
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+  });
+
+  it.each(["susdai-usd-ai", "reusd-re-protocol"])(
+    "keeps %s variable pricing and conditional queue terms unbounded at every tested notional",
+    (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["cost", "settlement"]);
+      expect(config.settlementModel).toBe("queued");
+      expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+      for (const notional of [1_000, 1_000_000, 25_000_000]) {
+        expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+      }
+    },
+  );
+
+  it("does not promote Maple FAQ timing into a guaranteed completion bound", () => {
+    const config = getRedemptionBackstopConfig("syrupusdc-maple")!;
+    expect(config.settlementModel).toBe("queued");
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(0);
   });
 
   it("does not expose a cash redemption route for non-refundable JPYC Prepaid v1", () => {
@@ -45,8 +90,39 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config?.executionModel).toBe("rules-based-nav");
     expect(config?.v9RouteReviewTerms).toMatchObject({
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["settlement"],
+      missingScoringFields: ["settlement", "cost"],
     });
+  });
+
+  it("retires JuiceDollar's operational route without treating shutdown as a live suspended channel", () => {
+    expect(getRedemptionBackstopConfig("jusd-juicedollar")).toBeNull();
+  });
+
+  it("leaves eEARN withdrawal costs unavailable until an admitted validator quote arrives", () => {
+    const config = getRedemptionBackstopConfig("eearn-ember")!;
+    expect(config.v9RouteReviewTerms?.settlementModel).toBe("queued");
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    for (const notional of [1_000, 1_000_000, 25_000_000]) {
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional, 5)).toBe(5);
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional, 0)).toBe(0);
+    }
+  });
+
+  it.each([
+    ["apxusd-apyx", "usdc-circle"],
+    ["usx-solstice", "usdg-paxos"],
+    ["usda-avalon", "usdt-tether"],
+  ])("does not invent a %s cost ceiling from payout identity or processing terms", (id, output) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    expect(config.outputAssets).toEqual([output]);
+    for (const notional of [1_000, 1_000_000, 25_000_000]) {
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+    }
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    if (id !== "usx-solstice") {
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(expect.arrayContaining(["cost", "settlement"]));
+    }
   });
 
   it.each(["frxusd-frax", "sfrxusd-frax", "usdz-anzen"])(

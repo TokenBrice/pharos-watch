@@ -3,6 +3,7 @@ import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapte
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-backstop-configs";
 import { configsFromBackstopEntries } from "@shared/lib/redemption-backstop-configs/factory";
+import { buildRedemptionBackstopRegistry, type RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs/manifest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -41,7 +42,7 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
-    const clockSec = Date.UTC(2026, 9, 5) / 1_000;
+    const clockSec = Date.UTC(2026, 9, 8) / 1_000;
     const reviewed = entries.filter(([, config]) => config.v9RouteReviewTerms?.settlementModel != null);
     expect(reviewed.length).toBeGreaterThan(0);
     for (const [id, config] of reviewed) {
@@ -53,8 +54,9 @@ describe("redemption backstop config consistency", () => {
 
   it.each(["slvon-ondo", "iauon-ondo"])("does not apply the %s USDon review before its evidence date", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
-    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 8, 5) / 1_000)).toBe("immediate");
-    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 9, 5) / 1_000)).toBe("atomic");
+    const reviewClockSec = Date.UTC(2026, 9, 7) / 1_000;
+    expect(resolveReviewedRedemptionSettlement(config, reviewClockSec - 1)).toBe("immediate");
+    expect(resolveReviewedRedemptionSettlement(config, Date.UTC(2026, 9, 8) / 1_000)).toBe("atomic");
   });
 
   it("every config ID exists in TRACKED_META_BY_ID", () => {
@@ -121,6 +123,41 @@ describe("redemption backstop config consistency", () => {
     );
 
     expect(violations).toEqual([]);
+  });
+
+  it("rejects an injected wrong-family manifest before exposing a registry", () => {
+    const config = getRedemptionBackstopConfig("usdc-circle")!;
+    const manifest: RedemptionBackstopConfigManifestEntry[] = [{
+      name: "fixture-queue", filePath: "shared/fixture-queue.ts",
+      allowedRouteFamilies: ["queue-redeem"],
+      entries: [{ id: "alpha", config, sourceFilePath: "shared/fixture-row.ts" }],
+    }];
+    expect(() => buildRedemptionBackstopRegistry(manifest)).toThrow();
+    expect(buildRedemptionBackstopRegistry([{ ...manifest[0]!, allowedRouteFamilies: [config.routeFamily] }])["alpha"]).toEqual(config);
+  });
+
+  it("keeps explicit same-family overrides and source metadata while rejecting cross-family shadowing", () => {
+    const config = getRedemptionBackstopConfig("usdc-circle")!;
+    const replacement = { ...config, settlementModel: "days" as const };
+    const manifest: RedemptionBackstopConfigManifestEntry[] = [{
+      name: "fixture-issuer", filePath: "shared/fixture-issuer.ts", allowedRouteFamilies: [config.routeFamily],
+      entries: [
+        { id: "alpha", config, sourceFilePath: "shared/base-source.ts" },
+        { id: "alpha", config: replacement, overrideReason: "Reviewed replacement", sourceFilePath: "shared/override-source.ts" },
+      ],
+    }];
+    const authored = structuredClone(manifest);
+    const result = buildRedemptionBackstopRegistry(manifest);
+    expect(result["alpha"]).toEqual(replacement);
+    expect(manifest).toEqual(authored);
+    expect(() => buildRedemptionBackstopRegistry([
+      { ...manifest[0]!, entries: [manifest[0]!.entries[0]!] },
+      { ...manifest[0]!, name: "other-owner", filePath: "shared/other-owner.ts", entries: [manifest[0]!.entries[1]!] },
+    ])).toThrow();
+    expect(() => buildRedemptionBackstopRegistry([{
+      ...manifest[0]!,
+      entries: manifest[0]!.entries.map((entry) => ({ ...entry, overrideReason: undefined })),
+    }])).toThrow();
   });
 
   it("every config resolves to an explicit confidence tier", () => {

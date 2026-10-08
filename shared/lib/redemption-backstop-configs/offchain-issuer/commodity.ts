@@ -197,26 +197,31 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   },
   "gldy-streamex": {
     ...commodityIssuerBase,
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-10-07",
     capacityModel: { kind: "unquantified" },
     settlementModel: "queued",
     unresolvedOutputAssetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"],
     unresolvedOutputDisposition: "reviewed-external",
-    costModel: fixedFee(
-      200,
-      "RWA.xyz primary-market terms list a 2% redemption fee; physical gold delivery can involve additional fabrication, shipping, or custody costs",
+    costModel: undisclosedReviewedFee(
+      "Public primary issuer materials reviewed do not publish a numeric GLDY fund-redemption fee; definitive offering terms and delivery/conversion charges are not available.",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-07",
+      rationale: "The July 23 issuer release describes secondary-market liquidity and extraordinary fund gates, not funded holder-redemption capacity. USD, unspecified stablecoin and physical-gold alternatives require a binding selected payout; lease roll-off/liquidation timing does not bound final delivered USD. Primary materials publish no numeric fund-redemption fee and definitive offering/delivery/conversion terms are unavailable. Capacity, completed settlement and all-in cost remain withheld.",
+      docs: [sourceRef("Streamex July 23, 2026 fund payout and extraordinary gating disclosure", "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-details-gldys-liquidity-infrastructure-12-million", ["route", "settlement"])],
+    },
     docs: [
-      sourceRef("Streamex fund payout and extraordinary gating disclosure", "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-details-gldys-liquidity-infrastructure-12-million", ["route", "settlement"]),
-      sourceRefRouteCapacityAccess("Streamex GLDY", "https://www.streamex.com/GLDY"),
-      sourceRefFull("RWA.xyz GLDY", "https://app.rwa.xyz/assets/GLDY"),
-      sourceRef("Chainlink GLDY Reserves", "https://data.chain.link/feeds/base/base/gldy-reserves", ["capacity"]),
+      sourceRef("Streamex July 23, 2026 fund payout and extraordinary gating disclosure", "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-details-gldys-liquidity-infrastructure-12-million", ["route", "settlement"]),
+      sourceRef("Streamex GLDY: definitive offering documents control", "https://www.streamex.com/GLDY/", ["route", "access"]),
     ],
     notes: [
       "Modeled route is the source-reviewed eligible-investor primary-market redemption path, not ordinary secondary-market sale liquidity",
       "GLDY distributes gold-leasing yield, so redemption quality depends on both gold backing and the issuer's leasing/custody program staying current",
       "The fund may pay U.S. dollars, unspecified stablecoins or physical gold. These conditional alternatives require a selected binding payout and its exact valuation; they are not a weighted basket. Wintermute RFQ's USDC output and instant secondary-sale execution do not describe this fund route.",
       "The July 23 disclosure allows extraordinary redemption gates and describes a longest wait of 12 calendar months for lease roll-off/full-fund liquidation. This contingent fund wait is not converted into seconds or treated as a bound on final delivered USD. No fixed funded capacity or full-supply completion is inferred.",
+      "The disclosed roughly $12M liquidity and Wintermute's 1,000-GLDY/$4.5M-per-48h limit describe secondary sales, not this fund's funded redemption capacity. No numeric primary issuer redemption fee is public; the non-primary 2% listing and Chainlink reserve feed are not redemption evidence.",
     ],
   },
   "gldt-gold-dao": {

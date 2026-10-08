@@ -104,13 +104,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     reviewedAt: "2026-05-12",
   },
   {
-    kind: "unverified-freshness",
-    stablecoinId: "wsrusd-reservoir",
-    reason: "Reservoir wrapped sRUSD telemetry inherits reviewed reserve state without verified timestamp metadata.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-05-12",
-  },
-  {
     kind: "legacy-freshness-bridge",
     stablecoinId: "zchf-frankencoin",
     reason: "Legacy live-reserve bridge metadata predates nested redemption freshness fields.",
@@ -183,19 +176,27 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "unused-live-redemption-telemetry",
-    stablecoinId: "usdat-saturn",
+    stablecoinId: "apyusd-apyx",
     reason:
-      "USDat's MultiMint wrapper read exposes the PYUSDx backing balance as capacity telemetry, but no public holder-facing redemption route through the wrapper has been reviewed; the telemetry is reserve evidence only until a route is configured.",
+      "Generic reserve telemetry measures idle apxUSD backing and asynchronous queue diagnostics, not the exact funded UnlockReceipt path. The configured route consumes only its standalone executable observer's receipt identity, vested output and claim guards; reserve balances or generic async state cannot substitute for that capacity evidence.",
     owner: POLICY_OWNER,
-    reviewedAt: "2026-09-09",
+    reviewedAt: "2026-10-07",
   },
   {
     kind: "unused-live-redemption-telemetry",
-    stablecoinId: "hchf-hedera-swiss-franc",
+    stablecoinId: "susdx-axis",
     reason:
-      "HCHF's HLiquity adapter publishes same-run debt-bounded redemption capacity, but the CHF-denominated route has no reviewed public redemption backstop config yet; the telemetry is reserve evidence only until a route is configured.",
+      "The StakedUSDx reserve feed measures active-share USDx backing and asynchronous request diagnostics. Reserved burned-share liabilities and the eligibility cooldown do not establish funded capacity or bounded completion for new requests through privileged queue servicing; the configured USDx-output route remains unquantified.",
     owner: POLICY_OWNER,
-    reviewedAt: "2026-09-09",
+    reviewedAt: "2026-10-07",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "usdat-saturn",
+    reason:
+      "USDat's MultiMint wrapper measures PYUSDx backing, not executable holder throughput through the configured USDC redemption rail. Backing balances, downstream conversion descriptions and unmeasured liquidity cannot establish exact same-notional USDC output capacity; this telemetry remains rejected for that route.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-07",
   },
   {
     kind: "unused-live-redemption-telemetry",

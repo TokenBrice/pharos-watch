@@ -19,7 +19,7 @@ import {
 } from "./safety-score-v9-causes";
 import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 7;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 8;
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -363,7 +363,7 @@ function refineReportCardsV9Response(
   }
 }
 
-/** Report7 is the current cause-aware publication; old envelopes require explicit historical dispatch. */
+/** Report8 carries exact typed exit identity; old envelopes require explicit historical dispatch. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,

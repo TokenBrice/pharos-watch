@@ -31,6 +31,22 @@ export const REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC: Record<
   queued: 30 * 86_400,
 };
 
+// These rails carry separately reviewed end-to-end terms, rather than the
+// asset's primary issuer/protocol review. A certificate alone is NOT an opt-out:
+// it must supersede that review through admitted exact-source chronology.
+const SEPARATELY_REVIEWED_REDEMPTION_RAILS = ["physical-to-usd"] as const;
+
+export function usesPrimaryRedemptionReviewTerms(
+  assetId: string,
+  route: Pick<ExitRouteObservation, "routeId" | "physicalToUsd">,
+): boolean {
+  if (route.physicalToUsd === undefined) return true;
+  for (const rail of SEPARATELY_REVIEWED_REDEMPTION_RAILS) {
+    if (route.routeId === `${rail}:${assetId}`) return false;
+  }
+  return true;
+}
+
 interface BuildRedemptionExitRouteObservationInput {
   stablecoinId: string;
   config: RedemptionBackstopConfig;
@@ -48,6 +64,7 @@ interface BuildRedemptionExitRouteObservationInput {
   settlementBoundUnproven?: true;
   resolvedFeeBps: number | null;
   outputValuation?: LiveReserveRedemptionOutputValuation | null;
+  sharedResourceKey?: ExitRouteObservation["sharedResourceKey"];
   now: number;
 }
 
@@ -323,13 +340,15 @@ export function buildRedemptionExitRouteObservation(
             request,
             input.resolvedFeeBps,
           );
-          return buildExitRouteCapacityPoint({
+          const point = buildExitRouteCapacityPoint({
             requestedNotionalUsd: request,
             maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
             capacityUsd: scoringCapacityUsd,
             admitted: (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps)
               || boundedUnknownFee,
           }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
+          if (costBps !== null) point.executionCostBps = costBps;
+          return point;
         });
   const point = capacityCurve?.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd) ?? {
     requestedNotionalUsd: modeledExitSizeUsd,
@@ -380,6 +399,7 @@ export function buildRedemptionExitRouteObservation(
     observedAt: evidence.observedAt,
     freshnessSeconds: Math.max(0, (floorTimestampSec(input.now) ?? 0) - evidence.observedAt),
     commonModeKeys,
+    ...(input.sharedResourceKey ? { sharedResourceKey: input.sharedResourceKey } : {}),
     ...(capacityCurve ? { capacityCurve } : {}),
   };
 }

@@ -25,6 +25,45 @@ function documentedRedemption(overrides: Partial<V9ExitEvaluationRoute> = {}): V
   return makeDocumentedRedemption({ capacityEvidenceTier: "documented", ...overrides });
 }
 
+describe("typed Exit route identity", () => {
+  it("projects fact identity independently of the opaque publication key", () => {
+    const fact = makeNormalizedExitRoute({
+      routeKey: "redemption:generation:redemption:colliding:coin:offchain-issuer",
+      routeId: "redemption:coin:offchain-issuer",
+      lane: "redemption",
+    });
+    expect(projectV9ExitEvaluationRoute(fact)).toMatchObject({
+      routeKey: fact.routeKey, routeId: fact.routeId, lane: fact.lane,
+    });
+  });
+
+  it.each([
+    { name: "included", overrides: {}, danger: false, included: true },
+    { name: "excluded capacity", overrides: { scoreEligible: false, evidenceKind: "unsupported", capacityCurve: [] }, danger: false, included: false },
+    { name: "unproven settlement", overrides: { settlementBoundUnproven: true }, danger: false, included: false },
+    { name: "incomparable request", overrides: { capacityCurve: [] }, danger: false, included: false },
+    { name: "immaterial lower bound", overrides: {
+      coverageClass: "exact-lower-bound",
+      capacityCurve: [{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1, completionRatio: 0.000001, executionCostBps: 0 }],
+    }, danger: false, included: false },
+    { name: "danger-held undisclosed fee", overrides: { feeEvidence: "undisclosed-reviewed" }, danger: true, included: false },
+  ] satisfies { name: string; overrides: Partial<V9ExitEvaluationRoute>; danger: boolean; included: boolean }[])(
+    "retains exact identity for $name",
+    ({ overrides, danger, included }) => {
+      const candidate = route({
+        routeKey: "opaque:generation", routeId: "redemption:coin:stablecoin-redeem", lane: "redemption",
+        ...overrides,
+      });
+      const result = evaluateV9Exit({
+        circulatingUsd: 20_000_000, routes: [candidate], preExitDangerHeld: danger,
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(result.routes[0]).toMatchObject({
+        routeKey: candidate.routeKey, routeId: candidate.routeId, lane: candidate.lane, included,
+      });
+    },
+  );
+});
+
 describe("selectV9ExitStressRequest", () => {
   it("snaps the supply-relative request upward to the reviewed grid", () => {
     expect(selectV9ExitStressRequest(100_000_000, V9_CANDIDATE_POLICY_V1)).toMatchObject({

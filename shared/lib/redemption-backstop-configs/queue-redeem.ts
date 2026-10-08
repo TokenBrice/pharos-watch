@@ -109,7 +109,12 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   "earnusd-lido": defineQueueRedeemConfig({
     outputAssets: ["usdc-circle"],
     holderEligibility: "any-holder",
-    capacityModel: { kind: "unquantified" },
+    capacityModel: {
+      kind: "executable-observer",
+      observerId: "lido-earnusd-queue",
+      capacityUse: "diagnostic-only",
+      requiredOutputAssetKeys: ["usdc-circle"],
+    },
     costModel: documentedVariableFee(
       "The exact Mellow FeeManager exposes the mutable redeemFeeD6 / 1e6 fee on async requests. The conditional sync rail additionally applies penaltyD6; observed zeros are snapshots, not permanent or all-in cost bounds. Gas and wallet charges remain separate.",
       "formula",
@@ -184,17 +189,35 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     notes: ["Protocol permission checks and published jurisdiction restrictions apply, including exclusions for the United States and Australia. The configured erc4626-single-asset reader measures fresh idle USDG but does not infer FIFO allocation, funded processing throughput or queue completion from that balance. No holder minimum, 30-day sibling maximum, 10% queue buffer, DEX capacity or static fallback is inferred."],
   }),
   "susdat-saturn": defineQueueRedeemConfig({
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-10-07",
     holderEligibility: "any-holder",
     outputAssets: ["usdat-saturn"],
-    capacityModel: { kind: "unquantified" },
+    capacityModel: {
+      kind: "executable-observer",
+      observerId: "saturn-v2-queue",
+      capacityUse: "diagnostic-only",
+      requiredOutputAssetKeys: ["usdat-saturn"],
+    },
     costModel: documentedVariableFee(
       "Native WithdrawalQueueERC721 request/process/claim fee is determined at processing, not submission: Regular/Elevated mode parameters and gas must be observed at the request notional; no permanent fee ceiling inferred from initial runbook values",
       "formula",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-07",
+      rationale: "Operator-gated processing can skip requests and has no guaranteed completion maximum. Separate share and queue USDat balances, NFT counts and current process-time fees are diagnostics, not funded capacity or an all-in cost ceiling for a new holder request.",
+      docs: [
+        sourceRef("Saturn sUSDat overview (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md", ["route", "fees", "settlement"]),
+        sourceRef("Native StakedUSDat implementation (reviewed 2026-10-07)", "https://sourcify.dev/server/v2/contract/1/0x2b7074cf6681382b70e239063931ebe83c0f4e0a?fields=sources,abi,runtimeMatch", ["route", "fees", "settlement"]),
+        sourceRef("Native WithdrawalQueueERC721 implementation (reviewed 2026-10-07)", "https://sourcify.dev/server/v2/contract/1/0xdaf6f8523d7a707d173a12041e1523fdf1373f23?fields=sources,abi,runtimeMatch", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
       sourceRef("Saturn V2 deployment runbook", "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md", ["route", "access", "fees", "settlement"]),
       sourceRef("Native StakedUSDat implementation", "https://sourcify.dev/server/v2/contract/1/0x2b7074cf6681382b70e239063931ebe83c0f4e0a?fields=sources,abi,runtimeMatch", ["route", "capacity", "access", "fees"]),
+      sourceRef("Saturn sUSDat overview (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Native WithdrawalQueueERC721 implementation (reviewed 2026-10-07)", "https://sourcify.dev/server/v2/contract/1/0xdaf6f8523d7a707d173a12041e1523fdf1373f23?fields=sources,abi,runtimeMatch", ["route", "access", "fees", "settlement"]),
     ],
     notes: ["Native sUSDat requests escrow shares, operators process against available USDat, and the request owner claims USDat. Pauses and restrictions apply. Neither the runbook schedule nor idle assets establish funded request capacity or a final-completion SLA; this is not the USDat primary-market route."],
   }),
@@ -347,12 +370,16 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     accessModel: "whitelisted-onchain",
     costModel: fixedFee(
       0,
-      "Maple WithdrawalManager docs process queued shares into assets at the current exchange rate, with no separate protocol redemption fee described",
+      "Maple WithdrawalManager processes queued shares into assets at the current exchange rate without a separate protocol redemption fee or withdrawal penalty. This zero is protocol-only; NAV impairments, gas, wallet and third-party costs remain separate.",
     ),
-    docs: mapleSyrupDocs(),
+    docs: [
+      ...mapleSyrupDocs(),
+      sourceRef("Maple FAQ operational withdrawal timing (reviewed 2026-10-07)", "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq", ["route", "settlement"]),
+      sourceRef("Maple withdrawal risk disclosure (reviewed 2026-10-07)", "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks", ["route", "settlement"]),
+    ],
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues processed as liquidity becomes available",
-      "Settlement reviewed 2026-10-07: the current risk disclosures state there is no guaranteed maximum withdrawal period, so no settlement SLA exists to curate; the previously noted 30-day figure is not an issuer-published maximum",
+      "Settlement reviewed 2026-10-07: Maple's FAQ does publish a 30-day operational maximum, but the risk disclosure explicitly states there is no guaranteed maximum withdrawal period. FIFO processing depends on available liquidity; neither the FAQ wording nor the reported average establishes a completion SLA.",
       "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
     ],
     telemetrySubject: "the pool's idle USDC balance",
@@ -378,23 +405,35 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "dai-makerdao", "susde-ethena", "usde-ethena"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
-    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    reviewedAt: "2026-10-07",
     costModel: documentedVariableFee(
-      "Re Protocol docs state redemption and transaction fees currently start at 6 bps (0.06%).",
+      "Re Protocol publishes 6 bps (0.06%) for the instant redemption branch only. The quarterly queue refers to the current fee schedule without a numeric queued-path rate, so the combined route has no generic fee maximum; gas and third-party charges remain separate.",
       "formula",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-07",
+      rationale: "The 6 bps fee is limited to funded instant redemptions, not the quarterly fallback. Queued payouts depend on available reserves and proportional allocation; neither queued pricing nor a guaranteed request-to-final-payout maximum is published.",
+      docs: [
+        sourceRef("Re Protocol about reUSD (reviewed 2026-10-07)", "https://docs.re.xyz/products/about-reusd", ["route", "fees", "settlement"]),
+        sourceRef("Re Protocol redemptions guide (reviewed 2026-10-07)", "https://docs.re.xyz/minting-and-redemptions/redemptions", ["route", "fees", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRef("Re Protocol reUSD docs", "https://docs.re.xyz/insurance-capital-layers/what-is-reusd", [
+      sourceRef("Re Protocol about reUSD (reviewed 2026-10-07)", "https://docs.re.xyz/products/about-reusd", [
         "route",
         "settlement",
         "capacity",
         "fees",
       ]),
+      sourceRef("Re Protocol redemptions guide (reviewed 2026-10-07)", "https://docs.re.xyz/minting-and-redemptions/redemptions", ["route", "fees", "settlement"]),
       sourceRef("Re Protocol transparency", "https://app.re.xyz/transparency", ["capacity"]),
     ],
     notes: [
       "Tracked metadata describes atomic redemption when instant liquidity is available and queue settlement otherwise",
       "Fresh Re Metrics reserve telemetry reads the current instant redemption vault balances as the direct bounded capacity; if that payload is unavailable, the reviewed 20% fallback matches the prior tracked instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
+      "Instant-buffer access and quarterly queue settlement are distinct branches; the published instant 6 bps must not price the queued fallback or imply a guaranteed quarterly completion date.",
     ],
   }),
   "susdai-usd-ai": defineReviewedQueueRedeemConfig("2026-04-04", {
@@ -402,6 +441,18 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "sUSDai redemptions use conservative NAV while deposits use optimistic NAV; the dynamic forward-pricing spread varies with loan repayments rather than a fixed redemption fee, and no same-notional bound is evaluated",
       "formula",
     ),
+    reviewedAt: "2026-10-07",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      reviewedAt: "2026-10-07",
+      rationale: "The conservative redemption NAV creates a variable pricing spread with no same-notional cost ceiling. FIFO ERC-7540 windows require privileged servicing when sufficient USDai is available; the example 30-day window is not a guaranteed redemption date or end-to-end completion maximum.",
+      docs: [
+        sourceRef("USD.AI Terms of Service (reviewed 2026-10-07)", "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service", ["route", "fees", "settlement"]),
+        sourceRef("USD.AI technical protocol overview (reviewed 2026-10-07)", "https://docs.usd.ai/technical-overview/technical-protocol-overview", ["route", "settlement"]),
+        sourceRef("USD.AI sUSDai withdrawal estimates (reviewed 2026-10-07)", "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates", ["fees"]),
+      ],
+    },
     docs: [
       sourceRef("USD.AI FAQ", "https://docs.usd.ai/faq/usdai-and-susdai-101", ["route", "capacity", "settlement"]),
       sourceRef("USDai product page", "https://usd.ai/usdai", ["route", "settlement"]),
@@ -410,10 +461,13 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
         "https://docs.usd.ai/depositor/susdai/susdai-withdrawal-estimates",
         ["fees"],
       ),
+      sourceRef("USD.AI Terms of Service (reviewed 2026-10-07)", "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service", ["route", "fees", "settlement"]),
+      sourceRef("USD.AI technical protocol overview (reviewed 2026-10-07)", "https://docs.usd.ai/technical-overview/technical-protocol-overview", ["route", "settlement"]),
     ],
     notes: [
       "Current route models sUSDai as an eventual queued exit back into USDai rather than as an immediate stablecoin redemption rail",
       "Issuer docs describe a limited instant-liquidity buffer, but Pharos does not assign a numeric immediate-capacity bound until a trustworthy public figure exists",
+      "FIFO window-end processing requires STRATEGY_ADMIN_ROLE and sufficient USDai; the Terms disclaim a guaranteed redemption date. Queue acceptance and the illustrative 30-day window do not establish funded completion.",
     ],
   }),
   "asusdf-astherus": defineQueueRedeemConfig({
@@ -501,7 +555,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       telemetrySubject: "the staking vault's YUSD holdings",
       settlementConstraint: "the cooldown",
     v9RouteReviewTerms: {
-      settlementDelaySec: 604_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The seven-day cooldown establishes withdrawal eligibility, not a sourced maximum to completed receipt of YUSD for this exact request.",
       reviewedAt: "2026-08-24",
       docs: [
         sourceRef(
@@ -668,7 +724,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
     ],
     v9RouteReviewTerms: {
-      settlementDelaySec: 172_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "FIFO redemptions processed within 48 hours do not establish an unconditional maximum to completed holder payout.",
       reviewedAt: "2026-10-02",
       docs: [
         sourceRef(
@@ -720,7 +778,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRef("Avant Protocol Revenue & Fees (reviewed 2026-10-05)", "https://docs.avantprotocol.com/yield-strategies-and-revenue/protocol-revenue-and-fees.md", ["fees"]),
     ],
     v9RouteReviewTerms: {
-      settlementDelaySec: 604_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The normal redemption window depends on liquidity and other conditions; it is not an unconditional seven-day maximum to completed USDC payout.",
       reviewedAt: "2026-10-03",
       docs: [
         sourceRef(
@@ -732,7 +792,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     },
     notes: [
       "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
-      "Settlement reviewed 2026-10-03: the redemption docs state requests can take up to 7 days depending on market liquidity and other conditions, so V9 uses that published 604,800-second maximum. It is not independent proof of funded execution.",
+      "The documented redemption window is conditional on liquidity and other conditions, not an independently proven maximum to completed same-notional output. V9 retains an explicit settlement gap.",
     ],
   }),
   "usdu-unitas": defineQueueRedeemConfig({
@@ -781,18 +841,26 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
+    capacityModel: { kind: "unquantified" },
     costModel: undisclosedReviewedFee(
-      "Saturn documents KYC-gated 1:1 USDC mint and redeem through the M0 Swap Facility (Uniswap V3 1bps tier); public docs reviewed do not publish a separate USDAT protocol redemption fee",
+      "Current Saturn docs describe quoted USDat-to-USDC orders through a validated M0 route, with output and route cost shown before confirmation. No generic all-in fee schedule or completed same-notional USDC quote is admitted; wallet gas remains separate.",
     ),
-    reviewedAt: "2026-04-16",
+    reviewedAt: "2026-10-07",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-07",
+      rationale: "The canonical wrapper migrated to PYUSDx backing, which does not bind measured backing to the configured USDC holder exit. Current USDC orders require a validated route and may fill partially; no exact output-bound funded throughput, completion maximum or same-notional all-in cost is established.",
+      docs: [
+        sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     docs: [
-      sourceRefRouteCapacity("Saturn USDAT", "https://saturn.money/usdat"),
-      sourceRef("Saturn documentation", "https://docs.saturn.money/", ["route", "access"]),
+      sourceRef("Saturn USDat mint and redeem (reviewed 2026-10-07)", "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md", ["route", "access", "fees", "settlement"]),
     ],
     notes: [
-      "USDAT is a permissioned M0 wrapper: mint/redeem requires KYC onboarding and is geofenced away from US, EEA, and OFAC jurisdictions; routes through the Uniswap V3 1bps tier against USDC",
-      "The 50% ratio is a reviewed heuristic placeholder for M0 Swap Facility liquidity pending a published quantitative buffer bound",
+      "The reviewed USDC destination is retained conservatively with restricted access and applicable jurisdiction eligibility. Current docs describe validated M0 limit orders with approved solver fills, possibly partial; secondary-market Curve swaps are a separate exit.",
+      "The exact canonical wrapper now measures PYUSDx backing, not USDC holder throughput. The obsolete M0/Uniswap 50%-of-supply assumption is removed; fresh backing, bridged supply and same-id wrapper balances cannot restore capacity without an exact verified USDC holder route.",
     ],
   }),
   "usdnr-nerona": defineQueueRedeemConfig({
@@ -862,11 +930,17 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "The RIF bucket queue 0x47f5014115d3bb29b20b5168ee75050d6f8c3bf1 at the same block uses implementation 0x8d7a31357ba29fecd3e6ce5b6110a2a28f619c97 and min/max operation waits of 1/6 blocks. These are execution-eligibility thresholds, not deadlines: guarded batch execution and failed operations leave final payout unbounded. Keyless pinned RPC: https://public-node.rsk.co.",
     ],
   }),
-  "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
+  "apyusd-apyx": defineReviewedQueueRedeemConfig("2026-10-07", {
     accessModel: "whitelisted-onchain",
-    settlementModel: "days",
+    settlementModel: "queued",
     executionModel: "rules-based-nav",
+    outputAssets: ["apxusd-apyx"],
+    capacityModel: {
+      kind: "executable-observer",
+      observerId: "apyusd-unlock-receipt",
+      capacityUse: "measured",
+      requiredOutputAssetKeys: ["apxusd-apyx"],
+    },
     totalScoreCap: 65,
     costModel: {
       ...documentedVariableFee(
@@ -898,8 +972,10 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       sourceRefFull("apyUSD active vault source (implementation pinned at Ethereum block 26140624)", "https://eth.blockscout.com/address/0xfD616567EcC1607F61073951A1E822F7315bB112?tab=contract"),
       sourceRefFull("UnlockReceipt claim and bounded fee source (implementation pinned at Ethereum block 26140624)", "https://eth.blockscout.com/address/0x54F1c7fFe10bC392f08AE9432A7e21a6E86bB982?tab=contract"),
     ],
-    telemetrySubject: "the vault's idle apxUSD balance",
-    settlementConstraint: "the documented unlock window",
+    notes: [
+      "The specialized observer bounds newly funded UnlockReceipts from currently idle apxUSD, excluding existing receipt escrow and vested yield. Owner claims begin after the current three-day minimum; the current zero receipt-fee target is 20 days. Governance curve changes also apply to existing receipts, with a hard 90-day maximum. This is queued, not atomic, and all-in gas and downstream apxUSD valuation remain unproven.",
+      "Failed receipt guards or unavailable same-run apxUSD valuation leave direct capacity unavailable; generic asynchronous reserve idle cash is not a fallback.",
+    ],
   }),
   "savusd-avant": erc4626ReserveTelemetryQueueConfig({
       reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
@@ -923,7 +999,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       telemetrySubject: "the staking vault's idle avUSD balance",
       settlementConstraint: "the one-day cooldown",
     v9RouteReviewTerms: {
-      settlementDelaySec: 86_400,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The one-day cooldown establishes unstaking eligibility, not a sourced maximum to completed avUSD receipt.",
       reviewedAt: "2026-08-19",
       docs: [
         sourceRef(
@@ -935,9 +1013,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     },
   }),
   "srusde-strata": defineQueueRedeemConfig({
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-10-07",
     capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["usde-ethena", "susde-ethena"] },
-    accessModel: "whitelisted-onchain",
+    accessModel: "permissionless-onchain",
     settlementModel: "queued",
     executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
@@ -948,12 +1026,14 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     docs: [
       sourceRef("Strata srUSDe market", "https://docs.strata.markets/markets/ethena-usde/srusde", [
         "route",
+        "access",
         "fees",
         "settlement",
       ]),
-      sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["route", "fees", "settlement"]),
+      sourceRef("Strata FAQ (reviewed 2026-10-07)", "https://docs.strata.markets/resources/faqs", ["route", "access", "fees", "settlement"]),
     ],
     notes: [
+      "Strata's FAQ states that anyone can mint and redeem through the fully permissionless protocol, subject to jurisdiction compliance; the any-holder cohort does not waive those restrictions.",
       "Holder-selected sUSDe and USDe payouts are mutually exclusive, not a basket. A successful sUSDe withdrawal can be atomic only when the same-run senior strategy cooldown is zero; USDe instead unstakes through Ethena and has no proven final-completion SLA. Neither the FAQ's seven days nor a current Ethena cooldown is a request-to-final-claim bound.",
       "Separate output-bound executable observations must retain their shared Strata resources. The existing idle underlying telemetry is not a two-output basket quote and must not establish a branch's settlement or capacity.",
     ],
@@ -982,7 +1062,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     executionModel: "rules-based-nav",
     costModel: fixedFee(0, "Hyperbeat docs state classic redemption completes within two days with no fee"),
     v9RouteReviewTerms: {
-      settlementDelaySec: 172_800,
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "Classic redemption processes withdrawals within two days; the source does not establish an unconditional two-day maximum to completed USDT receipt.",
       reviewedAt: "2026-01-06",
       docs: [
         sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route"]),
@@ -1043,19 +1125,32 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     settlementModel: "days",
     executionModel: "deterministic-onchain",
     outputAssets: ["usdc-circle"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    reviewedAt: "2026-10-01",
+    capacityModel: {
+      kind: "executable-observer",
+      observerId: "monetrix-funded-queue",
+      capacityUse: "diagnostic-only",
+      requiredOutputAssetKeys: ["usdc-circle"],
+    },
+    reviewedAt: "2026-10-07",
     costModel: undisclosedReviewedFee(
       "Monetrix public docs specify 1:1 redemption and cooldown but no numeric redemption fee; network gas remains separate",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      reviewedAt: "2026-10-07",
+      rationale: "Request acceptance records an escrow obligation, not funded completion. The mutable cooldown is a request-local minimum and escrow can be underfunded; no new-holder throughput, final-payout maximum or numeric all-in fee ceiling is established.",
+      docs: [
+        sourceRef("Monetrix redeem guide (reviewed 2026-10-07)", "https://doc.monetrix.xyz/guide/getting-started/redeem.md", ["route", "access", "settlement"]),
+        sourceRef("Verified MonetrixVault implementation (reviewed 2026-10-07)", "https://sourcify.dev/server/v2/contract/999/0x08F69C88C47ef1C5274fc11bfE350561252c77F2?fields=sources,abi,compilation", ["route", "access", "fees", "settlement"]),
+      ],
+    },
     routeExitCorrelation: "same-protocol-liquidity",
     docs: [
       sourceRef("Redeem guide", "https://doc.monetrix.xyz/guide/getting-started/redeem.md", ["route", "settlement", "access"]),
-      sourceRefRouteCapacityAccess("Mint guide", "https://doc.monetrix.xyz/guide/getting-started/mint.md"),
-      sourceRef("Delta-neutral strategy", "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy.md", [
-        "capacity",
-        "route",
-      ]),
+      sourceRef("Verified MonetrixVault implementation (reviewed 2026-10-07)", "https://sourcify.dev/server/v2/contract/999/0x08F69C88C47ef1C5274fc11bfE350561252c77F2?fields=sources,abi,compilation", ["route", "access", "fees", "settlement"]),
+      sourceRef("Mint guide", "https://doc.monetrix.xyz/guide/getting-started/mint.md", ["route", "access"]),
+      sourceRef("Delta-neutral strategy", "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy.md", ["route"]),
       sourceRef("FAQ", "https://doc.monetrix.xyz/guide/getting-started/faq.md", ["route", "settlement", "fees"]),
       sourceRef("Audits and contracts", "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md", [
         "route",
@@ -1063,8 +1158,9 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       ]),
     ],
     notes: [
-      "USDM redemption is a permissionless request/claim flow: requestRedeem burns USDM and locks a 1:1 USDC claim, then claimRedeem transfers USDC after the governance-set three-day cooldown.",
-      "Capacity re-reviewed 2026-10-01: the current redemption guide still documents the USDC request/claim rail and a governance-adjustable three-day cooldown, but publishes no hard executable USDC buffer. The 10% strategy-buffer ratio therefore remains heuristic, not a live balance or full-supply promise. The guide expressly says the TVL cap is mint-side and should not affect redemption.",
+      "USDM requestRedeem transfers USDM to the vault, records a 1:1 escrow obligation and stores request-specific cooldownEnd. claimRedeem burns the transferred USDM and calls escrow payOut after that request's cooldown; a later config change does not rewrite its stored cooldownEnd.",
+      "HyperEVM block 47935956 (2026-10-07T20:58:46Z), observed 2026-10-07T21:00:18.938Z via https://api-hyperliquid-mainnet-evm.n.dwellir.com, records redeemCooldown() of 172800 seconds (two days), not the guide's three-day text. This mutable minimum is not a completion maximum.",
+      "At that pinned block, escrow owed 46,899.380174 USDC but held 45,946.339767 USDC, a 953.040407 USDC shortfall. Fresh observer balances and obligations are diagnostics only: operator funding, existing requests and separate user/operator pause flags prevent a new-holder capacity or completion guarantee. No 10%-ratio fallback or blanket closed-route claim is inferred.",
     ],
   }),
 };

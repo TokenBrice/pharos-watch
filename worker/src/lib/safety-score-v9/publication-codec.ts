@@ -29,7 +29,7 @@ export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   constructor(readonly source: "publication" | "health" = "publication", readonly storedUpdatedAt: number | null = null) {
     super(source === "health"
       ? "publication-schema-cutover-pending: stored health schema 1 awaits health schema 2"
-      : "publication-schema-cutover-pending: stored schema 5 awaits a schema 6 publication");
+      : "publication-schema-cutover-pending: stored schema 6 awaits a schema 7 publication");
     this.name = "SafetyScoreV9SchemaCutoverPendingError";
   }
 }
@@ -133,14 +133,14 @@ function parsePublicationPayload(
     throw new Error(`${label} JSON is not canonical`);
   }
   const value = parsed.value;
-  if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 5) {
+  if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 6) {
     throw new SafetyScoreV9SchemaCutoverPendingError();
   }
   if (value === null || typeof value !== "object" || Array.isArray(value) ||
-      !("schemaVersion" in value) || value.schemaVersion !== 6) {
+      !("schemaVersion" in value) || value.schemaVersion !== 7) {
     const version = value !== null && typeof value === "object" && "schemaVersion" in value
       ? value.schemaVersion : "missing";
-    throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 6 and never infers evidence causes from legacy gaps`);
+    throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 7 and never infers route identity from legacy keys`);
   }
   return SafetyScoreV9CurrentResponseSchema.parse(value);
 }

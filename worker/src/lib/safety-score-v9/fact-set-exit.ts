@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import type { RedemptionRouteSuspension } from "@shared/types/redemption";
 import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import { isDexExitRouteScoreEligible } from "@shared/lib/p4-exit-route-capability-policy";

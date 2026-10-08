@@ -4,41 +4,32 @@ import {
   REDEMPTION_BACKSTOP_PROVIDER_IDS,
 } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
-import type { CapacityResolution, CapacityResolverContext } from "./profile";
+import { buildBoundedCapacityFields, type CapacityResolution, type CapacityResolverContext } from "./profile";
 
 type FixedUsdModel = Extract<RedemptionCapacityModel, { kind: "fixed-usd" }>;
 
-export async function resolveFixedUsdCapacity(
+export function resolveFixedUsdCapacity(
   model: FixedUsdModel,
   context: CapacityResolverContext,
-): Promise<CapacityResolution> {
+): CapacityResolution {
   const { supplyUsd } = context;
   const capacityConfidence = resolveCapacityConfidence(model);
   const capacitySemantics = resolveCapacitySemantics(model);
 
-  const hasPositiveSupply = supplyUsd != null && supplyUsd > 0;
-  const rawCapacityUsd = Math.max(0, model.amountUsd);
-  const immediateCapacityUsd = supplyUsd != null ? Math.min(supplyUsd, rawCapacityUsd) : rawCapacityUsd;
-  const immediateCapacityRatio = hasPositiveSupply ? Math.min(1, immediateCapacityUsd / supplyUsd) : null;
-  const dailyLimitUsd = model.dailyLimitUsd;
-  const dailyLimitCapsCapacity = dailyLimitUsd != null && dailyLimitUsd < immediateCapacityUsd;
-  // Equivalent to capping at the daily limit only when it is below immediate capacity; avoids a cast.
-  const scoringCapacityUsd =
-    dailyLimitUsd != null ? Math.max(0, Math.min(dailyLimitUsd, immediateCapacityUsd)) : immediateCapacityUsd;
-  const scoringCapacityRatio = hasPositiveSupply ? Math.min(1, scoringCapacityUsd / supplyUsd) : null;
+  const capacityFields = buildBoundedCapacityFields({
+    rawCapacityUsd: model.amountUsd,
+    supplyUsd,
+    dailyLimitUsd: model.dailyLimitUsd,
+    capacityProfileConfidence: capacityConfidence,
+    applyDailyLimit: true,
+  });
   return {
-    immediateCapacityUsd,
-    immediateCapacityRatio,
-    scoringCapacityUsd,
-    scoringCapacityRatio,
-    capacityScoreMode: hasPositiveSupply ? "interpolated" : "tier-floor",
-    capacityProfile: {
-      immediateUsd: immediateCapacityUsd,
-      ...(dailyLimitUsd != null ? { dailyLimitUsd } : {}),
-      scoringUsd: scoringCapacityUsd,
-      scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
-      capacityProfileConfidence: capacityConfidence,
-    },
+    immediateCapacityUsd: capacityFields.immediateCapacityUsd,
+    immediateCapacityRatio: capacityFields.immediateCapacityRatio,
+    scoringCapacityUsd: capacityFields.scoringCapacityUsd,
+    scoringCapacityRatio: capacityFields.scoringCapacityRatio,
+    capacityProfile: capacityFields.capacityProfile,
+    capacityScoreMode: capacityFields.hasPositiveSupply ? "interpolated" : "tier-floor",
     provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL,
     sourceMode:
       REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL].defaultSourceMode,
@@ -46,7 +37,7 @@ export async function resolveFixedUsdCapacity(
     capacityConfidence,
     capacitySemantics,
     notes: [
-      ...(supplyUsd != null && rawCapacityUsd > supplyUsd
+      ...(capacityFields.capacityExceedsSupply
         ? ["Configured fixed USD capacity exceeds current supply; clamped to supply for scoring"]
         : []),
       ...(supplyUsd == null
@@ -54,7 +45,7 @@ export async function resolveFixedUsdCapacity(
             "Stablecoins cache missing current supply; fixed USD capacity is visible with conservative bounded scoring",
           ]
         : []),
-      ...(dailyLimitCapsCapacity ? ["Documented daily limit caps usable scoring capacity"] : []),
+      ...(capacityFields.dailyLimitCapsCapacity ? ["Documented daily limit caps usable scoring capacity"] : []),
     ],
   };
 }

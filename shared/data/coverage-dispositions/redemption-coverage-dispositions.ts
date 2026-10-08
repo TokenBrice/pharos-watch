@@ -58,40 +58,27 @@ function reviewedOn(
  * retains the earlier adverse assessment, never proves that a route is absent.
  */
 export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedemptionCoverageDisposition[] = [
-  reviewedOn("2026-10-03", {
-    id: "usdfr-forest-road",
-    disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "No completed exact-controller USDC redemption-capacity adapter exists.",
-    rationale: "Eligible KYC-verified, nonblocked Ethereum holders redeem atomically while fully backed and unpaused through controller 0x50ac018eb6400f247ffe0fa7f1d4e0e900cdb47c against reserve 0x8317736611b542ddb4a820fe344b621a904bdd48. Idle USDC alone does not prove effective controller gates or executable same-notional output. Public credit/revenue history does not establish holder cash capacity. The sUSDfr 21-day queue and its minimum are separate.",
-    evidenceNeeded: "Fresh canonical-USDC output capacity with exact-controller eligibility, pause/backing gates and any effective caps; binding current direct redemption fees.",
-    evidenceUrls: [
-      "https://forestroadvault.com/docs/how-to",
-      "https://forestroadvault.com/docs/addresses",
-      "https://forestroadvault.com/docs/roles-and-governance",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewedOn("2026-10-03", {
+  reviewedOn("2026-10-07", {
     id: "usdx-axis",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
     blocker: "No current executable USDC/USDT RFQ capacity or exact-route capacity adapter is available.",
-    rationale: "Approved KYC/KYB primary counterparties require discretionary RFQ approval and operator submission before atomic settlement. Indicative 2%-of-book/day and seven-day bands are not committed throughput, completion SLAs or binding fees. Unmeasured liquidity is unavailable, not zero.",
+    rationale: "Current USDxMarket 0x5ae365ac83638418c4c30555d32f9a91ccaef58c and MarketConfig 0xce2cf8b00fcb5946f495ebd15ff9f0001e024d46 expose checkSettlement for a current signed order, not a pre-quote holder entitlement. KYC/KYB RFQs remain discretionary before operator submission; indicative 2%-of-book/day and seven-day bands are not committed throughput or completion SLAs.",
     evidenceNeeded: "Current accepted-quote executable capacity, binding settlement and fee terms, and an exact-route capacity reader.",
     evidenceUrls: [
       "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md",
       "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md",
+      "https://docs.axis.to/reference/core-contracts.md",
       "https://www.axis.to/terms-of-service",
     ],
     allowedRouteFamilyIfProven: "offchain-issuer",
   }),
-  reviewedOn("2026-10-03", {
+  reviewedOn("2026-10-07", {
     id: "mantrausd-mantra",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
     blocker: "No exact-route telemetry measures executable same-chain wM output through SwapFacility.",
-    rationale: "The reviewed child-to-wM route requires an unrestricted holder, allowance, approved extensions and unpaused SwapFacility. Native M is approved-swapper-only; telemetry for child-to-native-M gates or custody backing cannot certify wM output capacity. No dollars, solver exit or full-supply capacity is inferred.",
+    rationale: "The identified child-to-wM route requires exact facility and extension pauses, allowance, approval and a fresh quote into wM 0x437cc33344a0b27a429f795ff6b469c72698b291. Native-M approved-swapper telemetry and backing inventory do not establish the holder's wM output capacity or the distinct KYC native-M offchain conversion.",
     evidenceNeeded: "Fresh same-chain wM quote, output liquidity and effective SwapFacility/extension gates for the holder route, distinct from native-M telemetry.",
     evidenceUrls: [
       "https://mantrausd.com/",
@@ -107,22 +94,22 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     blocker:
       "Supercoin terms section 7.1 describes direct issuer redemption through the Supercoin App only once launched; current Supported Exchange off-ramps have no guaranteed price, availability or settlement outcome.",
     rationale:
-      "The future app's two-business-day bank-payment term is not a currently usable holder route. Trading or selling through an exchange cannot establish issuer par redemption or funded executable capacity.",
+      "The future app's two-business-day bank-payment term is not a launched holder route. Supported-exchange sales and the August reserve attestation do not establish issuer par redemption, app availability or funded executable payout capacity.",
     evidenceNeeded:
       "Primary evidence that the Supercoin App redemption channel is live, with current onboarding, payout, minimum, fee, liquidity and settlement terms.",
     evidenceUrls: ["https://www.supercoin.co.za/terms-of-service"],
-    reviewer: "Sol addition batch 2026-10-03 (orchestrated)",
-    reviewedDate: "2026-10-03",
+    reviewer: REVIEWER,
+    reviewedDate: "2026-10-07",
     allowedRouteFamilyIfProven: "offchain-issuer",
   },
-  reviewedOn("2026-10-01", {
+  reviewedOn("2026-10-07", {
     id: "bnusd-balanced",
     disposition: "defer",
     reasonCode: "route-status-unverified",
     blocker:
       "Balanced's current v1 documentation says the original app is no longer supported and must be withdrawn from or migrated before December 1, 2026. The migration guide distinguishes bnUSD(old), used by v1 loans and pools, from the new bnUSD; it does not establish a current stablecoin redemption for the tracked old token.",
     rationale:
-      "A 1:1 Stability Fund swap into USDC or USDT is documented in the abstract, but nothing published shows a holder of the tracked v1 token calling it today: the only documented v1 action is migrating bnUSD(old) 1:1 into the new bnUSD, and that new identity is not this tracked asset. Crediting the fund's capacity here would attribute a route on one token to a different one.",
+      "The current guide describes bnUSD(old)-to-new-bnUSD migration 1:1 on ICON, Stellar and Sui, not old-token USDC/USDT redemption. Sonic/SODAX reserve context belongs to a different contract and supply census. Neither migration value nor that inventory can be credited as tracked-old-token exit capacity before the December 1 retirement.",
     evidenceNeeded:
       "The active Stability Fund or SODAX route identifier reachable from the tracked ICON contract, plus its pause state, stablecoin balances, redemption limits, fee, and access terms — or a tracked-asset identity update to the current bnUSD deployment.",
     evidenceUrls: [
@@ -203,16 +190,16 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://www.homecoin.finance/", "https://github.com/homecoin-finance/gitbook"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "isc-international-stable-currency",
     disposition: "needs-research",
     reasonCode: "route-status-unverified",
     blocker:
-      "The ISC website and dashboard could not be fetched on 2026-10-01. The reachable whitepaper describes reserve buying and selling in markets, not an identified holder-callable redemption; the prior dashboard's zero figures are historical and are not treated as current observations.",
+      "The ISC website and dashboard recovered with non-browser HTTP 200 on 2026-10-07, but neither identifies a holder-callable redemption. The whitepaper describes issuer reserve-market buying and selling; the mutable reserve API provides no binding payout identity, fee or source period.",
     rationale:
-      "Reserve-market buybacks described in the whitepaper are issuer operations, not enough to prove a currently usable holder redemption.",
+      "Recovered websites, a Solana mint identity and reserve-market buybacks do not prove an ordinary-holder claim. Historical dashboard zero figures are not current observed capacity.",
     evidenceNeeded:
-      "A live app or contract route, output basket or asset, execution rules, capacity, fees, and settlement evidence.",
+      "An identified current program/instruction or binding issuer holder-redemption terms with complete output, execution, capacity, fees and completed-settlement evidence.",
     evidenceUrls: [
       "https://isc.money/",
       "https://isc.money/dashboard",
@@ -220,40 +207,40 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     ],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewedOn("2026-10-01", {
+  reviewedOn("2026-10-07", {
     id: "iusd-initia",
     disposition: "needs-research",
     reasonCode: "documentation-insufficient",
     blocker:
-      "Initia's bridge page re-read on 2026-10-01 describes generic Skip, LayerZero, CCTP, IBC, and DEX routing, but names no iUSD-specific burn, unwrap, output contract, fee, or capacity.",
+      "Initia's current generic SkipGo, LayerZero, CCTP and IBC bridge docs identify no tracked-iUSD burn/unlock entrypoint, output or fee. Existing Move vault AUSD0/supply reads measure backing, not a complete holder exit.",
     rationale:
-      "The shape research suggests — burn iUSD, unlock AUSD0 locally, reverse the LayerZero route, then redeem through Agora — is assembled from generic bridge and issuer functionality, and no documented Move view or entry point exposes the vault's unlocked balance, the burn entrypoint, or a fee and settlement schedule.",
+      "A proposed iUSD burn, local AUSD0 unlock and downstream Agora redemption combines generic functionality without proving the exact tracked-token path or ledger-bound executable capacity.",
     evidenceNeeded:
       "Official iUSD product docs, contract address, holder exit mechanics, underlying asset, fees, and current status.",
     evidenceUrls: ["https://docs.initia.xyz/home/tools/bridge", "https://scan.initia.xyz"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "lvusd-leverup",
     disposition: "defer",
     reasonCode: "route-status-unverified",
     blocker:
-      "Current LeverUp docs do describe conditional LVUSD-to-USDC holder redemption, contrary to the earlier borrower-only classification: protocol-loss redemptions use the prevailing circulation exchange rate, and a secondary-market TWAP below 0.9 enables daily quota-based exits.",
+      "Current LeverUp docs retain a protocol-loss redemption path below 0.99 and a secondary-market TWAP below 0.90 enabling daily quota exits. The exact reserve reader does not establish current gateway activation, quota, exchange rate, fees or output limits.",
     rationale:
-      "A conditional, quota-limited, potentially below-par exit is not a continuously open 1:1 collateral claim. No live gateway state, quota, fee, or complete execution bound was established in this review.",
+      "Reserve USDC is not an enabled continuously open par claim. The conditional loss/quota paths may be below par and remain unconfigured until exact current state and complete holder execution terms are verified.",
     evidenceNeeded:
       "Exact deployed LVUSD/USDC gateway, live activation condition, daily quota, exchange-rate calculation, fee, and current executable USDC inventory.",
     evidenceUrls: ["https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"],
     allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
-  reviewedOn("2026-10-01", {
+  reviewedOn("2026-10-07", {
     id: "mai-qidao",
     disposition: "defer",
     reasonCode: "capacity-unpublished",
     blocker:
       "QiDao's PSM documentation is reachable at /docs/peg-stability-module and explicitly describes permissionless MAI redemption after a three-day public withdrawal queue. It names USDC and DAI strategies but gives no numeric redemption fee or live executable PSM capacity.",
     rationale:
-      "Source recovery completes the documentation milestone, not route admission: neither CDP repayment fees nor deposited strategy assets establish the PSM payout fee or currently withdrawable inventory.",
+      "Recovered three-day PSM queue docs name USDC/DAI strategies but do not close the active deployment census, withdrawal fee, withdrawable liquidity or pending liabilities. The legacy 15-chain list and current two-chain text also need reconciliation; deposited assets or CDP repayment fees cannot substitute for current payout capacity.",
     evidenceNeeded:
       "Exact active PSM deployments and complete payout identities, current queue and fee parameters, pause state, and same-run executable withdrawal capacity.",
     evidenceUrls: [
@@ -312,38 +299,38 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://nereus.finance/"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "pht-pht",
     disposition: "defer",
     reasonCode: "no-holder-route",
     blocker:
-      "PHT materials do not document a broad holder-exercisable redemption against collateral or an issuer reserve.",
-    rationale: "A stablecoin claim without callable holder mechanics is not a scoreable route.",
-    evidenceNeeded: "Official redemption docs or an audited callable route for ordinary holders.",
+      "APACX's Redeem action repays the caller's own PHT debt and returns that borrower's own collateral; the beta Tron reserve wallet is not a public collateral claim.",
+    rationale: "Borrower debt closure does not serve an unrelated holder and a reserve wallet does not establish holder-funded redemption capacity.",
+    evidenceNeeded: "A new ordinary-holder callable redemption with complete output, fee, capacity and settlement terms, distinct from repaying one's own debt.",
     evidenceUrls: ["https://www.apacx.io/PHT", "https://docs.apacx.io/"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "spusd-soulpeg",
     disposition: "defer",
     reasonCode: "documentation-insufficient",
     blocker:
-      "SoulPeg's current introduction promises 1:1 conversion between sUSDC and SPUSD, so reverse wrapping is not ruled out. It still does not establish a complete ordinary-holder SPUSD-to-USDC withdrawal with executable capacity, lock conditions, fees, and deployed contract identity.",
+      "Official docs describe SPUSD-to-sUSDC reverse wrapping, while the current product page says one-way/no unwrap. Published wrapper addresses disagree, and neither source closes the tracked-token deployment or a secondary-holder USDC withdrawal.",
     rationale:
-      "The documented wrapper conversion alone does not prove that a secondary SPUSD holder can unlock and withdraw Venus-backed USDC.",
+      "Contradictory wrapper terms must be reconciled before modeling a route. Even reverse conversion into sUSDC does not prove unlocked Venus-backed USDC payout or funded executable capacity.",
     evidenceNeeded:
-      "Audited reverse-wrapper and USDC withdrawal contracts, secondary-holder access and lock conditions, fees, and same-run withdrawable capacity.",
-    evidenceUrls: ["https://docs.soulpeg.io/"],
+      "Reconciled official terms, exact live wrapper/source and tracked-token identity, secondary-holder lock/access conditions, USDC withdrawal fees and same-run capacity.",
+    evidenceUrls: ["https://docs.soulpeg.io/", "https://soulpeg.io/spusd"],
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "stusd-stoneyield",
     disposition: "needs-research",
     reasonCode: "capacity-unpublished",
     blocker:
       "StoneYield's current contract-design page describes manually unlocked STUSD, owner-controlled strategy withdrawals, and an internal Venus ERC-4626 vault; it does not identify a complete public STUSD burn-to-USDC route or executable capacity.",
     rationale:
-      "The USDC-linked wrapper may have a vault exit, but the accessible sources are insufficient to model it safely.",
+      "Owner/manual-unlock core STUSD and transferable sUSDC are distinct identities. An internal Venus ERC-4626 reserve is not a public tracked-STUSD burn-to-USDC route; the reserve adapter's token-identity mismatch remains a separate blocker.",
     evidenceNeeded: "Deployed redeem function, USDC output, queue or cooldown, fees, live capacity, and route status.",
     evidenceUrls: ["https://docs.stoneyield.io/", "https://docs.stoneyield.io/docs/protocol/contract-design"],
     allowedRouteFamilyIfProven: "queue-redeem",
@@ -404,15 +391,15 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://help.app.kava.io/article/15-what-is-kava-mint"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "usdxl-last",
     disposition: "defer",
     reasonCode: "borrower-repay-only",
     blocker:
-      "Last's website could not be fetched on 2026-10-01; the reachable HypurrFi site describes lending, trading, and credit products but no USDXL-specific holder redemption. The earlier borrower-only assessment remains historical, not a fresh operational claim.",
+      "Current HypurrFi documentation explicitly says direct redemption from supplementary USDT0 is not enabled. The recovered Last site and a roadmap facility do not establish an active ordinary-holder USDXL gateway.",
     rationale: "Borrower debt settlement and protocol-owned market liquidity are not general redemption.",
     evidenceNeeded: "Official ordinary-holder redemption mechanics with capacity, output, fees, and route status.",
-    evidenceUrls: ["https://www.last.net/", "https://hypurrfi.com/"],
+    evidenceUrls: ["https://www.last.net/", "https://hypurrfi.com/", "https://hypurrfi.com/blog-posts/usdxl-position-backed-cdp"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewed({
@@ -437,13 +424,13 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://uusd.ai/", "https://github.com/uusdai/uusd"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "vcred-vcred",
     disposition: "needs-research",
     reasonCode: "route-status-unverified",
     blocker:
       "vCred's current site labels the token staking product as coming soon and publishes no redeem or withdraw terms.",
-    rationale: "A NAV-token flag is insufficient when the holder product is not evidenced as live.",
+    rationale: "The staking product still says Coming soon; a Hemi token identity or vault NAV flag cannot establish launched withdrawal mechanics or a numeric redemption bound.",
     evidenceNeeded:
       "Live vault contracts and official deposit, redeem, cooldown, fee, capacity, and status documentation.",
     evidenceUrls: ["https://vcred.trade/"],
@@ -466,14 +453,14 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     ],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "usdv-solomon-v2",
     disposition: "defer",
     reasonCode: "issuer-terms-missing",
     blocker:
       "Solomon's replacement USDv docs confirm approved counterparties can burn USDv for an approved payout asset, subject to onboarding, liquidity, operational controls, program terms, and processing windows. They do not enumerate the complete direct-redemption payout set or publish quantitative capacity, fees, or a settlement bound.",
     rationale:
-      "The replacement Chancery mint is distinct from legacy USDv. USDC/USDG reserves and onchain market pairs do not by themselves identify guaranteed direct-redemption outputs, and open market swaps are not issuer redemption.",
+      "The replacement Chancery Solana mint is distinct from legacy USDv. The dated backing API covers selected authority accounts, not an approved payout registry or guaranteed institution burn/settlement throughput; USDC/USDG reserve assets and open-market swaps do not identify complete issuer redemption outputs.",
     evidenceNeeded:
       "Current Chancery redemption instruction and approved payout registry, counterparty access, live limits and payout liquidity, numeric fees, and processing/settlement terms for the replacement mint.",
     evidenceUrls: [
@@ -483,14 +470,14 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     ],
     allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-10-07", {
     id: "zkusd-goal3",
     disposition: "needs-research",
     reasonCode: "route-status-unverified",
     blocker:
-      "The former Goal3 portal and product documentation were unavailable in the earlier review. The current explorer page identifies the token, but no holder gateway, active capacity, or maintained 1:1 USDC redemption terms were established on 2026-10-01.",
+      "The tracked ZKsync token remains identifiable, but maintained issuer links and holder-redemption terms remain unavailable. The 2026-10-07 explorer result is a generic shell and the portal lookup failed; these fetch outcomes do not prove that a route is absent.",
     rationale:
-      "The token contract remains identifiable on-chain, but an ERC-20 contract alone does not prove a working redemption gateway.",
+      "An ERC-20 identity alone is not a holder gateway, and failed source recovery does not refresh historical route state or quantify USDC capacity.",
     evidenceNeeded:
       "Maintained official docs or a live portal/API plus gateway contract, USDC capacity, fees, access, and settlement evidence.",
     evidenceUrls: ["https://era.zksync.network/address/0xfc7e56298657b002b3e656400e746b7212912757"],

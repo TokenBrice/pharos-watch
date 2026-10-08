@@ -1,7 +1,7 @@
-import { logWorkerEventArgs } from "./structured-log";
+import { logWorkerEvent } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { ConsumedReserveInputSchema } from "@shared/types/reserve-input";
 import { assessConsumedRedemptionReserves } from "./accepted-reserve-generation";
+import { RedemptionReserveRunMetadataSchema, type RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type {  RedemptionBackstopEntry,
   RedemptionBackstopDetails,
   RedemptionBackstopMap,
@@ -18,23 +18,9 @@ import {
   RedemptionBackstopEntrySchema,
   RedemptionBackstopDetailsSchema,
   RedemptionRouteFamilySchema,
-  RedemptionCapacityProfileSchema,
-  RedemptionCapacityBasisSchema,
-  RedemptionCapacityConfidenceSchema,
-  RedemptionCapacitySemanticsSchema,
   RedemptionConfidenceDetailsSchema,
   RedemptionCostScenarioScoresSchema,
   RedemptionDocsSchema,
-  RedemptionFeeConfidenceSchema,
-  RedemptionFeeModelKindSchema,
-  RedemptionHolderEligibilitySchema,
-  RedemptionLiveCapacityKindSchema,
-  RedemptionLiveFreshnessKindSchema,
-  RedemptionModelConfidenceSchema,
-  RedemptionResolutionStateSchema,
-  RedemptionRouteExitCorrelationSchema,
-  RedemptionRouteStatusSchema,
-  RedemptionRouteStatusSourceSchema,
 } from "@shared/types/redemption";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
@@ -57,7 +43,7 @@ import {
   inferProviderCapacitySemantics,
 } from "@shared/lib/redemption-backstop-providers";
 import { buildMethodologyEnvelope } from "./api-methodology";
-import { decodeJsonString } from "./cache-json";
+import { decodeJsonString, type JsonDecodeResult } from "./cache-json";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
@@ -124,6 +110,7 @@ export interface RedemptionBackstopRunMetadata {
   v4ScoringParametersHash?: string;
   routeStatusProducer?: string;
   routeStatusProducerFetches?: boolean;
+  stablecoinsInput?: RedemptionReserveRunMetadata["stablecoinsInput"];
   [key: string]: unknown;
 }
 
@@ -152,80 +139,72 @@ function pickSchemaValue<T>(
   return parsed.success ? parsed.data : undefined;
 }
 
-function pickNonNegativeFiniteNumber(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
-  return value;
-}
+const CurrentImmutableDetailsSchema = RedemptionBackstopDetailsSchema.required({
+  resolutionState: true,
+  capacityConfidence: true,
+  capacitySemantics: true,
+  feeConfidence: true,
+  feeModelKind: true,
+  modelConfidence: true,
+  routeStatus: true,
+  routeStatusSource: true,
+  holderEligibility: true,
+});
+const HistoricalImmutableDetailsSchema = RedemptionBackstopDetailsSchema.required({ resolutionState: true });
+const HistoricalDetailsEvidenceSchema = HistoricalImmutableDetailsSchema
+  .omit({
+    docs: true,
+    notes: true,
+    capsApplied: true,
+    confidenceDetails: true,
+    costScenarioScores: true,
+  })
+  .strip();
 
-function pickUrlArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const urls: string[] = [];
-  const seen = new Set<string>();
-  for (const item of value) {
-    if (typeof item !== "string") return undefined;
-    try {
-      const parsed = new URL(item);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
-      const normalizedUrl = parsed.toString();
-      if (seen.has(normalizedUrl)) continue;
-      seen.add(normalizedUrl);
-      urls.push(normalizedUrl);
-    } catch {
-      return undefined;
-    }
-  }
-  return urls;
-}
+type DetailsDropReason = "missing-details" | "json-parse-failed" | "invalid-payload" | "unrecognized-methodology-version";
 
-function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetails {
-  const result: RedemptionBackstopDetails = {};
-  result.reserveInput = pickSchemaValue(ConsumedReserveInputSchema, raw.reserveInput);
-  if (raw.docs != null) result.docs = pickSchemaValue(RedemptionDocsSchema.nullable(), raw.docs);
-  result.notes = pickStringArray(raw.notes);
-  result.capsApplied = pickStringArray(raw.capsApplied);
-  if (typeof raw.feeDescription === "string") result.feeDescription = raw.feeDescription;
-  result.capacityBasis = pickSchemaValue(RedemptionCapacityBasisSchema, raw.capacityBasis);
-  result.resolutionState = pickSchemaValue(RedemptionResolutionStateSchema, raw.resolutionState);
-  result.capacityConfidence = pickSchemaValue(RedemptionCapacityConfidenceSchema, raw.capacityConfidence);
-  result.capacitySemantics = pickSchemaValue(RedemptionCapacitySemanticsSchema, raw.capacitySemantics);
-  result.capacityProfile = pickSchemaValue(RedemptionCapacityProfileSchema, raw.capacityProfile);
-  result.capacityKind = pickSchemaValue(RedemptionLiveCapacityKindSchema, raw.capacityKind);
-  result.freshnessKind = pickSchemaValue(RedemptionLiveFreshnessKindSchema, raw.freshnessKind);
-  result.sourceTimestamp = pickNonNegativeFiniteNumber(raw.sourceTimestamp);
-  result.sourceUrls = pickUrlArray(raw.sourceUrls);
-  result.settlementDelaySec = pickNonNegativeFiniteNumber(raw.settlementDelaySec);
-  result.queueDepthUsd = pickNonNegativeFiniteNumber(raw.queueDepthUsd);
-  result.dailyLimitUsd = pickNonNegativeFiniteNumber(raw.dailyLimitUsd);
-  result.minRedeemUsd = pickNonNegativeFiniteNumber(raw.minRedeemUsd);
-  result.liveHolderEligibility = pickSchemaValue(RedemptionHolderEligibilitySchema, raw.liveHolderEligibility);
-  result.feeConfidence = pickSchemaValue(RedemptionFeeConfidenceSchema, raw.feeConfidence);
-  result.feeModelKind = pickSchemaValue(RedemptionFeeModelKindSchema, raw.feeModelKind);
-  result.modelConfidence = pickSchemaValue(RedemptionModelConfidenceSchema, raw.modelConfidence);
-  result.confidenceDetails = pickSchemaValue(RedemptionConfidenceDetailsSchema, raw.confidenceDetails);
-  result.routeStatus = pickSchemaValue(RedemptionRouteStatusSchema, raw.routeStatus);
-  result.routeStatusSource = pickSchemaValue(RedemptionRouteStatusSourceSchema, raw.routeStatusSource);
-  if (typeof raw.routeStatusReason === "string") result.routeStatusReason = raw.routeStatusReason;
-  if (typeof raw.routeStatusReviewedAt === "string") result.routeStatusReviewedAt = raw.routeStatusReviewedAt;
-  result.holderEligibility = pickSchemaValue(RedemptionHolderEligibilitySchema, raw.holderEligibility);
-  result.eventualRedeemabilityScore = pickNonNegativeFiniteNumber(raw.eventualRedeemabilityScore);
-  result.costScenarioScores = pickSchemaValue(RedemptionCostScenarioScoresSchema, raw.costScenarioScores);
-  result.routeExitCorrelation = pickSchemaValue(RedemptionRouteExitCorrelationSchema, raw.routeExitCorrelation);
-  return result;
-}
-
-function parseDetails(value: string | null): RedemptionBackstopDetails | null {
-  if (!value) return {};
-  let invalidReserveInput = false;
-  const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
+function parseDetails(value: string | null, methodologyVersion: string): JsonDecodeResult<RedemptionBackstopDetails, DetailsDropReason> {
+  // Pre-v4 rows have optional fields that were not written by their producer.
+  // A version must positively identify that format; unknown versions are current.
+  const version = Number(methodologyVersion);
+  const recognizedVersion = /^[0-9]+$/.test(methodologyVersion) || /^[0-9]+[.][0-9]+$/.test(methodologyVersion);
+  const historical = version > 0 && version < 4 && recognizedVersion;
+  const schemaDropReason = recognizedVersion ? "invalid-payload" : "unrecognized-methodology-version";
+  return decodeJsonString<RedemptionBackstopDetails, DetailsDropReason>(value, {
+    missingReason: "missing-details",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { ok: false, reason: "invalid-payload" };
+      }
       const raw = parsed as Record<string, unknown>;
-      if (raw.reserveInput !== undefined && !ConsumedReserveInputSchema.safeParse(raw.reserveInput).success) invalidReserveInput = true;
-      const parsedDetails = RedemptionBackstopDetailsSchema.safeParse(raw);
-      return { ok: true, payload: parsedDetails.success ? parsedDetails.data : pickValidDetails(raw) };
+      if (!historical &&
+        (raw.routeStatus === undefined || raw.routeStatusSource === undefined || raw.holderEligibility === undefined)) {
+        return { ok: false, reason: schemaDropReason };
+      }
+      const parsedDetails = (historical
+        ? HistoricalImmutableDetailsSchema
+        : CurrentImmutableDetailsSchema).safeParse(raw);
+      if (parsedDetails.success) return { ok: true, payload: parsedDetails.data };
+      if (!historical) return { ok: false, reason: schemaDropReason };
+
+      // Only historical diagnostics may be salvaged. Evidence, state and source
+      // provenance must still validate intact, never disappear into defaults.
+      const evidence = HistoricalDetailsEvidenceSchema.safeParse(raw);
+      if (!evidence.success) return { ok: false, reason: "invalid-payload" };
+      return {
+        ok: true,
+        payload: {
+          ...evidence.data,
+          docs: pickSchemaValue(RedemptionDocsSchema.nullable(), raw.docs),
+          notes: pickStringArray(raw.notes),
+          capsApplied: pickStringArray(raw.capsApplied),
+          confidenceDetails: pickSchemaValue(RedemptionConfidenceDetailsSchema, raw.confidenceDetails),
+          costScenarioScores: pickSchemaValue(RedemptionCostScenarioScoresSchema, raw.costScenarioScores),
+        },
+      };
     },
   });
-  return invalidReserveInput ? null : decoded.payload ?? {};
 }
 
 export function normalizeRedemptionBackstopRunMetadata(
@@ -238,7 +217,8 @@ export function normalizeRedemptionBackstopRunMetadata(
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         return { ok: false, reason: "invalid-payload" };
       }
-      const raw = parsed as Record<string, unknown>;
+      const { stablecoinsInput: rawStablecoinsInput, ...raw } = parsed as Record<string, unknown>;
+      const stablecoinsInput = pickSchemaValue(RedemptionReserveRunMetadataSchema.shape.stablecoinsInput, rawStablecoinsInput);
       const familyCounts =
         raw.familyCounts && typeof raw.familyCounts === "object" && !Array.isArray(raw.familyCounts)
           ? Object.fromEntries(
@@ -251,6 +231,7 @@ export function normalizeRedemptionBackstopRunMetadata(
         ok: true,
         payload: {
           ...raw,
+          ...(stablecoinsInput ? { stablecoinsInput } : {}),
           ...(typeof raw.registryHash === "string" ? { registryHash: raw.registryHash } : {}),
           ...(familyCounts ? { familyCounts } : {}),
           ...(typeof raw.strongProxyCount === "number" ? { strongProxyCount: raw.strongProxyCount } : {}),
@@ -275,10 +256,33 @@ export function normalizeRedemptionBackstopRunMetadata(
   return decoded.payload ?? {};
 }
 
-function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
-  const details = parseDetails(row.details_json);
-  if (!details) return null;
-  const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
+function recordRowRejection(
+  row: RedemptionBackstopRow,
+  runId: string,
+  reason: DetailsDropReason | "invalid-entry",
+  rejectionReasons: string[],
+  error?: unknown,
+): void {
+  rejectionReasons.push(`${row.stablecoin_id}:${reason}`);
+  logWorkerEvent({
+    scope: "lib",
+    level: "warn",
+    event: "redemption-backstop-row-rejected",
+    message: "Rejected malformed immutable redemption backstop row",
+    runId,
+    error,
+    metadata: { stablecoinId: row.stablecoin_id, methodologyVersion: row.methodology_version, reason },
+  });
+}
+
+function toEntry(row: RedemptionBackstopRow, runId: string, rejectionReasons: string[]): RedemptionBackstopEntry | null {
+  const decodedDetails = parseDetails(row.details_json, row.methodology_version);
+  if (!decodedDetails.ok || !decodedDetails.payload.resolutionState) {
+    recordRowRejection(row, runId, decodedDetails.ok ? "invalid-payload" : decodedDetails.reason, rejectionReasons);
+    return null;
+  }
+  const details = decodedDetails.payload;
+  const resolutionState = decodedDetails.payload.resolutionState;
   const capacityConfidence =
     details.capacityConfidence ??
     inferProviderCapacityConfidence({
@@ -350,20 +354,22 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
   };
   const parsed = RedemptionBackstopEntrySchema.safeParse(entry);
   if (!parsed.success) {
-    logWorkerEventArgs("lib", "warn",
-      "[redemption-backstop] skipped malformed row",
-      JSON.stringify({ stablecoinId: row.stablecoin_id, error: parsed.error.message }),
-    );
+    recordRowRejection(row, runId, "invalid-entry", rejectionReasons, parsed.error);
     return null;
   }
   return parsed.data;
 }
 
-function decodeBackstopRows(rows: readonly RedemptionBackstopRow[], errorMessage: string): RedemptionBackstopMap {
+function decodeBackstopRows(
+  rows: readonly RedemptionBackstopRow[],
+  errorMessage: string,
+  runId: string,
+  rejectionReasons: string[],
+): RedemptionBackstopMap {
   try {
     const map: RedemptionBackstopMap = {};
     for (const row of rows) {
-      const entry = toEntry(row);
+      const entry = toEntry(row, runId, rejectionReasons);
       // Skip individual rows that fail schema validation rather than letting a
       // single malformed row abort the entire snapshot decode. Skipped rows
       // make the run row count fall short of written_count, so the caller's
@@ -427,7 +433,7 @@ async function getRecentCompletedRedemptionBackstopRuns(
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
   runId: string,
-): Promise<{ map: RedemptionBackstopMap; rawRowCount: number }> {
+): Promise<{ map: RedemptionBackstopMap; rawRowCount: number; rowRejectionReasons: string[] }> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     rows = await db
@@ -445,9 +451,11 @@ async function queryRedemptionBackstopMapFromRunRows(
   }
 
   const resultRows = rows.results ?? [];
+  const rowRejectionReasons: string[] = [];
   return {
-    map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows"),
+    map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows", runId, rowRejectionReasons),
     rawRowCount: resultRows.length,
+    rowRejectionReasons,
   };
 }
 
@@ -552,8 +560,9 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
 
       let map: RedemptionBackstopMap;
       let rawRowCount: number;
+      let rowRejectionReasons: string[];
       try {
-        ({ map, rawRowCount } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id));
+        ({ map, rawRowCount, rowRejectionReasons } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id));
       } catch (error) {
         const message = toErrorMessage(error);
         rejectionReasons.push(`${run.run_id}: query failed (${message})`);
@@ -562,7 +571,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
 
       const rowCount = Object.keys(map).length;
       if (rawRowCount !== run.written_count || rowCount !== run.written_count) {
-        rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count})`);
+        rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count}); row-rejections=${rowRejectionReasons.join(",")}`);
         continue;
       }
 

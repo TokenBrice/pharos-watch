@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
@@ -250,6 +250,54 @@ describe("generate-redemption-coverage-audit", () => {
     ]);
   });
 
+  it("counts route-factor instances separately from affected cards in a captured CLI report", () => {
+    const cwd = roots.makeRoot();
+    const reportCards = {
+      asOfSec: 1_791_402_404,
+      cards: [
+        { id: "alpha", localCauseGaps: [
+          "exit-route:redemption:issuer:cost",
+          "exit-route:dex:pool:cost",
+          "exit-route:redemption:issuer:settlement",
+          "route:dex:pool:settlement",
+          "exit-portfolio-coverage",
+          "reserve-composition",
+        ] },
+        { id: "beta", localCauseGaps: ["exit-route:redemption:issuer:cost", "exit-portfolio-coverage"] },
+        { id: "gamma", localCauseGaps: [] },
+      ],
+    };
+    writeFileSync(join(cwd, "cards.json"), JSON.stringify(reportCards));
+    const status = runCli(["--json", "--report-cards", "cards.json", "--report", "audit.json"], cwd, (input) =>
+      generateRedemptionCoverageAudit({
+        ...input,
+        trackedCoins: [], activeCoins: [], configs: {}, reviewedDispositions: [],
+      }),
+    );
+    expect(status).toBe(0);
+    const audit = JSON.parse(readFileSync(join(cwd, "audit.json"), "utf8"));
+    expect(audit.reportCardDiagnostics).toEqual({
+      asOfSec: reportCards.asOfSec,
+      evaluatedCards: 3,
+      costGapInstances: 3,
+      costAffectedCards: 2,
+      settlementGapInstances: 2,
+      settlementAffectedCards: 1,
+      factorGapAffectedCards: 2,
+      portfolioCoverageAffectedCards: 2,
+    });
+  });
+
+  it("does not present unavailable report-card diagnostics as zero gaps", () => {
+    const input = { trackedCoins: [], activeCoins: [], configs: {}, reviewedDispositions: [] };
+    expect(generateRedemptionCoverageAudit(input).reportCardDiagnostics).toBeNull();
+    expect(generateRedemptionCoverageAudit({
+      ...input, reportCards: { asOfSec: 1_791_402_404, cards: [] },
+    }).reportCardDiagnostics).toMatchObject({
+      evaluatedCards: 0, costGapInstances: 0, settlementGapInstances: 0, portfolioCoverageAffectedCards: 0,
+    });
+  });
+
   it("renders the expected reviewer tables", () => {
     const rationaleWithTableSyntax = "First line|with-pipe\nsecond line";
     const audit = generateRedemptionCoverageAudit({
@@ -283,10 +331,13 @@ describe("generate-redemption-coverage-audit", () => {
     expect(parseArgs(["--json", "--strict-active-gaps", "--check", "--report", "agents/audit.json"])).toEqual({
       format: "json",
       reportPath: "agents/audit.json",
+      reportCardsPath: null,
       strictActiveGaps: true,
       check: true,
     });
     expect(() => parseArgs(["--report"])).toThrow("--report requires a path");
+    expect(parseArgs(["--report-cards", "cards.json"]).reportCardsPath).toBe("cards.json");
+    expect(() => parseArgs(["--report-cards"])).toThrow("--report-cards requires a value");
     expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 

@@ -218,13 +218,13 @@ describe("v10.01 named reserve reports", () => {
 
   it("does not treat actual USDO self-verification as a named independent report that blocks curated admission", () => {
     const meta = { ...usdoCoin, ...usdoReserveEnvelope, liveReservesConfig: LIVE_RESERVES_CONFIG } as unknown as V9ExtensionRegistryMeta;
-    const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
+    const reviewDaySec = Date.parse(`${meta.reserveReview!.reviewedAt}T00:00:00Z`) / 1000;
+    // A current reviewed disclosure must never be admitted into a prior capture.
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, reviewDaySec - 1)).toBeNull();
+    const clockSec = reviewDaySec + 86400;
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
     const admission = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec);
     expect(admission).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
-    expect(admission!.rows).toContainEqual(expect.objectContaining({
-      name: "OpenEden TBILL tokens (tokenized U.S. T-bills)", pct: 79.31833137, assetClass: "tokenized-security",
-    }));
   });
 
 

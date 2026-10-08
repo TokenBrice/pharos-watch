@@ -2,7 +2,7 @@ import { Banknote, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { RailArrow, RailStationChip, StationLabel } from "@/components/stablecoin-detail/rail-station";
-import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
+import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@/lib/redemption-backstop-labels";
 import type { RedemptionAccessModel } from "@shared/types/redemption";
 
 /**

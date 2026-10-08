@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "../redemption-backstop-configs/schema";
-import { cloneRedemptionBackstopConfig } from "../redemption-backstop-configs/shared";
+import { cloneRedemptionBackstopConfig, resolveDefaultHolderEligibility } from "../redemption-backstop-configs/shared";
+import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 
 const touched = ["xgld-unitas", "susdat-saturn", "susdx-axis", "usdr-rise", "slvon-ondo", "iauon-ondo", "witry-brix", "gldy-streamex", "dllr-sovryn", "srusde-strata", "alusd-alchemix"];
 
@@ -27,16 +28,17 @@ describe("wave-3 redemption handoff uptake", () => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(config.settlementModel).toBe("queued");
     expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-    expect(config.capacityModel.kind).toBe("unquantified");
+    expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
     expect(config.capacityModel).not.toHaveProperty("fallbackRatio");
     expect(config.capacityModel).not.toHaveProperty("eventualCapacityModel");
   });
 
-  it("keeps HBD all-in payout cost unquantified while retaining its reviewed conversion delay", () => {
+  it("keeps HBD all-in payout cost and completed conversion settlement unquantified", () => {
     const config = getRedemptionBackstopConfig("hbd-hive")!;
     expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" });
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
-    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBe(302_400);
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
   });
 
   it("keeps XGLD's XAUt collateral fee separate from physical delivery or USD par", () => {
@@ -63,6 +65,22 @@ describe("wave-3 redemption handoff uptake", () => {
     expect(config.unresolvedOutputDisposition).toBe("reviewed-external");
     expect(config.unresolvedOutputAssetKeys!.length).toBeGreaterThan(1);
     expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+  });
+
+  it("allows the srUSDe any-holder cohort without relaxing branch-specific output or fee terms", () => {
+    const config = getRedemptionBackstopConfig("srusde-strata")!;
+    expect(config.accessModel).toBe("permissionless-onchain");
+    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("any-holder");
+    expect(config.settlementModel).toBe("queued");
+    expect(config.totalScoreCap).toBe(65);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(2.5);
+    expect(config.capacityModel).toMatchObject({
+      requiredOutputAssetKeys: ["usde-ethena", "susde-ethena"],
+    });
+    expect(RedemptionBackstopConfigSchema.safeParse({
+      ...config,
+      capacityModel: { kind: "reserve-sync-metadata", requiredOutputAssetKeys: ["usdc-circle"] },
+    }).success).toBe(false);
   });
 
   it("does not copy V3 mutable transmutation fees into the legacy DAI route", () => {

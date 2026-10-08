@@ -236,6 +236,8 @@ const SafetyScoreV9ExitBreakdownSchema = z
     primaryRoute: z
       .object({
         key: z.string().min(1),
+        routeId: z.string().min(1),
+        lane: z.enum(["dex", "redemption"]),
         label: z.string().min(1).max(160),
         routeFamily: ExitRouteFamilySchema,
         feeEvidence: z.enum(["undisclosed-reviewed", "disclosed-unquantified"]).optional(),
@@ -294,6 +296,8 @@ const SafetyScoreV9ExitBreakdownSchema = z
       z
         .object({
           key: z.string().min(1),
+          routeId: z.string().min(1),
+          lane: z.enum(["dex", "redemption"]),
           label: z.string().min(1).max(160),
           routeFamily: ExitRouteFamilySchema,
           score: ScoreSchema.nullable(),

@@ -1,0 +1,127 @@
+{
+  "url": "https://rpc.hyperliquid.xyz/evm",
+  "accessedAt": "2026-10-07T22:20:50.462193+00:00",
+  "block": {
+    "number": 47935956,
+    "hash": "0xe975c723f89356ead276122871562cde135ed99ea2e5b661d2e4cb047082fa9e",
+    "timestamp": 1791406726
+  },
+  "identities": [
+    {
+      "address": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "implementationAddress": "0x08f69c88c47ef1c5274fc11bfe350561252c77f2",
+      "codeHash": "0xb381e24c1264d42ae3f3f65621d5730936fb3f4825608a7981f3369e0f9e3721",
+      "implementationCodeHash": "0xcc230cec3e8011dfcdfbf519196e2433e903678aca13aa40be16bd7a02b38c69"
+    },
+    {
+      "address": "0x01313e95c0dd7fd4ad67edc39823b079f6734cee",
+      "implementationAddress": "0x1cc4c32f029cfec5c47b0d0850632231992059bc",
+      "codeHash": "0xb381e24c1264d42ae3f3f65621d5730936fb3f4825608a7981f3369e0f9e3721",
+      "implementationCodeHash": "0x4131d5aa64d63933e5dbf15d99114225c602848b5ce9f465e2c9566595c40d9e"
+    },
+    {
+      "address": "0xa118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "implementationAddress": "0x17100f8cafd727550bb32e6f1496d463da6d978f",
+      "codeHash": "0xb381e24c1264d42ae3f3f65621d5730936fb3f4825608a7981f3369e0f9e3721",
+      "implementationCodeHash": "0x26469b46c93dff03d63430bf6b6e89b546897622d60a1f5dfb951947271aee7e"
+    },
+    {
+      "address": "0xe2d2959f89b6389deb624bf076fe7d9e5401f377",
+      "implementationAddress": "0x05faf9cfa7143804e7fb0db423fde8330cd586df",
+      "codeHash": "0xb381e24c1264d42ae3f3f65621d5730936fb3f4825608a7981f3369e0f9e3721",
+      "implementationCodeHash": "0x180d4c7daa0c8306c78cfd23d9d25b0f788ffb8023f2d711f3007c1e3f0af86a"
+    }
+  ],
+  "calls": [
+    {
+      "label": "usdc",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x3e413bee",
+      "returnData": "0x000000000000000000000000b88339cb7199b77e23db6e890353e22632ba630f"
+    },
+    {
+      "label": "usdm",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0xee138d0f",
+      "returnData": "0x000000000000000000000000e2d2959f89b6389deb624bf076fe7d9e5401f377"
+    },
+    {
+      "label": "escrow",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x9e92bc60",
+      "returnData": "0x000000000000000000000000a118b1dbeb940944d071dbec787a2d2e8d3b6578"
+    },
+    {
+      "label": "config",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x79502c55",
+      "returnData": "0x00000000000000000000000001313e95c0dd7fd4ad67edc39823b079f6734cee"
+    },
+    {
+      "label": "escrow-vault",
+      "target": "0xa118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "callData": "0xfbfa77cf",
+      "returnData": "0x0000000000000000000000005586c2c8223c73ec0b41d6352748e6c173372e11"
+    },
+    {
+      "label": "escrow-usdc",
+      "target": "0xa118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "callData": "0x3e413bee",
+      "returnData": "0x000000000000000000000000b88339cb7199b77e23db6e890353e22632ba630f"
+    },
+    {
+      "label": "paused",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x5c975abb",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "label": "operator-paused",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x6aa0ed9d",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "label": "vault-shortfall",
+      "target": "0x5586c2c8223c73ec0b41d6352748e6c173372e11",
+      "callData": "0x23ad2062",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000038ce3e17"
+    },
+    {
+      "label": "escrow-shortfall",
+      "target": "0xa118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "callData": "0x19b1faef",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000038ce3e17"
+    },
+    {
+      "label": "cooldown",
+      "target": "0x01313e95c0dd7fd4ad67edc39823b079f6734cee",
+      "callData": "0xc1ce3438",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000002a300"
+    },
+    {
+      "label": "owed",
+      "target": "0xa118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "callData": "0xe7fa9f7d",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000aeb6bbfce"
+    },
+    {
+      "label": "balance",
+      "target": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+      "callData": "0x70a08231000000000000000000000000a118b1dbeb940944d071dbec787a2d2e8d3b6578",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000ab29d81b7"
+    },
+    {
+      "label": "usdc-decimals",
+      "target": "0xb88339cb7199b77e23db6e890353e22632ba630f",
+      "callData": "0x313ce567",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000006"
+    },
+    {
+      "label": "usdm-decimals",
+      "target": "0xe2d2959f89b6389deb624bf076fe7d9e5401f377",
+      "callData": "0x313ce567",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000006"
+    }
+  ]
+}

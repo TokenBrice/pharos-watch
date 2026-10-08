@@ -1,7 +1,7 @@
 import type { RedemptionDocSource } from "../../../types";
 import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms } from "../shared";
+import { defineConfigFamily } from "../factory";
 import {
-  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
@@ -78,13 +78,13 @@ const midasLytBase: RedemptionBackstopConfig = {
   ],
 };
 
-const MIDAS_LYT_VAULTS: readonly [id: string, ticker: string, productUrl: string][] = [
-  ["mf-one-midas", "mF-ONE", "https://midas.app/mfone"],
-  ["mglobal-midas-fasanara", "mGLOBAL", "https://midas.app/mglobal"],
-  ["mhyper-midas", "mHYPER", "https://midas.app/mhyper"],
-  ["mmev-midas", "mMEV", "https://docs.midas.app/tokens/mmev"],
-  ["mapollo-midas", "mAPOLLO", "https://midas.app/mapollo"],
-];
+const MIDAS_LYT_VAULTS = [
+  { id: "mf-one-midas", ticker: "mF-ONE", productUrl: "https://midas.app/mfone" },
+  { id: "mglobal-midas-fasanara", ticker: "mGLOBAL", productUrl: "https://midas.app/mglobal" },
+  { id: "mhyper-midas", ticker: "mHYPER", productUrl: "https://midas.app/mhyper" },
+  { id: "mmev-midas", ticker: "mMEV", productUrl: "https://docs.midas.app/tokens/mmev" },
+  { id: "mapollo-midas", ticker: "mAPOLLO", productUrl: "https://midas.app/mapollo" },
+] as const;
 
 const MIDAS_LYT_FEE_DISCLOSURES: Partial<
   Record<string, { statement: string; feeBpsMax: number; label: string; url: string }>
@@ -124,7 +124,7 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
 };
 assertKnownTableKeys(
   "MIDAS_LYT_FEE_DISCLOSURES",
-  MIDAS_LYT_VAULTS.map(([id]) => id),
+  MIDAS_LYT_VAULTS.map(({ id }) => id),
   MIDAS_LYT_FEE_DISCLOSURES,
 );
 
@@ -157,59 +157,57 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
 };
 assertKnownTableKeys(
   "MIDAS_LYT_TERMS_GAPS",
-  MIDAS_LYT_VAULTS.map(([id]) => id),
+  MIDAS_LYT_VAULTS.map(({ id }) => id),
   MIDAS_LYT_TERMS_GAPS,
 );
 
 
-const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
-  MIDAS_LYT_VAULTS.map(([id, ticker, productUrl]) => {
-    const config = cloneRedemptionBackstopConfig(midasLytBase);
+const MIDAS_LYT_CONFIGS = defineConfigFamily(
+  MIDAS_LYT_VAULTS,
+  ({ id, ticker, productUrl }) => {
     const feeDisclosure = MIDAS_LYT_FEE_DISCLOSURES[id];
-    config.costModel = feeDisclosure
-      ? feeDisclosure.feeBpsMax === 0
-        ? fixedFee(0, feeDisclosure.statement)
-        : {
-            ...documentedVariableFee(feeDisclosure.statement),
-            feeBpsMax: feeDisclosure.feeBpsMax,
-          }
-      : undisclosedReviewedFee(
-          `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
-        );
-    config.docs = [
+    const docs = [
       sourceRefFull(`Midas ${ticker}`, productUrl),
       ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
-      ...config.docs!,
+      ...midasLytBase.docs!,
     ];
     const termsGap = MIDAS_LYT_TERMS_GAPS[id];
-    if (termsGap) {
-      config.v9RouteReviewTerms = {
-        scoringDisposition: "bounded-terms-gap",
-        missingScoringFields: termsGap.missingScoringFields,
-        rationale: termsGap.rationale,
-        reviewedAt: "2026-09-04",
-        docs: [...config.docs],
-      };
-      if (id === "mhyper-midas" || id === "mmev-midas") {
-        const calendarReview = midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10);
-        config.v9RouteReviewTerms = {
-          ...config.v9RouteReviewTerms, ...calendarReview,
-          docs: [...config.v9RouteReviewTerms.docs!, ...calendarReview.docs!],
-        };
-      }
-    }
-    config.notes = [
-      `${ticker} is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.`,
-    ];
-    return [id, config];
-  }),
+    const calendarReview = id === "mhyper-midas" || id === "mmev-midas"
+      ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
+      : null;
+    return {
+      ...midasLytBase,
+      costModel: feeDisclosure
+        ? feeDisclosure.feeBpsMax === 0
+          ? fixedFee(0, feeDisclosure.statement)
+          : {
+              ...documentedVariableFee(feeDisclosure.statement),
+              feeBpsMax: feeDisclosure.feeBpsMax,
+            }
+        : undisclosedReviewedFee(
+            `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
+          ),
+      docs,
+      ...(termsGap ? {
+        v9RouteReviewTerms: {
+          scoringDisposition: "bounded-terms-gap" as const,
+          missingScoringFields: termsGap.missingScoringFields,
+          rationale: termsGap.rationale,
+          reviewedAt: "2026-09-04",
+          docs: [...docs],
+          ...(calendarReview ? { ...calendarReview, docs: [...docs, ...calendarReview.docs!] } : {}),
+        },
+      } : {}),
+      notes: [
+        `${ticker} is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.`,
+      ],
+    };
+  },
 );
 
-/** Spiko fund redemptions share the same "deposits and withdrawals" doc plus the
- *  SICAV prospectus; USD/GBP funds reference the standard redemption-order API while
- *  the EUR funds reference the instant-redemption-order API. Each entry appends its
- *  own product-page ref (some funds lack one) before the prospectus. Returned as fresh
- *  arrays/objects so no doc reference is shared across entries. */
+/** Spiko fund redemptions share the current withdrawal recipe and SICAV prospectus.
+ *  Only EUTBL and eurSAFO have documented instant-withdrawal eligibility; this is
+ *  investor/bank/day scope, not coin-wide liquidity or a currency-based capability. */
 const spikoDepositsRef = () =>
   sourceRef(
     "Spiko deposits and withdrawals",
@@ -219,17 +217,17 @@ const spikoDepositsRef = () =>
 const spikoBaseDocs = () => [
   spikoDepositsRef(),
   sourceRef(
-    "Spiko investor redemption API",
-    "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+    "Spiko withdrawal recipe",
+    "https://docs.spiko.io/direct/recipes/withdrawal",
     ["route", "access", "settlement"],
   ),
 ];
-const spikoEurBaseDocs = () => [
-  spikoDepositsRef(),
+const spikoInstantBaseDocs = () => [
+  ...spikoBaseDocs(),
   sourceRef(
-    "Spiko instant redemption API",
-    "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
-    ["route", "access", "settlement"],
+    "Spiko instant withdrawal eligibility (investor, bank and day scoped)",
+    "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility",
+    ["route", "access"],
   ),
 ];
 const spikoProspectus = () =>
@@ -239,24 +237,26 @@ const spikoProspectus = () =>
     "access",
     "settlement",
   ]);
-const spikoProspectusSettlementReview = (
-  settlementDelaySec: number,
-  settlementModel?: "same-day",
-): RedemptionV9RouteReviewTerms => ({
-  ...(settlementModel ? { settlementModel } : {}),
-  settlementDelaySec,
-  reviewedAt: "2026-07-29",
+const spikoProspectusSettlementReview = (settlementSupported = false): RedemptionV9RouteReviewTerms => ({
+  settlementModel: "days",
+  scoringDisposition: "bounded-terms-gap",
+  missingScoringFields: ["settlement"],
+  rationale: "Order centralization and ordinary D+1 business-day fund settlement are conditional on market opening, gates and suspensions; they do not establish an unconditional elapsed-second maximum to final bank receipt.",
+  reviewedAt: "2026-10-07",
   docs: [
     sourceRef(
       "Spiko SICAV prospectus",
       "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-      ["route"],
+      settlementSupported ? ["route", "settlement"] : ["route"],
     ),
   ],
 });
 const spikoCashAndCarrySettlementReview = (): RedemptionV9RouteReviewTerms => ({
-  settlementDelaySec: 172_800,
-  reviewedAt: "2026-08-11",
+  settlementModel: "days",
+  scoringDisposition: "bounded-terms-gap",
+  missingScoringFields: ["settlement"],
+  rationale: "The product article's ordinary cash-and-carry redemption window does not establish an unconditional maximum to completed exact-endpoint payment.",
+  reviewedAt: "2026-10-07",
   docs: [
     sourceRef(
       "Spiko Cash & Carry product article",
@@ -301,67 +301,65 @@ const SPIKO_FEE_DISCLOSURES: Record<string, { statement: string; url: string }> 
   },
 };
 
-/** Eight Spiko funds share the same issuer-API NAV-redemption base, product KID fee
- *  disclosure, and SICAV prospectus ref; EUR funds reference the instant-redemption API
- *  while USD/GBP funds reference the standard redemption API. Each fund appends its own
- *  product-page ref (some have none) and keeps its bespoke modeling note. */
-const SPIKO_FUNDS: readonly [
-  id: string,
-  ticker: string,
-  currency: "eur" | "non-eur",
-  productRef: RedemptionDocSource | null,
-  note: string,
-  settlementReview: (() => RedemptionV9RouteReviewTerms) | null,
-][] = [
-  [
-    "ustbl-spiko",
-    "USTBL",
-    "non-eur",
-    null,
-    "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    () => spikoProspectusSettlementReview(86_400, "same-day"),
-  ],
-  [
-    "safo-spiko-usd",
-    "SAFO",
-    "non-eur",
-    sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
-    "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    () => spikoProspectusSettlementReview(86_400, "same-day"),
-  ],
-  [
-    "spkcc-spiko",
-    "SPKCC",
-    "non-eur",
-    sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
-    "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    spikoCashAndCarrySettlementReview,
-  ],
-  [
-    "uktbl-spiko",
-    "UKTBL",
-    "non-eur",
-    sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
+/** Eight Spiko funds retain documented eventual-only NAV redemption and zero fund
+ *  exit fees. Instant eligibility is explicitly class-scoped, never inferred from
+ *  EUR denomination. Each fund keeps its product references and independent review. */
+const SPIKO_FUNDS: readonly {
+  id: string;
+  ticker: string;
+  shareClassId: string;
+  productRef: RedemptionDocSource | null;
+  note: string;
+  settlementReview: () => RedemptionV9RouteReviewTerms;
+}[] = [
+  {
+    id: "ustbl-spiko",
+    ticker: "USTBL",
+    shareClassId: "USTBL",
+    productRef: null,
+    note: "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    settlementReview: () => spikoProspectusSettlementReview(true),
+  },
+  {
+    id: "safo-spiko-usd",
+    ticker: "SAFO",
+    shareClassId: "SAFO",
+    productRef: sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
+    note: "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    settlementReview: () => spikoProspectusSettlementReview(true),
+  },
+  {
+    id: "spkcc-spiko",
+    ticker: "SPKCC",
+    shareClassId: "SPKCC",
+    productRef: sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
+    note: "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    settlementReview: spikoCashAndCarrySettlementReview,
+  },
+  {
+    id: "uktbl-spiko",
+    ticker: "UKTBL",
+    shareClassId: "UKTBL",
+    productRef: sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
       "capacity",
       "fees",
       "access",
     ]),
-    "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    () => spikoProspectusSettlementReview(86_400, "same-day"),
-  ],
-  [
-    "gbpsafo-spiko",
-    "GBPSAFO",
-    "non-eur",
-    sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
-    "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    () => ({
-      settlementModel: "same-day",
-      settlementDelaySec: 86_400,
+    note: "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    settlementReview: spikoProspectusSettlementReview,
+  },
+  {
+    id: "gbpsafo-spiko",
+    ticker: "GBPSAFO",
+    shareClassId: "gbpSAFO",
+    productRef: sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
+    note: "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    settlementReview: () => ({
+      settlementModel: "days",
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["capacity", "cost"],
+      missingScoringFields: ["capacity", "settlement", "cost"],
       rationale:
-        "The SICAV prospectus published 2026-09-01 specifies same-day NAV and settlement of redemption orders cleared by 11:30 a.m. Paris time, and its fee table lists no subscription or redemption fees. It also permits a redemption cap when net redemptions reach 10% of net assets, with deferred orders, so it is not a guaranteed stress-capacity lower bound; investor-paid DLT transaction fees and up to EUR 500 excluding VAT for technical wallet recovery leave all-in cost unbounded.",
+        "The SICAV prospectus permits redemption caps, deferred orders, market closures and suspensions, so normal NAV/order settlement does not establish an unconditional final-bank-receipt maximum or stressed executable capacity. Investor-paid DLT transaction fees and technical wallet recovery charges leave all-in cost unbounded.",
       reviewedAt: "2026-09-04",
       docs: [
         sourceRef(
@@ -376,62 +374,63 @@ const SPIKO_FUNDS: readonly [
         ),
       ],
     }),
-  ],
-  [
-    "eutbl-spiko",
-    "EUTBL",
-    "eur",
-    null,
-    "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    () => spikoProspectusSettlementReview(86_400, "same-day"),
-  ],
-  [
-    "eursafo-spiko",
-    "EURSAFO",
-    "eur",
-    sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
-    "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    () => spikoProspectusSettlementReview(86_400, "same-day"),
-  ],
-  [
-    "eurspkcc-spiko",
-    "EURSPKCC",
-    "eur",
-    sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
-    "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
-    spikoCashAndCarrySettlementReview,
-  ],
+  },
+  {
+    id: "eutbl-spiko",
+    ticker: "EUTBL",
+    shareClassId: "EUTBL",
+    productRef: null,
+    note: "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    settlementReview: () => spikoProspectusSettlementReview(true),
+  },
+  {
+    id: "eursafo-spiko",
+    ticker: "EURSAFO",
+    shareClassId: "eurSAFO",
+    productRef: sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
+    note: "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    settlementReview: () => spikoProspectusSettlementReview(true),
+  },
+  {
+    id: "eurspkcc-spiko",
+    ticker: "EURSPKCC",
+    shareClassId: "eurSPKCC",
+    productRef: sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", ["capacity", "fees", "access"]),
+    note: "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; standard withdrawals remain bank-rail dependent, and instant-withdrawal support is not established for this class.",
+    settlementReview: spikoCashAndCarrySettlementReview,
+  },
 ];
 assertExactTableKeys(
   "SPIKO_FEE_DISCLOSURES",
-  SPIKO_FUNDS.map(([id]) => id),
+  SPIKO_FUNDS.map(({ id }) => id),
   SPIKO_FEE_DISCLOSURES,
 );
 
 
-const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
-  SPIKO_FUNDS.map(([id, ticker, currency, productRef, note, settlementReview]): [string, RedemptionBackstopConfig] => {
-    const baseDocs = currency === "eur" ? spikoEurBaseDocs() : spikoBaseDocs();
+const SPIKO_FUND_CONFIGS = defineConfigFamily(
+  SPIKO_FUNDS,
+  ({ id, ticker, shareClassId, productRef, note, settlementReview }) => {
+    const baseDocs = shareClassId === "EUTBL" || shareClassId === "eurSAFO" ? spikoInstantBaseDocs() : spikoBaseDocs();
     const feeDisclosure = SPIKO_FEE_DISCLOSURES[id];
-    return [
-      id,
-      {
-        ...issuerBase,
-        ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-        settlementModel: "days",
-        outputAssetType: "nav",
-        costModel: fixedFee(0, feeDisclosure.statement),
-        ...(settlementReview ? { v9RouteReviewTerms: settlementReview() } : {}),
-        docs: [
-          ...baseDocs,
-          ...(productRef ? [productRef] : []),
-          sourceRef(`Spiko ${ticker} KID`, feeDisclosure.url, ["fees"]),
-          spikoProspectus(),
-        ],
-        notes: [note],
-      },
-    ];
-  }),
+    return {
+      ...issuerBase,
+      ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      settlementModel: "days",
+      outputAssetType: "nav",
+      costModel: fixedFee(0, feeDisclosure.statement),
+      v9RouteReviewTerms: settlementReview(),
+      docs: [
+        ...baseDocs,
+        ...(productRef ? [productRef] : []),
+        sourceRef(`Spiko ${ticker} KID`, feeDisclosure.url, ["fees"]),
+        spikoProspectus(),
+      ],
+      notes: [
+        note,
+        "Capacity is documented eventual-only redeemability. NAV, class totals and dated gross bank-cash positions are backing diagnostics, not funded withdrawal commitments. Authenticated instant availableAmount is investor/bank/day scoped, was not observed here and cannot be multiplied across holders or treated as coin-wide capacity; bankSupportsInstant without an actual bank ID is not bank confirmation, and EUR amounts require contemporaneous admitted FX.",
+      ],
+    };
+  },
 );
 
 /** bIB01 and bC3M share these two Backed sourceRefs verbatim (the redemption docs and
@@ -461,31 +460,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
       sourceRefRouteCapacityAccess("Tether legal terms", "https://tether.to/en/legal/"),
       sourceRef("Tether fees", "https://tether.to/en/fees/", ["fees", "access"]),
-    ],
-  },
-  "bfusd-binance": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    settlementModel: "days",
-    executionModel: "opaque",
-    routeStatus: "open",
-    costModel: documentedVariableFee(
-      "Binance terms allow variable fees, delays, limits, and suspension rights for BFUSD purchase and redemption",
-    ),
-    docs: [
-      sourceRef(
-        "Binance BFUSD FAQ",
-        "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
-        ["route", "access"],
-      ),
-      sourceRef(
-        "Binance BFUSD product terms",
-        "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf",
-        ["route", "capacity", "fees", "settlement"],
-      ),
-    ],
-    notes: [
-      "BFUSD is modeled as a Binance-account issuer route, not an on-chain token redemption path; Binance may delay or suspend redemption under its terms",
     ],
   },
   "pathusd-bridge": {
@@ -933,6 +907,17 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
+    settlementModel: "days",
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "The current SoFiUSD terms authorize fees but establish neither a numeric issuer fee maximum nor an unconditional completed-payout deadline. Fee authority is not a zero-fee schedule or proof of access or funded capacity.",
+      reviewedAt: "2026-10-07",
+      docs: [
+        sourceRef("SOFID Terms of Use (effective 2026-05-27; reviewed 2026-10-07)", "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf", ["fees", "settlement"]),
+      ],
+    },
     costModel: undisclosedReviewedFee(
       "BitGo Mint supports native SoFiUSD minting and redemption for institutions; public materials reviewed do not publish one fixed redemption fee",
     ),
@@ -947,6 +932,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "BitGo SoFiUSD infrastructure",
         "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/",
       ),
+      sourceRef("SOFID Terms of Use: fee authority only (reviewed 2026-10-07)", "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf", ["fees"]),
     ],
     notes: ["Modeled as institutional BitGo/SoFi issuer redemption, not a retail self-service on-chain burn path."],
   },

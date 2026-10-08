@@ -499,11 +499,11 @@ function refineResponse(
   }
 }
 
-/** Current schema-6 envelope: explicit proof-derived availability and partial evidence. */
+/** Current schema-7 envelope: proof-derived availability and exact typed exit-route identity. */
 export const SafetyScoreV9CurrentResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(6),
+    schemaVersion: z.literal(7),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()

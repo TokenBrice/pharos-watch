@@ -31,6 +31,7 @@ function evaluationRoute(observation: ExitRouteObservation): V9ExitEvaluationRou
     observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook" ? "dex" : "redemption";
   return {
     routeKey: observation.routeId,
+    routeId: observation.routeId,
     lane,
     routeFamily: observation.routeFamily as V9ExitEvaluationRoute["routeFamily"],
     applicability: "required",

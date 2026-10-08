@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RedemptionRouteRail } from "../redemption-route-rail";
-import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
+import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@/lib/redemption-backstop-labels";
 
 const BASE_PROPS = {
   accessLabel: "Issuer / institutional",

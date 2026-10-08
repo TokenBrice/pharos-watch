@@ -255,7 +255,7 @@ describe("stablecoin V9 safety presentation", () => {
         maxCostBps: 200,
         comparisonWindowSec: 86_400,
       },
-      primaryRoute: { key: "redemption:primary", label: "Direct redemption", routeFamily: "issuer-redemption", score: 84, components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      primaryRoute: { key: "redemption:primary", routeId: "primary", lane: "redemption", label: "Direct redemption", routeFamily: "issuer-redemption", score: 84, components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
       capsApplied: [],
       capacity: {
         executableUsd: 1_000,
@@ -272,7 +272,7 @@ describe("stablecoin V9 safety presentation", () => {
         observedAtSec: 1_752_537_600,
       }, },
       diversification: null,
-      alternatives: [{ key: "dex:curve", label: "Curve liquidity", routeFamily: "dex-amm", score: 77, included: true, exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null, confidenceFactor: 0.75,
+      alternatives: [{ key: "dex:curve", routeId: "curve", lane: "dex", label: "Curve liquidity", routeFamily: "dex-amm", score: 77, included: true, exclusionReason: null, confidenceDimensions: null, capacityEvidenceTier: 'unknown' as const, rawSameNotionalCostBps: null, confidenceFactor: 0.75,
       capacity: {
         executableUsd: 24_580_000,
         requestedNotionalUsd: 25_000_000,
@@ -375,7 +375,7 @@ describe("stablecoin V9 safety presentation", () => {
         maxCostBps: 200,
         comparisonWindowSec: 300,
       },
-      primaryRoute: { key: "redemption:earn-queued", label: "Queued USDC redemption", routeFamily: "protocol-redemption", score: 0, components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
+      primaryRoute: { key: "redemption:earn-queued", routeId: "earn-queued", lane: "redemption", label: "Queued USDC redemption", routeFamily: "protocol-redemption", score: 0, components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }), confidenceFactor: 1, confidenceDimensions: { observation: { factor: 1, cause: null, causeGapRefs: [] }, model: { factor: 1, cause: null, causeGapRefs: [] }, capacityMethod: { factor: 1, cause: null, causeGapRefs: [] } }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }).reduce((sum, component) => sum + component.weightedContribution, 0), eligibilityMultiplier: 1,
       capsApplied: ["zero-executable-capacity"],
       capacity: {
         executableUsd: 0,

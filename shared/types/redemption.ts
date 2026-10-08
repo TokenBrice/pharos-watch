@@ -5,7 +5,47 @@ import { ScoreSchema } from "./safety-schema-primitives";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 import { isValidIsoDateOnly } from "./date-primitives";
 import { BusinessCalendarIdSchema, BusinessClockTimeSchema, BusinessTimezoneSchema } from "./business-calendars";
-import { ConsumedReserveInputSchema } from "./reserve-input";
+import { ConsumedReserveInputSchema, LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES } from "./reserve-input";
+
+/** Shared route identity/capability authority; Worker strategies supply only executable reads. */
+export interface ExecutableRedemptionObserverDefinition {
+  coinId: string;
+  chain: string;
+  inputContract: string;
+  outputAssetKeys: readonly string[];
+  capacityCapability: "diagnostic-only" | "measured";
+  sourceLane: "reserve-backed" | "direct";
+}
+export const EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS = {
+  "ember-eearn-batched": { coinId: "eearn-ember", chain: "ethereum", inputContract: "0x9be9294722f8aad37b11a9792be2c782182cafa2", outputAssetKeys: ["usdc-circle"], capacityCapability: "diagnostic-only", sourceLane: "reserve-backed" },
+  "dtrinity-dusd-withdrawal": { coinId: "sdusd-dtrinity", chain: "ethereum", inputContract: "0x7cb20517776636ed76b68edb3d99dcce356abf02", outputAssetKeys: ["dusd-dtrinity"], capacityCapability: "measured", sourceLane: "reserve-backed" },
+  "noon-susn-withdrawal": { coinId: "susn-noon", chain: "ethereum", inputContract: "0xe24a3dc889621612422a64e6388927901608b91d", outputAssetKeys: ["usn-noon"], capacityCapability: "measured", sourceLane: "reserve-backed" },
+  "lido-earnusd-queue": { coinId: "earnusd-lido", chain: "ethereum", inputContract: "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", outputAssetKeys: ["usdc-circle"], capacityCapability: "diagnostic-only", sourceLane: "direct" },
+  "usdfr-par-controller": { coinId: "usdfr-forest-road", chain: "ethereum", inputContract: "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d", outputAssetKeys: ["usdc-circle"], capacityCapability: "measured", sourceLane: "direct" },
+  "apyusd-unlock-receipt": { coinId: "apyusd-apyx", chain: "ethereum", inputContract: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a", outputAssetKeys: ["apxusd-apyx"], capacityCapability: "measured", sourceLane: "direct" },
+  "monetrix-funded-queue": { coinId: "usdm-monetrix", chain: "hyperevm", inputContract: "0xe2d2959f89b6389deb624bf076fe7d9e5401f377", outputAssetKeys: ["usdc-circle"], capacityCapability: "diagnostic-only", sourceLane: "direct" },
+  "saturn-v2-queue": { coinId: "susdat-saturn", chain: "ethereum", inputContract: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7", outputAssetKeys: ["usdat-saturn"], capacityCapability: "diagnostic-only", sourceLane: "direct" },
+} as const;
+export type ExecutableRedemptionObserverId = keyof typeof EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS;
+export const ExecutableRedemptionObserverIdSchema = z.enum(
+  Object.keys(EXECUTABLE_REDEMPTION_OBSERVER_DEFINITIONS) as [ExecutableRedemptionObserverId, ...ExecutableRedemptionObserverId[]],
+);
+
+export const RedemptionCapacityRejectionReasonSchema = z.enum([
+  ...LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES,
+  "route-output-identity-unobserved",
+  "redeemable-capacity-unobserved",
+  "output-valuation-unobserved",
+  "all-in-cost-unobserved",
+  "settlement-bound-unproven",
+  "malformed-telemetry",
+  "unsupported-capacity-kind",
+  "missing-source-timestamp",
+  "future-source-timestamp",
+  "stale-source-timestamp",
+  "missing-block-number",
+]);
+export type RedemptionCapacityRejectionReason = z.infer<typeof RedemptionCapacityRejectionReasonSchema>;
 
 export const RedemptionRouteFamilySchema = z.enum([
   "stablecoin-redeem",
@@ -253,7 +293,7 @@ export const RedemptionConfidenceDetailsSchema = z.object({
 });
 export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDetailsSchema>;
 
-export const RedemptionBackstopEntrySchema = z.object({
+const RedemptionBackstopEntryBaseSchema = z.object({
   stablecoinId: z.string(),
   reserveInput: ConsumedReserveInputSchema.optional(),
   score: ScoreSchema.nullable(),
@@ -289,6 +329,7 @@ export const RedemptionBackstopEntrySchema = z.object({
   routeStatusReviewedAt: z.string().optional(),
   holderEligibility: RedemptionHolderEligibilitySchema.optional().default("unknown"),
   capacityConfidence: RedemptionCapacityConfidenceSchema,
+  capacityRejectionReason: RedemptionCapacityRejectionReasonSchema.optional(),
   capacityBasis: RedemptionCapacityBasisSchema.optional(),
   capacitySemantics: RedemptionCapacitySemanticsSchema,
   capacityProfile: RedemptionCapacityProfileSchema.optional(),
@@ -319,13 +360,26 @@ export const RedemptionBackstopEntrySchema = z.object({
   notes: z.array(z.string()).optional(),
   capsApplied: z.array(z.string()).optional(),
 });
+
+export const RedemptionBackstopEntrySchema = RedemptionBackstopEntryBaseSchema.superRefine((entry, ctx) => {
+  if (entry.resolutionState !== "resolved" && entry.score !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["score"],
+      message: "Only resolved redemption routes can carry an aggregate score",
+    });
+  }
+});
 export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySchema>;
 
-export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntrySchema.pick({
+// Persisted details are partial, including explicit historical envelopes; score
+// coherence is enforced once the complete entry is assembled.
+export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntryBaseSchema.pick({
   reserveInput: true,
   resolutionState: true,
   outputDependencyResolution: true,
   capacityConfidence: true,
+  capacityRejectionReason: true,
   capacityBasis: true,
   capacitySemantics: true,
   capacityProfile: true,

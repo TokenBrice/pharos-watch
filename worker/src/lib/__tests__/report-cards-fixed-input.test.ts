@@ -559,6 +559,15 @@ describe("retained v3 fixed report-card input", () => {
     );
   });
 
+  it("binds shared resource identity into redemption payload identity", () => {
+    const observation = redemptionRoute("redeem:resource", ["issuer:test"], ["USD:a"]);
+    const plain = { coin: redemptionEntry([observation]) };
+    const keyed = { coin: redemptionEntry([{ ...observation, sharedResourceKey: "ethereum:reservoir-psm:one" }]) };
+    expect(normalizeFixedRedemptionBackstopMap(keyed).coin.capacityProfile?.exitRouteObservations?.[0].sharedResourceKey)
+      .toBe("ethereum:reservoir-psm:one");
+    expect(computeRedemptionPayloadFingerprint(plain, "redemption:test"))
+      .not.toBe(computeRedemptionPayloadFingerprint(keyed, "redemption:test"));
+  });
   it("normalizes redemption payload identity and producer methodology versions", () => {
     const first = redemptionRoute("redeem:a", ["issuer:test", "rail:fiat"], ["USD:b", "USD:a"]);
     const second = redemptionRoute("redeem:b", ["rail:fiat", "issuer:test"], ["USD:a"]);

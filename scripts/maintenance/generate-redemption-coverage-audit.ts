@@ -1,5 +1,8 @@
 #!/usr/bin/env tsx
 
+import { resolve } from "node:path";
+import { z } from "zod";
+import type { V9PublicCauseGapTable } from "@shared/types/safety-score-v9-public-cause-gaps";
 import type { StablecoinMeta } from "@shared/types";
 import type { RedemptionRouteFamily } from "@shared/types/redemption";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
@@ -14,7 +17,7 @@ import {
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
 import { runDirectCli } from "../lib/cli-args.mjs";
-import { parseCoverageAuditCliArgs, writeOutputFile } from "../lib/coverage-audit-cli";
+import { parseCoverageAuditCliArgs, readRequiredJsonFile, writeOutputFile } from "../lib/coverage-audit-cli";
 import {
   REDEMPTION_COVERAGE_DISPOSITIONS,
   REDEMPTION_COVERAGE_REASON_CODES,
@@ -64,9 +67,63 @@ export interface HeuristicRouteAuditRow {
   evidenceNeeded: string;
 }
 
+const ReportCardGapInputSchema = z.object({
+  asOfSec: z.number().int().nonnegative(),
+  cards: z.array(z.object({
+    id: z.string().min(1),
+    localCauseGaps: z.array(z.string().min(1)),
+  })),
+});
+
+type ReportCardGapInput = {
+  asOfSec: number;
+  cards: readonly Pick<V9PublicCauseGapTable, "id" | "localCauseGaps">[];
+};
+
+export interface RedemptionReportCardDiagnostics {
+  asOfSec: number;
+  evaluatedCards: number;
+  costGapInstances: number;
+  costAffectedCards: number;
+  settlementGapInstances: number;
+  settlementAffectedCards: number;
+  factorGapAffectedCards: number;
+  portfolioCoverageAffectedCards: number;
+}
+
+function summarizeReportCardGaps(input: ReportCardGapInput): RedemptionReportCardDiagnostics {
+  const result: RedemptionReportCardDiagnostics = {
+    asOfSec: input.asOfSec,
+    evaluatedCards: input.cards.length,
+    costGapInstances: 0,
+    costAffectedCards: 0,
+    settlementGapInstances: 0,
+    settlementAffectedCards: 0,
+    factorGapAffectedCards: 0,
+    portfolioCoverageAffectedCards: 0,
+  };
+  for (const card of input.cards) {
+    let cost = 0;
+    let settlement = 0;
+    for (const gap of new Set(card.localCauseGaps)) {
+      const factor = /^(?:exit-route|route):.+:(cost|settlement)$/.exec(gap)?.[1];
+      if (factor === "cost") cost += 1;
+      if (factor === "settlement") settlement += 1;
+    }
+    result.costGapInstances += cost;
+    result.settlementGapInstances += settlement;
+    if (cost > 0) result.costAffectedCards += 1;
+    if (settlement > 0) result.settlementAffectedCards += 1;
+    if (cost > 0 || settlement > 0) result.factorGapAffectedCards += 1;
+    if (card.localCauseGaps.includes("exit-portfolio-coverage")) result.portfolioCoverageAffectedCards += 1;
+  }
+  return result;
+}
+
 export interface RedemptionCoverageAudit {
   generatedAt: string;
   validationErrors: string[];
+  reportCardDiagnostics: RedemptionReportCardDiagnostics | null;
   summary: {
     trackedCoins: number;
     configuredRoutes: number;
@@ -345,6 +402,7 @@ export function generateRedemptionCoverageAudit(
     frozenCoins?: readonly AuditCoin[];
     configs?: Record<string, RedemptionBackstopConfig>;
     reviewedDispositions?: readonly ReviewedRedemptionCoverageDisposition[];
+    reportCards?: ReportCardGapInput;
     generatedAt?: string;
   } = {},
 ): RedemptionCoverageAudit {
@@ -461,6 +519,7 @@ export function generateRedemptionCoverageAudit(
   return {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     validationErrors,
+    reportCardDiagnostics: input.reportCards ? summarizeReportCardGaps(input.reportCards) : null,
     summary: {
       trackedCoins: trackedCoins.length,
       configuredRoutes: configuredIds.size,
@@ -537,6 +596,21 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     `- Heuristic configured routes for V4-43: ${audit.summary.heuristicConfiguredRoutes}`,
     `- Reviewed disposition validation errors: ${audit.summary.validationErrors}`,
     "",
+    "## Captured Report-Card Gap Diagnostics",
+    "",
+    ...(audit.reportCardDiagnostics
+      ? [
+          `- Capture as-of (seconds): ${audit.reportCardDiagnostics.asOfSec}`,
+          `- Evaluated cards: ${audit.reportCardDiagnostics.evaluatedCards}`,
+          `- Cost factor-gap instances: ${audit.reportCardDiagnostics.costGapInstances}`,
+          `- Cost affected cards: ${audit.reportCardDiagnostics.costAffectedCards}`,
+          `- Settlement factor-gap instances: ${audit.reportCardDiagnostics.settlementGapInstances}`,
+          `- Settlement affected cards: ${audit.reportCardDiagnostics.settlementAffectedCards}`,
+          `- Cards affected by cost or settlement gaps: ${audit.reportCardDiagnostics.factorGapAffectedCards}`,
+          `- DEX portfolio coverage affected cards: ${audit.reportCardDiagnostics.portfolioCoverageAffectedCards}`,
+        ]
+      : ["Unavailable: no report-card capture supplied."]),
+    "",
     "## Reviewed Disposition Validation Errors",
     "",
     ...(audit.validationErrors.length > 0 ? audit.validationErrors.map((error) => `- ${error}`) : ["None."]),
@@ -567,16 +641,20 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
 type CliOptions = {
   format: "markdown" | "json";
   reportPath: string | null;
+  reportCardsPath: string | null;
   strictActiveGaps: boolean;
   check: boolean;
 };
 
 export function parseArgs(argv: string[]): CliOptions {
   return parseCoverageAuditCliArgs(argv, {
-    createOptions: (): CliOptions => ({ format: "markdown", reportPath: null, strictActiveGaps: false, check: false }),
+    createOptions: (): CliOptions => ({
+      format: "markdown", reportPath: null, reportCardsPath: null, strictActiveGaps: false, check: false,
+    }),
     includeCheck: true,
     options: [
       { flag: "--strict-active-gaps", kind: "boolean", apply: (options) => { options.strictActiveGaps = true; } },
+      { flag: "--report-cards", kind: "value", apply: (options, value) => { options.reportCardsPath = value!; } },
     ],
   });
 }
@@ -601,10 +679,13 @@ export function evaluateRedemptionCoverageAudit(
 export function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
-  auditFactory: () => RedemptionCoverageAudit = generateRedemptionCoverageAudit,
+  auditFactory: typeof generateRedemptionCoverageAudit = generateRedemptionCoverageAudit,
 ): number {
   const options = parseArgs(argv);
-  const audit = auditFactory();
+  const reportCards = options.reportCardsPath
+    ? ReportCardGapInputSchema.parse(readRequiredJsonFile(resolve(cwd, options.reportCardsPath), "Report cards"))
+    : undefined;
+  const audit = auditFactory({ reportCards });
   const output =
     options.format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderRedemptionCoverageAuditMarkdown(audit);
   const findings = evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: options.strictActiveGaps });

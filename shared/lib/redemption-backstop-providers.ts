@@ -10,6 +10,7 @@ export const REDEMPTION_BACKSTOP_PROVIDER_IDS = {
   SUPPLY_RATIO_MODEL: "supply-ratio-model",
   FIXED_USD_MODEL: "fixed-usd-model",
   RESERVE_SYNC_METADATA: "reserve-sync-metadata",
+  EXECUTABLE_OBSERVER: "executable-observer",
   RESERVE_SYNC_FALLBACK: "reserve-sync-fallback",
   SYNC_ERROR: "sync-error",
 } as const;
@@ -67,6 +68,13 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
       static: "heuristic",
     },
   },
+  [REDEMPTION_BACKSTOP_PROVIDER_IDS.EXECUTABLE_OBSERVER]: {
+    id: REDEMPTION_BACKSTOP_PROVIDER_IDS.EXECUTABLE_OBSERVER,
+    defaultSourceMode: "dynamic",
+    // Declaration alone is not a measurement.
+    defaultCapacityConfidence: "heuristic",
+    defaultCapacitySemantics: "immediate-bounded",
+  },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
     defaultSourceMode: "estimated",
@@ -86,7 +94,8 @@ export type RedemptionCapacityModelProviderKind =
   | "supply-full"
   | "supply-ratio"
   | "fixed-usd"
-  | "reserve-sync-metadata";
+  | "reserve-sync-metadata"
+  | "executable-observer";
 
 export function getRedemptionBackstopProviderDefinition(
   provider: string,
@@ -111,6 +120,8 @@ export function getProviderIdForCapacityModelKind(
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL;
     case "reserve-sync-metadata":
       return REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA;
+    case "executable-observer":
+      return REDEMPTION_BACKSTOP_PROVIDER_IDS.EXECUTABLE_OBSERVER;
   }
 }
 
