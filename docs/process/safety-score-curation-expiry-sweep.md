@@ -263,6 +263,34 @@ The report owns its clock, assessed count and no-live/already-fallback/baseline-
 fallback-gap/unchanged-or-upgrade census. An empty report means no assessed eligible
 strict downgrades, not healthy feeds or no possible changes among excluded assets.
 
+For replay artifacts containing access claim graphs, every graph must belong to the
+full counterfactual input generation, including graphs on assets whose reserve rows
+were not withheld. The report preserves captured access overlays and their evidence:
+it validates each original graph against the source capture clock/generation, then
+re-admits the complete graph through its schema at the unchanged frozen clock and
+new full input generation. The normal fact-set compiler still validates all
+evidence/status and clock/generation bindings. Invalid graphs fail the report;
+they are never silently dropped. Reserve-dependent graph joins are evaluated against
+the counterfactual facts, not copied supply weights. Graph-free captured overlays
+retain the existing isolated target-rebuild behavior.
+
+The October 6, 2026 sweep's `Access graph must match the admitted clock and input
+generation` failure is reproducible offline: replacing only the target asset in a
+captured extension left other graphs at the original generation; native-input
+narrowing additionally stamped the target with a one-asset generation. This was a
+counterfactual transform defect, not evidence that the production capture itself was
+incoherent. Graph-bearing native replays now rebuild the target using the full input,
+which costs more than the graph-free one-asset rebuild; no admission gate is relaxed.
+
+The executable sweep contract in
+`worker/scripts/__tests__/curation-expiry-sweep-cli.test.ts` reads the workflow's capture
+and generation commands and executes their actual entrypoints against a one-asset
+frozen cache export. It covers normalization, replay, all four reports, shared
+clock/fact-set identity, and the summary output/diff/PR permission boundary. The
+worklist routing test derives completeness from the producer's `V9_REASON_CODES`;
+the live-withheld tests cover native/legacy multi-asset graphs, fresh-build
+equivalence, invalid graph rejection, and capture-time overlay preservation.
+
 Assets already present in `liveToFallbackCoins` are excluded: their producer
 silence is already realized in this capture and is owned by the worklist/expiry
 lanes. The report intentionally does not estimate live-feed headroom. Replay is

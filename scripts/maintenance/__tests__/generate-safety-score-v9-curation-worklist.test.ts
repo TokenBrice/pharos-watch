@@ -1,3 +1,4 @@
+import { V9_REASON_CODES } from "@shared/types/safety-score-v9";
 import { describe, expect, it } from "vitest";
 import {
   priorityBand,
@@ -38,6 +39,11 @@ describe("Safety Score v9 curation worklist routing", () => {
         );
       }
     }
+    // Compare to the producer schema, not just the router's own descriptors:
+    // an omitted reason must fail even when the remaining table is consistent.
+    expect([...seenReasons].sort()).toEqual(
+      expect.arrayContaining(V9_REASON_CODES.filter((code) => code !== "missing-pillar-evidence")),
+    );
   });
 
   it("uses the registry priority bands including the critical P0 escape hatch", () => {
