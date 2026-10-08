@@ -147,7 +147,9 @@ describe("doc-ownership registry integrity", () => {
       "docs/digest-pipeline.md#generation": 43_892,
       "docs/worker-infrastructure.md#env-interface": 26_930,
       "docs/scripts.md": 26_152,
-      "docs/status-dashboard.md#backend-contract-get-apistatus": 70_059,
+      // 2026-10-07 scheduler-liveness and heavy-delivery contracts (8c6c9fbda,
+      // 1a3669bb5) grew this section on main without moving the ceiling.
+      "docs/status-dashboard.md#backend-contract-get-apistatus": 76_356,
     };
     const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [
