@@ -21,7 +21,7 @@ export interface PostDeployProbeReport extends PostDeployProbe {
 }
 
 export interface PostDeployAcceptanceRun {
-  acceptance: { outcome: PostDeployAcceptanceOutcome; reason: string };
+  acceptance: { outcome: PostDeployAcceptanceOutcome; reason: string; failureKind?: "deployment" | "operational" };
   exitCode: number;
   probes: PostDeployProbeReport[];
   summary: string;
@@ -45,15 +45,25 @@ export async function runPostDeployAcceptance({
   expectedPagesCommit,
   expectedWorkerVersion,
   observedWorkerVersion,
+  expectedHeavyWorkerVersion,
+  observedHeavyWorkerVersion,
 }: PostDeployAcceptanceDependencies & {
   pagesDeployed?: boolean;
   workerDeployed?: boolean;
   expectedPagesCommit?: string;
   expectedWorkerVersion?: string;
   observedWorkerVersion?: string;
+  expectedHeavyWorkerVersion?: string;
+  observedHeavyWorkerVersion?: string;
 } = {}): Promise<PostDeployAcceptanceRun> {
   const probes = selectPostDeployProbes({ pagesDeployed, workerDeployed });
   const results: PostDeployProbeReport[] = [];
+  const identityFailures: string[] = [];
+  const operationalFailures: string[] = [];
+  if (workerDeployed && (expectedHeavyWorkerVersion !== undefined || observedHeavyWorkerVersion !== undefined)
+    && (!expectedHeavyWorkerVersion || observedHeavyWorkerVersion !== expectedHeavyWorkerVersion)) {
+    identityFailures.push("heavy worker active version");
+  }
 
   for (const probe of probes) {
     if (probe.id === "pages-shell") {
@@ -70,6 +80,7 @@ export async function runPostDeployAcceptance({
       const identityMatches = typeof expectedPagesCommit === "string"
         && expectedPagesCommit.length > 0
         && releaseCommit === expectedPagesCommit;
+      if (!response.ok || !identityMatches) identityFailures.push("pages-shell release marker");
       results.push({
         ...probe,
         detail: `GET ${response.url} returned ${response.status}; release commit ${String(releaseCommit ?? "<missing>")}.`,
@@ -90,6 +101,7 @@ export async function runPostDeployAcceptance({
       const identityMatches = typeof expectedWorkerVersion === "string"
         && expectedWorkerVersion.length > 0
         && observedWorkerVersion === expectedWorkerVersion;
+      if (!identityMatches) identityFailures.push("worker active version");
       // `degraded` means the surface is served with named data-quality findings
       // (a long-unpriced asset, a producer's degraded streak); only `stale` says
       // the public surface itself is not being served within its budgets.
@@ -98,6 +110,12 @@ export async function runPostDeployAcceptance({
         && Array.isArray(healthPayload.warnings)
         ? healthPayload.warnings.map(String)
         : [];
+      if (!health?.ok || !served) {
+        operationalFailures.push(
+          `worker-health: ${String(healthState ?? "unreadable")} (HTTP ${health?.status ?? 0})`
+          + (warningList.length > 0 ? `; ${warningList.join("; ")}` : ""),
+        );
+      }
       results.push({
         ...probe,
         detail: `GET ${health?.url ?? WORKER_HEALTH_URL} returned ${health?.status ?? 0}`
@@ -109,7 +127,12 @@ export async function runPostDeployAcceptance({
     }
   }
 
-  const acceptance = summarizePostDeployAcceptance(results);
+  const probeAcceptance = summarizePostDeployAcceptance(results);
+  const acceptance: PostDeployAcceptanceRun["acceptance"] = identityFailures.length > 0
+    ? { outcome: "failed", failureKind: "deployment", reason: `deployment acceptance failed: ${identityFailures.join("; ")}` }
+    : operationalFailures.length > 0
+      ? { outcome: "failed", failureKind: "operational", reason: `activated; operational acceptance failed: ${operationalFailures.join("; ")}` }
+      : probeAcceptance;
   const summary = [
     "## Post-deploy operational acceptance",
     "",
@@ -142,11 +165,19 @@ export async function runPostDeployAcceptanceCli(
     expectedPagesCommit: env.EXPECTED_PAGES_COMMIT,
     expectedWorkerVersion: env.EXPECTED_WORKER_VERSION,
     observedWorkerVersion: env.OBSERVED_WORKER_VERSION,
+    expectedHeavyWorkerVersion: env.EXPECTED_HEAVY_WORKER_VERSION,
+    observedHeavyWorkerVersion: env.OBSERVED_HEAVY_WORKER_VERSION,
   });
 
   console.log(JSON.stringify({ probes: run.probes, acceptance: run.acceptance }, null, 2));
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, run.summary);
-  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `outcome=${run.acceptance.outcome}\n`);
+  if (env.GITHUB_OUTPUT) {
+    appendFileSync(env.GITHUB_OUTPUT, `outcome=${run.acceptance.outcome}\n`);
+    if (run.acceptance.failureKind) {
+      appendFileSync(env.GITHUB_OUTPUT, `failure_kind=${run.acceptance.failureKind}\n`
+        + `reason=${run.acceptance.reason.replace(/[\r\n]/g, " ")}\n`);
+    }
+  }
   return run.exitCode;
 }
 

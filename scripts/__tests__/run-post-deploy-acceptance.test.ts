@@ -118,6 +118,8 @@ describe("runPostDeployAcceptance", () => {
     });
 
     expect(run.probes[0]).toMatchObject({ outcome: "failed" });
+    expect(run.acceptance.failureKind).toBe("deployment");
+    expect(run.acceptance.reason).toContain("worker active version");
     expect(run.exitCode).toBe(1);
   });
 
@@ -147,6 +149,7 @@ describe("runPostDeployAcceptance", () => {
       ["pages-shell", "failed"],
     ]);
     expect(run.acceptance.outcome).toBe("failed");
+    expect(run.acceptance.failureKind).toBe("deployment");
     expect(run.exitCode).toBe(1);
   });
 
@@ -188,7 +191,8 @@ describe("runPostDeployAcceptance", () => {
       detail: `GET ${HEALTH_URL} returned 200 (stale); active version ${WORKER_VERSION}.`,
       outcome: "failed",
     });
-    expect(run.acceptance.reason).toBe("At least one completed read-only smoke probe failed.");
+    expect(run.acceptance.failureKind).toBe("operational");
+    expect(run.acceptance.reason).toBe("activated; operational acceptance failed: worker-health: stale (HTTP 200)");
     expect(run.exitCode).toBe(1);
   });
 
@@ -205,6 +209,39 @@ describe("runPostDeployAcceptance", () => {
       outcome: "failed",
     });
     expect(run.exitCode).toBe(1);
+  });
+  it("names health components without confusing successful markers with deployment failure", async () => {
+    const warnings = ["db-unhealthy", "yield-data:coverage", "prices:stale", "DEWS sentinel:future"];
+    const run = await runPostDeployAcceptance({
+      ...dependencies({ health: workerHealth({ payload: { status: "stale", warnings } }) }),
+      pagesDeployed: true,
+      workerDeployed: true,
+      expectedPagesCommit: RELEASE_COMMIT,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      expectedHeavyWorkerVersion: "heavy-version",
+      observedHeavyWorkerVersion: "heavy-version",
+    });
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
+    expect(run.exitCode).toBe(1);
+    for (const warning of warnings) expect(run.summary).toContain(warning);
+    expect(run.acceptance.reason).toContain("activated; operational acceptance failed:");
+    expect(run.probes.map((probe) => probe.id)).toEqual(["pages-shell", "worker-health"]);
+  });
+
+  it("classifies a heavy identity mismatch as deployment failure even if health is stale", async () => {
+    const run = await runPostDeployAcceptance({
+      ...dependencies({ health: workerHealth({ payload: { status: "stale" } }) }),
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      expectedHeavyWorkerVersion: "heavy-version",
+      observedHeavyWorkerVersion: "prior-heavy-version",
+    });
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "deployment" });
+    expect(run.acceptance.reason).toContain("heavy worker active version");
+    expect(run.exitCode).toBe(1);
+    expect(run.probes).toHaveLength(1);
   });
 });
 
@@ -257,9 +294,9 @@ describe("run-post-deploy-acceptance CLI", () => {
       dependencies(),
     );
     expect(exitCode).toBe(expectedExit);
-    expect(readFileSync(outputPath, "utf8")).toBe(
-      `outcome=${expectedExit === 0 ? "passed" : "failed"}\n`,
-    );
+    expect(readFileSync(outputPath, "utf8")).toBe(expectedExit === 0
+      ? "outcome=passed\n"
+      : "outcome=failed\nfailure_kind=deployment\nreason=deployment acceptance failed: worker active version\n");
   });
 
   it("returns a failing exit code and records the failed outcome for a failed probe", async () => {
@@ -274,6 +311,8 @@ describe("run-post-deploy-acceptance CLI", () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(readFileSync(outputPath, "utf8")).toBe("outcome=failed\n");
+    expect(readFileSync(outputPath, "utf8")).toBe(
+      "outcome=failed\nfailure_kind=operational\nreason=activated; operational acceptance failed: worker-health: unreadable (HTTP 502)\n",
+    );
   });
 });
