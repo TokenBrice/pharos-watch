@@ -40,10 +40,7 @@ export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
   "shared/lib/telegram-mini-app-contract.ts::TelegramSafetyMode":
     "Public Mini App typing contract; external Mini App code consumes this surface, which the src/app/pharoswatchbot/app/types.ts barrel re-exports for it.",
 };
-export const DEBT_MODULES: Record<string, string> = {
-  "shared/data/safety-score-v9/matched-invariants-v1.ts":
-    "Curated matched-invariant corpus for the publication-exact safety-score equivalence suites; deliberately test-only, not product data.",
-};
+export const DEBT_MODULES: Record<string, string> = {};
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
 export const DEBT_EXPORTS: Record<string, string> = {};

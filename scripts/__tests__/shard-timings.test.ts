@@ -54,9 +54,18 @@ describe("parseShardCoordinates", () => {
 describe("formatShardTimingSummary", () => {
   it("caps the step summary table and points at the full artifact", () => {
     const summary = summarizeShardTimings(report, { cwd: "/repo", shard: 1, shardCount: 4, wallMs: 12_000 });
-    const markdown = formatShardTimingSummary(summary, 2);
-    expect(markdown).toContain("shard 1/4");
+    const markdown = formatShardTimingSummary(summary, "plain-test", 2);
+    expect(markdown).toContain("### PR tests shard 1/4");
     expect(markdown.match(/^\| `/gm)).toHaveLength(2);
     expect(markdown).toContain("2 further files in the `pr-test-timings-1` run artifact.");
+  });
+
+  it("identifies coverage in both the heading and overflow artifact", () => {
+    const summary = summarizeShardTimings(report, { cwd: "/repo", shard: 2, shardCount: 8, wallMs: 12_000 });
+    const markdown = formatShardTimingSummary(summary, "critical-coverage", 2);
+    expect(markdown).toContain("### PR critical coverage shard 2/8");
+    expect(markdown.match(/^\| `/gm)).toHaveLength(2);
+    expect(markdown).toContain("2 further files in the `pr-coverage-timings-2` run artifact.");
+    expect(markdown).not.toContain("`pr-test-timings-2`");
   });
 });

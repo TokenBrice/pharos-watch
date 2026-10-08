@@ -33,7 +33,12 @@ const WAIVER_REVIEW_PRINT_LIMIT = 10;
 
 const LCOV_PATH = "coverage/lcov.info";
 
-type CoverageWaivers = Record<string, string>;
+type CoverageWaivers = Record<string, {
+  reviewAfter: string;
+  reason: string;
+  owner: string;
+  ownerTest: string;
+}>;
 type ExitFunction = (code?: string | number | null) => never;
 type GitExec = BaseBlobExec;
 
@@ -226,6 +231,7 @@ export function runCriticalCoverageCompletenessGuard({
     ...validateCriticalCoverageWaiverMetadata(waivers, {
       candidateFiles,
       criticalFiles,
+      ownership,
     }),
     ...validateCriticalOwnershipWaiverMetadata(ownershipWaivers, {
       candidateFiles,
@@ -318,7 +324,7 @@ export function runCriticalCoverageCompletenessGuard({
     }
   }
   consoleImpl.error(
-    "[coverage] Add an importing contract test for the source, or add a reviewed cutover waiver in scripts/lib/critical-ownership.mts.",
+    "[coverage] Add an exact-source importing behavioral contract and measure coverage enrollment; do not extend the historical cutover-waiver set.",
   );
   exit(1);
   return false;

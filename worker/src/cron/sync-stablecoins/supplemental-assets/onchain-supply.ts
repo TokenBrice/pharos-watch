@@ -2,6 +2,9 @@ import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
+import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
+import { fetchEvmBlockHeader, fetchEvmUint256AtBlock } from "../../../lib/evm-rpc";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import {
@@ -21,7 +24,7 @@ import {
 } from "../../../lib/chain-registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
-import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import { logWorkerEvent } from "../../../lib/structured-log";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
@@ -74,6 +77,40 @@ export interface OnChainMcapResult {
 export interface SingleContractOnChainMcapResult extends OnChainMcapResult {
   chain: string;
   chainLabel: string;
+}
+
+/** JLTXX native shares are read at a hash-bound finalized block, never recovered from market cap. */
+export async function fetchPinnedNativeShares(
+  meta: Pick<StablecoinMeta, "id" | "symbol" | "contracts">,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<PinnedNativeShareObservation | null> {
+  if (meta.id !== "jltxx-jpmorgan" || meta.symbol !== "JLTXX" || meta.contracts?.length !== 1) return null;
+  const contract = meta.contracts[0];
+  if (contract.chain !== "ethereum" || contract.address.toLowerCase() !== "0x09864f52b035ae22ee739dfa5c748fa080d07bd8" || contract.decimals !== 2) return null;
+  const options = { chainRpcs, signal: signal ?? AbortSignal.timeout(10_000), timeoutMs: 10_000 };
+  try {
+    const block = await fetchEvmBlockHeader("ethereum", "finalized", options);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (!block || block.timestamp <= 0 || block.timestamp > nowSec || nowSec - block.timestamp > LIVE_RESERVE_FRESHNESS_SEC) return null;
+    const pinnedOptions = { ...options, stateBlockHash: block.hash };
+    const raw = await fetchEvmUint256AtBlock("ethereum", contract.address, TOTAL_SUPPLY_SELECTOR, block.number, pinnedOptions);
+    const decimals = await fetchEvmUint256AtBlock("ethereum", contract.address, DECIMALS_SELECTOR, block.number, pinnedOptions);
+    throwIfAborted(options.signal);
+    if (raw == null || raw <= 0n || decimals !== 2n) return null;
+    const closing = await fetchEvmBlockHeader("ethereum", block.number, options);
+    if (!closing || closing.hash !== block.hash || closing.timestamp !== block.timestamp || closing.number !== block.number) return null;
+    const parsed = PinnedNativeShareObservationSchema.safeParse({
+      chain: contract.chain, contractAddress: contract.address.toLowerCase(),
+      rawShares: raw.toString(), decimals: Number(decimals),
+      blockNumber: block.number, blockHash: block.hash, observedAt: block.timestamp,
+    });
+    return parsed.success ? parsed.data : null;
+  } catch (error) {
+    throwIfAborted(options.signal);
+    logWorkerEventArgs("handler", "warn", `[fiat-cg] JLTXX pinned native shares unavailable: ${String(error).slice(0, 200)}`);
+    return null;
+  }
 }
 
 export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {

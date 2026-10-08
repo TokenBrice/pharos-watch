@@ -18,6 +18,7 @@ import {
 } from "../safety-score-v9/extension-supply";
 import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9/supply-attribution";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "../safety-score-v9/curated-single-route-supply";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -869,7 +870,9 @@ describe("curated native single-route supply attribution", () => {
         .sort()
         .map((key) => ({ kind: "bridge-route", key })),
     );
-    expect(safetyScoreV9RouteSupplyShare(review, XDAI_ROUTE_ID)).toBe(1);
+    expect(safetyScoreV9RouteSupplyShare(
+      review, CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION["xdai-gnosis"]!.routeId,
+    )).toBe(1);
   });
 
   it("feeds materialSupplyShare 1 into every xdai bridge control via the attribution review", () => {

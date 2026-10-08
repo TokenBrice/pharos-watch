@@ -78,32 +78,6 @@ export interface CriticalOwnershipWaiver {
 }
 
 export const CRITICAL_OWNERSHIP_WAIVERS: Readonly<Record<string, CriticalOwnershipWaiver>> = {
-  "functions/lib/pages-proxy-harness.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "functions/lib/proxy-paths.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "shared/lib/liquidity-score-weights.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/cron/depeg-detection/hydration.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/cron/depeg-detection/native-quote-policy.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/cron/depeg-resolver/constants.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/cron/depeg-resolver/options.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/cron/depeg-resolver/persistence.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/cap-cusd.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/infinifi-iusd.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/inherited-tracked.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/rate-cache.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/depeg-resolver-methodology.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/depeg-resolver-store-validators.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/geckoterminal-price-probe-stats.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/live-reserves/store-overview.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/live-reserves/store-read.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/curated-single-route-supply.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/extension-oracle.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/extension-wrapper-allocation.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/fact-set-backing.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/fact-set-boundary.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/fact-set-exit.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/safety-score-v9/fact-set-peg-supply.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
 };
 
 export function normalizeOwnershipPath(value: string): string {

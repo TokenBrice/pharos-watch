@@ -9,6 +9,7 @@ import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fix
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
+import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-publication-input.test-support";
 
 // Evaluate after the newest registry review so the D14 control refresh is
 // admitted alongside the reviewed custody/mechanism evidence.
@@ -45,49 +46,18 @@ function fixedInput() {
     pegDataById: Object.fromEntries(
       ACTIVE_ASSET_IDS.map((assetId) => [
         assetId,
-        {
+        makePublicationPegRow({
           id: assetId,
           symbol: assetId === ASSET_ID ? "DUSD" : "USDC",
           name: assetId === ASSET_ID ? "Dialectic USD" : "USDC",
-          pegType: "peggedUSD",
-          pegCurrency: "USD",
-          governance: "centralized",
-          currentDeviationBps: 1,
-          pegScore: 99,
-          priceSource: "fixture-price",
-          priceObservedAt: OBSERVED_AT_SEC,
-          pegPct: 99,
-          severityScore: 0,
-          spreadPenalty: 0,
-          eventCount: 0,
-          worstDeviationBps: 1,
-          activeDepeg: false,
-          lastEventAt: null,
-          trackingSpanDays: 365,
-          methodologyVersion: "peg:fixture-v1",
-        },
+        }, OBSERVED_AT_SEC),
       ]),
     ),
     activeDepegPeakBpsById: {},
     dexLiqMap: Object.fromEntries(
       ACTIVE_ASSET_IDS.map((assetId) => [
         assetId,
-        {
-          liquidityScore: 12,
-          concentrationHhi: 0.5,
-          poolCount: 1,
-          chainCount: 1,
-          coverageClass: "primary",
-          coverageConfidence: 1,
-          liquidityEvidenceClass: "measured",
-          hasMeasuredLiquidityEvidence: true,
-          effectiveTvlUsd: 1_000_000,
-          balanceMeasuredTvlUsd: 1_000_000,
-          organicMeasuredTvlUsd: 1_000_000,
-          exitRouteObservations: [],
-          methodologyVersion: "dex:fixture-v1",
-          updatedAt: OBSERVED_AT_SEC,
-        },
+        makePublicationDexRow(OBSERVED_AT_SEC),
       ]),
     ),
     redemptionBackstopMap: {},

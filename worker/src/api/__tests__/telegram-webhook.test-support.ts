@@ -182,6 +182,15 @@ function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
     ],
   });
 }
+
+export function makeStablecoinsCacheTable(overrides: Record<string, number>, updatedAt: number): MockTableConfig {
+  return {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["stablecoins"],
+    rows: [],
+    first: { value: makeStablecoinsCacheValue(overrides), updated_at: updatedAt },
+  };
+}
 function resetTelegramWebhookTest() {
   resetTelegramFetchSpy();
   resetTelegramInvalidSecretLogStateForTests();

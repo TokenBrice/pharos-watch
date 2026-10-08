@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import { normalizeDexScoreDetails } from "../../lib/dex-liquidity-response";
+import { makeCoinbaseRouteObservation } from "./p4-route-response.test-support";
 
 describe("P4 route observation API compatibility", () => {
   it("marks old score-component envelopes as explicitly unknown", () => {
@@ -26,33 +27,7 @@ describe("P4 route observation API compatibility", () => {
     const result = normalizeDexScoreDetails(
       JSON.stringify({
         tvlDepth: 10,
-        exitRouteObservations: [
-          {
-            routeId: "dex:usdc:cg-tickers:coinbase",
-            routeFamily: "dex-orderbook",
-            scope: { kind: "venue", venue: "coinbase", protocol: "coinbase" },
-            requestedNotionalUsd: 1_000_000,
-            settlementHorizonSec: 300,
-            maxCostBps: 200,
-            executableUsd: 500_000,
-            completionRatio: 0.5,
-            output: { kind: "fiat", currency: "USD" },
-            evidenceKind: "direct-orderbook-depth",
-            confidence: "medium",
-            scoreEligible: false,
-            observedAt: 1_720_000_000,
-            freshnessSeconds: 0,
-            commonModeKeys: ["protocol:coinbase", "fiat:usd"],
-            capacityCurve: [
-              {
-                requestedNotionalUsd: 1_000_000,
-                maxCostBps: 200,
-                executableUsd: 500_000,
-                completionRatio: 0.5,
-              },
-            ],
-          },
-        ],
+        exitRouteObservations: [makeCoinbaseRouteObservation()],
         exitRouteObservationCoverage: {
           status: "populated",
           capabilityMatrixVersion: "p4a.1",
@@ -100,31 +75,7 @@ describe("P4 route observation API compatibility", () => {
     expect(result.scoreComponents).toBeNull();
   });
   it("quarantines oversized observation envelopes", () => {
-    const observation = {
-      routeId: "dex:usdc:cg-tickers:coinbase",
-      routeFamily: "dex-orderbook" as const,
-      scope: { kind: "venue" as const, venue: "coinbase", protocol: "coinbase" },
-      requestedNotionalUsd: 1_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd: 500_000,
-      completionRatio: 0.5,
-      output: { kind: "fiat" as const, currency: "USD" },
-      evidenceKind: "direct-orderbook-depth" as const,
-      confidence: "medium" as const,
-      scoreEligible: false,
-      observedAt: 1_720_000_000,
-      freshnessSeconds: 0,
-      commonModeKeys: ["protocol:coinbase", "fiat:usd"],
-      capacityCurve: [
-        {
-          requestedNotionalUsd: 1_000_000,
-          maxCostBps: 200,
-          executableUsd: 500_000,
-          completionRatio: 0.5,
-        },
-      ],
-    };
+    const observation = makeCoinbaseRouteObservation();
 
     const result = normalizeDexScoreDetails(
       JSON.stringify({

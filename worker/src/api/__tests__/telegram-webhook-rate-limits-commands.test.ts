@@ -1,4 +1,4 @@
-import { pendingDisambiguationTable } from "./telegram-rows.test-support";
+import { makeBulkPendingRow, pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -8,7 +8,7 @@ import {
   sentMessageBody,
   latestSendMessageBody,
   expectMiniAppButton,
-  makeStablecoinsCacheValue,
+  makeStablecoinsCacheTable,
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
   fixtureLastSendMessageBody,
@@ -30,14 +30,10 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
+// Vitest hoists this factory before static imports initialize.
 vi.mock("../../lib/safety-score-index", async () => {
-  const { makeWorkerReportCardsV9Response, makeWorkerV9Card } = await import(
-    "../../test-helpers/report-cards-v9"
-  );
-  const snapshot = makeWorkerReportCardsV9Response({
-    updatedAt: 1_700_000_000,
-    cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
-  });
+  const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support");
+  const snapshot = makeTelegramSafetySnapshot();
   return {
     loadActiveSafetyScoreIndex: vi.fn(async () => ({
       kind: "v9",
@@ -47,10 +43,9 @@ vi.mock("../../lib/safety-score-index", async () => {
 });
 // Module loading inside a hoisted mock is required by Vitest's test seam.
 vi.mock("../../lib/safety-score-active-source", async () => {
-  const { makeWorkerReportCardsV9Response, makeWorkerV9Card } = await import("../../test-helpers/report-cards-v9");
+  const { makeTelegramSafetySnapshot } = await import("./telegram-safety.test-support");
   return { loadActiveSafetyScoreSource: vi.fn(async () => ({ kind: "v9",
-    snapshot: makeWorkerReportCardsV9Response({ updatedAt: 1_700_000_000,
-      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })] }),
+    snapshot: makeTelegramSafetySnapshot(),
   })) };
 });
 
@@ -448,23 +443,16 @@ describe("handleTelegramWebhook", () => {
 
   it("lets /health pass through during pending bulk confirmation without clearing it", async () => {
     const db = makeTelegramWebhookDb([
-      pendingDisambiguationTable({
-        action_type: "confirm-bulk",
-        action_payload: JSON.stringify({
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: [],
-          coinIds: ["usdc-circle"],
-          subscribeAll: false,
-        }),
-        alert_types: JSON.stringify([]),
-        resolved_ids: JSON.stringify([]),
-        ambiguous_ticker: "",
-        candidates: JSON.stringify([]),
-        remaining_tickers: JSON.stringify([]),
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "subscribe",
+        alertTypes: ["dews"],
+        presetIds: [],
+        coinIds: ["usdc-circle"],
+        subscribeAll: false,
+      }, {
         expires_at: Math.floor(Date.now() / 1000) + 60,
         initiator_user_id: "999",
-      }),
+      })),
       { match: "FROM telegram_subscribers", rows: [], first: null },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", first: { active_count: 0 }, rows: [] },
@@ -616,19 +604,11 @@ describe("handleTelegramWebhook", () => {
   it("/start sub_<types>_<targets> in a private chat dispatches into /subscribe", async () => {
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["stablecoins"],
-        rows: [],
-        first: {
-          value: makeStablecoinsCacheValue({
-            "usdt-tether": 100_000_000_000,
-            "usdc-circle": 90_000_000_000,
-            "dai-makerdao": 5_000_000_000,
-          }),
-          updated_at: 1_700_000_000,
-        },
-      },
+      makeStablecoinsCacheTable({
+        "usdt-tether": 100_000_000_000,
+        "usdc-circle": 90_000_000_000,
+        "dai-makerdao": 5_000_000_000,
+      }, 1_700_000_000),
     ]);
     const res = await handleTelegramWebhook(
       db,

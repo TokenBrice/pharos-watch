@@ -73,6 +73,7 @@ describe("PR test runner prepared plans", () => {
   it("attaches the import-aware reporter and retains original shard coordinates in timings", () => {
     const path = planPath();
     const timingPath = join(path, "..", "timings.json");
+    const summaryPath = join(path, "..", "summary.md");
     const plan = createPrTestPlan("base", ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"], {});
     writeFileSync(path, JSON.stringify(plan));
     const spawn = vi.fn((_file: string, args: string[]) => {
@@ -80,7 +81,10 @@ describe("PR test runner prepared plans", () => {
       writeFileSync(timingPath.replace(/\.json$/, ".vitest.json"), JSON.stringify({ success: true, testResults: [] }));
       return { status: 0, stdout: "", stderr: "" };
     });
-    expect(runPrTests({ argv: ["--shard=2/4"], env: { ...env, PR_TEST_PLAN_FILE: path, PR_SHARD_TIMINGS_FILE: timingPath }, spawn: spawn as never })).toBe(0);
+    expect(runPrTests({ argv: ["--shard=2/4"], env: {
+      ...env, PR_TEST_PLAN_FILE: path, PR_SHARD_TIMINGS_FILE: timingPath, GITHUB_STEP_SUMMARY: summaryPath,
+    }, spawn: spawn as never })).toBe(0);
     expect(JSON.parse(readFileSync(timingPath, "utf8"))).toMatchObject({ shard: 2, shardCount: 4, success: true });
+    expect(readFileSync(summaryPath, "utf8")).toContain("### PR tests shard 2/4");
   });
 });
