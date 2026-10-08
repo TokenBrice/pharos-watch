@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
+import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -384,10 +385,13 @@ describe("redemption same-notional route observations", () => {
     };
     const bounded = build({ config: { ...config, costModel }, resolvedFeeBps: 10 });
     expect(bounded).toMatchObject({ executableUsd: 5_000_000, scoreEligible: true });
+    // The 210 bps request breaches the 200 bps budget: it stays zero-capacity
+    // without a realized cost, which the published contract forbids above budget.
     expect(bounded?.capacityCurve?.filter((point) => [100_000, 1_000_000].includes(point.requestedNotionalUsd))).toEqual([
-      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 210 },
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0 },
       { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 21 },
     ]);
+    expect(ExitRouteObservationSchema.safeParse(bounded).error?.issues).toBeUndefined();
     expect(build({
       config: { ...config, costModel: { ...costModel, feeBpsMax: 250 } },
       resolvedFeeBps: 10,
