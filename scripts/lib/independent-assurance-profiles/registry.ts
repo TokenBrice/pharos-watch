@@ -24,3 +24,4 @@ import { PROFILE as USDP } from "./usdp"; COMPILER_PROFILES.USDP = USDP;
 import { PROFILE as XSGD } from "./xsgd"; COMPILER_PROFILES.XSGD = XSGD;
 import { PROFILE as XUSD } from "./xusd"; COMPILER_PROFILES.XUSD = XUSD;
 import { PROFILE as PAXG } from "./paxg"; COMPILER_PROFILES.PAXG = PAXG;
+import { PROFILE as MYRC } from "./myrc"; COMPILER_PROFILES.MYRC = MYRC;

@@ -3,6 +3,9 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import { buildHeroPassportItems } from "@/lib/stablecoin-detail-passport";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { RedemptionBackstopEntry } from "@shared/types";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -66,6 +69,36 @@ const ITEMS: HeroPassportItemViewModel[] = [
 ];
 
 describe("HeroPassportStrip", () => {
+  it.each([
+    ["permissionless-onchain", "Permissionless", "Permissionless onchain"],
+    ["whitelisted-onchain", "Whitelisted", "Whitelisted onchain"],
+    ["issuer-api", "Institutional", "Issuer / institutional"],
+    ["manual", "Manual", "Manual / discretionary"],
+  ] as const)("keeps compact %s access visible and its full name accessible", (accessModel, shortLabel, fullLabel) => {
+    const redemptionBackstop: RedemptionBackstopEntry = {
+      stablecoinId: "usdc-circle", score: 65, dexLiquidityScore: null,
+      accessScore: 40, settlementScore: 65, executionCertaintyScore: 60,
+      capacityScore: 100, outputAssetQualityScore: 100, costScore: 40,
+      routeFamily: "offchain-issuer", accessModel, settlementModel: "same-day",
+      executionModel: "rules-based-nav", outputAssetType: "stable-single",
+      provider: "supply-full-model", sourceMode: "estimated", resolutionState: "resolved",
+      routeStatus: "open", routeStatusSource: "static-config", holderEligibility: "verified-customer",
+      capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
+      feeConfidence: "undisclosed-reviewed", feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
+      immediateCapacityUsd: null, immediateCapacityRatio: null, feeBps: null, queueEnabled: false,
+      methodologyVersion: "1.1", updatedAt: 1_700_000_000, capsApplied: [],
+    };
+    const items = buildHeroPassportItems({
+      coin: TRACKED_META_BY_ID.get("usdc-circle")!, chainCount: 1, blacklistStatus: null,
+      resolvedMechanismArchetype: null,
+      mintAuthority: { status: "not-reviewed", mintPathLabel: "Unknown", mintPathShortLabel: "Unknown" },
+      redemptionBackstop, pegScoreResult: { eventCount: 0 }, isNavToken: false,
+    });
+    const { getByRole } = render(<HeroPassportStrip items={items} />);
+    const route = getByRole("link", { name: `Redeemability: ${fullLabel} — jump to redemption route` });
+    expect(route.textContent).toContain(shortLabel);
+    expect(route.getAttribute("href")).toBe("#redemption");
+  });
 
   it("renders one document-style anchor entry per passport item", () => {
     const { getByRole, getAllByRole } = render(<HeroPassportStrip items={ITEMS} />);

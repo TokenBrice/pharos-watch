@@ -3,6 +3,8 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
+  computeLiveReserveConfigFingerprint,
+  isReserveSupplyAdmissionBootstrapAuthorized,
 } from "../live-reserve-adapters";
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import {
@@ -80,6 +82,33 @@ describe("baseLiveReserveConfigSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("reserve-only supply bootstrap authorization", () => {
+  const config = {
+    adapter: "jpmorgan-nav" as const, version: 1, semantics: "single-asset" as const,
+    inputs: { primary: { kind: "http-html" as const, url: "https://example.com/nav" } },
+  };
+  it("validates actual calendar dates and rejects unknown authorization fields", () => {
+    for (const reviewBy of ["2026-02-30", "2026-13-01", "next week"]) {
+      expect(LiveReservesConfigSchema.safeParse({ ...config, bootstrapForSupplyAdmission: { reviewBy } }).success).toBe(false);
+    }
+    expect(LiveReservesConfigSchema.safeParse({
+      ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-10-10", retry: true },
+    }).success).toBe(false);
+    expect(LiveReservesConfigSchema.safeParse({
+      ...config, bootstrapForSupplyAdmission: { reviewBy: "2028-02-29" },
+    }).success).toBe(true);
+  });
+  it("expires at UTC start and cannot reset consumed input identity", () => {
+    const authorized = { ...config, bootstrapForSupplyAdmission: { reviewBy: "2026-10-10" } };
+    expect(isReserveSupplyAdmissionBootstrapAuthorized(authorized, Date.parse("2026-10-09T23:59:59Z"))).toBe(true);
+    expect(isReserveSupplyAdmissionBootstrapAuthorized(authorized, Date.parse("2026-10-10T00:00:00Z"))).toBe(false);
+    expect(isReserveSupplyAdmissionBootstrapAuthorized(config, Date.parse("2026-10-08T00:00:00Z"))).toBe(false);
+    expect(computeLiveReserveConfigFingerprint(authorized)).toBe(computeLiveReserveConfigFingerprint({
+      ...authorized, bootstrapForSupplyAdmission: { reviewBy: "2026-11-10" },
+    }));
   });
 });
 
@@ -265,5 +294,73 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("single-asset probe authoring boundaries", () => {
+  const base = {
+    adapter: "single-asset", version: 1, semantics: "single-asset",
+    inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+    params: { label: "Configured reserve label", risk: "low" },
+  };
+  const probes = {
+    reserveProbe: { kind: "json-path", path: ["reserves"] },
+    supplyProbe: { kind: "json-path", path: ["supply"] },
+    timestampProbe: { kind: "json-path", path: ["updatedAt"] },
+    liabilityTimestampComponents: { path: ["chains"], identityField: "chain", timestampField: "lastSyncedAt", quantityField: "totalSupply" },
+    reserveUnit: "CAD",
+  };
+
+  it("accepts a configured-chain liveness label without HTTP probes", () => {
+    expect(LiveReservesConfigSchema.safeParse(base).success).toBe(true);
+  });
+
+  it.each(Array.from({ length: 31 }, (_, index) => index + 1))("rejects ignored onchain probe mask %s", (mask) => {
+    const ignored = Object.fromEntries(Object.entries(probes).filter((_, index) => (mask & (1 << index)) !== 0));
+    expect(LiveReservesConfigSchema.safeParse({ ...base, params: { ...base.params, ...ignored } }).success).toBe(false);
+  });
+
+  it("preserves generic HTTP v1 probes and admits the paired native-CAD v2 lane", () => {
+    const http = { ...base, inputs: { primary: { kind: "http-json", url: "https://example.com/reserves" } } };
+    expect(LiveReservesConfigSchema.safeParse({ ...http, params: { ...base.params, reserveProbe: probes.reserveProbe } }).success).toBe(true);
+    const native = Object.fromEntries(Object.entries(probes).filter(([field]) => field !== "timestampProbe"));
+    const config = { ...http, version: 2, params: { ...base.params, ...native } };
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, version: 1 }).success).toBe(false);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...config.params, timestampProbe: probes.timestampProbe } }).success).toBe(false);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...config.params, reserveUnit: "USD" } }).success).toBe(false);
+    for (const field of Object.keys(native)) {
+      const params = Object.fromEntries(Object.entries(config.params).filter(([key]) => key !== field));
+      expect(LiveReservesConfigSchema.safeParse({ ...config, params }).success).toBe(false);
+    }
+  });
+});
+
+describe("identity-bound reserve reader configuration", () => {
+  const input = { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } };
+  const forestParams = {
+    managerAddress: "0x8317736611b542ddb4a820fe344b621a904bdd48",
+    managerImplementation: "0x99b4dfa4e1344273d5335bd90de1dea3a02b9c3a",
+    usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    tokenAddress: "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
+  };
+  it("rejects legacy Spark RPC params and non-collateral semantics", () => {
+    const config = { adapter: "spark-usdc-v1-inventory", version: 1, semantics: "collateral-mix", inputs: input };
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, params: { rpcUrl: "https://example.com" } }).success).toBe(false);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, semantics: "single-asset" }).success).toBe(false);
+  });
+  it("requires the complete exact Forest controller/accounting identity", () => {
+    const config = { adapter: "forest-road-reserve-manager", version: 1, semantics: "collateral-mix", inputs: input, params: forestParams };
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    for (const field of Object.keys(forestParams)) {
+      expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "0x1111111111111111111111111111111111111111" } }).success).toBe(false);
+      expect(LiveReservesConfigSchema.safeParse({ ...config, params: Object.fromEntries(Object.entries(forestParams).filter(([key]) => key !== field)) }).success).toBe(false);
+    }
+  });
+  it.each(["rpcUrl", "fallbackRpcUrl"])("requires HTTPS for Forest %s without changing other adapter policies", (field) => {
+    const config = { adapter: "forest-road-reserve-manager", version: 1, semantics: "collateral-mix", inputs: input };
+    expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "http://rpc.example.com" } }).success).toBe(false);
+    expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "https://rpc.example.com" } }).success).toBe(true);
   });
 });

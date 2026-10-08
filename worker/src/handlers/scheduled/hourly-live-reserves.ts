@@ -27,6 +27,7 @@ import {
   beginLiveReserveCheckpoint,
   finishLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
+  releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
   type ScheduledCheckpointIdentity,
   type ScheduledRecoveryCheckpoint,
@@ -226,9 +227,16 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   if (runtime.recoveryCheckpoint) {
     const priority = await getReserveProducerPriority(runtime.db);
     if (priority) {
+      const checkpoint = runtime.recoveryCheckpoint;
+      const recoveryClaimRelease = runtime.invocationId === checkpoint.invocationId
+        && runtime.invocationId === checkpoint.recoveryOwner
+        ? await releaseUnstartedLiveReserveRecoveryClaim(runtime.db, checkpoint)
+        : { disposition: "not-owned" };
       const jobs = buildReserveSyncSlotGroups(runtime, runtime.recoveryCheckpoint)
         .flatMap((group) => group.tasks.map((task) => task.job));
-      return recordPriorityDeferredReserveTasks(runtime, jobs, priority.reason, { producerPriority: priority });
+      return recordPriorityDeferredReserveTasks(runtime, jobs, priority.reason, {
+        producerPriority: priority, recoveryClaimRelease,
+      });
     }
   }
   const checkpoint =

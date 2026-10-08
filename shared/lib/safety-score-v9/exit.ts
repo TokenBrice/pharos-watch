@@ -61,6 +61,7 @@ export interface V9ExitEvaluationRoute {
   gaps?: readonly V9FactGapV3[];
   capacityEvidenceTier?: ExitRouteCapacityEvidenceTier;
   routeKey: string;
+  routeId: V9ExitRouteFactV2["routeId"];
   lane: "dex" | "redemption";
   routeFamily: "dex-amm" | "dex-orderbook" | "issuer-redemption" | "protocol-redemption" | "eventual-redemption";
   applicability: "required" | "not-applicable" | "unresolved";
@@ -109,6 +110,8 @@ export interface V9ExitRouteTrace {
   supportedComponentCeiling: number | null;
   factorContributions?: Readonly<Record<string, V9CauseContribution>>;
   routeKey: string;
+  routeId: V9ExitEvaluationRoute["routeId"];
+  lane: V9ExitEvaluationRoute["lane"];
   routeFamily: V9ExitEvaluationRoute["routeFamily"];
   feeEvidence?: V9ExitEvaluationRoute["feeEvidence"];
   observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
@@ -609,6 +612,8 @@ function evaluateRoute(
 ): V9ExitRouteTrace {
   const horizon = routeCapacityHorizon(route, request);
   const attribution = {
+    routeId: route.routeId,
+    lane: route.lane,
     routeFamily: route.routeFamily,
     cause: routeCause(route).cause,
     causeGapIds: routeCause(route).causeGapIds,
@@ -956,6 +961,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
   const access = mapHolderAccess(route);
   return {
     routeKey: route.routeKey,
+    routeId: route.routeId,
     status: route.status,
     factorStatuses: route.factorStatuses,
     capacityEvidenceTier: route.capacityEvidenceTier ?? "unknown",

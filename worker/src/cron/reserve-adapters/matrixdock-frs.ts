@@ -5,6 +5,7 @@ import {
   MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -29,7 +30,6 @@ const SILVER_SOURCE_KEY = "matrixdock-frs:silver";
 // unit: a grains/grams/scaled-unit feed would diverge far beyond this share.
 const UNIT_PIN_TOLERANCE_PCT = 0.5;
 const EXPECTED_DECIMALS = 9;
-const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 600;
 // `setReserve()` is the only writer of the feed's `reserve`/`roundId`/
 // `updatedAt`, so a round advances only when the issuer changes the reserve:
 // the feed is reserve-change-triggered, not heartbeat-driven. The budget is

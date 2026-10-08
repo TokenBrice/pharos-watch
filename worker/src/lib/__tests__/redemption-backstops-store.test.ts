@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
@@ -83,16 +83,18 @@ describe("loadRedemptionBackstopSnapshot", () => {
     try {
       const db = createSqliteD1(sqlite);
       const record = makeRedemptionWriteRecord();
-      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: record.stablecoinId, attemptId: null, configFingerprint: null,
-        freshness: assessReserveFetchFreshness({ fetchedAt: record.updatedAt - 60, attemptId: null }, record.updatedAt, 172800) };
+      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: record.stablecoinId, attemptId: null, configFingerprint: "b".repeat(64),
+        freshness: assessReserveFetchFreshness({ fetchedAt: record.updatedAt - 60, attemptId: null, metadata: { freshnessMode: "not-applicable" } }, record.updatedAt, 172800) };
       record.reserveInput = reserveInput;
       await upsertRedemptionBackstopSnapshots(db, [record], { runId: "redemption:binding", nowSec: record.updatedAt, metadata: {
-        reserveViewSchemaVersion: 1, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256, runClockSec: record.updatedAt,
+        reserveViewSchemaVersion: 2, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256, runClockSec: record.updatedAt,
         consumedReserveInputs: { [record.stablecoinId]: reserveInput },
+        stablecoinsInput: { updatedAt: record.updatedAt - 120, assessedAt: record.updatedAt, maxAgeSec: 600 },
       } });
       const loaded = await loadRedemptionBackstopSnapshot(db);
       expect(loaded.map[record.stablecoinId].reserveInput).toEqual(reserveInput);
       expect(loaded.latestUpdatedAt).toBe(record.updatedAt);
+      expect(loaded.runMetadata?.stablecoinsInput).toEqual({ updatedAt: record.updatedAt - 120, assessedAt: record.updatedAt, maxAgeSec: 600 });
       sqlite.exec("UPDATE redemption_backstop_runs SET metadata_json = '{}'");
       expect((await loadRedemptionBackstopSnapshot(db)).reserveInputHealth).toBe("unavailable");
     } finally { sqlite.close(); }
@@ -250,79 +252,197 @@ describe("loadRedemptionBackstopSnapshot", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("drops invalid enum and collection values from details JSON before applying fallbacks", async () => {
+  it("salvages invalid historical diagnostics without dropping valid evidence or provenance", async () => {
+    const original = JSON.parse(LEGACY_V3997_REDEMPTION_BACKSTOP_ROW.details_json);
     const db = mockD1Strict([
-      completedRunsQuery([completedRunRow({ run_id: "run-invalid-details", completed_at: 1_700_000_010 })]),
-      runRowsQuery("run-invalid-details", [
+      completedRunsQuery([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
+      runRowsQuery("legacy-run", [{
+        ...LEGACY_V3997_REDEMPTION_BACKSTOP_ROW,
+        details_json: JSON.stringify({
+          ...original,
+          sourceTimestamp: 1_746_799_900,
+          sourceUrls: ["https://example.com/redemption.json"],
+          notes: ["valid", 123],
+          capsApplied: ["valid-cap", false],
+          docs: { url: "not-a-url" },
+          confidenceDetails: { capacityEvidenceQuality: 101 },
+          costScenarioScores: { retail: "free" },
+        }),
+      }]),
+    ]);
+
+    const { map } = await loadRedemptionBackstopSnapshot(db);
+    expect(map["usdc-circle"]).toMatchObject({
+      score: LEGACY_V3997_REDEMPTION_BACKSTOP_ROW.score,
+      resolutionState: original.resolutionState,
+      capacityConfidence: original.capacityConfidence,
+      routeStatus: original.routeStatus,
+      sourceTimestamp: 1_746_799_900,
+      sourceUrls: ["https://example.com/redemption.json"],
+    });
+    expect(map["usdc-circle"].notes).toBeUndefined();
+    expect(map["usdc-circle"].capsApplied).toBeUndefined();
+    expect(map["usdc-circle"].docs).toBeUndefined();
+    expect(map["usdc-circle"].confidenceDetails).toBeUndefined();
+    expect(map["usdc-circle"].costScenarioScores).toBeUndefined();
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each([
+    null, "", "not-json", '{"resolutionState":', "null", "[]", '[{"resolutionState":"resolved"}]',
+    '"resolved"', "0", "true", "{}",
+  ])("rejects positive-score rows with missing or corrupt whole details: %s", async (detailsJson) => {
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({ score: 65, details_json: detailsJson })]),
+    ]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each([
+    { detailsJson: null, version: "4.07", reason: "missing-details" },
+    { detailsJson: "not-json", version: "4.07", reason: "json-parse-failed" },
+    { detailsJson: "null", version: "4.07", reason: "invalid-payload" },
+    { detailsJson: '{"resolutionState":"resolved"}', version: "4.07", reason: "invalid-payload" },
+    { detailsJson: '{"resolutionState":"resolved"}', version: "v3.997", reason: "unrecognized-methodology-version" },
+  ])("reports decoder drop $reason in the structured log and rejected-run diagnostics", async ({ detailsJson, version, reason }) => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const db = mockD1Strict([
+        completedRunsQuery([completedRunRow()]),
+        runRowsQuery("run-live", [makeRealisticRedemptionRow({
+          methodology_version: version, details_json: detailsJson,
+        })]),
+      ]);
+      await expect(loadRedemptionBackstopSnapshot(db)).rejects.toMatchObject({
+        message: expect.stringContaining(`eurc-circle:${reason}`),
+      });
+      const records = warning.mock.calls.map(([line]) => JSON.parse(String(line)));
+      expect(records).toContainEqual(expect.objectContaining({
+        event: "redemption-backstop-row-rejected",
+        runId: "run-live",
+        metadata: expect.objectContaining({ stablecoinId: "eurc-circle", methodologyVersion: version, reason }),
+      }));
+      assertAllD1MatchesUsed(db);
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it("continues admitting complete current details under an unrecognized methodology version", async () => {
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({ methodology_version: "v4.07" })]),
+    ]);
+    const { map } = await loadRedemptionBackstopSnapshot(db);
+    expect(map["eurc-circle"].methodologyVersion).toBe("v4.07");
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each([
+    "resolutionState", "capacityConfidence", "capacitySemantics", "feeConfidence", "feeModelKind",
+    "modelConfidence", "routeStatus", "routeStatusSource", "holderEligibility",
+  ])("rejects current immutable rows missing required %s", async (field) => {
+    const details = JSON.parse(makeRealisticRedemptionRow().details_json);
+    delete details[field];
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({
+        methodology_version: "4.07", details_json: JSON.stringify(details),
+      })]),
+    ]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each(["4.07", "3.997"])("rejects corrupt evidence even when diagnostics can be salvaged in %s", async (version) => {
+    const details = JSON.parse(makeRealisticRedemptionRow().details_json);
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({
+        methodology_version: version,
+        details_json: JSON.stringify({ ...details, reserveInput: {}, notes: ["note", 123] }),
+      })]),
+    ]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each(["resolutionState", "sourceTimestamp", "sourceUrls"])("never salvages corrupt historical %s as missing", async (field) => {
+    const details = JSON.parse(LEGACY_V3997_REDEMPTION_BACKSTOP_ROW.details_json);
+    const invalid = field === "resolutionState" ? "broken" : field === "sourceTimestamp" ? -1 : ["ftp://example.com"];
+    const db = mockD1Strict([
+      completedRunsQuery([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
+      runRowsQuery("legacy-run", [{
+        ...LEGACY_V3997_REDEMPTION_BACKSTOP_ROW,
+        details_json: JSON.stringify({ ...details, [field]: invalid, notes: ["note", 123] }),
+      }]),
+    ]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it.each([
+    { resolutionState: "failed", score: 65 },
+    { resolutionState: "missing-capacity", score: 0 },
+    { resolutionState: "invalid-state", score: null },
+  ])("rejects incoherent current score/state $resolutionState/$score", async ({ resolutionState, score }) => {
+    const details = JSON.parse(makeRealisticRedemptionRow().details_json);
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow()]),
+      runRowsQuery("run-live", [makeRealisticRedemptionRow({
+        methodology_version: "4.07", score, details_json: JSON.stringify({ ...details, resolutionState }),
+      })]),
+    ]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("preserves a resolved measured zero separately from absent capacity", async () => {
+    const details = JSON.parse(makeRealisticRedemptionRow().details_json);
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow({ expected_count: 2, written_count: 2 })]),
+      runRowsQuery("run-live", [
         makeRealisticRedemptionRow({
-          stablecoin_id: "bad-details",
-          snapshot_run_id: "run-invalid-details",
-          score: 65,
-          provider: "supply-full-model",
-          source_mode: "estimated",
-          fee_bps: null,
-          details_json: JSON.stringify({
-            resolutionState: "definitely-not-valid",
-            capacityConfidence: "not-a-confidence",
-            capacitySemantics: "unknown-semantics",
-            feeConfidence: "bad-fee-confidence",
-            feeModelKind: "bad-fee-kind",
-            modelConfidence: "bad-model-confidence",
-            routeStatus: "broken",
-            routeStatusSource: "bad-source",
-            holderEligibility: "nope",
-            capacityProfile: { scoringHorizon: "bad", capacityProfileConfidence: "heuristic" },
-            confidenceDetails: { capacityEvidenceQuality: 101 },
-            capacityKind: "bad-kind",
-            freshnessKind: "bad-freshness",
-            sourceTimestamp: -1,
-            sourceUrls: ["ftp://example.com/redemption.json"],
-            settlementDelaySec: -1,
-            queueDepthUsd: -1,
-            dailyLimitUsd: -1,
-            minRedeemUsd: -1,
-            liveHolderEligibility: "not-eligible",
-            eventualRedeemabilityScore: -1,
-            costScenarioScores: { retail: "free" },
-            routeExitCorrelation: "too-close",
-            notes: ["valid", 123],
-            capsApplied: ["valid-cap", false],
-            docs: { url: "not-a-url" },
-          }),
+          stablecoin_id: "measured-zero", methodology_version: "4.07", score: 0,
+          immediate_capacity_usd: 0, immediate_capacity_ratio: 0, details_json: JSON.stringify(details),
+        }),
+        makeRealisticRedemptionRow({
+          stablecoin_id: "absent", methodology_version: "4.07", score: null,
+          immediate_capacity_usd: null, immediate_capacity_ratio: null,
+          details_json: JSON.stringify({ ...details, resolutionState: "missing-capacity" }),
         }),
       ]),
     ]);
+    const { map } = await loadRedemptionBackstopSnapshot(db);
+    expect(map["measured-zero"]).toMatchObject({ score: 0, immediateCapacityUsd: 0, resolutionState: "resolved" });
+    expect(map.absent).toMatchObject({ score: null, immediateCapacityUsd: null, resolutionState: "missing-capacity" });
+    assertAllD1MatchesUsed(db);
+  });
 
-    const { map: result } = await loadRedemptionBackstopSnapshot(db);
-    const entry = result["bad-details"];
-
-    expect(entry).toBeDefined();
-    expect(entry!.resolutionState).toBe("resolved");
-    expect(entry!.capacityConfidence).toBe("heuristic");
-    expect(entry!.capacitySemantics).toBe("eventual-only");
-    expect(entry!.feeConfidence).toBe("undisclosed-reviewed");
-    expect(entry!.feeModelKind).toBe("undisclosed-reviewed");
-    expect(entry!.modelConfidence).toBe("low");
-    expect(entry!.routeStatus).toBe("unknown");
-    expect(entry!.routeStatusSource).toBe("static-config");
-    expect(entry!.holderEligibility).toBe("unknown");
-    expect(entry!.capacityProfile).toBeUndefined();
-    expect(entry!.confidenceDetails).toBeUndefined();
-    expect(entry!.capacityKind).toBeUndefined();
-    expect(entry!.freshnessKind).toBeUndefined();
-    expect(entry!.sourceTimestamp).toBeUndefined();
-    expect(entry!.sourceUrls).toBeUndefined();
-    expect(entry!.settlementDelaySec).toBeUndefined();
-    expect(entry!.queueDepthUsd).toBeUndefined();
-    expect(entry!.dailyLimitUsd).toBeUndefined();
-    expect(entry!.minRedeemUsd).toBeUndefined();
-    expect(entry!.liveHolderEligibility).toBeUndefined();
-    expect(entry!.eventualRedeemabilityScore).toBeUndefined();
-    expect(entry!.costScenarioScores).toBeUndefined();
-    expect(entry!.routeExitCorrelation).toBeUndefined();
-    expect(entry!.notes).toBeUndefined();
-    expect(entry!.capsApplied).toBeUndefined();
-    expect(entry!.docs).toBeUndefined();
+  it("falls back atomically from corrupt details to the earlier run's own timestamp and generation", async () => {
+    const db = mockD1Strict([
+      completedRunsQuery([
+        completedRunRow({ run_id: "run-corrupt", expected_count: 2, written_count: 2 }),
+        completedRunRow({
+          run_id: "run-old", max_updated_at: 1_699_999_990, methodology_version: "3.997",
+          metadata_json: JSON.stringify({ reserveGenerationId: "reserve-old" }),
+        }),
+      ]),
+      runRowsQuery("run-corrupt", [
+        makeRealisticRedemptionRow({ stablecoin_id: "new-only", details_json: "not-json" }),
+        makeRealisticRedemptionRow({ stablecoin_id: "otherwise-valid-new" }),
+      ]),
+      runRowsQuery("run-old", [makeRealisticRedemptionRow({ updated_at: 1_699_999_990 })]),
+    ]);
+    const result = await loadRedemptionBackstopSnapshot(db);
+    expect(result).toMatchObject({
+      runId: "run-old", latestUpdatedAt: 1_699_999_990, methodologyVersion: "3.997",
+      runMetadata: { reserveGenerationId: "reserve-old" },
+    });
+    expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
+    expect(result.map["eurc-circle"].updatedAt).toBe(1_699_999_990);
     assertAllD1MatchesUsed(db);
   });
 
@@ -386,6 +506,25 @@ describe("loadRedemptionBackstopSnapshot", () => {
     });
     expect(normalizeRedemptionBackstopRunMetadata("not-json")).toEqual({});
     expect(normalizeRedemptionBackstopRunMetadata(null)).toEqual({});
+  });
+
+  it.each([
+    { updatedAt: 0, assessedAt: 1_800_000_000, maxAgeSec: 600 },
+    { updatedAt: 1_800_000_001, assessedAt: 1_800_000_000, maxAgeSec: 600 },
+    { updatedAt: 1_799_999_399, assessedAt: 1_800_000_000, maxAgeSec: 600 },
+    { assessedAt: 1_800_000_000, maxAgeSec: 600 },
+  ])("does not normalize malformed supply identity as admitted evidence (%j)", (stablecoinsInput) => {
+    expect(normalizeRedemptionBackstopRunMetadata(JSON.stringify({ stablecoinsInput }))).not.toHaveProperty("stablecoinsInput");
+  });
+
+  it("rejects invalid supply metadata before creating a manifest", async () => {
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      await expect(upsertRedemptionBackstopSnapshots(createSqliteD1(sqlite), [makeRedemptionWriteRecord()], {
+        metadata: { stablecoinsInput: { updatedAt: 0, assessedAt: 1_800_000_000, maxAgeSec: 600 } },
+      })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM redemption_backstop_runs").get()).toEqual({ count: 0 });
+    } finally { sqlite.close(); }
   });
 
   it("writes immutable run/history rows under a completed run manifest without a legacy current mirror", async () => {

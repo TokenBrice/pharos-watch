@@ -32,8 +32,8 @@ function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadat
   const entry = { ...makeRedemptionWriteRecord(), stablecoinId: "iusd-infinifi", updatedAt: RUN };
   const reserveInput = { generationId: "reserve:1790000000:test", contentSha256: "a".repeat(64), stablecoinId: entry.stablecoinId, attemptId: "success",
     configFingerprint: computeLiveReserveConfigFingerprint(ACTIVE_META_BY_ID.get(entry.stablecoinId)!.liveReservesConfig!),
-    freshness: assessReserveFetchFreshness({ fetchedAt, attemptId: "success" }, RUN, 172800) };
-  const runMetadata = metadataValid ? { reserveViewSchemaVersion: 1, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256,
+    freshness: assessReserveFetchFreshness({ fetchedAt, attemptId: "success", metadata: { freshnessMode: "not-applicable" } }, RUN, 172800) };
+  const runMetadata = metadataValid ? { reserveViewSchemaVersion: 2, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256,
     runClockSec: RUN, consumedReserveInputs: { [entry.stablecoinId]: reserveInput } } : {};
   mocks.inputs.mockResolvedValue({
     stablecoinsCached: { kind: "ok", updatedAt: RUN, payload: { peggedAssets: [] } },
@@ -60,6 +60,19 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     fixture(RUN + 1, RUN - 60, false);
     const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
     expect(input.v9PublicationInputHealth.redemption).toMatchObject({ state: "unavailable", generationId: "redemption:actual", updatedAtSec: RUN });
+  });
+  it("holds mode-less v1 input unavailable, then admits a newly sealed v2 run", async () => {
+    fixture(RUN + 1, RUN - 60);
+    const loaded = await mocks.inputs();
+    loaded.redemptionSnapshotProvenance.runMetadata.reserveViewSchemaVersion = 1;
+    delete loaded.redemptionSnapshotProvenance.runMetadata.consumedReserveInputs["iusd-infinifi"].freshness.freshnessMode;
+    const old = await buildNativeSafetyScoreV9Capture(mockD1());
+    expect(old.input.v9PublicationInputHealth.redemption.state).toBe("unavailable");
+    expect(old.input.redemptionBackstopMap).toEqual({});
+    fixture(RUN + 1, RUN - 60);
+    const current = await buildNativeSafetyScoreV9Capture(mockD1());
+    expect(current.input.v9PublicationInputHealth.redemption.state).toBe("current");
+    expect(current.input.redemptionBackstopMap["iusd-infinifi"]).toBeDefined();
   });
   it.each([[8 * 3600, "current"], [8 * 3600 + 1, "stale"]] as const)("preserves output expiry at %s seconds", async (delta, state) => {
     fixture(RUN + delta, RUN - 60);

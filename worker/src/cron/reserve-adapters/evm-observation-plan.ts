@@ -2,7 +2,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData } from "viem/utils";
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, type EvmRpcOptions } from "../../lib/evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, type EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
@@ -39,11 +39,11 @@ export async function pinnedBlockPlan(options: {
     if (number == null || !Number.isSafeInteger(number) || number < 0) {
       throw new Error(`Unable to pin ${options.chain} observation block`);
     }
-    const timestamp = await fetchEvmBlockTimestamp(options.chain, number, rpcOptions);
-    if (timestamp == null || !Number.isSafeInteger(timestamp) || timestamp <= 0) {
-      throw new Error(`Unable to read ${options.chain} observation block timestamp`);
+    const header = await fetchEvmBlockHeader(options.chain, number, rpcOptions);
+    if (header == null) {
+      throw new Error(`Unable to read ${options.chain} observation block header`);
     }
-    return { chain: options.chain, number, timestamp };
+    return { chain: options.chain, number: header.number, timestamp: header.timestamp };
   });
   return { observedBlock, ctx: { ...options.ctx, observedBlock } };
 }

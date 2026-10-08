@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
@@ -144,8 +145,8 @@ describe("recordDeferredTail", () => {
       sqlite.prepare(
         `INSERT INTO reserve_composition (
            stablecoin_id, slices, fetched_at, source, attempt_id, metadata,
-           warning_count, adapter_source_model, adapter_evidence_class
-         ) VALUES (?, ?, ?, ?, ?, ?, 0, 'dynamic-mix', 'independent')`,
+           warning_count, adapter_source_model, adapter_evidence_class, config_fingerprint
+         ) VALUES (?, ?, ?, ?, ?, ?, 0, 'dynamic-mix', 'independent', ?)`,
       ).run(
         configuredCoin.id,
         JSON.stringify([{ name: "Verified reserves", pct: 100, risk: "low" }]),
@@ -153,6 +154,7 @@ describe("recordDeferredTail", () => {
         config.adapter,
         successAttemptId,
         JSON.stringify({ freshnessMode: "not-applicable" }),
+        computeLiveReserveConfigFingerprint(config),
       );
 
       const checkpoint = await beginLiveReserveCheckpoint(db, {

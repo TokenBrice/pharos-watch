@@ -16,6 +16,7 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import { composeExitComponentScore } from "@shared/lib/exit-route-scoring";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-causes";
 import { describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
@@ -184,9 +185,32 @@ function exitOwnScoreClause(
   return stressSize ? `${evidence} at ${stressSize}` : evidence;
 }
 
-/** Exit route keys end in the producer's route id, `redemption:<coin>:<family>`. */
-export function isEntryRouteKey(key: string, entry: RedemptionBackstopEntry): boolean {
-  return key.startsWith("redemption:") && key.endsWith(`:${entry.stablecoinId}:${entry.routeFamily}`);
+/** Opaque publication keys may change across generations; only typed identity joins routes. */
+export function isEntryRoute(
+  route: Pick<ExitAlternativeRoute, "routeId" | "lane">,
+  entry: RedemptionBackstopEntry,
+): boolean {
+  return route.lane === "redemption" && route.routeId === `redemption:${entry.stablecoinId}:${entry.routeFamily}`;
+}
+
+/** Missing evidence cannot be zero-filled into a displayed total or cap delta. */
+function composeStandaloneScore(entry: RedemptionBackstopEntry): number | null {
+  const {
+    accessScore: access,
+    settlementScore: settlement,
+    executionCertaintyScore: executionCertainty,
+    capacityScore: capacity,
+    outputAssetQualityScore: outputAssetQuality,
+    costScore: cost,
+  } = entry;
+  if (
+    access == null || settlement == null || executionCertainty == null ||
+    capacity == null || outputAssetQuality == null || cost == null
+  ) return null;
+  return composeExitComponentScore(
+    { access, settlement, executionCertainty, capacity, outputAssetQuality, cost },
+    REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
+  );
 }
 
 /** 0.97 → "0.97", 0.9 → "0.9". */
@@ -259,14 +283,8 @@ function exitDivergenceClause(
   const standaloneCaps = entry.capsApplied ?? [];
   const routeCap = standaloneCaps.find((cap) => cap.endsWith("-cap"));
   if (routeCap) {
-    let weighted = 0;
-    let complete = true;
-    for (const row of SCORE_COMPONENT_ROWS) {
-      const value = entry[EXIT_COMPONENT_ROUTE_FIELDS[row.weight].field];
-      if (value == null) complete = false;
-      else weighted += value * REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS[row.weight];
-    }
-    if (complete) {
+    const weighted = composeStandaloneScore(entry);
+    if (weighted !== null) {
       candidates.push({
         effect: weighted - routeScore,
         clause: `the standalone score carries its ${(STANDALONE_CAP_LABELS[routeCap] ?? humanizeSafetyScoreV9Value(routeCap)).toLowerCase()}`,
@@ -318,7 +336,7 @@ function describeExitReconciliation(
   if (reportCard == null || breakdown === null) return null;
   const notional = breakdown.stressRequest ? formatV9PresentationUsd(breakdown.stressRequest.requestedNotionalUsd) : null;
   const stressSize = notional ? `the ${notional} stress size` : "the Exit stress size";
-  const ownRoute = entry === null ? null : (breakdown.alternatives.find((route) => isEntryRouteKey(route.key, entry)) ?? null);
+  const ownRoute = entry === null ? null : (breakdown.alternatives.find((route) => isEntryRoute(route, entry)) ?? null);
   const primary = breakdown.primaryRoute;
   const primaryRawScore = primary?.score ?? null;
 
@@ -333,7 +351,7 @@ function describeExitReconciliation(
     // An unrated route's verdict already names the missing standalone score.
     const unrated = entry.score == null;
     const subject = unrated ? "This route" : `This route scores ${entry.score} but`;
-    if (primary !== null && isEntryRouteKey(primary.key, entry)) {
+    if (primary !== null && isEntryRoute(primary, entry)) {
       return unrated ? `Exit cannot score this route either; ${outcome}` : `${subject} Exit cannot score it; ${outcome}`;
     }
     if (ownRoute === null) return `${subject} is not in the Exit evaluation; ${outcome}`;
@@ -350,7 +368,7 @@ function describeExitReconciliation(
   if (entry === null) {
     return withSelectedRoute(primary, primaryScore, (selected) => `The Exit pillar relies on market routes instead (best: ${selected}).`);
   }
-  if (isEntryRouteKey(primary.key, entry)) {
+  if (isEntryRoute(primary, entry)) {
     if (entry.score == null) {
       return `The Exit pillar ${exitOwnScoreClause(primary.capacityEvidenceTier, primaryScore, stressSize)}.`;
     }
@@ -512,9 +530,7 @@ function RouteScoreBreakdown({
     const weight = REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS[row.weight];
     return { ...row, item, weight, contribution: item.score == null ? null : item.score * weight };
   });
-  const weightedSum = rows.every((row) => row.contribution !== null)
-    ? rows.reduce((sum, row) => sum + (row.contribution ?? 0), 0)
-    : null;
+  const weightedSum = composeStandaloneScore(entry);
   const caps = entry.capsApplied ?? [];
   const versionLabel = METHODOLOGY_CONTEXT.redemptionBackstop.versionLabel;
 

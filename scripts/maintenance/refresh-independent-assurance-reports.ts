@@ -31,6 +31,10 @@ const TOLERANCE_OVERRIDES: Partial<Record<
     reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
     reportedLiabilityTotalTolerance: { absolute: "1", relativePpm: 1 },
   },
+  MYRC: {
+    // August 2026 cash/fund schedule exceeds the asserted account total by MYR 0.03.
+    reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 },
+  },
 };
 
 function amountFromMatch(

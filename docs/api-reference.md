@@ -6,7 +6,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
-> **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Public Endpoints (generated from OpenAPI and the endpoint registry) · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
+> **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Safety Score Availability · Reserve Availability · Public Endpoints (generated from OpenAPI and the endpoint registry) · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
 
 ## Surface Split
 
@@ -315,7 +315,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 
 ### Full cards
 
-[Safety Score contract](./report-cards.md#api). The route remains `/api/report-cards/v9`; current body `schemaVersion` is 7 (methodology 10.01), with internal public response 6 and score trace 4. Model-family/route naming is not the methodology decimal or body schema version.
+[Safety Score contract](./report-cards.md#api). The route remains `/api/report-cards/v9`; current body `schemaVersion` is 8, wrapping public breakdown/publication schema 7 with score trace 4. Model-family/route naming, methodology decimal and body schema are distinct identities. Persisted public v6 is unavailable until a compatible accepted publication; no legacy route-key inference or fabricated cause defaults is allowed.
 
 Each `cards[]` row publishes `ratingStatus: "rated" | "not-rated" | "pipeline-gap"`. Rated means numeric score and letter grade; not-rated means null score and `grade: "NR"` with causal withholding reasons. Pipeline-gap means null score and null grade, never NR, zero or F. At least two included pillars are needed for a Safety Score. Exactly one A/B-only excluded pillar permits a two-pillar rating; two or three give technical pipeline-gap. Pipeline-gap keeps diagnostic breakdowns and null aggregate/stages/weakest pillar, with no binding cap.
 
@@ -325,9 +325,13 @@ Pillar rows carry `aggregationDisposition: "included" | "excluded-a-b"`, `causeG
 
 Exit route breakdowns add `confidenceDimensions: { observation, model, capacityMethod }`; each dimension has `{ factor, cause, causeGapIds }`. A/B-missing dimensions are neutral (factor 1); known weaker models and C/U uncertainty retain their factors. `confidenceFactor` reconciles to the minimum applicable dimension. `capacityEvidenceTier` distinguishes `live-direct`, `live-queue-proxy`, `documented`, `heuristic` and `unknown`; same-run verified live queue/proxy uses method factor 0.75. A diagnostic route may have null confidence dimensions. Neutral confidence never admits stale capacity or an invalid certificate, and does not imply holder eligibility, zero fee or executable output.
 
+Primary and alternative Exit breakdown rows require `routeId` and `lane` (`dex` or `redemption`) alongside opaque `routeKey`. Reconciliation uses the exact configured redemption ID and redemption lane, never key prefix/suffix guessing. These fields identify the observed rail; they do not imply admitted capacity, cost, settlement or independent liquidity.
+
 `completeness` adds `pipelineGapCount` and sorted unique `pipelineGapIds`. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; not-rated and pipeline-gap membership is disjoint and matches the cards. Do not derive NR count from every null score. Reserve breakdowns preserve `wholeAssetWeight` independently of `effectiveScoringWeight`; A/B tail exclusion never rescales dependency or materiality exposure.
 
 Retained old schema publications require explicit historical dispatch or refusal, never invented A/B defaults. Current consumers preserve status and partial metadata rather than treating a null score as a downgrade. Existing publication health/held headers remain a separate availability contract.
+
+The standalone redemption contract is described in [Redemption Backstops](./redemption-backstops.md#api-endpoint). Its optional `capacityRejectionReason` names canonical reserve or route admission failures, including missing/malformed/stale evidence, payout mismatch and unproven completion. `output-valuation-unobserved` and `all-in-cost-unobserved` distinguish missing valuation or execution cost from an unobserved native amount. Output-cache valuation keeps the original cache-generation clock, never the publication clock. Null capacity is unavailable, not measured zero. Only complete valid immutable runs are served; malformed or missing required details reject a whole run, with atomic earlier-run fallback retaining that run's clock/methodology, or `503` when none survives. Named row-drop reasons remain operator diagnostics, not partial public-row salvage.
 
 ### Free grades
 
@@ -340,6 +344,10 @@ Retained old schema publications require explicit historical dispatch or refusal
 ### Dependency scenarios
 
 [Modeled results](./dependency-map.md). Current response/artifact body `schemaVersion` is 2 and scenario cache generation is v2; the route remains `/api/dependency-scenarios/v1` with operation ID `dependencyScenariosV1`. Published and modeled technical pipeline-gap scores/grades stay null and distinct from NR; deltas involving unavailable numeric values remain null, never zero or a fabricated downgrade. Status and partial metadata survive parent propagation. These generation-bound offline artifacts remain noncanonical modeled scenarios, not forecasts or changes to accepted Safety Scores. Old artifacts require explicit historical version dispatch or refusal, never relabelling a v1 artifact under a v2 cache key.
+
+## Reserve Availability
+
+For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionEligibility` is `{ scheduled, reason }` with successful-response reasons `active`, `quarantined`, `frozen`, or `delisted`; only active is scheduled. Suspended, unconfigured and pre-launch assets return `404`, not additional eligibility values. Readable inactive configurations may serve retained historical evidence without refreshing its clocks or admitting it to active collection. See the [reserve API contract](./live-reserves.md#api-contract).
 
 ## Public Endpoints
 
@@ -672,7 +680,7 @@ Returns the dates available in the public daily snapshot archive.
 
 ### `GET /api/snapshots/:date.json`
 
-Returns the full public snapshot captured for one date. Historical report-v5 cards from methodologies before 9.15 may retain a valid nullable `stressStateDigest`; archive validation accepts only that retired field while preserving the original payload and ETag. Current report producers remain strict. The same compatibility applies to dated coin projections.
+Returns a dated snapshot unchanged, including identity and ETag. Archive validation also applies to coin projections; live producers remain strict. Pre-9.15 cards may retain nullable `stressStateDigest`. Report7 uses recorded pre-10.11 routes and methodology-specific witness/obligation counts; see [historical contracts](./report-cards.md#report-schema-v8).
 
 - **Operation ID:** `snapshotsDateJson`
 - **Path:** `/api/snapshots/{date}.json`
@@ -853,10 +861,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.47",
-    "versionLabel": "v4.47",
-    "currentVersion": "4.47",
-    "currentVersionLabel": "v4.47",
+    "version": "4.48",
+    "versionLabel": "v4.48",
+    "currentVersion": "4.48",
+    "currentVersionLabel": "v4.48",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -915,7 +923,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.47",
-  "methodologyVersion": "10.10"
+  "methodologyVersion": "10.11"
 }
 ```
 

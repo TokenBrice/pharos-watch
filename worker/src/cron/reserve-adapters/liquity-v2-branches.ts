@@ -3,6 +3,7 @@ import { decodeAbiParameters } from "viem/utils";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type {
   LiveReserveSnapshotMetadata,
+  LiveReserveRedemptionTelemetryKnownFields,
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
@@ -793,7 +794,7 @@ export function buildLiquityV2RedemptionMetadata(
     .filter((entry) => entry.shutDown == null)
     .map((entry) => entry.entry.branch.name);
   const routeObserved = branchRedeemability !== undefined || shutdownBranches.length > 0;
-  const routeStatus = !routeObserved
+  const routeStatus: NonNullable<LiveReserveRedemptionTelemetryKnownFields["routeStatus"]> = !routeObserved
     ? "unknown"
     : shutdownBranches.length > 0 || nonRedeemableBranches.length > 0
       ? "degraded"

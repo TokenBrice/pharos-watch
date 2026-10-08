@@ -60,8 +60,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "rlusd-ripple": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
-    docs: [sourceRefRouteCapacity("Ripple USD stablecoin", "https://ripple.com/solutions/stablecoin/")],
+    reviewedAt: "2026-10-07",
+    costModel: fixedFee(0, "Ripple Mint charges no mint or redeem fees; applicable Customer Agreement conditions and standard bank/payment costs remain separate"),
+    docs: [
+      sourceRefRouteCapacity("Ripple USD stablecoin", "https://ripple.com/solutions/stablecoin/"),
+      sourceRef("Ripple Mint Features FAQ (reviewed 2026-10-07)", "https://ripple.com/products/stablecoin/features/", ["fees"]),
+      sourceRef("Ripple stablecoin terms: Customer Agreement conditions", "https://ripple.com/legal/stablecoin/", ["route", "access", "fees", "settlement"]),
+    ],
+    notes: ["Zero is the disclosed Ripple Mint issuer fee only, not a zero all-in bank/payment-cost guarantee; governing Customer Agreement conditions remain applicable. No access, capacity or completion SLA is inferred from the FAQ."],
   },
   "usdon-ondo": {
     ...issuerBase,
@@ -236,11 +242,13 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("Circle Mint", "https://www.circle.com/circle-mint", ["route", "capacity", "access", "settlement"]),
       sourceRefRouteCapacity("Circle EURC", "https://www.circle.com/eurc"),
       sourceRef("Circle redemption structure (effective March 15, 2026)", "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644", ["fees"]),
+      sourceRef("Circle published KB0010644 direct Knowledge API (reviewed 2026-10-07)", "https://help.circle.com/api/sn_km_api/knowledge/articles/KB0010644?fields=number%2Cshort_description%2Ctext%2Cworkflow_state%2Csys_updated_on", ["fees"]),
       sourceRef("Circle product fee schedule", "https://help.circle.com/support/en/circle-product-fee-schedule?id=kb_article_view&sysparm_article=KB0010626", ["fees"]),
     ],
     notes: [
       "Sol unknown-resolver wave 2026-10-07 (EXIT_ROUTE_3): the Circle USDC/EURC redemption structure effective March 15, 2026 has at most 5 bps daily base fee plus 5 bps marginal monthly net-redemption overage. The V9-only 10 bps issuer-fee ceiling is conservative across the published tiers; it does not assert that the zero-burn-fee EEA cohort pays 10 bps or assume fee credits.",
       "Circle and its banking partners charge no outgoing redemption-wire fee; any receiving-bank fee is a third-party cost outside the issuer-fee ceiling, not asserted zero. No capacity, holder cohort or settlement promise changes. Fresh producer evidence is required to replace captured undisclosed fee evidence.",
+      "Basic has no daily fee but marginal monthly overage; Standard has a $2M/day allowance and 5 bps on net redemptions; Institutional charges 5 bps on gross redemption plus up to 5 bps marginal monthly overage. EEA zero-burn-fee scope and conditional credits do not establish universal fee zero. The KB's near-instant labels describe processing, not guaranteed completed payout.",
     ],
   },
   "usdc-circle": {
@@ -259,12 +267,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "fees",
       ]),
       sourceRef("Circle redemption structure (effective March 15, 2026)", "https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644", ["fees"]),
+      sourceRef("Circle published KB0010644 direct Knowledge API (reviewed 2026-10-07)", "https://help.circle.com/api/sn_km_api/knowledge/articles/KB0010644?fields=number%2Cshort_description%2Ctext%2Cworkflow_state%2Csys_updated_on", ["fees"]),
       sourceRef("Circle product fee schedule", "https://help.circle.com/support/en/circle-product-fee-schedule?id=kb_article_view&sysparm_article=KB0010626", ["fees"]),
     ],
     notes: [
       "Tracked USDC metadata records a 7% cash-deposit reserve slice; Pharos uses that cash slice as the documented hot-buffer lower bound and does not promote the unvalidated 20% proposal.",
       "Sol unknown-resolver wave 2026-10-07 (EXIT_ROUTE_3): Circle's redemption structure effective March 15, 2026 caps the institutional daily gross-redemption charge at 5 bps, plus at most 5 bps marginal monthly net-redemption overage. The V9-only 10 bps issuer-fee ceiling covers the additive maximum without assuming fee credits, unused monthly allowances, or eligibility for a lower-fee tier.",
       "Circle and its banking partners do not charge an outgoing redemption-wire fee. Receiving-bank charges are third-party costs outside this issuer-fee ceiling, not asserted zero. The Standard tier's gross-redemption cap does not constrain the modeled Institutional route; no captured capacity or settlement term is increased by this cost review.",
+      "Basic has no daily fee but marginal monthly overage; Standard's $2M/day free allowance is tier-specific, and Institutional's base fee is on gross redemption. EEA zero burn fees and optional credits are not a universal exemption. Near-instant processing does not establish final bank-receipt timing.",
     ],
   },
   "usdp-paxos": {
@@ -517,18 +527,28 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "tusd-trueusd": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
+    reviewedAt: "2026-10-07",
+    settlementModel: "days",
+    costModel: fixedFee(0, "TrueUSD charges no issuer mint/redemption fee; bank, wire and blockchain charges may be deducted and are not bounded here"),
     v9RouteCostTerms: { feeBpsMax: 0 },
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["cost", "settlement"],
+      rationale: "TrueUSD's zero issuer charge does not bound bank/wire deductions or blockchain costs and the terms expressly do not guarantee redemption rights. The FAQ's general one-business-day processing target is not a completed-payout guarantee.",
+      reviewedAt: "2026-10-07",
+      docs: [sourceRef("TrueUSD governing Terms of Use (modified 2024-01-11; reviewed 2026-10-07)", "https://app.tusd.io/terms-of-use", ["route", "fees", "settlement"])],
+    },
     docs: [
       sourceRefFull("TrueUSD mint and redeem", "https://www.tusd.io/"),
       sourceRef(
         "TrueUSD Terms of Use, Fees (modified 2024-01-11; reviewed 2026-10-07)",
         "https://app.tusd.io/terms-of-use",
-        ["fees"],
+        ["route", "fees", "settlement"],
       ),
     ],
     notes: [
-      "The Terms of Use Fees section states that the Company does not charge fees for minting or redeeming TrueUSD. The V9 ceiling covers issuer-charged redemption fees only; third-party bank/wire charges and blockchain transaction costs remain holder-borne and are not asserted to be zero.",
+      "The Terms of Use Fees section states that the Company does not charge fees for minting or redeeming TrueUSD. The V9 ceiling covers issuer-charged redemption fees only; third-party bank/wire fees may be deducted before transfer and blockchain transaction costs remain holder-borne. The terms expressly do not guarantee redemption rights; a general one-business-day processing target is not a final-payment SLA.",
     ],
   },
   "eurs-stasis": {
@@ -563,9 +583,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ylds-figure": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
     costModel: fixedFee(
       0,
-      "FCC does not charge holders of Figure Transferable Certificates any fees or expenses in connection with the issuance or surrender of Figure Transferable Certificates.",
+      "FCC imposes no surrender charge. Actual ACH pass-through fees are deducted from proceeds and unquantified; FCC or its affiliates pay blockchain charges for approved wallets, while invalid non-approved-wallet transfers remain holder-borne.",
     ),
     docs: [
       sourceRef("Figure YLDS overview", "https://www.figuremarkets.com/c/learn/ylds", [
@@ -576,10 +597,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       ]),
       sourceRefFull("Figure Certificate Company disclosures", "https://www.figuremarkets.com/disclosures/"),
       sourceRef(
-        "Figure Certificate Company prospectus",
-        "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm",
-        ["fees"],
+        "Figure issuer-hosted prospectus and August 6, 2026 supplement (reviewed 2026-10-07)",
+        "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+        ["fees", "settlement"],
       ),
+    ],
+    notes: [
+      "Zero describes the FCC surrender-charge component, not ACH net proceeds. FCC pays approved-wallet blockchain transaction charges; invalid transfers involving non-approved wallets are a separate cost scope.",
+      "End-to-end payout remains coarse days. The 24-hour processing wording has technological exceptions; wire/ACH may take five days and stablecoin conversion/transfer may take ten days. These staged conditional statements are not unconditional completion scalars.",
     ],
   },
   "usdtb-ethena": {

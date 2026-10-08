@@ -2,13 +2,15 @@ import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { attributedSerialParent } from "./safety-score-v9-public-internal";
 import { resolveCauseGapId, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
 
+type AttributionCard = Omit<SafetyScoreV9CurrentCard, "breakdowns">;
+
 export interface SafetyScoreV9ParentAttributionIssue {
   cardId: string;
   message: string;
 }
 
 export function findSafetyScoreV9ParentAttributionIssues(
-  response: V9PublicCauseGapContext & { cards: readonly SafetyScoreV9CurrentCard[] },
+  response: V9PublicCauseGapContext & { cards: readonly AttributionCard[] },
 ): SafetyScoreV9ParentAttributionIssue[] {
   const cards = response.cards;
   const cardsById = new Map(cards.map((card) => [card.id, card]));
@@ -80,13 +82,13 @@ export function findSafetyScoreV9ParentAttributionIssues(
   return issues;
 }
 
-function sameCausePath(response: V9PublicCauseGapContext, a: SafetyScoreV9CurrentCard, pathA: string, b: SafetyScoreV9CurrentCard, pathB: string): boolean {
+function sameCausePath(response: V9PublicCauseGapContext, a: AttributionCard, pathA: string, b: AttributionCard, pathB: string): boolean {
   const suffixA = /:cause:(\d+)$/u.exec(pathA), suffixB = /:cause:(\d+)$/u.exec(pathB);
   if (!suffixA || !suffixB) return pathA === pathB;
   return pathA.slice(0, suffixA.index) === pathB.slice(0, suffixB.index) &&
     sameCauseGapRef(response, a, Number(suffixA[1]), b, Number(suffixB[1]));
 }
-function sameCauseGapRefs(response: V9PublicCauseGapContext, a: SafetyScoreV9CurrentCard, refsA: readonly number[], b: SafetyScoreV9CurrentCard, refsB: readonly number[]): boolean {
+function sameCauseGapRefs(response: V9PublicCauseGapContext, a: AttributionCard, refsA: readonly number[], b: AttributionCard, refsB: readonly number[]): boolean {
   if (refsA.length !== refsB.length) return false;
   try {
     for (let i = 0; i < refsA.length; i++) {
@@ -98,7 +100,7 @@ function sameCauseGapRefs(response: V9PublicCauseGapContext, a: SafetyScoreV9Cur
     return true;
   } catch { return false; } // Invalid refs are reported by the card schema.
 }
-function sameCauseGapRef(response: V9PublicCauseGapContext, a: SafetyScoreV9CurrentCard, refA: number, b: SafetyScoreV9CurrentCard, refB: number): boolean {
+function sameCauseGapRef(response: V9PublicCauseGapContext, a: AttributionCard, refA: number, b: AttributionCard, refB: number): boolean {
   try { return resolveCauseGapId(response, a, refA) === resolveCauseGapId(response, b, refB); }
   catch { return false; }
 }

@@ -24,3 +24,4 @@ import USAT from "./usat.json"; MANIFEST_SOURCES.USAT = USAT;
 import XSGD from "./xsgd.json"; MANIFEST_SOURCES.XSGD = XSGD;
 import XUSD from "./xusd.json"; MANIFEST_SOURCES.XUSD = XUSD;
 import PAXG from "./paxg.json"; MANIFEST_SOURCES.PAXG = PAXG;
+import MYRC from "./myrc.json"; MANIFEST_SOURCES.MYRC = MYRC;

@@ -17,7 +17,7 @@ import {
 } from "@shared/lib/dependency-derivation";
 import { getL2BeatInfrastructureContext } from "@shared/lib/chains/l2beat-audit";
 import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
-import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type {
   DependencyType,
@@ -331,6 +331,8 @@ export interface DependencyCoverageAudit {
 export interface DependencyCoverageAuditInput {
   activeCoins?: readonly StablecoinMeta[];
   trackedCoins?: readonly StablecoinMeta[];
+  /** Authored bindings before suspension stripping; never consumed as live evidence. */
+  sourceCoins?: readonly StablecoinMeta[];
   targetDispositions?: readonly DependencyTargetDisposition[];
   adapterMappingReviews?: readonly DependencyAdapterMappingReview[];
   reportCards?: unknown;
@@ -999,6 +1001,7 @@ function validateTargetDispositions(input: {
 
 function validateAdapterMappingReviews(input: {
   activeCoins: readonly StablecoinMeta[];
+  sourceCoins: readonly StablecoinMeta[];
   reviews: readonly DependencyAdapterMappingReview[];
   requiredMappings: readonly AdapterMappingRequirement[] | null;
 }): {
@@ -1007,8 +1010,17 @@ function validateAdapterMappingReviews(input: {
 } {
   const gaps: AdapterMappingReviewGapRow[] = [];
   const activeAdapters = new Set<string>(
-    input.activeCoins.flatMap((coin) => coin.liveReservesConfig?.adapter ? [coin.liveReservesConfig.adapter] : []),
+    input.activeCoins.flatMap((coin) => coin.liveReservesConfig && !coin.liveReservesConfig.suspended ? [coin.liveReservesConfig.adapter] : []),
   );
+  const bindingStateByAdapter = new Map<string, { count: number; hasUnsuspendedBinding: boolean }>();
+  for (const coin of input.sourceCoins) {
+    const config = coin.liveReservesConfig;
+    if (!config) continue;
+    const state = bindingStateByAdapter.get(config.adapter) ?? { count: 0, hasUnsuspendedBinding: false };
+    state.count++;
+    state.hasUnsuspendedBinding ||= config.suspended == null;
+    bindingStateByAdapter.set(config.adapter, state);
+  }
   const reviewByAdapter = new Map<string, DependencyAdapterMappingReview>();
   for (const review of input.reviews) {
     if (reviewByAdapter.has(review.adapter)) {
@@ -1020,7 +1032,13 @@ function validateAdapterMappingReviews(input: {
       });
     }
     reviewByAdapter.set(review.adapter, review);
-    if (!activeAdapters.has(review.adapter)) {
+    const retention = review.retainedBinding;
+    const bindings = bindingStateByAdapter.get(review.adapter);
+    const validRetention = retention != null
+      && (retention.status === "suspended" || retention.status === "staged")
+      && typeof retention.reason === "string" && retention.reason.trim().length > 0
+      && bindings != null && bindings.count > 0 && !bindings.hasUnsuspendedBinding;
+    if (!activeAdapters.has(review.adapter) && !validRetention) {
       gaps.push({
         coinId: null,
         adapter: review.adapter,
@@ -1036,12 +1054,13 @@ function validateAdapterMappingReviews(input: {
         !sourceFile.startsWith("worker/src/cron/reserve-adapters/") || !existsSync(sourceFile)
       ))
       || !review.rationale.trim()
+      || (retention != null && !validRetention)
     ) {
       gaps.push({
         coinId: null,
         adapter: review.adapter,
         reason: "invalid-provenance",
-        detail: "Adapter review requires reviewer, ISO review date, rationale, and reserve-adapter source files.",
+        detail: "Adapter review requires reviewer, ISO review date, rationale, reserve-adapter source files, and valid all-suspended binding provenance for any retention marker.",
       });
     }
   }
@@ -1159,6 +1178,7 @@ function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[])
 export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput = {}): DependencyCoverageAudit {
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const trackedCoins = input.trackedCoins ?? (input.activeCoins ? activeCoins : TRACKED_STABLECOINS);
+  const sourceCoins = input.sourceCoins ?? (input.activeCoins ? trackedCoins : TRACKED_SOURCE_COINS);
   const targetDispositions = input.targetDispositions
     ?? (input.activeCoins ? [] : DEPENDENCY_TARGET_DISPOSITIONS);
   const adapterMappingReviews = input.adapterMappingReviews
@@ -1279,6 +1299,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   });
   const adapterMappingReviewValidation = validateAdapterMappingReviews({
     activeCoins,
+    sourceCoins,
     reviews: adapterMappingReviews,
     requiredMappings: requiredAdapterMappings,
   });

@@ -86,7 +86,7 @@ export type SafetyScoreV9PublicationRunResult =
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
-      schemaCutoverReason?: "schema-cutover-5-to-6";
+      schemaCutoverReason?: "schema-cutover-6-to-7";
     }
   | {
       status: "held";
@@ -226,13 +226,13 @@ async function loadAcceptedPublicationState(
 ): Promise<{
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
   previousHealth: V9PublicationHealth | null;
-  schemaCutoverReason?: "schema-cutover-5-to-6";
+  schemaCutoverReason?: "schema-cutover-6-to-7";
 }> {
-  let schemaCutoverReason: "schema-cutover-5-to-6" | undefined;
+  let schemaCutoverReason: "schema-cutover-6-to-7" | undefined;
   const [publication, previousHealth] = await Promise.all([
     loadSafetyScoreV9Publication(db, signal).catch((error: unknown) => {
       if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
-      schemaCutoverReason = "schema-cutover-5-to-6";
+      schemaCutoverReason = "schema-cutover-6-to-7";
       return null;
     }),
     loadSafetyScoreV9PublicationHealth(db, signal).catch((error: unknown) => {

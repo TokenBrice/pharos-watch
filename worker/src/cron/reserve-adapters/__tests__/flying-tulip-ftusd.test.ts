@@ -150,12 +150,102 @@ describe("adaptFlyingTulipFtUsd", () => {
     });
   });
 
-  it("fails when an expected chain is missing from the payload", () => {
+  it.each([1, 146, 56])("fails when reviewed chain %s is missing from the payload", (chainId) => {
     const missing = payload();
-    missing.chains = missing.chains.filter((chain) => chain.chainId !== 56);
-    expect(() => adaptFlyingTulipFtUsd(missing)).toThrow(
-      "flying-tulip-ftusd missing expected BNB Smart Chain chain payload",
-    );
+    missing.chains = missing.chains.filter((chain) => chain.chainId !== chainId);
+    expect(() => adaptFlyingTulipFtUsd(missing)).toThrow();
+  });
+
+  describe.each([1, 146, 56])("reviewed chain %s census", (chainId) => {
+    it.each([
+      [false, false], [true, true], [false, true], [true, false],
+    ])("rejects duplicates with inactive states %s / %s in either order", (firstInactive, secondInactive) => {
+      const source = payload();
+      const reviewed = source.chains.find((chain) => chain.chainId === chainId)!;
+      const first: DashboardChain = firstInactive
+        ? { chainId, chainName: reviewed.chainName, tvlUsd: 0, metrics: { totalSupplyUsd: 0 } }
+        : reviewed;
+      const second: DashboardChain = secondInactive
+        ? { chainId, chainName: reviewed.chainName, tvlUsd: 0, metrics: { totalSupplyUsd: 0 } }
+        : { ...reviewed };
+      const otherChains = source.chains.filter((chain) => chain.chainId !== chainId);
+      for (const duplicates of [[first, second], [second, first]]) {
+        expect(() => adaptFlyingTulipFtUsd({
+          ...source, chains: [...otherChains, ...duplicates],
+        })).toThrow(/duplicate chain ID/);
+      }
+    });
+
+    it.each([false, true])("allows a genuinely zero reviewed placeholder with collateral rows=%s", (withRows) => {
+      const source = payload();
+      const reviewed = source.chains.find((chain) => chain.chainId === chainId)!;
+      const baseline = adaptFlyingTulipFtUsd(source);
+      const result = adaptFlyingTulipFtUsd({
+        ...source,
+        chains: source.chains.map((chain) => chain.chainId === chainId
+          ? {
+            chainId, chainName: chain.chainName, tvlUsd: 0, metrics: { totalSupplyUsd: 0 },
+            collaterals: withRows
+              ? chain.collaterals.map((collateral) => ({ ...collateral, tvlAmountUsd: 0 }))
+              : [],
+          }
+          : chain),
+      });
+      expect(result.warnings).toEqual([]);
+      expect(result.metadata?.totalReserveUsd)
+        .toBeCloseTo(baseline.metadata!.totalReserveUsd! - reviewed.tvlUsd, 8);
+      expect(result.metadata?.supplyUsd)
+        .toBeCloseTo(baseline.metadata!.supplyUsd! - reviewed.metrics.totalSupplyUsd, 8);
+    });
+
+    it("rejects positive collateral hidden behind zero headline metrics", () => {
+      const source = payload();
+      const reviewed = source.chains.find((chain) => chain.chainId === chainId)!;
+      expect(() => adaptFlyingTulipFtUsd({
+        ...source,
+        chains: source.chains.map((chain) => chain.chainId === chainId
+          ? { ...reviewed, tvlUsd: 0, metrics: { totalSupplyUsd: 0 } }
+          : chain),
+      })).toThrow();
+    });
+
+    it.each<DashboardChain>([
+      { tvlUsd: 0 },
+      { metrics: { totalSupplyUsd: 0 } },
+      { tvlUsd: 0, metrics: { totalSupplyUsd: 0 }, collaterals: [{}] },
+    ])("rejects unavailable reviewed placeholder quantities: %j", (placeholder) => {
+      const source = payload();
+      expect(() => adaptFlyingTulipFtUsd({
+        ...source,
+        chains: source.chains.map((chain) => chain.chainId === chainId
+          ? { ...placeholder, chainId, chainName: chain.chainName }
+          : chain),
+      })).toThrow();
+    });
+  });
+
+  it("produces the same measured result regardless of reviewed chain order", () => {
+    const source = payload();
+    expect(adaptFlyingTulipFtUsd({ ...source, chains: [...source.chains].reverse() }))
+      .toEqual(adaptFlyingTulipFtUsd(source));
+  });
+
+  it.each([1, 146, 56])("does not join an undefined identity to reviewed chain %s", (chainId) => {
+    const source = payload();
+    expect(() => adaptFlyingTulipFtUsd({
+      ...source,
+      chains: source.chains.map((chain) => chain.chainId === chainId
+        ? { ...chain, chainId: undefined }
+        : chain),
+    })).toThrow();
+  });
+
+  it("rejects duplicate unreviewed defined identities before dropping inactive rows", () => {
+    const source = payload();
+    const placeholder = { chainId: 137, tvlUsd: 0, metrics: { totalSupplyUsd: 0 } };
+    expect(() => adaptFlyingTulipFtUsd({
+      ...source, chains: [...source.chains, placeholder, { ...placeholder }],
+    })).toThrow(/duplicate chain ID/);
   });
 
   it("fails closed when a reviewed collateral address changes", () => {
@@ -226,6 +316,20 @@ describe("adaptFlyingTulipFtUsd", () => {
         message: expect.stringContaining("Polygon"),
       }),
     );
+  });
+
+  it.each<DashboardChain>([
+    { chainId: 137, tvlUsd: 0 },
+    { chainId: 137, metrics: { totalSupplyUsd: 0 } },
+    { chainId: 137, tvlUsd: 0, metrics: { totalSupplyUsd: 0 }, collaterals: [{ tvlAmountUsd: 1 }] },
+    { chainId: 137, tvlUsd: 0, metrics: { totalSupplyUsd: 0 }, collaterals: [{}] },
+    { tvlUsd: 1, metrics: { totalSupplyUsd: 1 } },
+  ])("does not call unavailable or contradictory unreviewed quantities inactive: %j", (chain) => {
+    const source = payload();
+    const result = adaptFlyingTulipFtUsd({ ...source, chains: [...source.chains, chain] });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unexpected-chain", effect: "degraded",
+    }));
   });
 
   it("replays the current dashboard with new reviewed tokens and omitted zero FDUSD", () => {

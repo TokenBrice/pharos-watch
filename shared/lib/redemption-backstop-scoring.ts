@@ -270,14 +270,34 @@ export function computeRedemptionBackstopScore(args: {
   outputAssetQualityScore: number;
   costScore: number;
   totalScoreCap?: number;
-  executableCapacityUsd?: number | null;
+  executableCapacityUsd: number | null;
   modeledExitSizeUsd?: number | null;
 }): { score: number | null; capsApplied: string[] } {
-  if (args.capacityScore == null) {
+  if (
+    args.capacityScore == null ||
+    args.executableCapacityUsd == null ||
+    !Number.isFinite(args.executableCapacityUsd) ||
+    args.executableCapacityUsd < 0
+  ) {
     return {
       score: null,
       capsApplied: [],
     };
+  }
+
+  if (args.executableCapacityUsd === 0) {
+    return { score: 0, capsApplied: ["zero-executable-capacity"] };
+  }
+  if (
+    !hasMaterialExitCapacity(
+      {
+        executableCapacityUsd: args.executableCapacityUsd,
+        requestedNotionalUsd: args.modeledExitSizeUsd,
+      },
+      EXIT_ROUTE_SCORING_TABLES,
+    )
+  ) {
+    return { score: 0, capsApplied: ["immaterial-executable-capacity"] };
   }
 
   let score = composeExitComponentScore(
@@ -293,22 +313,6 @@ export function computeRedemptionBackstopScore(args: {
   );
 
   const capsApplied: string[] = [];
-
-  if (args.executableCapacityUsd === 0) {
-    return { score: 0, capsApplied: ["zero-executable-capacity"] };
-  }
-  if (
-    args.executableCapacityUsd != null &&
-    !hasMaterialExitCapacity(
-      {
-        executableCapacityUsd: args.executableCapacityUsd,
-        requestedNotionalUsd: args.modeledExitSizeUsd,
-      },
-      EXIT_ROUTE_SCORING_TABLES,
-    )
-  ) {
-    return { score: 0, capsApplied: ["immaterial-executable-capacity"] };
-  }
 
   if (args.routeFamily === "queue-redeem" && score > REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem) {
     score = REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem;
@@ -339,49 +343,3 @@ export function computeRedemptionBackstopScore(args: {
 export function computeModeledExitSizeUsd(circulatingSupplyUsd: number | null | undefined): number | null {
   return resolveExitRequestSupplyNotionalUsd(circulatingSupplyUsd, REDEMPTION_MODELED_EXIT_SIZE_REQUEST);
 }
-
-export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {
-  "stablecoin-redeem": "Stablecoin redeem",
-  "basket-redeem": "Basket redeem",
-  "collateral-redeem": "Collateral redeem",
-  "psm-swap": "PSM / swap floor",
-  "queue-redeem": "Queue redeem",
-  "offchain-issuer": "Offchain issuer",
-};
-
-export const REDEMPTION_ACCESS_LABELS: Record<RedemptionAccessModel, string> = {
-  "permissionless-onchain": "Permissionless onchain",
-  "whitelisted-onchain": "Whitelisted onchain",
-  "issuer-api": "Issuer / institutional",
-  manual: "Manual / discretionary",
-};
-
-/**
- * Authored-short projection of the access labels, for the fixed-width slots
- * that cannot take the full string: the hero passport strip's one-line budget
- * and the redemption route rail's ACCESS node. Prose surfaces keep the full
- * `REDEMPTION_ACCESS_LABELS` vocabulary.
- */
-export const REDEMPTION_ACCESS_PASSPORT_LABELS: Record<RedemptionAccessModel, string> = {
-  "permissionless-onchain": "Permissionless",
-  "whitelisted-onchain": "Whitelisted",
-  "issuer-api": "Institutional",
-  manual: "Manual",
-};
-
-export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, string> = {
-  atomic: "Atomic",
-  immediate: "Immediate",
-  "same-day": "Same day",
-  days: "1-7 days",
-  queued: "Queued",
-};
-
-export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, string> = {
-  "stable-single": "Stable output",
-  "stable-basket": "Stable basket",
-  "bluechip-collateral": "Blue-chip collateral",
-  "physical-commodity-delivery": "Physical commodity delivery",
-  "mixed-collateral": "Mixed collateral",
-  nav: "NAV / non-cash",
-};

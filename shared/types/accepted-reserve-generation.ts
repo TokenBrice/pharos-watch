@@ -12,7 +12,7 @@ export const AcceptedReserveSnapshotSchema = z.object({
   warningCount: z.number().int().nonnegative(),
   adapterSourceModel: z.enum(LIVE_RESERVE_SOURCE_MODEL_VALUES),
   adapterEvidenceClass: z.enum(LIVE_RESERVE_EVIDENCE_CLASS_VALUES),
-  configFingerprint: z.string().nullable(),
+  configFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   sliceCount: z.number().int().nonnegative(),
   lastSuccessAt: z.number().int().positive().nullable(),
   lastSuccessAttemptId: z.string().min(1).nullable(),
@@ -20,7 +20,7 @@ export const AcceptedReserveSnapshotSchema = z.object({
 export type AcceptedReserveSnapshot = z.output<typeof AcceptedReserveSnapshotSchema>;
 
 export const AcceptedReserveGenerationSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   generationId: z.string().min(1),
   root: z.object({ scheduleKey: z.literal("fourHourlyReserveSync"), slotStartedAt: z.number().int().positive(), queueHash: z.string().min(1) }).strict(),
   sealedBy: z.object({ attemptNo: z.number().int().positive(), executionGeneration: z.number().int().positive(), invocationId: z.string().min(1) }).strict(),

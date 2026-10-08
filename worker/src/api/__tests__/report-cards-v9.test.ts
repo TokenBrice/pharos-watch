@@ -26,7 +26,7 @@ describe("handleReportCardsV9", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       model: "v9",
-      schemaVersion: 7,
+      schemaVersion: 8,
       lifecycle: "active",
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
     });
@@ -82,7 +82,7 @@ describe("handleReportCardsV9", () => {
       kind: "error",
       reason: "publication-schema-cutover-pending",
       snapshot: null,
-      detail: "publication-schema-cutover-pending: stored publication schemaVersion5 requires schemaVersion6",
+      detail: "publication-schema-cutover-pending: stored publication schemaVersion6 requires schemaVersion7",
     });
 
     const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));

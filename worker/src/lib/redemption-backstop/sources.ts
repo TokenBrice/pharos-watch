@@ -1,12 +1,12 @@
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
+import { getExecutableRedemptionObserver, observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
 import { resolveCoinContractAddress } from "../../cron/reserve-adapters/evm";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import {
   deriveModelConfidenceWithDetails,
   deriveModelConfidence,
-  resolveCapacityConfidence,
   resolveCapacitySemantics,
 } from "@shared/lib/redemption-backstop-confidence";
 import {
@@ -26,7 +26,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
-import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { StablecoinData } from "@shared/types/market";
@@ -35,7 +35,6 @@ import { getLatestSuccessfulReserveSnapshotMetadata, type ReserveSnapshotMetadat
 import {
   resolveCapacityBasis,
   resolveRedemptionCapacity,
-  resolveReserveSyncCapacityConfidence,
   type RedemptionBackstopBuildOptions,
 } from "./capacity";
 import { mergeRedemptionRouteStatus, type RedemptionRouteStatusEvidence } from "./route-status";
@@ -51,56 +50,36 @@ import {
 import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
 
-interface OutputDependencyResolutionParticipant {
-  entry: RedemptionBackstopEntry;
-  outputStablecoinIds: readonly string[];
-}
-
-interface OutputDependencyResolutionRun {
-  participants: Map<string, OutputDependencyResolutionParticipant>;
-}
-
-const outputDependencyResolutionRuns = new Map<number, OutputDependencyResolutionRun>();
-const MAX_OUTPUT_DEPENDENCY_RESOLUTION_RUNS = 4;
-
-// The sync builds rows serially, then persists the completed array. Keeping the
-// returned row references here lets either build order converge on the same
-// snapshot-local disclosure without recursively re-running a dependency's
-// capacity resolver or changing that dependency's score semantics.
-function registerOutputDependencyResolution(
-  entry: RedemptionBackstopEntry,
-  config: RedemptionBackstopConfig,
-  now: number,
-): void {
-  let run = outputDependencyResolutionRuns.get(now);
-  if (!run || run.participants.has(entry.stablecoinId)) {
-    run = { participants: new Map() };
-    outputDependencyResolutionRuns.set(now, run);
+// Complete the disclosure join only after a snapshot has collected every
+// success/failure row. The local index captures states, not mutable row references.
+export function applyOutputDependencyResolution(
+  entries: readonly RedemptionBackstopEntry[],
+  configs: ReadonlyMap<string, Pick<RedemptionBackstopConfig, "outputAssets"> | null | undefined>,
+): RedemptionBackstopEntry[] {
+  const resolutionById = new Map<string, RedemptionBackstopEntry["resolutionState"]>();
+  for (const entry of entries) {
+    resolutionById.set(entry.stablecoinId, entry.resolutionState);
   }
-
-  const outputStablecoinIds = (config.outputAssets ?? []).filter((id) => !id.startsWith("asset:"));
-  run.participants.set(entry.stablecoinId, { entry, outputStablecoinIds });
-
-  for (const participant of run.participants.values()) {
-    const unresolvedDependencyId = participant.outputStablecoinIds.find((dependencyId) => {
-      const dependency = run!.participants.get(dependencyId)?.entry;
-      return dependency != null && dependency.resolutionState !== "resolved";
+  return entries.map((entry) => {
+    const outputAssets = configs.get(entry.stablecoinId)?.outputAssets;
+    const unresolvedDependencyId = outputAssets?.find((id) => {
+      if (id.startsWith("asset:")) return false;
+      const state = resolutionById.get(id);
+      return state != null && state !== "resolved";
     });
     if (unresolvedDependencyId) {
-      participant.entry.outputDependencyResolution = {
-        stablecoinId: unresolvedDependencyId,
-        resolutionState: run.participants.get(unresolvedDependencyId)!.entry.resolutionState,
+      return {
+        ...entry,
+        outputDependencyResolution: {
+          stablecoinId: unresolvedDependencyId,
+          resolutionState: resolutionById.get(unresolvedDependencyId)!,
+        },
       };
-    } else {
-      delete participant.entry.outputDependencyResolution;
     }
-  }
-
-  while (outputDependencyResolutionRuns.size > MAX_OUTPUT_DEPENDENCY_RESOLUTION_RUNS) {
-    const oldestRun = outputDependencyResolutionRuns.keys().next().value;
-    if (oldestRun == null) break;
-    outputDependencyResolutionRuns.delete(oldestRun);
-  }
+    if (!entry.outputDependencyResolution) return entry;
+    const { outputDependencyResolution: _previousDisclosure, ...withoutDisclosure } = entry;
+    return withoutDisclosure;
+  });
 }
 
 function resolveStaticFields(
@@ -147,7 +126,7 @@ export async function resolveRedemptionBackstopEntry(
     db,
     asset.id,
     config,
-    getCirculatingRaw(asset),
+    getCirculatingRawOrNull(asset),
     dexLiquidityScore,
     now,
     options,
@@ -163,47 +142,63 @@ export async function buildRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
   options: RedemptionBackstopBuildOptions = {},
 ): Promise<RedemptionBackstopEntry> {
-  // The Mellow modular vault has no ERC-4626 reserve adapter. Observe its
-  // exact queue terms here; the unquantified model never consumes capacityRaw.
-  const usesLidoEarnQueue = stablecoinId === "earnusd-lido";
-  const reserveSnapshotMetadata = usesLidoEarnQueue
+  if (options.signal?.aborted) throw options.signal.reason ?? new Error("Redemption run aborted");
+  const observerModel = config.capacityModel.kind === "executable-observer" ? config.capacityModel : null;
+  const descriptor = observerModel ? getExecutableRedemptionObserver(observerModel.observerId) : null;
+  if (observerModel && (!descriptor || descriptor.coinId !== stablecoinId || descriptor.sourceLane !== "direct" ||
+      observerModel.requiredOutputAssetKeys.length !== descriptor.outputAssetKeys.length ||
+      !observerModel.requiredOutputAssetKeys.every((key) => descriptor.outputAssetKeys.includes(key)))) {
+    throw new Error(`${stablecoinId} executable observer registry mismatch`);
+  }
+  const reserveSnapshotMetadata = observerModel
     ? null
     : options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const meta = usesLidoEarnQueue ? WORKER_TRACKED_META_BY_ID.get(stablecoinId) : null;
-  const contractAddress = meta ? resolveCoinContractAddress(meta, "ethereum") : null;
-  if (usesLidoEarnQueue && !contractAddress) {
-    throw new Error("earnusd-lido redemption observer missing tracked Ethereum contract");
+  const meta = descriptor ? WORKER_TRACKED_META_BY_ID.get(stablecoinId) : null;
+  const contractAddress = descriptor && meta ? resolveCoinContractAddress(meta, descriptor.chain) : null;
+  if (descriptor && (!contractAddress || contractAddress.toLowerCase() !== descriptor.inputContract.toLowerCase())) {
+    throw new Error(`${stablecoinId} executable observer tracked contract mismatch`);
   }
-  const directQueueObservation = usesLidoEarnQueue && contractAddress
-    ? await observeExecutableRedemptionRoute(
+  const directObservation = descriptor && contractAddress
+    ? options.executableRedemptionObservation ?? await observeExecutableRedemptionRoute(
         stablecoinId, contractAddress, options.signal ?? new AbortController().signal,
-        undefined, { rpcOptions: options.rpcOptions },
+        options.adapterContext, { rpcOptions: options.rpcOptions, nowSec: now }, descriptor.observerId,
       )
     : null;
-  if (usesLidoEarnQueue && !directQueueObservation) {
-    throw new Error("earnusd-lido redemption observer unavailable");
-  }
-  let observedLiveMetadata =
-    options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
-  if (directQueueObservation) {
-    // Deliberately do not admit any capacity, settlement maximum or output
-    // valuation from these diagnostic queue/liquidity reads.
+  if (observerModel && !directObservation) throw new Error(`${stablecoinId} executable observer unavailable`);
+  const cache = options.stablecoinsCache;
+  const outputKey = observerModel?.requiredOutputAssetKeys.length === 1 ? observerModel.requiredOutputAssetKeys[0] : null;
+  const outputAsset = cache?.kind === "ok" && outputKey
+    ? cache.payload.peggedAssets.find((asset) => asset.id === outputKey)
+    : null;
+  const outputPrice = outputAsset?.price;
+  const executableObserverValuation = options.executableObserverValuation ?? (
+    cache?.kind === "ok" && outputKey && typeof outputPrice === "number" && Number.isFinite(outputPrice) &&
+    outputPrice > 0 && Number.isSafeInteger(cache.updatedAt) && cache.updatedAt > 0 &&
+    cache.updatedAt <= now && now - cache.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
+      ? { outputAssetKey: outputKey, priceUsd: outputPrice, observedAt: cache.updatedAt }
+      : null
+  );
+  let observedLiveMetadata = observerModel
+    ? readRedemptionBackstopLiveMetadata(stablecoinId, null, now)
+    : options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
+  if (directObservation) {
     observedLiveMetadata = {
-      ...readRedemptionBackstopLiveMetadata(stablecoinId, null, now),
-      canUseFee: true,
-      feeReason: null,
-      redemptionFeeBps: directQueueObservation.feeBps,
-      routeStatus: directQueueObservation.routeStatus,
-      routeStatusSource: directQueueObservation.routeStatusSource,
-      routeStatusReason: directQueueObservation.routeStatusReason,
-      liveHolderEligibility: directQueueObservation.holderEligibility,
+      ...observedLiveMetadata,
+      canUseFee: directObservation.feeBps != null,
+      feeReason: directObservation.feeBps == null ? "redemption-fee-unavailable" : null,
+      redemptionFeeBps: directObservation.feeBps,
+      routeStatus: directObservation.routeStatus,
+      routeStatusSource: directObservation.routeStatusSource,
+      routeStatusReason: directObservation.routeStatusReason,
+      liveHolderEligibility: directObservation.holderEligibility,
+      outputAssetKeys: directObservation.outputAssetKeys,
     };
   }
-  const requiredOutputKeys = config.capacityModel.kind === "reserve-sync-metadata"
-    ? config.capacityModel.requiredOutputAssetKeys
-    : undefined;
+  const requiredOutputKeys = observerModel?.requiredOutputAssetKeys ?? (
+    config.capacityModel.kind === "reserve-sync-metadata" ? config.capacityModel.requiredOutputAssetKeys : undefined
+  );
   const observedOutputKeys = observedLiveMetadata.outputAssetKeys ?? [];
   const outputBound = !requiredOutputKeys || (
     observedOutputKeys.length === requiredOutputKeys.length &&
@@ -212,25 +207,28 @@ export async function buildRedemptionBackstopEntry(
   const liveMetadata = outputBound ? observedLiveMetadata : {
     ...observedLiveMetadata,
     canUseCapacity: false,
-    canUseFee: false,
+    canUseFee: observerModel ? false : observedLiveMetadata.canUseFee,
     capacityReason: "route-output-identity-unobserved",
-    feeReason: "route-output-identity-unobserved",
+    capacityRejectionReason: "route-output-identity-unobserved" as const,
+    feeReason: observerModel ? "route-output-identity-unobserved" : observedLiveMetadata.feeReason,
     immediateRedeemableUsd: null,
     immediateRedeemableRatio: null,
     settlementDelaySec: null,
     dailyLimitUsd: null,
     queueDepthUsd: null,
-    routeStatus: null,
-    routeStatusSource: null,
-    routeStatusReason: null,
-    routeStatusReviewedAt: null,
-    liveHolderEligibility: null,
+    routeStatus: observerModel ? null : observedLiveMetadata.routeStatus,
+    routeStatusSource: observerModel ? null : observedLiveMetadata.routeStatusSource,
+    routeStatusReason: observerModel ? null : observedLiveMetadata.routeStatusReason,
+    routeStatusReviewedAt: observerModel ? null : observedLiveMetadata.routeStatusReviewedAt,
+    liveHolderEligibility: observerModel ? null : observedLiveMetadata.liveHolderEligibility,
     v9OutputValuation: null,
   };
   const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSnapshotMetadata,
     redemptionLiveMetadata: liveMetadata,
+    executableRedemptionObservation: directObservation,
+    executableObserverValuation,
   });
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
@@ -276,7 +274,7 @@ export async function buildRedemptionBackstopEntry(
           outputAssetQualityScore: staticFields.outputAssetQualityScore,
           costScore: staticFields.costScore,
           totalScoreCap: config.totalScoreCap,
-          executableCapacityUsd: capacity.eventualCapacityUsd,
+          executableCapacityUsd: capacity.eventualCapacityUsd ?? null,
           modeledExitSizeUsd,
         }).score;
   let resolutionState: RedemptionBackstopEntry["resolutionState"] =
@@ -307,11 +305,11 @@ export async function buildRedemptionBackstopEntry(
     ...(routeSuspension ? { routeStatusReason: routeSuspension.reason, routeStatusReviewedAt: routeSuspension.reviewedAt } : {}),
   };
   const liveRouteStatus: RedemptionRouteStatusEvidence | null =
-    directQueueObservation
+    directObservation && outputBound
       ? {
-          routeStatus: directQueueObservation.routeStatus,
-          routeStatusSource: directQueueObservation.routeStatusSource,
-          routeStatusReason: directQueueObservation.routeStatusReason,
+          routeStatus: directObservation.routeStatus,
+          routeStatusSource: directObservation.routeStatusSource,
+          routeStatusReason: directObservation.routeStatusReason,
         }
       : capacity.routeStatus && capacity.routeStatusSource
       ? {
@@ -346,7 +344,7 @@ export async function buildRedemptionBackstopEntry(
     ? {
         ...capacity.capacityProfile,
         ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
-        ...(directQueueObservation ? { settlementBoundUnproven: true as const } : {}),
+        ...(capacity.settlementBoundUnproven ? { settlementBoundUnproven: true as const } : {}),
       }
     : undefined;
   const exitRouteObservation = liveMetadata.v9SfrxusdCrosschainRouteState
@@ -380,11 +378,12 @@ export async function buildRedemptionBackstopEntry(
         ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
         ...(capacity.evidenceObservedAt != null ? { evidenceObservedAt: capacity.evidenceObservedAt } : {}),
         ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
-        ...(capacity.settlementBoundUnproven || directQueueObservation
+        ...(capacity.settlementBoundUnproven
           ? { settlementBoundUnproven: true }
           : {}),
         ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
-        resolvedFeeBps: staticFields.feeBps,
+        ...(capacity.sharedResourceKey ? { sharedResourceKey: capacity.sharedResourceKey } : {}),
+        resolvedFeeBps: observerModel ? directObservation?.allInFeeBps ?? null : staticFields.feeBps,
         now,
       });
   const capacityProfile = baseCapacityProfile
@@ -413,17 +412,17 @@ export async function buildRedemptionBackstopEntry(
     ...capacity.notes,
     ...staticFields.notes,
     ...mergedRouteStatus.notes,
-    ...(directQueueObservation
+    ...(directObservation
       ? [
-          `earnusd-lido queue observation block ${directQueueObservation.blockNumber}; protocol fee only, not all-in cost or executable capacity`,
-          `earnusd-lido queue diagnostics: ${JSON.stringify(directQueueObservation.diagnostics)}`,
+          `${descriptor!.observerId} observation block ${directObservation.blockNumber}; native capacity state ${directObservation.capacityState}`,
+          `${descriptor!.observerId} diagnostics: ${JSON.stringify(directObservation.diagnostics)}`,
         ]
       : []),
   ]);
 
   const entry: RedemptionBackstopEntry = {
     stablecoinId,
-    ...(!directQueueObservation && options.reserveInput && (
+    ...(!observerModel && options.reserveInput && (
       (!routeSuspension && capacity.consumedReserveCapacity)
       || staticFields.selectedLiveFee
       || (capacity.consumedReserveRouteStatus && !routeSuspension && mergedRouteStatus.routeStatus === capacity.routeStatus && (
@@ -454,6 +453,7 @@ export async function buildRedemptionBackstopEntry(
     ...(routeStatusReviewedAt ? { routeStatusReviewedAt } : {}),
     holderEligibility,
     capacityConfidence: capacity.capacityConfidence,
+    ...(capacity.capacityRejectionReason ? { capacityRejectionReason: capacity.capacityRejectionReason } : {}),
     ...(capacityBasis ? { capacityBasis } : {}),
     capacitySemantics: capacity.capacitySemantics,
     feeConfidence: staticFields.feeConfidence,
@@ -480,15 +480,19 @@ export async function buildRedemptionBackstopEntry(
     queueEnabled: staticFields.queueEnabled,
     methodologyVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
     updatedAt: now,
-    ...(directQueueObservation ? {
-      sourceTimestamp: directQueueObservation.sourceTimestamp,
-      sourceUrls: directQueueObservation.sourceUrls,
-      freshnessKind: directQueueObservation.freshnessKind,
+    ...(directObservation && outputBound ? {
+      sourceTimestamp: directObservation.sourceTimestamp,
+      sourceUrls: directObservation.sourceUrls,
+      freshnessKind: directObservation.freshnessKind,
     } : {}),
     ...(staticFields.docs ? { docs: staticFields.docs } : {}),
     notes,
     capsApplied,
   };
+  // Deduplicate the selected public provenance list without rewriting retained evidence.
+  if (entry.sourceUrls && entry.sourceUrls.length > 1) {
+    entry.sourceUrls = [...new Set(entry.sourceUrls)];
+  }
   if (routeSuspension) {
     // Unavailable on this rail, not measured zero; separately produced channels remain independent.
     entry.score = null;
@@ -524,7 +528,6 @@ export async function buildRedemptionBackstopEntry(
       exitRouteObservations: [...(finalizedEntry.capacityProfile?.exitRouteObservations ?? []), ...executionRoutes.observations],
     } };
   }
-  registerOutputDependencyResolution(finalizedEntry, config, now);
   return finalizedEntry;
 }
 
@@ -560,10 +563,8 @@ export function buildFailedRedemptionBackstopEntry(
 ): RedemptionBackstopEntry {
   const staticFields = resolveStaticFields(stablecoinId, config);
   const settlementModel = resolveReviewedRedemptionSettlement(config, now);
-  const capacityConfidence =
-    config.capacityModel.kind === "reserve-sync-metadata"
-      ? resolveReserveSyncCapacityConfidence(stablecoinId)
-      : resolveCapacityConfidence(config.capacityModel);
+  // A failed row contains no admitted measurement, regardless of declared capabilities.
+  const capacityConfidence = "heuristic" as const;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence);
   const capacitySemantics = resolveCapacitySemantics(config.capacityModel);
   const resolutionState: RedemptionBackstopEntry["resolutionState"] = "failed";
@@ -614,6 +615,5 @@ export function buildFailedRedemptionBackstopEntry(
     ],
     capsApplied: [],
   };
-  registerOutputDependencyResolution(entry, config, now);
   return entry;
 }

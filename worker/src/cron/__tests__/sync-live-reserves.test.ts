@@ -337,15 +337,10 @@ describe("syncLiveReserves", () => {
     );
   });
 
-  // Reservoir's fee contract is coin-dependent (only srUSD and wsrUSD exit
-  // through the SavingModule) while the shared-source cache key deliberately
-  // omits the coin id, so sharing one result across the three coins would
-  // publish whichever coin the queue reached first.
+  // Reservoir's exact preceding leg is coin-dependent: srUSD uses the
+  // SavingModule fee; current wsrUSD unwraps directly to rUSD with no fee.
+  // Sharing one result across the three coins would misattribute that evidence.
   const RESERVOIR_COIN_IDS = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"] as const;
-  const RESERVOIR_SAVING_MODULE_EXIT_IDS: Record<string, true> = {
-    "srusd-reservoir": true,
-    "wsrusd-reservoir": true,
-  };
 
   interface ReserveCompositionRow {
     stablecoin_id: string;
@@ -390,11 +385,16 @@ describe("syncLiveReserves", () => {
             capacityUsd: 4,
             capacityKind: "live-direct",
             freshnessKind: "same-run-onchain",
+            sourceTimestamp: Math.floor(Date.now() / 1000) - 12,
+            blockNumber: 26_142_993,
+            outputAssetKeys: ["usdc-circle"],
+            sharedResourceKey: "ethereum:reservoir-psm:0x4809010926aec940b550d34a46a52739f996d75d",
             routeStatus: "open",
             routeStatusSource: "onchain",
             holderEligibility: "any-holder",
             settlementDelaySec: 0,
-            ...(RESERVOIR_SAVING_MODULE_EXIT_IDS[coin!.id] ? { feeBps: 1.34 } : {}),
+            ...(coin!.id === "srusd-reservoir" ? { feeBps: 1.34 } :
+              coin!.id === "wsrusd-reservoir" ? { feeBps: 0 } : {}),
           },
         },
       };
@@ -436,7 +436,7 @@ describe("syncLiveReserves", () => {
       expect(Object.keys(redemptionByCoin).sort()).toEqual([...RESERVOIR_COIN_IDS]);
       expect(redemptionByCoin["rusd-reservoir"]).not.toHaveProperty("feeBps");
       expect(redemptionByCoin["srusd-reservoir"]).toMatchObject({ feeBps: 1.34 });
-      expect(redemptionByCoin["wsrusd-reservoir"]).toMatchObject({ feeBps: 1.34 });
+      expect(redemptionByCoin["wsrusd-reservoir"]).toMatchObject({ feeBps: 0 });
       for (const redemption of Object.values(redemptionByCoin)) {
         expect(redemption).not.toHaveProperty("capacityRatioOfSupply");
       }

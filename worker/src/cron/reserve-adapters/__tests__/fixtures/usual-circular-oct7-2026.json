@@ -1,0 +1,156 @@
+{
+  "chain": "ethereum",
+  "endpoint": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+  "method": "batch",
+  "params": [
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x43882c864a406d55411b8c166bca604709fdf624",
+          "data": "0x43069d46"
+        },
+        "0x18ee869"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+          "data": "0x38d52e0f"
+        },
+        "0x18ee869"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+          "data": "0x38d52e0f"
+        },
+        "0x18ee869"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+          "data": "0x70a08231000000000000000000000000dd82875f0840aad58a455a70b88eed9f59cec7c7"
+        },
+        "0x18ee869"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+          "data": "0x70a08231000000000000000000000000dd82875f0840aad58a455a70b88eed9f59cec7c7"
+        },
+        "0x18ee869"
+      ]
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+          "data": "0x18160ddd"
+        },
+        "0x18ee869"
+      ]
+    }
+  ],
+  "requestedBlock": "26142825",
+  "block": {
+    "number": "26142825",
+    "hash": "0x9dfd6c254597579b539a3e86b6a48c886e41be7c5f57526e7443c61bf9e09ac4",
+    "timestamp": "2026-10-07T20:13:11.000Z"
+  },
+  "result": [
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x43882c864a406d55411b8c166bca604709fdf624",
+          "data": "0x43069d46"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000007000000000000000000000000136471a34f6ef19fe571effc1ca711fdb8e49f2b0000000000000000000000004cbc25559dbbd1272ec5b64c7b5f48a2405e6470000000000000000000000000d001f0a15d272542687b2677ba627f48a4333b5d00000000000000000000000058073531a2809744d1bf311d30fd76b27d662abb000000000000000000000000b672b3976baa3952bfb2ece8eefb784f8dab1424000000000000000000000000e4880249745eac5f1ed9d8f7df844792d560e750000000000000000000000000fe7c47895edb12a990b311df33b90cfea1d44c24",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+          "data": "0x38d52e0f"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x00000000000000000000000073a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+          "data": "0x38d52e0f"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x00000000000000000000000073a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xd001f0a15d272542687b2677ba627f48a4333b5d",
+          "data": "0x70a08231000000000000000000000000dd82875f0840aad58a455a70b88eed9f59cec7c7"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000c4c4424142e0891731ec5",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0xfe7c47895edb12a990b311df33b90cfea1d44c24",
+          "data": "0x70a08231000000000000000000000000dd82875f0840aad58a455a70b88eed9f59cec7c7"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x0000000000000000000000000000000000000000016fd8e34e22952ff9800000",
+      "state": "ok",
+      "reason": null
+    },
+    {
+      "method": "eth_call",
+      "params": [
+        {
+          "to": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+          "data": "0x18160ddd"
+        },
+        "0x18ee869"
+      ],
+      "result": "0x000000000000000000000000000000000000000001c161cda9926c8fe16f94a7",
+      "state": "ok",
+      "reason": null
+    }
+  ],
+  "state": "ok",
+  "reason": null,
+  "observedAt": "2026-10-07T20:46:30.528Z"
+}

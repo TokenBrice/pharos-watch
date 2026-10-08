@@ -8,10 +8,10 @@ import { buildMissingSupplyResolution, type CapacityResolution, type CapacityRes
 
 type SupplyFullModel = Extract<RedemptionCapacityModel, { kind: "supply-full" }>;
 
-export async function resolveSupplyFullCapacity(
+export function resolveSupplyFullCapacity(
   model: SupplyFullModel,
   context: CapacityResolverContext,
-): Promise<CapacityResolution> {
+): CapacityResolution {
   const { supplyUsd } = context;
   const capacityConfidence = resolveCapacityConfidence(model);
   const capacitySemantics = resolveCapacitySemantics(model);

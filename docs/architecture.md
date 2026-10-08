@@ -70,6 +70,8 @@ The API integration artifacts follow the same static-export pattern. `scripts/ma
 
 Worker cron refactors should place reusable stage helpers under `worker/src/cron/shared/`. The general abort vocabulary is `throwIfAborted`/`rethrowIfAborted` in `worker/src/lib/abort.ts`; cron families that need a terminal abort *result* (rather than a throw) build it beside their own stage runner, as `sync-stablecoins` does in `worker/src/cron/sync-stablecoins/runtime.ts`.
 
+Reserve freshness policy is runtime-neutral in `shared/lib/live-reserve-freshness.ts`; declarations and the schema-derived telemetry vocabulary remain in `shared/types/`. `shared/lib/redemption-route-suspension.ts` owns pure reviewed-suspension admission without importing Zod authoring. Worker row decoding, accepted-generation sealing and redemption consumers share whole-claim telemetry validation: malformed nested evidence is quarantined, not partially salvaged. The reserve producer seals one full-cohort schema-v2 generation before redemption consumes it; a standalone executable observer has its own route evidence and never manufactures reserve composition or `reserveInput`. See [Live Reserve Sync](./live-reserves.md#snapshot-admission-gates) and [Redemption Backstops](./redemption-backstops.md).
+
 ## Frontend Runtime And SEO Surface
 
 - The root layout keeps the universal `#main-content` skip link. Its additional `#data` shortcut uses `RouteChrome`'s `dataTableOnly` gate and appears only on the ten workspaces that own that target, not editorial, comparison, detail, or operator routes; the gate accepts canonical trailing-slash and slashless pathname forms.
@@ -344,16 +346,16 @@ Every entry in `TRACKED_STABLECOINS` is in one of five lifecycle phases. The pha
 | --- | --- | --- | --- | --- |
 | Active | `"active"` (or omitted) | Yes | Yes | Live tables, analytics, aggregates, alerts, and detail page |
 | Pre-launch | `"pre-launch"` | No | No | `/upcoming/` and pre-launch detail variant |
-| Quarantined | `"quarantined"` plus `listingStatusReview` | No | No | Static read-only detail record with reason and review date |
+| Quarantined | `"quarantined"` plus `listingStatusReview` | No ordinary collection; explicitly expiring reserve-only prerequisite exception | No | Static read-only detail record with reason and review date |
 | Delisted | `"delisted"` plus sourced `listingStatusReview` | No | No | Static historical detail record |
 | Frozen | `"frozen"` plus `frozenAt` and `obituary` | No | No | `/cemetery/` and preserved archive detail page |
 
 The main registry universes from `shared/lib/stablecoins/registry.ts` are:
 
 - `TRACKED_STABLECOINS` — the complete catalog across all five phases. Use for canonical identity, schema validation, static detail params, sitemap entries, and known provider IDs in discovery.
-- `ACTIVE_STABLECOINS` — active or omitted status only. Every write-side cron, live aggregator, PSI/DEWS/Bank-Run-Gauge input, and Telegram alert target must use this universe.
+- `ACTIVE_STABLECOINS` — active or omitted status only. Ordinary write-side crons, live aggregates, PSI/DEWS/Bank-Run-Gauge and Telegram alerts use this universe. The explicitly reviewed quarantined NAV `bootstrapForSupplyAdmission` exception authorizes only one bounded reserve prerequisite before its UTC-start `reviewBy` expiry; it does not expand the active producer/seal census, change lifecycle or authorize listing.
 - `PRE_LAUNCH_STABLECOINS`, `QUARANTINED_STABLECOINS`, `DELISTED_STABLECOINS`, and `FROZEN_STABLECOINS` — explicit lifecycle partitions that drive their respective static or archive surfaces.
-- `READABLE_STABLECOINS` — all post-launch records: active, quarantined, delisted, and frozen. Use only for historical/read-only navigation and identity resolution, never live collection or cache publication.
+- `READABLE_STABLECOINS` — all post-launch records: active, quarantined, delisted, frozen. Historical/read-only navigation and identity resolution only; this projection alone never authorizes live collection or cache publication.
 
 Listing scope, classes, quarantine, and delisting are defined in [Stablecoin Listing Policy](./listing-policy.md). The freeze procedure is documented in [Freezing a Tracked Stablecoin](./freezing-stablecoins.md).
 

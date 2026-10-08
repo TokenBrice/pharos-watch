@@ -18,7 +18,6 @@ const REVIEW_MAX_AGE_SEC = 365 * 24 * 60 * 60;
 const RESOLVED_OUTPUTS = {
   "fxd-fathom": ["usdt-tether"],
   "iusd-indigo-protocol": ["usdm-moneta", "usdc-circle"],
-  "jusd-juicedollar": ["usdc-circle", "usdt-tether", "ctusd-citrea"],
 } as const;
 
 const ROUTE_DEPLOYMENTS = {
@@ -28,10 +27,6 @@ const ROUTE_DEPLOYMENTS = {
   "iusd-indigo-protocol": [
     ["usdm-moneta", "cardano", "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d", 6],
     ["usdc-circle", "cardano", "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378", 6],
-  ],
-  "jusd-juicedollar": [
-    ["usdc-circle", "citrea", "0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839", 6],
-    ["ctusd-citrea", "citrea", "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d", 6],
   ],
 } as const;
 

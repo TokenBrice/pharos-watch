@@ -11,7 +11,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { isRedemptionSettlementFaster, resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
-import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-backstop-configs/schema";
+import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -26,6 +26,7 @@ import {
   deriveSupplyModelExitRouteObservation,
   buildPhysicalToUsdExitObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
+  usesPrimaryRedemptionReviewTerms,
 } from "../redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
@@ -543,7 +544,9 @@ function buildCertifiedRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInp
     capacityScoringHorizon: maximumSec === null ? "unknown" : maximumSec <= observation.settlementHorizonSec ? "immediate" : "queued",
     settlementModel: maximumSec === 0 ? "atomic" : maximumSec === null ? "unknown" : "bounded-delay",
     settlementSlaSec: maximumSec, queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
-    physicalResourceKeys: [...certificate.resourceKeys].sort(compareText),
+    physicalResourceKeys: [...new Set([...certificate.resourceKeys,
+      ...(observation.sharedResourceKey ? [observation.sharedResourceKey] : []),
+    ])].sort(compareText),
     failureDomains: certificate.failureDomainKeys.map((key) => ({ kind: "redemption-rail" as const, key })).sort((a, b) => compareText(a.key, b.key)),
     executionCosts: canonicalExecutionCosts(observation, () => null),
     output: buildOutputReview(fixedInput, observation, certificate.observationGenerationId, assetId),
@@ -665,15 +668,16 @@ function redemptionExecutionCertainty(
 
 function redemptionCoverageClass(
   entry: RedemptionBackstopEntry,
+  observation: ExitRouteObservation,
+  clockSec: number,
 ): RouteReview["coverageClass"] {
-  // A reviewed bounded-terms gap keeps the captured mechanism and capacity
-  // curve visible, but it cannot lend score credit to settlement/cost values
-  // that the review did not establish. This is V9-only static disposition;
-  // the frozen redemption observation and stored row remain untouched.
-  if (
-    getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms
-      ?.scoringDisposition === "bounded-terms-gap"
-  ) {
+  const config = getRedemptionBackstopConfig(entry.stablecoinId);
+  const reviewed = config?.v9RouteReviewTerms;
+  const reviewSec = reviewed?.reviewedAt ? Date.parse(`${reviewed.reviewedAt}T00:00:00Z`) / 1_000 : NaN;
+  // Primary terms bind every redemption-lane ID unless separately reviewed.
+  if (reviewed?.scoringDisposition === "bounded-terms-gap" &&
+    usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation) &&
+    Number.isFinite(reviewSec) && reviewSec <= clockSec) {
     return "diagnostic";
   }
   // Current-open evidence also gates discounted credit. Producer rejection
@@ -700,9 +704,10 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number,
   const capturedBaseSettlementModel = outputIdentityMatches && (reviewed?.settlementModel !== undefined || reviewed?.businessDayTerms !== undefined)
     ? config?.settlementModel ?? entry.settlementModel
     : entry.settlementModel;
-  // Business-day terms supersede generated/persisted scalar guesses. If the
-  // calendar or guarantee fails admission, no captured scalar becomes an SLA.
-  const capturedBaseSettlementDelaySec = reviewed?.businessDayTerms !== undefined
+  // Reviewed completion terms supersede persisted scalar guesses. A rejected
+  // scalar/calendar source must not revive its generated SLA from the row.
+  const capturedBaseSettlementDelaySec = reviewed?.businessDayTerms !== undefined ||
+      reviewed?.settlementDelaySec !== undefined
     ? undefined
     : entry.settlementModel === capturedBaseSettlementModel
       ? entry.settlementDelaySec
@@ -753,7 +758,7 @@ function redemptionReviewTerms(entry: RedemptionBackstopEntry, clockSec: number,
         settlementModel === reviewedSettlementModel &&
         reviewedSettlementDelaySec !== undefined
       ? reviewedSettlementDelaySec
-      : reviewed?.businessDayTerms !== undefined
+      : reviewed?.businessDayTerms !== undefined || reviewed?.settlementDelaySec !== undefined
         ? undefined
         : settlementModel === capturedBaseSettlementModel
           ? capturedBaseSettlementDelaySec
@@ -813,8 +818,10 @@ function redemptionExecutionCosts(
   return canonicalExecutionCosts(
     observation,
     (point) =>
-      observation.executionCostBps ??
-      (config
+      point.requestedNotionalUsd === observation.requestedNotionalUsd &&
+        point.maxCostBps === observation.maxCostBps && observation.executionCostBps !== undefined
+        ? observation.executionCostBps
+        : (config
         ? resolveV9RedemptionRouteCostBpsAtNotional(
             config,
             point.requestedNotionalUsd,
@@ -831,11 +838,10 @@ function hasUnquantifiedDocumentedRedemptionCost(
   observation: ExitRouteObservation,
 ): boolean {
   // A frozen documented row cannot establish a bound that the current review
-  // explicitly leaves unquantified. Already diagnostic terms-gap reviews
-  // retain captured terms; measured execution has separate evidence.
+  // explicitly leaves unquantified. A settlement-only gap cannot certify an
+  // unrelated numeric fee fallback; measured execution has separate evidence.
   return observation.evidenceKind === "documented-terms" &&
     config?.costModel.kind === "dynamic-or-unclear" &&
-    config.v9RouteReviewTerms?.scoringDisposition !== "bounded-terms-gap" &&
     config.costModel.feeBpsMax == null &&
     config.v9RouteCostTerms === undefined;
 }
@@ -869,12 +875,14 @@ function buildRedemptionRouteReview(
     (observation.output.kind === "tracked-stablecoin" &&
       outputIdentityIssues.length === 0);
   const reviewedTerms = redemptionReviewTerms(entry, fixedInput.clockSec, stableOutputIdentityMatches);
-  const physicalResourceKeys =
-    scope.kind === "issuer"
+  const physicalResourceKeys = [
+    ...(observation.sharedResourceKey ? [observation.sharedResourceKey] : []),
+    ...(scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
       : scope.kind === "protocol"
         ? [`protocol:${scope.protocol}${scope.chain ? `:${scope.chain}` : ""}`]
-        : dexPhysicalResourceKeys(observation);
+        : dexPhysicalResourceKeys(observation)),
+  ].sort(compareText);
   const outputReview =
     outputIdentityIssues.every((issue) => issue.code === "output-identity-mismatch")
       ? buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId)
@@ -898,7 +906,7 @@ function buildRedemptionRouteReview(
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
     modelConfidence,
-    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry),
+    coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation, fixedInput.clockSec),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon

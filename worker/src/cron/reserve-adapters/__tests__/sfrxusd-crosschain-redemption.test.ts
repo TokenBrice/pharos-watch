@@ -23,6 +23,9 @@ import {
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../../../lib/sfrxusd-crosschain-redemption-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
+import * as crosschainObserver from "../sfrxusd-crosschain-redemption";
+import type { SfrxusdCrosschainV9RouteAttempt } from "../../../lib/sfrxusd-crosschain-redemption-route";
+import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
 
 const ABI = parseAbi([
   "function paused() view returns (bool)",
@@ -543,6 +546,28 @@ async function observe(readClient: SfrxusdCrosschainRouteReadClient) {
   );
 }
 
+async function runProducerWithAttempt(attempt: SfrxusdCrosschainV9RouteAttempt) {
+  const supplyAssetsRaw = ETHEREUM_SUPPLY * PRICE / E18;
+  const asset = parsed.slice.expectedAssetAddress;
+  if (!asset) throw new Error("sfrxUSD fixture requires its reviewed underlying asset");
+  installErc4626Network({
+    vault: SFRXUSD,
+    asset,
+    totalAssets: supplyAssetsRaw,
+    totalSupply: ETHEREUM_SUPPLY,
+    convertedAssets: supplyAssetsRaw,
+    // Bigger than the remote withdrawal bound; never an alternative cross-chain exit.
+    idleBalance: 2_000_000n * E18,
+    decimals: 18,
+  });
+  const routeSpy = vi.spyOn(crosschainObserver, "observeSfrxusdCrosschainRedemptionRoute").mockResolvedValueOnce(attempt);
+  try {
+    return await runTrackedVault("sfrxusd-frax");
+  } finally {
+    routeSpy.mockRestore();
+  }
+}
+
 describe("observeSfrxusdCrosschainRedemptionRoute", () => {
   it("publishes a finalized diagnostic packet without inventing gas or settlement evidence", async () => {
     const readClient = client();
@@ -593,25 +618,32 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
         now: NOW,
       }),
     ).toBeNull();
+    const result = await runProducerWithAttempt(attempt);
+    const originalSourceTime = Math.min(
+      attempt.state.ethereumBlock.blockTimestamp,
+      attempt.state.fraxtalBlock.blockTimestamp,
+    );
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityKind: "documented-bound",
+      settlementBoundUnproven: true,
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      sourceTimestamp: originalSourceTime,
+      v9RouteAttempt: attempt,
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(result.metadata?.redemption).not.toHaveProperty("blockNumber");
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+    expect(result.metadata).not.toHaveProperty("sfrxusdCrosschainWithdrawableRaw");
     const reserveSnapshot = {
       stablecoinId: "sfrxusd-frax",
       fetchedAt: NOW - 30,
       source: "erc4626-single-asset",
-      metadata: {
-        freshnessMode: "verified" as const,
-        sourceTimestamp: NOW - 30,
-        redemption: {
-          capacityUsd: attempt.state.capacity.capacityUsd,
-          capacityKind: "live-direct-bounded" as const,
-          freshnessKind: "same-run-onchain" as const,
-          routeStatus: "open" as const,
-          routeStatusSource: "onchain" as const,
-          sourceUrls: attempt.state.sourceUrls,
-          v9RouteAttempt: attempt,
-        },
-      },
-      warningCount: 0,
-      warnings: [],
+      metadata: result.metadata!,
+      warningCount: result.warnings?.length ?? 0,
+      warnings: result.warnings ?? [],
       sourceModel: "single-bucket" as const,
       evidenceClass: "independent" as const,
       syncStatus: "ok" as const,
@@ -621,7 +653,9 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       reserveSnapshot,
       NOW,
     );
-    expect(liveMetadata.v9SfrxusdCrosschainRouteState).toEqual(attempt.state);
+    // The original diagnostic packet survives, but absent executable capacity
+    // cannot authorize a specialized route observation.
+    expect(liveMetadata.v9SfrxusdCrosschainRouteState).toBeNull();
     expect(
       readRedemptionBackstopLiveMetadata(
         "sfrxusd-frax",
@@ -651,7 +685,27 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       NOW,
       { reserveSnapshotMetadata: reserveSnapshot },
     );
-    expect(entry.capacityProfile?.exitRouteObservations).toBeUndefined();
+    for (const observation of entry.capacityProfile?.exitRouteObservations ?? []) {
+      expect(observation).toMatchObject({
+        scoreEligible: false,
+        executableUsd: 0,
+        settlementBoundUnproven: true,
+        capacityEvidenceTier: "heuristic",
+      });
+    }
+    expect(entry).toMatchObject({
+      resolutionState: "missing-capacity",
+      score: null,
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      sourceTimestamp: originalSourceTime,
+      capacityProfile: {
+        immediateUsd: null,
+        scoringUsd: null,
+        settlementBoundUnproven: true,
+        scoringHorizon: "unknown",
+      },
+    });
     const labels = vi
       .mocked(readClient.multicall)
       .mock.calls.flatMap((call) => call[1].map((item) => item.label));
@@ -718,6 +772,20 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       status: "rejected",
       rejectionCode,
     });
+  });
+
+  it("preserves a rejected onchain pause without laundering idle into measured zero or open capacity", async () => {
+    const attempt = await observe(client({ state: { remotePaused: true } }));
+    expect(attempt).toMatchObject({ status: "rejected", rejectionCode: "route-paused" });
+    const result = await runProducerWithAttempt(attempt);
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "paused",
+      routeStatusSource: "onchain",
+      v9RouteAttempt: attempt,
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("settlementBoundUnproven");
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
   });
 
 });

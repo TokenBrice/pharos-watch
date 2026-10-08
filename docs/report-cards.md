@@ -7,8 +7,8 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.10`<!-- GENERATED-END: methodology-version-safety-score -->
-- Public response schema: report v7 with score trace v4; retained older publications require explicit historical version dispatch or refusal, never fabricated cause defaults
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.11`<!-- GENERATED-END: methodology-version-safety-score -->
+- Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` is the current generated identity, derived from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
@@ -18,7 +18,7 @@ Safety Score V10 is the sole active stablecoin safety model. It publishes eviden
 
 Historical V8 methodology is documented in the scoring changelog. It is not a production API, fallback, selector input, or frontend model.
 
-The v10.10 correction counts distinct evidence obligations without removing scoring witnesses, publishes fully determined reserve-bound factors as known, and admits independent exact-scope researched-negative incident reviews. The structured changelog records the wave-5 owner approval of 2026-10-07 and separates these methodology changes from producer repairs that require fresh observations.
+The v10.11 live-reserve/redemption closure preserves explicit route-factor gaps, requires completion-scoped settlement evidence and keeps costs request-specific. Reviewed route curation and provenance repairs do not change pillar weights, request grids, portfolio coverage or grade gates; the structured changelog separates frozen-replay movers from producer-dependent outcomes.
 
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 
@@ -376,15 +376,15 @@ Methodology **9.98** makes linked reserve kinds explicit without refreshing hist
 
 Methodology **9.97** retains scoring weights, materiality thresholds, and evidence admission rules while correcting reserve attribution and precision. Accountable reconciles reviewed nested leaves; OnRe identifies Solomon's replacement USDv mint; Reservoir identifies the high-risk Sentora PRIME PYUSD claim; Re keeps protocol-pooled holdings unlinked without an attributable off-chain denominator and tranche waterfall. Frax, Nest, and InfiniFi preserve positive measured dust, and ftUSD validates present exact collateral identities without a fixed row count. Producer recovery does not establish scoring admission: weak probes, unverified freshness, and reconciliation failures retain their existing gates. Agora's Fern discovery repair preserves the exact reviewed July report and integrity checks.
 
-### Report schema v7
+### Report schema v8
 
-Report v7 is a semantic cutover: cause-bearing exclusions, partial weights and pipeline-gap/null-grade are distinct from NR. `ratingStatus`, full `partialEvidence`, separate `confidenceDimensions` and `completeness.pipelineGapCount/pipelineGapIds` reconcile to the cards. Existing supply/shared-book fields retain their meanings.
+The outer API report is schema v8 (`model: "v9"`), carrying public publication schema v7 with typed exact exit identity. Cause-bearing exclusions, partial weights and pipeline-gap/null-grade remain distinct from NR. `ratingStatus`, full `partialEvidence`, separate `confidenceDimensions` and `completeness.pipelineGapCount/pipelineGapIds` reconcile to the cards. Existing supply/shared-book fields retain their meanings.
 
 Evidence responsibility separates scoring witnesses from open obligations. `scoreTrace.evidenceResponsibility.facts` retains every published reason/path and `totalFactCount` remains its witness count. The per-owner summaries count each exact originating `sourceGapId` once per card; a source-less singleton causal view aliases an obligation only when its exact root is already present as a source under that owner. Critical counts mark an obligation critical if any of its witnesses is critical, and reason-code lists retain all witness codes. Inherited foreign-root views without a matching source, gapless synthetic rows, and multi-root views remain separate obligations; there is no cross-card deduplication. The coverage headline sums these summary obligation counts, not the witness-array lengths. This accounting does not change scoring, caps, evidence admission, or NR witnesses.
 
 Public evidence facts retain `sourceGapId` and `causeGapIds` for this accounting. Deduplication is owner-local within each card, never across assets or responsibility categories; synthetic, unmatched inherited and multi-root views cannot erase independent obligations.
 
-The current trace validator requires these obligation totals while separately requiring `totalFactCount === facts.length`. Older witness-count summaries containing duplicate roots are not reinterpreted as valid obligation summaries: activation must coordinate the newly computed accepted publication with consumers using the new validator. Retained history needs explicit historical dispatch or refusal, not compatibility aliases.
+Current traces require obligation totals and `totalFactCount === facts.length`; witness totals are not reinterpreted as obligations. Dated snapshots dispatch report7/breakdown6 by recorded methodology: 10.00–10.09 count witnesses, 10.10 counts obligations. They retain pre-10.11 routes, identity, bytes and ETag; live report8 stays strict. Identity mismatches, corrupt counts/scores and report7 claimed as 10.11 remain invalid.
 
 Publications carry `card.supply` with `circulatingUsdAtEvaluation`, `asOfSec`, and `generationId`. The amount is the evaluated compiled supply fact, not a current market-cap lookup. Unknown supply remains null, including its unavailable clock and identity. Observed zero remains zero. The supply clock is the fingerprint whose generation matches that fact; it is distinct from the publication clock.
 
@@ -412,6 +412,8 @@ The separate offline `GET /api/dependency-scenarios/v1` artifact is **not canoni
 
 Current producers emit report 7. Retained old schemas use explicit historical dispatch or are refused; no active compatibility alias supplies fake causes. Current dependency graph/scenario body schemas are 2 while their `/v1` route paths stay unchanged. Graph validation requires unique edges sorted by `(from, to, kind)` and exactly the serial/basket card projection; coverage cannot introduce external graph nodes.
 
+Primary and alternative Exit rows require typed `routeId` and `lane` (`dex` or `redemption`) in addition to opaque producer `routeKey`. Standalone reconciliation joins the exact configured redemption route ID and redemption lane, never prefix/suffix inference. Public breakdown/publication schema 7 and API wrapper 8 carry this payload-identity cutover; persisted public v6 is unavailable until a compatible accepted publication. Do not reconstruct or rewrite historical identity bytes.
+
 ## Exit Route Evidence
 
 A current established circulating USD amount sizes Exit's same-notional request when supply is `bounded-unknown` solely under `v9.supply.bridge-materiality`, including missing bridge profiles, ambiguous joins, and missing or rejected attribution packets. Unknown, stale, unsupported or unavailable amounts cannot size it. Sizing never resolves bridge/control/transfer/distribution evidence; those gaps follow scoped causes. Stress fraction, grid, cost bound and horizon stay unchanged, and sizing grants no route credit or substitute for executable capacity and terms.
@@ -429,6 +431,20 @@ ERC-4626 certificate grid points are independent pinned execution receipts, not 
 Exit-execution input generations bind the asset, canonical selected notional/cost bucket and captured input-unit valuation/reference, not the raw circulating-supply float. Supply drift within the same bucket preserves admission; crossing a bucket or changing the cost budget or input reference rejects with `execution-generation-mismatch`, even if the certificate also contains that other grid point. Admission still requires the exact selected point, reviewed deployment/implementation, source generation, integer units, gates, output/fee valuations and settlement proof under the unchanged policy freshness budgets. Pre-cutover input digests are incompatible and require fresh producer observations; changing the binding never re-certifies old captures.
 
 For documented redemption terms, a current dynamic cost review without a numeric ceiling keeps cost evidence unquantified even when a frozen row claims a fixed fee. HBD therefore receives no zero-cost promotion from its no-extra-fee conversion statement while its debt-ratio haircut remains unvalued. Dynamic live-direct atomic/immediate rails also require current on-chain or protocol-API open attribution before discounted credit; retained positive capacity with paused or unknown status remains diagnostic and does not prove exhaustion.
+
+Explicit `missingScoringFields` from the asset's primary terms-gap review produce capacity, cost or settlement factor gaps across all redemption-lane route IDs, even when captured numbers/known statuses exist. Noncanonical controller/cross-chain IDs and `execution:<digest>` are not exemptions. Only the separately reviewed exact `physical-to-usd:<asset-id>` rail carrying its own `physicalToUsd` trace opts out; a name alone cannot. A strictly newer admitted exact certificate for that same asset/rail/model/request can supersede the review. Missing cost is otherwise detected from fee evidence or any null point cost; missing settlement from `settlementBoundUnproven` or a null SLA. Known factor text does not admit the route: exact request, capacity, valued complete output, access, freshness and execution/settlement gates still apply.
+
+Scalar settlement requires a dated current `supports: ["settlement"]` source establishing the completed endpoint, not processing, initiation, an average, epoch or earliest claim. Conditional/target calendar terms and rejected scalar/calendar overlays cannot revive captured generated SLAs. Spiko normal D+1 dealing, Aegis/Avant cooldowns, Hyperbeat processing and USN's five-Business-Day clause retain explicit settlement gaps rather than invented elapsed maxima. Exact funded post-maturity claims retain their separate evidence lane.
+
+Per-point costs retain their own request identity. An observation-level scalar applies only to matching `requestedNotionalUsd` **and** `maxCostBps`; other points resolve from current bounded config terms. A minimum charge is not an additive fee or a maximum. Fixed issuer zero does not prove zero bank/network/partner deductions, full net proceeds or a differently scoped branch's cost. Curation cannot backdate fee reads; positive uptake needs a new producer observation and accepted capture.
+
+`exit-routes` and `exit-portfolio-coverage` are separate from local cost/settlement gaps. Empty inventory requires complete deployment/supply-chain and absence evidence to establish a measured absence. For a populated DEX surface, portfolio completeness requires zero retained pools or admitted budgeted exact-route coverage; missing observations, missing discovery integration and unsupported exact venues retain their distinct causes. Redemption fee/settlement changes cannot clear the DEX portfolio denominator or alter failure-domain/resource diversification.
+
+Coverage diagnostics distinguish **gap instances** from **affected cards**. The frozen October 7 research baseline had 96 cost instances on 96 cards, 87 settlement instances on 78 cards, 40 cards with literal `exit-routes`, and 142 with `exit-portfolio-coverage` (256-card union). These are dated baseline counts, not current coverage. Clearing a suffix is field coverage, not positive route admission or portfolio completeness.
+
+The coverage audit accepts an optional `--report-cards` capture `{ asOfSec, cards: [{ id, localCauseGaps }] }`. Its `reportCardDiagnostics` is null without a capture; otherwise it reports the capture clock, `evaluatedCards`, `costGapInstances`, `costAffectedCards`, `settlementGapInstances`, `settlementAffectedCards`, `factorGapAffectedCards` (cost/settlement union), and `portfolioCoverageAffectedCards` (literal portfolio cause). Instances count distinct normalized local route-factor keys per card; affected cards count each card once. Static config disposition counts remain separate, and a fee-only correction cannot change required/admitted DEX-pool coverage.
+
+Release replay on the same October 7 input produced 11 intended grade/status changes: eutbl-spiko B-→C-, safo-spiko-usd C+→C-, ustbl-spiko C+→C-, uktbl-spiko C+→C-, spkcc-spiko C→C-, eursafo-spiko C-→D, eurspkcc-spiko C-→D, hbusdt-hyperbeat C+→C-, cash-phantom C-→D, mmev-midas D→NR and syusd-aegis NR→D. Unsupported scalar removal and explicit gaps explain the exit moves; CASH's combined Treasury/MMF class remains conservative `other`. **syusd-aegis is a causal D-rating-gate effect, not an improvement**: its Exit score remains 35. mMEV's pre-existing missing capacity/cost/settlement review now affects evidence/withholding. uktbl's cap merely stops binding below its limit; savUSD and FPI also have intended non-grade Exit decreases. Frozen attribution does not certify newly measured production observers.
 
 Consumer rejection retains the captured execution evidence as rejected with its admission reason, withholding that route's capacity, cost and output credit without quarantining an otherwise usable asset.
 
@@ -451,6 +467,8 @@ Methodology **9.96** makes two score-semantic changes. Issuer routes honor revie
 ## Canonical Publication
 
 See [Compile hot path and its memory budget](#compile-hot-path-and-its-memory-budget) for compilation resource constraints and regression measurements.
+
+Current capture health requires original consumed reserve freshness mode and invalid-source diagnosis under the schema-v2 accepted reserve/redemption contract. Mode-less v1 bindings are unavailable until a new full-cohort reserve seal and redemption run; static and direct/no-reserve evidence retain their separate semantics. Strict matching configuration fingerprints and valid fetch clocks are provenance gates, not improved reserve quality.
 
 The publisher omits optional `sharedBookId` and `accessPosture.freezeLookthrough` when null; populated identity and diagnostic evidence remain intact, and known empty `dependencyCoverage` remains an explicit array because its presence establishes coverage availability.
 
@@ -572,7 +590,7 @@ The response includes:
 - the canonical serial/basket dependency graph
 - accepted `updatedAt`
 
-See [Report schema v7](#report-schema-v7) for cause-aware fields. Completeness reconciles `expectedCount = ratedCount + notRatedCount + pipelineGapCount`, with disjoint sorted NR/pipeline IDs. Index 2 and free-grades 1 preserve compact status/partial metadata; graph/scenario schema 2 preserves technical parent/model nulls separately from NR.
+See [Report schema v8](#report-schema-v8) for cause-aware fields and typed route identity. `/api/report-cards/v9` wraps public publication 7 as body schema 8; old public v6 is rejected rather than inferred current. Completeness reconciles `expectedCount = ratedCount + notRatedCount + pipelineGapCount`, with disjoint sorted NR/pipeline IDs. Index 2 and free-grades 1 preserve compact status/partial metadata; graph/scenario schema 2 preserves technical parent/model nulls separately from NR.
 
 
 Each pillar row on a card carries a `freshness` value: `current`, `stale`, or `unknown`. The Exit

@@ -16,6 +16,7 @@ import {
 } from "./live-reserve-adapter-descriptors";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
+import { isValidIsoDateOnly } from "../types/date-primitives";
 
 export * from "../types/live-reserve-adapter-policy";
 
@@ -65,6 +66,9 @@ const baseLiveReserveConfigSchema = z.object({
   breakerScope: z.string().min(1).optional(),
   display: LiveReserveDisplaySchema.optional(),
   scoring: liveReserveScoringPolicySchema.optional(),
+  bootstrapForSupplyAdmission: z.object({
+    reviewBy: z.string().refine(isValidIsoDateOnly, "reviewBy must be a valid ISO calendar date"),
+  }).strict().optional(),
   suspended: z
     .object({
       reason: z.string().min(1),
@@ -130,12 +134,51 @@ const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) 
     // A params block is only optional when the adapter's own schema accepts
     // `{}`; otherwise omitting it must fail config validation, not first in prod.
     params: paramsSchema.safeParse({}).success ? paramsSchema.optional() : paramsSchema,
+  }).superRefine((config, ctx) => {
+    if (adapterKey !== "single-asset") return;
+    // These fields have no runtime meaning in the onchain liveness reader.
+    // Reject them at authoring time instead of silently accepting a false probe.
+    const params = config.params as LiveReserveAdapterParamsByKey["single-asset"] | undefined;
+    if (!params) return;
+    const httpFields = ["reserveProbe", "supplyProbe", "timestampProbe", "liabilityTimestampComponents", "reserveUnit"] as const;
+    // The dynamically built schema has validated this shape before refinement.
+    const inputs = config.inputs as LiveReservesConfig["inputs"];
+    if (inputs.primary.kind !== "http-json") {
+      for (const field of httpFields) {
+        if (params[field] !== undefined) {
+          ctx.addIssue({ code: "custom", path: ["params", field], message: "HTTP reserve probes are unsupported by the onchain liveness reader" });
+        }
+      }
+      return;
+    }
+    if (params.reserveUnit === undefined && params.liabilityTimestampComponents === undefined) return;
+    if (config.version !== 2) {
+      ctx.addIssue({ code: "custom", path: ["version"], message: "Native reserve units and liability-component clocks require version 2" });
+    }
+    for (const field of ["reserveUnit", "liabilityTimestampComponents", "reserveProbe", "supplyProbe"] as const) {
+      if (params[field] === undefined) {
+        ctx.addIssue({ code: "custom", path: ["params", field], message: "Native reserve-unit reporting requires paired reserve and liability probes" });
+      }
+    }
+    if (params.timestampProbe !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["params", "timestampProbe"], message: "A liability component clock cannot date the reserve book" });
+    }
   }).superRefine((config, ctx) => validateAdapterConfigPolicy(adapterKey, config, ctx));
 }) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
 
 export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
   liveReserveConfigVariants as unknown as [z.ZodType<LiveReservesConfig>, ...z.ZodType<LiveReservesConfig>[]],
 );
+
+/** The authorization expires at UTC start of reviewBy, not end of that day. */
+export function isReserveSupplyAdmissionBootstrapAuthorized(
+  config: LiveReservesConfig,
+  nowMs: number,
+): boolean {
+  const reviewBy = config.bootstrapForSupplyAdmission?.reviewBy;
+  return reviewBy != null && isValidIsoDateOnly(reviewBy)
+    && Number.isFinite(nowMs) && nowMs < Date.parse(`${reviewBy}T00:00:00Z`);
+}
 
 
 export {

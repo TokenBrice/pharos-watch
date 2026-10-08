@@ -5,7 +5,9 @@ import {
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
+  REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
 } from "../redemption-backstop-scoring";
+import { composeExitComponentScore } from "../exit-route-scoring";
 
 describe("computeModeledExitSizeUsd", () => {
   it("models exit size as five percent of supply with floor and cap", () => {
@@ -191,6 +193,7 @@ describe("computeRedemptionBackstopScore", () => {
       settlementScore: 100,
       executionCertaintyScore: 100,
       capacityScore: null,
+      executableCapacityUsd: 1_000_000,
       outputAssetQualityScore: 100,
       costScore: 100,
     });
@@ -198,20 +201,54 @@ describe("computeRedemptionBackstopScore", () => {
     expect(result.capsApplied).toEqual([]);
   });
 
-  it.each([
-    ["accessScore", 20],
-    ["settlementScore", 15],
-    ["executionCertaintyScore", 15],
-    ["capacityScore", 25],
-    ["outputAssetQualityScore", 15],
-    ["costScore", 10],
-  ] as const)("weights %s independently", (component, expected) => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, -1])(
+    "does not score unavailable or invalid executable capacity %s",
+    (executableCapacityUsd) => {
+      // Exercise untyped/old runtime callers as well as the required typed input.
+      const args = {
+        routeFamily: "stablecoin-redeem" as const,
+        accessScore: 100,
+        settlementScore: 100,
+        executionCertaintyScore: 100,
+        capacityScore: 100,
+        outputAssetQualityScore: 100,
+        costScore: 100,
+      };
+      const result = executableCapacityUsd === undefined
+        ? computeRedemptionBackstopScore(args as Parameters<typeof computeRedemptionBackstopScore>[0])
+        : computeRedemptionBackstopScore({ ...args, executableCapacityUsd });
+      expect(result).toEqual({ score: null, capsApplied: [] });
+    },
+  );
+
+  it("keeps ratio-only component evidence diagnostic when executable quantity is unavailable", () => {
+    const capacity = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
+    expect(capacity.score).toBeGreaterThan(0);
     expect(computeRedemptionBackstopScore({
       routeFamily: "stablecoin-redeem",
-      accessScore: 0, settlementScore: 0, executionCertaintyScore: 0,
-      capacityScore: 0, outputAssetQualityScore: 0, costScore: 0,
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      capacityScore: capacity.score,
+      outputAssetQualityScore: 100,
+      costScore: 100,
+      executableCapacityUsd: null,
+    })).toEqual({ score: null, capsApplied: [] });
+  });
+
+  it.each([
+    ["access", 20],
+    ["settlement", 15],
+    ["executionCertainty", 15],
+    ["capacity", 25],
+    ["outputAssetQuality", 15],
+    ["cost", 10],
+  ] as const)("weights %s independently", (component, expected) => {
+    expect(composeExitComponentScore({
+      access: 0, settlement: 0, executionCertainty: 0,
+      capacity: 0, outputAssetQuality: 0, cost: 0,
       [component]: 100,
-    })).toEqual({ score: expected, capsApplied: [] });
+    }, REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS)).toBe(expected);
   });
 
   it("floors a measured zero-capacity route at zero", () => {
@@ -296,6 +333,7 @@ describe("computeRedemptionBackstopScore", () => {
       capacityScore: 100,
       outputAssetQualityScore: 100,
       costScore: 100,
+      executableCapacityUsd: 1_000_000,
     });
     expect(result.score).toBe(70);
     expect(result.capsApplied).toContain("queue-route-cap");
@@ -310,6 +348,7 @@ describe("computeRedemptionBackstopScore", () => {
       capacityScore: 100,
       outputAssetQualityScore: 100,
       costScore: 100,
+      executableCapacityUsd: 1_000_000,
     });
     expect(result.score).toBe(65);
     expect(result.capsApplied).toContain("offchain-route-cap");
@@ -325,6 +364,7 @@ describe("computeRedemptionBackstopScore", () => {
       outputAssetQualityScore: 100,
       costScore: 100,
       totalScoreCap: 50,
+      executableCapacityUsd: 1_000_000,
     });
     expect(result.score).toBe(50);
     expect(result.capsApplied).toContain("config-cap");
@@ -339,6 +379,7 @@ describe("computeRedemptionBackstopScore", () => {
       capacityScore: 40,
       outputAssetQualityScore: 50,
       costScore: 60,
+      executableCapacityUsd: 1_000_000,
     });
     expect(result.score).toBe(33);
     expect(result.capsApplied).toEqual([]);
@@ -355,6 +396,7 @@ describe("computeRedemptionBackstopScore", () => {
         capacityScore: 100,
         outputAssetQualityScore: 100,
         costScore: 100,
+        executableCapacityUsd: 1_000_000,
       });
       expect(result.capsApplied).toEqual([]);
     }
@@ -370,12 +412,13 @@ describe("computeRedemptionBackstopScore", () => {
       routeFamily,
       accessScore: input, settlementScore: input, executionCertaintyScore: input,
       capacityScore: input, outputAssetQualityScore: input, costScore: input,
+      executableCapacityUsd: 1_000_000,
     })).toEqual({ score, capsApplied });
   });
 
   it.each([
-    [50, undefined, 50, ["queue-route-cap", "config-cap"]],
-    [90, undefined, 70, ["queue-route-cap"]],
+    [50, 1_000_000, 50, ["queue-route-cap", "config-cap"]],
+    [90, 1_000_000, 70, ["queue-route-cap"]],
     [50, 0, 0, ["zero-executable-capacity"]],
   ])("resolves config cap %s with executable capacity %s", (totalScoreCap, executableCapacityUsd, score, capsApplied) => {
     expect(computeRedemptionBackstopScore({

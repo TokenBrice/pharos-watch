@@ -150,7 +150,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "qcad-stablecorp",
     "display": {
@@ -166,6 +166,7 @@
     "params": {
       "label": "CAD fiat reserves",
       "risk": "very-low",
+      "reserveUnit": "CAD",
       "reserveProbe": {
         "kind": "json-path",
         "path": [
@@ -178,13 +179,11 @@
           "totalSupply"
         ]
       },
-      "timestampProbe": {
-        "kind": "json-path",
-        "path": [
-          "chains",
-          "0",
-          "lastSyncedAt"
-        ]
+      "liabilityTimestampComponents": {
+        "path": ["chains"],
+        "identityField": "chain",
+        "timestampField": "lastSyncedAt",
+        "quantityField": "totalSupply"
       },
       "reserveSourceLabel": "Stablecorp balances API"
     }

@@ -15,6 +15,7 @@ import {
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
+  reserveInfoWarning,
 } from "./helpers";
 import {
   adaptBranchBalanceReserves,
@@ -23,6 +24,8 @@ import {
   readBranchBalanceParams,
 } from "./branch-balances";
 import { decodeUint256Word } from "./abi-decode";
+import type { BranchPriceObservation } from "./defillama";
+import { hasDegradingWarnings, hasFatalWarnings } from "./validate";
 
 const ADAPTER_KEY = "evm-branch-balances";
 const DEFAULT_DEBT_DECIMALS = 18;
@@ -540,12 +543,16 @@ async function observeHoneyFactoryRedemptionCapacity(
         sourceUrls: params.sourceUrls,
         feeBps: maxFeeBps,
       }),
-      warnings: skippedAssets.length > 0
-        ? [reserveDegradedWarning(
-            "redemption-capacity-non-stable-assets-skipped",
-            `${ADAPTER_KEY} excluded unconfigured or non-pegged collateral from redemption capacity: ${skippedAssets.join(", ")}`,
-          )]
-        : [],
+      warnings: [
+        ...(skippedAssets.length > 0 ? [reserveDegradedWarning(
+          "redemption-capacity-non-stable-assets-skipped",
+          `${ADAPTER_KEY} excluded unconfigured or non-pegged collateral from redemption capacity: ${skippedAssets.join(", ")}`,
+        )] : []),
+        ...(factoryPaused ? [reserveDegradedWarning(
+          "honey-redemption-paused",
+          "HoneyFactory paused() returned true on-chain",
+        )] : []),
+      ],
       custodyBackingByHolder,
     };
   } catch (error) {
@@ -710,6 +717,7 @@ export async function fetchEvmBranchBalancesReserves(
   }
 
   const priceMapWarnings: LiveReserveWarning[] = [];
+  const priceObservations = new Map<string, BranchPriceObservation>();
   const priceMap = params.priceOracle
     ? new Map((await Promise.all(balances.map(async ({ branch, balanceRaw }) => {
         if (balanceRaw == null || balanceRaw === 0n) return null;
@@ -717,11 +725,19 @@ export async function fetchEvmBranchBalancesReserves(
         const raw = await onchain.uint256(
           oracle.contract, encodeAddressCallData(oracle.selector, branch.token.address),
         );
+        if (raw != null && raw > 0n) {
+          priceObservations.set(branch.name, {
+            sourceKind: "pinned-oracle",
+            sourceLookup: `${input.chain}:${oracle.contract}:${oracle.selector}:${branch.token.address}`,
+            quoteTimestamp: plan.observedBlock.timestamp,
+            quoteConfidence: null,
+          });
+        }
         return raw != null && raw > 0n
           ? [branch.name, decimalNumberFromBigInt(raw, oracle.decimals)] as const
           : null;
       }))).filter((entry): entry is readonly [string, number] => entry != null))
-    : await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
+    : await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx, priceObservations);
 
   const baseMetadata = {
     observedBlock: plan.observedBlock,
@@ -740,11 +756,39 @@ export async function fetchEvmBranchBalancesReserves(
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
+    priceObservations,
     censusComplete,
     liabilityUsd: totalDebtUsd,
     details: observationDetails,
     metadata: { ...baseMetadata, ...(totalDebtUsd != null ? { totalDebtUsd } : {}) },
   });
+  if (_coin.id === "xusd-babelfish" && debtSelector === "0x18160ddd" && debtRaw != null) {
+    const details = result.metadata!.details as Record<string, unknown>;
+    details.valuationBasis = "mixed-nominal-market";
+    details.liabilityBasis = "totalSupply-at-par";
+    details.liabilityRaw = debtRaw.toString();
+    // This reviewed USD basket has ten native, 18-decimal balances. Do not
+    // generalize at-par reconciliation to arbitrary collateral or receipts.
+    if (censusComplete && result.metadata?.valuationComplete === true
+      && debtDecimals === 18 && balances.length === 10
+      && balances.every(({ branch, balanceRaw, observedDecimals, balanceDecimals }) =>
+        balanceRaw != null && observedDecimals === 18n && branch.token.decimals === 18
+        && balanceDecimals == null && branch.receipt == null)) {
+      const nominalReserveRaw = balances.reduce((sum, entry) => sum + entry.balanceRaw!, 0n);
+      details.nominalReconciliation = {
+        basis: "reviewed-USD-basket-at-par",
+        reserveRaw: nominalReserveRaw.toString(),
+        liabilityRaw: debtRaw.toString(),
+        shortfallRaw: (debtRaw - nominalReserveRaw).toString(),
+        decimals: 18,
+        reserveAtParUsd: decimalNumberFromBigInt(nominalReserveRaw, 18),
+        shortfallAtParUsd: decimalNumberFromBigInt(debtRaw - nominalReserveRaw, 18),
+        ...(debtRaw > 0n
+          ? { ratio: decimalNumberFromBigInt(nominalReserveRaw, 18) / totalDebtUsd! }
+          : {}),
+      };
+    }
+  }
   // Unknown or circular claims cannot become a full collateralization numerator.
   if (totalDebtUsd != null && totalDebtUsd > 0 && censusComplete && result.metadata?.valuationComplete === true) {
     const details = result.metadata.details as { knownReserveValueUsd: number };
@@ -755,6 +799,22 @@ export async function fetchEvmBranchBalancesReserves(
         "undercollateralized",
         `${ADAPTER_KEY} collateralization ratio ${ratio.toFixed(4)} below 1.0 (collateral ${details.knownReserveValueUsd.toFixed(2)} USD vs debt ${totalDebtUsd.toFixed(2)} USD)`,
       ));
+    }
+  }
+  // Only independently complete custody composition can separate these
+  // operational conditions from reserve admission. Other defects stay degraded.
+  if (
+    censusComplete && result.metadata?.valuationComplete === true
+    && !hasDegradingWarnings(result.warnings) && !hasFatalWarnings(result.warnings)
+    && commonWarnings.every((warning) => warning.effect === "info"
+      || warning.code === "redemption-capacity-non-stable-assets-skipped"
+      || warning.code === "honey-redemption-paused")
+  ) {
+    for (let index = 0; index < commonWarnings.length; index++) {
+      const warning = commonWarnings[index];
+      if (warning.code === "redemption-capacity-non-stable-assets-skipped" || warning.code === "honey-redemption-paused") {
+        commonWarnings[index] = reserveInfoWarning(warning.code, warning.message);
+      }
     }
   }
   return commonWarnings.length > 0

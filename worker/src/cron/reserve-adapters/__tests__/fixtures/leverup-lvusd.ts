@@ -1,3 +1,18 @@
+import octoberWire from "./leverup-oct7-2026.json";
+
+// Six verbatim state responses at Monad 111423307, independently captured
+// 2026-10-07T20:48:57.724Z. The market quote is historical production context:
+// its quote timestamp/confidence were not retained and must stay unknown.
+export const leverupOctoberObservation = {
+  wire: octoberWire,
+  block: {
+    number: Number(octoberWire.block.number),
+    timestamp: Date.parse(octoberWire.block.timestamp) / 1000,
+    hash: octoberWire.block.hash,
+  },
+  marketPriceUsd: 0.9997246620495984,
+} as const;
+
 // captured-at: 2026-10-01
 // rpc.monad.xyz, eth_call at 0x687ae37; DefiLlama USDC quote at 1790841690.
 export const leverupObservation = {

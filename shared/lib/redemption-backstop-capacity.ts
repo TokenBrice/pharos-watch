@@ -1,12 +1,20 @@
 import type { RedemptionBackstopEntry } from "../types/redemption";
 import type { RedemptionBackstopConfig, RedemptionCapacityModel } from "./redemption-backstop-configs/shared";
 
+/** Pinned executable-state age; independent of cached output-price generation age. */
+export const EXECUTABLE_REDEMPTION_OBSERVATION_MAX_AGE_SEC = 10 * 60;
+
 export function resolveCapacityBasis(
   routeFamily: RedemptionBackstopConfig["routeFamily"] | null,
   model: RedemptionCapacityModel,
   capacityConfidence?: RedemptionBackstopEntry["capacityConfidence"],
 ): RedemptionBackstopEntry["capacityBasis"] | undefined {
   if (model.kind === "unquantified") return undefined;
+  if (model.kind === "executable-observer") {
+    return model.capacityUse === "measured" &&
+      (capacityConfidence === "live-direct" || capacityConfidence === "documented-bound")
+      ? "live-direct-telemetry" : undefined;
+  }
   if (model.kind === "reserve-sync-metadata") {
     if (capacityConfidence === "live-direct") return "live-direct-telemetry";
     if (capacityConfidence === "live-proxy") return "live-proxy-buffer";

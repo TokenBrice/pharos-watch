@@ -27,20 +27,33 @@ interface OpenEdenReserveCompositionResponse {
   // is excluded from immediate-redemption capacity.
   pendingUsdc?: number;
   reserveAssetsInUsd: number;
+  uAmount?: number;
   ratio: number;
 }
 
 
-export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): AdapterResult {
+export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse, apiUrl: string): AdapterResult {
   for (const [field, value] of [
     ["reserveAssetsInUsd", payload.reserveAssetsInUsd],
     ["usdoAmount", payload.usdoAmount],
+    ["totalTbillAmountInUsd", payload.totalTbillAmountInUsd],
+    ["usdcAmount", payload.usdcAmount],
+    ["buidlAmount", payload.buidlAmount],
+    ["vbillAmount", payload.vbillAmount],
+    ["usycAmountInUsd", payload.usycAmountInUsd],
+    ["benjiAmount", payload.benjiAmount],
+    ["rlusdAmount", payload.rlusdAmount === undefined ? 0 : payload.rlusdAmount],
+    ["pendingUsdc", payload.pendingUsdc === undefined ? 0 : payload.pendingUsdc],
+    ["uAmount", payload.uAmount === undefined ? 0 : payload.uAmount],
   ] as const) {
     if (!Number.isFinite(value) || value < 0) {
       throw new Error(
         `openeden-usdo ${field} is not a finite non-negative number: ${String(value)}`,
       );
     }
+  }
+  if (payload.uAmount !== undefined && payload.uAmount > 0) {
+    throw new Error("openeden-usdo positive uAmount has no reviewed asset identity or value unit");
   }
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);
   const componentTotal =
@@ -53,8 +66,9 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
     + payload.benjiAmount
     + (payload.pendingUsdc ?? 0);
   if (
-    payload.reserveAssetsInUsd > 0
-    && Math.abs(componentTotal - payload.reserveAssetsInUsd) / payload.reserveAssetsInUsd > 0.01
+    payload.reserveAssetsInUsd === 0
+      ? componentTotal !== 0
+      : Math.abs(componentTotal - payload.reserveAssetsInUsd) / payload.reserveAssetsInUsd > 0.01
   ) {
     throw new Error(
       `openeden-usdo reserve components sum to ${componentTotal.toFixed(2)}, expected ${payload.reserveAssetsInUsd.toFixed(2)}`,
@@ -86,6 +100,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
 
   const slices = slicesFromValues([
     {
+      sourceKey: "openeden-usdo:tbill",
       name: "OpenEden TBILL",
       value: payload.totalTbillAmountInUsd,
       risk: "very-low",
@@ -93,6 +108,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:buidl",
       name: "BlackRock BUIDL",
       value: payload.buidlAmount,
       risk: "low",
@@ -100,11 +116,15 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
-      name: "OpenEden VBILL",
+      sourceKey: "openeden-usdo:vbill",
+      name: "VanEck VBILL",
       value: payload.vbillAmount,
       risk: "low",
+      coinId: "vbill-vaneck",
+      depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:usdc",
       name: "USDC buffer",
       value: payload.usdcAmount,
       risk: "low",
@@ -112,6 +132,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:pending-usdc",
       name: "Pending USDC",
       value: payload.pendingUsdc ?? 0,
       risk: "very-low",
@@ -119,6 +140,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:rlusd",
       name: "RLUSD buffer",
       value: payload.rlusdAmount ?? 0,
       risk: "low",
@@ -126,6 +148,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:usyc",
       name: "Hashnote USYC",
       value: payload.usycAmountInUsd,
       risk: "low",
@@ -133,6 +156,7 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
       depType: "collateral",
     },
     {
+      sourceKey: "openeden-usdo:benji",
       name: "Franklin Templeton BENJI",
       value: payload.benjiAmount,
       risk: "low",
@@ -161,8 +185,13 @@ export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): 
         routeStatus: "unknown",
         routeStatusSource: "static-config",
         holderEligibility: "verified-customer",
-        sourceUrls: ["https://openeden.com/usdo/transparency"],
+        sourceUrls: [apiUrl, "https://openeden.com/usdo/transparency"],
       }),
+      details: {
+        sourceUrls: [apiUrl, "https://openeden.com/usdo/transparency"],
+        liabilityScope: "reported-usdoAmount-only",
+        pendingUsdcExcludedFromCapacity: true,
+      },
     },
   };
 }
@@ -232,5 +261,5 @@ export async function fetchOpenEdenUsdoReserves(
     const detail = toErrorMessage(error);
     throw new Error(`openeden-usdo reserve composition fetch failed: ${detail}`);
   }
-  return adaptOpenEdenUsdo(payload);
+  return adaptOpenEdenUsdo(payload, primaryInput.url);
 }

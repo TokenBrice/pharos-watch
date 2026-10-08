@@ -11,10 +11,9 @@ import { computeUnknownExposurePct, normalizeSlices } from "./helpers";
 import {
   buildIndependentAssuranceReserveResult,
   verifyAssurancePdf,
-  type IndependentAssuranceProfile,
 } from "./independent-assurance";
 import { fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, AdapterResult } from "./types";
+import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
 import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "brla-independent-assurance";

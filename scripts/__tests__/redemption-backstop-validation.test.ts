@@ -51,6 +51,27 @@ function singleOwner(config: RedemptionBackstopConfig = baseConfig): ManifestFix
 }
 
 describe("validateRedemptionBackstopRegistry", () => {
+  it("requires standalone observer identity, capability and output coherence without a reserve adapter", () => {
+    const config: RedemptionBackstopConfig = {
+      ...baseConfig, routeFamily: "queue-redeem", outputAssets: ["usdc-circle"],
+      capacityModel: { kind: "executable-observer", observerId: "lido-earnusd-queue",
+        capacityUse: "diagnostic-only", requiredOutputAssetKeys: ["usdc-circle"] },
+    };
+    const findingsFor = (id: string, row: RedemptionBackstopConfig) => validateFixture([{
+      name: "queue", filePath: "queue.ts", configs: { [id]: row }, allowedRouteFamilies: ["queue-redeem"],
+    }]).findings.filter((finding) => finding.stablecoinId === id).map((finding) => finding.code);
+    expect(findingsFor("earnusd-lido", config)).not.toContain("reserve-sync-missing-live-reserves");
+    expect(findingsFor("earnusd-lido", config).filter((code) => code.startsWith("observer-"))).toEqual([]);
+    expect(findingsFor("usdt-tether", config)).toContain("observer-config-mismatch");
+    expect(findingsFor("earnusd-lido", { ...config, capacityModel: { ...config.capacityModel,
+      kind: "executable-observer", observerId: "lido-earnusd-queue", capacityUse: "measured",
+      requiredOutputAssetKeys: ["usdc-circle"],
+    } })).toContain("observer-capability-mismatch");
+    expect(findingsFor("earnusd-lido", { ...config, capacityModel: {
+      kind: "executable-observer", observerId: "lido-earnusd-queue", capacityUse: "diagnostic-only",
+      requiredOutputAssetKeys: ["usdt-tether"],
+    } })).toContain("observer-output-mismatch");
+  });
   it("rejects duplicate factory entries unless the later entry carries an override reason", () => {
     expect(() =>
       defineBackstopRegistry([
@@ -128,7 +149,7 @@ describe("validateRedemptionBackstopRegistry", () => {
         settlementModel: "same-day",
         settlementDelaySec: 3600,
         reviewedAt: "2026-08-24",
-        docs: [{ label: "Settlement terms", url: "https://example.com/terms", supports: ["route"] }],
+        docs: [{ label: "Settlement terms", url: "https://example.com/terms", supports: ["settlement"] }],
       },
     }).success).toBe(true);
 

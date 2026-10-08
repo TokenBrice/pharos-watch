@@ -49,7 +49,7 @@
     "compositionBasis": "WisdomTree WTGXX top-holdings disclosure",
     "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The source is a dated top-holdings snapshot and does not establish current holdings, legal segregation, or a token-specific assurance report after December 31, 2025.",
+    "knownUnknownExposure": "The retained December 31, 2025 top-holdings snapshot does not establish current inventory, safeguards or token-specific assurance. Source-maintenance check 2026-10-07: official dataspanapi WTGXX_2/WTGXX_3 PDFs are reachable and dated June 30, with 80.72% Treasury bills/FRNs and 19.28% Deutsche Bank/RBC repos; these are a different period, not replacement weights for the retained 79.57/20.43 mix. FAQ distinguishes monthly holdings, daily 4pm ET NAV and dealer-inventory liquidity. Current NAV or institutional API access cannot renew holdings. Lifecycle quarantine and native multichain liabilities including Stellar remain unresolved; no activation or freshness budget for a skipped nonexistent snapshot is authorized.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

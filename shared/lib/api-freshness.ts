@@ -24,6 +24,9 @@ export const CACHE_AVAILABILITY_MAX_AGE_SEC = Object.freeze(
   ) as Record<string, number>,
 );
 
+/** Producer-to-producer admission window, not the public endpoint advisory budget. */
+export const STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC = CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec * 2;
+
 export const FRESHNESS_SENTINEL_CACHE_KEYS = [
   "dex-liquidity",
   "yield-data",

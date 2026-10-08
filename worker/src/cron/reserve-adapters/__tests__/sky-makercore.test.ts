@@ -279,11 +279,37 @@ describe("resolveSkyTimestampSummary", () => {
     ]);
 
     expect(summary).toMatchObject({
-      sourceTimestamp: Date.parse("2026-04-05T17:33:24") / 1000,
-      latestSourceTimestamp: Date.parse("2026-04-05T18:33:24") / 1000,
+      sourceTimestamp: Date.parse("2026-04-05T17:33:24Z") / 1000,
+      latestSourceTimestamp: Date.parse("2026-04-05T18:33:24Z") / 1000,
       sourceTimestampSpreadSec: 3600,
       timestampCount: 2,
     });
+  });
+
+  it.each(["", "2026-02-30T17:33:24"])("counts all invalid material clocks without borrowing a zero-debt clock (%s)", (datetime) => {
+    const summary = resolveSkyTimestampSummary([
+      { group: "spark", group_name: "Spark", debt: "100", collateral: "100", datetime },
+      { group: "legacy-rwa", group_name: "Legacy", debt: "0", collateral: "0", datetime: "2026-04-05T17:33:24" },
+    ]);
+    expect(summary).toEqual({
+      sourceTimestamp: null,
+      latestSourceTimestamp: null,
+      sourceTimestampSpreadSec: null,
+      timestampCount: 0,
+      untimestampedCount: 1,
+    });
+  });
+
+  it.each([true, false])("withholds verified metadata for incomplete material coverage (all missing: %s)", async (allMissing) => {
+    const groups = SAMPLE_GROUPS.map((group, index) => ({
+      ...group,
+      datetime: allMissing || index === 0 ? "" : group.datetime,
+    }));
+    const { result } = await runSky(groups);
+    expect(result.metadata?.freshnessMode).toBe("unverified");
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.snapshotDate).toBeUndefined();
+    expectWarningEffect(result, "source-timestamp-coverage-incomplete", "degraded");
   });
 });
 

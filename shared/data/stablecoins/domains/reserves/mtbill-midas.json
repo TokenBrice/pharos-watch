@@ -105,7 +105,7 @@
     "compositionBasis": "Midas SAVE-linked historical mTBILL portfolio checkpoint 2026-10-01T10:00; rounded USD-million positions divided by exact reported equity 76.4537698558, with explicit unclassified residual",
     "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The $3,769.8558 difference between exact reported equity and rounded USTB/BUIDL positions remains unclassified (0.004930895895793434%). It includes any unidentified smaller positions and rounding differences. This issuer-reported portfolio does not establish complete custody mapping, all-root liability coverage or pending-redemption reconciliation.",
+    "knownUnknownExposure": "The retained curated October 1 checkpoint has a $3,769.8558 unclassified remainder (0.004930895895793434%) and does not establish complete custody, all-root liabilities or pending redemption. Source-maintenance check 2026-10-07: latest mTBILL API updatedAt remains September 18, beyond its 3-day composition budget; its distinct $76.309122M book has USTB $71.501M, BUIDL $4.806M and $2,122.1907 unresolved. The fixed October 1 by-timestamp lookup returns reports without updatedAt: the requested time is not publisher-certified observation time or newest-report discovery. Preserve 3-day source/48-hour fetch limits and await a genuinely dated latest source; neither native NAV nor request time renews composition. Do not replace retained weights/remainder with the differently dated latest book.",
     "knownUnknownExposurePct": 0.004930895895793434,
     "nonLinkDispositions": [
       {

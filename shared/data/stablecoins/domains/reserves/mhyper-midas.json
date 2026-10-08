@@ -50,7 +50,7 @@
     "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2 October protocol net-equity table reports Pendle 37.38%, Morpho 17.24%, Fluid 10.37%, anonymous CEX1/CEX2/CEX3 28.30% combined, wallet 4.95%, USDai 1.61% and smaller rows. These net-equity percentages include borrow offsets and do not identify full reserve instruments, hedge legs, CEX operators or token liabilities. They are diagnostic exposure observations, not normalized gross reserve weights or current dependency links.",
+    "knownUnknownExposure": "Source-maintenance check 2026-10-07: mHYPER updatedAt=2026-10-07T20:06:50.144Z contains protocol equity but no main_positions. Pendle 37.40%, Morpho 32.96% and anonymous CEX1/2/3 collectively 28.21% are diagnostic net-equity shares, not verified gross reserve weights or dependency links. Instrument identity, CEX operators, hedge legs, borrow offsets and token liabilities remain unresolved. Preserve the 7-day NAV cap; a candidate 3-day composition dashboard budget cannot clear missing identity and full census. A fresh API timestamp alone does not update the curated portfolio basis.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

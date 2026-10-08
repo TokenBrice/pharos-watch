@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { mergeRedemptionRouteStatus } from "../redemption-backstop/route-status";
 import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import { liveSnapshot, route, severeMarketEvidence } from "./redemption-backstop-sources.test-support";
@@ -100,6 +101,34 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.routeStatusSource).toBe("market-implied");
     expect(result.impaired).toBe(true);
     expect(result.capsApplied).toEqual(["market-implied-depeg-evidence-uncertain"]);
+  });
+
+  it.each([
+    { supplyUsd: null, marketStatus: "unknown" as const },
+    { supplyUsd: 1_000_000, marketStatus: "degraded" as const },
+  ])("withholds EURR's suspended issuer channel with $marketStatus market evidence", async ({ supplyUsd, marketStatus }) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("eurr-stablr")!;
+    const entry = await buildRedemptionBackstopEntry(
+      db, "eurr-stablr", config, supplyUsd, null, Date.UTC(2026, 9, 8) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: marketStatus }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended",
+      routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-07",
+      resolutionState: "impaired",
+      score: null,
+      capacityScore: null,
+      immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
   });
 
   it("lets strong live-direct routes keep live-open evidence during severe market impairment", () => {

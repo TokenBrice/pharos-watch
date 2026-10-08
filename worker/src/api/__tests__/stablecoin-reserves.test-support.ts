@@ -1,3 +1,6 @@
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+
 export function reserveCompositionRow(now: number, overrides: { slices?: string; metadata?: string } = {}) {
   return { ...compositionDefaults(now), ...overrides };
 }
@@ -11,6 +14,7 @@ function compositionDefaults(now: number) {
     metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
     adapter_source_model: "dynamic-mix",
     adapter_evidence_class: "independent",
+    config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!.liveReservesConfig!),
   };
 }
 
@@ -24,6 +28,7 @@ export function reserveSyncRow(now: number, overrides: {
   return {
     stablecoin_id: "iusd-infinifi",
     adapter_key: "infinifi",
+    config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get("iusd-infinifi")!.liveReservesConfig!),
     breaker_key: "live-reserves:infinifi",
     last_attempted_at: now,
     last_success_at: now,

@@ -2,6 +2,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V10: readonly MethodologyChangelogEntry[] = [
   {
+    version: "10.11",
+    title: "Evidence-scoped redemption factors and live-reserve provenance closure",
+    date: "2026-10-08",
+    effectiveAt: 1791417600,
+    summary:
+      "Safety Score v10.11 preserves explicit route-factor gaps, requires completed-endpoint support for settlement scalars and keeps costs bound to each request. Live-reserve/redemption provenance and observer repairs tighten evidence integrity without changing pillar weights, stress requests, portfolio coverage or grade gates.",
+    impact: [
+      "Exact-route missing capacity, settlement and cost terms override captured known statuses unless strictly newer admitted exact execution evidence exists for the same rail/model/request. Scalar settlement needs dated current settlement-supporting completed-endpoint evidence; processing, cooldowns, target D+1 dealing and conditional calendar terms cannot create a completion maximum or revive a persisted generated SLA.",
+      "Point execution costs retain their own notional/cost-budget identity. An observation-level scalar applies only when requestedNotionalUsd and maxCostBps both match; other points recompute from bounded terms. Minimum charges are not maximum fee evidence. Zero issuer/fund fees remain scoped and do not establish net proceeds or zero bank, partner, network or differently scoped queue charges.",
+      "Producer/provenance cutover: valid matching configuration fingerprints and schema-v2 accepted reserve envelopes/consumed manifests preserve original freshness mode and invalid-source diagnosis. Future fetch clocks and malformed nested claims fail closed; missing members remain explicit null snapshots. A fresh full-cohort reserve seal followed by redemption recomputation is required, never immutable-row backfill. Independent nested on-chain route evidence does not upgrade timestamp-less reserve composition.",
+      "Direct observer lanes keep protocol-specific guards: Lido, Monetrix and Saturn are diagnostic-only; USDfr measures the restricted par-state USDC controller, while funded apyUSD receipts are eventual-only after same-run payout valuation. No reserve/NAV/static fallback supplies missing execution, and all-in/gas proof remains separate. Reservoir's three holder routes retain one shared USDC resource rather than additive backup liquidity.",
+      "Payload identities, not new score formulas: public breakdown/publication schema 7 and API wrapper 8 require typed routeId and lane on primary/alternative Exit rows; persisted v6 is rejected until a compatible accepted publication. Consumed reserve schema 2, supply-input metadata, request-point costs and sharedResourceKey require fresh producer/publication baselines, not rewritten historical bytes.",
+      "Frozen October 7 replay (asOfSec 1791402404, same input) has 11 intended grade/status changes: eutbl-spiko B- to C- (65 to 52), safo-spiko-usd C+ to C- (64 to 52), ustbl-spiko C+ to C- (63 to 52), uktbl-spiko C+ to C- (64 to 53), spkcc-spiko C to C- (59 to 51), eursafo-spiko C- to D (54 to 47), eurspkcc-spiko C- to D (52 to 47), hbusdt-hyperbeat C+ to C- (61 to 50), cash-phantom C- to D (53 to 47), mmev-midas D to NR and syusd-aegis NR to D (49). Unsupported scalar withdrawal and explicit gaps cause the exit changes; CASH's combined Treasury/government-MMF holding is conservatively other, not a proved Treasury-bill instrument.",
+      "syusd-aegis NR to D is a pre-existing causal D-rating-gate effect, not improvement: Exit remains 35. mMEV's pre-existing missing capacity/cost/settlement review now limits evidence and triggers withholding. uktbl's unchanged cap stops binding below its limit. savUSD Exit falls 54.51 to 35 without a grade change; FPI Exit falls 68.65 to 66.02 from request-cost identity, still D. Frozen replay does not certify new live observers or post-release production health.",
+      "Route curation retains legal eventual-only entitlements without immediate capacity, correct issuer/third-party fee scope, exact output branches and documented gaps. EURR's selected StablR issuer channel is suspended as of June 24; route retirements preserve historical identities. Local redemption-factor changes do not clear exit-portfolio-coverage, which remains an independent DEX census/exact-observation obligation.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "10.10",
     title: "Distinct evidence obligations, known reserve bounds and researched incident absence",
     date: "2026-10-07",

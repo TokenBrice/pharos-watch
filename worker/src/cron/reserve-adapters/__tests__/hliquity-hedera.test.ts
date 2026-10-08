@@ -105,7 +105,12 @@ describe("adaptHliquityHederaState", () => {
     );
     expect(result.metadata?.supplyTokens).toBeCloseTo(debtHchf, 8);
     expect(result.metadata?.observedBlock).toEqual({ chain: "hedera", number: 99_808_682, timestamp: 1_788_980_926 });
-    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "open", capacityUsd: result.metadata?.totalLiabilitiesUsd });
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "open", routeStatusSource: "onchain", capacityKind: "documented-bound",
+      freshnessKind: "same-run-onchain", sourceTimestamp: 1_788_980_926, blockNumber: 99_808_682,
+    });
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
     expect(result.warnings).toBeUndefined();
   });
 
@@ -133,6 +138,7 @@ describe("adaptHliquityHederaState", () => {
     const result = adaptHliquityHederaState(buildState({ tcrRaw: 100_000_000n }));
 
     expect(result.metadata?.redemption).toMatchObject({ routeStatus: "paused" });
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "redemption-route-status-degraded", effect: "degraded" }),
     ]));
@@ -142,6 +148,24 @@ describe("adaptHliquityHederaState", () => {
     expect(() => adaptHliquityHederaState(buildState({ troveCollateralRaw: 0n, stabilityPoolCollateralRaw: 0n })))
       .toThrow(/collateral/);
     expect(() => adaptHliquityHederaState(buildState({ debtRaw: 0n }))).toThrow(/debt/);
+  });
+
+  it.each([
+    { tcrRaw: MCR },
+    { tcrRaw: MCR - 1n },
+    { tcrRaw: null },
+    { mcrRaw: null },
+    { mcrRaw: 0n },
+    { debtRaw: DEBT * 10n, supplyRaw: SUPPLY * 10n },
+  ])("never turns a system gate or total debt diagnostic into measured capacity (case $#)", (state) => {
+    const result = adaptHliquityHederaState(buildState(state));
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    expect(result.metadata?.redemption?.capacityKind).toBe("documented-bound");
+    expect(result.metadata?.redemption?.sourceTimestamp).toBe(NOW_SEC);
+    expect(result.metadata?.redemption?.blockNumber).toBe(99_808_682);
+    expect(result.metadata?.totalLiabilitiesUsd).toBeGreaterThan(0);
+    expect(result.metadata?.redemption?.settlementDelaySec).toBeUndefined();
   });
 });
 

@@ -3,6 +3,9 @@ import { createMockD1Preset, type MockTableConfig } from "@shared/test-utils/moc
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { ConsumedReserveInputSchema, RedemptionReserveRunMetadataSchema } from "@shared/types/reserve-input";
+import type * as SourcesModule from "../../lib/redemption-backstop/sources";
+import type * as RedemptionConfigsModule from "@shared/lib/redemption-backstops";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const DEFAULT_REDEMPTION_BACKSTOP_D1_TABLES: MockTableConfig[] = [
   { match: "FROM depeg_events", rows: [] },
@@ -18,6 +21,7 @@ const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
 const loadAcceptedReserveGenerationMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
+let outputAssetsByIdMock: Record<string, string[]> = {};
 const GATE_LOAD_TIMEOUT_MS = 15_000;
 
 function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
@@ -71,7 +75,8 @@ vi.mock("../../lib/dex-liquidity", () => ({
   loadDexLiquidityScores: loadDexLiquidityScoresMock,
 }));
 
-vi.mock("../../lib/redemption-backstop/sources", () => ({
+vi.mock("../../lib/redemption-backstop/sources", async (importOriginal) => ({
+  ...(await importOriginal<typeof SourcesModule>()),
   buildFailedRedemptionBackstopEntry: buildFailedRedemptionBackstopEntryMock,
   buildRedemptionBackstopEntry: buildRedemptionBackstopEntryMock,
   resolveRedemptionBackstopEntry: resolveRedemptionBackstopEntryMock,
@@ -86,7 +91,8 @@ vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
   loadAcceptedReserveGeneration: loadAcceptedReserveGenerationMock,
 }));
 
-vi.mock("@shared/lib/redemption-backstops", () => ({
+vi.mock("@shared/lib/redemption-backstops", async (importOriginal) => ({
+  ...(await importOriginal<typeof RedemptionConfigsModule>()),
   getConfiguredRedemptionBackstopIds: () => configuredIdsMock,
   getRedemptionBackstopConfig: (id: string) =>
     configuredIdsMock.includes(id)
@@ -97,6 +103,7 @@ vi.mock("@shared/lib/redemption-backstops", () => ({
           executionModel: "deterministic-basket",
           outputAssetType: "stable-basket",
           capacityModel: { kind: "supply-full" },
+          outputAssets: outputAssetsByIdMock[id],
           costModel: { kind: "dynamic-or-unclear" },
         }
       : null,
@@ -106,6 +113,7 @@ describe("syncRedemptionBackstops", () => {
   beforeEach(() => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
+    outputAssetsByIdMock = {};
     vi.clearAllMocks();
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
@@ -142,7 +150,7 @@ describe("syncRedemptionBackstops", () => {
       }),
     );
     loadAcceptedReserveGenerationMock.mockReset().mockResolvedValue({
-      schemaVersion: 1, generationId: "reserve:1700000000:test", root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1700000000, queueHash: "test" },
+      schemaVersion: 2, generationId: "reserve:1700000000:test", root: { scheduleKey: "fourHourlyReserveSync", slotStartedAt: 1700000000, queueHash: "test" },
       sealedBy: { attemptNo: 1, executionGeneration: 1, invocationId: "test" }, producerCompletedAtSec: now, contentSha256: "a".repeat(64), members: [],
     });
     upsertRedemptionBackstopSnapshotsMock.mockImplementation((_db: unknown, snapshots: unknown[]) =>
@@ -173,6 +181,50 @@ describe("syncRedemptionBackstops", () => {
     expect(result.metadata).toContain("stablecoins-cache:missing-cache");
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   }, GATE_LOAD_TIMEOUT_MS);
+
+  it.each([
+    ["stale", (clock: number) => clock - CRON_INTERVALS["sync-stablecoins"] * 2 - 1],
+    ["future", (clock: number) => clock + 1],
+    ["zero", () => 0],
+    ["absent", () => undefined],
+    ["null", () => null],
+    ["non-finite", () => NaN],
+  ] as const)("holds the prior output for an inadmissible %s supply generation", async (_label, timestamp) => {
+    const clock = Math.floor(Date.now() / 1000);
+    vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
+    try {
+      loadStablecoinsCacheMock.mockResolvedValue({
+        kind: "ok", updatedAt: timestamp(clock),
+        payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
+      });
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+      expect(result.status).toBe("error");
+      expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
+      expect(buildRedemptionBackstopEntryMock).not.toHaveBeenCalled();
+      expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it.each([0, CRON_INTERVALS["sync-stablecoins"] - 1, CRON_INTERVALS["sync-stablecoins"], CRON_INTERVALS["sync-stablecoins"] * 2])("records healthy producer generations at age %d", async (age) => {
+    const clock = Math.floor(Date.now() / 1000);
+    vi.spyOn(Date, "now").mockReturnValue(clock * 1000);
+    try {
+      const input = {
+        updatedAt: clock - age,
+        assessedAt: clock, maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
+      };
+      loadStablecoinsCacheMock.mockResolvedValue({
+        kind: "ok", updatedAt: input.updatedAt,
+        payload: { peggedAssets: [makeAsset({ id: "cusd-cap", circulating: { peggedUSD: 10_000_000 } })] },
+      });
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput).toEqual(input);
+      expect(upsertRedemptionBackstopSnapshotsMock.mock.calls[0][2].metadata.stablecoinsInput.maxAgeSec)
+        .toBeGreaterThanOrEqual(CRON_INTERVALS["sync-stablecoins"] * 2);
+    } finally { vi.restoreAllMocks(); }
+  });
 
   it("aborts before loading inputs when the signal is already aborted", async () => {
     const controller = new AbortController();
@@ -216,6 +268,48 @@ describe("syncRedemptionBackstops", () => {
     await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort before write");
     expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("persists completed downstream disclosures after success/failure collection (%s)", async (reverse) => {
+    const now = Math.floor(Date.now() / 1000);
+    outputAssetsByIdMock = { "cusd-cap": ["iusd-infinifi"] };
+    if (reverse) configuredIdsMock.reverse();
+    const upstream = Object.freeze(makeResolvedSnapshot("cusd-cap", now));
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) => {
+      if (asset.id === "iusd-infinifi") throw new Error("Downstream read unavailable");
+      return Promise.resolve(upstream);
+    });
+    // This suite initializes non-hoisted mocks before loading the cron module.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const persisted = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
+    expect(persisted.find((entry) => entry.stablecoinId === "cusd-cap")).toEqual({
+      ...upstream,
+      outputDependencyResolution: { stablecoinId: "iusd-infinifi", resolutionState: "failed" },
+    });
+    expect(persisted.find((entry) => entry.stablecoinId === "iusd-infinifi")?.resolutionState).toBe("failed");
+    expect(upstream).not.toHaveProperty("outputDependencyResolution");
+  });
+
+  it("does not leak a prior run's downstream failure into the next snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    outputAssetsByIdMock = { "cusd-cap": ["iusd-infinifi"] };
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) => {
+      if (asset.id === "iusd-infinifi") throw new Error("Downstream read unavailable");
+      return Promise.resolve(makeResolvedSnapshot(asset.id, now));
+    });
+    // This suite initializes non-hoisted mocks before loading the cron module.
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const first = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(makeResolvedSnapshot(asset.id, now)),
+    );
+    await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+    const second = upsertRedemptionBackstopSnapshotsMock.mock.calls[1][1] as RedemptionBackstopEntry[];
+    expect(first[0].outputDependencyResolution?.resolutionState).toBe("failed");
+    expect(second[0]).not.toHaveProperty("outputDependencyResolution");
+    expect(first[0].outputDependencyResolution?.resolutionState).toBe("failed");
   });
 
   it("writes snapshots and summarizes source-mode coverage", async () => {
@@ -289,10 +383,11 @@ describe("syncRedemptionBackstops", () => {
       contentSha256: "a".repeat(64),
       stablecoinId: "cusd-cap",
       attemptId: "accepted-attempt",
-      configFingerprint: null,
+      configFingerprint: "b".repeat(64),
       freshness: {
         stale: false, staleReasons: [], assessedAt: now, fetchedAt: now - 60,
         attemptId: "accepted-attempt", fetchAgeSec: 60, fetchBudgetSec: 172800,
+        freshnessMode: "not-applicable", sourceFreshnessInvalid: false,
         sourceTimestamp: null, sourceAgeSec: null, sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
       },
     });

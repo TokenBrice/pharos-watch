@@ -1,3 +1,5 @@
+import { isValidCalendarDate, isValidIsoDateOnly } from "@shared/types/date-primitives";
+
 export function verifiedFreshnessMetadata(
   sourceTimestamp: number,
 ): { sourceTimestamp: number; freshnessMode: "verified" } {
@@ -74,32 +76,60 @@ export interface SourceTimestampSummary {
   timestampCount: number;
 }
 
-export function summarizeSourceTimestamps(values: readonly unknown[]): SourceTimestampSummary | null {
-  const timestamps = values
-    .map((value) => parseTimestampLikeToUnixSeconds(value))
-    .filter((value): value is number => value != null)
-    .sort((left, right) => left - right);
+export interface SourceTimestampCoverageSummary {
+  sourceTimestamp: number | null;
+  latestSourceTimestamp: number | null;
+  sourceTimestampSpreadSec: number | null;
+  timestampCount: number;
+  /** One submitted value per material row; any missing clock prevents verified freshness. */
+  untimestampedCount: number;
+}
 
-  if (timestamps.length === 0) {
-    return null;
+/** Only a source-reviewed caller may interpret a zoneless wall clock as UTC. */
+export type SourceTimestampZonelessPolicy = "require-zone" | "assumed-utc";
+
+function summarizeTimestampCoverage(
+  values: readonly unknown[],
+  zonelessPolicy: SourceTimestampZonelessPolicy,
+): SourceTimestampCoverageSummary {
+  let sourceTimestamp: number | null = null;
+  let latestSourceTimestamp: number | null = null;
+  let timestampCount = 0;
+  let untimestampedCount = 0;
+  for (const value of values) {
+    const parsed = parseTimestampLikeToUnixSeconds(value, zonelessPolicy);
+    if (parsed == null) {
+      untimestampedCount += 1;
+    } else {
+      timestampCount += 1;
+      if (sourceTimestamp == null || parsed < sourceTimestamp) sourceTimestamp = parsed;
+      if (latestSourceTimestamp == null || parsed > latestSourceTimestamp) latestSourceTimestamp = parsed;
+    }
   }
-
-  const sourceTimestamp = timestamps[0];
-  const latestSourceTimestamp = timestamps[timestamps.length - 1];
   return {
     sourceTimestamp,
     latestSourceTimestamp,
-    sourceTimestampSpreadSec: latestSourceTimestamp - sourceTimestamp,
-    timestampCount: timestamps.length,
+    sourceTimestampSpreadSec: sourceTimestamp != null && latestSourceTimestamp != null
+      ? latestSourceTimestamp - sourceTimestamp
+      : null,
+    timestampCount,
+    untimestampedCount,
   };
 }
 
-export interface SourceTimestampCoverageSummary extends SourceTimestampSummary {
-  /** Submitted values that could not be parsed into a timestamp. Callers that
-   *  submit one value per material row must treat a non-zero count as
-   *  incomplete coverage rather than silently letting the remaining rows'
-   *  clock stand in for the whole composition. */
-  untimestampedCount: number;
+/** Optional alternative clocks: ignore missing values, return null only if none parse. */
+export function summarizeSourceTimestamps(
+  values: readonly unknown[],
+  zonelessPolicy: SourceTimestampZonelessPolicy = "require-zone",
+): SourceTimestampSummary | null {
+  const summary = summarizeTimestampCoverage(values, zonelessPolicy);
+  if (summary.sourceTimestamp == null || summary.latestSourceTimestamp == null) return null;
+  return {
+    sourceTimestamp: summary.sourceTimestamp,
+    latestSourceTimestamp: summary.latestSourceTimestamp,
+    sourceTimestampSpreadSec: summary.latestSourceTimestamp - summary.sourceTimestamp,
+    timestampCount: summary.timestampCount,
+  };
 }
 
 /**
@@ -110,28 +140,9 @@ export interface SourceTimestampCoverageSummary extends SourceTimestampSummary {
  */
 export function summarizeSourceTimestampsRequiringCoverage(
   values: readonly unknown[],
-): SourceTimestampCoverageSummary | null {
-  const timestamps: number[] = [];
-  let untimestampedCount = 0;
-  for (const value of values) {
-    const parsed = parseTimestampLikeToUnixSeconds(value);
-    if (parsed == null) {
-      untimestampedCount += 1;
-    } else {
-      timestamps.push(parsed);
-    }
-  }
-  if (timestamps.length === 0) {
-    return null;
-  }
-  timestamps.sort((left, right) => left - right);
-  return {
-    sourceTimestamp: timestamps[0],
-    latestSourceTimestamp: timestamps[timestamps.length - 1],
-    sourceTimestampSpreadSec: timestamps[timestamps.length - 1] - timestamps[0],
-    timestampCount: timestamps.length,
-    untimestampedCount,
-  };
+  zonelessPolicy: SourceTimestampZonelessPolicy = "require-zone",
+): SourceTimestampCoverageSummary {
+  return summarizeTimestampCoverage(values, zonelessPolicy);
 }
 
 function normalizeUnixTimestampSeconds(value: number): number | null {
@@ -139,10 +150,20 @@ function normalizeUnixTimestampSeconds(value: number): number | null {
   return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);
 }
 
+const MONTH_NUMBERS: Readonly<Record<string, number>> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+function calendarTimestampSeconds(milliseconds: number): number | null {
+  return Number.isFinite(milliseconds) && milliseconds > 0 ? Math.floor(milliseconds / 1000) : null;
+}
+
 /**
- * Parse a timestamp-like value (epoch number, epoch string, `DD/MM/YY`, or a
- * long date like `Jan 5, 2024`) into Unix seconds, or `null` when it can't be
- * parsed unambiguously.
+ * Parse source epochs, calendar dates and explicitly zoned datetimes into Unix
+ * seconds. Calendar dates normalize to UTC midnight; zoneless datetimes require
+ * a source-reviewed `assumed-utc` policy and never inherit the host timezone.
  *
  * Short `DD/MM/YY` dates are deliberately rejected (return `null`) whenever both
  * the day and month are <= 12 (e.g. `05/11/24`), because the field order is then
@@ -152,7 +173,10 @@ function normalizeUnixTimestampSeconds(value: number): number | null {
  * with their own format-specific parser rather than relying on this helper, and
  * an adapter that hits this path falls back to `unverified` freshness.
  */
-export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
+export function parseTimestampLikeToUnixSeconds(
+  value: unknown,
+  zonelessPolicy: SourceTimestampZonelessPolicy = "require-zone",
+): number | null {
   if (typeof value === "number") {
     return normalizeUnixTimestampSeconds(value);
   }
@@ -173,36 +197,86 @@ export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
     const [, day, month, year] = shortDateMatch;
     const dayNumber = Number(day);
     const monthNumber = Number(month);
-    if (
-      !Number.isInteger(dayNumber) ||
-      !Number.isInteger(monthNumber) ||
-      dayNumber < 1 ||
-      dayNumber > 31 ||
-      monthNumber < 1 ||
-      monthNumber > 12 ||
-      (dayNumber <= 12 && monthNumber <= 12)
-    ) {
-      return null;
-    }
     const fullYear = 2000 + Number(year);
-    const parsed = Date.UTC(fullYear, monthNumber - 1, dayNumber);
-    const parsedDate = new Date(parsed);
     if (
-      parsedDate.getUTCFullYear() !== fullYear ||
-      parsedDate.getUTCMonth() !== monthNumber - 1 ||
-      parsedDate.getUTCDate() !== dayNumber
-    ) {
-      return null;
+      (dayNumber <= 12 && monthNumber <= 12)
+      || !isValidCalendarDate(fullYear, monthNumber, dayNumber)
+    ) return null;
+    return calendarTimestampSeconds(Date.UTC(fullYear, monthNumber - 1, dayNumber));
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return isValidIsoDateOnly(trimmed)
+      ? calendarTimestampSeconds(Date.parse(`${trimmed}T00:00:00Z`))
+      : null;
+  }
+
+  // Includes Accountable's captured `YYYY.MM.DD HH:mm:ss UTC` clock.
+  const datetime = /^(\d{4})[-.](\d{2})[-.](\d{2})[Tt ](\d{2}):(\d{2})(.*)$/i.exec(trimmed);
+  if (datetime) {
+    const year = Number(datetime[1]);
+    const month = Number(datetime[2]);
+    const day = Number(datetime[3]);
+    const hour = Number(datetime[4]);
+    const minute = Number(datetime[5]);
+    let suffix = datetime[6];
+    let second = 0;
+    if (suffix.startsWith(":")) {
+      const seconds = /^:(\d{2})/.exec(suffix);
+      if (!seconds) return null;
+      second = Number(seconds[1]);
+      suffix = suffix.slice(seconds[0].length);
+      if (suffix.startsWith(".")) {
+        const fraction = /^\.\d+/.exec(suffix);
+        if (!fraction) return null;
+        suffix = suffix.slice(fraction[0].length);
+      }
     }
-    return normalizeUnixTimestampSeconds(parsed);
+    const zone = suffix.trim();
+    if (zone && !/^(?:Z|UTC|GMT|[+-]\d{2}:?\d{2})$/i.test(zone)) return null;
+    if (
+      !isValidCalendarDate(year, month, day)
+      || hour > 23 || minute > 59 || second > 59
+      || (!zone && zonelessPolicy !== "assumed-utc")
+    ) return null;
+    let offsetMinutes = 0;
+    if (zone && /^[+-]/.test(zone)) {
+      const offsetHour = Number(zone.slice(1, 3));
+      const offsetMinute = Number(zone.slice(-2));
+      if (offsetHour > 23 || offsetMinute > 59) return null;
+      offsetMinutes = (zone[0] === "+" ? 1 : -1) * (offsetHour * 60 + offsetMinute);
+    }
+    return calendarTimestampSeconds(
+      Date.UTC(year, month - 1, day, hour, minute, second) - offsetMinutes * 60_000,
+    );
   }
 
-  const longDateOnlyMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{4})$/);
-  if (longDateOnlyMatch) {
-    const parsed = Date.parse(`${trimmed} 00:00:00 UTC`);
-    return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+  // Validate month-name calendars before Date.parse can roll an impossible day.
+  // Both month-first disclosure dates and explicit-zone RFC dates remain usable.
+  const monthFirst = /\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})\b/.exec(trimmed);
+  const dayFirst = /\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})\b/.exec(trimmed);
+  if (monthFirst || dayFirst) {
+    const monthName = monthFirst ? monthFirst[1] : dayFirst![2];
+    const day = Number(monthFirst ? monthFirst[2] : dayFirst![1]);
+    const year = Number(monthFirst ? monthFirst[3] : dayFirst![3]);
+    const month = MONTH_NUMBERS[monthName.toLowerCase()];
+    if (month == null || !isValidCalendarDate(year, month, day)) return null;
   }
-
-  const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+  const yearFirst = /^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?=$|[Tt\s])/.exec(trimmed);
+  if (yearFirst && !isValidCalendarDate(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]))) return null;
+  // Localized slash dates belong to reviewed caller-specific parsers (SG Forge).
+  if (/\d\s*\/\s*\d/.test(trimmed)) return null;
+  const time = /\b(\d{1,2}):(\d{2})/.exec(trimmed);
+  if (time) {
+    const seconds = /^:(\d{2})/.exec(trimmed.slice(time.index + time[0].length));
+    if (Number(time[1]) > 23 || Number(time[2]) > 59 || Number(seconds?.[1] ?? 0) > 59) return null;
+  }
+  const zoneText = trimmed.replace(/\s*\([^)]*\)$/, "").trim();
+  const offset = /[+-](\d{2}):?(\d{2})$/.exec(zoneText);
+  if (offset && (Number(offset[1]) > 23 || Number(offset[2]) > 59)) return null;
+  const explicitZone = /(?:Z|UTC|GMT|[+-]\d{2}:?\d{2}|[ECMP][SD]T)$/i.test(zoneText);
+  if (time && !explicitZone && zonelessPolicy !== "assumed-utc") return null;
+  // Retain other previously tolerated source forms, but never consult host timezone.
+  const parsed = Date.parse(explicitZone ? trimmed : `${trimmed} UTC`);
+  return calendarTimestampSeconds(parsed);
 }

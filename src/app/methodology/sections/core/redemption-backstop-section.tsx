@@ -73,6 +73,22 @@ export function RedemptionBackstopMethodologySection() {
           unmeasured liquidity into a fixed zero: absent telemetry remains unrated, and routes without an honest
           capacity model remain source-reviewed but unconfigured.
         </p>
+        <p>
+          Direct executable observers are a separate route-evidence source, not proof of reserve composition.
+          Lido, Monetrix and Saturn retain diagnostic-only null capacity; USDfr measures a restricted par-state
+          USDC controller, and apyUSD measures funded apxUSD receipts only with current payout valuation.
+          Delayed apyUSD receipts remain eventual-only, not immediate liquidity. Missing completion, exact output
+          or all-in cost evidence cannot be replaced by full supply, vault NAV or idle cash. Reservoir&apos;s
+          three routes share one USDC PSM resource rather than additive backup liquidity.
+        </p>
+        <p>
+          A fee minimum is not a maximum, and zero issuer fees do not establish zero bank, network or partner
+          deductions or full net proceeds. Each request point keeps its own cost. Settlement ceilings require
+          dated support for completed payout; processing targets, cooldowns and conditional business-day terms
+          remain gaps. The supply-cache generation must pass its existing availability budget before a new
+          snapshot is built. Original reserve freshness and immutable details fail closed; older valid fallback
+          keeps its own clock rather than appearing newly observed.
+        </p>
         <MethodologyFacts
           facts={[
             { label: "Access", value: `${weights.access * 100}%` },

@@ -1,10 +1,10 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import { fetchIndependentAssuranceReserves, type IndependentAssuranceProfile } from "./independent-assurance";
+import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { fetchTextResponseWithRetry } from "./request";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
-import type { AdapterContext, AdapterResult } from "./types";
+import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
 
 const WIDEN_HOST = "fwc.widen.net";
 

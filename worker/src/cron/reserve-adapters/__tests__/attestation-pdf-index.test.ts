@@ -38,6 +38,20 @@ describe("adaptAttestationPdfIndex", () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([0, 0.5, 2])("retains raw percentage drift %s through configured-slice rounding repair", (drift) => {
+    const result = adaptAttestationPdfIndex('<a href="/reports/2026-08-31-attestation.pdf">August report</a>', {
+      slices: [{ name: "Cash", pct: 80 + drift, risk: "low" }, { name: "Fund", pct: 20, risk: "low" }],
+    });
+    expect(result.metadata?.diag?.rawSumDeviation).toBe(drift);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
+  });
+
+  it("rejects raw configured-slice drift above the existing two-point boundary", () => {
+    expect(() => adaptAttestationPdfIndex("", {
+      slices: [{ name: "Cash", pct: 102.01, risk: "low" }],
+    })).toThrow();
+  });
+
   it("uses the reviewed balance date and rejects publication dates from a newer unreviewed report", () => {
     const url = "https://issuer.example/reports/2026-08-12-report.pdf";
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", {

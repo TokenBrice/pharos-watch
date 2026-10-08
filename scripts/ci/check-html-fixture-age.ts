@@ -55,6 +55,34 @@ const HEADER_PREFIX_BYTES = 4096;
  * gate, forcing its provenance to be recorded explicitly.
  */
 const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  "myrc-index-2026-10-07.json":
+    "Immutable Blox discovery replay captured 2026-10-07T21:01:31.362971Z from https://api.blox.my/blox-admin/attestations; freezes the uniquely newest August examination and later upload clock so historical freshness and newer-unreviewed-report rejection cannot be refreshed away.",
+  "myrc-report-2026-08.txt":
+    "Immutable Poppler extraction of https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-08-August.pdf, accessed 2026-10-07T21:01:31.379205Z and refetched byte-identical 2026-10-08; SHA-256 95cd46d41af13d63eece4439c00af9d158e893fdf21993e842d09e4bfa557aa2 freezes the August31 examined amounts, three-cent discrepancy and circulation criterion.",
+  "qcad-balances-2026-10-07.json":
+    "Immutable liability-perimeter replay captured 2026-10-07T21:05:24.151150Z from https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json; freezes native CAD amounts, positive unreviewed ARC, absent Solana and liability-only clocks without a fiat reserve observation date.",
+  "openeden-reserve-composition-2026-10-07.json":
+    "Immutable accounting replay captured 2026-10-07T20:47:18.580729Z from https://prod-gw.openeden.com/usdo/sys/reserve-composition-last; freezes the dated eight-component reserve book, zero unmapped uAmount and unresolved signed-gap/queued-claim scope for fail-closed boundary tests.",
+  "accountable-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from cache.accountable.capital/dashboard/yuzu and axis.accountable.capital:8443/dashboard; freezes signed-book residual and anonymous venue composition defects.",
+  "usdai-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161; raw unsafe integer literals, missing accounting clock and unresolved full-book denominator must not be refreshed away.",
+  "makina-strategy-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721; freezes issuer AUM disagreement and stale underlying accounting.",
+  "makina-allocations-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations; paired counted-position clocks and net allocation book must remain historical.",
+  "midas-rejection-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api-prod.midas.app/api/transparency and its by-timestamp route; product-specific stale, undated, opaque, leveraged and missing-position bodies preserve rejection evidence.",
+  "xusd-balances-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from public-node.rsk.co at Rootstock block 9305511; pins ten reserve balances and nominal liability shortfall rather than following current chain state.",
+  "xusd-decimals-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from public-node.rsk.co at Rootstock block 9305511; token scale observations belong to the paired historical balance census.",
+  "usual-circular-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api-ethereum-mainnet-erigon.n.dwellir.com at Ethereum block 26142825; freezes the registry and positive USD0 circular-claim words.",
+  "usual-production-oct7-2026.json":
+    "Immutable adverse-state context captured 2026-10-07 from api.pharos.watch/api/stablecoin-reserves/usd0-usual; historical external balances and oracle valuations are explicitly distinct from independent circular-claim wire evidence.",
+  "leverup-oct7-2026.json":
+    "Immutable adverse-state replay captured 2026-10-07 from api-monad-mainnet-full.n.dwellir.com at Monad block 111423307; preserves six state responses proving the designated-reserve deficit.",
   "matrixdock-stbt-stats.json":
     "captured 2026-10-06 from the official Matrixdock STBT /bond/anon/website/api/v1/stats JSON API; frozen issuer USD NAV census has no observation timestamp and cannot carry an HTML-comment capture header",
   "midas-mtbill-transparency.json":
@@ -82,6 +110,14 @@ const NON_HTML_FIXTURE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "captured 2026-09-30 from Ripio's official HubSpot attestation index (payload capturedAt 2026-09-30, June 30 reports); JSON cannot carry an HTML-comment capture header",
   "lido-earnusd-pinned-state.json":
     "Ethereum state pinned at block 26122344 (blockTimestamp 1791157259, 2026-10-05) with code hashes; age is the pinned block, JSON cannot carry an HTML-comment capture header",
+  "apyusd-observer-pinned.json":
+    "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:22:48.313985+00:00 from https://eth-mainnet.public.blastapi.io; freezes UnlockReceipt funding, vesting delivery and controller guard words for historical behavioral replay, not refreshable current capacity.",
+  "forest-road-observer-pinned.json":
+    "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:20:50.462557+00:00 from https://ethereum.drpc.org; freezes exact USDfr par-controller identities, authority and guarded same-notional quotes, not refreshable current capacity.",
+  "monetrix-observer-pinned.json":
+    "Immutable HyperEVM block 47935956 RPC capture accessed 2026-10-07T22:20:50.462193+00:00 from https://rpc.hyperliquid.xyz/evm; freezes funded-escrow shortfall and request-local cooldown context for diagnostic replay, not holder capacity.",
+  "saturn-observer-pinned.json":
+    "Immutable Ethereum block 26143056 RPC capture accessed 2026-10-07T22:20:50.462420+00:00 from https://ethereum.drpc.org; freezes Saturn V2 queue identities, balances and process-time fee words for diagnostic replay, not invented queue throughput.",
 };
 
 /**

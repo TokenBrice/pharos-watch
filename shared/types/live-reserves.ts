@@ -14,6 +14,7 @@ import {
 } from "./live-reserve-core";
 import { ReserveSliceSchema } from "./reserves";
 import { HttpUrlSchema } from "./validators";
+import { isValidIsoDateOnly } from "./date-primitives";
 import {
   RedemptionHolderEligibilitySchema,
   RedemptionLiveCapacityKindValues,
@@ -21,9 +22,9 @@ import {
   RedemptionRouteStatusSchema,
   RedemptionRouteStatusSourceSchema,
 } from "./redemption";
-import { ReserveFreshnessViewSchema } from "./reserve-input";
+import { ReserveFreshnessViewSchema, LiveReserveAdmissionRejectionCodeSchema } from "./reserve-input";
 export { ReserveFreshnessViewSchema } from "./reserve-input";
-export type { ReserveFreshnessView } from "./reserve-input";
+export type { ReserveFreshnessView, LiveReserveAdmissionRejectionCode } from "./reserve-input";
 
 export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
 export * from "./live-reserve-core";
@@ -114,6 +115,8 @@ export interface LiveReservesConfig {
   display?: LiveReserveDisplay;
   scoring?: LiveReserveScoringPolicy;
   suspended?: LiveReserveSuspension;
+  /** One bounded reserve-only prerequisite attempt; never authorizes listing. */
+  bootstrapForSupplyAdmission?: { reviewBy: string };
   inputs: {
     primary: LiveReserveInput;
     fallbacks?: LiveReserveInput[];
@@ -236,40 +239,6 @@ const UnitRatioSchema = /* @__PURE__ */ (() => z.number().finite().min(0).max(1)
 const BoundedFeeBpsSchema = /* @__PURE__ */ (() => z.number().finite().min(0).max(10_000))();
 const NonNegativeFiniteSecondsSchema = /* @__PURE__ */ (() => z.number().finite().nonnegative())();
 
-/**
- * Numeric policy for redemption telemetry. One home: the response schema and
- * the D1 row decoder both consume these schemas, matching what the producer
- * validator enforces before a row is ever written, so a retained or corrupt
- * row cannot publish a value the producer would have rejected.
- */
-export const LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS = {
-  capacityUsd: NonNegativeFiniteUsdSchema,
-  capacityRatioOfSupply: UnitRatioSchema,
-  sourceTimestamp: z.number().finite(),
-  blockNumber: z.number().finite(),
-  settlementDelaySec: NonNegativeFiniteSecondsSchema,
-  queueDepthUsd: NonNegativeFiniteUsdSchema,
-  dailyLimitUsd: NonNegativeFiniteUsdSchema,
-  minRedeemUsd: NonNegativeFiniteUsdSchema,
-  feeBps: BoundedFeeBpsSchema,
-} as const;
-
-export type LiveReserveRedemptionTelemetryNumberField =
-  keyof typeof LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS;
-
-/** Parse one persisted telemetry field against the shared policy, or null when it must be dropped. */
-export function parseLiveReserveRedemptionTelemetryNumber(
-  field: LiveReserveRedemptionTelemetryNumberField,
-  value: unknown,
-): number | null {
-  return LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS[field].safeParse(value).success
-    ? (value as number)
-    : null;
-}
-
-export const LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS = Object.keys(
-  LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS,
-) as LiveReserveRedemptionTelemetryNumberField[];
 
 export const LiveReserveRedemptionTelemetrySchema = /* @__PURE__ */ (() => z
   .object({
@@ -278,12 +247,12 @@ export const LiveReserveRedemptionTelemetrySchema = /* @__PURE__ */ (() => z
     settlementBoundUnproven: z.literal(true).optional(),
     capacityKind: z.enum(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES).optional(),
     freshnessKind: z.enum(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES).optional(),
-    sourceTimestamp: z.number().finite().optional(),
+    sourceTimestamp: z.number().finite().nonnegative().optional(),
     blockNumber: z.number().finite().optional(),
     routeStatus: RedemptionRouteStatusSchema.optional(),
     routeStatusSource: RedemptionRouteStatusSourceSchema.optional(),
     routeStatusReason: z.string().optional(),
-    routeStatusReviewedAt: z.string().optional(),
+    routeStatusReviewedAt: z.string().refine(isValidIsoDateOnly, "Expected YYYY-MM-DD").optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     settlementDelaySec: NonNegativeFiniteSecondsSchema.optional(),
     queueDepthUsd: NonNegativeFiniteUsdSchema.optional(),
@@ -300,6 +269,50 @@ export const LiveReserveRedemptionTelemetrySchema = /* @__PURE__ */ (() => z
   })
   .passthrough())();
 export type LiveReserveRedemptionTelemetry = z.output<typeof LiveReserveRedemptionTelemetrySchema>;
+
+/** Known wire fields without the passthrough index signature, for producer projections. */
+export type LiveReserveRedemptionTelemetryKnownFields = Pick<
+  LiveReserveRedemptionTelemetry,
+  keyof typeof LiveReserveRedemptionTelemetrySchema.shape
+>;
+
+/** In-memory quarantine signal; inspect before JSON serialization erases symbols. */
+export const MALFORMED_REDEMPTION_TELEMETRY = Symbol.for("pharos.malformedRedemptionTelemetry");
+
+export type LiveReserveRedemptionTelemetryIssue = z.ZodIssue;
+
+export type DecodedLiveReserveRedemptionTelemetry =
+  | { status: "absent" }
+  | { status: "invalid"; issues: readonly LiveReserveRedemptionTelemetryIssue[] }
+  | { status: "valid"; telemetry: LiveReserveRedemptionTelemetry };
+
+/** Structural admission only. Evidence, source age and adapter capabilities are separate policies. */
+export function decodeLiveReserveRedemptionTelemetry(
+  metadata: unknown,
+): DecodedLiveReserveRedemptionTelemetry {
+  if (metadata == null) return { status: "absent" };
+  if (typeof metadata !== "object" || Array.isArray(metadata)) {
+    return { status: "invalid", issues: [{ code: "custom", path: [], message: "Invalid metadata root" }] };
+  }
+  if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
+    return { status: "absent" };
+  }
+  const raw = (metadata as Record<string, unknown>).redemption;
+  if (raw === undefined) return { status: "absent" };
+  if (raw && typeof raw === "object" &&
+    (raw as Record<PropertyKey, unknown>)[MALFORMED_REDEMPTION_TELEMETRY] === true) {
+    return { status: "invalid", issues: [{ code: "custom", path: [], message: "Quarantined redemption telemetry" }] };
+  }
+  const parsed = LiveReserveRedemptionTelemetrySchema.safeParse(raw);
+  return parsed.success
+    ? { status: "valid", telemetry: parsed.data }
+    : { status: "invalid", issues: parsed.error.issues };
+}
+
+export const LiveReserveDiagnosticsSchema = /* @__PURE__ */ (() => z.object({
+  rawSumDeviation: z.number().finite().nonnegative().optional(),
+}).passthrough())();
+export type LiveReserveDiagnostics = z.output<typeof LiveReserveDiagnosticsSchema>;
 
 /** Why a supply-comparing adapter withheld its reserve/liability ratio. */
 const LIABILITY_RATIO_UNAVAILABLE_REASON_VALUES = [
@@ -393,18 +406,11 @@ export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
     buyFeeBpsMax: z.number().finite().optional(),
     redemption: LiveReserveRedemptionTelemetrySchema.optional(),
     details: UnknownRecordSchema.optional(),
-    diag: UnknownRecordSchema.optional(),
+    diag: LiveReserveDiagnosticsSchema.optional(),
   })
   .passthrough())();
 export type LiveReserveSnapshotMetadata = z.output<typeof LiveReserveSnapshotMetadataSchema>;
 
-/** Snapshot admission rejection codes, published as `provenance.scoringRejectionReasons`. */
-const LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES = [
-  "unconfigured", "suspended", "missing-snapshot", "inconsistent-snapshot",
-  "config-mismatch", "non-independent", "stale", "invalid-freshness",
-  "degraded-snapshot", "insufficient-slices",
-] as const;
-export type LiveReserveAdmissionRejectionCode = (typeof LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)[number];
 
 
 export const ReserveProvenanceViewSchema = /* @__PURE__ */ (() => z
@@ -414,7 +420,7 @@ export const ReserveProvenanceViewSchema = /* @__PURE__ */ (() => z
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
     scoringEligible: z.boolean(),
     /** Admission reasons behind `scoringEligible` (empty when eligible); `stale` is explained by `sync.freshness`. */
-    scoringRejectionReasons: z.array(z.enum(LIVE_RESERVE_ADMISSION_REJECTION_CODE_VALUES)).optional(),
+    scoringRejectionReasons: z.array(LiveReserveAdmissionRejectionCodeSchema).optional(),
   })
   .strict())();
 export type ReserveProvenanceView = z.output<typeof ReserveProvenanceViewSchema>;
@@ -427,12 +433,19 @@ export const ReserveDisplayBadgeViewSchema = /* @__PURE__ */ (() => z
   .strict())();
 export type ReserveDisplayBadgeView = z.output<typeof ReserveDisplayBadgeViewSchema>;
 
+export const ReserveCollectionEligibilitySchema = /* @__PURE__ */ (() => z.object({
+  scheduled: z.boolean(),
+  reason: z.enum(["active", "quarantined", "frozen", "delisted"]),
+}).strict())();
+export type ReserveCollectionEligibility = z.output<typeof ReserveCollectionEligibilitySchema>;
+
 export const ReserveSyncStateViewSchema = /* @__PURE__ */ (() => z
   .object({
     enabled: z.boolean(),
     status: z.enum(["ok", "degraded", "error", "skipped"]),
     stale: z.boolean(),
     bootstrap: z.boolean(),
+    collectionEligibility: ReserveCollectionEligibilitySchema.optional(),
     lastAttemptedAt: z.number().finite().optional(),
     lastSuccessAt: z.number().finite().optional(),
     warnings: z.array(z.string()).optional(),

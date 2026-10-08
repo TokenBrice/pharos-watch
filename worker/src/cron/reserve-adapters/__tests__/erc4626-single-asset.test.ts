@@ -3,9 +3,16 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
+import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
+import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import type { AdapterResult } from "../types";
+import { finalizeErc4626RedemptionCapacity } from "../erc4626-redemption-capacity";
 import {
   installErc4626Network,
   runTrackedVault,
+  type Erc4626RpcFixture,
 } from "./erc4626-single-asset.test-support";
 
 // Generic underlying-token fixture; not Maple's reviewed pooled claim.
@@ -124,6 +131,61 @@ function mockYearnV3Rpc(isShutdownRaw?: bigint | number, pausedRaw?: bigint | nu
       return undefined;
     }],
   });
+}
+
+function installTrackedMorphoV2(
+  id: string,
+  warnings: unknown,
+  fixture: Erc4626RpcFixture = {},
+  vaultOverrides: Record<string, unknown> = {},
+) {
+  const coin = TRACKED_META_BY_ID.get(id)!;
+  const config = coin.liveReservesConfig!;
+  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
+  const primary = config.inputs.primary;
+  if (primary.kind !== "onchain-evm" || params.redemptionLiquidity?.source !== "morpho-vault-v2") {
+    throw new Error(`Missing tracked Morpho V2 fixture for ${id}`);
+  }
+  const vault = coin.contracts!.find((contract) => contract.chain === primary.chain)!.address;
+  const asset = params.slice.expectedAssetAddress!;
+  const chainId = params.redemptionLiquidity.chainId;
+  installErc4626Network({
+    chain: primary.chain,
+    vault,
+    asset,
+    paused: 0,
+    ...fixture,
+    extraHandlers: [({ url, call }) => {
+      if (call?.data === "0xad468d11") return jsonResponse({ result: uint256Result(1) });
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      return jsonResponse({ data: { vaultV2ByAddress: {
+        address: vault, asset: { address: asset }, chain: { id: chainId }, listed: true,
+        liquidity: "90000000", liquidityUsd: 90, warnings,
+        ...vaultOverrides,
+      } } });
+    }],
+  });
+}
+
+function trackedVaultSnapshot(id: string, result: AdapterResult) {
+  const coin = TRACKED_META_BY_ID.get(id)!;
+  return {
+    stablecoinId: id,
+    slices: result.slices,
+    fetchedAt: Math.floor(Date.now() / 1000),
+    attemptId: "morpho-test-success",
+    source: coin.liveReservesConfig!.adapter,
+    metadata: result.metadata ?? {},
+    warnings: result.warnings ?? [],
+    warningCount: result.warnings?.length ?? 0,
+    adapterSourceModel: "single-bucket" as const,
+    adapterEvidenceClass: "independent" as const,
+    configFingerprint: computeLiveReserveConfigFingerprint(coin.liveReservesConfig!),
+  };
+}
+
+function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: string }) {
+  return { lastSuccessAt: snapshot.fetchedAt, lastSuccessAttemptId: snapshot.attemptId };
 }
 
 describe("fetchErc4626SingleAssetReserves", () => {
@@ -569,7 +631,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       redemptionCapacitySource: "erc4626-idle-underlying",
       redemption: {
         capacityUsd: 1,
-        routeStatus: "degraded",
+        routeStatus: "unknown",
       },
     });
     expect(result.metadata).not.toHaveProperty("sboldSpWithdrawableRaw");
@@ -668,11 +730,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.25,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "degraded",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
       },
     });
     expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
   });
 
   it("does not label an EUR underlying balance as USD capacity without FX valuation", async () => {
@@ -774,7 +836,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       }),
     ]);
     expect(result.metadata?.details?.navConsistencyRatio).toBeCloseTo(1.1, 2);
-    expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
+    expect(result.metadata?.redemption?.routeStatus).toBe("unknown");
   });
 
   it("uses explicit RPC URLs for ERC-4626 vaults on chains without registry RPCs", async () => {
@@ -833,6 +895,194 @@ describe("fetchErc4626SingleAssetReserves", () => {
         assetAddressMatchesExpected: true,
       },
     });
+  });
+});
+
+describe("Morpho V2 operational conditions and composition admission", () => {
+  it.each([
+    { id: "steakusdg-steakhouse", type: "deposit_disabled", level: "RED", code: "morpho-vault-v2-deposit-disabled", status: "unknown" },
+    { id: "krusdc-keyrock", type: "low_liquidity", level: "YELLOW", code: "morpho-vault-v2-low-liquidity", status: "degraded" },
+  ])("admits complete $id composition without expanding idle capacity", async ({ id, type, level, code, status }) => {
+    installTrackedMorphoV2(id, [{ type, level }]);
+    const result = await runTrackedVault(id);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code, effect: "info" }));
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({ pct: 100, risk: "high", depType: "wrapper" });
+    expect(result.metadata).toMatchObject({
+      unknownExposurePct: 0,
+      redemptionCapacityRaw: "25000000",
+      redemptionCapacitySource: "erc4626-idle-underlying",
+      redemption: {
+        capacityUsd: 25, freshnessKind: "same-run-onchain", routeStatus: status,
+        observerDiagnostics: { morphoWarnings: [{ type, level }] },
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
+    if (status === "degraded") {
+      expect(result.metadata?.redemption?.routeStatusSource).toBe("protocol-api");
+    } else {
+      expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+    }
+    const validation = expectValidAdapterOutput("erc4626-single-asset", result, { subjectId: id });
+    expect(nonInfoWarnings(validation.warnings)).toEqual([]);
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const snapshot = trackedVaultSnapshot(id, result);
+    const syncState = trackedVaultSyncState(snapshot);
+    expect(evaluateLiveReserveAdmission(snapshot, syncState, coin, snapshot.fetchedAt).eligible).toBe(true);
+    expect(evaluateLiveReserveAdmission(snapshot, { ...syncState, lastSuccessAttemptId: "different-attempt" }, coin, snapshot.fetchedAt).reasons).toContain("inconsistent-snapshot");
+    expect(evaluateLiveReserveAdmission(snapshot, syncState, coin, snapshot.fetchedAt + LIVE_RESERVE_FRESHNESS_SEC + 1).reasons).toContain("stale");
+    expect(evaluateLiveReserveAdmission({ ...snapshot, configFingerprint: "old-config" }, syncState, coin, snapshot.fetchedAt).reasons).toContain("config-mismatch");
+    expect(evaluateLiveReserveAdmission({
+      ...snapshot,
+      metadata: { ...snapshot.metadata, freshnessMode: "verified", sourceTimestamp: snapshot.fetchedAt - LIVE_RESERVE_FRESHNESS_SEC - 1 },
+    }, syncState, coin, snapshot.fetchedAt).reasons).toContain("stale");
+  });
+
+  it.each([
+    { id: "steakusdg-steakhouse", warnings: null },
+    { id: "krusdc-keyrock", warnings: null },
+    { id: "steakusdg-steakhouse", warnings: undefined },
+    { id: "krusdc-keyrock", warnings: undefined },
+  ])("admits healthy $id with a nullish warning list $warnings", async ({ id, warnings }) => {
+    installTrackedMorphoV2(id, warnings);
+    const result = await runTrackedVault(id);
+    expect(nonInfoWarnings(result.warnings)).toEqual([]);
+    expect(result.metadata).toMatchObject({
+      unknownExposurePct: 0,
+      morphoVaultV2LiquidityRaw: "90000000",
+      redemptionCapacityRaw: "90000000",
+      redemptionCapacitySource: "morpho-vault-v2-liquidity",
+      redemption: {
+        capacityUsd: 90,
+        freshnessKind: "same-run-api",
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+      },
+    });
+    const validation = expectValidAdapterOutput("erc4626-single-asset", result, { subjectId: id });
+    expect(nonInfoWarnings(validation.warnings)).toEqual([]);
+    const snapshot = trackedVaultSnapshot(id, result);
+    expect(evaluateLiveReserveAdmission(
+      snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt,
+    ).eligible).toBe(true);
+  });
+
+  it.each([
+    { warnings: [{ type: "unknown", level: "RED" }] },
+    { warnings: [{ type: "deposit_disabled", level: "RED" }, { type: "bad_debt", level: "RED" }] },
+    { warnings: [{ type: "bad_debt", level: "RED" }, { type: "low_liquidity", level: "YELLOW" }] },
+    { warnings: [{ type: "deposit_disabled", level: "YELLOW" }] },
+    { warnings: [{ type: "low_liquidity", level: "RED" }] },
+    { warnings: [{ type: "low_liquidity" }] },
+    { warnings: [null] },
+    { warnings: "malformed" },
+    { warnings: {} },
+  ])("rejects unknown, wrong-level or malformed warnings %j", async ({ warnings }) => {
+    const id = "krusdc-keyrock";
+    installTrackedMorphoV2(id, warnings);
+    const result = await runTrackedVault(id);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "morpho-vault-v2-warning", effect: "degraded" }));
+    expect(result.metadata?.redemption?.capacityUsd).toBe(25);
+    expect(result.metadata).not.toHaveProperty("morphoVaultV2LiquidityRaw");
+    const snapshot = trackedVaultSnapshot(id, result);
+    expect(evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt).reasons).toContain("degraded-snapshot");
+    expect(result.metadata?.redemption?.routeStatus).not.toBe("open");
+  });
+
+  it.each([0n, 25_000_000n])("retains protocol-API low-liquidity state for observed idle %s", async (idleBalance) => {
+    installTrackedMorphoV2("krusdc-keyrock", [{ type: "low_liquidity", level: "YELLOW" }], { idleBalance });
+    const result = await runTrackedVault("krusdc-keyrock");
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: Number(idleBalance) / 1e6, routeStatus: "degraded",
+      freshnessKind: "same-run-onchain", routeStatusSource: "protocol-api",
+    });
+  });
+
+  it("keeps onchain pause ahead of API low liquidity while admitting complete composition", async () => {
+    const id = "krusdc-keyrock";
+    installTrackedMorphoV2(id, [{ type: "low_liquidity", level: "YELLOW" }], { paused: 1 });
+    const result = await runTrackedVault(id);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-redemption-paused", effect: "info" }));
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25, routeStatus: "paused", routeStatusSource: "onchain" });
+    const snapshot = trackedVaultSnapshot(id, result);
+    expect(evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt).eligible).toBe(true);
+  });
+
+  it("does not exempt missing idle attribution or fabricate capacity", async () => {
+    const id = "krusdc-keyrock";
+    installTrackedMorphoV2(id, [{ type: "low_liquidity", level: "YELLOW" }], { idleBalance: null });
+    const result = await runTrackedVault(id);
+    expect(result.metadata).toMatchObject({ unknownExposurePct: 100, redemption: { routeStatus: "degraded", routeStatusSource: "protocol-api" } });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-idle-balance-unavailable", effect: "degraded" }));
+    const snapshot = trackedVaultSnapshot(id, result);
+    expect(evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt).reasons).toContain("degraded-snapshot");
+  });
+
+  it("keeps NAV divergence a composition defect without inferring withdrawal impairment", async () => {
+    const id = "steakusdg-steakhouse";
+    installTrackedMorphoV2(id, [{ type: "deposit_disabled", level: "RED" }], { convertedAssets: 110_000_000n });
+    const result = await runTrackedVault(id);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-nav-divergence", effect: "degraded" }));
+    expect(result.metadata?.redemption?.routeStatus).toBe("unknown");
+    const snapshot = trackedVaultSnapshot(id, result);
+    expect(evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt).reasons).toContain("degraded-snapshot");
+  });
+
+  it("does not exempt a warned API payload with an identity mismatch or malformed amount", async () => {
+    const id = "steakusdg-steakhouse";
+    for (const vaultOverrides of [
+      { address: "0x000000000000000000000000000000000000dead" },
+      { asset: { address: "0x000000000000000000000000000000000000dead" } },
+      { liquidity: "invalid" },
+      { liquidityUsd: "invalid" },
+      { forceDeallocatableLiquidity: "invalid" },
+      { listed: false },
+    ]) {
+      installTrackedMorphoV2(id, [{ type: "deposit_disabled", level: "RED" }], {}, vaultOverrides);
+      const result = await runTrackedVault(id);
+      expect(nonInfoWarnings(result.warnings)).not.toEqual([]);
+      const snapshot = trackedVaultSnapshot(id, result);
+      expect(evaluateLiveReserveAdmission(snapshot, trackedVaultSyncState(snapshot), TRACKED_META_BY_ID.get(id), snapshot.fetchedAt).reasons).toContain("degraded-snapshot");
+    }
+  });
+
+  it("does not infer route impairment from an unrelated NAV warning", async () => {
+    installErc4626Network({ paused: 0, convertedAssets: 110_000_000n });
+    const result = await runTrackedVault("syrupusdc-maple");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-nav-divergence", effect: "degraded" }));
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25, routeStatus: "open", routeStatusSource: "onchain" });
+  });
+
+  it("retains a known low-liquidity diagnosis even when an earlier unknown tag rejects composition", async () => {
+    installTrackedMorphoV2("krusdc-keyrock", [
+      { type: "bad_debt", level: "RED" },
+      { type: "low_liquidity", level: "YELLOW" },
+    ]);
+    const result = await runTrackedVault("krusdc-keyrock");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "morpho-vault-v2-warning", effect: "degraded" }));
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 25, routeStatus: "degraded", routeStatusSource: "protocol-api" });
+  });
+});
+
+describe("sfrxUSD generic completion boundary", () => {
+  it.each([0n, 500_000_000n])("never turns remote withdrawability or idle %s into generic unbounded capacity", (idleCapacityRaw) => {
+    const telemetry = finalizeErc4626RedemptionCapacity({
+      supplyAssetsRaw: 1_000_000_000n,
+      idleCapacityRaw,
+      pause: { paused: false, shutdown: null },
+      configured: {
+        source: "fraxtal-hop-withdrawable", capacityRaw: 100_000_000n, underlyingDecimals: 6,
+        warnings: [], diagnostics: {}, telemetry: {},
+        route: {
+          freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+          capacityKind: "documented-bound", settlementBoundUnproven: true,
+          sourceTimestamp: 1_790_000_000,
+        },
+      },
+    });
+    expect(telemetry).toBeNull();
   });
 });
 

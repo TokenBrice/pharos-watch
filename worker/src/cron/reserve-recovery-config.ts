@@ -1,4 +1,8 @@
-import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, isReserveSupplyAdmissionBootstrapAuthorized, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_STABLECOINS, hasWorkerLiveReserves } from "@shared/lib/stablecoins/worker-runtime-registry";
+import type { WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
+import { isReserveNavPriceSource } from "../lib/reserve-nav-price";
 import { throwIfAborted } from "../lib/abort";
 import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease-primitives";
 import {
@@ -51,12 +55,38 @@ function partitionReserveConfigRecoveries(
   return { suspended, missingFetchers, skippedSameFingerprint, due };
 }
 
+/** Separate prerequisite lane; it never joins the active producer/generation census. */
+export function selectReserveSupplyAdmissionBootstrapTargets(
+  coins: readonly WorkerRuntimeStablecoinMeta[],
+  snapshotFingerprints: ReadonlyMap<string, string>,
+  attemptedFingerprints: ReadonlyMap<string, string>,
+  hasFetcher: (adapter: string) => boolean,
+  nowMs: number,
+): ConfiguredCoin[] {
+  return coins.filter(hasWorkerLiveReserves).filter((coin) => {
+    const config = coin.liveReservesConfig;
+    if (coin.status !== "quarantined" || !coin.flags.navToken || config.suspended
+      || !isReserveNavPriceSource(config.adapter)
+      || !isReserveSupplyAdmissionBootstrapAuthorized(config, nowMs)
+      || !LiveReservesConfigSchema.safeParse(config).success || !hasFetcher(config.adapter)) return false;
+    const fingerprint = computeLiveReserveConfigFingerprint(config);
+    return snapshotFingerprints.get(coin.id) !== fingerprint
+      && attemptedFingerprints.get(coin.id) !== fingerprint;
+  });
+}
+
 export async function recoverLiveReserveConfigChanges(
   db: D1Database,
   signal: AbortSignal,
   adapterCtx: AdapterContext,
   pollIdentity: ReserveRecoveryPollIdentity = {},
 ) {
+  const nowMs = Date.now();
+  const supplyAdmissionBootstrapExpired = WORKER_TRACKED_STABLECOINS.filter((coin) => {
+    const reviewBy = coin.liveReservesConfig?.bootstrapForSupplyAdmission?.reviewBy;
+    return reviewBy != null && isValidIsoDateOnly(reviewBy)
+      && Date.parse(`${reviewBy}T00:00:00Z`) <= nowMs;
+  }).map((coin) => coin.id);
   // The outer scheduled reserve-recovery lease/fence owns this phase. Take the
   // producer's lease too so the four-hourly writer and this targeted writer
   // cannot overlap. Read candidates only AFTER taking it (idempotent on retry).
@@ -64,8 +94,8 @@ export async function recoverLiveReserveConfigChanges(
     throwIfAborted(leaseSignal);
     const startedMs = Date.now();
     const deadlineMs = startedMs + RESERVE_CONFIG_RECOVERY_BUDGET_MS;
-    // Published bindings take priority. Without one, a recorded prior attempt
-    // still proves a changed existing config; never bootstrap unattempted feeds.
+    // Published bindings take priority for ordinary changed-config recovery.
+    // Explicit quarantined prerequisite authorizations are selected separately.
     // No composition or attempt payloads are loaded, only compact binding rows.
     const rows = await runWithOverloadRetry(() => db.prepare(
       `SELECT stablecoin_id, config_fingerprint, 'snapshot' AS binding_source
@@ -90,19 +120,29 @@ export async function recoverLiveReserveConfigChanges(
       priorBindingSources[snapshot != null ? "snapshot" : "attempt"]++;
       return true;
     });
-    const states = await loadReserveSyncStateMap(db, mismatched.map((coin) => coin.id));
+    const bootstrapCandidates = selectReserveSupplyAdmissionBootstrapTargets(
+      WORKER_TRACKED_STABLECOINS, snapshotFingerprints, attemptedFingerprints, () => true, startedMs,
+    );
+    const states = await loadReserveSyncStateMap(db, [...mismatched, ...bootstrapCandidates].map((coin) => coin.id));
     const initial = partitionReserveConfigRecoveries(
       mismatched, attemptedFingerprints, currentFingerprints, states, new Set(),
     );
     // Consumed and suspended opportunities never initialize adapter machinery.
-    const adapterRegistry = initial.due.length > 0 ? await import("./reserve-adapters/index") : null;
+    // Runtime adapter-registry plugin loading stays lazy: static loading would
+    // initialize the complete fetcher corpus even for consumed/no-target polls.
+    const adapterRegistry = initial.due.length > 0 || bootstrapCandidates.length > 0
+      ? await import("./reserve-adapters/index") : null;
     const missingFetcherIds = new Set(initial.due.filter((coin) =>
       adapterRegistry!.getReserveAdapter(coin.liveReservesConfig!.adapter) == null,
     ).map((coin) => coin.id));
     const partition = partitionReserveConfigRecoveries(
       mismatched, attemptedFingerprints, currentFingerprints, states, missingFetcherIds,
     );
-    const { due } = partition;
+    const bootstrapTargets = selectReserveSupplyAdmissionBootstrapTargets(
+      bootstrapCandidates, snapshotFingerprints, attemptedFingerprints,
+      (adapter) => adapterRegistry!.getReserveAdapter(adapter) != null, startedMs,
+    );
+    const due = [...partition.due, ...bootstrapTargets];
     const warnings = partition.missingFetchers.map((stablecoinId) => ({
       stablecoinId, code: "config-recovery-missing-fetcher", severity: "warning" as const,
     }));
@@ -164,6 +204,9 @@ export async function recoverLiveReserveConfigChanges(
       disposition: warnings.length > 0 ? "config-recovery-partial" : "config-recovery-checked",
       mismatchCount: mismatched.length,
       priorBindingSources,
+      supplyAdmissionBootstrapCount: bootstrapTargets.length,
+      supplyAdmissionBootstrapIds: bootstrapTargets.map((coin) => coin.id),
+      supplyAdmissionBootstrapExpired,
       suspendedCount: partition.suspended.length,
       missingFetcherCount: partition.missingFetchers.length,
       skippedSameFingerprint: partition.skippedSameFingerprint,
@@ -180,10 +223,11 @@ export async function recoverLiveReserveConfigChanges(
   });
   if (leased.status === "skipped_neutral") {
     return { disposition: "config-recovery-priority", reason: leased.producerPriority!.reason,
-      producerPriority: leased.producerPriority, attemptedCount: 0, attempted: [], healed: [], failed: [] };
+      producerPriority: leased.producerPriority, supplyAdmissionBootstrapExpired,
+      attemptedCount: 0, attempted: [], healed: [], failed: [] };
   }
   return leased.status === "skipped_locked"
     ? { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held", blockedBy: leased.blockedBy,
-      attempted: [], healed: [], failed: [] }
+      supplyAdmissionBootstrapExpired, attempted: [], healed: [], failed: [] }
     : leased.result!;
 }

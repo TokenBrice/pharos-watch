@@ -150,8 +150,8 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
     ));
   }
 
-  // `redeemCollateral()` reverts unless the protocol-priced TCR clears MCR, so
-  // the holder-facing redemption route is open only while the gate holds.
+  // The TCR/MCR system gate is observed independently of any eligible-trove
+  // census or exact redeem request; passing it establishes no capacity amount.
   let routeStatus: "open" | "paused" | "unknown";
   let routeStatusReason: string | undefined;
   if (state.tcrRaw == null || state.mcrRaw == null || state.mcrRaw <= 0n) {
@@ -198,6 +198,7 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
     hbarPriceUsd: state.hbarPriceUsd ?? null,
     chfUsdRate: state.chfUsdRate,
     fxRateDate: state.fxRateDate,
+    redemptionCapacityBasis: "system-debt-diagnostic-only",
   };
 
   return {
@@ -212,15 +213,15 @@ export function adaptHliquityHederaState(state: HliquityHederaState): AdapterRes
       supplyUsd: supplyHchf * state.chfUsdRate,
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: totalLiabilitiesUsd,
-        capacityKind: "live-direct-bounded",
+        capacityKind: "documented-bound",
         freshnessKind: "same-run-onchain",
+        sourceTimestamp: state.block.timestampSec,
+        blockNumber: state.block.number,
         routeStatus,
         routeStatusSource: "onchain",
         routeObserved: true,
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "any-holder",
-        settlementDelaySec: 0,
         sourceUrls: [
           "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability",
           "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts",

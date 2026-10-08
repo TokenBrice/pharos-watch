@@ -391,7 +391,7 @@ expectWarnings(result, ["quarantined-balance"]);
 - `expectWarnings(result, codes)` asserts the emitted warning **codes**, never message wording; `expectWarningEffect(result, code, effect)` pins one code's effect. Message text is not a contract and copy edits must not fail a suite.
 - Pure `adapt*` unit tests keep calling the parser directly — the harness is for fetch-level and adapter-level cases.
 
-Independent-assurance adapters share their redirect, allowed-host, reviewed-report, and newer-report fence through `__tests__/independent-assurance.test-support.ts`. Issuer suites keep only issuer-specific discovery and rewrite behavior; add each live product to the table in `independent-assurance.test.ts` so a registry-row drift still fails the common fence.
+Independent-assurance adapters share their redirect, allowed-host, reviewed-report, and newer-report fence through `__tests__/independent-assurance.test-support.ts`. Agora, Anchorage, AUDD, CADD, FDUSD, RLUSD and SBC dispatch through the real generic engine with profile-only publisher modules; `IndependentAssuranceProfile` belongs to `types.ts`, not a driver re-export. Issuer suites keep only publisher-specific discovery/rewrite behavior. Add each product to `independent-assurance.test.ts` and exercise registered dispatch through index/PDF/hash/reconciliation/result validation so registry/profile drift fails the common fence; a forwarder mock is not verification.
 
 #### Corpus replay gate (`__tests__/adapter-corpus.test.ts`)
 

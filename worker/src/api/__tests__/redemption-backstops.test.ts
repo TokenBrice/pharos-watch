@@ -105,9 +105,69 @@ describe("handleRedemptionBackstops", () => {
     assertAllD1MatchesUsed(db);
   });
 
+  it.each([null, "", "not-json", '{"resolutionState":', "null", "[]", '"resolved"', "{}"])(
+    "returns 503 rather than a positive score when immutable details are invalid: %s",
+    async (detailsJson) => {
+      const db = makeCompletedRunsDb([completedRun("run-corrupt")], {
+        "run-corrupt": [makeRedemptionRow({ score: 88, details_json: detailsJson })],
+      });
+      const response = await handleRedemptionBackstops(db);
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({ error: "Redemption backstop snapshot unavailable" });
+      assertAllD1MatchesUsed(db);
+    },
+  );
+
+  it("returns 503 for corrupt reserve provenance without salvaging positive scalar columns", async () => {
+    const details = JSON.parse(makeRedemptionRow().details_json);
+    const db = makeCompletedRunsDb([completedRun("run-corrupt-binding")], {
+      "run-corrupt-binding": [makeRedemptionRow({
+        details_json: JSON.stringify({ ...details, reserveInput: { generationId: "reserve-new" } }),
+      })],
+    });
+    const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "Redemption backstop snapshot unavailable" });
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("retains the earlier immutable timestamp, methodology and stale headers after corrupt latest details", async () => {
+    const olderTimestamp = 1_699_700_000;
+    const newerTimestamp = 1_700_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime((newerTimestamp + 60) * 1000);
+    const db = makeCompletedRunsDb([
+      completedRun("run-new-corrupt", { methodology_version: "4.07" }),
+      completedRun("run-old-valid", {
+        completed_at: olderTimestamp + 10, min_updated_at: olderTimestamp,
+        max_updated_at: olderTimestamp, methodology_version: "3.997",
+      }),
+    ], {
+      "run-new-corrupt": [makeRedemptionRow({
+        methodology_version: "4.07", details_json: "not-json", updated_at: newerTimestamp,
+      })],
+      "run-old-valid": [makeRedemptionRow({ updated_at: olderTimestamp, methodology_version: "3.997" })],
+    });
+    const response = await handleRedemptionBackstops(db);
+    const body = RedemptionBackstopsResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.updatedAt).toBe(olderTimestamp);
+    expect(body.coins["cusd-cap"].updatedAt).toBe(olderTimestamp);
+    expect(body.methodology.version).toBe("3.997");
+    expect(response.headers.get("X-Data-Age")).toBe(String(newerTimestamp + 60 - olderTimestamp));
+    expect(response.headers.get("Warning")).not.toBeNull();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    assertAllD1MatchesUsed(db);
+  });
+
   it("attributes methodology.version from the completed run manifest", async () => {
+    const details = JSON.parse(makeRedemptionRow().details_json);
     const db = makeCompletedRunsDb([completedRun("run-v404", { methodology_version: "4.04" })], {
-      "run-v404": [makeRedemptionRow({ snapshot_run_id: "run-v404", methodology_version: "4.03" })],
+      "run-v404": [makeRedemptionRow({
+        snapshot_run_id: "run-v404", methodology_version: "4.03",
+        details_json: JSON.stringify({
+          ...details, routeStatus: "open", routeStatusSource: "static-config", holderEligibility: "any-holder",
+        }),
+      })],
     });
 
     const response = await handleRedemptionBackstops(db);

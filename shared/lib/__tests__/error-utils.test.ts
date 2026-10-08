@@ -11,6 +11,22 @@ describe("toErrorMessage", () => {
     });
   });
 
+  it("preserves cause messages without reading a lazy stack", () => {
+    let stackReads = 0;
+    const error = new Error("outer", { cause: new Error("inner") });
+    Object.defineProperty(error, "stack", {
+      get() { stackReads++; return "diagnostic stack"; },
+    });
+
+    expect(toErrorMessage(error)).toBe("outer; cause: inner");
+    expect(stackReads).toBe(0);
+    expect(describeError(error)).toMatchObject({
+      message: "outer; cause: inner",
+      stack: "diagnostic stack",
+    });
+    expect(stackReads).toBe(1);
+  });
+
   it("preserves own codes on Error subclasses", () => {
     class NetworkError extends Error {
       readonly code = "NETWORK_DOWN";

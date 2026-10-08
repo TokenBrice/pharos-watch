@@ -1,7 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSlicesWithDiagnostics, normalizeSlices, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { calculateRawPercentageSumDeviation, normalizeSlicesWithDiagnostics, normalizeSlices, parsePositiveNumericLike, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 import type { ReserveSlice } from "@shared/types/core";
+
+describe("parsePositiveNumericLike", () => {
+  it("keeps decimal amount units without accepting radix text", () => {
+    expect(parsePositiveNumericLike("0x10")).toBeNull();
+    expect(parsePositiveNumericLike("0b10")).toBeNull();
+    expect(parsePositiveNumericLike("0o10")).toBeNull();
+    expect(parsePositiveNumericLike(".5")).toBe(0.5);
+    expect(parsePositiveNumericLike("1.")).toBe(1);
+    expect(parsePositiveNumericLike("+1.5e-2")).toBe(0.015);
+    expect(parsePositiveNumericLike("1e309")).toBeNull();
+  });
+
+  it("retains the positive-only contract for observed zero, negative, and absent amounts", () => {
+    for (const value of [0, "-0", "-0.5", null, undefined]) {
+      expect(parsePositiveNumericLike(value)).toBeNull();
+    }
+  });
+});
+
+describe("calculateRawPercentageSumDeviation", () => {
+  it.each([0, 0.5, 2, 2.01])("retains raw drift of %s percentage points in either direction", (deviation) => {
+    expect(calculateRawPercentageSumDeviation([40, 60 - deviation])).toBeCloseTo(deviation, 12);
+    expect(calculateRawPercentageSumDeviation([40, 60 + deviation])).toBeCloseTo(deviation, 12);
+  });
+
+  it("keeps zero and positive dust in the source census without normalization repair", () => {
+    expect(calculateRawPercentageSumDeviation([0, 99, 0.000001])).toBeCloseTo(0.999999, 12);
+    expect(calculateRawPercentageSumDeviation([])).toBe(100);
+  });
+});
 
 describe("valueUsdFromBigIntPrice", () => {
   it("returns NaN for non-positive or non-finite prices", () => {

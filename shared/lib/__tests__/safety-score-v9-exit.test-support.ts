@@ -4,6 +4,7 @@ import type { V9ExitRouteFactV2 } from "@shared/types/safety-score-v9-facts";
 export function makeExitRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
   return {
     routeKey: "redemption:issuer",
+    routeId: "issuer",
     lane: "redemption",
     routeFamily: "issuer-redemption",
     applicability: "required",
@@ -40,6 +41,7 @@ export function makeExitRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V
 export function makeDocumentedRedemption(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
   return makeExitRoute({
     routeKey: "redemption:issuer-documented",
+    routeId: "issuer-documented",
     routeFamily: "issuer-redemption",
     scoreEligible: false,
     coverageClass: "exact-lower-bound",

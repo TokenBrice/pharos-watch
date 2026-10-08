@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { URL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptQuantozTransparency } from "../quantoz-transparency";
 import { expectWarningEffect, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
@@ -161,6 +163,17 @@ describe("adaptQuantozTransparency", () => {
 describe("fetchQuantozTransparencyReserves", () => {
   const url = "https://www.quantoz.com/transparency";
   const nowSec = Date.UTC(2026, 3, 20, 1) / 1000;
+
+  it.each(["eurq-quantoz", "usdq-quantoz"])("rejects the freshly fetched October capture of %s on its August accounting date", async (coinId) => {
+    const { result, report } = await runAdapter("quantoz-transparency", coinId, {
+      network: { html: { [url]: readFileSync(new URL("./fixtures/quantoz-aug30-disclosure.html", import.meta.url), "utf8") } },
+      nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-30T00:00:00Z") / 1000);
+    expectWarningEffect(result, "published-percentages-rounded", "info");
+    expectWarningEffect(report, "stale-source-data", "degraded");
+    expect(report.warnings.some((warning) => warning.code === "pct-sum-deviation")).toBe(false);
+  });
 
   it("fetches the reviewed token through the shared network harness", async () => {
     const { result, network } = await runAdapter("quantoz-transparency", "eurq-quantoz", {

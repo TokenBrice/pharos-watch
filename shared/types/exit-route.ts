@@ -445,6 +445,8 @@ const ExitRouteObservationBaseSchema = z.object({
   observedAt: z.number().int().nonnegative(),
   freshnessSeconds: z.number().int().nonnegative(),
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
+  /** One physical inventory reused across routes; never additive capacity. */
+  sharedResourceKey: z.string().trim().min(1).optional(),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
   observationHistory: ExitRouteObservationHistorySchema.optional(),
   physicalToUsd: PhysicalToUsdTraceSchema.optional(),

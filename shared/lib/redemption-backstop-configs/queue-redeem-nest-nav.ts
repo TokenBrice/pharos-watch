@@ -1,6 +1,6 @@
+import { defineConfigFamily } from "./factory";
 import type { RedemptionBackstopConfig } from "./shared";
 import {
-  cloneRedemptionBackstopConfig,
   documentedBoundSupplyFull,
   fixedFee,
   queueRedeemBase,
@@ -29,11 +29,11 @@ const nestNavVaultBase: RedemptionBackstopConfig = {
   ],
 };
 
-const NEST_NAV_VAULTS: readonly [id: string, ticker: string, outputAssets: readonly string[]][] = [
-  ["ntbill-nest", "nTBILL", ["usdc-circle", "pusd-plume"]],
-  ["nbasis-nest", "nBASIS", ["usdc-circle", "pusd-plume"]],
-  ["nopal-nest", "nOPAL", ["usdc-circle", "pusd-plume", "usdt-tether"]],
-  ["nwisdom-nest", "nWISDOM", ["usdc-circle", "pusd-plume"]],
+const NEST_NAV_VAULTS = [
+  { id: "ntbill-nest", ticker: "nTBILL", outputAssets: ["usdc-circle", "pusd-plume"] },
+  { id: "nbasis-nest", ticker: "nBASIS", outputAssets: ["usdc-circle", "pusd-plume"] },
+  { id: "nopal-nest", ticker: "nOPAL", outputAssets: ["usdc-circle", "pusd-plume", "usdt-tether"] },
+  { id: "nwisdom-nest", ticker: "nWISDOM", outputAssets: ["usdc-circle", "pusd-plume"] },
 ];
 
 /** Vaults whose documented Plume USDC and pUSD NestVault paths both returned
@@ -41,30 +41,32 @@ const NEST_NAV_VAULTS: readonly [id: string, ticker: string, outputAssets: reado
  *  The zero covers only the direct queued-redemption fee on those paths. */
 const NEST_ZERO_QUEUED_FEE_VAULTS: Partial<Record<string, true>> = { "ntbill-nest": true, "nwisdom-nest": true };
 
-export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
-  NEST_NAV_VAULTS.map(([id, ticker, outputAssets]) => {
-    const config = cloneRedemptionBackstopConfig(nestNavVaultBase);
-    config.outputAssets = [...outputAssets];
+export const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = defineConfigFamily(
+  NEST_NAV_VAULTS,
+  ({ id, ticker, outputAssets }) => {
     const zeroQueuedFee = NEST_ZERO_QUEUED_FEE_VAULTS[id] === true;
-    config.costModel = zeroQueuedFee
+    return {
+      ...nestNavVaultBase,
+      outputAssets,
+      costModel: zeroQueuedFee
       ? fixedFee(
           0,
           `${ticker} NestVault fees(2) returned flat 0 and rate 0 on the documented Plume USDC and pUSD paths at Plume block 97180152 (2026-10-03); this zero covers only the direct queued-redemption fee, not transaction gas, optional bridge legs, or other chains`,
         )
       : undisclosedReviewedFee(
           `Nest docs describe ${ticker} redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee`,
-        );
-    if (zeroQueuedFee) {
-      config.docs = [
-        ...config.docs!,
-        sourceRef(
-          "Nest protocol NestVaultCore fee source (reviewed 2026-10-03)",
-          "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/NestVaultCore.sol",
-          ["fees"],
         ),
-      ];
-    }
-    config.notes = [`Nest's current vault directory lists a ${ticker} redemption estimate of 4 days.`];
-    return [id, config];
-  }),
+      docs: [
+        ...nestNavVaultBase.docs!,
+        ...(zeroQueuedFee ? [
+          sourceRef(
+            "Nest protocol NestVaultCore fee source (reviewed 2026-10-03)",
+            "https://github.com/plumenetwork/nest-protocol/blob/main/contracts/NestVaultCore.sol",
+            ["fees"],
+          ),
+        ] : []),
+      ],
+      notes: [`Nest's current vault directory lists a ${ticker} redemption estimate of 4 days.`],
+    };
+  },
 );

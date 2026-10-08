@@ -1,12 +1,18 @@
 {
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "forest-road-reserve-manager",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdfr-forest-road",
-    "display": { "url": "https://forestroadvault.com/transparency", "label": "Reviewed Forest Road credit and idle USDC mix" },
+    "display": { "url": "https://forestroadvault.com/transparency", "label": "Onchain idle USDC and net accrued credit accounting" },
     "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } },
-    "params": { "rpcUrl": "https://ethereum-rpc.publicnode.com" }
+    "params": {
+      "managerAddress": "0x8317736611b542ddb4a820fe344b621a904bdd48",
+      "managerImplementation": "0x99b4dfa4e1344273d5335bd90de1dea3a02b9c3a",
+      "usdcAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "tokenAddress": "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com"
+    }
   },
   "id": "usdfr-forest-road",
   "name": "Forest Road USDfr",

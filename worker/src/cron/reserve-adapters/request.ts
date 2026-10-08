@@ -93,7 +93,7 @@ interface JsonRetryOptions {
   headers?: HeadersInit;
   maxResponseBytes?: number;
   maxRetries?: number;
-  /** Transport-owned observer; invoked for every response, including retries. */
+  /** Observes every actual response, including retries; bypasses caching/coalescing. */
   onResponse?: (response: Response) => void;
   redirect?: RequestInit["redirect"];
 }
@@ -211,26 +211,9 @@ function isHeadersInstance(headers: HeadersInit): headers is Headers {
   return typeof Headers !== "undefined" && headers instanceof Headers;
 }
 
-function isPlainHeadersRecord(headers: HeadersInit): headers is Record<string, string> {
-  return !Array.isArray(headers) && !isHeadersInstance(headers);
-}
-
-function normalizeHeaderEntries(headers: HeadersInit): Array<[string, string]> {
-  return Array.from(new Headers(headers).entries()).sort(([leftName, leftValue], [rightName, rightValue]) => {
-    if (leftName < rightName) return -1;
-    if (leftName > rightName) return 1;
-    if (leftValue < rightValue) return -1;
-    if (leftValue > rightValue) return 1;
-    return 0;
-  });
-}
-
-function serializeHeadersForCache(headers?: HeadersInit): string {
-  if (!headers) return "null";
-  if (isPlainHeadersRecord(headers)) {
-    return JSON.stringify(headers);
-  }
-  return `headers:${JSON.stringify(normalizeHeaderEntries(headers))}`;
+function serializeHeadersForCache(headers: Headers): string {
+  return JSON.stringify(Array.from(headers.entries()).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0));
 }
 
 function serializeRetryOptionsForCache(options?: { maxRetries?: number; maxResponseBytes?: number }): string {
@@ -250,17 +233,12 @@ function fetchBodyOptions(timeoutMs: number, maxResponseBytes?: number) {
 function buildRequestHeaders(
   defaults: Record<string, string>,
   overrides?: HeadersInit,
-): HeadersInit {
-  if (!overrides || isPlainHeadersRecord(overrides)) {
-    return {
-      ...defaults,
-      ...(overrides ?? {}),
-    };
-  }
-
+): Headers {
   const merged = new Headers(defaults);
-  for (const [name, value] of normalizeHeaderEntries(overrides)) {
-    merged.set(name, value);
+  if (overrides) {
+    for (const [name, value] of isHeadersInstance(overrides) ? overrides : new Headers(overrides)) {
+      merged.set(name, value);
+    }
   }
   return merged;
 }
@@ -314,39 +292,42 @@ export async function fetchJsonWithRetry<T>(
   options?: JsonRetryOptions,
 ): Promise<T> {
   const maxRetries = options?.maxRetries ?? 2;
+  const headers = buildRequestHeaders(
+    { Accept: "application/json", "User-Agent": ADAPTER_USER_AGENT }, options?.headers,
+  );
+  const redirect = options?.redirect ?? "follow";
+  const factory = async (): Promise<CachedRequestValue<T>> => runAdapterIo(ctx, `json-get:${url}`, async () => {
+    const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
+    const result = await fetchTextBodyWithRetry(
+      url,
+      {
+        signal,
+        redirect,
+        headers,
+      },
+      maxRetries,
+      { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
+    );
+    if (!result) {
+      throw new Error(`Fetch failed for ${url}`);
+    }
+    if (!result.response.ok) {
+      throw new Error(`HTTP ${result.response.status} for ${url}`);
+    }
+    const raw = result.body;
+    try {
+      return { value: JSON.parse(raw) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
+    } catch (error) {
+      throw buildJsonParseError(url, result.response, raw, error);
+    }
+  });
+  if (options?.onResponse) {
+    if (ctx?.requestCache) getRequestCacheState(ctx.requestCache).cacheBypassed = true;
+    return (await factory()).value;
+  }
   return getCachedRequest(
-    `json-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(options?.headers)}`,
-    async () => runAdapterIo(ctx, `json-get:${url}`, async () => {
-      const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
-      const result = await fetchTextBodyWithRetry(
-        url,
-        {
-          signal,
-          ...(options?.redirect ? { redirect: options.redirect } : {}),
-          headers: buildRequestHeaders(
-            {
-              Accept: "application/json",
-              "User-Agent": ADAPTER_USER_AGENT,
-            },
-            options?.headers,
-          ),
-        },
-        maxRetries,
-        { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
-      );
-      if (!result) {
-        throw new Error(`Fetch failed for ${url}`);
-      }
-      if (!result.response.ok) {
-        throw new Error(`HTTP ${result.response.status} for ${url}`);
-      }
-      const raw = result.body;
-      try {
-        return { value: JSON.parse(raw) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
-      } catch (error) {
-        throw buildJsonParseError(url, result.response, raw, error);
-      }
-    }),
+    `json-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${redirect}:${serializeHeadersForCache(headers)}`,
+    factory,
     ctx,
   );
 }
@@ -361,40 +342,43 @@ export async function fetchJsonPostWithRetry<T>(
 ): Promise<T> {
   const serializedBody = JSON.stringify(body);
   const maxRetries = options?.maxRetries ?? 2;
+  const headers = buildRequestHeaders(
+    { "Content-Type": "application/json", "User-Agent": ADAPTER_USER_AGENT }, options?.headers,
+  );
+  const redirect = options?.redirect ?? "follow";
+  const factory = async (): Promise<CachedRequestValue<T>> => runAdapterIo(ctx, `json-post:${url}`, async () => {
+    const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
+    const result = await fetchTextBodyWithRetry(
+      url,
+      {
+        redirect,
+        method: "POST",
+        headers,
+        body: serializedBody,
+        signal,
+      },
+      maxRetries,
+      { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
+    );
+    if (!result) {
+      throw new Error(`POST fetch failed for ${url}`);
+    }
+    if (!result.response.ok) {
+      throw new Error(`HTTP ${result.response.status} for POST ${url}`);
+    }
+    try {
+      return { value: JSON.parse(result.body) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
+    } catch (error) {
+      throw buildJsonParseError(url, result.response, result.body, error);
+    }
+  });
+  if (options?.onResponse) {
+    if (ctx?.requestCache) getRequestCacheState(ctx.requestCache).cacheBypassed = true;
+    return (await factory()).value;
+  }
   return getCachedRequest(
-    `json-post:${url}:${timeoutMs}:${serializedBody}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(options?.headers)}`,
-    async () => runAdapterIo(ctx, `json-post:${url}`, async () => {
-      const observation = createRequestBodyObserver(ctx, options?.maxResponseBytes ?? DEFAULT_ADAPTER_MAX_RESPONSE_BYTES);
-      const result = await fetchTextBodyWithRetry(
-        url,
-        {
-          ...(options?.redirect ? { redirect: options.redirect } : {}),
-          method: "POST",
-          headers: buildRequestHeaders(
-            {
-              "Content-Type": "application/json",
-              "User-Agent": ADAPTER_USER_AGENT,
-            },
-            options?.headers,
-          ),
-          body: serializedBody,
-          signal,
-        },
-        maxRetries,
-        { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onResponse: options?.onResponse, onBodyRead: observation.onBodyRead },
-      );
-      if (!result) {
-        throw new Error(`POST fetch failed for ${url}`);
-      }
-      if (!result.response.ok) {
-        throw new Error(`HTTP ${result.response.status} for POST ${url}`);
-      }
-      try {
-        return { value: JSON.parse(result.body) as T, cacheBytes: observation.intakeBytes == null ? null : 8 * observation.intakeBytes, basis: "intake-estimate" };
-      } catch (error) {
-        throw buildJsonParseError(url, result.response, result.body, error);
-      }
-    }),
+    `json-post:${url}:${timeoutMs}:${serializedBody}${serializeRetryOptionsForCache(options)}:${redirect}:${serializeHeadersForCache(headers)}`,
+    factory,
     ctx,
   );
 }
@@ -415,6 +399,7 @@ async function fetchTextResponse(
   url: string,
   signal: AbortSignal,
   timeoutMs: number,
+  headers: Headers,
   ctx?: AdapterContext,
   options?: TextRetryOptions,
 ): Promise<CachedRequestValue<AdapterFetchResponse<string>>> {
@@ -425,12 +410,7 @@ async function fetchTextResponse(
       url,
       {
         signal,
-        headers: buildRequestHeaders(
-          {
-            "User-Agent": ADAPTER_USER_AGENT,
-          },
-          options?.headers,
-        ),
+        headers,
       },
       maxRetries,
       { ...fetchBodyOptions(timeoutMs, options?.maxResponseBytes), onBodyRead: observation.onBodyRead },
@@ -456,9 +436,10 @@ export async function fetchTextResponseWithRetry(
   ctx?: AdapterContext,
   options?: TextRetryOptions,
 ): Promise<AdapterFetchResponse<string>> {
+  const headers = buildRequestHeaders({ "User-Agent": ADAPTER_USER_AGENT }, options?.headers);
   return getCachedRequest(
-    `text-response-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(options?.headers)}`,
-    () => fetchTextResponse(url, signal, timeoutMs, ctx, options),
+    `text-response-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(headers)}`,
+    () => fetchTextResponse(url, signal, timeoutMs, headers, ctx, options),
     ctx,
   );
 }
@@ -470,10 +451,11 @@ export async function fetchTextWithRetry(
   ctx?: AdapterContext,
   options?: TextRetryOptions,
 ): Promise<string> {
+  const headers = buildRequestHeaders({ "User-Agent": ADAPTER_USER_AGENT }, options?.headers);
   return getCachedRequest(
-    `text-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(options?.headers)}`,
+    `text-get:${url}:${timeoutMs}${serializeRetryOptionsForCache(options)}:${serializeHeadersForCache(headers)}`,
     async () => {
-      const response = await fetchTextResponse(url, signal, timeoutMs, ctx, options);
+      const response = await fetchTextResponse(url, signal, timeoutMs, headers, ctx, options);
       return { value: response.value.body, cacheBytes: response.cacheBytes == null ? null : response.cacheBytes - 512, basis: response.basis };
     },
     ctx,

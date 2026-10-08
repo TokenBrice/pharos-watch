@@ -52,7 +52,7 @@
     "compositionBasis": "Midas issuer strategy disclosure plus independent rwa.xyz Asset-Backed Credit / Fasanara Global Fund envelope; no published constituent weights",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current loan-level weights, obligor and originator concentrations, warehouse facilities and actual cash-versus-receivables allocation remain unverified. The latest visible July 13 aggregate report and disclosed liquidity targets do not establish September composition. The latest retrieved financial attestation carries a May 31 fund valuation inside a July 13 publication; publication time does not reset the holdings basis.",
+    "knownUnknownExposure": "Loan-level weights, obligors, originators, warehouse facilities and cash-versus-receivables allocation remain unverified. Source-maintenance check 2026-10-07: mGLOBAL API updatedAt=2026-10-07T20:08:00.124Z labels 93.83% USDT and 6.17% Aave USDC, but the official June 23 structure describes receivables/digital invoices/asset-based finance and general_wallet is unmapped. Do not promote that label to verified Tether reserves. The retained SAVE CID's manager valuation is May 31 and ops claim June 29; publication or proof update cannot renew valuation. Exact equity/NAV agreement may echo the September 24 NAV rather than prove constituents. Preserve the 4000000-second NAV cap; monthly manager reporting does not authorize that age for loan-level composition. Curated dates and unresolved strategy envelope remain unchanged.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

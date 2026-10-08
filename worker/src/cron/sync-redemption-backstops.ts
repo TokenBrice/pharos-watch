@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -19,6 +20,7 @@ import { loadDexLiquidityScores } from "../lib/dex-liquidity";
 import { AcceptedReserveViewError, acceptedReserveMetadataMap, consumedReserveInput, loadAcceptedReserveGeneration } from "../lib/accepted-reserve-generation";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store-write";
 import {
+  applyOutputDependencyResolution,
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
   resolveRedemptionBackstopEntry,
@@ -107,6 +109,7 @@ export async function syncRedemptionBackstops(
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const now = Math.floor(Date.now() / 1000);
   await reportProgress?.({ stage: "loading-redemption-reserves" });
   let acceptedReserveGeneration;
   try {
@@ -125,13 +128,26 @@ export async function syncRedemptionBackstops(
       metadata: { reason: `stablecoins-cache:${stablecoinsCache.reason}` },
     });
   }
+  const supplyMaxAgeSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
+  const supplyUpdatedAt = stablecoinsCache.updatedAt;
+  if (
+    supplyUpdatedAt == null ||
+    !Number.isSafeInteger(supplyUpdatedAt) ||
+    supplyUpdatedAt <= 0 ||
+    supplyUpdatedAt > now ||
+    now - supplyUpdatedAt > supplyMaxAgeSec
+  ) {
+    return createCronResult({
+      status: "error",
+      metadata: { reason: "stablecoins-cache:invalid-supply-generation" },
+    });
+  }
 
   const configuredIds = getConfiguredRedemptionBackstopIds();
   const configById = new Map(
     configuredIds.map((stablecoinId) => [stablecoinId, getRedemptionBackstopConfig(stablecoinId)]),
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
-  const now = Math.floor(Date.now() / 1000);
   const exitExecutionEnvelope = loadV9CandidateMethodologyPolicy(now);
   const exitExecutionReviews = validateExitExecutionModelReviews(exitExecutionModelReviews, exitExecutionEnvelope);
   const currentDepegObservationsById = buildRedemptionCurrentDepegObservationMap({
@@ -180,7 +196,7 @@ export async function syncRedemptionBackstops(
     }
   }
 
-  const snapshots = [];
+  const collectedSnapshots = [];
   const failedIds: string[] = [];
 
   await reportProgress?.({ stage: "resolving-redemption-backstops", itemsDone: 0, itemsTotal: configuredIds.length });
@@ -216,17 +232,18 @@ export async function syncRedemptionBackstops(
         }
       }
 
-      if (resolved) snapshots.push(resolved);
+      if (resolved) collectedSnapshots.push(resolved);
     } catch (error) {
       logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failedIds.push(stablecoinId);
       const config = configById.get(stablecoinId);
       if (config) {
-        snapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
+        collectedSnapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
       }
     }
   }
   throwIfAborted(signal);
+  const snapshots = applyOutputDependencyResolution(collectedSnapshots, configById);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
@@ -272,10 +289,11 @@ export async function syncRedemptionBackstops(
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
   const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
-    reserveViewSchemaVersion: 1,
+    reserveViewSchemaVersion: 2,
     reserveGenerationId: acceptedReserveGeneration.generationId,
     reserveContentSha256: acceptedReserveGeneration.contentSha256,
     runClockSec: now,
+    stablecoinsInput: { updatedAt: supplyUpdatedAt, assessedAt: now, maxAgeSec: supplyMaxAgeSec },
     consumedReserveInputs: Object.fromEntries(
       snapshots.flatMap((entry) => entry.reserveInput ? [[entry.stablecoinId, entry.reserveInput]] : []),
     ),

@@ -242,6 +242,8 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
           ? []
           : [{
               routeKey: "redemption:fixture",
+              routeId: "fixture",
+              lane: "redemption",
               ...knownCause,
               confidenceDimensions: { observation: neutralConfidence, model: neutralConfidence, capacityMethod: neutralConfidence },
               capacityEvidenceTier: "live-direct",
@@ -314,6 +316,39 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
+  it("publishes typed identity for the primary and included/excluded alternatives", () => {
+    const input = fixture("identity", { score: 91.8, grade: "A+" });
+    const exit = input.exit!;
+    const primary = exit.routes[0]!;
+    input.exit = {
+      ...exit,
+      routes: [
+        primary,
+        { ...primary, routeKey: "opaque:included", routeId: "distinct-included", lane: "dex", routeFamily: "dex-amm" },
+        {
+          ...primary, routeKey: "opaque:excluded", routeId: "distinct-excluded",
+          score: null, included: false, exclusionReason: "missing-same-notional-route",
+          capacityPoint: null, components: null, confidenceFactor: null, confidenceDimensions: null,
+        },
+      ],
+    };
+    const card = projectSafetyScoreV9Card(input).card;
+    expect(card.breakdowns!.exit.primaryRoute).toMatchObject({ routeId: "fixture", lane: "redemption" });
+    expect(card.breakdowns!.exit.alternatives).toMatchObject([
+      { key: "opaque:excluded", routeId: "distinct-excluded", lane: "redemption", included: false },
+      { key: "opaque:included", routeId: "distinct-included", lane: "dex", included: true },
+    ]);
+    const legacy = structuredClone(card) as unknown as {
+      breakdowns: { exit: { primaryRoute: Record<string, unknown>; alternatives: Record<string, unknown>[] } };
+    };
+    delete legacy.breakdowns.exit.primaryRoute.routeId;
+    delete legacy.breakdowns.exit.primaryRoute.lane;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(legacy).success).toBe(false);
+    const missingAlternative = structuredClone(card) as unknown as typeof legacy;
+    delete missingAlternative.breakdowns.exit.alternatives[0]!.routeId;
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(missingAlternative).success).toBe(false);
+  });
+
   it.each([
     ["missing-runtime-route-evidence", "missing-same-notional-route", "exit-routes"],
     ["missing-oracle-profile", "unresolved-oracle-branch-applicability", "economic-control:oracle"],
@@ -724,7 +759,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(6);
+    expect(response.schemaVersion).toBe(7);
     expect(response.lifecycle).toBe("active");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated", "pipeline-gap"]);
     expect(response.completeness).toEqual({

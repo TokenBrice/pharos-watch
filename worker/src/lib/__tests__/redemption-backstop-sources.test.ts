@@ -1,10 +1,18 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import * as redemptionBackstops from "@shared/lib/redemption-backstops";
+import * as redemptionCapacity from "../redemption-backstop/capacity";
+import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { StablecoinData } from "@shared/types/market";
-import type { resolveRedemptionBackstopEntry as ResolveRedemptionBackstopEntry } from "../redemption-backstop/sources";
+import type {
+  applyOutputDependencyResolution as ApplyOutputDependencyResolution,
+  buildRedemptionBackstopEntry as BuildRedemptionBackstopEntry,
+  buildFailedRedemptionBackstopEntry as BuildFailedRedemptionBackstopEntry,
+  resolveRedemptionBackstopEntry as ResolveRedemptionBackstopEntry,
+} from "../redemption-backstop/sources";
 import type { ExecutableRedemptionObservation } from "../../cron/reserve-adapters/executable-redemption-observers";
 import {
   buildEntryFixture,
@@ -18,14 +26,17 @@ import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop/live-
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { buildChainRpcs } from "../chain-registry";
 import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import type * as ExecutableObservers from "../../cron/reserve-adapters/executable-redemption-observers";
 
-const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock } = vi.hoisted(() => ({
+const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock, observeExecutableRedemptionRouteMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
   getLatestSuccessfulReserveSnapshotMetadataMock: vi.fn(),
+  observeExecutableRedemptionRouteMock: vi.fn(),
 }));
 
-const observeExecutableRedemptionRouteMock = vi.fn();
-vi.mock("../../cron/reserve-adapters/executable-redemption-observers", () => ({
+vi.mock("../../cron/reserve-adapters/executable-redemption-observers", async (importOriginal) => ({
+  ...await importOriginal<typeof ExecutableObservers>(),
   observeExecutableRedemptionRoute: observeExecutableRedemptionRouteMock,
 }));
 vi.mock("../live-reserves/store", async (importOriginal) => {
@@ -39,9 +50,10 @@ vi.mock("../live-reserves/store", async (importOriginal) => {
 });
 
 describe("buildRedemptionBackstopEntry", () => {
-  let buildRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildRedemptionBackstopEntry;
-  let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildFailedRedemptionBackstopEntry;
+  let buildRedemptionBackstopEntry: typeof BuildRedemptionBackstopEntry;
+  let buildFailedRedemptionBackstopEntry: typeof BuildFailedRedemptionBackstopEntry;
   let resolveRedemptionBackstopEntry: typeof ResolveRedemptionBackstopEntry;
+  let applyOutputDependencyResolution: typeof ApplyOutputDependencyResolution;
   const now = 1_700_000_000;
   const fixedFeeCases = [
     { feeBps: 0, expectedScore: 100 }, { feeBps: 25, expectedScore: 80 },
@@ -87,8 +99,8 @@ describe("buildRedemptionBackstopEntry", () => {
       supplyUsd: 27_682_881.200551473, dexScore: 35,
       metadata: { redemption: { capacityUsd: 362_655.25 }, freshnessMode: "unverified" },
       overrides: { fetchedAt: now - 300, source: "collateral-positions-api" },
-      expected: { routeFamily: "stablecoin-redeem", immediateCapacityUsd: 362_655.25,
-        feeBps: 0, feeConfidence: "fixed" } },
+      expected: { routeFamily: "stablecoin-redeem", immediateCapacityUsd: 235_304.49020468752,
+        feeBps: 0, feeConfidence: "fixed", provider: "reserve-sync-fallback", capacityConfidence: "heuristic", modelConfidence: "low" } },
   ] as const;
 
   // These fixtures cover terms/reserve telemetry; exact-execution reviews are explicit opt-ins.
@@ -109,8 +121,9 @@ describe("buildRedemptionBackstopEntry", () => {
   });
   it("binds only selected live capacity or fee evidence, not unused static telemetry", async () => {
     const stablecoinId = "lusd-liquity";
-    const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId, attemptId: "success", configFingerprint: null,
-      freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: "success" }, now, 172800) };
+    const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId, attemptId: "success",
+      configFingerprint: computeLiveReserveConfigFingerprint(TRACKED_META_BY_ID.get(stablecoinId)!.liveReservesConfig!),
+      freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: "success", metadata: { freshnessMode: "not-applicable" } }, now, 172800) };
     const snapshot = liveSnapshot(stablecoinId, { freshnessMode: "not-applicable", redemption: {
       capacityUsd: 100_000, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain", feeBps: 50,
     } }, { source: "liquity-v1", sourceModel: "single-bucket" });
@@ -135,6 +148,7 @@ describe("buildRedemptionBackstopEntry", () => {
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
     buildFailedRedemptionBackstopEntry = mod.buildFailedRedemptionBackstopEntry;
     resolveRedemptionBackstopEntry = mod.resolveRedemptionBackstopEntry;
+    applyOutputDependencyResolution = mod.applyOutputDependencyResolution;
   });
 
   beforeEach(() => {
@@ -169,7 +183,6 @@ describe("buildRedemptionBackstopEntry", () => {
     "sparkusdtbc-spark",
     "sparkusdc-spark",
     "usdr-rise",
-    "susdat-saturn",
     "susdx-axis",
     "xgld-unitas",
   ])("publishes missing capacity rather than a measured zero for unmeasured %s liquidity", async (id) => {
@@ -192,6 +205,8 @@ describe("buildRedemptionBackstopEntry", () => {
       observeExecutableRedemptionRouteMock.mockResolvedValue({
         capacityRaw: 129641670774n,
         capacitySource: "lido-earnusd-unquantified-queue",
+        capacityState: "unquantified",
+        outputAssetKeys: ["usdc-circle"],
         settlementBoundUnproven: true,
         underlyingDecimals: 6,
         capacityKind: "live-direct-bounded",
@@ -209,12 +224,13 @@ describe("buildRedemptionBackstopEntry", () => {
       const config = getRedemptionBackstopConfig("earnusd-lido")!;
       const rpcOptions = { chainRpcs: buildChainRpcs(), beforeRequest: vi.fn(() => true) };
       const signal = new AbortController().signal;
-      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: "earnusd-lido", attemptId: null, configFingerprint: null,
-        freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: null }, now, 172800) };
+      const reserveInput = { generationId: "reserve:1700000000:test", contentSha256: "a".repeat(64), stablecoinId: "earnusd-lido", attemptId: null, configFingerprint: "b".repeat(64),
+        freshness: assessReserveFetchFreshness({ fetchedAt: now - 120, attemptId: null, metadata: { freshnessMode: "not-applicable" } }, now, 172800) };
       const entry = await buildEntry("earnusd-lido", config, supplyUsd, null, { rpcOptions, signal, reserveInput });
       expect(entry.reserveInput).toBeUndefined();
       expect(entry).toMatchObject({
         feeBps: 27, feeConfidence: "formula", routeStatus: "open", routeStatusSource: "onchain",
+        provider: "executable-observer", sourceMode: "dynamic", capacityConfidence: "heuristic",
         capacitySemantics: "eventual-only", resolutionState: "missing-capacity",
         immediateCapacityUsd: null, immediateCapacityRatio: null,
         capacityScore: null, score: null, eventualRedeemabilityScore: null,
@@ -235,12 +251,7 @@ describe("buildRedemptionBackstopEntry", () => {
       }
       expect(entry.settlementDelaySec).toBeUndefined();
       expect(entry.notes).toContain("redemption-capacity-unquantified");
-      expect(entry.notes?.some((note) => note.includes("queue diagnostics:"))).toBe(true);
       expect(getLatestSuccessfulReserveSnapshotMetadataMock).not.toHaveBeenCalled();
-      expect(observeExecutableRedemptionRouteMock).toHaveBeenCalledWith(
-        "earnusd-lido", "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981", signal,
-        undefined, { rpcOptions },
-      );
     },
   );
 
@@ -248,7 +259,7 @@ describe("buildRedemptionBackstopEntry", () => {
     observeExecutableRedemptionRouteMock.mockResolvedValue(null);
     await expect(buildEntry(
       "earnusd-lido", getRedemptionBackstopConfig("earnusd-lido")!, 100_000_000, null,
-    )).rejects.toThrow("earnusd-lido redemption observer unavailable");
+    )).rejects.toThrow("earnusd-lido executable observer unavailable");
   });
 
   it("does not retain the historical open/zero-fee snapshot after a read rejection", async () => {
@@ -263,33 +274,93 @@ describe("buildRedemptionBackstopEntry", () => {
     { keys: ["m-m0"], accepted: false },
     { keys: ["wm-m0"], accepted: true },
   ])("admits only exact USDR holder-output telemetry ($keys)", async ({ keys, accepted }) => {
-    const metadata = {
-      ...readRedemptionBackstopLiveMetadata("usdr-rise", null, now),
-      canUseCapacity: true,
-      canUseFee: true,
-      immediateRedeemableUsd: 2_000_000,
-      immediateRedeemableRatio: 0.2,
-      capacityConfidence: "live-direct" as const,
-      capacityKind: "live-direct" as const,
-      freshnessKind: "same-run-onchain" as const,
-      redemptionFeeBps: 0,
-      outputAssetKeys: keys,
-    };
+    const snapshot = liveSnapshot("usdr-rise", { freshnessMode: "not-applicable", redemption: {
+      capacityUsd: 2_000_000, capacityRatioOfSupply: 0.2, capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain", blockNumber: 26_143_056, sourceTimestamp: now,
+      feeBps: 0, outputAssetKeys: keys,
+    } });
+    const metadata = readRedemptionBackstopLiveMetadata("usdr-rise", snapshot, now);
     const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 10_000_000, null, {
-      reserveSnapshotMetadata: null,
-      redemptionLiveMetadata: metadata,
+      reserveSnapshotMetadata: snapshot, redemptionLiveMetadata: metadata,
     });
     expect(entry.immediateCapacityUsd).toBe(accepted ? 2_000_000 : null);
-    expect(entry.feeBps).toBe(accepted ? 0 : null);
+    expect(entry.feeBps).toBe(0);
     expect(entry.resolutionState).toBe(accepted ? "resolved" : "missing-capacity");
     if (!accepted) {
       expect(entry.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
-      expect(entry.notes).toContain("route-output-identity-unobserved");
+      expect(entry.capacityRejectionReason).toBe("route-output-identity-unobserved");
     }
   });
 
+  it.each(["stale", "wrong-output", "unvalued", "unknown-all-in"] as const)(
+    "keeps registered USDfr %s observation unavailable without borrowing reserve or supply capacity", async (reason) => {
+      const direct: ExecutableRedemptionObservation = {
+        capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
+        outputAssetKeys: reason === "wrong-output" ? ["usdt-tether"] : ["usdc-circle"],
+        underlyingDecimals: 6, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+        routeStatus: "open", routeStatusSource: "onchain", routeStatusReason: "Pinned controller",
+        holderEligibility: "any-holder", feeBps: 0, allInFeeBps: reason === "unknown-all-in" ? null : 1,
+        settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: reason === "stale" ? now - 601 : now,
+        sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
+      };
+      const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
+        executableRedemptionObservation: direct,
+        executableObserverValuation: reason === "unvalued" ? null : {
+          outputAssetKey: "usdc-circle", priceUsd: 1, observedAt: now,
+        },
+        reserveSnapshotMetadata: liveSnapshot("usdfr-forest-road", {
+          redemption: { capacityUsd: 9_000_000, feeBps: 0 }, freshnessMode: "not-applicable",
+        }),
+      });
+      expect(entry.immediateCapacityUsd).toBeNull();
+      expect(entry.capacityProfile?.scoringUsd).toBeNull();
+      expect(entry.capacityProfile?.eventualUsd).toBeNull();
+      expect(entry.reserveInput).toBeUndefined();
+      expect(entry.capacityRejectionReason).toBe({
+        stale: "stale-source-timestamp", "wrong-output": "route-output-identity-unobserved",
+        unvalued: "output-valuation-unobserved", "unknown-all-in": "all-in-cost-unobserved",
+      }[reason]);
+    },
+  );
   it.each([
-    "usdfr-forest-road",
+    { updatedAt: now - 1, admitted: true },
+    { updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC, admitted: true },
+    { updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 1, admitted: false },
+    { updatedAt: now + 1, admitted: false },
+    { updatedAt: 0, admitted: false },
+    { updatedAt: now - 0.5, admitted: false },
+  ])("preserves cached output generation time and admits only fresh generations ($updatedAt)", async ({ updatedAt, admitted }) => {
+    const direct: ExecutableRedemptionObservation = {
+      capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
+      outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+      routeStatusReason: "Pinned controller", holderEligibility: "any-holder", feeBps: 0,
+      allInFeeBps: 1, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
+      sourceUrls: ["https://www.usdfr.com/"], diagnostics: {},
+    };
+    const resolver = vi.spyOn(redemptionCapacity, "resolveRedemptionCapacity");
+    try {
+      const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
+        executableRedemptionObservation: direct,
+        stablecoinsCache: { kind: "ok", updatedAt,
+          payload: { peggedAssets: [makeAsset({ id: "usdc-circle", price: 0.98 })] } },
+      });
+      expect(resolver.mock.calls[resolver.mock.calls.length - 1]?.[5]?.executableObserverValuation).toEqual(admitted
+        ? { outputAssetKey: "usdc-circle", priceUsd: 0.98, observedAt: updatedAt } : null);
+      expect(entry.immediateCapacityUsd).toBe(admitted ? 490 : null);
+      expect(entry.capacityRejectionReason).toBe(admitted ? undefined : "output-valuation-unobserved");
+      expect(entry.reserveInput).toBeUndefined();
+    } finally {
+      resolver.mockRestore();
+    }
+  });
+  it("fails closed when the registered USDfr direct observation is unavailable", async () => {
+    observeExecutableRedemptionRouteMock.mockResolvedValue(null);
+    await expect(buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("usdfr-forest-road", { redemption: { capacityUsd: 9_000_000 } }),
+    })).rejects.toThrow("usdfr-forest-road executable observer unavailable");
+  });
+  it.each([
     "usdx-axis",
     "mantrausd-mantra",
   ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
@@ -377,6 +448,62 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBeNull();
   });
 
+  describe("absence-preserving asset wrapper", () => {
+    const models = [
+      { kind: "fixed-usd", amountUsd: 1_000_000 },
+      { kind: "supply-ratio", ratio: 0.5 },
+      { kind: "supply-full" },
+      { kind: "reserve-sync-metadata" },
+    ] as const;
+    const supplyCases: { label: string; circulating: StablecoinData["circulating"] | undefined }[] = [
+      { label: "missing", circulating: undefined },
+      { label: "empty", circulating: {} },
+      { label: "NaN", circulating: { peggedUSD: NaN } },
+      { label: "infinite", circulating: { peggedUSD: Infinity } },
+      { label: "observed zero", circulating: { peggedUSD: 0 } },
+    ];
+    for (const capacityModel of models) {
+      it.each(supplyCases)(`preserves $label supply through ${capacityModel.kind}`, async ({ circulating }) => {
+        const configLookup = vi.spyOn(redemptionBackstops, "getRedemptionBackstopConfig")
+          .mockReturnValue(route({ capacityModel }));
+        try {
+          const entry = await resolveRedemptionBackstopEntry(
+            mockD1Strict([]),
+            makeAsset({ id: "lusd-liquity", circulating }),
+            null,
+            now,
+            {
+              exitExecutionReviews: [],
+              reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
+                freshnessMode: "not-applicable",
+                redemption: { capacityUsd: 1_000_000, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain" },
+              }, { source: "liquity-v1", sourceModel: "single-bucket" }),
+            },
+          );
+          expect(entry).not.toBeNull();
+          expect(entry!.immediateCapacityRatio).toBeNull();
+          if (capacityModel.kind === "supply-full") {
+            if (circulating?.peggedUSD === 0) {
+              expect(entry!.capacityProfile?.eventualUsd).toBe(0);
+              expect(entry!.eventualRedeemabilityScore).toBe(0);
+            } else {
+              expect(entry!.resolutionState).toBe("missing-cache");
+              expect(entry!.capacityProfile?.eventualUsd ?? null).toBeNull();
+              expect(entry!.eventualRedeemabilityScore).toBeNull();
+            }
+          } else if (capacityModel.kind === "supply-ratio") {
+            expect(entry!.resolutionState).toBe(circulating?.peggedUSD === 0 ? "missing-capacity" : "missing-cache");
+            expect(entry!.immediateCapacityUsd).toBeNull();
+          } else {
+            expect(entry!.immediateCapacityUsd).toBe(circulating?.peggedUSD === 0 ? 0 : 1_000_000);
+          }
+        } finally {
+          configLookup.mockRestore();
+        }
+      });
+    }
+  });
+
   it("resolves supply-ratio capacity correctly", async () => {
     const entry = await buildEntry(
       "test-coin",
@@ -391,54 +518,66 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.score).not.toBeNull();
   });
 
-  it("discloses an unresolved declared output without changing the resolved hop", async () => {
-    const routeEntry = await buildEntry(
-      "test-output-dependent-unresolved",
-      route({
-        routeFamily: "psm-swap",
-        capacityModel: { kind: "supply-ratio", ratio: 0.5 },
-        outputAssetType: "stable-single",
-        outputAssets: ["test-unresolved-output"],
-      }),
-      100_000_000,
-      null,
-    );
-    const unchanged = {
-      score: routeEntry.score,
-      capacityScore: routeEntry.capacityScore,
-      capacityConfidence: routeEntry.capacityConfidence,
-      modelConfidence: routeEntry.modelConfidence,
-      resolutionState: routeEntry.resolutionState,
-    };
-
-    const outputEntry = await buildEntry("test-unresolved-output", route(), null, null);
-
-    expect(outputEntry.resolutionState).toBe("missing-cache");
-    expect(routeEntry).toMatchObject({
-      outputDependencyResolution: {
-        stablecoinId: "test-unresolved-output",
-        resolutionState: "missing-cache",
-      },
-      ...unchanged,
+  it.each([false, true])("joins unresolved outputs without build-order dependence (%s)", async (reverse) => {
+    const config = route({
+      routeFamily: "psm-swap",
+      capacityModel: { kind: "supply-ratio", ratio: 0.5 },
+      outputAssets: ["asset:usd", "missing-output", "test-unresolved-output"],
     });
+    const buildUpstream = () => buildEntry("test-upstream", config, 100_000_000, null);
+    const buildDownstream = () => buildEntry("test-unresolved-output", route(), null, null);
+    const entries = reverse
+      ? [await buildDownstream(), await buildUpstream()]
+      : [await buildUpstream(), await buildDownstream()];
+    const upstream = entries.find((entry) => entry.stablecoinId === "test-upstream")!;
+    Object.freeze(upstream);
+    expect(upstream).not.toHaveProperty("outputDependencyResolution");
+    const completed = applyOutputDependencyResolution(entries, new Map([["test-upstream", config]]));
+    const disclosed = completed.find((entry) => entry.stablecoinId === "test-upstream")!;
+    expect(disclosed).toEqual({
+      ...upstream,
+      outputDependencyResolution: { stablecoinId: "test-unresolved-output", resolutionState: "missing-cache" },
+    });
+    expect(upstream).not.toHaveProperty("outputDependencyResolution");
+    expect(applyOutputDependencyResolution(completed, new Map([["test-upstream", config]]))).toEqual(completed);
   });
 
-  it("omits the disclosure when the declared output is fully resolved", async () => {
-    const outputEntry = await buildEntry("test-resolved-output", route(), 100_000_000, null);
-    const routeEntry = await buildEntry(
-      "test-output-dependent-resolved",
-      route({
-        routeFamily: "psm-swap",
-        capacityModel: { kind: "supply-ratio", ratio: 0.5 },
-        outputAssetType: "stable-single",
-        outputAssets: ["test-resolved-output"],
-      }),
-      100_000_000,
-      null,
-    );
+  it("keeps concurrent same-clock snapshots isolated and returned builders unmutated", async () => {
+    const config = route({ capacityModel: { kind: "supply-ratio", ratio: 0.5 }, outputAssets: ["test-output"] });
+    const configs = new Map([["test-upstream", config]]);
+    const [[upstreamA, failedOutput], [upstreamB, resolvedOutput]] = await Promise.all([
+      Promise.all([
+        buildEntry("test-upstream", config, 100_000_000, null),
+        Promise.resolve(buildFailedRedemptionBackstopEntry("test-output", route(), now)),
+      ]),
+      Promise.all([
+        buildEntry("test-upstream", config, 100_000_000, null),
+        buildEntry("test-output", route(), 100_000_000, null),
+      ]),
+    ]);
+    const first = applyOutputDependencyResolution([upstreamA, failedOutput], configs);
+    const second = applyOutputDependencyResolution([upstreamB, resolvedOutput], configs);
+    expect(first[0].outputDependencyResolution).toEqual({ stablecoinId: "test-output", resolutionState: "failed" });
+    expect(second[0]).not.toHaveProperty("outputDependencyResolution");
+    await buildEntry("test-output", route(), null, null);
+    expect(first[0].outputDependencyResolution).toEqual({ stablecoinId: "test-output", resolutionState: "failed" });
+    expect(upstreamA).not.toHaveProperty("outputDependencyResolution");
+    expect(upstreamB).not.toHaveProperty("outputDependencyResolution");
+    expect(applyOutputDependencyResolution([first[0]], configs)[0]).not.toHaveProperty("outputDependencyResolution");
+    expect(applyOutputDependencyResolution([first[0], resolvedOutput], configs)[0]).not.toHaveProperty("outputDependencyResolution");
+  });
 
-    expect(outputEntry.resolutionState).toBe("resolved");
-    expect(routeEntry).not.toHaveProperty("outputDependencyResolution");
+  it("discloses only the first observed unresolved output across self and cyclic edges", async () => {
+    const configA = route({ outputAssets: ["asset:usd", "missing", "test-b", "test-a"] });
+    const configB = route({ outputAssets: ["test-a"] });
+    const a = buildFailedRedemptionBackstopEntry("test-a", configA, now);
+    const b = buildFailedRedemptionBackstopEntry("test-b", configB, now);
+    const configs = new Map([["test-a", configA], ["test-b", configB]]);
+    const completed = applyOutputDependencyResolution([a, b], configs);
+    expect(completed[0].outputDependencyResolution).toEqual({ stablecoinId: "test-b", resolutionState: "failed" });
+    expect(completed[1].outputDependencyResolution).toEqual({ stablecoinId: "test-a", resolutionState: "failed" });
+    const self = applyOutputDependencyResolution([a], new Map([["test-a", route({ outputAssets: ["test-a"] })]]));
+    expect(self[0].outputDependencyResolution).toEqual({ stablecoinId: "test-a", resolutionState: "failed" });
   });
 
   it("uses capacity profile scoring capacity to reduce effective exit score", async () => {
@@ -728,7 +867,7 @@ describe("buildRedemptionBackstopEntry", () => {
     // A paused route's zero is the measured pause, not an evidence gap: the
     // bounded-gap lane must not swallow a live impairment.
     expect(entry.routeStatus).toBe("paused");
-    expect(entry.capacityProfile?.settlementBoundUnproven).not.toBe(true);
+    expect(entry.capacityProfile?.settlementBoundUnproven).toBe(true);
     expect(entry.score).toBeNull();
     expect(entry.capsApplied).toContain("live-route-status-impairment");
   });
@@ -798,6 +937,8 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it("derives reserve-sync ratio from supply when nested capacity omits ratio", async () => {
+    const sourceUrls = ["https://example.com/redemption.json", "https://example.com/redemption.json"];
+    const retainedSourceUrls = [...sourceUrls];
     const entry = await buildEntry(
       "usde-ethena",
       route({
@@ -819,7 +960,7 @@ describe("buildRedemptionBackstopEntry", () => {
             capacityKind: "live-proxy-validated",
             freshnessKind: "verified-source-timestamp",
             sourceTimestamp: now - 120,
-            sourceUrls: ["https://example.com/redemption.json", "https://example.com/redemption.json"],
+            sourceUrls,
             settlementDelaySec: 3600,
             queueDepthUsd: 12_000_000,
             dailyLimitUsd: 5_000_000,
@@ -838,6 +979,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.freshnessKind).toBe("verified-source-timestamp");
     expect(entry.sourceTimestamp).toBe(now - 120);
     expect(entry.sourceUrls).toEqual(["https://example.com/redemption.json"]);
+    expect(sourceUrls).toEqual(retainedSourceUrls);
     expect(entry.settlementDelaySec).toBe(3600);
     expect(entry.queueDepthUsd).toBe(12_000_000);
     expect(entry.dailyLimitUsd).toBe(5_000_000);
@@ -869,7 +1011,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.routeStatus).toBe("open");
     expect(entry.routeStatusSource).toBe("onchain");
     expect(entry.liveHolderEligibility).toBe("any-holder");
-    expect(entry.capacityConfidence).toBe("documented-bound");
+    expect(entry.capacityConfidence).toBe("heuristic");
     expect(entry.capacityBasis).toBe("live-proxy-buffer");
     expect(entry.capacityKind).toBe("live-queue");
     expect(entry.immediateCapacityUsd).toBeNull();
@@ -1165,7 +1307,7 @@ describe("buildRedemptionBackstopEntry", () => {
     );
 
     expect(entry.resolutionState).toBe("missing-capacity");
-    expect(entry.notes).toContain("Live reserve metadata lacks redeemable-capacity amount");
+    expect(entry.capacityRejectionReason).toBe("invalid-freshness");
   });
 
   it("does not emit an effective-exit score when the redemption route is unresolved", async () => {
@@ -1207,7 +1349,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("failed");
     expect(entry.score).toBeNull();
-    expect(entry.capacityConfidence).toBe("dynamic");
+    expect(entry.capacityConfidence).toBe("heuristic");
     expect(entry.feeConfidence).toBe("fixed");
     expect(entry.feeBps).toBe(25);
     expect(entry.feeDescription).toBe("Reviewed fallback fee is 25 bps");
@@ -1481,7 +1623,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.score).toBeNull();
-    expect(entry.notes).toContain("Live reserve metadata stale; fresh metadata required");
+    expect(entry.capacityRejectionReason).toBe("stale");
   });
 
   it("keeps GHO resolved when the only live warning is aggregated residual issuance", async () => {

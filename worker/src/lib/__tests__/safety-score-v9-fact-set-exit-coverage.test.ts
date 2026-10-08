@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { fixedFee, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -18,6 +19,11 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
+import { withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
+import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
+import { compileRouteFactorStatuses, createAssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { createV9EvidenceReference } from "@shared/lib/safety-score-v9/evidence";
+import { makeExecutionCertificate } from "@shared/lib/__tests__/safety-score-v9-exit-execution.test-support";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
@@ -35,8 +41,118 @@ import {
   makeV9Extension as extension,
   makeV9QueuedRedemptionFixedInput as queuedRedemptionFixedInput,
   v9RouteReview as routeReview,
+  v9ExitRouteObservation,
   v9Status,
 } from "../../test-helpers/v9-fixed-input";
+
+describe("explicit route factor gaps and source chronology", () => {
+  it.each([
+    { factor: "cost", nonCanonical: false }, { factor: "cost", nonCanonical: true },
+    { factor: "settlement", nonCanonical: false }, { factor: "settlement", nonCanonical: true },
+    { factor: "capacity", nonCanonical: false }, { factor: "capacity", nonCanonical: true },
+  ] as const)("retains numeric $factor diagnostics without clearing its consumer gap (noncanonical: $nonCanonical)", ({ factor, nonCanonical }) => {
+    const assetId = "usdc-circle";
+    const row = makeSupplyFullRedemption({ stablecoinId: assetId, feeBps: 7 });
+    if (nonCanonical) {
+      const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
+        { ...exactFixedInput({ assetId, clockSec: Date.UTC(2026, 6, 13) / 1000 }),
+          redemptionBackstopMap: { [assetId]: row } }, assetId,
+      )[0]!.observation;
+      row.capacityProfile = { ...row.capacityProfile!, exitRouteObservations: [{
+        ...observation, routeId: `redemption:${assetId}:fpi-controller:ethereum`,
+      }] };
+    }
+    const draft = exactFixedInput({ assetId, clockSec: Date.UTC(2026, 6, 13) / 1000 });
+    draft.redemptionBackstopMap = { [assetId]: row };
+    draft.redemptionStale = false;
+    draft.redemptionGenerationId = "redemption:explicit-missing-factors";
+    draft.inputFreshness.redemptionBackstops = { updatedAt: draft.clockSec, ageSeconds: 0, stale: false };
+    const fixed = rebuildFixed(draft);
+    withRedemptionBackstopConfig(assetId, { v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap", missingScoringFields: [factor], reviewedAt: "2026-07-01",
+      rationale: "The exact completion, cost or capacity bound has not been established.",
+      docs: [{ label: "Route terms", url: "https://example.com/route", supports: ["route"] }],
+    } }, () => {
+      const reviewed = structuredClone(extension({ assetId, clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint }));
+      reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, assetId);
+      reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      const asset = compiled.assets[0]!;
+      const route = asset.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+      expect(route.coverageClass).toBe("diagnostic");
+      expect(route.capacityCurve.some((point) => point.executionCostBps === 7)).toBe(true);
+      expect(route.settlementSlaSec).toBe(0);
+      expect(route.factorStatuses[factor]!.observationState).toBe("missing");
+      const gap = asset.gaps.find((candidate) => route.factorStatuses[factor]!.gapIds.includes(candidate.gapId))!;
+      expect(gap.causeScope).toMatchObject({ routeKey: route.routeKey, factorKey: factor, requiredDatum: factor });
+      expect(gap.gapId).toBe(`${assetId}:gap:exit-route:${route.routeKey}:${factor}`);
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      expect(evaluated.exit.causeGapIds).toContain(gap.gapId);
+    });
+  });
+
+  it.each([{ feeBpsMin: 25 }, { minFeeUsd: 1_000 }])("keeps minimum-only fees in the cost cause gaps (%j)", (minimum) => {
+    const assetId = "usdc-circle";
+    const draft = exactFixedInput({ assetId, clockSec: Date.UTC(2026, 6, 13) / 1000 });
+    draft.redemptionBackstopMap = { [assetId]: makeSupplyFullRedemption({ stablecoinId: assetId, feeBps: null }) };
+    draft.redemptionStale = false;
+    draft.redemptionGenerationId = "redemption:minimum-only-cost";
+    draft.inputFreshness.redemptionBackstops = { updatedAt: draft.clockSec, ageSeconds: 0, stale: false };
+    const fixed = rebuildFixed(draft);
+    withRedemptionBackstopConfig(assetId, {
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula", ...minimum },
+      v9RouteReviewTerms: undefined, v9RouteCostTerms: undefined,
+    }, () => {
+      const reviewed = structuredClone(extension({ assetId, clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint }));
+      reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, assetId);
+      reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      const route = compiled.assets[0]!.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+      expect(route.factorStatuses.cost!.observationState).toBe("missing");
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      expect(evaluated.exit.causeGapIds).toEqual(expect.arrayContaining(route.factorStatuses.cost!.gapIds));
+    });
+  });
+
+  it.each(["older", "newer", "diagnostic", "noncanonical-older", "noncanonical-newer", "rejected", "stricter"] as const)(
+    "resolves primary terms gaps only for newly admitted exact evidence (%s)", (scenario) => {
+      const fixed = exactFixedInput({ assetId: "usdc-circle", clockSec: Date.UTC(2026, 6, 13) / 1000 });
+      const reviewed = extension({ assetId: "usdc-circle", clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
+      const context = createAssetBuildContext(normalizeSafetyScoreV9CompilerInput(fixed), reviewed, reviewed.assets[0]!, "a".repeat(64));
+      const base = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), extension()).assets[0]!.exitRoutes[0]!;
+      const certificate = makeExecutionCertificate();
+      certificate.identity = { ...certificate.identity, assetId: "usdc-circle" };
+      const reviewSec = Date.parse("2026-07-01T00:00:00Z") / 1000;
+      certificate.observedAtSec = certificate.source.timestamp = reviewSec +
+        (scenario === "older" || scenario === "noncanonical-older" ? -1 : 86400);
+      const point = certificate.points[0]!;
+      if (scenario === "diagnostic") { point.certification = "diagnostic"; point.reason = "execution-unavailable"; }
+      const evidence = createV9EvidenceReference({ evidenceId: "exact:route", sourceId: "exact:source",
+        sourceGenerationId: "exact:generation", observedAtSec: certificate.observedAtSec,
+        disposition: scenario === "rejected" ? "rejected" : "observed",
+        ...(scenario === "rejected" ? { rejection: { code: "rejected", reason: "Rejected read", rejectedAtSec: fixed.clockSec } } : {}),
+      }, fixed.clockSec);
+      context.evidence.set(evidence.evidenceId, evidence);
+      const route = { ...base, lane: "redemption" as const,
+        routeId: scenario.startsWith("noncanonical") ? "execution:exact-request-digest" : "redemption:usdc-circle:offchain-issuer",
+        executionCertificate: certificate,
+        executionModelId: certificate.modelId,
+        request: { requestedNotionalUsd: point.requestedNotionalUsd, maxCostBps: point.maxCostBps, settlementHorizonSec: 300 },
+        status: { ...base.status, observationState: "known" as const, evidenceRefIds: [evidence.evidenceId] },
+        factorStatuses: scenario === "stricter" ? { cost: { ...base.status, observationState: "unsupported" as const, gapIds: ["existing:rejected"] } } : {},
+      };
+      withRedemptionBackstopConfig("usdc-circle", { v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap", missingScoringFields: ["cost", "settlement", "capacity"], reviewedAt: "2026-07-01",
+        rationale: "Exact bounds remain unknown.", docs: [{ label: "Terms", url: "https://example.com/terms", supports: ["route"] }],
+      } }, () => {
+        const compiled = compileRouteFactorStatuses(context, route);
+        expect(compiled.factorStatuses.cost!.observationState)
+          .toBe(scenario === "stricter" ? "unsupported" : scenario === "newer" || scenario === "noncanonical-newer" ? "known" : "missing");
+        if (scenario === "stricter") expect(compiled.factorStatuses.cost!.gapIds).toEqual(["existing:rejected"]);
+      });
+    },
+  );
+});
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it.each([201, 4900])("re-admits a reviewed %s bps cost as zero within the request budget without quarantine", (costBps) => {
@@ -498,6 +614,75 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     ).assets[0]!;
     expect(modelLimitOnly.exitStatus.observationState).toBe("known");
     expect(modelLimitOnly.gaps.map((gap) => gap.reasonCode)).not.toContain("incomplete-dex-route-coverage");
+  });
+
+  it("keeps the DEX portfolio denominator and cause independent of fee-only changes", () => {
+    const assetId = "usdc-circle";
+    const run = (costModel: RedemptionBackstopConfig["costModel"], observedPools: number) => {
+      const draft = exactFixedInput({ assetId, clockSec: Date.UTC(2026, 6, 13) / 1_000 });
+      draft.redemptionBackstopMap = {
+        [assetId]: makeSupplyFullRedemption({ stablecoinId: assetId, feeBps: null, updatedAt: draft.clockSec }),
+      };
+      draft.redemptionStale = false;
+      draft.redemptionGenerationId = "redemption:fee-only-fixture";
+      draft.inputFreshness.redemptionBackstops = { updatedAt: draft.clockSec, ageSeconds: 0, stale: false };
+      const coverage = draft.dexLiqMap[assetId]!.exitRouteObservationCoverage!;
+      if (observedPools === 2) {
+        draft.dexLiqMap[assetId]!.exitRouteObservations!.push(
+          v9ExitRouteObservation("dex:secondary", draft.clockSec - 100, "ethereum", draft.clockSec, "dex:secondary"),
+        );
+      }
+      coverage.observationCount = observedPools;
+      coverage.scoreEligibleObservationCount = observedPools;
+      coverage.evidenceCounts = { "reserve-based-amm-simulation": observedPools };
+      coverage.retainedPoolCount = 2;
+      coverage.scoreEligibleCapabilityPoolCount = 2;
+      coverage.scoreEligiblePoolCount = observedPools;
+      coverage.unsupportedPoolCount = 2 - observedPools;
+      coverage.unsupportedReasons = observedPools === 1
+        ? { "executionCapabilityGate:measured-execution:quote-failed": 1 }
+        : {};
+      const fixed = rebuildFixed(draft);
+      return withRedemptionBackstopConfig(assetId, {
+        costModel, v9RouteCostTerms: undefined, v9RouteReviewTerms: undefined,
+      }, () => {
+        const reviewed = extension({ assetId, clockSec: fixed.clockSec, registryFingerprint: fixed.registryFingerprint });
+        reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, assetId);
+        reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
+        const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+        const asset = compiled.assets[0]!;
+        const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+        return {
+          causeGapIds: evaluated.exit.causeGapIds,
+          portfolioGap: asset.gaps.find((gap) => gap.gapId === `${assetId}:gap:exit-portfolio-coverage`),
+          redemption: asset.exitRoutes.find((route) => route.lane === "redemption")!,
+        };
+      });
+    };
+    const unknownFee: RedemptionBackstopConfig["costModel"] = {
+      kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed",
+    };
+    for (const observedPools of [1, 2]) {
+      const before = run(unknownFee, observedPools);
+      const after = run(fixedFee(0), observedPools);
+      expect(before.redemption.factorStatuses.cost!.observationState).toBe("missing");
+      expect(before.causeGapIds).toEqual(expect.arrayContaining(before.redemption.factorStatuses.cost!.gapIds));
+      expect(after.redemption.capacityCurve.every((point) => point.executionCostBps === 0)).toBe(true);
+      expect(after.redemption.factorStatuses.cost!.observationState).toBe("known");
+      for (const gapId of before.redemption.factorStatuses.cost!.gapIds) {
+        expect(after.causeGapIds).not.toContain(gapId);
+      }
+      expect(after.portfolioGap).toEqual(before.portfolioGap);
+      if (observedPools === 1) {
+        expect(after.portfolioGap?.reasonCode).toBe("incomplete-dex-route-coverage");
+        expect(before.causeGapIds).toContain(`${assetId}:gap:exit-portfolio-coverage`);
+        expect(after.causeGapIds).toContain(`${assetId}:gap:exit-portfolio-coverage`);
+      } else {
+        expect(after.portfolioGap).toBeUndefined();
+        expect(before.causeGapIds).not.toContain(`${assetId}:gap:exit-portfolio-coverage`);
+        expect(after.causeGapIds).not.toContain(`${assetId}:gap:exit-portfolio-coverage`);
+      }
+    }
   });
 
   it.each([

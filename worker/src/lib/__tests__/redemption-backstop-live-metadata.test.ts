@@ -119,15 +119,16 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     },
   });
   const payloadCases = [
-    ["deduplicates valid sourceUrls and drops invalid or unsupported URLs",
+    ["quarantines invalid source URLs rather than dropping constraints from a positive claim",
       payload({ sourceUrls: [
         "https://example.com/redeem", "https://example.com/redeem", "not-a-url",
         "ftp://example.com/redeem", "http://example.com/status",
       ] }),
-      { sourceUrls: ["https://example.com/redeem", "http://example.com/status"] }],
-    ["drops negative optional redemption constraints",
+      { sourceUrls: [], canUseCapacity: false, immediateRedeemableUsd: null }],
+    ["quarantines negative optional redemption constraints",
       payload({ dailyLimitUsd: -1, minRedeemUsd: "-2", settlementDelaySec: -3, queueDepthUsd: "-4" }),
-      { dailyLimitUsd: null, minRedeemUsd: null, settlementDelaySec: null, queueDepthUsd: null }],
+      { dailyLimitUsd: null, minRedeemUsd: null, settlementDelaySec: null, queueDepthUsd: null,
+        canUseCapacity: false, immediateRedeemableUsd: null }],
     ["treats display-only capacityKind as unusable for scoring capacity",
       payload({ capacityKind: "documented-eventual" }),
       { capacityKind: "documented-eventual", immediateRedeemableUsd: 1_000_000,
@@ -140,13 +141,8 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       ),
       { immediateRedeemableUsd: null, immediateRedeemableRatio: null,
         redemptionFeeBps: null, canUseCapacity: false, canUseFee: false,
-        capacityReason: "Live redemption capacity telemetry is malformed; fresh valid metadata required",
-        feeReason: "Live redemption fee telemetry is malformed; using reviewed fee model instead",
-        capacityNotes: expect.arrayContaining([
-          "Live redemption capacity USD is malformed and was ignored",
-          "Live redemption capacity ratio is above 1 and was ignored",
-          "Live redemption fee bps is above 10000 and was ignored",
-        ]) }],
+        capacityRejectionReason: "malformed-telemetry",
+        capacityConfidence: null }],
   ] as const;
 
   it("accepts a complete source-bound Cap output basket with current direct capacity", () => {
@@ -211,9 +207,9 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   it("preserves DUSD's unproven settlement bound without scoring the minimum finalization delay", () => {
     const metadata = readMetadata("dusd-dialectic", dusdOpenQueueMetadata(now + 60));
 
-    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.canUseCapacity).toBe(false);
     expect(metadata.capacityConfidence).toBe("live-proxy");
-    expect(metadata.immediateRedeemableUsd).toBe(0);
+    expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.settlementBoundUnproven).toBe(true);
     expect(metadata.capacityKind).toBe("live-queue");
     expect(metadata.queueDepthUsd).toBe(3_104.889979);
@@ -237,11 +233,11 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     }));
 
     expect(metadata.settlementBoundUnproven).toBe(true);
-    expect(metadata.immediateRedeemableUsd).toBe(0);
-    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
   });
 
-  it("drops malformed Cap output weights without discarding valid capacity", () => {
+  it("quarantines malformed Cap output weights together with capacity", () => {
     const metadata = readMetadata("cusd-cap", {
       freshnessMode: "not-applicable",
       redemption: {
@@ -260,13 +256,13 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       },
     });
 
-    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.v9OutputValuation).toBeNull();
-    expect(metadata.capacityNotes).toContain("Live redemption output valuation is malformed and was ignored");
   });
 
   it.each(["2026-02-30", "2026-13-01", "20260512", "May 12, 2026"])(
-    "drops invalid routeStatusReviewedAt value %s",
+    "quarantines invalid routeStatusReviewedAt value %s",
     (routeStatusReviewedAt) => {
       const metadata = readMetadata("lusd-liquity", {
         freshnessMode: "not-applicable",
@@ -280,9 +276,11 @@ describe("readRedemptionBackstopLiveMetadata", () => {
         },
       });
 
-      expect(metadata.routeStatus).toBe("open");
-      expect(metadata.routeStatusSource).toBe("onchain");
+      expect(metadata.routeStatus).toBeNull();
+      expect(metadata.routeStatusSource).toBeNull();
       expect(metadata.routeStatusReviewedAt).toBeNull();
+      expect(metadata.canUseCapacity).toBe(false);
+      expect(metadata.immediateRedeemableUsd).toBeNull();
     },
   );
 
@@ -306,9 +304,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.redemptionFeeBps).toBeNull();
     expect(metadata.canUseCapacity).toBe(false);
     expect(metadata.canUseFee).toBe(false);
-    expect(metadata.capacityReason).toBe("Live redemption capacity telemetry is malformed; fresh valid metadata required");
-    expect(metadata.feeReason).toBe("Live redemption fee telemetry is malformed; using reviewed fee model instead");
-    expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
+    expect(metadata.capacityRejectionReason).toBe("malformed-telemetry");
   });
 
   it.each([
@@ -415,13 +411,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.redemptionFeeBps).toBeNull();
     expect(metadata.canUseCapacity).toBe(false);
     expect(metadata.canUseFee).toBe(false);
-    expect(metadata.capacityNotes).toEqual(
-      expect.arrayContaining([
-        "Live redemption capacity USD is malformed and was ignored",
-        "Live redemption capacity ratio is below 0 and was ignored",
-        "Live redemption fee bps is below 0 and was ignored",
-      ]),
-    );
+    expect(metadata.capacityConfidence).toBeNull();
   });
 
   it("ignores live route status that omits source attribution", () => {
@@ -477,7 +467,22 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.routeStatusReviewedAt).toBeNull();
   });
 
-  it("keeps sourced route status visible even when stale capacity cannot score", () => {
+
+  it.each([
+    { dailyLimitUsd: -1 }, { queueDepthUsd: null }, { settlementDelaySec: "1" },
+    { holderEligibility: "unsupported" }, { outputAssetKeys: [] },
+  ])("cannot admit a positive capacity or fee with malformed constraint %j", (constraint) => {
+    const raw = payload({ capacityUsd: 1_000_000, feeBps: 0, ...constraint });
+    for (const input of [raw, decodedRowMetadata(raw)]) {
+      const result = readMetadata("lusd-liquity", input);
+      expect(result.canUseCapacity).toBe(false);
+      expect(result.canUseFee).toBe(false);
+      expect(result.immediateRedeemableUsd).toBeNull();
+      expect(result.redemptionFeeBps).toBeNull();
+      expect(result.capacityConfidence).toBeNull();
+    }
+  });
+  it("does not promote stale sourced route status as currently admitted evidence", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
       liveSnapshot("lusd-liquity", {
@@ -494,33 +499,30 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
 
     expect(metadata.canUseCapacity).toBe(false);
-    expect(metadata.capacityReason).toBe("Live reserve metadata stale; fresh metadata required");
-    expect(metadata.routeStatus).toBe("open");
-    expect(metadata.routeStatusSource).toBe("onchain");
+    expect(metadata.capacityRejectionReason).toBe("stale");
+    expect(metadata.routeStatus).toBeNull();
+    expect(metadata.routeStatusSource).toBeNull();
   });
 
   it.each([
     [
       "missing",
       undefined,
-      "Live redemption freshness is verified-source-timestamp without sourceTimestamp",
-      "Live redemption capacity claims verified source freshness without a source timestamp",
+      "missing-source-timestamp",
     ],
     [
       "malformed",
       "1700000000",
-      "Live redemption source timestamp is malformed and was ignored",
-      "Live redemption capacity claims verified source freshness without a source timestamp",
+      "malformed-telemetry",
     ],
     [
       "future-dated",
       now + 601,
-      "Live redemption source timestamp is 601s in the future and was ignored",
-      "Live redemption capacity claims verified source freshness with a future source timestamp",
+      "future-source-timestamp",
     ],
   ])(
     "fails closed when verified redemption freshness has a %s source timestamp",
-    (_label, redemptionSourceTimestamp, expectedWarning, expectedReason) => {
+    (_label, redemptionSourceTimestamp, expectedReason) => {
       const redemption: Record<string, unknown> = {
         capacityUsd: 1_000_000,
         capacityKind: "live-direct-bounded",
@@ -537,11 +539,10 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       });
 
       expect(metadata.hasScoringEligibleFreshness).toBe(true);
-      expect(metadata.freshnessKind).toBe("verified-source-timestamp");
+      expect(metadata.freshnessKind).toBe(_label === "malformed" ? null : "verified-source-timestamp");
       expect(metadata.sourceTimestamp).toBeNull();
       expect(metadata.canUseCapacity).toBe(false);
-      expect(metadata.capacityReason).toBe(expectedReason);
-      expect(metadata.capacityNotes).toContain(expectedWarning);
+      expect(metadata.capacityRejectionReason).toBe(expectedReason);
     },
   );
 
@@ -679,10 +680,135 @@ describe("Theo curated carrier with independent redemption probe", () => {
     });
     const result = readRedemptionBackstopLiveMetadata("thusd-theo", snapshot, now);
     expect(result.canUseCapacity).toBe(accepted);
-    expect(result.immediateRedeemableUsd).toBe(0);
+    expect(result.immediateRedeemableUsd).toBe(accepted ? 0 : null);
     expect(result.canUseFee).toBe(false);
     expect(readRedemptionBackstopLiveMetadata("usde-ethena", snapshot, now).canUseCapacity).toBe(false);
     snapshot.fetchedAt = now - 3 * 86400;
     expect(readRedemptionBackstopLiveMetadata("thusd-theo", snapshot, now).canUseCapacity).toBe(false);
+  });
+});
+
+describe("capacity-specific reserve evidence admission", () => {
+  const nested = {
+    capacityUsd: 81_342.270181, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+    sourceTimestamp: now - 12, blockNumber: 26_142_993, outputAssetKeys: ["usdc-circle"],
+    routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder", feeBps: 1.34,
+  };
+  const snapshot = (redemption: Record<string, unknown> = nested) => liveSnapshot("srusd-reservoir",
+    { freshnessMode: "unverified", redemption }, {
+      fetchedAt: now - 10, admission: { eligible: false, reasons: ["invalid-freshness"], freshness: null },
+    });
+
+  it("admits a complete nested pinned scope without promoting composition", () => {
+    const input = snapshot();
+    const result = readRedemptionBackstopLiveMetadata("srusd-reservoir", input, now);
+    expect(result.canUseCapacity).toBe(true);
+    expect(result.hasScoringEligibleFreshness).toBe(false);
+    expect(input.admission?.eligible).toBe(false);
+    expect(input.admission?.reasons).toEqual(["invalid-freshness"]);
+    expect(result.immediateRedeemableUsd).toBe(nested.capacityUsd);
+    expect(result.canUseFee).toBe(true);
+  });
+
+  it.each([
+    [{ sourceTimestamp: undefined }, "missing-source-timestamp"],
+    [{ sourceTimestamp: now + 601 }, "future-source-timestamp"],
+    [{ sourceTimestamp: now - 172_801 }, "stale-source-timestamp"],
+    [{ sourceTimestamp: "yesterday" }, "malformed-telemetry"],
+    [{ blockNumber: undefined }, "missing-block-number"],
+    [{ blockNumber: -1 }, "missing-block-number"],
+    [{ blockNumber: 1.5 }, "missing-block-number"],
+    [{ outputAssetKeys: undefined }, "route-output-identity-unobserved"],
+    [{ outputAssetKeys: ["usdt-tether"] }, "route-output-identity-unobserved"],
+    [{ capacityUsd: undefined }, "redeemable-capacity-unobserved"],
+  ] as const)("rejects incomplete nested evidence %j with typed cause %s", (changes, cause) => {
+    const result = readRedemptionBackstopLiveMetadata("srusd-reservoir", snapshot({ ...nested, ...changes }), now);
+    expect(result.canUseCapacity).toBe(false);
+    expect(result.capacityRejectionReason).toBe(cause);
+  });
+
+  it.each(["config-mismatch", "inconsistent-snapshot", "stale", "suspended"] as const)(
+    "never overrides immutable snapshot defect %s", (reason) => {
+      const input = snapshot();
+      input.admission = { eligible: false, reasons: ["invalid-freshness", reason], freshness: null };
+      const result = readRedemptionBackstopLiveMetadata("srusd-reservoir", input, now);
+      expect(result.canUseCapacity).toBe(false);
+      expect(result.canUseFee).toBe(false);
+      expect(result.routeStatus).toBeNull();
+      expect(result.capacityRejectionReason).toBe(reason);
+    },
+  );
+
+  it("does not excuse a stale timestamped composition with a newer PSM read", () => {
+    const input = snapshot();
+    input.metadata.freshnessMode = "verified";
+    input.metadata.sourceTimestamp = now - 90 * 86_400;
+    input.admission = undefined;
+    expect(readRedemptionBackstopLiveMetadata("srusd-reservoir", input, now).capacityRejectionReason).toBe("stale");
+  });
+
+  it("rejects insolvency instead of laundering it through the independent PSM scope", () => {
+    const input = snapshot();
+    input.warningCount = 1;
+    input.warnings = [{ code: "reservoir-insolvent", severity: "warning", effect: "degraded", message: "fixture" }];
+    const result = readRedemptionBackstopLiveMetadata("srusd-reservoir", input, now);
+    expect(result.canUseCapacity).toBe(false);
+    expect(result.capacityRejectionReason).toBe("degraded-snapshot");
+  });
+
+  it("retains fee evidence when only the capacity amount is absent", () => {
+    const input = liveSnapshot("srusd-reservoir", {
+      freshnessMode: "not-applicable", redemption: { ...nested, capacityUsd: undefined },
+    }, { fetchedAt: now - 10 });
+    const result = readRedemptionBackstopLiveMetadata("srusd-reservoir", input, now);
+    expect(result.capacityRejectionReason).toBe("redeemable-capacity-unobserved");
+    expect(result.canUseCapacity).toBe(false);
+    expect(result.canUseFee).toBe(true);
+    expect(result.redemptionFeeBps).toBe(1.34);
+  });
+});
+
+describe("async cash is not holder completion capacity", () => {
+  it.each(["open", "paused", "unknown", undefined])("withholds idle cash with unproved settlement and status %s", (routeStatus) => {
+    const result = readMetadata("susdx-axis", {
+      freshnessMode: "not-applicable", immediateRedeemableUsd: 41_995_519.33990015,
+      redemption: { capacityUsd: 41_995_519.33990015, capacityKind: "documented-bound",
+        freshnessKind: "same-run-onchain", settlementBoundUnproven: true,
+        routeStatus, routeStatusSource: routeStatus ? "onchain" : undefined },
+    });
+    expect(result.canUseCapacity).toBe(false);
+    expect(result.immediateRedeemableUsd).toBeNull();
+    expect(result.immediateRedeemableRatio).toBeNull();
+    expect(result.settlementBoundUnproven).toBe(true);
+    expect(result.capacityRejectionReason).toBe("settlement-bound-unproven");
+  });
+});
+
+describe("adverse evidence cannot be erased by rejected capacity", () => {
+  it.each(["paused", "degraded", "cohort-limited", "unknown"])("preserves non-allowlisted degraded %s and limiting evidence", (routeStatus) => {
+    const result = readRedemptionBackstopLiveMetadata("lusd-liquity", liveSnapshot("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: { capacityUsd: 100, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+        routeStatus, routeStatusSource: "onchain", routeStatusReason: "Observed impairment",
+        routeStatusReviewedAt: "2026-05-01", dailyLimitUsd: 5, settlementBoundUnproven: true },
+    }, { fetchedAt: now - 60, syncStatus: "degraded" }), now);
+    expect(result.canUseCapacity).toBe(false);
+    expect(result.immediateRedeemableUsd).toBeNull();
+    expect(result.routeStatus).toBe(routeStatus);
+    expect(result.routeStatusSource).toBe("onchain");
+    expect(result.routeStatusReason).toBe("Observed impairment");
+    expect(result.routeStatusReviewedAt).toBe("2026-05-01");
+    expect(result.dailyLimitUsd).toBe(5);
+    expect(result.settlementBoundUnproven).toBe(true);
+    expect(result.evidenceObservedAt).toBeNull();
+  });
+
+  it("does not honour producer-authored suspended without authored routeSuspension", () => {
+    const result = readMetadata("lusd-liquity", { freshnessMode: "not-applicable",
+      redemption: { capacityUsd: 100, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+        routeStatus: "suspended", routeStatusSource: "onchain" } });
+    expect(result.routeStatus).toBeNull();
+    expect(result.routeStatusSource).toBeNull();
+    expect(result.capacityNotes.some((note) => note.includes("routeSuspension"))).toBe(true);
   });
 });

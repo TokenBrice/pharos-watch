@@ -13,6 +13,7 @@ import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 import trusd from "@shared/data/stablecoins/coins/trusd-tori.json";
 import toriPayload from "./fixtures/accountable-tori-2026-09-30.json";
+import octoberCapture from "./fixtures/accountable-oct7-2026.json";
 import {
   ACCOUNTABLE_MAPPING_CASES,
   makeTimestampedYuzuPayload,
@@ -96,6 +97,32 @@ afterEach(() => {
 });
 
 describe("adaptAccountableDashboard", () => {
+  it("replays Yuzu's October signed book without certifying unresolved LP/PT identities", async () => {
+    const { result } = await runAdapter("accountable", "yzusd-yuzu", {
+      network: { json: { "https://cache.accountable.capital/dashboard/yuzu": octoberCapture.yuzu } },
+      nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-10-07T13:44:59Z") / 1000);
+    expect(result.metadata?.signedBucketTotalResidual).toBeCloseTo(2_349_563.1561, 3);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "signed-negative-bucket", effect: "degraded" }));
+    expect(result.metadata?.unknownBucketNames).toEqual(expect.arrayContaining(["[Agora]_AUSD_LP", "[Re]_PT_reUSD"]));
+    const unknown = result.slices.find((entry) => entry.name === "Unknown / unmapped Accountable buckets");
+    expect(unknown).toMatchObject({ risk: "high" });
+    expect(unknown?.coinId).toBeUndefined();
+    expect(unknown?.depType).toBeUndefined();
+  });
+
+  it("replays Axis's anonymous venue book as unknown locations, not collateral assets", async () => {
+    const { result } = await runAdapter("accountable", "usdx-axis", {
+      network: { json: { "https://axis.accountable.capital:8443/dashboard": octoberCapture.axis } },
+      nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
+    });
+    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Number(octoberCapture.axis.data.ts) / 1000));
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.slices.every((slice) => slice.risk === "high" && slice.coinId == null && slice.depType == null)).toBe(true);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unmapped-bucket", effect: "degraded" }));
+  });
+
   it.each(ACCOUNTABLE_MAPPING_CASES)("maps $name into reserve slices", (testCase) => {
     const result = adaptAccountableDashboard(
       { res: "ok", data: {

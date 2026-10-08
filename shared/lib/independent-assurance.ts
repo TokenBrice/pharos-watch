@@ -19,6 +19,7 @@ const INDEPENDENT_ASSURANCE_PRODUCTS = [
   "XUSD",
   "AUDD", "USAT", "USDPT", "BRLA", "AUSD", "FIDD", "SBC", "TRYB", "TGBP",
   "PGOLD", "CADD", "BRLV", "AUDM", "USX", "FDUSD",
+  "MYRC",
 ] as const;
 
 export type IndependentAssuranceProduct = (typeof INDEPENDENT_ASSURANCE_PRODUCTS)[number];
@@ -79,7 +80,7 @@ export const IndependentAssuranceManifestSchema = z
     engagement: z.string().trim().min(1),
     conclusion: z.enum(["unmodified", "unqualified", "nothing-came-to-attention", "agreed-upon-procedures", "issuer-attested"]),
     assuranceTier: z.enum(["independent-assurance", "agreed-upon-procedures", "issuer-attested"]).optional(),
-    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce", "GBP", "TRY", "BRL", "CAD", "ZAR"]),
+    unit: z.enum(["USD", "EUR", "AUD", "SGD", "fine-troy-ounce", "GBP", "TRY", "BRL", "CAD", "ZAR", "MYR"]),
     assets: z.array(ReportAmountSchema).min(1),
     liabilities: z.array(ReportAmountSchema).min(1),
     adjustments: z.array(ReportAdjustmentSchema).optional(),

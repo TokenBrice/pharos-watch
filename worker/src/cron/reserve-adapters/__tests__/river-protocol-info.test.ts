@@ -250,6 +250,36 @@ describe("fetchRiverProtocolInfoReserves branch redemption telemetry", () => {
     expectValidAdapterOutput("river-protocol-info", result);
   });
 
+  it.each([
+    { sourceTimestamp: NOW_SEC - 60, freshnessMode: "verified" },
+    { sourceTimestamp: NOW_SEC - 7 * 24 * 60 * 60, freshnessMode: "verified" },
+    { sourceTimestamp: undefined, freshnessMode: "unverified" },
+  ])("keeps source clocks and bounded debt separate from repaired docs ($sourceTimestamp)", async ({
+    sourceTimestamp,
+    freshnessMode,
+  }) => {
+    const points = sourceTimestamp == null ? [] : [{ timestamp: sourceTimestamp }];
+    const { result } = await runRiver(riverNetwork({}, {
+      tvl: 640,
+      circulatingSupply: 1000,
+      tvlData: points,
+      circulatingData: points,
+    }));
+
+    expect(result.metadata?.freshnessMode).toBe(freshnessMode);
+    expect(result.metadata?.sourceTimestamp).toBe(sourceTimestamp);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 9_100_000,
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      feeBps: 50,
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("sourceTimestamp");
+    expect(result.metadata?.details?.protocolTvlToSupplyRatio).toBe(0.64);
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.warnings ?? []).toEqual([]);
+  });
+
   it("never probes a chain without a pinned Satoshi app", async () => {
     const { network } = await runRiver(riverNetwork({ ethereum: {}, base: {} }));
 

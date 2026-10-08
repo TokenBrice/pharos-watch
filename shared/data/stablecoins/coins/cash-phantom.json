@@ -69,18 +69,22 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "curated-validated",
+    "adapter": "bridge-transparency",
     "version": 1,
-    "semantics": "single-asset",
+    "semantics": "collateral-mix",
     "breakerScope": "cash-phantom",
     "display": {
-      "url": "https://phantom.com/cash",
-      "label": "Phantom Cash"
+      "url": "https://reserves.bridge.xyz/cash",
+      "label": "Phantom CASH reserves"
     },
     "inputs": {
       "primary": {
-        "kind": "onchain-solana"
+        "kind": "http-json",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/cash"
       }
+    },
+    "params": {
+      "slug": "cash"
     }
   },
   "launchDate": "2025-09-30"
