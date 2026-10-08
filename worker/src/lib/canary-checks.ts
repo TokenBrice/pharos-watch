@@ -254,7 +254,8 @@ async function loadDexCurrentSummary(db: D1Database): Promise<DexCurrentSummaryR
               LIMIT 1
            ), 0) AS row_count,
            (SELECT COUNT(*) FROM dex_liquidity
-             WHERE publication_state IS NULL OR publication_state != 'published') AS unpublished_rows,
+             WHERE publication_generation_id IS NOT NULL
+               AND (publication_state IS NULL OR publication_state != 'published')) AS unpublished_rows,
            SUM(CASE WHEN state = 'published' THEN 1 ELSE 0 END) AS generation_count,
            MAX(CASE WHEN state = 'published' THEN COALESCE(published_at, started_at) END) AS latest_updated_at
          FROM dex_liquidity_publication_generations`,
