@@ -2,8 +2,8 @@
   "usds-sky": {
     "coinId": "usds-sky",
     "title": "How does USDS break?",
-    "thesis": "Capture the vote queue, wait out the 48-hour delay, then mint USDS or replace the token; holders can cash out only 4.39 billion.",
-    "premise": "Hypothetical: one coalition accumulates more SKY approvals than the sitting hat and lifts itself into control of the Sky Chief. No compromise, coercion or misconduct by any voter, delegate, signer or custodian is alleged, and no such capture has been observed. Everything else in the route - the 48-hour delay, the governor's authority over the USDS token, the LitePSM's USDC stock and the Vow's empty cushion - was read or replayed at block 26,139,200 on 2026-10-07. Figures covering the collateral book are shared with DAI and are never USDS-only.",
+    "thesis": "A coalition that captures governance and survives the 48-hour notice period can mint unbacked USDS or replace its logic; LitePSM exits remain inventory-limited.",
+    "premise": "Hypothetical: a coalition outvotes Sky's governing address, queues a harmful spell, and prevents a defensive replacement from cancelling it before execution. No capture or misconduct is alleged. Unless stated otherwise, measurements and fork replays use block 26,139,200 on 2026-10-07. The exit calculation assumes unchanged contracts, funded and approved callers, no replenishment and no competing withdrawals; it covers only LitePSM inventory, not other venues or future prices. Collateral-book figures are DAO-wide and shared with DAI, not USDS-only reserves.",
     "keyFigures": [
       {
         "value": "7.04bn SKY",
@@ -62,11 +62,12 @@
           }
         ],
         "elapsed": "T+0",
-        "cost": "One block of voting; the SKY is escrowed, not spent",
-        "missingDefense": "No quorum of people, no signature threshold and no committee: only relative weight",
-        "explanation": "Chief.canCall authorises exactly one address, the current hat, and lift installs any address holding strictly more approvals. At the pinned block the hat held 7.04bn SKY of approvals - 30.0% of supply - and 7.16bn SKY sat escrowed in the Chief. The cost to outvote it is its live approval weight, which changes with staking and voting; the pinned figure is not a fixed threshold. The lift cooldown is 10 blocks, so displacing the hat takes a single transaction once the approvals exist.",
+        "cost": "SKY voting weight is escrowed, not spent",
+        "missingDefense": "Independent approval threshold",
+        "explanation": "The Chief authorises the current governing address, called the hat, and lift replaces it only with a candidate holding strictly more SKY approvals. The pinned hat had 7.04bn SKY approvals, 30.0% of SKY supply; this moving weight is informational, and lift permits replacements in the last lift's block or after more than 10 blocks.",
         "evidence": "verified-onchain",
         "sourceIds": [
+          "chainlog",
           "chief",
           "sitting-hat",
           "sky",
@@ -89,8 +90,8 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction from the hat",
-        "missingDefense": "The only caller is the authority the route already took",
-        "explanation": "plot is gated to the Chief hat through Chief.canCall, and it rejects any eta earlier than now + delay. A fork replay recorded three attempts: plot from a non-hat address reverted, plot from the hat one second short of the delay reverted, and plot at exactly now + 172800 succeeded and emitted the LogNote event.",
+        "missingDefense": "Independent spell approval",
+        "explanation": "Only the current hat can queue a plan through the recorded Chief-to-Pause route. On the pinned fork, a non-hat call and a hat call scheduled one second too early reverted, while scheduling exactly 172,800 seconds ahead succeeded.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "pause",
@@ -105,8 +106,8 @@
         "action": "The queued plan sits in DSPause.plans until its eta",
         "elapsed": "T+0 to T+2d",
         "cost": "Two days of public notice",
-        "missingDefense": "No veto, no cancellation by anyone but the attacker's own hat",
-        "explanation": "This is the whole defence the delay buys: visibility. drop is auth-gated to that same hat, so no guardian, holder, delegate or committee can cancel the plan, and re-plotting one is equally impossible for them. The replay measured the delay exactly: exec one second before eta reverted and exec at eta succeeded, 172,800 seconds of chain time after the plot block.",
+        "missingDefense": "Veto outside elected governance",
+        "explanation": "Cancellation belongs to the current hat, so voters can stop the plan by electing a defensive replacement that calls drop before execution. The route assumes they fail; the replay rejected execution one second early and allowed it exactly 172,800 seconds after plotting.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "pause",
@@ -134,8 +135,8 @@
         ],
         "elapsed": "T+2d",
         "cost": "One transaction, and any address may send it",
-        "missingDefense": "No post-execution check beyond the proxy still owning itself",
-        "explanation": "exec carries no authorization beyond a plan that was plotted and a codehash that still matches, so nothing needs to be signed at execution time: the replay executed the plan from an unrelated address once eta had passed. The delegatecall runs in the PauseProxy's own storage context, so the spell's calls reach USDS with the governor as msg.sender and as address(this).",
+        "missingDefense": "Independent execution approval",
+        "explanation": "Anyone can execute an uncancelled plan after its scheduled time if the target codehash still matches; the replay used an unrelated caller. The spell runs inside PauseProxy, whose external token calls carry the governor's authority, and execution requires its owner to remain DSPause.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "pause",
@@ -163,9 +164,9 @@
           }
         ],
         "elapsed": "T+2d",
-        "cost": "One transaction per effect",
-        "missingDefense": "No supply cap, no mint delay and no second governor",
-        "explanation": "A replay impersonating the governor at the pinned block confirmed all three capabilities and their limits. The governor is already a ward: rely added a new minter, mint created 1,000,000 USDS to an address carrying no code, the newly relied address then minted on its own, and upgradeToAndCall accepted an implementation address. The same mint from a non-ward reverted with Usds/not-authorized, and a burn of a holder's balance without an allowance also reverted - the token gives the governor issuance and logic control but no seizure.",
+        "cost": "Effects can be combined in one spell",
+        "missingDefense": "Token-level mint or upgrade veto",
+        "explanation": "Impersonating the governor on the pinned fork added a minter and minted 1,000,000 USDS without collateral; a non-ward mint and an unapproved holder burn reverted. The upgrade call accepted the current implementation, proving the authorization gate, while verified source permits another compatible implementation; no hostile replacement was replayed.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "usds",
@@ -197,10 +198,10 @@
             "chainId": 1
           }
         ],
-        "elapsed": "T+2d to T+3d",
-        "cost": "One transaction per holder, no fee",
-        "missingDefense": "Inventory, not solvency: the pocket is one issuer's token sitting in one contract",
-        "explanation": "The wrapper converts USDS one-for-one into the joined DAI the LitePSM accepts and pays out USDC from the pocket, whose entire balance is reachable by public calls. The replay took 1,000,000 USDS to exactly 1,000,000 USDC with tin and tout at zero, showed that asking for one unit more than the pocket reverts, drained the remaining $4.390bn pocket in a single call, and then showed the next exit reverting on an empty pocket. Against $7.122bn of USDS that is 61.7% of supply, and 37.5% of the USDS plus DAI book.",
+        "elapsed": "After execution; drain timing unmodelled",
+        "cost": "Approved USDS balance, no exit fee",
+        "missingDefense": "Guaranteed inventory replenishment",
+        "explanation": "With the pinned exit contracts unchanged, a funded, approved caller exchanged 1,000,000 USDS for 1,000,000 USDC, then drained the remaining 4.390bn USDC in one public call. Above-inventory and empty-pocket exits reverted; the initial 4.391bn USDC equals 61.7% of USDS supply or 37.5% of combined USDS and DAI supply at par.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "lite-psm",
@@ -214,32 +215,34 @@
         "kind": "holder-outcome",
         "title": "Hold the leftover claim",
         "actor": "USDS and DAI holders",
-        "action": "Everyone still holding keeps a claim on the shared collateral book",
-        "elapsed": "T+3d",
-        "cost": "Permanent for whoever stays",
-        "explanation": "USDS exposes no pause, freeze, blacklist or admin transfer, so holders cannot be locked out of the token, and the governor cannot debit a balance without that holder's allowance. The residual problem is economic: the $2.731bn of USDS the pocket cannot cash is a claim on a shared book whose largest measured ilk positions were 43.8% LitePSM USDC, 32.1% Spark lending and 14.4% Bloom at the pin, and the Vow held no surplus to absorb an uncovered gap.",
+        "action": "Remaining holders face impaired backing and uncertain exit prices",
+        "elapsed": "After inventory exhaustion",
+        "cost": "Loss and recovery are not quantified",
+        "explanation": "If all pinned LitePSM inventory served existing USDS holders, with no replenishment, new minting or DAI competition, 2.731bn USDS would remain outside that exit; DAI conversion and savings-vault withdrawals create no additional USDC inventory. The reviewed token lacks freeze or seizure functions, but an upgrade can change those protections, and neither the shared book nor eventual recovery was valued.",
         "evidence": "inferred",
         "sourceIds": [
           "usds",
           "usds-impl",
           "vat",
           "vow",
-          "ils"
+          "ils",
+          "dai-usds",
+          "susds"
         ]
       }
     ],
     "window": {
-      "label": "Notice window, not a defence window",
+      "label": "Governance response window",
       "fromStageId": "queue-spell",
       "toStageId": "execute-spell",
-      "duration": "Exactly 48 hours",
-      "note": "The delay is enforced at plot and at exec and cannot be shortened by anyone but the sitting hat. It publishes the plan and buys two days of notice, but it grants no veto: the only address that can drop a queued plan is the hat that queued it."
+      "duration": "At least 48 hours",
+      "note": "The pinned delay gives voters at least 48 hours to elect a replacement hat and cancel the plan. There is no separate guardian veto; changing the delay itself requires execution through PauseProxy."
     },
     "defenders": [
       {
         "name": "The 48-hour delay",
         "verdict": "partial",
-        "why": "It enforces public notice and prevents same-block execution, and the replay measured it exactly at 172,800 seconds of chain time. It is not a veto: cancellation is auth-gated to the same hat, and execution needs no further authorization, so the delay only changes when the outcome lands.",
+        "why": "The pinned delay enforces at least 172,800 seconds of notice. That permits a governance response, but an uncancelled plan becomes executable by anyone after its scheduled time.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "pause",
@@ -249,7 +252,7 @@
       {
         "name": "Voting holders",
         "verdict": "partial",
-        "why": "Displacing the hat requires strictly more than its live SKY approvals - 7.04bn at the pin - which is a real but moving cost, and a later hat can drop a plan the previous one queued. Neither helps inside the 48 hours, and acquiring the stake is a market transaction rather than a control that blocks the route.",
+        "why": "Voters can elect a replacement hat and cancel before execution, including during the 48-hour delay. They need strictly more than the incumbent's live approvals; success and acquisition cost were not established.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "chief",
@@ -259,7 +262,7 @@
       {
         "name": "Emergency Shutdown Module",
         "verdict": "cannot-stop",
-        "why": "fire() requires Sum to reach min, and min is set to 2^256-1 while the module held 0.001306 MKR of the legacy governance token. The threshold is unreachable by any amount of staking, so emergency shutdown cannot be triggered at all.",
+        "why": "At the pin, min is max uint256 in MKR base units, far above even all remaining MKR plus prior stake. The ESM cannot fire under this configuration; governance can still call End directly.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "esm"
@@ -267,20 +270,21 @@
       },
       {
         "name": "The End shutdown module",
-        "verdict": "cannot-stop",
-        "why": "live reads 1 and the module is wired as a ward of the Vat, Dog, Spot and Vow. Its only callers are the ESM, which cannot fire, and MCD_PAUSE_PROXY, which this route already controls, so caging the system is another thing the captured authority can do rather than something that stops it.",
-        "evidence": "verified-onchain",
+        "verdict": "unverified",
+        "why": "Sky marks End deprecated in archived documentation. Pinned reads confirm the ESM and PauseProxy as authorised callers, but do not enumerate every ward; governance's shutdown authority is not an independent veto, and complete settlement was not replayed.",
+        "evidence": "documented",
         "sourceIds": [
           "end",
           "esm",
           "vat",
-          "pause-proxy"
+          "pause-proxy",
+          "sky-shutdown"
         ]
       },
       {
         "name": "The LitePSM",
         "verdict": "partial",
-        "why": "It returns cash at par with no fee and its $4.391bn pocket is reachable in full, covering 61.7% of USDS supply. That is an inventory bound on one issuer's token held by one contract, not a solvency guarantee, and the same issuer can disable it outright.",
+        "why": "At the pin, funded callers could drain 4.391bn USDC at par, equal to 61.7% of USDS supply with unchanged exit contracts. Replenishment is not guaranteed, and every USDC sender retains Circle token dependence.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "lite-psm",
@@ -291,17 +295,18 @@
       {
         "name": "The Vow surplus",
         "verdict": "cannot-stop",
-        "why": "At the pin the Vow held $0.654bn of surplus against $0.715bn of recognised debt, a net shortfall of $0.060bn, with a further $0.228bn in the debt queue. Both auction levers are disabled by configuration: bump is zero and hump and sump are max uint256, so neither a surplus auction nor a debt auction can start.",
+        "why": "Pinned Vow credit was 654.473m DAI against 714.592m recognised debt, a 60.119m deficit. The 228.196m queued debt is already included; max-uint hump and sump prevent its legacy surplus and debt auctions at this state.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "vow",
-          "vat"
+          "vat",
+          "dog"
         ]
       },
       {
         "name": "Circle",
-        "verdict": "cannot-stop",
-        "why": "USDC was live and the PSM pocket was not blacklisted at the pin, and the blacklister is an on-chain role. A fork replay showed blacklisting the pocket reverts both swap directions on the LitePSM with the issuer's own reason string, which removes the last cash exit instead of absorbing the loss.",
+        "verdict": "partial",
+        "why": "Circle's blacklist capability could stop PSM outflows, including hostile withdrawals, but also block legitimate exits. The fork replay blacklisted the pocket and both swap directions reverted; no issuer intervention or recovery is assumed.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "usdc",
@@ -313,82 +318,82 @@
     "falsifiers": [
       {
         "id": "hat-approvals-bar",
-        "condition": "The sitting hat differs from the recorded 0xF01b594aF26fC8A8ae1e24DCaF904ECB6Fd1BaDC, Chief.lift loses its strict comparison approvals[candidate] > approvals[hat], or the Chief-authorized DSPause route to the recorded PauseProxy changes",
+        "condition": "The hat differs from recorded 0xF01b594aF26fC8A8ae1e24DCaF904ECB6Fd1BaDC; Pause owner, Chief authority, PauseProxy address or proxy owner differs from the recorded route; or Chief, Pause or PauseProxy runtime changes, requiring review of the strict-greater-than election rule and execution gates",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "pause-delay",
-        "condition": "DSPause.delay falls below 172,800 seconds, or plot accepts an eta earlier than now + delay",
+        "condition": "DSPause.delay falls below 172,800 seconds, or its reviewed runtime changes and requires renewed review of plot and execution timing",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "usds-holder-controls",
-        "condition": "USDS gains a pause, freeze, blacklist or admin seizure over holder balances",
+        "condition": "The USDS implementation address, proxy runtime or implementation runtime changes, requiring renewed review of pause, freeze, blacklist, seizure and burn-allowance controls",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "esm-can-fire",
-        "condition": "The Emergency Shutdown Module can still fire, because min is reachable staked MKR",
+        "condition": "ESM runtime, MKR token or End address changes; or ESM and End are live, ESM is an End ward, and min is at most Sum plus MKR total supply minus MKR already held by ESM, so supply alone no longer rules out activation",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "spell-veto",
-        "condition": "A guardian, committee or second authority can cancel or veto a queued spell",
+        "condition": "DSPause gains a nonzero owner, its authority differs from the recorded Chief, or the Pause or Chief runtime changes, requiring renewed review of who can cancel a queued spell",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "vow-surplus",
-        "condition": "The Vow holds any net surplus at all, with Vat credit exceeding Vat debt; at the pinned block it holds none",
+        "condition": "Vat.dai(Vow) exceeds Vat.sin(Vow), giving the Vow any positive net credit; queued Sin is already included in Vat.sin(Vow)",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "litepsm-non-circle-usdc",
-        "condition": "The LitePSM replenishes its USDC stock from a source other than the Circle issuer",
+        "condition": "The recorded USDC token, wrapper-to-PSM route, runtimes or pocket changes; exit fee is nonzero, pocket allowance is insufficient, USDC is paused, pocket or PSM is blacklisted, Vat is not live, or pocket inventory reaches USDS supply at par. Separately, documented economically independent replenishment would challenge the inventory-only premise; that documentary question remains unverified",
         "status": "unverified"
       },
       {
         "id": "book-look-through",
-        "condition": "The collateral book's Spark, Bloom and Grove positions are fully looked through to named assets",
+        "condition": "The registered ilk list or Chainlog allocator vault/buffer addresses change, requiring renewed review; or dated asset-level disclosures reconcile Spark, Bloom and Grove debt and buffers to named deployments, custodians and legal claims. The documentary reconciliation remains unverified",
         "status": "unverified"
       }
     ],
     "exposure": [
       {
         "label": "USDS holders",
-        "detail": "$7.122bn of USDS was outstanding at block 26,139,200, and DAI added $4.587bn of claims on the same book, so the shared liability base was $11.709bn.",
+        "detail": "At block 26,139,200, totalSupply measured 7.122bn USDS and 4.587bn DAI, or 11.709bn combined token units. This uses 18-decimal token quantities, not market-valued dollars.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Shared collateral book",
-        "detail": "35 ilks carried $11.851bn of Vat debt in total, against a Vat debt of $12.566bn including $0.715bn of unbacked debt. Measured ilk shares were 43.8% LitePSM USDC, 32.1% Spark, 14.4% Bloom and 1.0% Grove. These are shared DAO-wide figures, not USDS-only reserves.",
+        "detail": "At block 26,139,200, 35 ilks carried $11.851bn of Vat debt at a $1-per-DAI accounting assumption; Vat debt was 12.566bn DAI including 0.715bn unbacked debt. Shares of summed registered ilk debt were 43.8% LitePSM USDC, 32.1% Spark, 14.4% Bloom and 1.0% Grove. These DAO-wide debt allocations are not asset valuations or USDS-only reserves; Art times rate is divided by 10^45.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Cash reachable at par",
-        "detail": "The LitePSM pocket held $4.391bn of USDC with tin and tout at zero and $0.798bn of pre-minted DAI held. A public call drained the remaining pocket at par; the next exited reverted. That is 61.7% of USDS supply and 37.5% of combined USDS and DAI supply.",
+        "detail": "At block 26,139,200, USDC balance divided by 10^6 gave 4.391bn USDC in the pocket; tin and tout were zero. The 0.798bn pre-minted DAI balance and 0.800bn DAI buffer support the opposite swap direction, not the USDS-to-USDC ceiling. With funded, approved callers and unchanged contracts, the static pocket covers 61.7% of USDS supply or 37.5% of combined USDS and DAI supply at par, without replenishment or competing exits.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Savings wrapper",
-        "detail": "sUSDS reported $4.934bn of total assets against 4.437bn sUSDS shares, so a large share of outstanding USDS is itself wrapped and would run through the same exit.",
+        "detail": "At block 26,139,200, sUSDS totalAssets divided by 10^18 was 4.934bn USDS against totalSupply of 4.437bn sUSDS shares. Assets and shares are different units; the savings wrapper is not a separate USDC reserve.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Absorption capacity",
-        "detail": "Dog's global auction cap Hole was $150m with Dirt at zero, and the Vow had no surplus. Liquidation throughput is capped, and uncovered debt has nowhere to go while hump and sump are max uint256.",
+        "detail": "At block 26,139,200, Dog.Hole divided by 10^45 was 150m DAI and Dirt was zero. Hole limits outstanding auction debt plus penalties, with a dusty-vault exception, rather than setting a liquidation rate. Vow net credit was negative; its legacy auctions could not start under the pinned hump/sump settings. No system-wide recovery value is inferred.",
         "evidence": "verified-onchain"
       }
     ],
     "sources": [
       {
         "id": "chainlog",
-        "label": "Sky Chainlog (version 1.20.20) resolving every address below",
+        "label": "Sky Chainlog (version 1.20.20), address discovery at the pin",
         "url": "https://etherscan.io/address/0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F#code",
         "observedAt": "2026-10-07",
         "block": 26139200
@@ -520,27 +525,6 @@
         "block": 26139200
       },
       {
-        "id": "sky-liquidation",
-        "label": "Sky documentation: collateral liquidation and Clipper auctions",
-        "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
-        "observedAt": "2026-10-07",
-        "block": 26139200
-      },
-      {
-        "id": "sky-osm",
-        "label": "Sky documentation: OSM delayed oracle and the Median to Spot price path",
-        "url": "https://developers.skyeco.com/protocol/core/osm/",
-        "observedAt": "2026-10-07",
-        "block": 26139200
-      },
-      {
-        "id": "sky-vow",
-        "label": "Sky documentation: Vow surplus, debt queue and debt auctions",
-        "url": "https://developers.skyeco.com/protocol/core/vow/",
-        "observedAt": "2026-10-07",
-        "block": 26139200
-      },
-      {
         "id": "sky-shutdown",
         "label": "Sky documentation: End system caging, marked deprecated",
         "url": "https://developers.skyeco.com/archive/shutdown/shutdown/",
@@ -555,18 +539,18 @@
     },
     "review": {
       "status": "draft",
-      "note": "Chain verified on a local mainnet fork pinned at block 26,139,200 (2026-10-07T08:05:23Z); the governor-authority, delay-timing and LitePSM replays are recorded with transaction hashes in agents/how-does-x-break/verification/usds-scenario/. No capture, compromise or misconduct is alleged: the premise is hypothetical. Book-level figures are shared with DAI and are not USDS-only. LP exit depth is a pinned static-inventory bound, not a price forecast. Awaiting maintainer review."
+      "note": "Draft reviewed against fresh read-only chain calls at block 26,139,200 and the recorded governor-authority, delay-timing and LitePSM fork transcripts in agents/how-does-x-break/verification/usds-scenario/. Governance can reclaim the hat and cancel during the delay. No hostile implementation, full shutdown settlement or exhaustive End ward census was replayed. The 30-day Transfer/SellGem census establishes immediate USDC movements, not independent funding provenance; allocator asset look-through also remains unresolved. Book quantities are shared DAO-wide debt, and exit inventory is conditional, not a price forecast. Awaiting maintainer review."
     }
   },
   "crvusd-curve": {
     "coinId": "crvusd-curve",
     "title": "How does crvUSD break?",
-    "thesis": "Three Safe keys bypass vlCVX voting; one operator-delegate key needs a poll majority whose size depends on outside veCRV opposition.",
-    "premise": "Hypothetical: three of the five signers on Convex's vote-extension Safe, or one ConvexCore operator key, are compromised, coerced, or collude. No such compromise has been observed. At block 26,138,725, the one-key route needs 55.48% poll yes when other veCRV abstains, or 94.31% against all outside opposition; both routes require an early, full-weight Curve ballot.",
+    "thesis": "Compromised Convex keys could authorize unbacked crvUSD issuance: three bypass vlCVX voting, while one operator-delegate key needs a turnout-dependent poll result.",
+    "premise": "Hypothetical: three of the five signers on Convex's vote-extension Safe, or one ConvexCore operator key, are compromised, coerced, or collude. No such compromise has been observed. Using block 26,138,725 as the vote snapshot, the one-key route needs at least 55.48% poll yes when other veCRV abstains, or 94.31% against all outside opposition; these bounds assume Convex casts within the first 3.5 days, at full weight. Future snapshots need recalculation, and the one-key route also depends on the intact Safe not replacing the caster before its ballot.",
     "keyFigures": [
       {
         "value": "1 or 3",
-        "label": "Keys to turn Convex's vote",
+        "label": "Keys for conditional voting control",
         "evidence": "verified-onchain",
         "sourceIds": [
           "safe",
@@ -592,7 +576,7 @@
       },
       {
         "value": "32.7M crvUSD",
-        "label": "Quoted 99% of PegKeeper reserves",
+        "label": "Static input quotes: 99% counter-reserves",
         "evidence": "verified-onchain",
         "sourceIds": [
           "pegkeeper-quotes"
@@ -604,7 +588,7 @@
         "id": "open-vote",
         "kind": "governance",
         "title": "Open a malicious vote",
-        "actor": "Any address holding at least 2,500 veCRV",
+        "actor": "A holder of at least 2,500 veCRV, outside its proposal cooldown",
         "action": "Ownership Voting newVote(script: DAO Agent → Factory admin → set_debt_ceiling(attacker, X))",
         "actionIsCode": true,
         "targets": [
@@ -616,9 +600,9 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction",
-        "missingDefense": "Proposal creation is open to any holder above the veCRV minimum",
-        "explanation": "The vote can be opened before or after the keys are taken. Its script tells the DAO Agent to raise a debt ceiling for an address the attacker controls. The vote is public from its first block.",
-        "evidence": "documented",
+        "missingDefense": "No proposal-content veto",
+        "explanation": "The public vote can open before or after key compromise, subject to the proposer's balance and cooldown requirements. Its script instructs the DAO Agent to raise a debt ceiling for an attacker-controlled address.",
+        "evidence": "verified-onchain",
         "sourceIds": [
           "voting",
           "curve-proposals"
@@ -632,8 +616,8 @@
         "action": "Seven-day vote period runs to completion",
         "elapsed": "T+0 → T+7d",
         "cost": "7 days, fully public",
-        "missingDefense": "Execution cannot be brought forward: the 7-day period must elapse first",
-        "explanation": "On the Safe route Convex's whole weight is cast yes directly, whatever vlCVX holders wanted. Curve requires yes votes to exceed 51% of votes cast and 30% of total voting power, so at block 26,138,725 (a 54.0798% share) no combination of other holders could put it below either bar. The vote still cannot be executed while it is open: a fork replay confirmed executeVote reverts until the full seven-day period has elapsed.",
+        "missingDefense": "No independent execution veto",
+        "explanation": "At block 26,138,725, Convex's 54.0798% share makes the Safe route's full-weight yes ballot unbeatable, but execution still waits seven days. After closure, Curve requires yes to exceed 51% of votes cast and 30% of snapshot voting power, or simply 51% of snapshot power; the fork replay confirmed that this shortcut does not permit early execution.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "voting",
@@ -673,7 +657,7 @@
         "elapsed": "T+7d",
         "cost": "One transaction, once the vote period has elapsed",
         "missingDefense": "No collateral check, no further timelock",
-        "explanation": "Raising a debt ceiling mints the increase straight to the named address. A fork replay of exactly this script minted 10 million crvUSD to a plain address: no collateral, no registered lending market, and no allowance or co-signature from the recipient.",
+        "explanation": "A ceiling above the recipient's recorded residual mints the difference directly to that address. On a fork from block 26,139,017, the vote script minted 10 million crvUSD to an unregistered plain address after the full seven-day period, with no collateral, recipient allowance or co-signature.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "intermediary",
@@ -686,10 +670,10 @@
         "kind": "holder-outcome",
         "title": "Sell into the peg",
         "actor": "Attacker",
-        "action": "Swap the unbacked crvUSD into Curve pools, PegKeeper pairs and LlamaLend markets",
+        "action": "Sell the unbacked crvUSD into liquidity pools, including PegKeeper pairs",
         "elapsed": "T+7d",
-        "cost": "Minutes",
-        "explanation": "crvUSD holders, scrvUSD depositors and LlamaLend lenders are left holding a claim with no matching collateral.",
+        "cost": "Market-dependent; no sale replayed",
+        "explanation": "The new issuance adds claims without adding collateral, diluting existing backing rather than removing collateral from existing loans. Sales would expose pool liquidity, scrvUSD depositors and LlamaLend lenders to a depeg; no realized sale or price path was simulated.",
         "evidence": "inferred",
         "sourceIds": [
           "pegkeepers"
@@ -703,7 +687,7 @@
           "id": "safe",
           "label": "Through the Safe",
           "keys": "3 of 5",
-          "premise": "Three of the five signers on the Safe that owns Convex's vote extension are compromised, coerced, or collude.",
+          "premise": "Hypothetical: three of the five signers on the Safe that owns Convex's vote extension are compromised, coerced, or collude.",
           "stages": [
             {
               "id": "safe-take-keys",
@@ -713,7 +697,7 @@
               "action": "Obtain 3 of 5 signatures on the Safe that owns Convex's vote extension",
               "elapsed": "T+0",
               "cost": "Off-chain: phishing, coercion, or collusion",
-              "missingDefense": "No Safe guard, no modules: three signatures are enough",
+              "missingDefense": "No guard on signer-approved calls",
               "explanation": "The Safe is a plain 3-of-5 with no guard and no modules, so any three owners can sign any call it is allowed to make.",
               "evidence": "verified-onchain",
               "sourceIds": [
@@ -736,8 +720,8 @@
               ],
               "elapsed": "T+0",
               "cost": "One transaction",
-              "missingDefense": "No timelock · no vlCVX approval · two hand-off paths",
-              "explanation": "The Booster only accepts votes from this extension, and the extension's owner can name any address as the caster, effective immediately. Today the caster is CurveVoteExecutor, which applies the vlCVX result; nothing obliges the owner to keep it. The Safe drove this role directly from 2022 until it appointed the executor on 2026-08-03. A second path (revertControl, then the Booster owner) also hands over the delegate, so a guard on setDaoOperator alone would not close this route.",
+              "missingDefense": "No hand-off timelock or vlCVX approval",
+              "explanation": "The extension-owning Safe can immediately replace CurveVoteExecutor with any caster, bypassing its vlCVX tally rule. The Safe can also call revertControl and use the Booster owner wrappers to replace the delegate, so blocking setDaoOperator alone would not close both paths.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "extension",
@@ -752,7 +736,7 @@
               "kind": "governance",
               "title": "Vote all veCRV yes",
               "actor": "Attacker's caster",
-              "action": "DaoVote(voteId, true) → Booster → VoterProxy → Voting.vote",
+              "action": "DaoVote(voteId, true, true) → Booster → VoterProxy → Voting.vote",
               "actionIsCode": true,
               "targets": [
                 {
@@ -768,7 +752,7 @@
               ],
               "elapsed": "T+0",
               "cost": "One transaction",
-              "missingDefense": "The vlCVX result is never consulted",
+              "missingDefense": "No binding vlCVX ballot",
               "explanation": "The replacement caster votes the whole pooled position at once. The cvxCRV holders whose CRV is locked there cannot withdraw it or redirect its vote.",
               "evidence": "verified-onchain",
               "sourceIds": [
@@ -800,8 +784,8 @@
               ],
               "elapsed": "T+0",
               "cost": "Off-chain compromise, coercion, or collusion; not observed",
-              "missingDefense": "One operator can make ConvexCore call anything; no second operator or timelock",
-              "explanation": "ConvexCore's three operators are this EOA, a 3-of-5 Safe and FxGaugeExecutor: they are not three interchangeable keys, and the EOA alone can drive ConvexCore. At block 26,138,725 it also held delegated weight equal to 45.8% of vlCVX, while its own locked balance was zero.",
+              "missingDefense": "No co-signature or operator timelock",
+              "explanation": "ConvexCore's operators are this EOA, a 3-of-5 Safe and FxGaugeExecutor, and the EOA alone can make Core call either owned contract. At block 26,138,725, its delegated epoch-239 weight was 20,690,663.1 CVX, or 45.8184% of that epoch's 45,157,959.4842 CVX supply, while its own locked balance was zero.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "convexcore",
@@ -835,9 +819,9 @@
                 }
               ],
               "elapsed": "T+0",
-              "cost": "Two transactions; the poll stays open at least one day and must open a day before the Curve vote's half-way point",
-              "missingDefense": "No timelock on poll creation or guardian appointment; the guardian only skips the 12-hour finalization wait",
-              "explanation": "ConvexCore owns both contracts, so the key can bind a poll to any Curve vote id and mark itself guardian. It cannot replace the executor's fixed pointers, forge holder ballots, or skip the poll: a fork run showed the executor still sends the platform's proportional result.",
+              "cost": "Two transactions; the one-day poll must close early enough to cast within the Curve vote's first 3.5 days",
+              "missingDefense": "No delay on owner configuration",
+              "explanation": "ConvexCore owns the platform and executor, so the key can link a poll to the Curve vote and appoint itself guardian, skipping only the 12-hour finalization wait. It cannot replace the executor's fixed pointers, forge holder ballots or skip the poll; the fork run still sent the platform's proportional result.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "convexcore",
@@ -864,7 +848,7 @@
               "elapsed": "T+0 → T+1d",
               "cost": "One transaction; no vlCVX purchase needed",
               "missingDefense": "No cap on delegated concentration",
-              "explanation": "At block 26,138,725, a full yes ballot from the operator's 45.8% delegated vlCVX block tolerates about 36.77% of supply voting no only if other veCRV abstains. Winning against all outside veCRV opposition instead needs at least 94.31% poll yes, allowing only about 2.76% of vlCVX supply to vote no.",
+              "explanation": "At block 26,138,725, with the delegate's 20,690,663.1 CVX fixed as the sole yes weight D, maximum no weight is floor(D × (10000 - b) / b) in 18-decimal units: about 36.76705146% of epoch-239 supply for a 5,548-basis-point yes target, or 2.76436013% for 9,431. The first bound assumes other veCRV abstains and the second withstands all outside opposition, both at full Curve weight; direct delegator votes reduce D, and exceeding the second bound removes guaranteed passage, not necessarily passage.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "platform",
@@ -900,8 +884,8 @@
               ],
               "elapsed": "T+1d",
               "cost": "One transaction after the poll closes; it must land within the Curve vote's first 3.5 days",
-              "missingDefense": "No independent ballot veto",
-              "explanation": "The executor casts Convex's weight in the poll's proportion, floored to basis points. At the pinned share and full weight, 55.48% yes passes with other veCRV abstaining but can lose against opposition; 94.31% puts more than 51% of total veCRV in the yes column and passed on a fork with 15.2% outside veCRV voting no.",
+              "missingDefense": "No automatic ballot veto",
+              "explanation": "The executor uses floor(yes × 10000 / (yes + no)): at block 26,138,725 and full Curve weight, 5,548 yes basis points clears the strict 30% quorum with other veCRV abstaining, while 9,431 exceeds 51% of total voting power regardless of outside opposition. One basis point less fails the respective bound; a fork from block 26,139,382 confirmed that 55.48% lost against 15.2% outside opposition while 94.31% passed.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "executor",
@@ -921,7 +905,7 @@
       "fromStageId": "open-vote",
       "toStageId": "execute-mint",
       "duration": "7 days",
-      "note": "Visible onchain from the first block. No independent veto exists in the verified Voting → Agent → Factory path. On the ConvexCore route a counted no reduces the Curve yes, and undelegated holders can oppose during the poll; the Safe route bypasses that tally entirely. Exiting is an economic response, not the only option."
+      "note": "The vote is public for seven days, but the intact Safe's response window on the Core route ends when Convex's ballot lands, potentially just after the one-day poll closes. Counted vlCVX opposition can weaken that ballot; the Safe route bypasses the poll. No independent veto was found in the downstream Voting → Agent → Factory execution path."
     },
     "defenders": [
       {
@@ -937,7 +921,7 @@
       {
         "name": "vlCVX holders",
         "verdict": "partial",
-        "why": "They cannot stop the Safe's caster replacement. At block 26,138,725, assuming the delegate votes its whole block yes, ConvexCore needs at least 55.48% poll yes if other veCRV abstains (opposing vlCVX no greater than about 36.77% of supply), or 94.31% to win against all outside veCRV opposition (no greater than about 2.76%); exceeding the latter removes immunity, not necessarily passage. ConvexCore can obstruct some delegated voters, but a fork run showed an undelegated holder could still vote no.",
+        "why": "At the pin, vlCVX opposition can defeat the Core route's conditional poll result but cannot veto Safe caster replacement. Direct delegator voting reduces the attacker's yes weight; the tested obstruction did not silence undelegated holders.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "extension",
@@ -963,26 +947,53 @@
       {
         "name": "Convex's two other signers",
         "verdict": "cannot-stop",
-        "why": "Two signatures cannot override three, and they have no say over a ConvexCore operator key.",
+        "why": "On the three-key Safe route, the two remaining owners cannot veto a transaction signed by the compromised majority. Individually they have no authority over the separate Core operator key.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "safe"
         ]
       },
       {
+        "name": "The intact Convex Safe",
+        "verdict": "partial",
+        "why": "On the Core route, three intact Safe signers can call setDaoOperator or revertControl before the executor's Curve ballot. The guardian can execute immediately after the one-day poll closes, making last-moment intervention a transaction-ordering race.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "safe",
+          "extension",
+          "executor",
+          "platform",
+          "voting"
+        ]
+      },
+      {
+        "name": "Other ConvexCore operators",
+        "verdict": "partial",
+        "why": "A remaining Core operator can revoke the compromised key, but that key can revoke the others first. The attacker has the first-mover advantage; revocation does not retract a Curve ballot already cast.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "convexcore",
+          "voting"
+        ]
+      },
+      {
         "name": "Curve Emergency DAO",
         "verdict": "cannot-stop",
-        "why": "Its 5-of-9 Safe can pause PegKeepers, adjust market risk settings and reduce existing debt ceilings, but has no vote-cancel, Agent or Factory-mint veto in the Voting → Agent → Factory path. A fork replay showed the ceiling reduction reverts unless the holder approved the Factory, and tokens already sold to third parties cannot be recovered from them.",
+        "why": "The 5-of-9 Emergency DAO can pause PegKeepers, adjust risk parameters and lower debt ceilings, but has no independent veto in the Voting → Agent → Factory path. In the fork replay, lowering the minted recipient's ceiling reverted while it held tokens without a Factory allowance, and the same path could not recover tokens transferred to a third party.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "emergency-dao",
-          "intermediary"
+          "intermediary",
+          "curve-dao-acl",
+          "crvusd-token",
+          "pegkeeper-regulator",
+          "voting"
         ]
       },
       {
         "name": "The market",
         "verdict": "partial",
-        "why": "The vote is public for seven days, so holders can leave early, but a mass exit is itself a depeg.",
+        "why": "Holders can seek an exit during the seven-day notice window. Actual exit prices depend on buyers, liquidity and market responses, none of which the independent pool quotes model.",
         "evidence": "inferred",
         "sourceIds": []
       }
@@ -990,37 +1001,37 @@
     "falsifiers": [
       {
         "id": "extension-owner",
-        "condition": "The vote extension is owned by a vlCVX-controlled timelock, or ownership is renounced",
+        "condition": "The vote extension's owner differs from the recorded Convex Safe",
         "status": "not-met",
         "checkedAtBlock": 26138725
       },
       {
         "id": "caster-handoff-delay",
-        "condition": "setDaoOperator, and the revertControl hand-off to the Booster owner, gain an onchain delay that vlCVX holders can veto",
+        "condition": "The runtime of the extension, Booster or either Booster owner wrapper changes, or the Booster delegate/owner or either wrapper's owner differs from block 26,138,725",
         "status": "not-met",
         "checkedAtBlock": 26138725
       },
       {
         "id": "safe-guard",
-        "condition": "The Safe gets a guard that blocks or delays both caster hand-off paths",
+        "condition": "The Safe's threshold differs from three, its owner count differs from five, its guard slot is nonzero, or its module list is no longer empty",
         "status": "not-met",
         "checkedAtBlock": 26138725
       },
       {
         "id": "core-operators",
-        "condition": "ConvexCore's operators are replaced by a timelocked multi-signature authority",
+        "condition": "ConvexCore's enabled operator set or runtime differs from block 26,138,725",
         "status": "not-met",
         "checkedAtBlock": 26138725
       },
       {
         "id": "convex-vecrv-share",
-        "condition": "Convex holds 51% of veCRV or less at a vote snapshot",
+        "condition": "Convex's VoterProxy balance is 51% of total veCRV supply or less at the check's pinned block; this is not a future vote snapshot",
         "status": "not-met",
         "checkedAtBlock": 26138725
       },
       {
         "id": "arbitrary-mint-recipient",
-        "condition": "set_debt_ceiling stops minting to arbitrary addresses",
+        "condition": "The Factory, admin intermediary or crvUSD runtime differs from block 26,139,017, or the recorded Factory admin, intermediary DAO, Factory stablecoin or token minter pointer changes",
         "status": "not-met",
         "checkedAtBlock": 26139017
       }
@@ -1028,27 +1039,27 @@
     "exposure": [
       {
         "label": "crvUSD holders",
-        "detail": "248.82 million crvUSD was outstanding at block 26,138,725, after excluding unused minted inventory from the 2.105 billion total supply.",
+        "detail": "At block 26,138,725, stock-adjusted supply was 248.82 million crvUSD: 2.10481 billion total supply less 1.64888 billion at enumerated mint recipients and 207.11 million of unused YieldBasis AMM inventory. The lender, savings and bridge exposures below overlap this supply and must not be added to it.",
         "evidence": "verified-onchain"
       },
       {
         "label": "PegKeeper pools",
-        "detail": "At block 26,138,725 the five PegKeeper pairs held 6.27 million USDC, 16.79 million USDT, 0.54 million PYUSD, 7.41 million frxUSD and 1.06 million GHO. Independent get_dy quotes against that unchanged pool state price a 32.66 million crvUSD sale at 99% of each pair's counter-asset reserves; no sequential sale or pool response was simulated.",
+        "detail": "At block 26,138,725 the five PegKeeper pairs held 6.27 million USDC, 16.79 million USDT, 0.54 million PYUSD, 7.41 million frxUSD and 1.06 million GHO, reported separately rather than summed as dollars. Independent get_dy queries against each pool's unchanged state quoted inputs totalling 32.656 million crvUSD to receive 99% of each pair's counter-asset reserve; this sums crvUSD inputs only, not a simulated sale or price forecast.",
         "evidence": "verified-onchain"
       },
       {
         "label": "LlamaLend lenders",
-        "detail": "48 lending vaults held 95.69 million crvUSD in lender claims, including 30.00 million of protocol-funded operator claims.",
+        "detail": "At block 26,138,725, 48 lending vaults reported 95.69 million crvUSD in totalAssets, including 30.003 million of protocol-funded operator claims. These are lender claims, not idle cash: 75.05 million crvUSD was lent out.",
         "evidence": "verified-onchain"
       },
       {
         "label": "scrvUSD depositors",
-        "detail": "The savings vault held 16.24 million crvUSD.",
+        "detail": "At block 26,138,725, the savings vault's crvUSD balance and totalAssets both read 16.24 million crvUSD.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Bridged crvUSD",
-        "detail": "Arbitrum, Base and Optimism representations totalled 2.02 million crvUSD.",
+        "detail": "Arbitrum, Base and Optimism token totalSupply reads summed to 2.02 million crvUSD at chain-local blocks 512,486,468, 52,283,032 and 157,878,317, respectively, all timestamped 2026-10-07 06:43:31 UTC. These bridge representations are not additional Ethereum issuance.",
         "evidence": "verified-onchain"
       }
     ],
@@ -1154,11 +1165,6 @@
         "block": 26138725
       },
       {
-        "id": "convex-multisig",
-        "label": "Convex docs: Multisig admin rights",
-        "url": "https://docs.convexfinance.com/convexfinance/faq/multisig-admin-rights"
-      },
-      {
         "id": "convex-delegation",
         "label": "Convex Delegation (closed seeding; direct-vote accounting)",
         "url": "https://etherscan.io/address/0x22697721ec1c14e42305e91bf02672932e8a7b09#code",
@@ -1187,6 +1193,27 @@
         "block": 26138725
       },
       {
+        "id": "curve-dao-acl",
+        "label": "Curve DAO ACL permissions",
+        "url": "https://etherscan.io/address/0xbd0697ba421e7fec529e3e76d9e9f3a710490369#events",
+        "observedAt": "2026-10-07",
+        "block": 26138775
+      },
+      {
+        "id": "crvusd-token",
+        "label": "crvUSD mint and allowance-gated burn source",
+        "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code",
+        "observedAt": "2026-10-07",
+        "block": 26138775
+      },
+      {
+        "id": "pegkeeper-regulator",
+        "label": "PegKeeperRegulator emergency pause authority",
+        "url": "https://etherscan.io/address/0x36a04caffc681fa179558b2aaba30395cddd855f#code",
+        "observedAt": "2026-10-07",
+        "block": 26138775
+      },
+      {
         "id": "pegkeeper-quotes",
         "label": "crvUSD PegKeeper pools, quoted with get_dy at the pinned block (USDC pair shown)",
         "url": "https://etherscan.io/address/0x4dece678ceceb27446b35c672dc7d61f30bad69e#readContract",
@@ -1201,14 +1228,14 @@
     },
     "review": {
       "status": "draft",
-      "note": "Chain verified on a local mainnet fork at blocks 26,138,725 and 26,139,017; awaiting maintainer approval of the published text."
+      "note": "Pinned state and static pool quotes were re-read at block 26,138,725. Issuance replay: fork block 26,139,017; turnout-bound replay: fork block 26,139,382. The falsifier checks monitor the named configuration changes, not whether a changed configuration installs an effective safeguard. Future snapshot turnout, defender reaction and realized exit prices are not established. Awaiting maintainer approval."
     }
   },
   "usdc-circle": {
     "coinId": "usdc-circle",
     "title": "How does USDC break?",
     "thesis": "A bank-reserve shock outlasts Circle's liquidity and public rescue, leaving holders unable to exit at par.",
-    "premise": "Hypothetical: a banking shock traps reserve cash, redemptions queue, and neither Circle nor public authorities restores access before confidence fails. USDC recovered after the March 2023 SVB shock; this scenario is the tail where it does not. No current bank failure, reserve shortfall or redemption suspension is asserted. August's examined reserves still included net cash and settlement balances, but individual bank exposures were undisclosed.",
+    "premise": "Hypothetical: a banking shock traps reserve cash, redemptions queue, and neither Circle nor public authorities restores access before confidence fails. USDC recovered after the March 2023 SVB shock; this tail assumes rescue fails or arrives too late, without estimating its likelihood. No current bank failure, reserve shortfall or redemption suspension is asserted. August's examined reserves included net cash and settlement balances, but the examination did not disclose individual bank exposures.",
     "keyFigures": [
       {
         "value": "14.44%",
@@ -1272,7 +1299,7 @@
         "elapsed": "T+hours",
         "cost": "Until bank access or replacement funding resumes",
         "missingDefense": "Independent settlement backstop",
-        "explanation": "In 2023, $3.3B at SVB needed a public deposit backstop before becoming fully available. Today's reserve includes short Treasuries and overnight Treasury-backed repos, but their reported values do not prove uninterrupted payment access.",
+        "explanation": "Circle reported that the 2023 backstop would restore access to $3.3B at SVB. August's examination includes short Treasuries and overnight Treasury-backed repos, but their reported values do not prove uninterrupted payment access.",
         "evidence": "documented",
         "sourceIds": [
           "circle-svb",
@@ -1305,7 +1332,7 @@
         "elapsed": "T+minutes to days",
         "cost": "Trading fees and price impact",
         "missingDefense": "Continuous cash arbitrage",
-        "explanation": "A static 10M USDC sale into the sampled Uniswap USDC/USDT pool quotes 9.08M USDT, with a post-swap marginal ratio near 0.432. This measures one pool's depth, not a forecast; arbitrage and liquidity changes are excluded.",
+        "explanation": "At Ethereum block 26,139,234, a static 10M USDC sale into Uniswap's USDC/USDT 0.01% pool quotes 9.08M USDT, averaging 0.908 USDT per USDC. This measures isolated pool depth, not a forecast; external arbitrage and liquidity changes are excluded.",
         "evidence": "inferred",
         "sourceIds": [
           "uniswap-usdt",
@@ -1398,7 +1425,7 @@
       {
         "name": "Treasury, Fed and FDIC",
         "verdict": "can-stop",
-        "why": "Full deposit access arrested the SVB route in 2023. A comparable intervention can arrest this chain, but future coverage and timing are discretionary rather than promised to USDC holders.",
+        "why": "Full deposit access arrested the SVB route in 2023, and a comparable intervention can arrest this chain. The cited intervention does not promise future coverage or timing to USDC holders.",
         "evidence": "documented",
         "sourceIds": [
           "federal-backstop",
@@ -1418,8 +1445,8 @@
       },
       {
         "name": "Circle transfer controls",
-        "verdict": "partial",
-        "why": "The deployed pauser can stop transfers and the blacklister can freeze addresses. USDC was unpaused and the LitePSM pocket was not blacklisted at the pin; local fork replays verified both controls.",
+        "verdict": "cannot-stop",
+        "why": "The pauser and blacklister can block token transfers but cannot restore bank access. At the pin USDC was unpaused and the LitePSM pocket unblacklisted; local fork replays verified both transfer controls.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "usdc-token",
@@ -1431,22 +1458,22 @@
     "falsifiers": [
       {
         "id": "bank-cash-exposure",
-        "condition": "Reserve bank deposits and net cash exposure are removed, with independently verified continuity of Treasury and repo settlement access.",
+        "condition": "Reserve bank deposits and net cash exposure are removed, with independently verified Treasury/repo settlement continuity. Watch: August examination only; unchanged text does not re-decide this condition or test settlement access.",
         "status": "not-met"
       },
       {
         "id": "universal-redemption",
-        "condition": "Every non-EEA holder gains enforceable direct redemption without an institutional Circle Mint eligibility gate.",
+        "condition": "Every non-EEA holder gains enforceable direct redemption without an institutional Circle Mint eligibility gate. Watch: USDC and Mint terms; unchanged text does not re-decide eligibility.",
         "status": "not-met"
       },
       {
         "id": "named-bank-exposure",
-        "condition": "Named bank exposures and tested replacement liquidity demonstrate that the modeled correlated access loss can be met in full.",
+        "condition": "Named bank exposures and tested replacement liquidity establish full coverage of the modeled access loss. Watch: August examination and FY2025 filing; unchanged text does not establish replacement-liquidity adequacy.",
         "status": "unverified"
       },
       {
         "id": "standing-backstop",
-        "condition": "A binding standing backstop guarantees timely access to all affected reserve deposits and settlement channels.",
+        "condition": "A binding standing backstop guarantees timely access to all affected reserve deposits and settlement channels. Watch: USDC/Mint terms and the 2023 federal statement; unchanged text cannot establish current guarantees.",
         "status": "unverified"
       }
     ],
@@ -1468,12 +1495,12 @@
       },
       {
         "label": "Static exit quotes",
-        "detail": "Selling 100M USDC into Curve 3pool quotes 63.20M USDT. Quotes isolate each pinned pool with unchanged liquidity and no external arbitrage; USDT, DAI and crvUSD outputs are tokens, not guaranteed dollars.",
+        "detail": "At Ethereum block 26,139,234, selling 100M USDC into Curve 3pool quotes 63.20M USDT. Quotes isolate each pool with unchanged liquidity and no external arbitrage; outputs are tokens, not guaranteed dollars.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Off-chain reserve access",
-        "detail": "August reserves were 18.01% short Treasuries, 67.55% overnight Treasury repo and 14.44% net cash/settlement balances. The 2025 filing named BNY custody and qualified reserve protection in issuer bankruptcy; neither proves current bank concentration.",
+        "detail": "August reserves were 18.01% short Treasuries, 67.55% overnight Treasury repo and 14.44% net cash/settlement balances. The FY2025 filing named BNY as fund custodian; its insolvency discussion is dated, not a current legal assessment.",
         "evidence": "documented"
       }
     ],
@@ -1599,14 +1626,14 @@
     },
     "review": {
       "status": "draft",
-      "note": "Banking-route draft. SVB recovered; this tail requires failed rescue. Static quotes are not a price forecast. Counterparty concentration, stress throughput and current insolvency protections need maintainer review."
+      "note": "Banking-route draft. SVB recovered; this tail assumes rescue fails or arrives too late. Static quotes are not forecasts. Documentary checks watch cited versions only, not later publications; matches never re-decide falsifiers. Counterparty concentration, stress throughput and current insolvency protections require maintainer review."
     }
   },
   "gho-aave": {
     "coinId": "gho-aave",
     "title": "How does GHO break?",
     "thesis": "Two of three Risk Council keys double a mint bucket and issue 310 million GHO to any address, with no deposit and no delay.",
-    "premise": "Hypothetical: two of the three signers on Aave's Risk Council Safe are compromised, coerced, or collude. No such compromise has been observed, and no misconduct by any signer is alleged. The route needs nothing else: the permissions, the full bucket and the elapsed cooldown were all in place at the pinned block.",
+    "premise": "Hypothetical: two of the three signers on Aave's Risk Council Safe lose control of their keys. No compromise or misconduct is alleged. At block 26,139,200, the permissions, full bucket and elapsed cooldown enabled the replayed route.",
     "keyFigures": [
       {
         "value": "2 of 3",
@@ -1629,7 +1656,7 @@
       },
       {
         "value": "No delay",
-        "label": "Council skips the 4-day vote",
+        "label": "Council bypasses ordinary governance",
         "evidence": "verified-onchain",
         "sourceIds": [
           "steward",
@@ -1639,7 +1666,7 @@
       },
       {
         "value": "24.7M GHO",
-        "label": "Exit above 98% nominal par",
+        "label": "Quoted exits, ≥98% token par",
         "evidence": "verified-onchain",
         "sourceIds": [
           "gsm-usdt",
@@ -1664,8 +1691,8 @@
         ],
         "elapsed": "T+0",
         "cost": "Off-chain: phishing, coercion, or collusion; not observed",
-        "missingDefense": "No Safe guard and no modules: two signatures are enough",
-        "explanation": "The Safe is a plain two-of-three with no guard, no module guard and no modules, so any two owners can sign any call it is permitted to make. A fork replay confirmed that one approval reverts and two execute.",
+        "missingDefense": "No transaction guard",
+        "explanation": "The Safe requires two of three owners and has no guard or modules. Using impersonated owners' on-chain hash approvals, the fork replay rejected one approval and executed with two; no real private keys were used.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "council",
@@ -1693,8 +1720,8 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction",
-        "missingDefense": "No vote and no execution timelock on the increase",
-        "explanation": "This facilitator's bucket was already full at the pinned block, so the mint needs headroom first. The steward lets the Council at most double a capacity, and only once per day, but the day had already passed: the last increase was 119 days earlier. Raising the cap mints nothing by itself.",
+        "missingDefense": "No execution timelock",
+        "explanation": "At the pin, the bucket was full and its last update was about 119 days earlier. Each call can at most double the current capacity after strictly more than 86,400 seconds; raising capacity mints nothing.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "steward",
@@ -1721,9 +1748,9 @@
           }
         ],
         "elapsed": "T+0",
-        "cost": "One transaction, same block as the cap raise",
-        "missingDefense": "No collateral check and no restriction on the recipient",
-        "explanation": "The verified facilitator forwards the caller's chosen recipient and amount straight to the token. A fork replay minted 310 million GHO to a fresh address that held nothing and had no code: total supply rose from 699 million to 1.009 billion, and no collateral moved.",
+        "cost": "One transaction after the cap raise",
+        "missingDefense": "No deposit or recipient restriction",
+        "explanation": "The facilitator forwards the chosen recipient and amount without checking a deposit. On the pinned fork, minting 310 million GHO to a fresh address raised supply from 699 million to 1.009 billion without moving collateral.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "facilitator",
@@ -1735,15 +1762,16 @@
         "kind": "mint-or-upgrade",
         "title": "Double again next day",
         "actor": "Compromised Risk Council Safe",
-        "action": "Raise the capacity again once a day has elapsed, then mint the new headroom",
-        "elapsed": "T+1d",
-        "cost": "Two transactions per day, repeatable",
-        "missingDefense": "No lifetime budget: the cap only limits the rate",
-        "explanation": "The cooldown bounds one mint, not the total. On the fork the same pair of calls one day later took the outstanding unbacked balance to 930 million GHO and supply to 1.629 billion, with no aggregate ceiling reached.",
+        "action": "Wait strictly more than 24 hours after the increase, then double capacity and mint the new headroom",
+        "elapsed": "T+24h and 1s",
+        "cost": "Two more transactions",
+        "missingDefense": "No cumulative issuance budget",
+        "explanation": "The debounce limits capacity updates, while each mint is limited by unused capacity; neither tracks lifetime issuance. After a further 86,401 seconds, the fork's second doubling and mint brought deposit-free issuance to 930 million GHO.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "steward",
-          "gho"
+          "gho",
+          "aave-docs-gho"
         ]
       },
       {
@@ -1754,8 +1782,8 @@
         "action": "Redeem through the mainnet GSM, then sell the remainder into the GHO pools",
         "elapsed": "T+0 → T+1d",
         "cost": "Minutes",
-        "missingDefense": "Redemption stock is a fraction of a single day's mint",
-        "explanation": "On-chain quotes at the pinned block cover at least 24.7 million GHO at 98% or more of nominal token par: 22.5 million through the stablecoin module's remaining inventory and 2.2 million across the Curve, Uniswap v3 and Uniswap v4 pools. That is under 8% of one day's mint; the quoted stablecoin outputs are not guaranteed dollars.",
+        "missingDefense": "Limited measured exit inventory",
+        "explanation": "At block 26,139,200, static quotes covered at least 24.7 million GHO at ≥98% nominal token par, under 8% of the first mint. Venues were quoted independently without rebalancing; this is neither an exhaustive exit ceiling nor a price forecast.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "gsm-usdt",
@@ -1784,10 +1812,10 @@
             "chainId": 1
           }
         ],
-        "elapsed": "T+4d or later",
-        "cost": "A full proposal, vote and executor delay",
-        "missingDefense": "No emergency path to the facilitator or the token",
-        "explanation": "The measured Level-1 path is a one-day voting cooldown, three days of voting and a one-day executor delay. A fork replay showed what it buys: future mints stop, but nothing is burned, the facilitator cannot even be removed while its level is non-zero, and revoking the mint role still leaves the Council able to raise capacities.",
+        "elapsed": "T+5d or later",
+        "cost": "A new proposal, vote and executor delay",
+        "missingDefense": "No guardian mint-role revocation",
+        "explanation": "A newly initiated Level-1 proposal needs a one-day cooldown, three-day vote and one-day executor delay. On the fork, revoking the mint role stopped later issuance without burning existing tokens; the Council's separate capacity-setting permission survived.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "governance",
@@ -1800,12 +1828,12 @@
       {
         "id": "holders",
         "kind": "holder-outcome",
-        "title": "Holders absorb the loss",
+        "title": "Holders face dilution",
         "actor": "GHO holders",
-        "action": "Savings depositors, stakers and pool holders are left with a claim no asset answers",
-        "elapsed": "T+4d",
-        "cost": "Permanent for whoever still holds",
-        "explanation": "GHO has no pause, freeze, blacklist or recovery path, so the new units stay where they land and the loss falls on whoever holds the token when the issuance becomes known.",
+        "action": "Savings depositors, stakers and pool holders remain exposed to the added unbacked issuance",
+        "elapsed": "From the first mint",
+        "cost": "Loss depends on exits and recapitalisation",
+        "explanation": "The added units have no matching deposit and remain transferable after mint authority is revoked. Holders face dilution unless outside resources cover the loss; neither the eventual price nor recovery is established by the replay.",
         "evidence": "inferred",
         "sourceIds": [
           "gho",
@@ -1815,11 +1843,11 @@
       }
     ],
     "window": {
-      "label": "Unopposed issuance window",
+      "label": "Ordinary governance response window",
       "fromStageId": "raise-cap",
       "toStageId": "governance-too-late",
-      "duration": "At least 4 days",
-      "note": "The mint is visible from its first block, but nothing can be executed against it sooner than the measured Level-1 governance path. Within that window the Council can repeat the doubling once a day. Exiting is an economic response, not a defence."
+      "duration": "At least 5 days from proposal",
+      "note": "This assumes a new Level-1 proposal starts when issuance is detected. The measured cooldown, vote and executor delay total five days, allowing repeated capacity increases more than 24 hours apart while the Council retains both permissions."
     },
     "defenders": [
       {
@@ -1835,7 +1863,7 @@
       {
         "name": "Aave governance",
         "verdict": "partial",
-        "why": "It holds every relevant admin role but its fastest measured route is four days or more. A fork replay showed it can stop later mints, yet it cannot burn or freeze what exists, cannot remove a facilitator whose level is non-zero, and must revoke the mint role and the steward permission separately.",
+        "why": "A new Level-1 proposal takes at least five days. Revoking the Council's mint role stops this issuance route but leaves its separate steward permission intact; zeroing capacity also stops minting without recovering tokens already issued.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "governance",
@@ -1861,7 +1889,7 @@
       {
         "name": "The GHO token",
         "verdict": "cannot-stop",
-        "why": "The deployed token is immutable and exposes no pause, freeze, blacklist, recovery or admin burn. Probes for all six on a fork reverted, and the only burn debits the facilitator's own balance, which is empty after it mints to someone else.",
+        "why": "Verified immutable source exposes no pause, freeze, blacklist or administrator clawback; six matching selector probes reverted at the pin. Burning debits the facilitator's own balance, so it cannot retrieve GHO already minted to another address.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "gho",
@@ -1871,8 +1899,8 @@
       {
         "name": "stkGHO and Umbrella",
         "verdict": "cannot-stop",
-        "why": "The Safety Module held 30.56 million GHO at the pinned block, and the Core market's Umbrella registry entry was empty. Either way these cover a lending-market deficit, which deposit-free facilitator issuance never creates.",
-        "evidence": "verified-onchain",
+        "why": "The pinned stake was 30.56 million GHO, not outside collateral, and the Core provider's Umbrella registry entry was empty. Neither observation establishes a way to reverse this issuance; any recapitalisation remains outside the replay.",
+        "evidence": "inferred",
         "sourceIds": [
           "stkgho",
           "core-provider"
@@ -1881,7 +1909,7 @@
       {
         "name": "The stablecoin module",
         "verdict": "cannot-stop",
-        "why": "Both mainnet modules were live and unfrozen, but their remaining inventory redeems only 22.5 million GHO. Freezing them is the one lever available quickly, and it removes the redemption venue rather than the issuance.",
+        "why": "Both mainnet modules were unfrozen and unseized at the pin, with quoted inventory for 22.5 million GHO. Freezing conversions closes those exits without revoking the Council's separate mint permission.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "gsm-usdt",
@@ -1891,7 +1919,7 @@
       {
         "name": "The market",
         "verdict": "partial",
-        "why": "The mint is public from its first block, so holders can try to leave, but measured depth runs out well before a single day's issuance and a mass exit is itself a depeg.",
+        "why": "Public issuance lets holders try to exit. The sampled quotes cover under 8% of the first mint, but do not establish total market capacity or the price after arbitrage, new liquidity and other trading.",
         "evidence": "inferred",
         "sourceIds": [
           "curve-gho-crvusd",
@@ -1914,37 +1942,37 @@
       },
       {
         "id": "council-safe-guard",
-        "condition": "The Council Safe gains a guard, or its threshold rises above two of three",
+        "condition": "The Council Safe's threshold differs from two, its owner count differs from three, a module is enabled, or its guard slot becomes non-zero",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "fixed-mint-recipient",
-        "condition": "The facilitator mint is restricted to a fixed reserve recipient instead of an arbitrary address",
+        "condition": "The facilitator or GHO runtime bytecode changes from the pinned, verified arbitrary-recipient implementation, requiring a new recipient-restriction review",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "capacity-increase-delay",
-        "condition": "Capacity increases gain an execution delay that governance can veto before they take effect",
+        "condition": "The steward or GHO runtime bytecode changes from the pinned, verified immediate-capacity implementation, requiring a new execution-delay review",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "gho-holder-controls",
-        "condition": "GHO gains a pause, freeze or recovery path over balances already minted",
+        "condition": "GHO runtime bytecode changes, or an executor-origin pause, unpause, blacklist, freeze, seize or burnFrom probe stops reverting; either requires review of holder-control powers",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "lifetime-issuance-budget",
-        "condition": "A finite lifetime budget bounds cumulative facilitator issuance",
+        "condition": "The facilitator, steward or GHO runtime bytecode changes from the pinned implementation without a lifetime issuance counter, requiring a new budget review",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
       {
         "id": "gsm-reserve-backing",
-        "condition": "Backing for the unresolved share of stablecoin-module reserves is published and reconciled",
+        "condition": "The tracked facilitator, module or reserve-entity census changes; bucket levels cease to match supply; reserve-held GHO plus entity usage ceases to match the mainnet bucket; module inventory falls below available liquidity or reports a deficit; or published backing resolves the residual, which requires manual review",
         "status": "unverified"
       }
     ],
@@ -1961,17 +1989,27 @@
       },
       {
         "label": "Redemption inventory",
-        "detail": "The two mainnet modules redeem 22.51 million GHO in total; the USDC-side module is effectively empty at 0.03 of a token.",
+        "detail": "At block 26,139,200, the two mainnet modules redeem 22.51 million GHO in total, including buy fees; the USDC-side inventory is 0.029227 stataUSDC shares. This is a redemption quote, not a measurement of total backing.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Pool exit depth",
-        "detail": "Curve, Uniswap v3 and Uniswap v4 quotes absorb at least 2.21 million GHO at 98% or more of nominal token par, measured one venue at a time against pinned pool state with no rebalancing. It is a lower bound: lending reserves that hold GHO are excluded, and the quoted stablecoin outputs are not guaranteed dollars.",
+        "detail": "At block 26,139,200, Curve, Uniswap v3 and v4 quotes cover at least 2.21 million GHO at ≥98% nominal token par, independently and without rebalancing. The sampled lower bound excludes lending reserves; output tokens are not guaranteed dollars.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Savings and staking",
-        "detail": "Savings deposits held 172.30 million GHO and the Safety Module held 30.56 million GHO, neither of which can be redeemed for an outside asset.",
+        "detail": "At block 26,139,200, savings deposits held 172.30 million GHO and the Safety Module held 30.56 million GHO. These are claims denominated in GHO, not separate outside assets backing the added issuance.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Receipt claims, not full backing",
+        "detail": "At block 26,139,200, the two mainnet modules' wrapper balances convert to 22,486,754.418098 underlying USDC/USDT units, 3.217% of 699 million GHO at token par. This measures Aave receipt claims, not immediate issuer-token liquidity or all protocol collateral.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Unreconciled mainnet allocation",
+        "detail": "Subtracting those token-par receipt claims from the 310 million GHO mainnet bucket leaves 287.513 million, or 41.132% of total supply at block 26,139,200. This limited look-through does not establish a backing shortfall.",
         "evidence": "verified-onchain"
       }
     ],
@@ -2105,14 +2143,8 @@
       {
         "id": "aave-docs-gho",
         "label": "Aave docs: GHO facilitators and buckets",
-        "url": "https://aave.com/docs/primitives/gho",
-        "observedAt": "2026-10-07"
-      },
-      {
-        "id": "aave-docs-council",
-        "label": "Aave docs: risk stewards and the Risk Council",
-        "url": "https://aave.com/docs/developers/aave-v3/risk-stewards",
-        "observedAt": "2026-10-07"
+        "url": "https://aave.com/docs/ecosystem/gho",
+        "observedAt": "2026-10-08"
       }
     ],
     "evidencePin": {
@@ -2122,14 +2154,14 @@
     },
     "review": {
       "status": "draft",
-      "note": "Chain verified on a local mainnet fork at block 26,139,200; 19 of 19 replay steps passed. No signer compromise is alleged. Exit depth is a measured lower bound under a static-pool assumption. Awaiting maintainer approval of the published text."
+      "note": "Draft reviewed against fresh reads at block 26,139,200 and the saved 19-step fork transcript. Safe execution used impersonated-owner hash approvals, not real keys. Static quotes are sampled lower bounds; reserve receipt claims do not prove total backing. Bytecode drift requires semantic review; disclosure reconciliation remains unverified."
     }
   },
   "usde-ethena": {
     "coinId": "usde-ethena",
     "title": "How does USDe break?",
-    "thesis": "Five Safe signatures can repoint the minter, minting USDe with no collateral and no supply cap.",
-    "premise": "Hypothetical: five of the ten signers on Ethena's governance Safe, or their keys, are compromised or collude, and a whitelisted transaction executor relays the signed calls. No such compromise has been observed. The same five keys then schedule, wait out and execute one timelocked operation that replaces the token minter, so the replacement can issue USDe without collateral, outside every per-block limit EthenaMinting V2 enforces.",
+    "thesis": "Five compromised Safe keys can replace USDe's minter after public notice, enabling collateral-free issuance beyond the ordinary mint cap.",
+    "premise": "Hypothetical: five governance Safe keys are compromised, a whitelisted executor relays their calls, and no defensive cancellation succeeds during the public delay. No compromise or misconduct is alleged. At Ethereum block 26,139,380, the Safe required five of ten signatures and could schedule a minter replacement with a 24-hour delay. The fork impersonated the Safe and tested its guard separately; it did not reproduce key theft or forge owner signatures.",
     "keyFigures": [
       {
         "value": "5 of 10",
@@ -2159,8 +2191,8 @@
         ]
       },
       {
-        "value": "$0.8M",
-        "label": "Nominal USDC and USDT exits",
+        "value": "0.808M tokens",
+        "label": "Sampled USDC and USDT outputs",
         "evidence": "verified-onchain",
         "sourceIds": [
           "curve-pools",
@@ -2177,8 +2209,8 @@
         "action": "Obtain 5 of 10 signatures on the Ethena governance Safe",
         "elapsed": "T+0",
         "cost": "Off-chain: phishing, coercion, or collusion",
-        "missingDefense": "No Safe module, no independent co-signer: five keys are enough",
-        "explanation": "The Safe is a plain 5-of-10 with no modules. Its transaction guard restricts how a call may be relayed, not which signed call goes out, so five owners can authorise any call the Safe is permitted to make. This premise is hypothetical and no compromise has been observed.",
+        "missingDefense": "Independent approval of minter changes",
+        "explanation": "At the pinned block, the Safe required five of ten signatures and had no enabled modules. Its guard accepts this scheduling payload from a whitelisted executor; compromise of the five keys remains hypothetical.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "safe",
@@ -2206,8 +2238,8 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction",
-        "missingDefense": "The proposer and the canceller are the same five-of-ten Safe",
-        "explanation": "The Safe is the timelock's only proposer and canceller. The call is queued with a 24-hour delay and emits a public CallScheduled event carrying the operation id, target, calldata and delay, so the pending swap is observable from the first block.",
+        "missingDefense": "Independent cancellation authority",
+        "explanation": "The governance Safe is the only proposer and canceller at the pinned block. Scheduling publishes the target, calldata and delay in a CallScheduled event, making the minter replacement visible before execution.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "timelock",
@@ -2224,8 +2256,8 @@
         "action": "24-hour minimum delay before execution",
         "elapsed": "T+0 → T+1d",
         "cost": "24 hours, fully public",
-        "missingDefense": "Nobody outside the Safe can veto: cancelling needs the same five keys",
-        "explanation": "The delay cannot be shortened on the spot: the timelock holds its own default-admin role, and a schedule with a shorter delay reverts. A fork replay confirmed execute reverts with the operation still pending and, after the delay, succeeds.",
+        "missingDefense": "Veto outside the governance Safe",
+        "explanation": "The fork rejected early execution and, after cancellation, rescheduling with a shorter delay. Any five Safe owners can authorize cancellation, including the five remaining owners if exactly five keys were compromised; this route assumes they do not stop execution.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "timelock",
@@ -2236,7 +2268,7 @@
         "id": "execute-swap",
         "kind": "mint-or-upgrade",
         "title": "Execute the swap",
-        "actor": "Compromised Safe or any whitelisted executor",
+        "actor": "Safe or another timelock-role executor",
         "action": "TimelockController.execute → USDe.setMinter(attacker)",
         "actionIsCode": true,
         "targets": [
@@ -2253,8 +2285,8 @@
         ],
         "elapsed": "T+1d",
         "cost": "One transaction",
-        "missingDefense": "No guard, delay or review on the token's owner-only minter setter",
-        "explanation": "Executing the queued call replaces the minter and emits MinterUpdated. A fork replay of exactly this sequence repointed the minter to a plain address and left the token's owner unchanged.",
+        "missingDefense": "Additional token-level minter review",
+        "explanation": "After the delay, the fork executed the queued call and replaced the minter with a plain address while leaving the token owner unchanged. Timelock executor roles are separate from the Safe guard's relay whitelist.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "token",
@@ -2278,8 +2310,8 @@
         ],
         "elapsed": "T+1d",
         "cost": "One transaction per batch",
-        "missingDefense": "The token mint checks only the caller: no collateral, no cap, no window",
-        "explanation": "USDe.mint only requires the caller to be the stored minter. On the fork the replacement minted one billion USDe to an empty address, then two more billion in a single block, so the two-hundred-million-per-block limit that applies to EthenaMinting V2 does not bind this path.",
+        "missingDefense": "Token-level collateral and issuance limits",
+        "explanation": "USDe.mint checks the stored minter, with no collateral or economic supply cap. On a fork of block 26,139,380, the replacement issued two billion USDe in one block, ten times the ordinary minter's 200 million per-block cap.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "token",
@@ -2290,16 +2322,17 @@
       {
         "id": "redeem-gate",
         "kind": "redemption-blocked",
-        "title": "Redemption cannot absorb it",
-        "actor": "Ethena off-chain RFQ service",
-        "action": "Issuer-quoted redemption, last-look, twenty million USDe per block",
-        "elapsed": "T+1d → T+2d",
-        "cost": "Hours to days of queuing",
-        "missingDefense": "Redemption is collateral-funded and issuer-quoted, not a holder right",
-        "explanation": "Primary redemption runs through an issuer quote with a last-look check and a per-block contract cap, and it settles against backing assets. Unbacked supply has no backing leg to settle against, so the quote side cannot clear the new tokens at par.",
-        "evidence": "documented",
+        "title": "Redemption consumes existing backing",
+        "actor": "Ethena off-chain quote service",
+        "action": "Eligible users request issuer-quoted redemption",
+        "elapsed": "After the minter replacement",
+        "cost": "Service availability and pricing unmodelled",
+        "missingDefense": "Backing for the additional issuance",
+        "explanation": "Direct redemption requires eligibility and an issuer quote, with last-look checks. Tokens are fungible: redemption can consume existing backing, but cannot supply the assets missing from additional uncollateralised issuance.",
+        "evidence": "inferred",
         "sourceIds": [
           "ethena-docs-mintredeem",
+          "ethena-order-checks",
           "ethena-terms",
           "minting"
         ]
@@ -2307,18 +2340,19 @@
       {
         "id": "holder-outcome",
         "kind": "holder-outcome",
-        "title": "Holders take the discount",
+        "title": "Holders face discounted exits",
         "actor": "USDe and sUSDe holders",
-        "action": "Sell or queue while the unbacked supply is dumped",
-        "elapsed": "T+1d → T+3d",
-        "cost": "Minutes per swap, days per unstake",
-        "missingDefense": "Public exit depth is a fraction of a percent of supply",
-        "explanation": "On-chain quotes at the pinned block show about 0.8 million in USDC and USDT outputs at nominal par across the main Ethereum pools, against a 4.97 billion USDe supply; these are token outputs, not guaranteed dollars, and deeper pools quote into FRAX or crvUSD. Staked USDe adds a one-day unstaking cooldown before it can even queue for redemption.",
-        "evidence": "verified-onchain",
+        "action": "Seek secondary-market exits or eligible redemption",
+        "elapsed": "After issuance; timing unmodelled",
+        "cost": "Market loss not quantified",
+        "missingDefense": "Guaranteed exit at par",
+        "explanation": "If unbacked issuance overwhelms available backing and demand, holders face discounted exits. The sampled quotes measure only static token outputs at block 26,139,380; the 24-hour sUSDe withdrawal cooldown does not guarantee redemption access or an exit before execution.",
+        "evidence": "inferred",
         "sourceIds": [
           "curve-pools",
           "uniswap-quotes",
           "token",
+          "ethena-terms",
           "susde"
         ]
       }
@@ -2327,17 +2361,18 @@
       {
         "name": "Timelocked minter change with a public schedule event",
         "verdict": "partial",
-        "why": "A 24-hour delay and a CallScheduled event are real: the swap is visible before it executes and cannot be executed early or rescheduled silently. It fails as a stop because the proposer and the canceller are the same five-of-ten Safe, the delay cannot be shortened without the timelock's own 24-hour path, and the operation only needs the signatures the attacker already holds.",
+        "why": "Public notice gives owners time to respond, not holders a guaranteed exit. Only the governance Safe can cancel, using any five owners; shortening the minimum delay itself requires a timelocked operation. From deployment at block 25,301,829 through 26,139,380, its logs contain no direct USDe minter-change schedule and no Cancelled event, not proof of an effective or ineffective off-chain response.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "timelock",
-          "fork"
+          "fork",
+          "blockscout-history"
         ]
       },
       {
         "name": "EthenaSafeGuard on the governance Safe",
         "verdict": "partial",
-        "why": "The guard blocks module enables, fallback-handler changes and non-allowlisted delegatecalls, and requires the relaying executor to sit on a global whitelist. It does not review intent: calling the guard with the exact minter-swap schedule payload passed for a whitelisted executor and reverted for anyone else, so it constrains how the call travels, not whether it goes out.",
+        "why": "The guard restricts module changes, fallback handlers, delegatecalls and transaction relayers. A separate fork call with the exact scheduling payload passed for a whitelisted executor and reverted for an unwhitelisted address; no independent approval of this minter replacement was required.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "guard",
@@ -2347,7 +2382,7 @@
       {
         "name": "EthenaMinting V2 per-block mint cap",
         "verdict": "cannot-stop",
-        "why": "The 200,000,000 USDe per-block mint maximum is enforced inside the minter contract, not inside the token. Replacing the minter leaves the cap behind, and the fork replay minted twice that amount in one block.",
+        "why": "At block 26,139,380, the ordinary minter's global mint cap was 200,000,000 USDe per block. The token enforces no such limit: replacing the minter allowed two one-billion-USDe transactions in one fork block, ten times that cap.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "minting",
@@ -2358,74 +2393,89 @@
       {
         "name": "Issuer redemption and last-look quoting",
         "verdict": "cannot-stop",
-        "why": "Redemption is an issuer-quoted service that delivers backing assets against burned USDe, gated behind eligibility, a per-block contract cap and last-look pricing. It is not a redemption guarantee against supply that was never collateralised, and the current Reserve Fund is about 1.25% of issuer-reported supply.",
+        "why": "Ethena documents eligibility, quotes and last-look checks; its terms limit redemption to a pro-rata reserve share capped at $1, subject to conditions. These controls govern redemption service, not the replacement minter's issuance; the pinned ordinary contract cap was 20 million USDe per block.",
         "evidence": "documented",
         "sourceIds": [
           "ethena-docs-mintredeem",
           "ethena-terms",
-          "ethena-status"
+          "ethena-order-checks",
+          "minting"
         ]
       },
       {
         "name": "sUSDe unstaking cooldown",
         "verdict": "cannot-stop",
-        "why": "Staked USDe must cooldown for a day before the underlying can be claimed, which slows holders rather than protecting them. The cooldown is itself a timelocked parameter.",
+        "why": "At block 26,139,380, withdrawing underlying USDe required a 24-hour cooldown. This constrains the wrapper withdrawal route, not secondary sales of sUSDe, and does not ensure that a holder can exit before the minter swap.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "susde"
+        ]
+      },
+      {
+        "name": "Reported backing and off-chain operations",
+        "verdict": "cannot-stop",
+        "why": "Issuer-reported backing and reserve assets are finite; the token's mint function does not verify them. Ethena's documented hedge and custody services do not impose a token-level issuance cap, and their live loss-absorption capacity was not established.",
+        "evidence": "inferred",
+        "sourceIds": [
+          "token",
+          "ethena-status",
+          "ethena-collateral",
+          "ethena-docs-oes",
+          "ethena-hedging"
         ]
       }
     ],
     "falsifiers": [
       {
         "id": "token-owner-timelock",
-        "condition": "USDe is owned by an address that is not a 24-hour timelock",
+        "condition": "USDe's owner differs from the recorded Ethena timelock address",
         "status": "not-met",
         "checkedAtBlock": 26139380
       },
       {
         "id": "timelock-delay-proposers",
-        "condition": "The timelock's minimum delay is below 24 hours, or a proposer other than the governance Safe exists",
+        "condition": "The timelock delay falls below 24 hours, its runtime changes, or its live proposer set is no longer exactly the governance Safe",
         "status": "not-met",
         "checkedAtBlock": 26139380
       },
       {
         "id": "safe-independent-veto",
-        "condition": "The Safe has an independent module, guard owner or second path that can block a signed schedule",
+        "condition": "The Safe enables a module, changes guard address, guard runtime or guard owner, or loses the guard's allowed-Safe status",
         "status": "not-met",
         "checkedAtBlock": 26139380
       },
       {
         "id": "token-mint-limit",
-        "condition": "A supply or per-block limit binds the token's own mint path",
+        "condition": "USDe's runtime differs from the reviewed implementation with no token-level issuance cap",
         "status": "not-met",
         "checkedAtBlock": 26139380
       },
       {
         "id": "minter-change-veto-history",
-        "condition": "A scheduled minter change has ever been cancelled or vetoed outside the proposing Safe",
-        "status": "unverified"
+        "condition": "A timelock operation containing a direct USDe setMinter call has a Cancelled event attributable to a caller other than the governance Safe",
+        "status": "not-met",
+        "checkedAtBlock": 26139380
       }
     ],
     "exposure": [
       {
         "label": "Issuer backing after a repoint",
-        "detail": "Ethena's status API on 2026-10-07T07:59:54Z reported 4,991,487,069.45 USD of backing assets against 4,972,303,551.36 USD of token supply, a 0.39% excess; its separate collateral feed dated 2026-10-07 classified 81.5% of its own backing total in an allocation-unresolved Liquid Cash basket. Freshly minted supply has no matching asset at all.",
+        "detail": "The status API dated 2026-10-07T07:59:54Z reported $4,991,487,069.45 backing against $4,972,303,551.36 token supply, 0.39% excess, and a $62,076,933.81 Reserve Fund, 1.25% of that supply. Separately, collateral rows timestamped 2026-10-07T04:58:29Z placed $4,062,846,164.75 in Liquid Cash: 81.47% of that feed's $4,987,015,125.75 backing total, not the status API's denominator; the basket's underlying allocation is unresolved here.",
         "evidence": "documented"
       },
       {
         "label": "Secondary-market exit depth",
-        "detail": "Static quotes at block 26,139,380 returned up to 215,524 USDC on Curve, 193,428 USDC on Uniswap v3 and 398,895 USDT on Curve for the tested inputs, so about 0.8 million in dollar-stable tokens stands in front of a 4.97 billion USDe supply. These are sampled token outputs, not guaranteed dollars or a proven maximum exit capacity.",
+        "detail": "At block 26,139,380, separate static quotes for 2 million USDe into each Curve pool returned 215,524.320067 USDC and 398,894.915892 USDT; a 5-million-USDe Uniswap v3 input quoted 193,428.052857 USDC. These three outputs total 807,847.288816 tokens at unchanged pool state, with severe slippage; they are neither guaranteed dollars, reserve balances, a price forecast nor maximum market-wide exit capacity.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Staked holders",
-        "detail": "sUSDe held 1,237,006,254.53 USDe of assets at the pinned block, about a quarter of supply, and each holder needs a 24-hour cooldown before the underlying can be redeemed.",
+        "detail": "At block 26,139,380, sUSDe totalAssets was 1,237,006,254.525033114509446189 USDe, after dividing the raw value by 10^18. That is 24.90% of the token's 4,968,483,014.571660393523503861 USDe supply; underlying withdrawals had a 24-hour cooldown, while secondary sales of wrapper shares are a separate route.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Off-chain hedge and custody leg",
-        "detail": "The delta hedge sits on exchange perpetuals and the spot leg at named custodians with contractual-only bankruptcy remoteness and an omnibus segregation model; neither leg is observable on chain, so no absorption capacity for a loss can be measured here.",
+        "detail": "Ethena's Hedging System documentation describes off-chain pricing, position reconciliation and backing transfers. Its custody documentation names Copper, Ceffu and Fireblocks and acknowledges reliance on provider cooperation and legal behavior in an exchange failure; these documents do not establish live hedge coverage, custody enforceability or loss-absorption capacity on chain.",
         "evidence": "documented"
       }
     ],
@@ -2474,8 +2524,8 @@
       },
       {
         "id": "fork",
-        "label": "Local Anvil mainnet fork replay at block 26,139,380 (schedule, execute, setMinter, uncollateralised mints)",
-        "url": "https://ethereum-rpc.publicnode.com",
+        "label": "Local Anvil fork of block 26,139,380: impersonated Safe, separate guard test, delay reverts, minter swap and uncollateralised mints",
+        "url": "https://eth.drpc.org",
         "block": 26139380,
         "observedAt": "2026-10-07"
       },
@@ -2495,8 +2545,8 @@
       },
       {
         "id": "blockscout-history",
-        "label": "Public log history: MinterUpdated, token ownership transfers, timelock role grants and scheduled operations",
-        "url": "https://eth.blockscout.com/address/0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+        "label": "Complete timelock log capture, deployment 25,301,829 through 26,139,380; cached Etherscan history",
+        "url": "https://etherscan.io/address/0xe8dc0fab349ea169283c48ccfd09d797e6db7c94#events",
         "observedAt": "2026-10-07"
       },
       {
@@ -2512,15 +2562,15 @@
         "observedAt": "2026-10-07"
       },
       {
-        "id": "ethena-por",
-        "label": "Ethena weekly proof-of-reserves API (delta-neutral and over-collateralised confirmations)",
-        "url": "https://app.ethena.fi/api/por",
-        "observedAt": "2026-10-01"
+        "id": "ethena-order-checks",
+        "label": "Ethena order validity checks (quotes, eligibility and last look)",
+        "url": "https://docs.ethena.fi/technical-design/minting-usde/order-validity-checks",
+        "observedAt": "2026-10-08"
       },
       {
         "id": "ethena-docs-mintredeem",
-        "label": "Ethena mint and redeem key functions (RFQ, per-block limits, custodian routes)",
-        "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        "label": "Ethena mint and redeem key functions (per-block limits and custodian routes)",
+        "url": "https://docs.ethena.fi/technical-design/minting-usde/mint-and-redeem-key-functions"
       },
       {
         "id": "ethena-terms",
@@ -2531,6 +2581,12 @@
         "id": "ethena-docs-oes",
         "label": "Ethena off-exchange settlement and custody providers",
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
+      },
+      {
+        "id": "ethena-hedging",
+        "label": "Ethena Hedging System (off-chain pricing and position reconciliation)",
+        "url": "https://docs.ethena.fi/technical-design/hedging-system",
+        "observedAt": "2026-10-08"
       }
     ],
     "evidencePin": {
@@ -2540,20 +2596,20 @@
     },
     "review": {
       "status": "draft",
-      "note": "Draft for maintainer review. Verified at Ethereum block 26,139,380 with a local Anvil fork replay; the hedge and custody legs remain off-chain evidence (documented), and a key-compromise premise is hypothetical."
+      "note": "Draft for maintainer review. Pinned reads and a local fork support the minter-replacement path, not a real key compromise. The fork impersonated the Safe and tested its guard separately; hedge, custody and redemption operations remain off-chain evidence, and neither holder loss nor recovery timing was simulated."
     },
     "window": {
       "label": "Public 24-hour notice",
       "fromStageId": "schedule",
       "toStageId": "execute-swap",
       "duration": "24 hours",
-      "note": "The queued operation is visible from the schedule event and executes no earlier than 24 hours later; the fork replay confirmed earlier execution reverts."
+      "note": "The public schedule gives at least 24 hours before execution at the pinned configuration. Early execution and a shorter reschedule reverted on the fork; detection creates no guaranteed liquidity, timely cancellation or holder exit."
     }
   },
   "usdt-tether": {
     "coinId": "usdt-tether",
     "title": "How does USDT break?",
-    "thesis": "Three of six issuer keys can redirect Ethereum USDT's settlement logic immediately; affected holders still need Tether's gated cash exit.",
+    "thesis": "Three of six issuer keys can immediately redirect Ethereum USDT's settlement logic; direct cash redemption remains gated.",
     "premise": "Hypothetical: three of the six Ethereum issuer-wallet signers are compromised, and a hostile replacement disables settlement before control is recovered. No compromise or misconduct is alleged. This route concerns Ethereum USDT, not an independently verified takeover of every native deployment. A prolonged failure also requires issuer recovery and alternative settlement to fall short; the reserve report does not establish a current shortfall.",
     "keyFigures": [
       {
@@ -2620,7 +2676,7 @@
         "kind": "mint-or-upgrade",
         "title": "Redirect the token",
         "actor": "Captured issuer multisig",
-        "action": "submitTransaction(USDT, 0, deprecate(replacement)) → confirmTransaction → USDT.deprecate",
+        "action": "submitTransaction(USDT, 0, deprecate(replacement)) → confirmTransaction twice → USDT.deprecate",
         "actionIsCode": true,
         "targets": [
           {
@@ -2632,7 +2688,7 @@
         "elapsed": "T+0",
         "cost": "Three signer transactions, no mandatory wait",
         "missingDefense": "Replacement validation and timelock",
-        "explanation": "The token accepts the owner's replacement address without checking its interface or preserving holder rights. A fork replay through the real multisig activated an intentionally reverting replacement on the third confirmation.",
+        "explanation": "The token accepts the owner's replacement address without checking its interface or enforcing balance preservation. A fork replay through the real multisig activated an intentionally reverting replacement on the third confirmation.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "token",
@@ -2684,7 +2740,7 @@
         "elapsed": "T+hours to days",
         "cost": "Verification, issuer processing and redemption fees",
         "missingDefense": "Universal direct redemption",
-        "explanation": "The February 2026 terms make direct redemption personal to verified customers and permit service suspension. The published minimum is $100,000, with the greater of $1,000 or 0.1% charged; the contract's owner-only redeem burns inventory and does not send holders dollars.",
+        "explanation": "The terms, last updated February 26, 2026, give verified customers personal contractual redemption at $1 per USDT less fees, subject to service suspension under section 6. The fee schedule requires $100,000 minimum redemption and charges the greater of $1,000 or 0.1%; the owner-only redeem function burns issuer inventory without sending dollars.",
         "evidence": "documented",
         "sourceIds": [
           "terms",
@@ -2701,11 +2757,13 @@
         "elapsed": "T+days onward",
         "cost": "Unbounded settlement delay; haircut is not measured",
         "missingDefense": "Guaranteed timely recovery",
-        "explanation": "This catastrophic tail requires Tether's operational response and a working replacement to remain insufficient. A settlement lock does not itself prove reserve insolvency or permanent loss; neither cash redemption nor pre-shock pool quotes guarantees an exit during it.",
+        "explanation": "This tail requires issuer recovery and alternative settlement to fall short; multi-chain circulation does not measure their capacity. Settlement failure alone proves neither reserve insolvency nor permanent loss, and pre-shock pool quotes do not guarantee an exit.",
         "evidence": "inferred",
         "sourceIds": [
           "token",
           "terms",
+          "supply",
+          "quoter",
           "attestation",
           "audit-announcement"
         ]
@@ -2722,7 +2780,7 @@
       {
         "name": "Uncompromised issuer signers",
         "verdict": "partial",
-        "why": "The remaining three can form a competing threshold coalition, but have no unilateral veto over the attacking three. Wallet owner changes also require the wallet's threshold; success and transaction ordering are not guaranteed.",
+        "why": "While still wallet owners, the remaining three can form a competing threshold coalition, but cannot veto the attacking three. Threshold-approved signer changes can remove that recovery route; success and transaction ordering are not guaranteed.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "owner-wallet"
@@ -2749,7 +2807,7 @@
       {
         "name": "Verified redemption customers",
         "verdict": "partial",
-        "why": "Eligible customers have contractual cash redemption, subject to minimums, fees and suspension provisions. That access alone does not repair a token that cannot settle transfers to the issuer.",
+        "why": "Verified customers have personal contractual redemption at $1 per USDT less fees, subject to minimums and suspension provisions. That access alone does not repair a token that cannot settle transfers to the issuer.",
         "evidence": "documented",
         "sourceIds": [
           "terms",
@@ -2759,7 +2817,7 @@
       {
         "name": "Reserve assurance and audit",
         "verdict": "cannot-stop",
-        "why": "The June reserve assurance and announced 2025 financial-statement audit concern off-chain financial reporting. Neither removes Ethereum admin powers or supplies an independent settlement rollback.",
+        "why": "BDO's June 30, 2026 reserve assurance differs from the KPMG FY2025 financial-statement audit Tether announced on August 13, 2026. Neither removes token-admin powers; the underlying KPMG opinion was not reviewed here.",
         "evidence": "documented",
         "sourceIds": [
           "attestation",
@@ -2770,30 +2828,30 @@
     "falsifiers": [
       {
         "id": "owner-threshold",
-        "condition": "Ethereum USDT's owner no longer permits three of the six observed signers to execute the redirect.",
+        "condition": "The token owner, three-of-six threshold or signer set differs from the evidence pin, or owner-contract code is absent, requiring fresh review of the captured-authority premise.",
         "status": "not-met",
         "checkedAtBlock": 26139383
       },
       {
         "id": "redirect-delay",
-        "condition": "The redirect acquires an independently enforceable delay or veto before replacement activation.",
+        "condition": "The token owner or token/wallet bytecode differs from the source-reviewed immediate redirect path at the pin. Any delay or veto must then be reviewed manually.",
         "status": "not-met",
         "checkedAtBlock": 26139383
       },
       {
         "id": "replacement-compatibility",
-        "condition": "The deployed token validates replacement compatibility and preserves an independent holder settlement path.",
+        "condition": "Ethereum USDT is deprecated, its replacement address is nonzero, or its bytecode differs from the pinned legacy contract. Replacement compatibility and independent settlement then require fresh review.",
         "status": "not-met",
         "checkedAtBlock": 26139383
       },
       {
         "id": "independent-recovery",
-        "condition": "A tested independent recovery mechanism guarantees timely settlement despite capture of the issuer threshold.",
+        "condition": "Tether's published terms establish a tested independent recovery guarantee for timely settlement despite issuer-threshold capture. The document watch flags text changes only; an unchanged fingerprint does not establish or re-decide that guarantee.",
         "status": "unverified"
       },
       {
         "id": "universal-redemption",
-        "condition": "Every holder can obtain direct cash redemption without verified-customer eligibility and the published minimum.",
+        "condition": "Tether's published terms and fee schedule provide every holder direct cash redemption without verified-customer eligibility or a minimum amount. The document watch flags text changes only; an unchanged fingerprint does not re-decide eligibility.",
         "status": "not-met"
       }
     ],
@@ -2805,32 +2863,32 @@
       },
       {
         "label": "Multi-chain scale",
-        "detail": "DefiLlama's October 7 daily aggregate reports 184.20B circulating USDT. Ethereum contract supply is 47.94% of that different-scope denominator; this comparison is not a reconciled Ethereum circulating share.",
+        "detail": "DefiLlama's October 7, 2026 daily aggregate reports 184.20B circulating USDT. Ethereum contract supply at block 26,139,383 is 47.94% of that different-scope denominator; this comparison is not a reconciled Ethereum circulating share.",
         "evidence": "documented"
       },
       {
         "label": "Static stablecoin exits",
-        "detail": "At the pin, a 50M USDT sale quotes 45.74M USDC in Curve 3pool or 20.57M USDC in Uniswap V3's 0.01% USDC pair. Each quote assumes unchanged pool liquidity, active transfers and no external arbitrage; neither is a catastrophe price forecast.",
+        "detail": "At block 26,139,383, a 50M USDT sale quotes 45.74M USDC in Curve 3pool or 20.57M USDC in Uniswap V3's 0.01% USDC pair. Each quote assumes unchanged pool liquidity, zero token transfer fees, active transfers and no external arbitrage; neither is a catastrophe price forecast.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Sampled pool holdings",
-        "detail": "Eleven sampled Curve and Uniswap V3 pools hold 139.37M USDT at the pin. The deep sampled WETH/USDT 0.3% pool quotes 17,905.84 WETH for 50M USDT; token outputs are not guaranteed dollars and no exhaustive global liquidity ranking is claimed.",
+        "detail": "Eleven sampled Curve and Uniswap V3 pools hold 139.37M USDT at block 26,139,383. With unchanged liquidity, zero token transfer fees, active transfers and no external arbitrage, the sampled WETH/USDT 0.3% pool quotes 17,905.84 WETH for 50M USDT; these are token units, not guaranteed dollars or an exhaustive liquidity measure.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Aave Core transmission",
-        "detail": "The reserve token points to Ethereum USDT and Aave Core. Its 2.73B deposit-token supply is a USDT-denominated claim, while actual available USDT is 84.17M; claims and cash are not additive exposure.",
+        "detail": "At block 26,139,383, the reserve token points to Ethereum USDT and Aave Core. Its 2.73B deposit-token supply is a USDT-denominated claim, while its actual USDT balance is 84.17M; claims and held tokens are not additive exposure.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Reserve snapshot",
-        "detail": "The June 30 report lists $187.75B assets, $183.64B liabilities and $4.11B excess. Assets include $13.45B secured loans, $18.84B gold and $5.80B bitcoin; the July 31 ISAE 3000R assurance covers that date, not continuous liquidity or full financial statements.",
+        "detail": "The June 30, 2026 report lists $187.75B assets, $183.64B liabilities and $4.11B excess. Assets include $13.45B secured loans, $18.84B gold and $5.80B bitcoin; BDO's July 31, 2026 ISAE 3000R assurance covers that snapshot, not continuous liquidity or full financial statements.",
         "evidence": "documented"
       },
       {
         "label": "Other issuer powers",
-        "detail": "Pinned transfer fees are zero. The unchanged legacy logic caps selectable fees at 19 basis points and 49 USDT per transfer; issuer blacklist-and-destroy and deposit-free issue powers also replayed successfully, but are not extra entry branches here.",
+        "detail": "At block 26,139,383, both transfer-fee parameters are zero. Legacy transfers charge the lesser of the selected percentage and token cap, whose integer maxima are 19 basis points and 49 USDT; these limits do not constrain replacement logic. Fork replays confirmed that blacklisting blocks outgoing transfers, destruction zeroes a blacklisted balance and reduces supply, and issue credits issuer inventory without an on-chain collateral check.",
         "evidence": "verified-onchain"
       },
       {
@@ -2927,14 +2985,14 @@
     },
     "review": {
       "status": "draft",
-      "note": "Ethereum-only issuer-threshold route. Real three-of-six wallet execution, blacklist destruction, fee limits and hostile replacement were replayed locally. Prolonged failed recovery and downstream DeFi consequences remain hypothetical. Quarter-end assurance is distinct from the separately announced FY2025 audit. Awaiting maintainer review."
+      "note": "Ethereum-only issuer-threshold route. Three-of-six wallet execution, blacklist destruction, fee limits and hostile replacement were replayed locally; this review re-read 45 pinned state/quote calls and both verified sources. Prolonged recovery failure and DeFi propagation remain hypothetical. BDO reserve assurance is distinct from Tether's announced FY2025 KPMG audit, whose opinion was not reviewed. Documentary watches detect text drift, not condition truth. Awaiting maintainer review."
     }
   },
   "usd1-world-liberty-financial": {
     "coinId": "usd1-world-liberty-financial",
     "title": "How does USD1 break?",
-    "thesis": "One hot-wallet key mints unlimited USD1 with no cap and no checker; three Safe keys can replace the token's logic outright.",
-    "premise": "Hypothetical: the Ethereum hot wallet allowed to mint, or three of the five owners of the ProxyAdmin Safe, are compromised, coerced, or collude. No compromise has been observed. At Ethereum block 26,139,384 the mint path had no cap and the mint checker was the zero address, so one MINTER_ROLE transaction credits any address with any amount, and BNB Chain runs the same governor with single-key minters of its own. Neither Safe has a guard, a module, or an execution delay, and the ProxyAdmin that can replace the implementation holds no timelock. Roughly $4.5bn of USD1 is outstanding across eight chains.",
+    "thesis": "One minter key can issue USD1 without a supply cap or mint checker; three Safe keys can replace the token's logic.",
+    "premise": "Hypothetical: an attacker controls the Ethereum minter's signing key or three of the five signers controlling token upgrades. No compromise or misconduct is alleged or observed. Ethereum block 26,139,384 and BNB Chain block 126,221,941 show plain externally owned minters, no supply cap and a zero mint checker. Minting remains subject to role, recipient, transfer and arithmetic checks. The two Ethereum routes are independently authorized; their shared sale, redemption pressure and loss are hypothetical, not an end-to-end replay.",
     "keyFigures": [
       {
         "value": "1",
@@ -2956,7 +3014,7 @@
       },
       {
         "value": "100B",
-        "label": "USD1 minted in one transaction",
+        "label": "USD1 minted on Ethereum fork",
         "evidence": "verified-onchain",
         "sourceIds": [
           "fork-replay"
@@ -2975,14 +3033,14 @@
       {
         "id": "take-operator-keys",
         "kind": "premise",
-        "title": "Take an operator key",
+        "title": "Take issuance or upgrade control",
         "actor": "Attacker",
-        "action": "Obtain one of the keys that can move USD1: the minter hot wallet, a ProxyAdmin Safe signer, or a freezer wallet",
+        "action": "Control the minter key or three ProxyAdmin Safe signers",
         "elapsed": "T+0",
         "cost": "Off-chain key compromise, coercion, or collusion; not observed",
-        "missingDefense": "Each operational key is a single point of control",
-        "explanation": "Hypothetically the attacker holds an operational key rather than a privilege it had to earn. Which key it holds decides the route: an EOA with MINTER_ROLE can mint supply on its own, while a ProxyAdmin signer must still collect two more signatures. No compromise has been observed.",
-        "evidence": "verified-onchain",
+        "missingDefense": "Independent issuance or upgrade veto",
+        "explanation": "The assumed compromise targets either one minting address or a separate three-signature upgrade authority. Neither route requires the other's permission; off-chain key custody and compromise feasibility are unverified.",
+        "evidence": "inferred",
         "sourceIds": [
           "roles-eth",
           "governor-eth",
@@ -2994,18 +3052,15 @@
         "kind": "market-shock",
         "title": "Sell into thin pools",
         "actor": "Attacker and market",
-        "action": "Swap the new USD1 for USDT, WBNB, and WLFI, and let the secondary price break par",
+        "action": "Sell newly minted or seized USD1 into available liquidity",
         "elapsed": "T+minutes",
         "cost": "Minutes",
-        "missingDefense": "No transfer limit, no circuit breaker, and no par exit for most holders",
-        "explanation": "The deepest USD1 pair is a BNB Chain 0.01% USDT pool; a static quote at block 126,221,941 returns 991,738 USDT for 1M USD1 but only 2,636,358 USDT for 5M, so the average USDT received per USD1 is already 47% below par. The Ethereum USDT pair returns 104,871 USDT for 1M, and two Ethereum wallets hold 57% of that chain's supply. The last examination covered 2026-08-31, so a shortfall is not visible in a published number on the day it appears.",
-        "evidence": "verified-onchain",
+        "missingDefense": "Guaranteed liquid exit at par",
+        "explanation": "At BNB Chain block 126,221,941, the sampled USD1/USDT pool quotes 2,636,114 USDT for 5M USD1, averaging 0.5272 USDT per USD1, 47.3% below one-for-one. This assumes unchanged liquidity, active transfers and no external arbitrage or routing; it is not a market-price forecast or proof that an Ethereum attacker reaches BNB liquidity.",
+        "evidence": "inferred",
         "sourceIds": [
           "bnb-quotes",
-          "dexscreener",
-          "holders",
-          "kpmg",
-          "attestations"
+          "eth-quotes"
         ]
       },
       {
@@ -3013,32 +3068,33 @@
         "kind": "redemption-blocked",
         "title": "Par exit needs an account",
         "actor": "Issuer",
-        "action": "Redeem only through a GoAccount under the Stablecoin Services Agreement",
+        "action": "Seek direct redemption as a registered BitGo client in good standing",
         "elapsed": "T+days",
         "cost": "Eligibility review, fees, and transaction limits",
-        "missingDefense": "Direct redemption is closed to non-Accountholders",
-        "explanation": "The published terms allow only Accountholders to exchange USD1 with the issuer, and the service terms require a registered client in good standing; payment is targeted within two business days and is expressly not a service-level commitment. The issuer reserves the right to set transaction limits and to defer or suspend redemptions, so a holder without an account has a contractual claim it cannot yet exercise.",
+        "missingDefense": "Universal direct redemption",
+        "explanation": "BitGo's fiat-coin terms target initiating payment typically within two business days after a compliant request, including completed compliance review, rather than guaranteeing cash arrival. Non-clients lack direct redemption access, and transaction limits or suspension can constrain eligible clients.",
         "evidence": "documented",
         "sourceIds": [
           "bitgo-terms",
           "bitgo-services-terms",
-          "por"
+          "kpmg"
         ]
       },
       {
         "id": "freeze-and-attest",
         "kind": "authority-capture",
-        "title": "Freeze the venues",
-        "actor": "Incident response and the operator wallets",
-        "action": "Freezer role halts balances, pauser role halts the whole token",
-        "elapsed": "T+hours",
-        "cost": "One transaction per action",
-        "missingDefense": "The freeze and pause keys are single-role EOAs and a WalletSimple",
-        "explanation": "Freezing the largest exchange wallet took one transaction on the fork, a transfer from that wallet reverted with Account is frozen, and the balance was then drained by the admin Safe and swept out. Pausing the token stops every transfer, including honest exits, and neither action can reverse a mint that already happened.",
+        "title": "Attempt emergency containment",
+        "actor": "Uncompromised incident-response operators",
+        "action": "Try freezing affected wallets or pausing transfers",
+        "elapsed": "T+minutes to hours",
+        "cost": "One governor transaction per action",
+        "missingDefense": "Upgrade-independent containment",
+        "explanation": "Under the pinned logic, fork calls immediately froze a 300M-USD1 Ethereum wallet and paused transfers; attempted transfers then reverted. These controls do not undo issuance or guarantee containment after an upgrade, because replacement logic can bypass them.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "fork-replay",
-          "roles-eth"
+          "roles-eth",
+          "holders"
         ]
       },
       {
@@ -3046,11 +3102,11 @@
         "kind": "holder-outcome",
         "title": "Holders carry the loss",
         "actor": "Holders, venues, and pool liquidity",
-        "action": "Absorb a claim on reserves that no longer matches outstanding supply",
-        "elapsed": "T+days",
-        "cost": "Permanent for unredeemed balances",
-        "explanation": "USD1 is a contractual redemption right, not a security interest in the reserve, and the terms disclaim liability for freezes, seizures, and blocked addresses. Exchange balances, pool liquidity, and lending markets priced at par carry the difference.",
-        "evidence": "documented",
+        "action": "Bear losses if recovery or reserve replenishment falls short",
+        "elapsed": "T+days onward",
+        "cost": "Recovery time and final loss unmeasured",
+        "explanation": "Unbacked issuance creates a supply gap unless reserves are replenished or the extra tokens are recovered; seized balances create a separate loss for their owners. Holders and venues bear any unrecovered loss, but the replay establishes neither its market size nor its permanence.",
+        "evidence": "inferred",
         "sourceIds": [
           "bitgo-terms",
           "kpmg"
@@ -3064,7 +3120,7 @@
           "id": "hot-key",
           "label": "Through the minter hot wallet",
           "keys": "1 key",
-          "premise": "The Ethereum hot wallet that holds MINTER_ROLE is compromised, coerced, or colludes. It holds no other role, and its key custody is not established on chain.",
+          "premise": "Hypothetically, the Ethereum minter's signing key is compromised. The address also holds the burner role; its off-chain custody protections are not established by its empty on-chain code.",
           "stages": [
             {
               "id": "hot-key-take",
@@ -3081,8 +3137,8 @@
               ],
               "elapsed": "T+0",
               "cost": "Off-chain key compromise, coercion, or collusion; not observed",
-              "missingDefense": "A plain EOA, with no multisig, module, or delay",
-              "explanation": "This address is not a contract: it has no owners, threshold, guard, or timelock to clear. It signed 59 mints worth 112.6M USD1 between blocks 24,686,176 and 26,136,290, most recently a 7.5M mint about 10 hours before this pin. BNB Chain's governor adds two more single-key minters and a single-key freezer.",
+              "missingDefense": "On-chain minting signature threshold",
+              "explanation": "The Ethereum minter has empty code at block 26,139,384, so the contract requires one address's signature rather than an on-chain multisig threshold. At BNB Chain block 126,221,941, two minting addresses likewise have empty code; this does not establish how their keys are stored.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "roles-eth",
@@ -3111,12 +3167,13 @@
               ],
               "elapsed": "T+0",
               "cost": "One transaction, 89,558 gas on the fork",
-              "missingDefense": "No cap, no checker, no approval",
-              "explanation": "The checker slot returned the zero address, so nothing validates a mint, and neither the governor nor the token stores a supply cap. A fork replay of this exact call minted 100,000,000,000 USD1 in one transaction, taking Ethereum supply from 1.61bn to 101.6bn, while a wallet without MINTER_ROLE reverted with OnlyMinterOrBridge.",
+              "missingDefense": "Supply cap and mint checker",
+              "explanation": "At Ethereum block 26,139,384, the checker is zero and the verified mint path has no supply cap, while authorization and transfer checks remain. Impersonating the minter on a fork issued 100B USD1 in one call, raising Ethereum supply from 1.6127B to 101.6127B without adding reserves.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "fork-replay",
-                "governor-eth"
+                "governor-eth",
+                "implementation"
               ]
             }
           ]
@@ -3125,7 +3182,7 @@
           "id": "admin-safe",
           "label": "Through the ProxyAdmin Safe",
           "keys": "3 of 5",
-          "premise": "Three of the five owners of the Safe that owns the token's ProxyAdmin are compromised, coerced, or collude.",
+          "premise": "Hypothetically, an attacker controls three of the five signers of the Safe that owns the token's ProxyAdmin. This is distinct from controlling the minter address.",
           "stages": [
             {
               "id": "admin-safe-take",
@@ -3142,8 +3199,8 @@
               ],
               "elapsed": "T+0",
               "cost": "Off-chain key compromise, coercion, or collusion; not observed",
-              "missingDefense": "No guard, no module, and no execution delay",
-              "explanation": "The Safe is a plain 3-of-5 with an empty module list and a zero guard, and its five owners are EOAs with no further threshold behind them.",
+              "missingDefense": "Upgrade timelock or independent veto",
+              "explanation": "At Ethereum block 26,139,384, the Safe requires three of five signatures, has no enabled modules and has a zero guard. All five signers have empty code; their off-chain custody protections are unverified.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "roles-eth",
@@ -3171,9 +3228,9 @@
                 }
               ],
               "elapsed": "T+0",
-              "cost": "One transaction, 38,809 gas on the fork",
-              "missingDefense": "No timelock on the implementation slot",
-              "explanation": "ProxyAdmin checks only its owner, and the owner is the Safe. A fork replay pointed the proxy at an implementation with the same storage layout; the same call from a random address reverted with Ownable: caller is not the owner, and the Safe's call landed an Upgraded event.",
+              "cost": "One ProxyAdmin call; Safe signing gas not measured",
+              "missingDefense": "Upgrade timelock",
+              "explanation": "ProxyAdmin accepts an immediate upgrade from its owner Safe and rejects other callers. The fork impersonated that Safe and changed the implementation; it did not collect three signatures or execute through the Safe itself.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "fork-replay",
@@ -3186,7 +3243,7 @@
               "kind": "holder-outcome",
               "title": "Rewrite holder balances",
               "actor": "Attacker",
-              "action": "Transfer balances straight from holders through the replaced logic",
+              "action": "Seize holder balances and mint extra tokens through replacement logic",
               "targets": [
                 {
                   "label": "USD1 token proxy",
@@ -3195,9 +3252,9 @@
                 }
               ],
               "elapsed": "T+0",
-              "cost": "One unauthenticated transaction",
-              "missingDefense": "Once replaced, the new logic is the only check",
-              "explanation": "The replacement implementation could call the ERC20 base transfer directly, bypassing the pause gate and the frozen-account check the shipped logic enforces. On the fork it moved 500M USD1 out of the largest holder and minted a further 1bn, with no role and no signature required.",
+              "cost": "Two attacker transactions after the upgrade",
+              "missingDefense": "Holder consent after upgrade",
+              "explanation": "On the Ethereum fork, separate calls through the replacement seized 500M USD1 from a wallet holding 624.4M and minted another 1B USD1. Neither required a token role or holder consent, although both transactions were signed by their sender.",
               "evidence": "verified-onchain",
               "sourceIds": [
                 "fork-replay"
@@ -3208,17 +3265,17 @@
       ]
     },
     "window": {
-      "label": "From a taken key to a frozen market",
+      "label": "From compromise to attempted containment",
       "fromStageId": "take-operator-keys",
       "toStageId": "freeze-and-attest",
-      "duration": "Hours to days",
-      "note": "The mint or the implementation swap is one transaction; the market damage and the redemption queue take longer to settle."
+      "duration": "Immediate calls; response timing hypothetical",
+      "note": "Minting and upgrading have no mandatory on-chain wait. Market transmission, redemption pressure and incident response are assumed sequences, not measured durations; freezing may occur before redemption requests."
     },
     "defenders": [
       {
         "name": "Mint checker",
         "verdict": "cannot-stop",
-        "why": "The checker slot returned the zero address at the pin, so no contract stands between a MINTER_ROLE call and new supply.",
+        "why": "The checker address is zero at both chain pins, so no external checker validates backing before minting. Role, recipient and transfer checks still apply.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "roles-eth",
@@ -3228,7 +3285,7 @@
       {
         "name": "Safe thresholds",
         "verdict": "partial",
-        "why": "Three keys are needed rather than one, but neither Safe has a guard, a module, or an execution delay, and the ProxyAdmin owner is a plain 3-of-5.",
+        "why": "The upgrade Safe needs three of five signatures; the governor-admin Safe needs three of six. Neither has enabled modules or a guard, and neither imposes a transaction delay; the plain minter bypasses both signature thresholds.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "roles-eth",
@@ -3239,17 +3296,18 @@
       {
         "name": "Reserve attestation",
         "verdict": "partial",
-        "why": "KPMG examined $4,195,716,067 of reserve assets against $4,195,303,689 of redeemable USD1 for 2026-08-31, which detects a shortfall after the fact; nothing in the mint path reads the attestation.",
+        "why": "The monthly examination covers dated reserve snapshots, not continuous backing, and the mint path never reads it. A later shortfall need not appear in the August report.",
         "evidence": "documented",
         "sourceIds": [
           "kpmg",
-          "attestations"
+          "attestations",
+          "governor-eth"
         ]
       },
       {
         "name": "Freeze and pause roles",
         "verdict": "partial",
-        "why": "A freezer EOA or pauser wallet can halt one venue or the whole token in a transaction, but neither can reverse a mint, and pausing blocks every honest holder as well.",
+        "why": "Under the pinned logic, authorized freeze and pause calls take effect immediately and can interrupt honest exits. They do not undo completed issuance, and hostile replacement logic can bypass them.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "roles-eth",
@@ -3259,7 +3317,7 @@
       {
         "name": "Redemption window",
         "verdict": "partial",
-        "why": "Accountholders can exchange at par through the GoAccount, but the service terms require a client in good standing, target two business days without committing to it, and let the issuer defer or suspend redemptions in a run.",
+        "why": "Registered clients in good standing can request redemption at par less fees. Fiat-coin terms target payment initiation typically within two business days after a compliant request, subject to limits and possible suspension.",
         "evidence": "documented",
         "sourceIds": [
           "bitgo-terms",
@@ -3270,31 +3328,31 @@
     "falsifiers": [
       {
         "id": "single-key-minter",
-        "condition": "MINTER_ROLE on the Ethereum governor no longer includes a single-key EOA",
+        "condition": "On Ethereum or BNB Chain, the token's governor, mint-role membership or members' code sizes differ from that chain's evidence pin, requiring review of the plain-address minting route.",
         "status": "not-met",
         "checkedAtBlock": 26139384
       },
       {
         "id": "supply-cap",
-        "condition": "The token implementation enforces a supply cap or a non-zero mint checker",
+        "condition": "On either chain, the governor, governed-token address, implementation, checker or proxy/governor/implementation bytecode changes from its pin. The check detects mint-path drift, not whether changed code actually introduces a cap.",
         "status": "not-met",
         "checkedAtBlock": 26139384
       },
       {
         "id": "proxyadmin-safe-guard",
-        "condition": "The ProxyAdmin owner Safe has a guard, an enabled module, or a timelock in front of the upgrade",
+        "condition": "On either chain, ProxyAdmin ownership/code or its Safe's threshold, owners, owner code sizes, modules, guard, singleton or Safe/singleton bytecode differs from the pin, requiring fresh review of immediate upgrade authority.",
         "status": "not-met",
         "checkedAtBlock": 26139384
       },
       {
         "id": "control-delay",
-        "condition": "Minting, freezing, or pausing takes effect behind a delay longer than one block",
+        "condition": "On either chain, the mint path or mint/freeze/pause role-holder membership, code or recorded Safe/clone protections changes from the pin. The check flags protection drift; it does not measure a newly introduced delay.",
         "status": "not-met",
         "checkedAtBlock": 26139384
       },
       {
         "id": "universal-redemption",
-        "condition": "Any holder, not only an Accountholder, can redeem USD1 for dollars at par with the issuer",
+        "condition": "BitGo's USD1 Terms or Coin Minting & Redemption Services Terms and Public Terms change. The document watch flags text drift for manual reassessment of universal par redemption; it does not decide eligibility.",
         "status": "not-met"
       }
     ],
@@ -3306,27 +3364,32 @@
       },
       {
         "label": "All-chain supply",
-        "detail": "4.47bn USD1 across eight chains, led by Ethereum, Solana, and BNB Chain.",
+        "detail": "DefiLlama's October 7, 2026 daily snapshot reports $4.47B of pegged-USD circulation across eight chains. This API aggregate is not Ethereum supply or a same-block total.",
         "evidence": "documented"
       },
       {
         "label": "Top-wallet concentration",
-        "detail": "The two largest Ethereum wallets hold 924,398,766 USD1 between them, 57.3% of that chain's supply.",
+        "detail": "At Ethereum block 26,139,384, two sampled leading wallets hold 924,398,766 USD1, or 57.3% of that chain's 1,612,665,220 USD1 contract supply. This is wallet concentration, not independent beneficial ownership.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Largest venues",
-        "detail": "Explorer tags identify both leading Ethereum wallets as Binance, and the Chainlink CCIP pool holds 20.9M USD1.",
+        "detail": "Explorer labels identify the two sampled Ethereum wallets as Binance. Those labels do not establish independent owners or the exchange's liabilities.",
         "evidence": "documented"
       },
       {
         "label": "Exit depth",
-        "detail": "A static quote at block 126,221,941 returns 991,738 USDT for 1M USD1 and 2,636,358 USDT for 5M in the deepest pair; the Ethereum USDT pair returns 104,871 USDT for 1M.",
+        "detail": "At BNB Chain block 126,221,941, PancakeSwap V3's 0.01% USD1/USDT pool quotes 991,734 USDT for 1M USD1 and 2,636,114 USDT for 5M. At Ethereum block 26,139,384, Uniswap V3's 0.01% pair quotes 104,871 USDT for a requested 1M input but hits the price limit, so full input execution is not established. Quotes assume active transfers, unchanged liquidity and no external arbitrage or routing.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Reserve attestation",
-        "detail": "KPMG examined $4,195,716,067 of reserve assets against $4,195,303,689 of redeemable USD1 at 2026-08-31: $1,129,357,410 in demand deposits and $3,066,358,657 in a government money-market fund.",
+        "detail": "KPMG's August 31, 2026 snapshot covers $4,195,716,067 of assets against 4,195,303,689 redeemable USD1, valued at contractual $1 par. Assets comprise $1,129,357,410 in demand-deposit cash and equivalents and $3,066,358,657 in a government money-market fund; these are not October balances.",
+        "evidence": "documented"
+      },
+      {
+        "label": "Verification limits",
+        "detail": "A local rebuild of the published implementation did not reproduce deployed runtime exactly. Control claims rest on pinned chain state, verified source and fork behavior, not that rebuild. The upgrade replay impersonated the Safe, and neither route was replayed through a market sale or issuer redemption.",
         "evidence": "documented"
       }
     ],
@@ -3350,6 +3413,13 @@
         "label": "Ethereum USD1 TokenGovernor source and role accessors",
         "url": "https://etherscan.io/address/0xEE9B1A09AEDAceD9dCDA74964EA447feb93861C2#code",
         "observedAt": "2026-10-07T08:42:23.000Z"
+      },
+      {
+        "id": "implementation",
+        "label": "USD1 StablecoinV2 verified implementation source",
+        "url": "https://etherscan.io/address/0x694aa534bdef8ed63244eb902e7914e527891f08#code",
+        "observedAt": "2026-10-08",
+        "block": 26139384
       },
       {
         "id": "proxyadmin",
@@ -3380,16 +3450,17 @@
       },
       {
         "id": "bnb-quotes",
-        "label": "BNB Chain static-pool exit quotes at block 126,221,941",
-        "url": "https://bsc-dataseed.binance.org",
-        "observedAt": "2026-10-07T09:05:00.000Z",
+        "label": "BNB Chain PancakeSwap V3 static quotes, reread through NodeReal at block 126,221,941",
+        "url": "https://bscscan.com/address/0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997#code",
+        "observedAt": "2026-10-08",
         "block": 126221941
       },
       {
-        "id": "dexscreener",
-        "label": "DEX Screener USD1 pool inventory",
-        "url": "https://api.dexscreener.com/latest/dex/tokens/0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
-        "observedAt": "2026-10-07T08:45:00.000Z"
+        "id": "eth-quotes",
+        "label": "Ethereum Uniswap V3 QuoterV2, price-limit-bound USD1/USDT quotes",
+        "url": "https://etherscan.io/address/0x61fFE014bA17989E743c5F6cB21bF9697530B21e#code",
+        "observedAt": "2026-10-08",
+        "block": 26139384
       },
       {
         "id": "holders",
@@ -3417,14 +3488,8 @@
         "observedAt": "2026-10-07T09:00:00.000Z"
       },
       {
-        "id": "por",
-        "label": "USD1 proof of reserves dashboard",
-        "url": "https://por.worldlibertyfinancial.com",
-        "observedAt": "2026-10-07T09:00:00.000Z"
-      },
-      {
         "id": "bitgo-services-terms",
-        "label": "BitGo Coin Minting & Redemption Services Terms, last updated 2026-03-25",
+        "label": "BitGo Coin Minting & Redemption Services Terms and Public Terms, last updated 2026-03-25",
         "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms",
         "observedAt": "2026-10-07T09:20:00.000Z"
       },
@@ -3442,18 +3507,18 @@
     },
     "review": {
       "status": "draft",
-      "note": "Both entry routes replayed on an Ethereum fork at block 26,139,384; BNB Chain roles read at block 126,221,941. Awaiting maintainer review of the exact content."
+      "note": "Pinned Ethereum and BNB Chain controls reread; both authorization paths supported, with Safe execution impersonated rather than signed in the fork. BNB quotes corrected against a fresh pinned read; Ethereum quotes reach the price limit. Local source rebuild did not match runtime. Documentary watches require manual eligibility review. Key custody, cross-chain transmission, market loss and recovery remain unestablished. Awaiting maintainer review of the exact content."
     }
   },
   "lusd-liquity": {
     "coinId": "lusd-liquity",
     "title": "How does LUSD break?",
-    "thesis": "Nobody holds a key. A broken Chainlink hands pricing to one fallback feed: minting, liquidation and the dollar floor all quote its number.",
-    "premise": "Hypothetical: the Chainlink ETH-USD feed stops returning a usable answer, and the Tellor fallback carries a wrong price while it does. No compromise of either oracle has been observed, and no misconduct by any reporter is alleged. Liquity V1 is immutable: there is no admin key, no pause and no upgrade anywhere in this route, which is why the scenario turns on pricing rather than on authority. Everything else was read or replayed at block 26,139,200 on 2026-10-07.",
+    "thesis": "A wrong fallback enables borrowing against overstated ETH and underpays redemptions; sustained borrowing can exhaust Liquity's collateral buffer.",
+    "premise": "Hypothetical: Chainlink stops returning a usable ETH price while the Tellor fallback supplies a valid, fresh but wrong number. No compromise or misconduct is alleged. State and fork examples use Ethereum block 26,139,200 on 2026-10-07; the examples are separate tests, not consecutive transactions. Oracle outputs were mocked, not obtained by compromising either feed. Dollar valuations assume the pinned Chainlink price of $2,617.6773/ETH is the honest market price; they are not forecasts.",
     "keyFigures": [
       {
         "value": "49.7 cents",
-        "label": "Real ETH per LUSD redeemed",
+        "label": "ETH value/LUSD at ~2× price",
         "evidence": "verified-onchain",
         "sourceIds": [
           "trove-manager",
@@ -3463,7 +3528,7 @@
       },
       {
         "value": "22.76M LUSD",
-        "label": "Minted against 1,000 ETH",
+        "label": "Borrower mint: 1,000 ETH, ~10× price",
         "evidence": "verified-onchain",
         "sourceIds": [
           "borrower-operations",
@@ -3507,8 +3572,8 @@
         ],
         "elapsed": "T+0",
         "cost": "Outside the protocol; not observed",
-        "missingDefense": "No second primary feed and no median across sources",
-        "explanation": "The feed was healthy at the pinned block, answering 2,617.68 dollars with the price feed in its chainlinkWorking state. A reverting, zero or stale answer counts as broken, and the protocol has no other primary source to compare against.",
+        "missingDefense": "No halt on primary-feed failure",
+        "explanation": "Chainlink answered $2,617.6773/ETH at the pin, with Liquity using its primary feed. The fork instead made the answer revert; unusable or over-four-hour-old primary data sends the pricing logic toward the fallback.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed",
@@ -3536,8 +3601,8 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction, by anyone",
-        "missingDefense": "No bound between the fallback value and the last good price",
-        "explanation": "On a fork the fallback value was adopted exactly as reported: the price moved from 2,603.34 to 260.00 in one call with no sanity check on the size of the jump. The caller reads the newest Tellor value directly, with no dispute buffer and no delay.",
+        "missingDefense": "No fallback-to-last-price deviation bound",
+        "explanation": "With Chainlink reverting, one fork call adopted a fresh mocked Tellor value of $260/ETH instead of the stored $2,603.3351, without bounding the jump. Liquity's caller retrieves the newest Tellor value without adding a dispute waiting period.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed",
@@ -3548,7 +3613,7 @@
       {
         "id": "mint-unbacked",
         "kind": "mint-or-upgrade",
-        "title": "Mint on a false price",
+        "title": "Borrow against overstated ETH",
         "actor": "Anyone with ETH",
         "action": "BorrowerOperations.openTrove(maxFee, LUSDAmount, upperHint, lowerHint)",
         "actionIsCode": true,
@@ -3566,8 +3631,8 @@
         ],
         "elapsed": "T+0",
         "cost": "One transaction, plus the collateral deposited",
-        "missingDefense": "The 110% rule binds the quoted value, not the market value",
-        "explanation": "With the price overstated tenfold, one fork transaction deposited 1,000 ETH worth 2.62 million dollars and credited the borrower with 22.76 million LUSD, leaving 11.5 cents of real backing per LUSD received by the borrower. Supply rose from 26.10 million to 48.98 million.",
+        "missingDefense": "No independent collateral valuation",
+        "explanation": "At a mocked $26,176.77/ETH, approximately ten times the pinned Chainlink price, depositing 1,000 ETH credited the borrower with 22.76 million LUSD. The deposit was worth $2.62 million at that reference price, or 11.5 cents per LUSD received; this chosen borrowing amount is not a mint ceiling.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "borrower-operations",
@@ -3578,7 +3643,7 @@
       {
         "id": "floor-pays-less",
         "kind": "redemption-blocked",
-        "title": "Floor pays the quote",
+        "title": "Redemption returns less ETH",
         "actor": "LUSD holder",
         "action": "TroveManager.redeemCollateral(...) at the fallback price",
         "actionIsCode": true,
@@ -3590,45 +3655,48 @@
           }
         ],
         "elapsed": "T+0",
-        "cost": "Minutes, per holder",
-        "missingDefense": "The dollar floor is denominated by whatever the feed says",
-        "explanation": "Redeeming 100,000 LUSD at a price overstated twofold returned 18.97 ETH, worth 49,658 dollars at the real rate, or 49.7 cents on the dollar. The same redemption at the honest price returned 37.94 ETH, or 99.3 cents. If the error runs the other way the floor closes instead: redemption reverts once the total ratio falls under 110%.",
+        "cost": "One redemption transaction, plus its fee",
+        "missingDefense": "No independent redemption-price floor",
+        "explanation": "In a separate replay at $5,235/ETH, approximately twice the reference price, redeeming 100,000 LUSD returned 18.97 ETH after fees, worth $49,658 at pinned Chainlink prices. That is 49.7 cents per LUSD, versus 99.3 cents in the honest-price control; neither is a market-price forecast.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "trove-manager",
-          "chainlink-eth-usd"
+          "chainlink-eth-usd",
+          "liquity-v1-docs"
         ]
       },
       {
         "id": "sell-into-one-pool",
         "kind": "market-shock",
-        "title": "Sell into one venue",
+        "title": "Sell through measured liquidity",
         "actor": "Whoever minted",
         "action": "Swap the new LUSD through the Curve LUSD/3CRV pool",
-        "elapsed": "T+0 → T+1d",
-        "cost": "Minutes",
-        "missingDefense": "One venue carries the float; the rest is dust",
-        "explanation": "At the pinned block the Curve LUSD metapool held 2.26 million LUSD and quoted five million LUSD out at 5,004,346 USDC on a static-pool basis. Every Uniswap v3 LUSD pool across USDC, USDT and WETH held under 2,000 LUSD. Those quotes assume no arbitrage replenishment and no second venue.",
+        "elapsed": "While the price is wrong",
+        "cost": "Execution timing and proceeds unmodelled",
+        "missingDefense": "No guaranteed exit depth",
+        "explanation": "The pinned Curve LUSD/3CRV pool quoted five million LUSD for 5,004,346 USDC, assuming unchanged pool state and no arbitrage replenishment. Only that pool exceeded 500,000 LUSD in the bounded two-Curve-pool and twelve Uniswap pair/fee census; balances do not establish executable depth or exclude other venues.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "curve-lusd-3crv",
+          "curve-bold-lusd",
           "uniswap-v3-factory"
         ]
       },
       {
         "id": "holder-outcome",
         "kind": "holder-outcome",
-        "title": "Bounded, then repaired",
+        "title": "Borrowing exhausts the buffer",
         "actor": "LUSD holders",
-        "action": "Hold through the window, or exit at the discount",
-        "elapsed": "T+1d",
-        "cost": "The difference between the quote and the market",
-        "missingDefense": "Nothing reverses what was minted or redeemed in the window",
-        "explanation": "The price feed returns to Chainlink as soon as both oracles are live, unbroken and within 5% of each other, so the error is not permanent. The transfers made while it was live are. Even after a replayed 22.76 million unbacked mint, the system stood at 391.5% against real prices, so this is a deep discount rather than a collapse of the backing.",
+        "action": "Repeated borrowing leaves less collateral than debt",
+        "elapsed": "While the false price persists",
+        "cost": "10,000 ETH in the counterexample",
+        "missingDefense": "No independently valued backing floor",
+        "explanation": "Ten 1,000-ETH deposits at the same approximately tenfold false price left 84.4787% collateralisation at the assumed honest-price reference. Damage scales with the mispricing window and borrowing volume; the starting buffer absorbs shocks but guarantees no backing floor.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed",
-          "trove-manager"
+          "trove-manager",
+          "borrower-operations"
         ]
       }
     ],
@@ -3636,14 +3704,14 @@
       "label": "While the wrong number is live",
       "fromStageId": "fallback-takes-over",
       "toStageId": "sell-into-one-pool",
-      "duration": "As long as the primary feed stays broken",
-      "note": "The fallback publishes about every four hours and was 3 hours 10 minutes old at the pinned block, inside Liquity's own 4-hour freshness limit with about 50 minutes to spare."
+      "duration": "Until accepted oracle data corrects the price",
+      "note": "The last five Tellor publications at the pin were about four hours apart; the latest was 3h 10m old, within the four-hour limit. Expiry freezes the last accepted price rather than shutting down."
     },
     "defenders": [
       {
         "name": "Chainlink primary feed",
         "verdict": "can-stop",
-        "why": "While the primary feed answers, a wrong fallback value changes nothing. On a fork, a fallback quoting 260 dollars left the protocol price at 2,617.68 and liquidation reverted with nothing to liquidate.",
+        "why": "In the pinned primary-working state, a mocked $260 fallback left the fetched price at $2,617.6773 and liquidation reverted. Merely answering is insufficient: invalid, stale or sharply diverging Chainlink rounds can still trigger fallback logic.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed",
@@ -3653,7 +3721,7 @@
       {
         "name": "Overcollateralisation",
         "verdict": "partial",
-        "why": "The system stood at 724.6% at the pinned block using the Chainlink price, 72,251 ETH against 26.10 million LUSD. That buffer absorbs a large pricing error: a replayed tenfold overstatement that minted 22.76 million LUSD still left the system at 391.5% against real prices.",
+        "why": "The pinned 720.6% ratio uses the stored last-good price; Chainlink-valued backing was 724.6%. One replayed deposit left 391.5%; ten left 84.5%, so the buffer absorbs initial shocks but cannot cap sustained false-price borrowing.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "trove-manager"
@@ -3662,7 +3730,7 @@
       {
         "name": "Immutability",
         "verdict": "partial",
-        "why": "No key can mint, pause, re-point the oracle or upgrade the code, which removes every route the other dossiers turn on. The same property means no one can intervene once a wrong price is live.",
+        "why": "Liquity's reviewed contracts have no privileged mint, pause or upgrade path; their owners are renounced. External oracle administration is separate, and nobody inside Liquity can override a wrong price.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed",
@@ -3672,16 +3740,16 @@
       {
         "name": "Price-feed recovery rule",
         "verdict": "partial",
-        "why": "The feed returns to Chainlink once both oracles are live, unbroken and within 5% of each other, so the mispricing ends with the outage. Trades, mints and liquidations made inside the window are final.",
+        "why": "On a price-fetching transaction, valid, fresh feeds within 5% (difference divided by the lower price) restore Chainlink. Restoring Chainlink alone is insufficient; a stale fallback can leave the last adopted wrong price in use.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "price-feed"
         ]
       },
       {
-        "name": "Stability Pool",
+        "name": "Recovery-mode liquidation limits",
         "verdict": "partial",
-        "why": "The pool held 7.57 million LUSD, 29.0% of outstanding debt, and absorbs liquidations before they redistribute. In a false low-price replay it absorbed 68,878 LUSD across 69 troves; it does not address a price that is too high.",
+        "why": "At $260/ETH, recovery-mode liquidation closed 69 of 70 vaults but offset only 68,878 LUSD, leaving 717.1% backing at pinned Chainlink prices. The last vault cannot be liquidated; redemption reverts below 110% oracle-valued system collateralisation.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "stability-pool",
@@ -3691,7 +3759,7 @@
       {
         "name": "Liquity V2 shutdown path",
         "verdict": "cannot-stop",
-        "why": "The newer protocol halts a branch on oracle failure instead of pricing from a fallback, which a fork replay confirmed on the wstETH branch. V1 has no shutdown path and cannot borrow this defence.",
+        "why": "A stale stETH-USD feed irreversibly shut down the newer protocol's wstETH borrowing branch on the fork, while retaining a redemption path. Liquity V1 has no equivalent shutdown mechanism.",
         "evidence": "verified-onchain",
         "sourceIds": [
           "v2-wsteth-price-feed",
@@ -3702,7 +3770,7 @@
     "falsifiers": [
       {
         "id": "primary-feed-healthy",
-        "condition": "The Liquity PriceFeed reports status chainlinkWorking and the Chainlink ETH-USD feed answers within the 4-hour window",
+        "condition": "The PriceFeed's configured Chainlink primary or TellorCaller address differs from the reviewed source address; current status, response validity and freshness are reported separately",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
@@ -3714,7 +3782,7 @@
       },
       {
         "id": "fallback-deviation-bound",
-        "condition": "The reviewed PriceFeed, TellorCaller, TroveManager, BorrowerOperations, Stability Pool or LUSD token runtime changes, a renounced Liquity owner becomes nonzero, or the PriceFeed's 50% consecutive-Chainlink-round or 5% oracle-recovery boundary changes, requiring renewed review of the unbounded fallback-adoption route",
+        "condition": "The reviewed PriceFeed, TellorCaller, TroveManager, BorrowerOperations, Stability Pool or LUSD token runtime changes; the PriceFeed, TroveManager, BorrowerOperations or Stability Pool owner becomes nonzero; or the 50% consecutive-Chainlink-round or 5% oracle-recovery constant changes",
         "status": "not-met",
         "checkedAtBlock": 26139200
       },
@@ -3732,7 +3800,7 @@
       },
       {
         "id": "exit-concentration",
-        "condition": "More than one on-chain venue holds at least 500,000 LUSD, so the exit no longer depends on a single Curve pool",
+        "condition": "The reviewed Curve LUSD/3CRV, Curve BOLD/LUSD or Uniswap v3 factory runtime changes; balances and quotes in the bounded venue census are informational, not a global absence claim",
         "status": "not-met",
         "checkedAtBlock": 26139200
       }
@@ -3745,17 +3813,22 @@
       },
       {
         "label": "Collateral behind it",
-        "detail": "72,251.2195 ETH across 70 Troves, a 720.6% collateral ratio at the feed's last good price of 2,603.34 dollars.",
+        "detail": "72,251.2195 ETH across 70 loan vaults, called Troves, at the pin; a 720.6% collateral ratio at the stored last-good price of $2,603.3351/ETH.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Stability Pool depth",
-        "detail": "7,568,151.33 LUSD and 591.62 ETH, covering 29.0% of outstanding debt before liquidations redistribute.",
+        "detail": "At the pin, 7,568,151.33 LUSD and 591.62 ETH; LUSD deposits equal 29.0% of entire system debt. Recovery-mode vaults at or below 100% collateralisation redistribute debt without first using these deposits.",
         "evidence": "verified-onchain"
       },
       {
         "label": "Measured exit",
-        "detail": "The Curve LUSD metapool held 2,257,071 LUSD and quoted 5 million LUSD out at 5,004,346 USDC; every Uniswap v3 LUSD pool held under 2,000 LUSD. Static-pool quotes, no arbitrage replenishment.",
+        "detail": "At the pin, Curve LUSD/3CRV held 2,257,071 LUSD and BOLD/LUSD held 190,629 LUSD. Twelve Uniswap v3 LUSD pair/fee combinations with USDC, USDT and WETH at fees 100/500/3000/10000 yielded nine deployed pools, each below 2,000 LUSD; no global census was performed. Curve quoted 5 million LUSD for 5,004,346 USDC without replenishment or routing; BOLD/LUSD quotes reverted at every size tested, which does not prove zero liquidity.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Repeated-mint counterexample",
+        "detail": "At fork block 26,139,200, ten consecutive 1,000-ETH deposits at the same mocked $26,176.77/ETH, approximately tenfold, each credited a borrower with 22.76 million LUSD. System debt reached 254.866 million LUSD against 82,251.2195 ETH, or 84.4787% collateralisation, assuming pinned Chainlink's $2,617.6773/ETH is the honest market price. The replay supplied 10,000 ETH, held the false price constant and made no market sales; it establishes a backing shortfall under those assumptions, not sale proceeds or attack cost.",
         "evidence": "verified-onchain"
       }
     ],
@@ -3824,6 +3897,13 @@
         "block": 26139200
       },
       {
+        "id": "curve-bold-lusd",
+        "label": "Etherscan: Curve BOLD/LUSD pool",
+        "url": "https://etherscan.io/address/0x7ed17e037b7d88a8270c89b3afa9c38e5218f12b#readContract",
+        "observedAt": "2026-10-07",
+        "block": 26139200
+      },
+      {
         "id": "uniswap-v3-factory",
         "label": "Etherscan: Uniswap v3 factory",
         "url": "https://etherscan.io/address/0x1F98431c8aD98523631AE4a59f267346ea31F984#readContract",
@@ -3857,7 +3937,7 @@
     },
     "review": {
       "status": "draft",
-      "note": "Oracle fallback, mint, redemption and liquidation limbs replayed on a local Ethereum fork at block 26,139,200, alongside a Liquity V2 wstETH branch-shutdown contrast. Reporter economics for the fallback oracle could not be read at this block and are deliberately absent. Awaiting maintainer review of the exact content."
+      "note": "Oracle fallback, mint, redemption and liquidation limbs were replayed independently on a local fork at block 26,139,200. Additional replays show ten 1,000-ETH deposits consuming the buffer to 84.4787% reference-price backing, and a wrong adopted price persisting after primary recovery or fallback expiry until fresh oracle agreement restores Chainlink. The false-low replay remains bounded by recovery-mode rules; that finding does not extend to repeated false-high borrowing. No attack on either oracle, reporter economics, maximum mint, recovery time or future market discount was established. Awaiting maintainer review of the exact content."
     }
   }
 }

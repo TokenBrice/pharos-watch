@@ -52,7 +52,6 @@ const PAIRS = [
   { label: "USDT", address: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
   { label: "WETH", address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" },
 ] as const;
-const BOLD_LUSD = "0x7ed17e037b7d88a8270c89b3afa9c38e5218f12b";
 
 function sourcePin(context: ScenarioCheckContext, sourceId: string): bigint {
   const block = context.record.sources.find((entry) => entry.id === sourceId)?.block;
@@ -145,7 +144,7 @@ function venues(context: ScenarioCheckContext, blockNumber: bigint): Promise<Ven
         found.push({ label, address: address.toLowerCase() as `0x${string}`, balance });
       };
       await add("Curve LUSD/3CRV", scenarioSourceAddress(context.record, "curve-lusd-3crv"));
-      await add("Curve BOLD/LUSD", BOLD_LUSD);
+      await add("Curve BOLD/LUSD", scenarioSourceAddress(context.record, "curve-bold-lusd"));
       for (const pair of PAIRS) {
         for (const fee of [100, 500, 3000, 10000]) {
           const pool = await chain.client.readContract({ address: scenarioSourceAddress(context.record, "uniswap-v3-factory"), abi: ABI, functionName: "getPool", args: [lusd, pair.address, fee], blockNumber });
@@ -166,12 +165,25 @@ function venueEvidence(entries: Venue[]) {
 const checks: readonly ScenarioCheck[] = [
   {
     id: "primary-feed-healthy",
-    label: "Recorded primary/fallback wiring and Chainlink healthy-state predicate",
+    label: "Reviewed primary and fallback address wiring",
+    async run(context) {
+      const primary = await addressValue(context, "price-feed", "priceAggregator");
+      const fallback = await addressValue(context, "price-feed", "tellorCaller");
+      const recorded = { primary: scenarioSourceAddress(context.record, "chainlink-eth-usd").toLowerCase(), fallback: scenarioSourceAddress(context.record, "tellor-caller").toLowerCase() };
+      return {
+        verdict: primary === recorded.primary && fallback === recorded.fallback ? "holds" : "changed",
+        recorded, observed: { primary, fallback },
+        reason: "Oracle wiring is decisive. Current status and feed freshness are informational observations, not evidence that the hypothetical outage cannot occur.",
+      };
+    },
+  },
+  {
+    id: "primary-feed-state",
+    kind: "observation",
+    label: "Current Chainlink response validity and freshness",
     async run(context) {
       const { client, blockNumber } = requireScenarioChain(context);
       const primary = scenarioSourceAddress(context.record, "chainlink-eth-usd");
-      const configuredPrimary = await addressValue(context, "price-feed", "priceAggregator");
-      const configuredFallback = await addressValue(context, "price-feed", "tellorCaller");
       const status = await client.readContract({ address: scenarioSourceAddress(context.record, "price-feed"), abi: ABI, functionName: "status", blockNumber });
       const timestamp = (await client.getBlock({ blockNumber })).timestamp;
       const timeout = await uintValue(context, "price-feed", "TIMEOUT");
@@ -186,10 +198,10 @@ const checks: readonly ScenarioCheck[] = [
       const valid = (round: typeof latest) => round[0] !== 0n && round[1] > 0n && round[3] > 0n && round[3] <= timestamp;
       const healthy = status === 0 && valid(latest) && valid(previous) && timestamp - latest[3] <= timeout;
       return {
-        verdict: healthy && configuredPrimary === primary.toLowerCase() && configuredFallback === scenarioSourceAddress(context.record, "tellor-caller").toLowerCase() ? "holds" : "changed",
-        recorded: { status: 0, primary: primary.toLowerCase(), fallback: scenarioSourceAddress(context.record, "tellor-caller").toLowerCase(), healthy: true },
-        observed: { status, primary: configuredPrimary, fallback: configuredFallback, healthy, roundId: latest[0].toString(), answer: latest[1].toString(), updatedAt: latest[3].toString(), blockTimestamp: timestamp.toString(), timeoutSeconds: timeout.toString(), previousRoundValid: valid(previous) },
-        reason: "Healthy at the authored pin is a conditional blocker of the hypothetical outage, not an automatic status=met declaration. Failed RPC/round reads are unavailable, never proof of health.",
+        verdict: healthy ? "holds" : "changed",
+        recorded: { status: 0, validCurrentAndPreviousRounds: true, currentRoundWithinTimeout: true },
+        observed: { status, healthy, roundId: latest[0].toString(), answer: latest[1].toString(), updatedAt: latest[3].toString(), blockTimestamp: timestamp.toString(), timeoutSeconds: timeout.toString(), previousRoundValid: valid(previous) },
+        reason: "Reports status, response validity and freshness only; this is not the full fetchPrice selection predicate, which also compares consecutive-round prices. Failed RPC/round reads are unavailable, never proof of health.",
       };
     },
   },
@@ -261,15 +273,14 @@ const checks: readonly ScenarioCheck[] = [
   },
   {
     id: "exit-concentration",
-    label: "Bounded venue census, without claiming a global absence of alternatives",
+    label: "Reviewed exit-venue and factory runtimes",
     async run(context) {
-      const current = await venues(context, requireScenarioChain(context).blockNumber);
-      const large = current.filter((entry) => entry.balance >= 500_000n * WAD);
-      const observed = { venues: venueEvidence(current), qualifyingKnownVenues: large.length };
-      if (large.length > 1) return { verdict: "changed", recorded: { moreThanOneVenueWith500000Lusd: false }, observed, reason: "At least two distinct known pools hold 500,000 LUSD. This settles the stated positive balance condition only, not executable exit capacity or economic independence." };
+      const codes = await reviewedRuntimes(context, ["curve-lusd-3crv", "curve-bold-lusd", "uniswap-v3-factory"]);
       return {
-        verdict: "unavailable", observed,
-        reason: "Only the reviewed Curve LUSD/3CRV and BOLD/LUSD pools plus Uniswap v3 USDC/USDT/WETH pairs at fees 100/500/3000/10000 were enumerated. Fewer than two qualifying known pools cannot prove no other Ethereum or cross-chain venue holds 500,000 LUSD. Obtain an expanded venue census before deciding this global negative; balances also do not prove executable swap liquidity.",
+        verdict: codes.unchanged ? "holds" : "changed",
+        recorded: { runtimeHashes: codes.recorded },
+        observed: { runtimeHashes: codes.observed },
+        reason: "Decisive only for runtime identity of the two cited Curve pools and Uniswap factory. The measured-exit figure reports the bounded two-Curve-pool and twelve-pair/fee census; balances, quotes and qualifying-venue counts are informational, not proof of a global absence of alternatives.",
       };
     },
   },
