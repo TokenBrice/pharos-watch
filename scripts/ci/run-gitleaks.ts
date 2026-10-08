@@ -450,7 +450,16 @@ export function runGitleaksConfigSelfTest(
       "UNI0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
       "XAUT0x68749665ff8d2d112fa859aa293f07a622782f38",
     ].join("/");
+    const supplyAttributionSlotKey = ["v9Supply", "AttributionOffset"].join("");
     const publicControls = [
+      {
+        path: "scripts/maintenance/run-worker-smoke.mjs",
+        value: { query: `SELECT state FROM cron_slot_executions WHERE slot_key = '${supplyAttributionSlotKey}'` },
+      },
+      {
+        path: "worker/src/lib/__tests__/v9-slot-window.test.ts",
+        value: { currentSlotKey: supplyAttributionSlotKey },
+      },
       {
         path: "worker/scripts/repair-tron-blacklist-amounts.ts",
         value: { token: tronUsdt, tokenHex: tronUsdtHex },

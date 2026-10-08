@@ -57,6 +57,20 @@ paths = [
   '''(?:^|/)scripts/ci/check-cron-connection-budget\.test\.ts$''',
 ]
 
+# This reviewed slot key names the public cron-slot row used by the Heavy smoke
+# query and V9 admission fixture. Pair its exact value with only those owners:
+# unrelated credentials remain detectable, and the exception survives rebases.
+[[allowlists]]
+description = "Reviewed V9 supply-attribution cron slot key is a public scheduler identifier"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^v9SupplyAttributionOffset$''']
+paths = [
+  '''(?:^|/)scripts/maintenance/run-worker-smoke\.mjs$''',
+  '''(?:^|/)worker/src/lib/__tests__/v9-slot-window\.test\.ts$''',
+]
+
 [[allowlists]]
 description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
