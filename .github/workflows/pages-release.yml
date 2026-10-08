@@ -118,7 +118,23 @@ jobs:
           npm run generated:post-refresh
           npx --no-install next build --webpack
           npm run postbuild
-      - name: Validate static SEO and published archive continuity
+      - name: Archive non-secret post-refresh release data
+        env:
+          PAGES_RELEASE_DATA_ARCHIVE_PATH: ${{ runner.temp }}/pages-release-data.tar.zst
+        run: >-
+          node --import tsx --input-type=module -e
+          'import { createPagesReleaseDataArchive } from "./scripts/lib/pages-release-data.mts";
+          createPagesReleaseDataArchive(process.cwd(), process.env.PAGES_RELEASE_DATA_ARCHIVE_PATH);'
+      - name: Retain post-refresh data for Pages PR and local replay
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pages-release-data-${{ github.sha }}
+          overwrite: true
+          path: ${{ runner.temp }}/pages-release-data.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Validate Pages artifact gates (size, CSS integrity, flags, phishing, SEO/continuity)
         env:
           SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml
         # Includes feature-flag, direct-upload size, phishing-signature, and

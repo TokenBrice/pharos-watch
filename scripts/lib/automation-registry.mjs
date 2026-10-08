@@ -25,6 +25,20 @@ function uniqueSorted(values) {
 const PAGES_EXTRA_EXACT_PATHS = [
   "next.config.ts",
   "postcss.config.mjs",
+  "scripts/ci/check-feature-flag-inlining.ts",
+  "scripts/ci/check-phishing-signatures.ts",
+  "scripts/ci/run-pages-artifact-lane.ts",
+  "scripts/lib/pages-release-data.mts",
+  "scripts/lib/seo-html-parse.mjs",
+  "scripts/lib/seo-sitemap.mjs",
+  "scripts/maintenance/critical-css-worker.mjs",
+  "scripts/maintenance/inline-homepage-critical-css.ts",
+  "scripts/maintenance/report-build-size.mjs",
+  "scripts/maintenance/run-generated-artifacts.ts",
+  "scripts/maintenance/run-pages-release-checks.ts",
+  "scripts/maintenance/refresh-pages-release-data.ts",
+  "scripts/maintenance/generate-public-datasets.ts",
+  "scripts/ci/check-seo-static.mjs",
   "scripts/maintenance/build-world-map-svg.ts",
   "scripts/maintenance/generate-docs-metadata.ts",
   "scripts/maintenance/generate-llms-txt.ts",
@@ -56,8 +70,19 @@ export const DEPLOY_IMPACT_REGISTRY = {
     exactPaths: [],
   },
   pages: {
-    exactPaths: uniqueSorted([...PAGES_EXTRA_EXACT_PATHS, ...PUBLIC_DOC_SOURCE_PATHS]),
-    prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
+    // Derive build generators from their lifecycle owner so a new compile-input
+    // or post-refresh script cannot silently bypass the Pages artifact lane.
+    get exactPaths() {
+      return uniqueSorted([
+        ...PAGES_EXTRA_EXACT_PATHS,
+        ...PUBLIC_DOC_SOURCE_PATHS,
+        ...GENERATED_ARTIFACT_REGISTRY
+          .filter((artifact) => artifact.buildLifecycle !== "maintenance-only")
+          .flatMap((artifact) => artifact.sourcePaths)
+          .filter((path) => path.startsWith("scripts/") && !path.includes("*")),
+      ]);
+    },
+    prefixes: ["data/", "functions/", "public/", "shared/", "src/", "scripts/build-data/", "next.config.", "tailwind.config.", "postcss.config."],
     workflowOnlyExactPaths: [
       ".github/workflows/pages-prepare.yml",
       ".github/workflows/pages-release.yml",
@@ -110,6 +135,7 @@ function generatedArtifact(definition) {
     autoStage: definition.autoStage ?? false,
     checkable: definition.checkable ?? true,
     inputState: definition.inputState ?? "working-tree",
+    requiredBrowsers: definition.requiredBrowsers ?? [],
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
     outputPaths: uniqueSorted(definition.outputPaths ?? []),
   };
@@ -539,6 +565,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-editorial",
+    requiredBrowsers: ["firefox"],
     buildLifecycle: "maintenance-only",
     checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",
     command: "node scripts/maintenance/build-og-editorial.mjs",
@@ -558,6 +585,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-learn",
+    requiredBrowsers: ["firefox"],
     buildLifecycle: "maintenance-only",
     checkCommand: "node --import tsx scripts/maintenance/build-og-learn-images.ts --check",
     command: "node --import tsx scripts/maintenance/build-og-learn-images.ts",
@@ -581,6 +609,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-case-studies",
+    requiredBrowsers: ["firefox"],
     buildLifecycle: "maintenance-only",
     checkCommand: "node --import tsx scripts/maintenance/build-og-case-studies.ts --check",
     command: "node --import tsx scripts/maintenance/build-og-case-studies.ts",
@@ -602,6 +631,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "og-cemetery",
+    requiredBrowsers: [],
     buildLifecycle: "maintenance-only",
     autoStage: true,
     checkCommand: "node --import tsx scripts/maintenance/build-og-cemetery.ts --check",

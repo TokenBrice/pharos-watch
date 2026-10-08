@@ -148,7 +148,8 @@ describe("CI workflow scope", () => {
     expect(jobs.validation.needs).toBe("prepare");
     expect(jobs["critical-coverage-shards"].needs).toBe("prepare");
     expect(jobs["critical-coverage"].needs).toEqual(["prepare", "critical-coverage-shards"]);
-    expect(jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "critical-coverage-shards", "critical-coverage"]);
+    expect(jobs["pages-artifact"].needs).toBe("prepare");
+    expect(jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "critical-coverage-shards", "critical-coverage", "pages-artifact"]);
     expect(jobs["pr-gate"].if).toBe("${{ always() }}");
     expect(jobs.validation.strategy["max-parallel"]).toBe(10);
     expect(jobs["critical-coverage-shards"].strategy["max-parallel"]).toBe(8);
@@ -295,7 +296,7 @@ describe("CI workflow scope", () => {
       jobs: Record<string, {
         needs?: string | string[];
         "continue-on-error"?: boolean;
-        steps?: Array<{ uses?: string; run?: string; if?: string; "continue-on-error"?: boolean; with?: Record<string, unknown> }>;
+        steps?: Array<{ uses?: string; run?: string; if?: string; id?: string; name?: string; env?: Record<string, string>; "continue-on-error"?: boolean; with?: Record<string, unknown> }>;
       }>;
     };
     // The workspace-artifact fan-out was measured across three paired
@@ -317,15 +318,55 @@ describe("CI workflow scope", () => {
     const staticSteps = fullStatic.steps ?? [];
     const save = staticSteps.findIndex((step) => step.uses?.startsWith("actions/cache/save@"));
     expect(save).toBeGreaterThan(-1);
-    expect(staticSteps.filter((step) => step.run).map((step) => step.run)).toEqual([
+    expect(staticSteps.filter((step) => step.run?.startsWith("npm run ")).map((step) => step.run)).toEqual([
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
     ]);
+    // Every mandatory command runs independently once the workspace is ready,
+    // so one red step cannot mask the remaining mandatory outcomes.
+    for (const step of staticSteps) {
+      if (!step.run?.startsWith("npm run ")) continue;
+      expect(step["continue-on-error"]).toBeUndefined();
+      expect(step.if).toContain("!cancelled()");
+      expect(step.if).toContain("steps.workspace.outcome == 'success'");
+    }
+    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
+      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeLessThan(save);
+    }
     for (const command of ["lint:typed", "typecheck:tests", "check:structural"]) {
-      const index = staticSteps.findIndex((step) => step.run === `npm run ${command}`);
-      expect(index).toBeGreaterThan(save);
-      expect(staticSteps[index]["continue-on-error"]).toBeUndefined();
-      expect(staticSteps[index].if).toBeUndefined();
+      expect(staticSteps.findIndex((step) => step.run === `npm run ${command}`)).toBeGreaterThan(save);
+    }
+    // The cache publishes only fully validated lint and compiler state.
+    expect(staticSteps[save]["continue-on-error"]).toBeUndefined();
+    expect(staticSteps[save].if).toContain("!cancelled()");
+    for (const command of ["lint", "typecheck", "typecheck:worker"]) {
+      const id = staticSteps.find((step) => step.run === `npm run ${command}`)?.id;
+      expect(id, `Missing step id for npm run ${command}`).toBeDefined();
+      expect(staticSteps[save].if).toContain(`steps.${id}.outcome == 'success'`);
+    }
+    // The aggregate step reports every mandatory outcome and fails the job
+    // naming each failed command, whatever their count.
+    const aggregate = staticSteps.find((step) => step.name === "Report mandatory static outcomes");
+    expect(aggregate).toBeDefined();
+    expect(aggregate!.if).toContain("steps.workspace.outcome == 'success'");
+    expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
+      staticSteps.findIndex((step) => step.run === "npm run check:structural"));
+    const outcomeEnv = Object.entries(aggregate!.env ?? {});
+    expect(outcomeEnv).toHaveLength(6);
+    for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
+      const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
+      for (const [key, expression] of outcomeEnv) {
+        env[key] = expression === failedExpression ? "failure" : "success";
+      }
+      const result = spawnSync("bash", ["-c", aggregate!.run!], { env, encoding: "utf8" });
+      expect(result.stderr.toString()).toBe("");
+      expect(result.status).toBe(failedExpression === undefined ? 0 : 1);
+      if (failedExpression !== undefined) {
+        const id = /steps\.([^.]+)\.outcome/.exec(failedExpression)![1];
+        const command = staticSteps.find((step) => step.id === id)?.run;
+        expect(command).toBeDefined();
+        expect(result.stdout).toContain(command!.slice("npm run ".length));
+      }
     }
   });
 

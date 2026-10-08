@@ -14,6 +14,33 @@ import {
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
+describe("Pages artifact selection", () => {
+  it.each([
+    "src/app/page.tsx",
+    "next.config.mjs",
+    "tailwind.config.ts",
+    "postcss.config.cjs",
+    "scripts/build-data/build-stablecoin-detail-snapshots.ts",
+    "scripts/maintenance/generate-depeg-event-search-data.ts",
+    "scripts/build-data/generate-stablecoin-client-projections.ts",
+    "scripts/maintenance/inline-homepage-critical-css.ts",
+    "scripts/maintenance/critical-css-worker.mjs",
+    "scripts/maintenance/report-build-size.mjs",
+    "scripts/ci/check-seo-static.mjs",
+    "scripts/ci/check-feature-flag-inlining.ts",
+    "scripts/ci/check-phishing-signatures.ts",
+    "scripts/ci/run-pages-artifact-lane.ts",
+  ])("requires the artifact lane for Pages/build-pipeline path %s", (path) => {
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: true });
+  });
+
+  it.each(["docs/testing.md", "worker/src/api/health.ts", "worker/wrangler.toml"])(
+    "does not require the lane for an isolated non-Pages path %s", (path) => {
+      expect(classifyChangedFiles([path]).pagesArtifactRequired).toBe(false);
+    },
+  );
+});
+
 describe("critical owner coverage selection", () => {
   it("selects coverage for edited owners and deleted base-only owners, but not unrelated tests", () => {
     expect(classifyChangedFiles(["worker/src/lib/__tests__/auth.test.ts"]).criticalCoverageChanged).toBe(true);
@@ -228,12 +255,13 @@ describe("hasDeployImpact", () => {
     expect(hasPagesDeployImpact(files)).toBe(false);
   });
 
-  it("deploys for static export inputs but not validation-only build reports", () => {
+  it("selects Pages for static export inputs and artifact-gate owners without selecting Worker", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
     expect(hasWorkerDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(false);
 
     for (const file of ["scripts/maintenance/report-build-size.mjs", "scripts/ci/check-phishing-signatures.ts"]) {
-      expect(hasDeployImpact([file]), file).toBe(false);
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+      expect(hasWorkerDeployImpact([file]), file).toBe(false);
     }
   });
 
@@ -288,6 +316,9 @@ describe("classifyDeployChanges", () => {
 
   it("requests Firefox only when changed sources select a browser-rendered artifact", () => {
     expect(classifyChangedFiles(["src/app/page.tsx"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["src/lib/mechanism-explainer-registry.ts"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["scripts/maintenance/build-og-learn-images.ts"]).playwrightFirefoxRequired).toBe(true);
+    expect(classifyChangedFiles(["src/components/stablecoin-detail/mechanism-diagrams/example.tsx"]).playwrightFirefoxRequired).toBe(true);
     expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).playwrightFirefoxRequired).toBe(false);
   });
 

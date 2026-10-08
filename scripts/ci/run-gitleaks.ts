@@ -19,6 +19,7 @@ import { arch, platform, tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { isBuiltin } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
 export const GITLEAKS_VERSION = "8.30.0";
 const GITLEAKS_PINS = {
@@ -64,29 +65,68 @@ interface GitleaksOptions {
   policyRoot?: string;
   trustedRoot?: string;
   candidatePolicy: boolean;
+  localTrusted: boolean;
+  help: boolean;
 }
 
 function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): GitleaksOptions {
-  const mode = argv.includes("--worktree") ? "worktree" : argv.includes("--tree") ? "tree" : "range";
-  const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
-  const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
-  const value = (flag: string) => {
-    const arg = argv.find((item) => item.startsWith(`${flag}=`));
-    if (!arg) return undefined;
-    const path = arg.slice(flag.length + 1);
-    if (!path) throw new Error(`${flag} requires a directory`);
-    return resolve(path);
+  const { values, tokens } = parseArgs({
+    args: [...argv],
+    strict: true,
+    allowPositionals: false,
+    tokens: true,
+    options: {
+      range: { type: "boolean" },
+      tree: { type: "boolean" },
+      worktree: { type: "boolean" },
+      "local-trusted": { type: "boolean" },
+      base: { type: "string" },
+      head: { type: "string" },
+      "lenient-platform": { type: "boolean" },
+      "snapshot-trusted": { type: "string" },
+      "policy-root": { type: "string" },
+      "trusted-root": { type: "string" },
+      "candidate-policy": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    if (token.kind !== "option") continue;
+    if (seen.has(token.name)) throw new Error(`--${token.name} may only be specified once`);
+    seen.add(token.name);
+  }
+  const modes = ["range", "tree", "worktree", "local-trusted", "snapshot-trusted"].filter((name) => seen.has(name));
+  if (modes.length > 1) throw new Error("Select only one Gitleaks mode");
+  if (!values["local-trusted"] && (seen.has("base") || seen.has("head"))) {
+    throw new Error("--base and --head require --local-trusted");
+  }
+  if (values["local-trusted"] && !values.help) {
+    validateLocalTrustedRefs(values.base ?? "", values.head ?? "");
+    if (["lenient-platform", "policy-root", "trusted-root", "candidate-policy"].some((name) => seen.has(name))) {
+      throw new Error("--local-trusted cannot override or skip trusted policy");
+    }
+  }
+  const mode = values.worktree ? "worktree" : values.tree ? "tree" : "range";
+  const baseRef = values.base ?? env.GITLEAKS_BASE_REF ?? "origin/main";
+  const headRef = values.head ?? env.GITLEAKS_HEAD_REF ?? "HEAD";
+  const directory = (value: string | undefined) => {
+    if (value === undefined) return undefined;
+    if (!value.trim()) throw new Error("Gitleaks directory options require a non-empty directory");
+    return resolve(value);
   };
   return {
     baseRef,
     fullHistory: env.GITLEAKS_FULL_HISTORY === "1" || ZERO_SHA.test(baseRef),
     headRef,
-    lenientPlatform: argv.includes("--lenient-platform"),
+    lenientPlatform: values["lenient-platform"] ?? false,
     mode,
-    snapshotTrusted: value("--snapshot-trusted"),
-    policyRoot: value("--policy-root"),
-    trustedRoot: value("--trusted-root"),
-    candidatePolicy: argv.includes("--candidate-policy"),
+    snapshotTrusted: directory(values["snapshot-trusted"]),
+    policyRoot: directory(values["policy-root"]),
+    trustedRoot: directory(values["trusted-root"]),
+    candidatePolicy: values["candidate-policy"] ?? false,
+    localTrusted: values["local-trusted"] ?? false,
+    help: values.help ?? false,
   };
 }
 
@@ -255,6 +295,125 @@ export function gitleaksCandidateMatchesTrusted(repoRoot: string, trustedRoot: s
   return candidate.length === trusted.length && candidate.every((path, index) =>
     path === trusted[index] &&
     readFileSync(resolve(repoRoot, path)).equals(readFileSync(resolve(trustedRoot, path))));
+}
+
+function validateLocalTrustedRefs(baseSha: string, headSha: string): void {
+  if (![baseSha, headSha].every((sha) => /^[0-9a-f]{40}$/.test(sha) && !ZERO_SHA.test(sha))) {
+    throw new Error("--local-trusted requires --base and --head as full, non-zero commit SHAs");
+  }
+}
+
+/** Materialize only the scanner's committed import closure and policy. */
+function materializeGitleaksRevision(repoRoot: string, sha: string, destination: string): void {
+  const visited = new Set<string>();
+  const visit = (path: string, scanner: boolean) => {
+    const target = resolve(destination, path);
+    const name = relative(destination, target);
+    if (isAbsolute(name) || name === ".." || name.startsWith("../")) {
+      throw new Error("Scanner dependency escapes its revision snapshot");
+    }
+    if (visited.has(name)) return;
+    visited.add(name);
+    const entry = execFileSync("git", ["ls-tree", sha, "--", name], { cwd: repoRoot, encoding: "utf8", stdio: "pipe" });
+    if (!/^100(?:644|755) blob /.test(entry)) throw new Error("Missing or non-regular scanner input");
+    const bytes = execFileSync("git", ["show", `${sha}:${name}`], { cwd: repoRoot, stdio: "pipe", maxBuffer: 16 * 1024 * 1024 });
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, bytes);
+    if (!scanner) return;
+    for (const specifier of localImportSpecifiers(bytes.toString("utf8"))) {
+      if (isBuiltin(specifier)) continue;
+      if (!specifier.startsWith(".")) throw new Error("Scanner snapshot requires dependency-free local imports");
+      visit(relative(destination, resolve(dirname(target), specifier)), true);
+    }
+  };
+  visit(SCANNER_PATH, true);
+  for (const path of POLICY_FILES) visit(path, false);
+  writeFileSync(resolve(destination, "package.json"), '{"private":true,"type":"module"}\n');
+}
+
+interface LocalTrustedGitleaksOptions {
+  baseSha: string;
+  headSha: string;
+  mergeSha?: string;
+  repoRoot: string;
+}
+
+const runGitleaksMode: GitleaksRunner = (binary, args, options) => spawnSync(binary, [
+  args[0], "--input-type=module", "--eval",
+  // Older trusted CLIs used exit 1 for both setup errors and findings. Calling
+  // their existing mode function preserves scans while distinguishing throws.
+  "import(process.argv[1]).then(({runGitleaks}) => runGitleaks({argv:process.argv.slice(2)}))" +
+    ".then(({status}) => { process.exitCode = status; }).catch(() => { process.exitCode = 2; });",
+  pathToFileURL(args[1]).href, ...args.slice(2),
+], options);
+
+/**
+ * CI's security sequence on frozen local commits. The temporary detached scan
+ * repository borrows objects read-only (no clone, branch, or worktree creation).
+ * Its HEAD is the requested head unless a parity caller supplies mergeSha.
+ * The latter additionally includes synthetic merge-resolution lines; range
+ * selection and candidate inputs remain frozen to the branch headSha.
+ * Each pass runs the revision's own scanner, never the candidate for trusted
+ * passes. Scanner output retains the existing --redact contract.
+ */
+export async function runLocalTrustedGitleaks(
+  { baseSha, headSha, mergeSha, repoRoot }: LocalTrustedGitleaksOptions,
+  { runScanner = runGitleaksMode }: { runScanner?: GitleaksRunner } = {},
+): Promise<{ ok: boolean; exitCode: number; summary: string }> {
+  try {
+    validateLocalTrustedRefs(baseSha, headSha);
+    if (mergeSha !== undefined) validateLocalTrustedRefs(baseSha, mergeSha);
+  } catch {
+    return { ok: false, exitCode: 2, summary: "Trusted secret scan requires full, non-zero base/head and optional merge commit SHAs." };
+  }
+  let temporaryRoot: string | undefined;
+  let stage = "setup";
+  const result = (exitCode: number, summary: string) => ({ ok: exitCode === 0, exitCode, summary });
+  try {
+    const root = realpathSync(repoRoot);
+    for (const sha of [baseSha, headSha, ...(mergeSha ? [mergeSha] : [])]) {
+      execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: root, stdio: "pipe" });
+    }
+    temporaryRoot = mkdtempSync(join(tmpdir(), "pharos-trusted-gitleaks-"));
+    const baseRoot = join(temporaryRoot, "base");
+    const candidateRoot = join(temporaryRoot, "candidate");
+    const trustedRoot = join(temporaryRoot, "trusted");
+    materializeGitleaksRevision(root, baseSha, baseRoot);
+    // Private HEAD/index/refs; read-only alternates avoid copying full history.
+    execFileSync("git", ["init", "--quiet", "--bare", join(candidateRoot, ".git")], { stdio: "pipe" });
+    execFileSync("git", ["--git-dir", join(candidateRoot, ".git"), "config", "core.bare", "false"], { stdio: "pipe" });
+    writeFileSync(join(candidateRoot, ".git/HEAD"), `${mergeSha ?? headSha}\n`);
+    const objects = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-path", "objects"], {
+      cwd: root, encoding: "utf8", stdio: "pipe",
+    }).trim();
+    writeFileSync(join(candidateRoot, ".git/objects/info/alternates"), `${objects}\n`);
+    const env = { ...process.env, GITLEAKS_BASE_REF: baseSha, GITLEAKS_HEAD_REF: headSha, GITLEAKS_FULL_HISTORY: "0" };
+    const scan = (scannerRoot: string, args: string[]) => {
+      const outcome = runScanner(process.execPath, [
+        "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", join(scannerRoot, SCANNER_PATH), ...args,
+      ], { cwd: candidateRoot, env, stdio: "inherit" });
+      if (outcome.error || outcome.status == null) return 2;
+      return outcome.status === 0 ? 0 : outcome.status === 1 ? 1 : 2;
+    };
+    stage = "snapshot";
+    let status = scan(baseRoot, [`--snapshot-trusted=${trustedRoot}`]);
+    if (status !== 0) return result(2, "Trusted secret scan could not snapshot base inputs.");
+    stage = "trusted range";
+    status = scan(trustedRoot, ["--range", `--policy-root=${trustedRoot}`]);
+    if (status !== 0) return result(status, `Trusted secret scan failed at ${stage}.`);
+    stage = "trusted merge resolutions";
+    status = scan(trustedRoot, ["--tree", `--policy-root=${trustedRoot}`]);
+    if (status !== 0) return result(status, `Trusted secret scan failed at ${stage}.`);
+    stage = "candidate policy";
+    materializeGitleaksRevision(root, headSha, candidateRoot);
+    status = scan(candidateRoot, ["--range", "--candidate-policy", `--trusted-root=${trustedRoot}`]);
+    return result(status, status === 0 ? "Trusted secret scans and candidate policy check passed." : `Trusted secret scan failed at ${stage}.`);
+  } catch {
+    // Git errors can include blob contents; never echo raw setup exceptions.
+    return result(2, `Trusted secret scan setup failed at ${stage}; verify full local commit history and scanner inputs.`);
+  } finally {
+    if (temporaryRoot) rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 }
 
 export function resolveGitleaksPin(platformKey: string): (typeof GITLEAKS_PINS)[keyof typeof GITLEAKS_PINS] | undefined {
@@ -622,6 +781,20 @@ export async function runGitleaks({
   runBinary?: GitleaksRunner;
 } = {}): Promise<{ status: number }> {
   const options = parseOptions(argv, env);
+  if (options.help) {
+    console.log("Usage: run-gitleaks.ts --local-trusted --base=<sha> --head=<sha>\n" +
+      "Or: --range | --tree | --worktree [--policy-root=<dir>]\n" +
+      "Snapshot: --snapshot-trusted=<dir>; candidate: --range --candidate-policy --trusted-root=<dir>\n" +
+      "Local trusted exits: 0 clean, 1 findings, 2 usage/setup error. CI additionally scans its synthetic PR merge.");
+    return { status: 0 };
+  }
+  if (options.localTrusted) {
+    const result = await runLocalTrustedGitleaks({
+      baseSha: options.baseRef, headSha: options.headRef, repoRoot: process.cwd(),
+    });
+    console.log(`[gitleaks] ${result.summary}`);
+    return { status: result.exitCode };
+  }
   if (options.snapshotTrusted) {
     snapshotGitleaksTrustedInputs(resolve(dirname(fileURLToPath(import.meta.url)), "../.."), options.snapshotTrusted);
     return { status: 0 };
@@ -699,6 +872,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     })
     .catch((error) => {
       console.error(`[gitleaks] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-      process.exitCode = 1;
+      process.exitCode = 2;
     });
 }

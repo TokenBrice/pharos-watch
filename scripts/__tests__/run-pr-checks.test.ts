@@ -17,7 +17,9 @@ describe("local PR check orchestration", () => {
       "verified-doc-links",
       "doc-source-paths",
       "doc-sync",
+      "doc-ownership-invariants",
       "agents-doc-artifact",
+      "docs-generated-artifacts",
     ]);
   });
 
@@ -31,10 +33,20 @@ describe("local PR check orchestration", () => {
       "verified-doc-links",
       "doc-source-paths",
       "doc-sync",
+      "doc-ownership-invariants",
       "agents-doc-artifact",
+      "docs-generated-artifacts",
       "pr-static",
       "pr-tests",
+      "pages-artifact",
     ]);
+  });
+
+  it("uses the classifier docs predicate for mixed root Markdown and source", () => {
+    const changedFiles = ["AGENTS.md", "src/app/page.tsx"];
+    const classification = classifyChangedFiles(changedFiles);
+    expect(classification.docsChanged).toBe(true);
+    expect(buildPrCheckPlan(changedFiles, classification, { skipCoverage: false })).toContain("doc-sync");
   });
 
   it("hands doc-sync ownership to the docs lane for mixed plans", () => {
@@ -91,6 +103,7 @@ describe("local PR check orchestration", () => {
       forwardedTestArgs: ["--shard=1/2", "--runInBand"],
       noFetch: true,
       skipCoverage: true,
+      plan: false,
     });
   });
 
@@ -124,7 +137,9 @@ describe("local PR check orchestration", () => {
     };
 
     const gitleaks = createLaneCommand("gitleaks", context);
-    expect(gitleaks.extraEnv).toMatchObject({ GITLEAKS_BASE_REF: "origin/main", GITLEAKS_HEAD_REF: "HEAD" });
+    expect(gitleaks.cmd).toContain("--local-trusted");
+    expect(gitleaks.cmd).toContain(`--base=${context.resolvedBaseSha}`);
+    expect(gitleaks.cmd).toContain("--head=HEAD");
 
     const classifier = createLaneCommand("classifier-smoke", context);
     expect(classifier.extraEnv).toMatchObject({

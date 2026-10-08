@@ -1,4 +1,4 @@
-export type PrLaneSelector = "always" | "code" | "critical-coverage" | "docs";
+export type PrLaneSelector = "always" | "code" | "critical-coverage" | "docs" | "pages-artifact";
 
 export type PrLaneId =
   | "preflight"
@@ -7,6 +7,7 @@ export type PrLaneId =
   | "tests"
   | "critical-coverage-shards"
   | "critical-coverage"
+  | "pages-artifact"
   | "docs"
   | "gate";
 
@@ -30,6 +31,7 @@ export interface PrLaneSelection {
   criticalCoverageShards: number;
   docsChanged: boolean;
   docsOnly: boolean;
+  pagesArtifactRequired?: boolean;
   testShards?: number;
 }
 
@@ -92,6 +94,12 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     ],
   },
   {
+    id: "pages-artifact",
+    selector: "pages-artifact",
+    timeoutMinutes: 20,
+    commands: [{ id: "pages-artifact", program: "npm", args: ["run", "check:pages-artifact"] }],
+  },
+  {
     id: "docs",
     selector: "docs",
     timeoutMinutes: 15,
@@ -99,7 +107,9 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
       { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
       { id: "doc-source-paths", program: "npm", args: ["run", "check:doc-source-paths"] },
       { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
+      { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
       { id: "agents-doc-artifact", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=agents-doc"] },
+      { id: "docs-generated-artifacts", program: "node", args: ["--import", "tsx", "scripts/ci/check-docs-generated-artifacts.mts"] },
     ],
   },
   { id: "gate", selector: "always", timeoutMinutes: 5, commands: [] },
@@ -117,6 +127,7 @@ export function isPrLaneSelected(lane: PrLaneDefinition, selection: PrLaneSelect
     case "code": return !selection.docsOnly;
     case "critical-coverage": return selection.criticalCoverageChanged;
     case "docs": return selection.docsChanged;
+    case "pages-artifact": return selection.pagesArtifactRequired === true;
   }
 }
 

@@ -8,6 +8,9 @@
  * exposes their source globs through one matcher, and derives the family-shaped
  * projection used by the change contract. That keeps matching and output compatibility centralized
  * without reintroducing a second authored family inventory.
+ * Optional `testOwnership` declarations bind inspected source globs to invariant
+ * tests that Vitest cannot discover through imports. PR selection consumes all
+ * declarations independently of focused-check tier precedence.
  *
  * Document references stay structured through the runtime boundary so text and
  * JSON formatters can render `path#anchor` while still exposing `{path, anchor}`.
@@ -29,6 +32,11 @@ export interface DocReference {
 
 type RawDocReference = string | DocReference;
 
+export interface DeclaredTestOwnership {
+  sources: string[];
+  tests: string[];
+}
+
 interface RawMapping {
   alsoRead?: string[];
   background?: RawDocReference[];
@@ -41,6 +49,7 @@ interface RawMapping {
   rules?: string[];
   sources: string[];
   tier?: "specific" | "fallback";
+  testOwnership?: DeclaredTestOwnership[];
 }
 
 interface RawExclusion {
@@ -152,6 +161,8 @@ export const DOC_OWNERSHIP_REGISTRY: DocOwnershipRegistry = registry;
 export const DEFAULT_BASE_DOCS: string[] = registry.baseDocs ?? [];
 export const CORE_RULES: string[] = registry.coreRules ?? [];
 export const PATH_FAMILIES: PathFamily[] = (registry.mappings ?? []).map(normalizeMapping);
+export const DECLARED_TEST_OWNERSHIP: DeclaredTestOwnership[] = (registry.mappings ?? [])
+  .flatMap((mapping) => mapping.testOwnership ?? []);
 export const PATH_EXCLUSIONS: PathExclusion[] = (registry.exclusions ?? []).map((exclusion) => ({
   reason: exclusion.reason,
   sourceGlobs: exclusion.sources,

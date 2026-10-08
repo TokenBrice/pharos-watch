@@ -30,7 +30,7 @@ export function buildPrWorkflowMatrix(selection: PrLaneSelection): { include: Wo
   // The docs lane owns doc-sync for mixed docs/source PRs.
   const docsLaneSelected = isPrLaneSelected(getPrLane("docs"), selection);
   for (const lane of PR_LANES) {
-    if (["preflight", "critical-coverage-shards", "critical-coverage", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
+    if (["preflight", "critical-coverage-shards", "critical-coverage", "pages-artifact", "gate"].includes(lane.id) || !isPrLaneSelected(lane, selection)) continue;
     const shards = lane.id === "tests" ? selection.testShards ?? 4 : 1;
     if (!Number.isInteger(shards) || shards < 1 || (lane.shards !== undefined && shards > lane.shards)) {
       throw new Error(`Invalid shard count for ${lane.id}: ${shards}`);
@@ -130,6 +130,7 @@ function main(argv: readonly string[] = process.argv.slice(2), env: NodeJS.Proce
       criticalCoverageShards,
       docsChanged: bool(env.DOCS_CHANGED),
       docsOnly,
+      pagesArtifactRequired: bool(env.PAGES_ARTIFACT_REQUIRED),
       ...(docsOnly ? {} : { testShards: readPrTestPlan(PR_TEST_PLAN_PATH).shardCount }),
     });
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, outputs);

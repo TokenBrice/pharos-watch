@@ -26,6 +26,14 @@ import { PATH_FAMILIES, matchesOwnershipGlob } from "../lib/doc-ownership-regist
 import { runDirectCli } from "../lib/cli-args.mjs";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
+const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
+  "package.json": true,
+  "package-lock.json": true,
+  ".npmrc": true,
+  "scripts/ci/verify-dependency-audit.ts": true,
+  "scripts/ci/dependency-audit-exceptions.json": true,
+};
+const RESERVE_FIXTURE_PREFIX = "worker/src/cron/reserve-adapters/__tests__/fixtures/";
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
 const STRUCTURAL_TEST_PATH_PATTERNS = [
@@ -118,6 +126,17 @@ export function buildPrStaticCheckPlan(
 
   if (changedFiles.some((file) => ROOT_DEPENDENCY_PATHS.has(file))) {
     commands.push({ name: "audit:deps" });
+  }
+
+  if (changedFiles.some((file) => Object.hasOwn(REVIEWED_DEPENDENCY_AUDIT_PATHS, file))) {
+    commands.push({ name: "check:dependency-audit" });
+  }
+  if (changedFiles.some((file) =>
+    (file.startsWith(RESERVE_FIXTURE_PREFIX) && /\.(html|json|txt)$/.test(file)) ||
+    file === "scripts/ci/check-html-fixture-age.ts" ||
+    file === "scripts/maintenance/refresh-reserve-html-fixtures.ts"
+  )) {
+    commands.push({ name: "check:html-fixture-metadata" });
   }
 
   // `skipDocSync` is the composition-context option passed by `check:pr` and

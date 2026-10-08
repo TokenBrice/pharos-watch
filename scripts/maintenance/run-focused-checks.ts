@@ -73,7 +73,8 @@ export interface FocusedCheckReport {
   fallbackOnlyPaths: number;
   lanes: GateLaneReport[];
   planOnly: boolean;
-  status: "failed" | "passed" | "planned";
+  unmappedPaths: string[];
+  status: "failed" | "passed" | "planned" | "routing-incomplete" | "intentional-no-check";
 }
 
 export interface RunFocusedChecksOptions {
@@ -142,8 +143,10 @@ export function buildFocusedCheckPlan(
 
   const checks: FocusedCheck[] = [];
   const seenChecks = new Set<string>();
-  const isGeneric = (family: PathFamily) => family.id === "frontend-routes" || family.id === "scripts-tooling";
-  const retainedCommands = new Set([...selectedFamilies.values()].filter((family) => !isGeneric(family)).flatMap((family) => family.checks));
+  const genericFamilyIds: Record<string, true> = {
+    "frontend-routes": true, "scripts-tooling": true, "worker-runtime": true, "shared-runtime": true,
+  };
+  const retainedCommands = new Set([...selectedFamilies.values()].filter((family) => !genericFamilyIds[family.id]).flatMap((family) => family.checks));
   [...selectedFamilies.values()]
     .sort((a, b) => (familyOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (familyOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER))
     .forEach((family) => {
@@ -156,7 +159,7 @@ export function buildFocusedCheckPlan(
           argv = ["npm", "run", "lint:changed", "--", ...files.flatMap((file) => ["--file", file])];
           plannedCommand = createSpawnCommand(argv[0], argv.slice(1)).cmd;
         }
-        if (isGeneric(family)) {
+        if (genericFamilyIds[family.id]) {
           if (retainedCommands.has(command)) continue;
           const files = classification.changedFiles.filter((file) => family.sourceGlobs.some((glob) => matchesOwnershipGlob(file, glob)));
           if (family.id === "frontend-routes" && command === "npx vitest run src"
@@ -236,13 +239,7 @@ export async function runFocusedChecks({
   if (writeCliHelpIfRequested(args, USAGE, stdout)) return 0;
 
   const plan = buildFocusedCheckPlan(selectFocusedFiles(args));
-  if (args.files.length > 0) {
-    const mappedFiles = new Set(plan.classification.mappings.flatMap((mapping) => mapping.matchedFiles));
-    const unmatched = plan.changedFiles.filter((file) => !mappedFiles.has(file));
-    if (unmatched.length > 0) {
-      throw new Error(`No ownership mapping for explicit path(s): ${unmatched.join(", ")}. Route these paths before running focused checks.`);
-    }
-  }
+  const routingIncomplete = plan.classification.unmappedPaths.length > 0;
   if (args.json) {
     writeLine(stderr, "[check:focused] " + plan.checks.length + " focused check(s) selected.");
   } else {
@@ -251,7 +248,7 @@ export async function runFocusedChecks({
 
   const startedAt = now();
   const plannedLanes = plan.checks.map(makeLane);
-  if (args.planOnly) {
+  if (routingIncomplete || args.planOnly || plan.checks.length === 0) {
     const report: FocusedCheckReport = {
       changedFiles: plan.changedFiles,
       checks: plan.checks,
@@ -259,11 +256,15 @@ export async function runFocusedChecks({
       durationMs: Math.max(0, now() - startedAt),
       fallbackOnlyPaths: plan.fallbackOnlyPaths,
       lanes: plannedLanes,
-      planOnly: true,
-      status: "planned",
+      planOnly: args.planOnly,
+      unmappedPaths: plan.classification.unmappedPaths,
+      status: routingIncomplete ? "routing-incomplete" : plan.checks.length === 0 ? "intentional-no-check" : "planned",
     };
     if (args.json) writeJsonReport(report, stdout);
-    return 0;
+    else writeLine(routingIncomplete ? stderr : stdout, routingIncomplete
+      ? `[check:focused] routing-incomplete: no ownership mapping for ${report.unmappedPaths.join(", ")}. Route these paths before running focused checks.`
+      : `[check:focused] ${report.status}`);
+    return routingIncomplete ? 1 : 0;
   }
 
   const lanes = await runGateLanes(plan.checks, {
@@ -304,6 +305,7 @@ export async function runFocusedChecks({
     fallbackOnlyPaths: plan.fallbackOnlyPaths,
     lanes,
     planOnly: false,
+    unmappedPaths: plan.classification.unmappedPaths,
     status: failed ? "failed" : "passed",
   };
   if (args.json) writeJsonReport(report, stdout);

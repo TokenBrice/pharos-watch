@@ -60,6 +60,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       coverage_matrix: ${{ steps.matrix.outputs.coverage_matrix }}
       playwright_firefox_required: ${{ steps.classify.outputs.playwright_firefox_required }}
+      pages_artifact_required: ${{ steps.classify.outputs.pages_artifact_required }}
       workspace_artifact_name: ${{ steps.publish-workspace.outputs.workspace-artifact-name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,6 +91,7 @@ jobs:
           CRITICAL_COVERAGE_CHANGED: ${{ steps.classify.outputs.critical_coverage_changed }}
           DOCS_CHANGED: ${{ steps.classify.outputs.docs_changed }}
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
+          PAGES_ARTIFACT_REQUIRED: ${{ steps.classify.outputs.pages_artifact_required }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --matrix
@@ -98,6 +100,8 @@ jobs:
         if: ${{ steps.classify.outputs.docs_only == 'true' }}
         env:
           PR_LANE_ID: docs
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
       - uses: $/.github/actions/setup-workspace
         id: publish-workspace
@@ -155,6 +159,42 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # Peak fan-out: validation 10 + coverage 8 + Pages 1 + secrets 1 = 20.
+  pages-artifact:
+    name: Pages artifact
+    needs: prepare
+    if: ${{ needs.prepare.outputs.pages_artifact_required == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
+      NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
+      NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
+      NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER }}
+      NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: $/.github/actions/setup-workspace
+        with:
+          cache-npm: "false"
+          install-deps: "false"
+          workspace-artifact: restore
+          workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
+      - name: Replay release data and enforce Pages artifact gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_LANE_ID: pages-artifact
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
+
   critical-coverage-shards:
     name: Critical coverage (${{ matrix.shard }}/${{ matrix.shardCount }})
     needs: prepare
@@ -179,6 +219,8 @@ jobs:
           workspace-artifact-name: ${{ needs.prepare.outputs.workspace_artifact_name }}
       - name: Run manifest coverage shard
         env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_LANE_ID: critical-coverage-shards
           PR_LANE_SHARD: ${{ matrix.shard }}
           PR_LANE_SHARD_COUNT: ${{ matrix.shardCount }}
@@ -230,6 +272,8 @@ jobs:
           merge-multiple: true
       - name: Merge and enforce touched critical-file coverage ratchet
         env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.pull_request.base.sha }}
           PR_LANE_ID: critical-coverage
         run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --run
@@ -237,7 +281,7 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs: [secrets, prepare, validation, critical-coverage-shards, critical-coverage]
+    needs: [secrets, prepare, validation, critical-coverage-shards, critical-coverage, pages-artifact]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -249,6 +293,8 @@ jobs:
       CRITICAL_COVERAGE_CHANGED: ${{ needs.prepare.outputs.critical_coverage_changed }}
       CRITICAL_COVERAGE_SHARDS_RESULT: ${{ needs.critical-coverage-shards.result }}
       CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
+      PAGES_ARTIFACT_REQUIRED: ${{ needs.prepare.outputs.pages_artifact_required }}
+      PAGES_ARTIFACT_RESULT: ${{ needs.pages-artifact.result }}
     steps:
       - name: Require the manifest-selected validation path
         run: |
@@ -274,5 +320,15 @@ jobs:
             fi
           elif [ "${CRITICAL_COVERAGE_CHANGED}" != "false" ] || [ "${CRITICAL_COVERAGE_SHARDS_RESULT}" != "skipped" ] || [ "${CRITICAL_COVERAGE_RESULT}" != "skipped" ]; then
             echo "Unexpected unselected coverage state: selected=${CRITICAL_COVERAGE_CHANGED}, shards=${CRITICAL_COVERAGE_SHARDS_RESULT}, merge=${CRITICAL_COVERAGE_RESULT}."
+            exit 1
+          fi
+
+          if [ "${PAGES_ARTIFACT_REQUIRED}" = "true" ]; then
+            if [ "${PAGES_ARTIFACT_RESULT}" != "success" ]; then
+              echo "Pages artifact validation failed: ${PAGES_ARTIFACT_RESULT}."
+              exit 1
+            fi
+          elif [ "${PAGES_ARTIFACT_REQUIRED}" != "false" ] || [ "${PAGES_ARTIFACT_RESULT}" != "skipped" ]; then
+            echo "Unexpected unselected Pages artifact state: selected=${PAGES_ARTIFACT_REQUIRED}, result=${PAGES_ARTIFACT_RESULT}."
             exit 1
           fi
