@@ -79,4 +79,23 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
     expect(input.v9PublicationInputHealth.redemption.state).toBe(state);
   });
+  it("quarantines only the asset whose consumed reserve evidence lost admission", async () => {
+    fixture(RUN + 1, RUN - 60);
+    const loaded = await mocks.inputs();
+    const other = ACTIVE_STABLECOINS.find((coin) => coin.id !== "iusd-infinifi" && coin.liveReservesConfig && !coin.liveReservesConfig.suspended)!;
+    const base = loaded.redemptionBackstopMap["iusd-infinifi"];
+    const otherInput = { ...base.reserveInput, stablecoinId: other.id, configFingerprint: computeLiveReserveConfigFingerprint(other.liveReservesConfig!) };
+    const census = loaded.redemptionSnapshotProvenance.runMetadata.consumedReserveInputs;
+    census[other.id] = otherInput;
+    loaded.redemptionBackstopMap[other.id] = { ...base, stablecoinId: other.id, reserveInput: otherInput };
+    // The first asset's binding is internally consistent but its source freshness was never verified.
+    const unverified = { ...base.reserveInput, freshness: { ...base.reserveInput.freshness, freshnessMode: "unverified" } };
+    census["iusd-infinifi"] = unverified;
+    loaded.redemptionBackstopMap["iusd-infinifi"] = { ...base, reserveInput: unverified };
+    mocks.inputs.mockResolvedValue(loaded);
+    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+    expect(input.v9PublicationInputHealth.redemption.state).toBe("current");
+    expect(Object.keys(input.redemptionBackstopMap)).toEqual([other.id]);
+    expect(input.inputFreshness.redemptionBackstops.stale).toBe(false);
+  });
 });

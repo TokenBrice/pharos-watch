@@ -178,11 +178,13 @@ describe("producer-owned accepted reserve generations", () => {
     const input = consumedReserveInput(accepted, ASSET, record);
     const entries = [{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[];
     const metadata = { reserveViewSchemaVersion: 2, reserveGenerationId: accepted.generationId, reserveContentSha256: accepted.contentSha256, runClockSec: CLOCK, consumedReserveInputs: { [ASSET]: input } };
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 59)).toBe("fresh");
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toBe("fresh");
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toBe("stale");
-    expect(assessConsumedRedemptionReserves(entries, {}, CLOCK, CLOCK)).toBe("unavailable");
-    expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: {} }, CLOCK, CLOCK)).toBe("unavailable");
+    const fresh = { state: "fresh", quarantined: {} };
+    const unavailable = { state: "unavailable", quarantined: {} };
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 59)).toEqual(fresh);
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toEqual(fresh);
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
+    expect(assessConsumedRedemptionReserves(entries, {}, CLOCK, CLOCK)).toEqual(unavailable);
+    expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: {} }, CLOCK, CLOCK)).toEqual(unavailable);
   });
 
   it("expires consumed source evidence independently of a fresh fetch and checks binding identity", async () => {
@@ -197,19 +199,23 @@ describe("producer-owned accepted reserve generations", () => {
     } }, coin, CLOCK, 172800);
     const entries = [{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[];
     const metadata = { reserveViewSchemaVersion: 2, reserveGenerationId: accepted.generationId, reserveContentSha256: accepted.contentSha256, runClockSec: CLOCK, consumedReserveInputs: { [ASSET]: input } };
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toBe("fresh");
-    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toBe("stale");
-    expect(assessConsumedRedemptionReserves(entries, { ...metadata, reserveGenerationId: "different" }, CLOCK, CLOCK)).toBe("unavailable");
-    expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: { [ASSET]: { ...input, configFingerprint: "b".repeat(64) } } }, CLOCK, CLOCK)).toBe("unavailable");
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 60)).toEqual({ state: "fresh", quarantined: {} });
+    expect(assessConsumedRedemptionReserves(entries, metadata, CLOCK, CLOCK + 61)).toEqual({ state: "fresh", quarantined: { [ASSET]: "stale" } });
+    expect(assessConsumedRedemptionReserves(entries, { ...metadata, reserveGenerationId: "different" }, CLOCK, CLOCK).state).toBe("unavailable");
+    expect(assessConsumedRedemptionReserves(entries, { ...metadata, consumedReserveInputs: { [ASSET]: { ...input, configFingerprint: "b".repeat(64) } } }, CLOCK, CLOCK).state).toBe("unavailable");
+    // A consistent binding to a configuration that has since changed loses only that asset.
+    const rebound = { ...input, configFingerprint: "b".repeat(64) };
+    expect(assessConsumedRedemptionReserves([{ stablecoinId: ASSET, reserveInput: rebound }] as RedemptionBackstopEntry[],
+      { ...metadata, consumedReserveInputs: { [ASSET]: rebound } }, CLOCK, CLOCK)).toEqual({ state: "fresh", quarantined: { [ASSET]: "config-mismatch" } });
   });
   it.each([
-    [{ freshnessMode: "not-applicable" }, "fresh"],
-    [{ freshnessMode: "verified", sourceTimestamp: CLOCK - 60 }, "fresh"],
-    [{ freshnessMode: "unverified" }, "unavailable"],
-    [{}, "unavailable"],
-    [{ freshnessMode: "verified" }, "unavailable"],
-    [{ freshnessMode: "not-applicable", diag: { invalidFreshness: true } }, "unavailable"],
-  ] as const)("preserves captured source mode and diagnosis through seal and consumed readback: %j", async (sourceMetadata, expected) => {
+    [{ freshnessMode: "not-applicable" }, {}],
+    [{ freshnessMode: "verified", sourceTimestamp: CLOCK - 60 }, {}],
+    [{ freshnessMode: "unverified" }, { [ASSET]: "freshness-unverified" }],
+    [{}, { [ASSET]: "freshness-unverified" }],
+    [{ freshnessMode: "verified" }, { [ASSET]: "freshness-unverified" }],
+    [{ freshnessMode: "not-applicable", diag: { invalidFreshness: true } }, { [ASSET]: "freshness-unverified" }],
+  ] as const)("preserves captured source mode and diagnosis through seal and consumed readback: %j", async (sourceMetadata, quarantined) => {
     const h = await harness();
     h.sqlite.prepare("UPDATE reserve_composition SET metadata = ?").run(JSON.stringify(sourceMetadata));
     await sealAcceptedReserveGeneration(h.db, h.identity, "test", h.ids, { status: "ok" }, CLOCK);
@@ -220,12 +226,12 @@ describe("producer-owned accepted reserve generations", () => {
     const entries = [{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[];
     const metadata = { reserveViewSchemaVersion: 2, reserveGenerationId: envelope.generationId, reserveContentSha256: envelope.contentSha256,
       runClockSec: CLOCK, consumedReserveInputs: { [ASSET]: input } };
-    expect(assessConsumedRedemptionReserves(entries, JSON.parse(JSON.stringify(metadata)), CLOCK, CLOCK)).toBe(expected);
-    expect(assessConsumedRedemptionReserves(entries, { ...metadata, reserveViewSchemaVersion: 1 }, CLOCK, CLOCK)).toBe("unavailable");
+    expect(assessConsumedRedemptionReserves(entries, JSON.parse(JSON.stringify(metadata)), CLOCK, CLOCK)).toEqual({ state: "fresh", quarantined });
+    expect(assessConsumedRedemptionReserves(entries, { ...metadata, reserveViewSchemaVersion: 1 }, CLOCK, CLOCK).state).toBe("unavailable");
     const { freshnessMode: _mode, ...modeLessFreshness } = input.freshness;
     const oldInput = { ...input, freshness: modeLessFreshness };
     expect(assessConsumedRedemptionReserves([{ ...entries[0], reserveInput: oldInput }] as RedemptionBackstopEntry[],
-      { ...metadata, consumedReserveInputs: { [ASSET]: oldInput } }, CLOCK, CLOCK)).toBe("unavailable");
+      { ...metadata, consumedReserveInputs: { [ASSET]: oldInput } }, CLOCK, CLOCK).state).toBe("unavailable");
   });
 
   it("rejects future Worker fetch clocks before and after consumed round-trip", async () => {
@@ -237,6 +243,6 @@ describe("producer-owned accepted reserve generations", () => {
     const input = consumedReserveInput(envelope, ASSET, record);
     const metadata = { reserveViewSchemaVersion: 2, reserveGenerationId: envelope.generationId, reserveContentSha256: envelope.contentSha256,
       runClockSec: CLOCK, consumedReserveInputs: { [ASSET]: input } };
-    expect(assessConsumedRedemptionReserves([{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[], metadata, CLOCK, CLOCK)).toBe("unavailable");
+    expect(assessConsumedRedemptionReserves([{ stablecoinId: ASSET, reserveInput: input }] as RedemptionBackstopEntry[], metadata, CLOCK, CLOCK).state).toBe("unavailable");
   });
 });

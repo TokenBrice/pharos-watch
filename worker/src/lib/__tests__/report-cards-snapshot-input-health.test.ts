@@ -87,7 +87,7 @@ describe("report-card V9 publication input health", () => {
       latestUpdatedAt: NOW_SEC - 60,
       runId: "redemption:current",
       methodologyVersion: "redemption:test",
-      reserveInputHealth: "fresh",
+      reserveInputAssessment: { state: "fresh", quarantined: {} },
     });
     mocks.loadFreshIndependentLiveReserveMap
       .mockReset()
@@ -212,15 +212,26 @@ describe("report-card V9 publication input health", () => {
     });
   });
 
-  it.each(["stale", "unavailable"] as const)("holds expired or incompatible consumed evidence as %s without changing the run clock", async (state) => {
+  it("holds a run whose consumed reserve binding is incompatible without changing the run clock", async () => {
     mocks.loadRedemptionBackstopSnapshot.mockResolvedValue({
       map: { test: { stablecoinId: "test" } }, latestUpdatedAt: NOW_SEC - 60,
-      runId: "redemption:actual", methodologyVersion: "redemption:test", reserveInputHealth: state,
+      runId: "redemption:actual", methodologyVersion: "redemption:test", reserveInputAssessment: { state: "unavailable", quarantined: {} },
     });
     const inputs = await loadReportCardsSnapshotInputs(db(), { preloadedStablecoinsCache: stablecoinsCache() });
     expect(inputs.redemptionBackstopMap).toEqual({});
-    expect(inputs.v9PublicationInputHealth.redemption).toEqual({ state, generationId: "redemption:actual", updatedAtSec: NOW_SEC - 60 });
+    expect(inputs.v9PublicationInputHealth.redemption).toEqual({ state: "unavailable", generationId: "redemption:actual", updatedAtSec: NOW_SEC - 60 });
     expect(inputs.inputFreshness.redemptionBackstops.ageSeconds).toBe(60);
+  });
+
+  it("keeps a run current when only individual assets carry inadmissible reserve evidence", async () => {
+    const map = { test: { stablecoinId: "test" }, other: { stablecoinId: "other" } };
+    mocks.loadRedemptionBackstopSnapshot.mockResolvedValue({
+      map, latestUpdatedAt: NOW_SEC - 60, runId: "redemption:actual", methodologyVersion: "redemption:test",
+      reserveInputAssessment: { state: "fresh", quarantined: { test: "freshness-unverified" } },
+    });
+    const inputs = await loadReportCardsSnapshotInputs(db(), { preloadedStablecoinsCache: stablecoinsCache() });
+    expect(inputs.redemptionBackstopMap).toEqual(map);
+    expect(inputs.v9PublicationInputHealth.redemption.state).toBe("current");
   });
 
   it("marks a completed empty redemption snapshot as not applicable", async () => {
