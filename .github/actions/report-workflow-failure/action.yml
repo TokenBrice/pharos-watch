@@ -1,0 +1,45 @@
+name: Report Workflow Failure
+description: Maintain deduplicated main-workflow incidents and alert the existing private ops Telegram channel only on a green-to-red transition.
+
+inputs:
+  workflow-file:
+    description: Stable workflow filename used as the incident namespace.
+    required: true
+  needs-json:
+    description: Mandatory caller job results from toJSON(needs).
+    required: true
+  job-names-json:
+    description: Job ID to display-name prefix mapping for named jobs and matrix leaves.
+    required: false
+    default: '{}'
+  allowed-skips:
+    description: Comma-separated explicitly unselected job IDs; unexpected skips cannot close incidents.
+    required: false
+    default: ''
+  github-token:
+    description: Caller token with actions read and issues write.
+    required: true
+  telegram-bot-token:
+    description: Existing TELEGRAM_BOT_TOKEN credential, provisioned in Actions secrets.
+    required: false
+  telegram-operator-chat-id:
+    description: Existing private TELEGRAM_OPERATOR_CHAT_ID destination, never the public digest chat.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        node-version: '24.16.0'
+    - name: Reconcile workflow incidents
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        WORKFLOW_FILE: ${{ inputs.workflow-file }}
+        WORKFLOW_NEEDS: ${{ inputs.needs-json }}
+        WORKFLOW_JOB_NAMES: ${{ inputs.job-names-json }}
+        WORKFLOW_ALLOWED_SKIPS: ${{ inputs.allowed-skips }}
+        TELEGRAM_BOT_TOKEN: ${{ inputs.telegram-bot-token }}
+        TELEGRAM_OPERATOR_CHAT_ID: ${{ inputs.telegram-operator-chat-id }}
+      run: node scripts/ci/report-workflow-failure.ts

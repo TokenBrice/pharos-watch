@@ -178,3 +178,32 @@ jobs:
           npx tsx scripts/maintenance/publish-safety-score-map.ts summary
           --job-status="${JOB_STATUS}"
           --out-dir="${MAP_OUT_DIR}"
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [plan, render]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: safety-map-refresh.yml
+          needs-json: ${{ toJSON(needs) }}
+          job-names-json: '{"plan":"Plan publication","render":"Render and publish"}'
+          allowed-skips: ${{ needs.plan.result == 'success' && needs.plan.outputs.should_render == 'false' && 'render' || '' }}
+          github-token: ${{ github.token }}
+          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}
