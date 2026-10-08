@@ -22,11 +22,19 @@
       {
         "label": "Verified immutable USDu BSC source and holder-transfer ABI",
         "url": "https://sourcify.dev/server/v2/contract/56/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=sources,abi"
+      },
+      {
+        "label": "Unitas backing and custody overview",
+        "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+      },
+      {
+        "label": "HT Digital collateral sighting, 25 September 2026",
+        "url": "https://raw.githubusercontent.com/UnipayFI/POR/main/docs/20260925_090008_HTD_PoR_for_Unitas.pdf"
       }
     ],
-    "evidence": "Re-reviewed 2026-10-01. The Terms of Service dated 27 August 2026 explicitly state that Unipay does not have or claim the ability to freeze, burn, seize, or otherwise alter USDu or sUSDu held in a user's wallet; interface suspension is separate. This supersedes the adverse issuer-legal-power claim recorded by the 2026-08-08 review. Verified BSC USDu.sol has standard ERC-20 holder transfers, self/allowance-based burning, and owner-only minter replacement, with no holder blacklist, seizure, or pause surface. At finalized Solana slot 452213018, both RPC reads returned no freezeAuthority and only metadataPointer/tokenMetadata extensions. The still-active Solana mint authority and BSC issuance-admin powers remain Mint Authority risks rather than holder-freeze powers.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB01USDU)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Re-reviewed 2026-10-08. The current Terms of Service dated 27 August 2026 disclaim issuer power to freeze, burn, seize, or alter USDu/sUSDu in user wallets; interface suspension is separate. This supersedes the adverse issuer-legal-power claim recorded on 2026-08-08. Re-read verified BSC USDu.sol and inherited ERC-20 code: holder transfers are standard, burns require the holder or allowance, and owner-only minter replacement creates issuance power without a holder blacklist, seizure, pause, or token upgrade path. At finalized Solana slot 454577487, getAccountInfo returned freezeAuthority=null and only metadataPointer/tokenMetadata extensions, with no transfer hook or permanent delegate. Active mint authority remains a separate issuance risk. Upstream exposure also reviewed: Unitas documents WBTC, JLP (including USDC/USDT), and Copper/Ceffu off-exchange custody. HT Digital's 25 September sighting names BTC $36.241m, JLP $11.263m, USD1 $3.352m, BSC-USD $1.647m, U $0.435m, BNB $0.388m, and Other assets -$0.709m. It does not identify the BTC representation/custodian, map assets to custody rails, or reconcile all deployments; CEX balances include unrealised margin PnL. These facts establish upstream risk but do not establish full CEX custody or a non-overlapping issuer/custodian-controlled reserve share strictly above 50%, as required for Upstream by the current FreezeWatch policy. Retain No as no qualifying exposure resolved under that policy, not as proof of zero upstream risk; revisit when instrument/custody weights resolve the threshold.",
+    "reviewer": "Codex targeted freezeability review",
+    "reviewedAt": "2026-10-08"
   },
   "oracleRisk": {
     "tier": "oracleless",

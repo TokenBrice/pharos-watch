@@ -1,7 +1,7 @@
 {
   "id": "steakusdc-steakhouse",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Website",
@@ -10,11 +10,23 @@
       {
         "label": "Verified exact-deployment VaultV2 source and gate abdication semantics",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51"
+      },
+      {
+        "label": "Sourcify verified exact-deployment VaultV2 source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeef088055857739c12cd3765f20b7679def0f51?fields=sources,abi"
+      },
+      {
+        "label": "Circle USDC blacklist authority",
+        "url": "https://github.com/circlefin/stablecoin-evm/blob/master/contracts/v1/Blacklistable.sol"
+      },
+      {
+        "label": "Circle USDC holder-transfer blacklist enforcement",
+        "url": "https://github.com/circlefin/stablecoin-evm/blob/master/contracts/v1/FiatTokenV1.sol"
       }
     ],
-    "evidence": "The previous inferred Yes did not identify an exercised freeze control. At Ethereum block 26095798, receiveSharesGate, sendSharesGate, and receiveAssetsGate were zero, and the setters for all three were permanently abdicated. The verified immutable VaultV2 source enforces abdication and has no administrator-only seizure, forced holder burn, or upgrade path. Allocation governance and USDC's underlying freeze exposure remain separate risks; this verdict covers the vault share's direct blacklistability.",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA13BUIDL)",
-    "reviewedAt": "2026-10-01"
+    "evidence": "Re-reviewed 2026-10-08. At Ethereum block 26148411, asset() returned canonical USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48); receiveSharesGate, sendSharesGate, and receiveAssetsGate were zero, and all three setters were permanently abdicated. The verified immutable VaultV2 source enforces abdication and has no administrator-only seizure, forced holder burn, or upgrade path. Those facts exclude a direct holder-freeze verdict but do not remove the vault's USDC exposure: Circle can blacklist USDC accounts and block underlying transfers, including settlement to a blacklisted recipient. Under the tracked parent/wrapper rule, steakUSDC therefore inherits USDC's freeze exposure and is Upstream. This corrects the 2026-10-01 No verdict, which scoped its conclusion to direct share controls and omitted the required parent inheritance.",
+    "reviewer": "Codex targeted freezeability review",
+    "reviewedAt": "2026-10-08"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
