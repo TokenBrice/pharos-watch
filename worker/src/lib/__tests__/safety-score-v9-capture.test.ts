@@ -97,5 +97,10 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     expect(input.v9PublicationInputHealth.redemption.state).toBe("current");
     expect(Object.keys(input.redemptionBackstopMap)).toEqual([other.id]);
     expect(input.inputFreshness.redemptionBackstops.stale).toBe(false);
+    expect(input.pipelineGapByAssetId?.["iusd-infinifi"]).toEqual([expect.objectContaining({
+      verdict: expect.objectContaining({ scope: expect.objectContaining({ pillar: "exit", factorKey: "capacity" }),
+        proof: expect.objectContaining({ rejectionCode: "redemption-reserve-input-freshness-unverified", sourceGenerationId: "redemption:actual" }) }),
+    })]);
+    expect(input.pipelineGapByAssetId?.[other.id]).toBeUndefined();
   });
 });

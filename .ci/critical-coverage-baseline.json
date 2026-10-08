@@ -248,6 +248,7 @@
     "worker/src/lib/safety-score-v9/publication-replay-capture.ts": 92.8,
     "worker/src/lib/safety-score-v9/publication-runner.ts": 85.3,
     "worker/src/lib/safety-score-v9/publication-store.ts": 79.6,
+    "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts": 100,
     "worker/src/lib/safety-score-v9/resource-budget.ts": 100,
     "worker/src/lib/safety-score-v9/supply-attribution-capture-budget.ts": 100,
     "worker/src/lib/safety-score-v9/supply-attribution-contract.ts": 92.5,
