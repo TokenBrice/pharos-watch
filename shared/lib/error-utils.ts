@@ -17,9 +17,10 @@ function errorProperty(value: object, key: string, isError = false): unknown {
  * Bounded, runtime-neutral diagnostics. Workers supply their existing sanitizer
  * so every string is redacted before bounds, rather than truncating secrets.
  */
-export function describeError(
+function buildErrorDescriptor(
   error: unknown,
-  sanitize: (value: string) => string = (value) => value,
+  sanitize: (value: string) => string,
+  includeStack: boolean,
 ): ErrorDescriptor {
   const seen = new Set<object>();
   let nodes = 0;
@@ -51,7 +52,7 @@ export function describeError(
     if (object) {
       const code = errorProperty(object, "code", isError);
       if (typeof code === "string" || typeof code === "number") descriptor.code = bounded(String(code), 100);
-      const stack = depth === 0 ? errorProperty(object, "stack", isError) : undefined;
+      const stack = includeStack && depth === 0 ? errorProperty(object, "stack", isError) : undefined;
       if (typeof stack === "string") descriptor.stack = bounded(stack, 800);
       const cause = errorProperty(object, "cause", isError);
       const children = errorProperty(object, "errors", isError);
@@ -80,6 +81,18 @@ export function describeError(
   return visit(error, 0);
 }
 
-export function toErrorMessage(error: unknown): string {
-  return describeError(error).message;
+export function describeError(
+  error: unknown,
+  sanitize: (value: string) => string = (value) => value,
+): ErrorDescriptor {
+  return buildErrorDescriptor(error, sanitize, true);
+}
+
+// Message-only callers must not format lazy stacks: V8 can retain multi-MiB
+// script line tables even though the caller discards the descriptor's stack.
+export function toErrorMessage(
+  error: unknown,
+  sanitize: (value: string) => string = (value) => value,
+): string {
+  return buildErrorDescriptor(error, sanitize, false).message;
 }
