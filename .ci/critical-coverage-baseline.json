@@ -292,6 +292,7 @@
     "worker/src/lib/safety-score-v9/peg-provenance.ts": 84.7,
     "worker/src/lib/safety-score-v9/publication-assessment.ts": 93.1,
     "worker/src/lib/safety-score-v9/publication-codec.ts": 84.8,
+    "worker/src/lib/safety-score-v9/publication-journal.ts": 93.3,
     "worker/src/lib/safety-score-v9/publication-replay-capture.ts": 92.8,
     "worker/src/lib/safety-score-v9/publication-runner.ts": 85.3,
     "worker/src/lib/safety-score-v9/publication-store.ts": 79.6,

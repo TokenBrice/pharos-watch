@@ -531,6 +531,7 @@ export async function computeSafetyScoreV9(
       supplyAttributionGeneration: supplyAttributionGenerationState,
       resourcePressure: resourceAdmission.resourcePressure,
       publication: publicationDiagnostics,
+      journal: publication.journal,
     }),
     productivity: {
       productive: publication.status === "published",

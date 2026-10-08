@@ -48,6 +48,7 @@
 | 0258     | `0258_scheduled_checkpoint_supersession.sql`              | Add nullable exact superseder identity JSON to scheduled recovery checkpoints; no backfill, reset, or historical rewrite. |
 | 0259     | `0259_cron_slot_execution_started_at_indexes.sql`          | Add idempotent overall/per-slot actual-start indexes for request-time scheduler delivery evidence. |
 | 0260     | `0260_scheduled_child_attempts.sql`                        | Add nullable slot child-marker protocol and immutable scheduled-child attempt/terminal claims with executing-slot cascade retention; no backfill or producer-history rebuild. |
+| 0261     | `0261_safety_score_publication_journal.sql`                 | Add change-only, generation-addressed compact accepted Safety cards and accepted/held attempt lineage; no backfill or scoring change. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -260,7 +261,7 @@ Queued 2026-10-08 (all operations remain deferred; each requires the compatible 
 
 ## Append-only Retention Policy
 
-Current owner rulings for append-only operational/product tables that are intentionally absent from `runPruneCronHistory`:
+Current owner rulings for append-only operational/product tables; permanent archives stay outside `runPruneCronHistory`, while bounded evidence rows identify their prune owner below:
 
 | Table                  | Retention policy                                 | Reason                                                                                                                                                                                                                                            |
 | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -277,6 +278,7 @@ Current owner rulings for append-only operational/product tables that are intent
 | `safety_score_history_v2` | Product archive - keep forever | Version-aware score history preserves methodology boundaries, rollback/restoration provenance, and exact model/input identities; public history and Tape can depend on old rows indefinitely. |
 | `report_card_evidence_journal` | Retained accepted enrichment - 45 days and 32 rows per asset | Excluded from the base-input digest; exact captures retain at most the latest two bounded rows per asset. `fact-set-context.ts` consumes captured reserve-failure/pipeline-gap causes. Canonical accepted base/delta retention remains supported; not every row changes a scalar score. Keep table, indexes and capture fields. |
 | `safety_score_v9_supply_attribution_journal` | Retained accepted enrichment - 45 days and 32 rows per asset | Excluded from the base-input digest; exact captures retain at most the latest two bounded rows per asset. `extension-supply.ts` consumes captured null-review cause/responsibility/rejection and generation metadata. Canonical accepted base/delta retention remains supported; not every row changes a scalar score. Keep table, indexes and capture fields. |
+| `safety_score_publication_journal`, `safety_score_publication_attempts` | Operational attribution evidence - 120 days | Change-only compact cards and every accepted/held attempt retain identities, pillar/peg/cap/route diagnostics and pinned input lineage; daily `prune-cron-history` drains each table in bounded batches. This is not a full replay archive or the permanent public grade history. |
 | `depeg_resolver_publication_snapshots_v2`, `depeg_resolver_publication_snapshot_refs` | Publication audit archive - keep forever until the Phase B archive rollout | Every published DDR generation must remain recoverable. Unchanged quarter-hourly publications now write a narrow reference row instead of a payload, so growth follows content changes; the compressed payloads move to R2 under their `base_payload_hash` only through the separate reviewed destructive rollout that replaces `trg_ddr_publication_snapshots_v2_no_delete`. Reference rows are never archived. |
 
 ## Reviewed Data Migrations
@@ -402,6 +404,7 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0253_supply_history_price_observed_at.sql`: apply before the Worker release that writes and reads `price_observed_at` (mint-burn-flow v6.23) — the new Worker selects the column. Worker rollback ignores the additive nullable column; retain it. A prior Worker's snapshot writes leave it NULL, so those rows' prices are simply not mint/burn event evidence after roll-forward (events stay unpriced and their hours `partial` until heal or repair). No backfill: historical observation clocks cannot be reconstructed.
 - `0258_scheduled_checkpoint_supersession.sql`: restore the prior Worker for a code rollback; keep the additive nullable identity column and retained supersession records. Rollback may restore targeted retry churn but must not resurrect retired checkpoint debt or clear live leases. Restore D1 only for unexpected schema/data mutation using the verified pre-window bookmark.
 - `0260_scheduled_child_attempts.sql`: roll back both scripts without removing the additive nullable protocol column, attempt ledger, producer histories or publications. Preserve terminal claims and live leases/checkpoints; restore D1 only for unexpected schema/data mutation using the verified pre-window bookmark.
+- `0261_safety_score_publication_journal.sql`: apply before Worker activation; old Workers ignore the two new tables and indexes. Retain the pre-window Time Travel bookmark, migration ledger and deployed public/heavy versions. Worker rollback stops journaling without reversing accepted scores or deleting evidence; schema removal requires a separate cleanup rollout. Observe the first heavy accepted and held attempts and daily bounded prune.
 
 ## Rollback Procedure
 

@@ -41,6 +41,27 @@ describe("runPruneCronHistory", () => {
     await expect(runPruneCronHistory(db, controller.signal)).rejects.toThrow("cron history prune aborted");
   });
 
+  it("prunes both Safety evidence stores at 120 days while retaining the exact boundary", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - 120 * 86_400;
+    for (const [id, clock] of [["old", cutoff - 1], ["boundary", cutoff]] as const) {
+      insert(sqlite, `INSERT INTO safety_score_publication_journal
+        (generation_id, stablecoin_id, published_at, methodology_version, policy_digest, evaluation_build_digest, compact_digest, compact_json, input_lineage_json)
+        VALUES (?, 'coin', ?, '10.12', 'policy', 'build', 'digest', '{}', '{}')`, id, clock);
+      insert(sqlite, `INSERT INTO safety_score_publication_attempts
+        (attempt_id, generation_id, attempted_at, published_at, outcome, hold_reason_codes_json, methodology_version, policy_digest, evaluation_build_digest, input_lineage_json)
+        VALUES (?, ?, ?, ?, 'held', '["dex-stale"]', '10.12', 'policy', 'build', '{}')`, id, id, clock, clock);
+    }
+    const result = await runPruneCronHistory(db);
+    expect(sqlite.prepare("SELECT generation_id FROM safety_score_publication_journal").all()).toEqual([{ generation_id: "boundary" }]);
+    expect(sqlite.prepare("SELECT attempt_id FROM safety_score_publication_attempts").all()).toEqual([{ attempt_id: "boundary" }]);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      safetyScoreJournalDeleted: 1, safetyScoreAttemptsDeleted: 1, cutoffSafetyScoreJournalSec: cutoff,
+      safetyScoreJournalCappedAtLimit: false, safetyScoreAttemptsCappedAtLimit: false,
+    });
+  });
+
   it.each([
     {
       label: "removes cron_runs older than 7 days and keeps newer rows",

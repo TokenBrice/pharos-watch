@@ -52,6 +52,18 @@ const { runSafetyScoreV9Publication } = await import(
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 
 describe("Safety Score V9 publication runner", () => {
+  it("does not roll back accepted cards when the journal D1 read throws", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    try {
+      sqlite.exec("DROP TABLE safety_score_publication_journal");
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
+      expect(result).toMatchObject({ status: "published", journal: { status: "failed", reason: "journal-write-failed", rows: 0 } });
+      expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
+      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+    } finally { sqlite.close(); }
+  });
   it("publishes despite replay serialization failure and retains the previous generation pair", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");

@@ -36,6 +36,7 @@ import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
 import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
+import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -87,6 +88,7 @@ export type SafetyScoreV9PublicationRunResult =
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
       schemaCutoverReason?: "schema-cutover-6-to-7";
+      journal: SafetyScoreJournalResult;
     }
   | {
       status: "held";
@@ -102,6 +104,7 @@ export type SafetyScoreV9PublicationRunResult =
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
+      journal: SafetyScoreJournalResult;
     }
   | {
       status: "failed";
@@ -109,6 +112,7 @@ export type SafetyScoreV9PublicationRunResult =
       stage: SafetyScoreV9PublicationFailureStage;
       code: string;
       message: string;
+      journal: SafetyScoreJournalResult;
     };
 
 function sameBaseInput(
@@ -513,9 +517,16 @@ export async function runSafetyScoreV9Publication(
         publicationClockSec: fixedInput.clockSec,
         signal: publicationSignal,
       });
+      const journal = await journalSafetyScorePublication({
+        db: input.db, publication, fixedInput, attemptId, attemptedAtSec,
+        outcome: "held", holdReasons: assessment.reasons,
+        transferMaterialityGenerationId: input.transferMaterialityGeneration?.generationId ?? null,
+        signal: publicationSignal,
+      });
       return {
         status: "held",
         attemptId,
+        journal,
         attemptedPublicationGenerationId:
           publication.publicationGenerationId,
         reasons: assessment.reasons,
@@ -606,9 +617,16 @@ export async function runSafetyScoreV9Publication(
         metadata: { error: String(error).slice(0, 200) },
       });
     }
+    const journal = await journalSafetyScorePublication({
+      db: input.db, publication, fixedInput, attemptId, attemptedAtSec,
+      outcome: "accepted",
+      transferMaterialityGenerationId: input.transferMaterialityGeneration?.generationId ?? null,
+      signal: publicationSignal,
+    });
     return {
       status: "published",
       attemptId,
+      journal,
       publicationGenerationId: publication.publicationGenerationId,
       candidateId: publication.candidateId,
       ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
@@ -634,6 +652,7 @@ export async function runSafetyScoreV9Publication(
       status: "failed",
       attemptId,
       stage: failureStage,
+      journal: { status: "skipped", reason: "publication-failed", rows: 0 },
       ...failure,
     };
   }
