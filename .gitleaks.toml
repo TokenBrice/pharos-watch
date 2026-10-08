@@ -507,3 +507,13 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:d80ceabb-07a6-4dc4-9020-70ec86b4f42f|bf215cdc-f549-474d-8ca9-5a1810fabeb8|0386fd1d-2316-4320-b799-96ec6c4e827e|a14472d0-79d6-41bf-89e7-82cb699e77ed|b06233b0-229f-47ce-b622-127fb63f231f|79d5fd49-deae-41b4-a809-9e1afaa02f32|f8496498-5cb4-4fef-bc4e-417919b00eb1|234509c8-e339-4a05-8ac9-a101c5963313|b41923ad-1f3b-42af-9ef3-625a1a029e21|cad709b6-47f1-427d-ad14-443fa5cd76e1|3cad87ae-7846-4bfe-ba2e-411fbf166f60|54e9714e-c65f-4b0c-8bcf-c7869956dd20)$''']
 paths = ['''(?:^|/)shared/data/stablecoins/domains/compliance/[a-z0-9-]+\.json$''']
+
+# Matrixdock STBT terms (same reviewed public GitBook download token as the
+# compliance sidecar entry above), cited by the STBT redemption route config.
+[[allowlists]]
+description = "Reviewed Matrixdock STBT terms GitBook download token in its redemption route config"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^79d5fd49-deae-41b4-a809-9e1afaa02f32$''']
+paths = ['''(?:^|/)shared/lib/redemption-backstop-configs/offchain-issuer/discovery\.ts$''']
