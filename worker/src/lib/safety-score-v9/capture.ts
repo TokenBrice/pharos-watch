@@ -34,6 +34,8 @@ import type { ReportCardEvidenceJournalByIdV1 } from "@shared/lib/report-card-ev
 import { compareCodeUnits } from "@shared/lib/compare";
 import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
 import { logWorkerEvent } from "../structured-log";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
@@ -239,6 +241,15 @@ export async function buildNativeSafetyScoreV9Capture(
   const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
   const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
   const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
+  if (!redemptionStale) {
+    for (const [assetId, reason] of Object.entries(quarantined)) {
+      const routeFamily = getRedemptionBackstopConfig(assetId)?.routeFamily;
+      if (!routeFamily || !activeAssetIds.includes(assetId)) continue;
+      (pipelineGapByAssetId[assetId] ??= []).push(captureRedemptionReserveQuarantine({
+        assetId, redemptionGenerationId, routeFamily, reason, clockSec,
+      }));
+    }
+  }
 
   // Collateral drift itself keeps running in the reserve/status lane; only the
   // capture of its diagnostic output drops. The fallback list stays: the V9

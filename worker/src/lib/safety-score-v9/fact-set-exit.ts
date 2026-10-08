@@ -23,6 +23,8 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
+import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
+import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
 import type {
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
@@ -743,6 +745,14 @@ export function buildRoutes(context: AssetBuildContext): {
   if (suspension && !routes.some((route) => route.routeId === suspension.routeId && route.lane === "redemption")) {
     routes.push(buildSuspendedRoute(context, suspension));
   }
+  const generationId = context.fixedInput.redemptionGenerationId;
+  // A redemption row withheld at capture because its consumed reserve evidence
+  // lost admission keeps the same producer-failed rail, bound to that verdict.
+  const quarantineScope = config && !redemption
+    ? redemptionReserveQuarantineScope(context.asset.assetId, generationId, config.routeFamily) : null;
+  const quarantine = quarantineScope
+    ? findRedemptionReserveQuarantine(context.fixedInput.pipelineGapByAssetId, context.asset.assetId, quarantineScope) : undefined;
+  let unavailableRail: { routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"]; evidenceId: string; capacityGapId: string } | null = null;
   if (
     redemption?.provider === "reserve-sync-metadata" &&
     redemption.resolutionState === "missing-capacity" &&
@@ -751,7 +761,6 @@ export function buildRoutes(context: AssetBuildContext): {
     !routes.some((route) => route.lane === "redemption")
   ) {
     const routeId = `redemption:${context.asset.assetId}:${redemption.routeFamily}`;
-    const generationId = context.fixedInput.redemptionGenerationId;
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const evidenceId = addEvidence(context, createV9EvidenceReference({
       evidenceId: `${context.asset.assetId}:redemption-capacity-unavailable`,
@@ -765,13 +774,32 @@ export function buildRoutes(context: AssetBuildContext): {
         reason: "Captured redemption resolutionState is missing-capacity for an open live-direct telemetry rail." },
     }, context.fixedInput.clockSec));
     const message = "The configured live-only redemption route has unavailable capacity telemetry.";
-    const gapId = routeGap(context, routeKey, "capacity", "missing",
-      "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]);
+    unavailableRail = { routeId, routeFamily: "protocol-redemption", evidenceId, capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+      "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]) };
+  } else if (quarantine && quarantineScope && !routes.some((route) => route.lane === "redemption")) {
+    const routeKey = quarantineScope.routeKey!;
+    const evidenceId = addEvidence(context, quarantine.evidence);
+    unavailableRail = {
+      routeId: `redemption:${context.asset.assetId}:${config!.routeFamily}`,
+      routeFamily: config!.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
+      evidenceId,
+      capacityGapId: addGap(context, createV9FactGapV3({
+        gapId: `${context.asset.assetId}:gap:route:${routeKey}:capacity`,
+        reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
+        observationState: "missing", responsibility: v9EvidenceResponsibilityForCauseProof(quarantine.verdict.proof),
+        path: optionalExitV9Path(routeKey), message: quarantine.evidence.rejection!.reason,
+        evidenceRefIds: [evidenceId], causeScope: quarantineScope, causeProof: quarantine.verdict.proof,
+      })),
+    };
+  }
+  if (unavailableRail) {
+    const { routeId, routeFamily, evidenceId, capacityGapId } = unavailableRail;
+    const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.exit.same-notional-route"),
       observationState: "missing",
       evidenceRefIds: [evidenceId],
-      gapIds: [gapId],
+      gapIds: [capacityGapId],
     });
     const costGapId = routeGap(context, routeKey, "cost", "bounded-unknown", "missing-same-notional-route",
       "unresearched", "No current same-notional cost datum is established for the unavailable rail.", []);
@@ -779,7 +807,7 @@ export function buildRoutes(context: AssetBuildContext): {
       observationState: "bounded-unknown", gapIds: [costGapId], evidenceRefIds: [evidenceId] });
     routes.push({
       routeKey, routeId, lane: "redemption", sourceGenerationId: generationId,
-      routeFamily: "protocol-redemption",
+      routeFamily,
       holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
       modelConfidence: "unknown", observationConfidence: "unknown", observationHistory: null,
       evidenceKind: "documented-terms", coverageClass: "diagnostic",
