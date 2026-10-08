@@ -27,9 +27,9 @@ vi.mock("@shared/lib/psi-eligible", async () => {
   // Vitest hoists this factory before static test imports are initialized.
   const { supplyMetadata } = await import("./backfill-supply-history.test-support");
   const fixtures = supplyMetadata();
-  const { SHADOW_STABLECOINS } = await import("@shared/lib/shadow-stablecoins");
-  // The ID resolver validates shadow membership at import time.
-  fixtures.push(...SHADOW_STABLECOINS);
+  const { PSI_HISTORICAL_ASSETS } = await import("@shared/lib/psi-historical-assets");
+  // The ID resolver validates historical-asset membership at import time.
+  fixtures.push(...PSI_HISTORICAL_ASSETS);
   psiEligibleMocks.stablecoins.push(...fixtures);
   for (const coin of fixtures) psiEligibleMocks.metaById.set(coin.id, coin);
   psiEligibleMocks.defaultStablecoins.push(...fixtures);

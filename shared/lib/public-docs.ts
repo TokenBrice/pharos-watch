@@ -131,9 +131,9 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
   },
   {
     slug: "shadow-stablecoins",
-    title: "Shadow Stablecoins",
+    title: "PSI Historical Assets",
     summary:
-      "Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.",
+      "Off-catalog PSI historical assets: authoritative continuity, monitoring eligibility, public listing exclusions and unavailable source history.",
     group: "methodology",
   },
   {

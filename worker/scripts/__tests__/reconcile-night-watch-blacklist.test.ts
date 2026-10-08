@@ -237,6 +237,7 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(JSON.stringify(summary)).not.toContain(bookmark);
 
     const { sqlite } = databases.open();
+    sqlite.exec("ALTER TABLE blacklist_events DROP COLUMN amount");
     for (const statement of mutationStatements) sqlite.exec(statement);
     const finalStatements = executeStatements.mock.calls[1]?.[0] as string[];
     for (const statement of finalStatements) sqlite.exec(statement);
@@ -244,6 +245,15 @@ describe("Night Watch blacklist reconciliation", () => {
       .prepare("SELECT COUNT(*) AS count FROM blacklist_events WHERE reconciliation_manifest_id = ?")
       .get(frozenManifest.manifestId) as { count: number };
     expect(stored.count).toBe(86);
+    for (const event of frozenManifest.events) {
+      const native = amountNative(event);
+      expect(sqlite.prepare("SELECT amount_native, amount_usd_at_event, amount_source, amount_status FROM blacklist_events WHERE id = ?").get(event.id)).toEqual({
+        amount_native: native,
+        amount_usd_at_event: native,
+        amount_source: native == null ? "unavailable" : "event",
+        amount_status: native == null ? "recoverable_pending" : "resolved",
+      });
+    }
     const tail = sqlite
       .prepare("SELECT reconciliation_manifest_id, reconciliation_run_id FROM blacklist_events WHERE id = ?")
       .get(outOfManifestTailEvent.id) as {

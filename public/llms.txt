@@ -126,7 +126,7 @@
 - [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.
 - [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.
 - [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.
-- [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.
+- [PSI Historical Assets](https://pharos.watch/docs/shadow-stablecoins/): Off-catalog PSI historical assets: authoritative continuity, monitoring eligibility, public listing exclusions and unavailable source history.
 - [Design Language](https://pharos.watch/docs/design-language/): Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.
 - [Design Tokens](https://pharos.watch/docs/design-tokens/): Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.
 

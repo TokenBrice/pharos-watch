@@ -246,6 +246,14 @@ function DewsTechnicalDetails() {
           reading built from the same components; one asset&apos;s unreadable detail never holds the whole run.
         </p>
         <p>
+          Since shared Depeg/DEWS methodology v6.33, Liquidity Erosion pairs the historical score and TVL from
+          the nearest positive-TVL daily observation with coverage confidence at least 0.5, within an inclusive
+          36 hours of the seven-day target, preserving its original date. Closer weak observations cannot replace
+          an eligible anchor. Without one both historical anchors are unavailable, not calm; weak public history
+          remains visible. This can change scores and bands and requires owner-approved production-history replay
+          before release. No replay result is claimed here.
+        </p>
+        <p>
           The Yield Anomaly sub-signal combines legacy warning strings with populated Yield Intelligence source-risk,
           source-switch, and rank-attribution stress evidence. Neutral, missing, or malformed structured yield rows
           remain unavailable rather than adding zero-stress signal weight.

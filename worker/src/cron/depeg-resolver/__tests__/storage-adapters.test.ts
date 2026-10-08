@@ -247,7 +247,7 @@ describe("DDR storage adapters", () => {
       source: "live",
       sourceFingerprint: "A".repeat(64),
       publicTrackedAtFirstSeen: true,
-      psiShadowAtFirstSeen: false,
+      psiOffCatalogAtFirstSeen: false,
       registrySnapshot: { tracked: true },
     } as const;
     const options = {

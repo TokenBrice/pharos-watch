@@ -29,6 +29,7 @@ describe("event kyc.rip reconciliation", () => {
     "persists only matching blacklist receipts: %s",
     async (scenario) => {
       const { sqlite } = databases.open();
+      sqlite.exec("ALTER TABLE blacklist_events DROP COLUMN amount");
       const candidate = eventRows[0]!;
       const txHash = candidate.tx_hash as `0x${string}`;
       const contract = "0xdac17f958d2ee523a2206206994597c13d831ec7" as const;
@@ -61,12 +62,13 @@ describe("event kyc.rip reconciliation", () => {
         { d1, fetchImpl: vi.fn().mockResolvedValue(okPayload(rows)),
           client: { getTransactionReceipt, getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }) } },
       );
-      const stored = sqlite.prepare("SELECT id, address, tx_hash, event_type, timestamp, block_number, contract_address, stablecoin, chain_id FROM blacklist_events").all();
+      const stored = sqlite.prepare("SELECT id, address, tx_hash, event_type, timestamp, block_number, contract_address, stablecoin, chain_id, amount_native, amount_usd_at_event FROM blacklist_events").all();
       const success = scenario === "matching" || scenario === "partial-failure";
       expect(stored).toEqual(success ? [{
         id: `ethereum-${txHash}-0x7`, address: candidate.address, tx_hash: txHash,
         event_type: "blacklist", timestamp: 1_700_000_000, block_number: 20_000_000,
         contract_address: contract, stablecoin: "USDT", chain_id: "ethereum",
+        amount_native: null, amount_usd_at_event: null,
       }] : []);
       expect(summary.inserted).toBe(success ? 1 : 0);
     },

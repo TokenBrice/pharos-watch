@@ -35,7 +35,7 @@ export interface DdrCanonicalIncidentInput {
   source: string | null;
   sourceFingerprint: string | null;
   publicTrackedAtFirstSeen: boolean;
-  psiShadowAtFirstSeen: boolean;
+  psiOffCatalogAtFirstSeen: boolean;
   registrySnapshot: Record<string, unknown>;
 }
 

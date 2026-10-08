@@ -9,7 +9,7 @@ import {
 import { SUPPLY_SNAPSHOT_UPSERT_PREFIX } from "../lib/supply-history-db";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { prepareCacheUpsert } from "../lib/db-cache";
-import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
+import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
@@ -81,7 +81,7 @@ export async function snapshotSupply(
   const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
   const configuredRequiredActiveIds = options.requiredActiveIds ?? [...WORKER_ACTIVE_IDS];
   const snapshotEligibleIds = new Set(
-    options.snapshotEligibleIds ?? [...WORKER_ACTIVE_IDS, ...SHADOW_IDS],
+    options.snapshotEligibleIds ?? [...WORKER_ACTIVE_IDS, ...PSI_HISTORICAL_IDS],
   );
   const preflight = await preflightSupplySnapshot(db, {
     nowSec: options.nowSec,

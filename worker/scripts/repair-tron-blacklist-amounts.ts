@@ -154,7 +154,7 @@ export function assertTronReplayEvidenceFresh(input: unknown, nowMs: number): vo
 
 function guard(repair: TronReplayRepair): string {
   const e = repair.event;
-  return `(id=${sqlString(e.id)} AND chain_id='tron' AND stablecoin='USDT' AND event_type='blacklist' AND contract_address=${sqlString(TOKEN)} AND address=${sqlString(e.address)} AND tx_hash=${sqlString(e.tx_hash)} AND block_number=${e.block_number} AND timestamp=${e.timestamp} AND config_key=${sqlString(e.configKey)} AND amount_native IS NULL AND amount_usd_at_event IS NULL AND amount IS NULL AND amount_status IN ('recoverable_pending','provider_failed','ambiguous','permanently_unavailable') AND suppression_reason IS NULL)`;
+  return `(id=${sqlString(e.id)} AND chain_id='tron' AND stablecoin='USDT' AND event_type='blacklist' AND contract_address=${sqlString(TOKEN)} AND address=${sqlString(e.address)} AND tx_hash=${sqlString(e.tx_hash)} AND block_number=${e.block_number} AND timestamp=${e.timestamp} AND config_key=${sqlString(e.configKey)} AND amount_native IS NULL AND amount_usd_at_event IS NULL AND amount_status IN ('recoverable_pending','provider_failed','ambiguous','permanently_unavailable') AND suppression_reason IS NULL)`;
 }
 
 export function buildTronReplayRepairSql(repairs: TronReplayRepair[], hash: string, bookmark: string, nowSec: number): string[] {
@@ -177,7 +177,7 @@ export function buildTronReplayRepairSql(repairs: TronReplayRepair[], hash: stri
   // SAFETY: identities/provenance use sqlString; numeric CASE values come from validated raw amounts and integer timestamps.
   return [
     `INSERT INTO admin_action_audit(created_at,actor,action,target,result,details_json,intent_key) SELECT ${nowSec},'operator-cli',${sqlString(SCRIPT)},'tron-USDT',CASE WHEN (SELECT COUNT(*) FROM blacklist_events WHERE ${where})=${repairs.length} THEN 'ok' ELSE 'guard_failed' END,${sqlString(details)},${sqlString(hash)};`,
-    `UPDATE blacklist_events SET amount=${value},amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${provenance},provenance_observed_at=${observedAt} WHERE ${where};`,
+    `UPDATE blacklist_events SET amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${provenance},provenance_observed_at=${observedAt} WHERE ${where};`,
     `DELETE FROM cache WHERE key IN (${getBlacklistDerivedCacheKeys().map(sqlString).join(",")});`,
   ];
 }

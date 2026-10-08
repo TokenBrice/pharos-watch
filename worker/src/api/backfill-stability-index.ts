@@ -277,7 +277,7 @@ export async function handleBackfillStabilityIndex({
                   mcap7dChangePct: input.mcap7dChangePct,
                   eligibleUniverseCount: input.eligibleUniverseCount,
                   coveredUniverseCount: input.coveredUniverseCount,
-                  shadowCoverageCount: input.shadowCoverageCount,
+                  historicalAssetCoverageCount: input.historicalAssetCoverageCount,
                   historicalPriceCoverageCount: input.historicalPriceCoverageCount,
                   peakDeviationFallbackCount: input.peakDeviationFallbackCount,
                   openDepegsWithoutPrice: input.openDepegsWithoutPrice,

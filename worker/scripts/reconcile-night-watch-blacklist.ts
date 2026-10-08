@@ -668,14 +668,14 @@ function eventUpsertStatement(
   const amountSource = amountNative == null ? "unavailable" : "event";
   const amountStatus = amountNative == null ? "recoverable_pending" : "resolved";
   return `INSERT INTO blacklist_events
-    (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native,
+    (id, stablecoin, chain_id, chain_name, event_type, address, amount_native,
      amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp,
      methodology_version, contract_address, config_key, event_signature, event_topic0,
      suppression_reason, amount_attempt_count, amount_last_attempted_at, amount_last_error_class,
      amount_last_provider, explorer_tx_url, explorer_address_url, reconciliation_manifest_id,
      reconciliation_run_id, provenance_source, provenance_observed_at, source_event_index)
    VALUES (${sqlString(event.id)}, 'USDT', 'tron', 'Tron', ${sqlString(event.eventType)},
-     ${sqlString(event.address)}, ${amountNative ?? "NULL"}, ${amountNative ?? "NULL"},
+     ${sqlString(event.address)}, ${amountNative ?? "NULL"},
      ${amountNative ?? "NULL"}, ${sqlString(amountSource)}, ${sqlString(amountStatus)},
      ${sqlString(event.txHash)}, ${event.blockNumber}, ${timestamp}, ${sqlString(methodologyVersion)},
      ${sqlString(manifest.contractAddress)}, ${sqlString(manifest.configKey)},
