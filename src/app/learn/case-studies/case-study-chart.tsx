@@ -11,9 +11,9 @@ import { getCaseStudyChartDays } from "@/lib/case-study-event-window";
 
 /**
  * Live Pharos peg-deviation chart embedded in a case study. Hydrates
- * client-side via `useSupplyHistory` (fine under static export) and reuses the
- * coin's curated annotation overlay. Only rendered for data-rich coins where a
- * real series exists; historical pre-collection events omit `dataWidgets`.
+ * client-side via `useSupplyHistory` (fine under static export). Only rendered
+ * for data-rich coins where a real series exists; historical pre-collection
+ * events omit `dataWidgets`. Event annotation overlays are retired.
  */
 export function CaseStudyChart({
   widget,
@@ -37,7 +37,6 @@ export function CaseStudyChart({
         <PegDeviationChart
           data={data}
           pegCurrency="USD"
-          stablecoinId={widget.coinId}
           embedded
         />
       )}

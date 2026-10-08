@@ -40,9 +40,7 @@ interface ComplianceUrlState {
   regime: ComplianceRegimeFilter;
   status: ComplianceStatusFilter;
   type: MicaTokenType | "all";
-  tokenType: MicaTokenType | "all";
   peg: PegCurrency | "all";
-  pegCurrency: PegCurrency | "all";
 }
 
 const COMPLIANCE_STATUS_VALUES: readonly ComplianceStatusFilter[] = [
@@ -74,17 +72,7 @@ const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
     defaultValue: "all",
     allowedValues: COMPLIANCE_TOKEN_TYPE_VALUES,
   },
-  tokenType: {
-    kind: "enum",
-    defaultValue: "all",
-    allowedValues: COMPLIANCE_TOKEN_TYPE_VALUES,
-  },
   peg: {
-    kind: "enum",
-    defaultValue: "all",
-    allowedValues: COMPLIANCE_PEG_VALUES,
-  },
-  pegCurrency: {
     kind: "enum",
     defaultValue: "all",
     allowedValues: COMPLIANCE_PEG_VALUES,
@@ -126,7 +114,7 @@ function ComplianceViewTabs({
   );
 }
 
-function inferRegimeFromLegacyParams({
+function inferRegimeFromFilters({
   rawRegime,
   rawStatus,
   rawTokenType,
@@ -149,23 +137,16 @@ export function ComplianceClient() {
 
   const rawRegime = searchParams.get("regime") ?? "";
   const rawStatus = urlState.status;
-  // Legacy alias `tokenType` is read as a fallback for the canonical `type`
-  // param to keep old `/compliance` deep links working. Deprecated since the
-  // regime split; remove once analytics show no `tokenType=` traffic for a
-  // full release window (canonical writers below only ever emit `type`).
-  const rawTokenType = searchParams.has("type") ? urlState.type : urlState.tokenType;
-  const regimeFilter = inferRegimeFromLegacyParams({ rawRegime, rawStatus, rawTokenType });
+  const rawTokenType = urlState.type;
+  const regimeFilter = inferRegimeFromFilters({ rawRegime, rawStatus, rawTokenType });
   const statusFilter = normalizeComplianceStatusFilter(rawStatus, regimeFilter);
   const tokenTypeFilter = regimeFilter === "genius" ? "all" : normalizeMicaTokenTypeFilter(rawTokenType);
-  // Legacy alias `pegCurrency` -> canonical `peg`; same deprecation/removal plan
-  // as `tokenType` above.
-  const rawPeg = searchParams.has("peg") ? urlState.peg : urlState.pegCurrency;
-  const pegFilter = rawPeg;
+  const pegFilter = urlState.peg;
 
   const setRegimeFilter = useCallback((v: ComplianceRegimeFilter) => {
     trackEvent("filter_applied", { page: "compliance", filter_type: "regime", filter_value: v });
     trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: v });
-    writeUrlState({ regime: v, status: "all", type: "all", tokenType: "all" });
+    writeUrlState({ regime: v, status: "all", type: "all" });
   }, [writeUrlState]);
 
   const setStatusFilter = useCallback((v: ComplianceStatusFilter) => {
@@ -175,18 +156,18 @@ export function ComplianceClient() {
 
   const setTokenTypeFilter = useCallback((v: MicaTokenType | "all") => {
     trackEvent("filter_applied", { page: "compliance", filter_type: "type", filter_value: v });
-    writeUrlState({ type: v, tokenType: "all" });
+    writeUrlState({ type: v });
   }, [writeUrlState]);
 
   const setPegFilter = useCallback((v: PegCurrency | "all") => {
     trackEvent("filter_applied", { page: "compliance", filter_type: "peg", filter_value: v });
-    writeUrlState({ peg: v, pegCurrency: "all" });
+    writeUrlState({ peg: v });
   }, [writeUrlState]);
 
   const openOverviewStatus = useCallback((regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => {
     trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: regime });
     trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: status });
-    writeUrlState({ regime, status, type: "all", tokenType: "all" });
+    writeUrlState({ regime, status, type: "all" });
   }, [writeUrlState]);
 
   const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync(
@@ -320,8 +301,8 @@ export function ComplianceClient() {
                     <div>
                       <p className="pharos-kicker">GENIUS Implementation Watch</p>
                       <p className="text-xs text-muted-foreground">
-                        Source-backed signals before the Act is generally effective; these rows are not compliance
-                        determinations.
+                        Source-backed signals before the Act is generally effective, plus pre-launch assets even
+                        after effectiveness. These rows are not compliance determinations.
                       </p>
                     </div>
                     <span className="pharos-numeric text-xs text-muted-foreground">

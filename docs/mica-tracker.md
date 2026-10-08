@@ -146,13 +146,13 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 - `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
 - `src/components/compliance/compliance-client.tsx` — `ComplianceClient`, lazily loaded by the page shell; owns the filters and both regime tables.
-- `src/lib/compliance-model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only; pre-launch GENIUS rows may enter Implementation Watch, while frozen, quarantined, and delisted rows are excluded.
+- `src/lib/compliance-model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only. GENIUS rows stay in Implementation Watch before the explicitly released effective phase; pre-launch GENIUS rows stay in Watch even then, until normal catalog activation. Frozen, quarantined, and delisted rows are excluded.
 - `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 - `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
 
 **Columns (each regime table):** coin · status badge · pathway / type (EMT/ART, authorizationType, `significant` badge) · authority · issuer entity · row-expand toggle. Regime is a filter, not a column — each regime renders its own table. Source links, and for GENIUS rows the review evidence and reserve-disclosure detail, live in the expandable full-width row fold rather than in columns. The `regime=all` Overview directory has its own columns: coin · peg · MiCA status · GENIUS status.
 
-**Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
+**Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. Only these canonical keys select filters; retired query aliases are ignored.
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
@@ -171,7 +171,7 @@ Verify: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run seo:check
 Low-cost reuse, not required for MVP:
 
 - A global "key MiCA dates" strip on `/compliance/` using the anchors above.
-- Per-coin regulatory milestones via the **existing** `LaunchMilestone` `type: "regulatory"` (`LAUNCH_MILESTONE_TYPE_VALUES` in `core.ts`) and chart-annotation `"regulatory"` type, surfaced in the `/timeline/` feed ([tape-page.md](./tape-page.md)).
+- Per-coin regulatory milestones via the **existing** `LaunchMilestone` `type: "regulatory"` (`LAUNCH_MILESTONE_TYPE_VALUES` in `core.ts`), surfaced in the `/timeline/` feed ([tape-page.md](./tape-page.md)). The retained curated annotation corpus is editorial history, not a live chart overlay.
 
 No new infrastructure — these primitives already exist.
 

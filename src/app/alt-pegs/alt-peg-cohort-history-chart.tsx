@@ -217,8 +217,8 @@ export function AltPegCohortHistoryChart({
       coverageNote={
         coverageStartLabel ? (
           <p className="text-xs text-muted-foreground">
-            Coverage starts {coverageStartLabel}. This uses the legacy provider-wide stablecoin-charts cohort feed;
-            its live core-universe tail is withheld during the aggregate-policy transition to avoid a false drop.
+            Coverage starts {coverageStartLabel}. This historical provider-wide cohort feed includes selected
+            structural history overlays. No current core-universe point is appended because the populations differ.
             Cohorts below the current ${OTHER_THRESHOLD.toLocaleString("en-US")} latest-point threshold roll into
             Other.
           </p>

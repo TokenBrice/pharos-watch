@@ -6,6 +6,16 @@ import {
 } from "../feature-flags";
 
 describe("feature flag lifecycle", () => {
+  it("retains only permanent hero and review-gated presentation/rollback controls", () => {
+    expect(Object.keys(FEATURE_FLAGS)).toEqual([
+      "heroVerdict",
+      "quietDeviations",
+      "mobileStickySummary",
+      "depegResolver",
+      "depegResolverReviewer",
+    ]);
+  });
+
   it("keeps lifecycle metadata aligned with the boolean flag API", () => {
     expect(new Set(Object.keys(FEATURE_FLAG_LIFECYCLE))).toEqual(new Set(Object.keys(FEATURE_FLAGS)));
 

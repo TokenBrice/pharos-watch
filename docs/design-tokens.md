@@ -128,7 +128,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 ### Don't
 
 - Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
-- Hardcode hex values in chart components — use the JS token maps, except for intentional local canonical palettes: market-cap delta colors in `src/components/mcap-chart.tsx`, `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`, and `ANNOTATION_HEX_COLORS` in `src/components/chart-primitives/annotations.tsx`.
+- Hardcode hex values in chart components — use the JS token maps, except for intentional local canonical palettes: market-cap delta colors in `src/components/mcap-chart.tsx` and `PEG_BAND_HEX` in `src/components/peg-deviation-chart.tsx`.
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files
 

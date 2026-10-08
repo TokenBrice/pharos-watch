@@ -2,13 +2,10 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { useMarketDataChartWindow } from "./use-market-data-chart-window";
 import { MarketDataChartSyncProvider } from "./sync";
 
-vi.mock("@/hooks/use-chart-annotations", () => ({
-  useChartAnnotations: () => ({ data: [] }),
-}));
 
 const data = [
   { ts: new Date(2026, 4, 12).getTime() },
@@ -25,7 +22,6 @@ describe("useMarketDataChartWindow", () => {
         filteredData: data,
         margin,
         range: "90d",
-        stablecoinId: "test-coin",
       }),
     );
 
@@ -44,7 +40,6 @@ describe("useMarketDataChartWindow", () => {
         filteredData: data,
         margin,
         range: "30d",
-        stablecoinId: "test-coin",
       }),
     );
 
@@ -59,7 +54,7 @@ const syncWrapper = ({ children }: { children: ReactNode }) =>
 describe("useMarketDataChartWindow — brush window", () => {
   it("includes points exactly at both brush endpoints in data and domain", () => {
     const { result } = renderHook(
-      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d", stablecoinId: "test-coin" }),
+      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d" }),
       { wrapper: syncWrapper },
     );
 
@@ -72,7 +67,7 @@ describe("useMarketDataChartWindow — brush window", () => {
 
   it("narrows data and domain to a single-point brush, then restores when cleared", () => {
     const { result } = renderHook(
-      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d", stablecoinId: "test-coin" }),
+      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d" }),
       { wrapper: syncWrapper },
     );
 
@@ -87,7 +82,7 @@ describe("useMarketDataChartWindow — brush window", () => {
 
   it("yields empty data, null domain, and undefined ticks for a brush with no points", () => {
     const { result } = renderHook(
-      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d", stablecoinId: "test-coin" }),
+      () => useMarketDataChartWindow({ filteredData: data, margin, range: "90d" }),
       { wrapper: syncWrapper },
     );
 

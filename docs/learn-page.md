@@ -57,7 +57,7 @@ Reverse lookup helpers in the content registry let other surfaces deep-link into
 - `CASE_STUDY_BY_DEPEG_SLUG`
 - `caseStudySlugForEvent(coinId, tsMs)`
 
-Client surfaces must not import the full content registry. `src/hooks/use-chart-annotations.ts` reads the generated `client-index.ts`, which carries only the lookup maps and event-window resolver inputs needed for chart overlays — including the coin-id and cemetery-id maps `CASE_STUDY_CLIENT_BY_COIN_ID` and `CASE_STUDY_CLIENT_BY_CEMETERY_ID`, which have no server-registry counterpart.
+Client surfaces must not import the full content registry. The generated `src/lib/case-study-client-index.ts` owns compact case-study lookup maps for client consumers, including the coin-id and cemetery-id maps `CASE_STUDY_CLIENT_BY_COIN_ID` and `CASE_STUDY_CLIENT_BY_CEMETERY_ID`, which have no server-registry counterpart. The former live chart annotation hook is retired; case-study articles, their chart widgets and ordinary links remain.
 
 ---
 
@@ -88,7 +88,6 @@ Primary inbound surfaces:
 - Start Here content in `src/lib/start-here-content.ts`
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`
-- Stablecoin detail/chart annotations, via `caseStudySlugForEvent`
 - About, methodology, and taxonomy pages linking into mechanism explainers or glossary definitions
 
 ---

@@ -2,10 +2,7 @@
 // Do not edit by hand. Run `npm run prebuild` or `tsx scripts/maintenance/generate-case-study-client-index.ts`.
 
 import type { CaseStudyOutcome } from "@/lib/case-study-outcomes";
-import {
-  resolveCaseStudySlugForEvent,
-  type CaseStudyEventWindowResolverItem,
-} from "@/lib/case-study-event-window";
+import type { CaseStudyEventWindowResolverItem } from "@/lib/case-study-event-window";
 
 export interface CaseStudyClientSummary {
   readonly slug: string;
@@ -175,9 +172,9 @@ export const CASE_STUDY_CLIENT_BY_CEMETERY_ID: Record<string, CaseStudyClientSum
 };
 
 /**
- * Minimal event-window index used by chart annotations. Keep this module free
- * of imports from ./index or content modules; it is part of charted-page client
- * bundles.
+ * Event-window metadata retained for public route inventory and corpus parity.
+ * Keep this module free of article bodies; client lookup and palette consumers
+ * use the compact projections below.
  */
 export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] = [
   {
@@ -721,10 +718,3 @@ export const CASE_STUDY_CLIENT_LIST: readonly CaseStudyClientListEntry[] = [
   }
 ];
 
-/**
- * Resolve the case study that covers a charted event for `coinId` at `tsMs`
- * without importing article bodies into the client bundle.
- */
-export function caseStudySlugForEvent(coinId: string, tsMs: number): string | undefined {
-  return resolveCaseStudySlugForEvent(CASE_STUDY_EVENT_WINDOWS, coinId, tsMs);
-}

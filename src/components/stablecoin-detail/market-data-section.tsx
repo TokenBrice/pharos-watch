@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ChartAnnotationLegend } from "@/components/chart-primitives/annotations";
 import { ChartBrush, MarketDataChartSyncProvider, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
@@ -15,7 +14,6 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";
 import { McapChart } from "@/components/mcap-chart";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
-import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
@@ -45,11 +43,9 @@ interface MarketDataSectionProps {
 
 /**
  * Unified "Market Data" block pairing `McapChart` + `PegDeviationChart` under a
- * single time-range selector and a single shared annotation legend. The range
- * is owned here and pushed down via the `controlledRange` prop on each chart;
- * the legend spans the full supply-history window so it remains stable when
- * the range changes (reference-line markers inside each chart stay gated to
- * the visible window via `ifOverflow="hidden"`).
+ * single time-range selector. The range is owned here and pushed down via the
+ * `controlledRange` prop on each chart; shared brushing and crosshairs keep
+ * the ordinary price and market-cap series synchronized.
  */
 export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, updatedAtMs, frozenNote }: MarketDataSectionProps) {
   // 90d default: recent structure is the read this page optimizes for; "all"
@@ -122,12 +118,6 @@ function MarketDataSectionBody({
     setBrushedRange?.(null);
   }, [range, setBrushedRange]);
 
-  // Annotation legend reflects the brushed window when present, else the
-  // full controlled range.
-  const annotationFromMs = sync?.brushedRange?.[0] ?? brushDomain?.[0] ?? null;
-  const annotationToMs = sync?.brushedRange?.[1] ?? brushDomain?.[1] ?? null;
-  const { data: annotations } = useChartAnnotations(stablecoinId, annotationFromMs, annotationToMs);
-
   return (
     <section id="chart" aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
@@ -152,7 +142,6 @@ function MarketDataSectionBody({
               <McapChart
                 data={supplyHistory}
                 stablecoinId={stablecoinId}
-                hideAnnotationLegend
                 controlledRange={range}
                 embedded
               />
@@ -161,8 +150,6 @@ function MarketDataSectionBody({
               <PegDeviationChart
                 data={supplyHistory}
                 pegCurrency={pegCurrency}
-                stablecoinId={stablecoinId}
-                hideAnnotationLegend
                 controlledRange={range}
                 embedded
               />
@@ -185,15 +172,6 @@ function MarketDataSectionBody({
                 )}
               </div>
               <ChartBrush domain={brushDomain} value={sync.brushedRange} onChange={sync.setBrushedRange} />
-            </div>
-          ) : null}
-          {annotations.length > 0 ? (
-            <div className="border-t border-border/50 px-4 py-3 sm:px-6">
-              <ChartAnnotationLegend
-                annotations={annotations}
-                numbered
-                className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
-              />
             </div>
           ) : null}
         </div>

@@ -81,7 +81,8 @@ describe("AltPegCohortHistoryChart", () => {
     expect(screen.getByRole("heading", { name: /alt-peg market cap by cohort/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
-    expect(screen.getByText(/legacy provider-wide stablecoin-charts cohort feed/i)).toBeTruthy();
+    expect(screen.getByText(/historical provider-wide cohort feed includes selected structural history overlays/i)).toBeTruthy();
+    expect(screen.getByText(/No current core-universe point is appended because the populations differ/i)).toBeTruthy();
     expect(
       screen.getByRole("table", { name: /alt-peg market cap by cohort over 1 points/i }),
     ).toBeTruthy();
