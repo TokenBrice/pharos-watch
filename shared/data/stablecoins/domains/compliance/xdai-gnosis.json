@@ -9,67 +9,157 @@
           "label": "Gnosis xDAI Bridge: mint/burn and gas-token mechanics",
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin definition and distributed-ledger exclusions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Gnosis Chain xDAI bridge and block-rewards infrastructure; no legal payment-stablecoin issuer identified",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "xDAI's native gas role and bridge mint/burn model make a blanket non-payment classification too strong, but no legal issuer, issuer redemption obligation, or U.S. GENIUS pathway was identified. The bridge documentation establishes the on-chain mechanism only. The GENIUS rulemaking phase remains proposed-rules.",
+    "notes": "xDAI is native gas and a transactional asset minted and burned by bridge and consensus infrastructure. Current bridge documentation describes USDS deposits, sUSDS backing and release of USDS or DAI, not a legally identified issuer's fixed-fiat redemption obligation. Identifiable bridge governors have upgrade powers, so a categorical issuerless or fully decentralized exemption is not asserted. Public on-chain bridge reserves are disclosed, but these are not a GENIUS-compliant reserve report or monthly attestation; no public 1:1 fiat redemption policy was identified. No issuer-specific GENIUS authorization, application or foreign registration was found. GENIUS issuer rules remain proposed; the SCRC procedural rule does not activate the Act. The not-yet-restricted DASP posture is regime-specific and does not imply every venue may serve U.S. users. issuerEntity is omitted because bridge and block-rewards infrastructure is a mechanism description, not a primary-source legal issuer name. No issuer domicile or issuer-specific regulator is inferred from bridge governors.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending-application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Register 91 FR 10202: payment stablecoin definition and proposed framework",
-        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
       },
       {
         "label": "Gnosis xDAI Bridge documentation",
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "NYDFS virtual-currency directory and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS enforcement index",
+        "url": "https://www.dfs.ny.gov/industry_guidance/enforcement_actions",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "FDIC GENIUS Act proposed rule materials",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Gnosis bridge governors and upgrade controls",
+        "url": "https://docs.gnosischain.com/bridges/management/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Gnosis xDAI bridge on-chain reserve holdings",
+        "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "Federal Register 91 FR 10202 OCC GENIUS proposed rules",
-        "OCC Digital Assets Licensing Applications table and Corporate Applications Search",
-        "GENIUS Act Public Law 119-27",
-        "Treasury proposed state-regime comparability rule",
-        "Gnosis xDAI Bridge, bridge governance, and token documentation",
-        "Federal Register and regulator searches for Gnosis, xDAI, and an issuer-specific U.S. filing"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.dfs.ny.gov/industry_guidance/enforcement_actions",
+        "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "https://docs.gnosischain.com/bridges/management/",
+        "https://docs.gnosischain.com/about/tokens/xdai",
+        "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract",
+        "Independent exact-token authorization searches for Gnosis/xDAI with GENIUS, PPSI and payment-stablecoin terms on OCC, Federal Register, FDIC, NCUA, Federal Reserve, Treasury and NYDFS domains; additional exact site:occ.gov xDAI, site:federalregister.gov Gnosis stablecoin and site:dfs.ny.gov Gnosis searches returned no responsive records. Independent Gnosis/xDAI enforcement, sanctions, consent-order and cease-and-desist searches covered OCC, NYDFS, SEC, CFTC, FinCEN and Treasury. Only the stated public-source set is covered."
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found for xDAI or a legally identified Gnosis payment-stablecoin issuer. The reviewed sources describe bridge and consensus mechanics, not a U.S. authorization pathway.",
+      "summary": "As of 2026-10-07, no public token-specific GENIUS PPSI approval, state qualification, official GENIUS application or registered foreign-issuer exception was found for xDAI in the consulted federal, NYDFS and Gnosis materials and regulator-domain searches. The OCC pending national-bank table is not an exhaustive GENIUS register. The documented bridge/consensus mechanism does not identify a legal payment-stablecoin issuer or an issuer-specific U.S. pathway. No public enforcement action was found in the searched sources; these bounded negative results do not establish universal absence.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual-currency directory and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosureUrl": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
   }
 }

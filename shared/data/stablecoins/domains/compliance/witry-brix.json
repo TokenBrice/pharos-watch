@@ -4,7 +4,7 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "ESMA interim MiCA register: current ART/EMT register page (last update 12 August 2026)",
+        "label": "ESMA interim MiCA register: ART/EMT register page (last update 7 October 2026)",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
@@ -12,9 +12,96 @@
         "url": "https://brix.money/itry"
       },
       {
-        "label": "Brix privacy policy: wiTRY Limited is domiciled in the British Virgin Islands",
+        "label": "Brix privacy policy: BVI wiTRY Limited is the website controller, not independently established as wrapper issuer",
         "url": "https://brix.money/privacy-policy"
+      },
+      {
+        "label": "Brix staking documentation: wiTRY represents a proportional iTRY pool share with an increasing exchange rate",
+        "url": "https://docs.brix.money/itry/staking.md"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "wiTRY is an ERC-4626 receipt for staked iTRY with a proportional pool claim. Yield increases the iTRY quantity redeemable per wiTRY, so the wrapper unit is a value-accruing position rather than a fixed Turkish-lira payment unit. Underlying iTRY terms and its issuer are assessed separately; iTRY being backed by money-fund shares does not itself make wiTRY a registered fund share.",
+      "references": [
+        {
+          "label": "Brix staking documentation: appreciating ERC-4626 wiTRY pool share",
+          "url": "https://docs.brix.money/itry/staking.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Brix iTRY and wiTRY product page",
+          "url": "https://brix.money/itry",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Brix website terms and privacy policy identify wiTRY Limited as website operator/data controller in the British Virgin Islands. They do not establish the legal issuer or redemption obligor for wiTRY; issuerEntity is intentionally omitted. The iTRY Token Terms identify iTRY Limited as the underlying iTRY issuer, not the wrapper issuer. Staking documents contain a coming-soon notice while the product page presents wiTRY as live; this lifecycle discrepancy does not change the documented appreciating-share mechanics. No independent PPSI status is inferred from underlying assets or custody arrangements.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Brix staking documentation: appreciating ERC-4626 wiTRY pool share",
+        "url": "https://docs.brix.money/itry/staking.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brix iTRY and wiTRY product page",
+        "url": "https://brix.money/itry",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Brix privacy policy: wiTRY Limited controller",
+        "url": "https://brix.money/privacy-policy",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-26"
+      },
+      {
+        "label": "Brix website terms of use",
+        "url": "https://docs.brix.money/resources/terms-and-policies/brix-website-terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-25"
+      },
+      {
+        "label": "Underlying iTRY Token Terms: iTRY Limited and digital-asset redemption",
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-25"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -2,21 +2,146 @@
   "id": "frnt-wyoming",
   "genius": {
     "applicability": "apparent-payment-stablecoin",
-    "applicabilityBasis": { "summary": "FRNT is a transferable USD-par stable token with a statutory reserve-backed redemption obligation. The reserve rules expressly deny legal-tender, general state-obligation and federal-insurance status; state issuance alone does not establish a national-currency exclusion." },
-    "authorizationStatus": "unknown",
+    "applicabilityBasis": {
+      "summary": "FRNT is a transferable USD-par stable token with a statutory reserve-backed redemption obligation. The reserve rules expressly deny legal-tender, general state-obligation and federal-insurance status; state issuance alone does not establish a national-currency exclusion."
+    },
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Wyoming Stable Token Commission",
     "issuerDomicile": "United States, Wyoming",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://dashboard.ledgerlens.io/c/wystc",
     "redemptionPolicyPresent": true,
-    "notes": "Wyoming Stable Token Act issuance authority and current administrative reserve/redemption rules are verified. These sources establish the state public issuer and special trust-limited obligation, not a GENIUS state-qualified PPSI approval. Token-specific federal approval, state-qualified approval and GENIUS application posture remain unresolved. Daily financial examination is announced, but no current signed report was retrieved; LedgerLens metrics are explicitly supplemental and non-assured. MiCA is not assessed because an EU offering or authorization mapping was not established.",
+    "notes": "Wyoming Stable Token Act issuance authority and current administrative reserve/redemption rules are verified. Commission issuance and the special trust-limited obligation do not establish a GENIUS state-qualified PPSI approval. The public review found no token-specific GENIUS approval, official application or announced GENIUS route. Redemption ordinarily runs through Licensed Service Providers at USD 1; holder access to direct Commission redemption is conditional. Daily financial examination is announced, but no current signed assurance report was retrieved; LedgerLens metrics are supplemental and non-assured. Monthly attestation presence is not asserted. No public GENIUS enforcement action was located in the reviewed sources.",
     "references": [
-      { "label": "Wyoming Stable Token Commission reserve rules effective September 23, 2026", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf", "sourceKind": "state-regulator", "sourceDate": "2026-09-23", "accessedAt": "2026-10-02" },
-      { "label": "Wyoming FRNT mainnet launch", "url": "https://content.govdelivery.com/accounts/WYGOV/bulletins/3ee734a", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "FRNT supplemental reserve dashboard and assurance disclaimer", "url": "https://dashboard.ledgerlens.io/c/wystc", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" }
+      {
+        "label": "Wyoming Stable Token Commission reserve rules effective September 23, 2026",
+        "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-09-23",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Wyoming FRNT mainnet launch",
+        "url": "https://content.govdelivery.com/accounts/WYGOV/bulletins/3ee734a",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-19"
+      },
+      {
+        "label": "FRNT supplemental reserve dashboard and assurance disclaimer",
+        "url": "https://dashboard.ledgerlens.io/c/wystc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Wyoming Stable Token Commission terms and user agreement",
+        "url": "https://stabletoken.wyo.gov/assets/media/terms.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-09-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC state certification forms and procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS implementation timing",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Commission announces daily FRNT reserve examination",
+        "url": "https://content.govdelivery.com/accounts/WYGOVSTC/bulletins/416f9d3",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-13",
+        "accessedAt": "2026-10-07"
+      }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html — reopened pending digital-asset charter table; no matching issuer; this is not a comprehensive PPSI approval register",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — proposed GENIUS framework, not issuer approval",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm — SCRC certification procedure; intake subject to PRA approval and Treasury notice",
+        "https://home.treasury.gov/news/press-releases/sb0605 — separate issuer-effective and DASP timing; foreign-issuer framework",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm — proposed application and prudential framework",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act — proposed FDIC issuer standards",
+        "https://ncua.gov/newsroom/press-release/2026/ncua-announces-proposed-rule-permitted-payment-stablecoin-issuer-standards — proposed NCUA issuer standards",
+        "Independent exact-name public search: (Wyoming Stable Token Commission OR Gemini Trust Company OR HeLa OR Berachain) AND (GENIUS OR PPSI) across occ.gov, federalreserve.gov, fdic.gov, ncua.gov and home.treasury.gov; no matching issuer-specific approval/application located",
+        "Independent public search: (FRNT OR GUSD OR HLUSD OR Berachain) AND GENIUS Act AND approval/application; no issuer-specific approval or application located",
+        "Wyoming Commission reserve rules effective September 23, 2026 and terms effective September 18, 2025: official PDFs downloaded and text-extracted after certificate-chain reader failure",
+        "Official Wyoming FRNT launch bulletin; Commission daily examination announcement; LedgerLens supplemental-dashboard disclaimer",
+        "Independent issuer-domain search: stabletoken.wyo.gov / WYGOVSTC GovDelivery, GENIUS and FRNT; no specific approval route/application statement located"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official application or issuer-announced GENIUS route was located for Wyoming Stable Token Commission/FRNT as of 2026-10-07. Wyoming statutory issuance is not an issuer approval under GENIUS. This is a bounded public-source finding, not proof that no nonpublic filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC state certification forms and procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS implementation timing",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

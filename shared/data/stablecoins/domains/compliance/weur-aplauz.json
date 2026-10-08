@@ -8,12 +8,16 @@
     "authorizedEntity": "Aplauz NL B.V.",
     "references": [
       {
-        "label": "ESMA EMT register names exact issuer and token, checked 2026-10-02",
+        "label": "ESMA EMT register names exact issuer and token, checked 2026-10-07",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
         "label": "Token-specific whitepaper: EMI issuer and holder rights; notification is not whitepaper approval",
         "url": "https://www.weur.io/protocol/whitepaper/v2"
+      },
+      {
+        "label": "DNB public register: Aplauz NL B.V. electronic-money institution, trade names WEUR and WSPN",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R180692"
       }
     ]
   }

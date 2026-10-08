@@ -1,95 +1,205 @@
 {
   "id": "wm-m0",
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "wM is a non-rebasing 1:1 wrapper around M and presents dollar-stable transfer and unwrap functionality, so it is treated as an apparent payment stablecoin even though the wrapper is not the underlying M minter.",
+      "summary": "wM is a non-rebasing dollar-stable wrapper around M with transferable balances and technical wrap/unwrap functionality. It is nonearning by default; approved earners can claim underlying yield, which alone does not turn every wM balance into a NAV-accruing vault share. The repository and protocol documentation establish conversion into M, but do not identify a legal wM issuer obligated to redeem for fixed monetary value. Section 2(22) expressly excludes another fixed-value digital asset from the monetary-redemption limb. Applicability is unclear pending a token-specific monetary redemption undertaking.",
       "references": [
         {
           "label": "M0 Wrapped M contract repository",
           "url": "https://github.com/m0-platform/wrapped-m-token",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 Wrapped M documentation",
+          "url": "https://docs.m0.org/protocol/wrapped-m",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 Foundation website Terms and Conditions",
+          "url": "https://www.m0.org/terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "M0 Foundation / M0 protocol; underlying M is minted by permissioned Minters",
-    "issuerDomicile": "Switzerland",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for wM, M0 Foundation, or the underlying M token. M0 describes an issuer-partner infrastructure model, so a future GENIUS posture may attach to an individual permissioned Minter rather than to the wrapper or protocol layer.",
+    "notes": "wM is a non-rebasing M wrapper with earning and non-earning account modes. Technical unwrapping returns M and does not establish fixed-money redemption. The prior M0 Foundation / M0 protocol issuerEntity and Switzerland issuerDomicile are removed: the Foundation terms identify the Swiss website operator, disclaim a Protocol Actor role and expressly state that those terms do not apply to M or Protocol Actors. The exact legal wM issuer and monetary redemption obligor remain unresolved. A permissioned Minter or partner authorization must not be transferred to wM. The public M0 reserve-dashboard endpoint and protocol backing disclosures are retained as a disclosure footprint, not verified live reserve amounts or independent financial assurance. Dashboard text could not be recovered; the browser returned an unrelated URL, which was rejected and closed. No wrapper-specific monthly signed reserve attestation was found. No qualifying public token-specific GENIUS approval, official application or registered foreign exception was located.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Federal Reserve GENIUS customer-identification proposal",
         "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 developer docs",
         "url": "https://docs.m0.org/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 website",
         "url": "https://www.m0.org/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 reserve dashboard",
         "url": "https://dashboard.m0.org/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "M0 Wrapped M contract repository",
         "url": "https://github.com/m0-platform/wrapped-m-token",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury Section 3 implementation proposal and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve stablecoin standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury state-certification review procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "M0 Wrapped M documentation",
+        "url": "https://docs.m0.org/protocol/wrapped-m",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "M0 Foundation website Terms and Conditions",
+        "url": "https://www.m0.org/terms-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "M0 permissioned issuer model",
+        "url": "https://docs.m0.org/issuers/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "OCC digital assets licensing applications page, searched for wM, M0 Foundation, M, and named permissioned Minters",
-        "Federal Reserve GENIUS customer-identification proposal",
-        "GENIUS Act Public Law 119-27",
-        "M0 docs, website, reserve dashboard, and Wrapped M contract repository"
+        "Public Law 119-27, Section 2(22), independently reopened PDF",
+        "OCC Bulletin 2026-3, full primary HTML inspected",
+        "OCC current digital-asset bank licensing applications table, full primary HTML inspected; this is not a PPSI register",
+        "Federal Reserve September 24, 2026 standards and application proposals",
+        "Treasury August 17, 2026 Section 3 proposal and September 30, 2026 SCRC procedural rule",
+        "NYDFS full current virtual-currency regulated-entity and Greenlist page",
+        "Official-domain search for Nerona, USDnr, Startale, USDSC, RISE Dollar, M0 Foundation, MXON and Wrapped M across OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS",
+        "https://docs.m0.org/",
+        "https://www.m0.org/",
+        "https://dashboard.m0.org/",
+        "https://github.com/m0-platform/wrapped-m-token",
+        "https://docs.m0.org/protocol/wrapped-m",
+        "https://www.m0.org/terms-conditions",
+        "https://docs.m0.org/issuers/overview",
+        "M0 dashboard reopened as metadata-only HTML; mismatched browser URL rejected, no live dashboard figures verified"
       ],
-      "summary": "As of 2026-08-14, no token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for wM, M0 Foundation, or the underlying M token. The public M0 materials describe infrastructure and permissioned issuer partners, not a wM-specific U.S. authorization.",
+      "summary": "As of 2026-10-07, independently reopened regulator publications, the OCC bank-application table, NYDFS tables, token documentation and the recorded official-domain search did not identify a qualifying public GENIUS PPSI approval, state-qualified designation, official application, registered foreign exception, issuer licensing-intent announcement or token-specific GENIUS enforcement action for Wrapped M (wM). The legal token issuer and fixed-money redemption obligation remain unresolved. The search is bounded public negative evidence, not a complete register or a conclusion that confidential applications do not exist. Infrastructure partners and similarly named tokens do not establish this wrapper's authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications: reviewed for wM/M0 and named M0 Minters",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency entities and issuance-approved Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 Wrapped M contract repository",
+          "url": "https://github.com/m0-platform/wrapped-m-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 Wrapped M documentation",
+          "url": "https://docs.m0.org/protocol/wrapped-m",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 Foundation website Terms and Conditions",
+          "url": "https://www.m0.org/terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "M0 permissioned issuer model",
+          "url": "https://docs.m0.org/issuers/overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

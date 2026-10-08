@@ -8,8 +8,8 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Midas mHYPER: tokenised investment strategy and EU Prospectus Regulation offer",
-        "url": "https://midas.app/mhyper"
+        "label": "Midas mHYPER Final Terms dated 17 July 2026: Swiss-law investment certificates and EU public offer",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media&token=b06233b0-229f-47ce-b622-127fb63f231f"
       },
       {
         "label": "Midas Software GmbH base prospectus: blockchain-based certificates and debt instruments",
@@ -20,19 +20,21 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "mHYPER is a NAV-accreting tokenized investment product structured as a Midas blockchain-based certificate/debt instrument, not a fixed-value payment stablecoin. Its value tracks a market-neutral strategy and the Midas prospectus excludes U.S. persons; the GENIUS payment-stablecoin perimeter is therefore not the right authorization track.",
+      "summary": "mHYPER is a NAV-linked blockchain-based investment certificate issued by Midas Software GmbH. Its July 17, 2026 final terms identify the Hyperithm LLC reference portfolio and investment-performance exposure. Standard redemption uses NAV per token less fees, with USDC settlement and applicable gates or holdbacks. The documented debt-security structure supports the tracker excluded-security classification; this is not a U.S. securities ruling.",
       "references": [
         {
-          "label": "GENIUS Act statutory summary: payment stablecoins and permitted issuers",
-          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Midas mHYPER product page",
-          "url": "https://midas.app/mhyper",
+          "label": "Midas mHYPER final terms dated July 17, 2026",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media&token=b06233b0-229f-47ce-b622-127fb63f231f",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -42,40 +44,55 @@
     "issuerDomicile": "Germany",
     "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "mHYPER is a Midas NAV-accreting, yield-bearing blockchain-based certificate/debt instrument tracking Hyperithm market-neutral stablecoin strategies, not a fixed-value payment stablecoin. The Liechtenstein FMA prospectus approval is a securities-prospectus approval, not a MiCA or GENIUS issuer authorization; Midas documentation also excludes U.S. persons. No GENIUS approval/application/foreign-exception registration was assessed because the asset is an excluded security.",
+    "notes": "GENIUS section 2(22) requires fixed monetary-value redemption and separately excludes securities. This tracker perimeter classification follows the token-specific investment-certificate/debt-security documents and is not a U.S. judicial or regulatory securities determination. FMA prospectus approval is a document review, not issuer licensing or GENIUS approval. No U.S. issuer pathway, federal regulator, state regulator or foreign-issuer registration is asserted. The token-specific issuer portfolio API returned public positions, assets, liabilities and equity with an October 7, 2026 update timestamp. ReserveDisclosurePresent records that self-reported portfolio disclosure, not an independently audited reserve report or a requirement to hold the notional underlying. RedemptionPolicyPresent is false because standard redemption follows NAV less fees and limitations rather than a fixed USD 1 monetary-value entitlement. Monthly independent reserve-attestation posture is omitted because the current methodology page could not be independently reopened.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
-        "label": "Midas mHYPER product page",
-        "url": "https://midas.app/mhyper",
+        "label": "Midas mHYPER final terms dated July 17, 2026",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media&token=b06233b0-229f-47ce-b622-127fb63f231f",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Midas Software GmbH base prospectus: blockchain-based certificates and U.S. restrictions",
         "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2024-07-17",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "GENIUS Act S.1582: payment stablecoin framework",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas 2026 base prospectus: continued certificate programme and U.S. restrictions",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Midas mHYPER issuer portfolio disclosure API",
+        "url": "https://api-prod.midas.app/api/transparency?token=mHYPER",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosureUrl": "https://api-prod.midas.app/api/transparency?token=mHYPER"
   }
 }

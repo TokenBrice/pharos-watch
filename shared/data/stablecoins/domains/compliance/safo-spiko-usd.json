@@ -16,5 +16,80 @@
         "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "SAFO is the USD accumulation share class (ISIN FR0014015LE1) of the Spiko Amundi Overnight Swap Fund sub-fund of SPIKO SICAV, a French UCITS. Each token registers an investment-fund share with proportional asset and voting rights; accumulated income increases share value. These fund securities are excluded from the GENIUS payment-stablecoin definition by section 2(22)(B)(iii), not ordinary dollar payment liabilities.",
+      "references": [
+        {
+          "label": "SPIKO SICAV prospectus: French UCITS shares and tokenized register",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+          "sourceKind": "issuer-filing",
+          "sourceDate": "2026-09-01",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Amundi and Spiko: SAFO is a tokenized sub-fund of SPIKO SICAV",
+          "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-19",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "SPIKO SICAV",
+    "issuerDomicile": "France",
+    "licensingRegulator": "Autorité des marchés financiers (AMF)",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The prospectus identifies SPIKO SICAV as the French UCITS and SAFO as its sub-fund. Spiko Finance is the distributor/transfer agent and Amundi is delegated investment manager; neither role converts the fund share into a payment stablecoin. UCITS/AMF fund regulation is not GENIUS PPSI authorization. Business-day redemption at fund share value is not an issuer promise to redeem a fixed dollar amount. GENIUS reserve and monthly-attestation indicators are intentionally omitted: investment-portfolio disclosure is not a payment-stablecoin reserve assessment.",
+    "references": [
+      {
+        "label": "SPIKO SICAV prospectus: French UCITS shares and tokenized register",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2026-09-01",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Amundi and Spiko: SAFO is a tokenized sub-fund of SPIKO SICAV",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment-stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Spiko: SAFO is a UCITS fund regulated by the AMF",
+        "url": "https://www.spiko.io/blog/spiko-amundi-safo",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-19",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Spiko fund documentation: USD SAFO ISIN, accumulated income and D+1 liquidity",
+        "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/funds/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

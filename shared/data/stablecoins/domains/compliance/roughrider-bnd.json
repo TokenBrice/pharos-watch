@@ -3,59 +3,127 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "Roughrider Coin is a pre-launch USD bank-to-bank payment stablecoin pilot announced by Bank of North Dakota with Fiserv infrastructure."
+      "summary": "Current VersaBank and Fiserv launch disclosures describe Roughrider as a live U.S.-dollar-backed stablecoin for bank-to-bank payments, issued by VersaBank USA National Association. BND describes 1:1 dollar backing with fiat-funded minting and automatic redemption/burning. BND also uses token-deposit language, but its FAQ uses that label for Tether/Circle and distinguishes actual tokenized bank deposits; no exact-token legal deposit liability establishing the statutory deposit exclusion was found. Apparent-payment-stablecoin is retained, with that legal-classification caveat.",
+      "references": [
+        {
+          "label": "VersaBank Roughrider live stablecoin issuance disclosure",
+          "url": "https://www.versabank.com/versabank-partners-with-fiserv-to-provide-critical-digital-asset-technology-and-custody-reserve-management-services-for-bank-of-north-dakotas-roughrider-stablecoin/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-10-01"
+        },
+        {
+          "label": "BND Roughrider architecture, reserves and mint/burn mechanics",
+          "url": "https://bnd.nd.gov/roughrider/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
-    "issuerEntity": "Bank of North Dakota / Fiserv",
+    "issuerEntity": "VersaBank USA National Association",
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
+    "reserveDisclosurePresent": true,
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Bank of North Dakota and Fiserv publicly announced Roughrider as a USD-backed stablecoin pilot and reference the U.S. stablecoin framework, but no token-specific GENIUS PPSI approval, state-qualified approval, or official application was found. The issuer pathway remains unknown because the public materials do not identify a final PPSI route for the BND/Fiserv deployment.",
+    "notes": "IssuerEntity is corrected from Bank of North Dakota / Fiserv to VersaBank USA National Association, the exact bank issuer identified by current BND architecture and corroborated by VersaBank/Fiserv launch disclosures, consistent with the separate USDVB sibling issuer string. BND supplies program governance; Fiserv supplies platform/integration; neither is the final token issuer. Primary sources say Roughrider is already live (October 1 VersaBank/Fiserv announcements and October 5 BND confirmation), although the supplied research roster/base lifecycle remains pre-launch; no lifecycle metadata is edited here. Apparent-payment-stablecoin/issuer-announced-intent is retained because the product is explicitly marketed as a dollar-backed interbank payment stablecoin and BND says its program follows the GENIUS framework. The BND token-deposit terminology is not by itself evidence of a holder deposit liability: the same FAQ labels Tether/Circle token deposits and separates true tokenized deposits. VersaBank USDVB is a different legal deposit-token pilot and its exclusion must not be copied here. No qualifying token/issuer-specific GENIUS approval or pending application was located; an existing OCC bank charter and 2024 conditional business-line/name-change decision are not PPSI approval. No final GENIUS pathway is identified in the public sources; direct issuance by this bank must not be silently recast as an approved IDI-subsidiary route. Public reserve disclosure is descriptive only: one-to-one dollar backing through participating-institution FBO VersaBank custody accounts and an FBO concentration account at BND. Public mint/burn and redemption mechanics exist, but no separate token-specific monthly independent reserve examination was located. Broad promises of attestations do not count as a published monthly attestation. RedemptionPolicyPresent records the disclosed automated institutional cash/mint/burn mechanism, not guaranteed retail-holder access or separately reviewed contractual redemption terms. No relevant public issuer action was located in the consulted regulator materials and targeted search; this is not a supervisory no-action assurance.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "Bank of North Dakota Roughrider announcement",
         "url": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-10-08",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Fiserv Roughrider partnership announcement",
-        "url": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin",
+        "label": "Fiserv digital-asset platform: Roughrider first live use case",
+        "url": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-digital-asset-platform-goes-live-financial-institution",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2025-10-08",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-01"
+      },
+      {
+        "label": "VersaBank identifies its U.S. bank as Roughrider issuer",
+        "url": "https://www.versabank.com/versabank-partners-with-fiserv-to-provide-critical-digital-asset-technology-and-custody-reserve-management-services-for-bank-of-north-dakotas-roughrider-stablecoin/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-01"
+      },
+      {
+        "label": "BND confirms successful institutional Roughrider launch",
+        "url": "https://bnd.nd.gov/bank-of-north-dakota-launches-roughrider-coin-credits-collaboration-and-controlled-innovation/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-05"
+      },
+      {
+        "label": "BND Roughrider operational architecture and GENIUS framework statement",
+        "url": "https://bnd.nd.gov/roughrider/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC VersaBank USA existing banking approval and crypto non-objection condition",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2024/ca1323.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-06-13"
+      },
+      {
+        "label": "OCC current pending digital-asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC 2026 final-rule inventory",
+        "url": "https://www.occ.gov/topics/laws-and-regulations/occ-regulations/final-issuances/occ-final-issuances-2026.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act payment-stablecoin and deposit definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS NPRM and reporting-form notices",
-        "Bank of North Dakota Roughrider materials",
-        "Fiserv Roughrider and FIUSD materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/topics/laws-and-regulations/occ-regulations/final-issuances/occ-final-issuances-2026.html",
+        "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2024/ca1323.pdf",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/",
+        "https://bnd.nd.gov/roughrider/",
+        "https://bnd.nd.gov/bank-of-north-dakota-launches-roughrider-coin-credits-collaboration-and-controlled-innovation/",
+        "https://investors.fiserv.com/news-releases/news-release-details/fiserv-digital-asset-platform-goes-live-financial-institution",
+        "https://www.versabank.com/versabank-partners-with-fiserv-to-provide-critical-digital-asset-technology-and-custody-reserve-management-services-for-bank-of-north-dakotas-roughrider-stablecoin/",
+        "Targeted occ.gov/fdic.gov/federalreserve.gov/dfs.ny.gov searches for Roughrider, VersaBank USA and GENIUS approval/application/enforcement"
       ],
-      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or final issuer-pathway source was located for Roughrider Coin.",
+      "summary": "No qualifying public GENIUS PPSI approval or pending application naming Roughrider/VersaBank USA was located in the consulted regulator sources and exact-issuer searches. Existing OCC charter/business-line permission does not establish such authorization. Current issuer/program materials state GENIUS-framework intent but do not identify a final PPSI route. No relevant public token/issuer enforcement action or published monthly token-specific independent reserve examination was found in the consulted materials. These are source-limited negative findings, not proof that no private filing, supervisory communication or unpublished attestation exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "licensingRegulator": "OCC (VersaBank USA National Association national-bank charter; existing bank authority, not GENIUS PPSI approval)",
+    "primaryFederalRegulator": "OCC",
+    "reserveDisclosureUrl": "https://bnd.nd.gov/roughrider/"
   }
 }

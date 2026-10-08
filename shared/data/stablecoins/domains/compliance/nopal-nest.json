@@ -1,5 +1,18 @@
 {
   "id": "nopal-nest",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Nest nOPAL vault disclosure",
+        "url": "https://docs.nest.credit/about/available-vaults/"
+      },
+      {
+        "label": "Nest vault operations: pro rata NAV share and variable redemption value",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -9,50 +22,100 @@
           "label": "Nest nOPAL vault disclosure",
           "url": "https://docs.nest.credit/about/available-vaults/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Nest terms and conditions: vault-token structure and Nest DAO LLC",
           "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-20"
+        },
+        {
+          "label": "Nest vault operations: pro rata NAV shares",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "Nest DAO LLC",
-    "issuerDomicile": "Republic of the Marshall Islands",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Explicitly recorded as outside the GENIUS payment-stablecoin authorization posture because nOPAL is a yield-bearing vault share with NAV/yield exposure, not a payment stablecoin. The underlying and vault-token legal classification should be rechecked if Nest changes the product structure or begins U.S. payment-token marketing.",
+    "notes": "nOPAL is assessed as a variable-NAV vault share outside the tracked GENIUS payment-stablecoin authorization posture. The public exit mechanics redeem shares at portfolio value, subject to liquidity; redemptionPolicyPresent is false because a fixed 1:1 monetary redemption policy was not established. The positions API is provider-generated portfolio disclosure, not independent monthly reserve assurance. The opened Nest documentation and targeted Nest monthly-attestation search did not identify an independent monthly vault-reserve report. The March 20, 2026 terms identify Nest DAO LLC as the Marshall Islands Products/interface provider and permit fund managers and asset issuers to create vaults. They do not expressly distinguish the legal issuer or redemption obligor of this exact share token. Plume's public legal explanation identifies Nest DAO LLC as the vault curator, while its March 25, 2026 congressional testimony refers to Nest DAO LLC vault token holders. These materials do not conclusively establish that the pre-sweep issuerEntity is wrong; Nest DAO LLC is retained under the strict baseline-preservation rule, with exact token issuance unresolved. issuerDomicile remains omitted. Geographic restrictions prohibit U.S.-located, organized or ordinarily resident users from platform and direct smart-contract access; this eligibility policy is not GENIUS qualification. The pre-sweep issuerEntity is retained to avoid an uncertain change to the Safety Score issuer join; retention is not a newly established legal issuer determination. The prior no-public-action-found enforcement assertion is omitted because an issuer-specific enforcement review was not established.",
     "references": [
       {
         "label": "Nest terms and conditions: Nest DAO LLC and yield-bearing vault tokens",
         "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-20"
       },
       {
         "label": "Nest nOPAL vault disclosure",
         "url": "https://docs.nest.credit/about/available-vaults/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GENIUS Act enacted text: Public Law 119-27",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nest nOPAL integration and NAV-based redemption",
+        "url": "https://docs.nest.credit/developers/integration-guides/nopal",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nest vault operations: pro rata NAV shares",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "nOPAL vault position disclosure",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nest geographic restrictions: platform and smart-contract eligibility",
+        "url": "https://docs.nest.credit/security-and-compliance/geographic-restrictions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Plume vault legal explanation: Nest DAO LLC as curator",
+        "url": "https://app.plume.org/how-it-works",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Plume general counsel congressional testimony: Nest DAO LLC vault token holders",
+        "url": "https://docs.house.gov/meetings/BA/BA00/20260325/119103/HHRG-119-BA00-Wstate-BanaeiS-20260325.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Nest DAO LLC"
   }
 }

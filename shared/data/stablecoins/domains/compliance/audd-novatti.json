@@ -3,7 +3,23 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "AUDD is a 1:1 AUD-backed payment stablecoin with institutional redemption, multichain distribution, and Coinbase Wallet custody availability for US users (trading restricted to non-US Coinbase users)."
+      "summary": "AUDC Pty Ltd issues AUDD for payment and settlement with an obligation to redeem each token for AUD1, backed by segregated AUD cash held on bare trust. Fixed redemption in a non-USD national currency meets the apparent payment-stablecoin profile.",
+      "references": [
+        {
+          "label": "AUDD issuer Terms of Service",
+          "url": "https://www.audd.digital/audd-terms-of-service/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-10"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -17,59 +33,148 @@
     "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: AUDD is a foreign non-USD payment stablecoin with some US presence (Coinbase Wallet custody; not tradable on Coinbase for US-based users). No GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration found. Foreign exception framework still under proposed rulemaking (Treasury NPRM FR 2026-06489). Monthly William Buck attestations confirmed through May 2026. Reserve-report date recorded as of 2026-06-18 review: 2026-05-31 (date kind unspecified).",
+    "notes": "Review as of 2026-10-07: AUDC Pty Ltd discloses AFSL 700123 and an AUD1 holder-redemption obligation. No issuer-specific GENIUS approval, application or foreign registration was located. The issuer Coinbase announcement describes global distribution without substantiating the prior U.S. trading-restriction/custody-only distinction, which is removed. The Coinbase-operated blog was blocked during independent verification and is not retained as evidence. Novatti and AUDC commentary discuss GENIUS policy context without announcing a U.S. application. Monthly William Buck AUP reports extend through 30 September 2026, signed 5 October; the engagement provides factual findings without an assurance opinion. Treasury FR 2026-06489 concerns state-regime similarity. GENIUS offer/sale restrictions remain prospective under the opened Treasury section 3 proposal.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "AUDD Coinbase listing announcement",
         "url": "https://www.audd.digital/audd-launches-on-coinbase/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "Coinbase AUDD listing blog (global, not US trading)",
-        "url": "https://www.coinbase.com/blog/audd-and-xsgd-live",
-        "sourceKind": "news",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "AUDD terms",
         "url": "https://www.audd.digital/audd-terms-and-conditions/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "AUDD transparency (monthly William Buck attestations through May 2026)",
+        "label": "AUDD transparency",
         "url": "https://www.audd.digital/transparency/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+        "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-09"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Treasury proposed GENIUS section 3 regulations",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "AUDD issuer Terms of Service",
+        "url": "https://www.audd.digital/audd-terms-of-service/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-10"
+      },
+      {
+        "label": "William Buck AUDD September 2026 agreed-upon-procedures report",
+        "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf",
         "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-10-05"
+      },
+      {
+        "label": "Novatti AUDC funding announcement and GENIUS market context",
+        "url": "https://announcements.asx.com.au/asxpdf/20250814/pdf/06mvrhmnnqkh1x.pdf",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin 2026-3 and public releases",
-        "Treasury NPRM on state-regime comparability (FR 2026-06489)",
-        "AUDD issuer website (audd.digital): no mention of GENIUS Act or US registration",
-        "Coinbase AUDD pages: trading restricted for US users, custody only",
-        "Web search for AUDC/AUDD GENIUS foreign exception or US registration: no results",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 implementing proposal, reopened 2026-10-07",
+        "Current OCC Digital Assets Licensing Applications pending table, reopened with direct HTTP and HTML extraction; ordinary bank-charter table, not exhaustive PPSI register",
+        "Joint payment-stablecoin customer-identification proposal (91 FR 37234) and Federal Reserve September 24 implementation-proposal release",
+        "Treasury August 17 section 3 proposal and September 30 SCRC procedural interim final rule",
+        "New York DFS June 9 proposed stablecoin regulation",
+        "GENIUS Act Public Law 119-27 enacted statutory text",
+        "Current token issuer terms and reserve disclosures for AUDC Pty Ltd",
+        "Token and issuer searches for GENIUS approval/application across OCC, Federal Reserve, FDIC, NCUA, Treasury and NYDFS domains",
+        "Token and issuer enforcement searches across SEC, CFTC, FinCEN, OFAC and NYDFS domains; no matching public action located"
       ],
-      "summary": "No token-specific public US GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AUDD. Foreign exception registration framework remains in proposed-rulemaking phase as of 2026-06-18.",
+      "summary": "As of 2026-10-07, the opened federal/state rulemaking materials, OCC pending-applications table, issuer disclosures and issuer-name regulatory searches did not identify a GENIUS PPSI approval, state-qualified status, official pending application, registered foreign exception or issuer-announced GENIUS application plan for AUDC Pty Ltd / AUDD. Search and table coverage are limited public negative evidence; no authorization or enforcement absence is certified. Australian licensing does not establish a U.S. pathway.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-09"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury proposed GENIUS section 3 regulations",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

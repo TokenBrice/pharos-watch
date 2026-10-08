@@ -1,87 +1,188 @@
 {
   "id": "eusd-telcoin",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register and scope information",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Issuer eUSD disclosure (U.S. personal accounts; not comprehensive EEA-offer evidence)",
-        "url": "https://bank.telco.in/eUSD"
-      },
-      {
-        "label": "Telcoin Digital Cash: EEA eEUR product disclosure",
-        "url": "https://www.telcoin.co.jp/en/digital-cash"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "eUSD is a bank-issued U.S. dollar payment stablecoin with KYC-gated mint and redemption through Telcoin Digital Asset Bank."
+      "summary": "eUSD is a bank-issued U.S. dollar payment stablecoin with KYC-gated mint and redemption through Telcoin Digital Asset Bank.",
+      "references": [
+        {
+          "label": "Telcoin Digital Asset Bank eUSD terms",
+          "url": "https://bank.telco.in/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-15"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank customer agreement",
+          "url": "https://bank.telco.in/customer-agreement",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-15"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Telcoin, Inc. d/b/a Telcoin Digital Asset Bank",
+    "issuerEntity": "Telcoin Digital Asset Bank",
     "issuerDomicile": "United States",
     "stateRegulator": "Nebraska Department of Banking and Finance",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://bank.telco.in/eUSD",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository Institution charter granted November 12, 2025. Current issuer pages still promise regular reserve disclosures and monthly external-auditor attestations; no report was located on the eUSD and Digital Cash pages consulted. No Telcoin-specific GENIUS PPSI approval/application was found in the scoped issuer/Nebraska/OCC review on 2026-10-01. Do not treat the state DADI charter as PPSI approval or extrapolate the search to a statement that no issuer has been approved.",
+    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository Institution operating charter issued November 12, 2025. The current bank homepage identifies the bank as a wholly owned subsidiary of Telcoin, Inc., so the former parent-company d/b/a issuer attribution is removed. The June 15, 2026 terms and customer agreement identify the bank as eUSD issuer, describe transferable fixed-dollar tokens, segregated backing and eligible-account redemption, and distinguish third-party connected-bank deposits from eUSD purchases. The eUSD page discloses cash and cash-equivalent backing and promises regular reserve reports; the Digital Cash page promises monthly external-auditor attestations. No current report was linked on those reviewed pages. The June 23, 2026 announcement concerns planned GENIUS Act-compliant yield on eUSD, subject to regulatory requirements, without identifying an issuance-authorization route or PPSI filing. Retain no-public-authorization-found and unknown pathway. The Nebraska charter is not treated as GENIUS qualification. Treasury gives January 18, 2027 as the expected Act effective date. The optional enforcement finding is omitted because the scoped review does not establish comprehensive issuer action history.",
     "references": [
       {
-        "label": "Telcoin eUSD reserve disclosure page",
+        "label": "Telcoin eUSD reserve backing and planned disclosures",
         "url": "https://bank.telco.in/eUSD",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Telcoin terms of use",
         "url": "https://bank.telco.in/terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-15"
       },
       {
         "label": "Nebraska Governor signs first-in-nation Digital Asset Bank charter (November 12, 2025)",
         "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter",
         "sourceKind": "state-regulator",
         "sourceDate": "2025-11-12",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "Telcoin eUSD launch press release (December 26, 2025)",
-        "url": "https://www.businesswire.com/news/home/20251226357792/en/Telcoin-Begins-Digital-Asset-Banking-Operations-with-Launch-of-eUSD-Stablecoin",
-        "sourceKind": "issuer-disclosure",
-        "sourceDate": "2025-12-26",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Banking Dive: Telcoin Digital Asset Bank nabs final charter approval",
         "url": "https://www.bankingdive.com/news/telcoin-digital-asset-bank-nabs-final-charter-approval/805337/",
         "sourceKind": "news",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-11-12"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement: eUSD redemption",
+        "url": "https://bank.telco.in/customer-agreement",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-15"
+      },
+      {
+        "label": "Telcoin June 23, 2026 bank-account launch and GENIUS-related yield plans",
+        "url": "https://www.telco.in/en/newsroom/2026-06-23/telcoin-launches-first-regulated-on-chain-bank-accounts-in-the-us",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-23"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "OFAC 2026 civil penalties and enforcement information",
+        "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Nebraska NDBF digital asset charter and supervision resources",
+        "url": "https://ndbf.nebraska.gov/digital-assets",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Telcoin bank issuer identity and subsidiary disclosure",
+        "url": "https://bank.telco.in/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "Telcoin bank eUSD and Terms of Use re-opened 2026-10-01",
-        "Telcoin Japan Digital Cash disclosure re-opened 2026-10-01",
-        "Nebraska governor/NDBF November 12, 2025 charter announcement re-opened 2026-10-01",
-        "OCC Bulletin 2026-28 re-opened 2026-10-01",
-        "OCC digital-assets licensing index and OCC-site Telcoin/GENIUS search, 2026-10-01"
+        "OCC digital-assets licensing index: complete nine-row pending-applicant table inspected in raw HTML; Telcoin Digital Asset Bank and Telcoin, Inc. absent",
+        "Federal Register: September 30, 2026 SCRC procedural rule; March 2 OCC and September 29 Federal Reserve proposals independently fetched from GovInfo and inspected",
+        "Nebraska NDBF digital-assets resources and November 12, 2025 Governor/NDBF charter announcement",
+        "Telcoin bank homepage, eUSD product page, June 15, 2026 terms and customer agreement, June 23, 2026 issuer announcement, and Digital Cash page",
+        "Treasury August 17, 2026 issuance, offer and sale proposal and Federal Reserve September 24, 2026 issuer/application announcement",
+        "Exact Telcoin Digital Asset Bank / GENIUS search across OCC, Federal Register, Nebraska NDBF and Treasury domains, reviewed 2026-10-07; indexed results are not a complete agency docket"
       ],
-      "summary": "No Telcoin/eUSD GENIUS PPSI authorization or official application was located within the issuer, Nebraska charter announcement and OCC materials consulted on 2026-10-01. The Nebraska DADI charter is confirmed separately. This scoped review does not establish that no other issuer has GENIUS authorization, nor adjudicate Nebraska state-regime comparability.",
-      "reviewer": "Sol curation pass 2026-10-01 (ValB29BUCK)",
-      "reviewedAt": "2026-10-01"
+      "summary": "The public OCC licensing table, Federal Register implementation materials, Nebraska sources and issuer pages reviewed on 2026-10-07 did not identify a GENIUS PPSI approval, state-qualified approval, foreign registration or official pending GENIUS application for Telcoin Digital Asset Bank/eUSD. The Nebraska operating charter is confirmed separately. The issuer statement concerns planned compliant yield and does not establish an issuance authorization or application. This bounded public-source review does not rule out confidential or unindexed filings or determine Nebraska state-regime comparability.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury proposed issuance, offer and sale rules; expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC state-certification procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "OFAC 2026 civil penalties and enforcement information",
+          "url": "https://ofac.treasury.gov/civil-penalties-and-enforcement-information",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Nebraska NDBF digital assets resources",
+          "url": "https://ndbf.nebraska.gov/digital-assets",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "reviewer": "Sol curation pass 2026-10-01 (ValB29BUCK)",
-    "reviewedAt": "2026-10-01"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

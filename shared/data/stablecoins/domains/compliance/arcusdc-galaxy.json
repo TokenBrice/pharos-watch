@@ -1,0 +1,72 @@
+{
+  "id": "arcusdc-galaxy",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Morpho: Galaxy USDC exact vault",
+        "url": "https://app.morpho.org/arc/vault/0x8e357432cc12ff425c36432f312968aeb16112af"
+      },
+      {
+        "label": "Morpho Vault V2 lending and receipt-token mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "arcUSDC represents a value-accruing ERC-4626 lending-vault position over USDC on Arc. Shares redeem for the current proportional value of vault assets, which changes with interest, fees and losses, subject to available liquidity. The product is offered as a curated yield strategy rather than a payment or settlement token with an issuer obligation to redeem a fixed amount of national currency.",
+      "references": [
+        {
+          "label": "Morpho: Galaxy USDC exact vault",
+          "url": "https://app.morpho.org/arc/vault/0x8e357432cc12ff425c36432f312968aeb16112af",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho Vault V2 lending and receipt-token mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Morpho VaultV2 primary source: share valuation and redemption",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment dated 2026-10-07 applies to the exact Arc vault 0x8e357432cc12ff425c36432f312968aeb16112af, separately from underlying USDC. GENIUS Act section 2(22) requires payment or settlement design plus an issuer obligation to redeem a fixed amount of monetary value. Variable vault-share redemption does not establish that obligation. Galaxy is identified as curator; its brand, the Galaxy Curation LLC communication-preparer disclosure, and the underlying stablecoin issuer do not establish the legal issuer of this vault share. issuerEntity and issuerDomicile are therefore omitted. Protocol holdings/APY displays and smart-contract audits are not independent monthly reserve attestations for this share. No GENIUS authorization, foreign registration, enforcement finding or stablecoin reserve-disclosure assertion is made for the vault.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27, section 2(22)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Galaxy: institutional Morpho vault-curation launch",
+        "url": "https://www.galaxy.com/newsroom/galaxy-launches-institutional-vault-curator",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-16"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

@@ -1,13 +1,46 @@
 {
   "id": "susdx-axis",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Axis exact V2 sUSDx appreciating vault-share accounting",
+        "url": "https://docs.axis.to/reference/staking-contracts.md"
+      },
+      {
+        "label": "Axis staking and unstaking: variable USDx per share",
+        "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md"
+      },
+      {
+        "label": "ESMA MiCA Article 3: EMT and ART stable-reference definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
       "summary": "sUSDx is an ERC-4626/ERC-7540 USDx savings receipt with a variable exchange rate as realized trading rewards vest. Redemption returns proportional USDx through an async queue rather than a fixed monetary-value payment. This is Pharos's editorial assessment of the exact savings-share structure, not a token-specific regulator determination or a finding that the parent USDx is outside GENIUS.",
       "references": [
-        { "label": "Axis savings-vault share and redemption accounting", "url": "https://docs.axis.to/reference/staking-contracts.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-        { "label": "Axis staking and unstaking", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-        { "label": "GENIUS Act payment-stablecoin definition", "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm", "sourceKind": "statute", "sourceDate": "2025-07-18", "accessedAt": "2026-10-02" }
+        {
+          "label": "Axis savings-vault share and redemption accounting",
+          "url": "https://docs.axis.to/reference/staking-contracts.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Axis staking and unstaking",
+          "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
       ]
     },
     "authorizationStatus": "not-applicable",
@@ -16,13 +49,48 @@
     "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "The savings receipt is separately identified from canonical USDx and inherits its economic risk. Axis terms name Coordinate Origin Limited for issuance/redemption and Coordinate Labs Pte. Ltd. for the platform; no token-specific regulatory approval is asserted. The issuer's U.S.-person exclusion is an access policy, not proof of statutory authorization or exclusion. MiCA is intentionally unassessed because no exact sUSDx regulatory classification was established; an interest-accruing share cannot be assigned an EU out-of-scope status merely by analogy to sUSDe.",
+    "notes": "sUSDx is the exact V2 ERC-4626/ERC-7540 appreciating USDx vault share: vested rewards increase USDx per share and async redemption returns proportional USDx, not a fixed monetary-value amount. This supports the separate non-payment-token assessment, independently of the unresolved parent USDx category. Existing issuerEntity Coordinate Origin Limited is preserved as the general issuance/redemption entity named in Axis terms, distinct from Singapore platform operator Coordinate Labs Pte. Ltd. The terms do not separately identify a legal issuer for the sUSDx contract share; no savings-share authorization is claimed. U.S.-person restrictions are access policy, not statutory exclusion. Its proposed MiCA out-of-scope row is limited to the EMT/ART stablecoin tracker because this exact share is not designed to preserve a fixed reference value; no financial-instrument exemption or exclusion from all MiCA/CASP obligations is asserted. OCC rules remain proposals.",
     "references": [
-      { "label": "Axis legal issuer and platform operator", "url": "https://www.axis.to/terms-of-service", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "Axis variable reward and U.S.-person restrictions", "url": "https://docs.axis.to/resources-and-legal/compliance.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" },
-      { "label": "Axis async savings-vault accounting", "url": "https://docs.axis.to/reference/staking-contracts.md", "sourceKind": "issuer-disclosure", "accessedAt": "2026-10-02" }
+      {
+        "label": "Axis legal issuer and platform operator",
+        "url": "https://www.axis.to/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis variable reward and U.S.-person restrictions",
+        "url": "https://docs.axis.to/resources-and-legal/compliance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis async savings-vault accounting",
+        "url": "https://docs.axis.to/reference/staking-contracts.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Axis staking and unstaking; variable USDx per share",
+        "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS Act NPRM: payment-stablecoin scope",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

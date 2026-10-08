@@ -1,0 +1,78 @@
+{
+  "id": "sdusd-dtrinity",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "dTRINITY sdUSD: yield-accruing dSTAKE vault shares",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "dTRINITY FAQ: sdUSD is not pegged to USD",
+        "url": "https://docs.dtrinity.org/informational/faq"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sdUSD is the ERC-4626 receipt share for dUSD supplied through dSTAKE into dLEND. Its exchange/redemption value tracks the vault's NAV and appreciates with lending yield and rewards; holders bear liquidity and bad-debt risk. The current FAQ expressly states that sdUSD is not USD-pegged and should be considered a yieldcoin, not a stablecoin. It is not offered as a fixed-par monetary-value redemption instrument.",
+      "references": [
+        {
+          "label": "dTRINITY sdUSD dSTAKE vault documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "dTRINITY FAQ: sdUSD is NAV-referenced, not USD-pegged",
+          "url": "https://docs.dtrinity.org/informational/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the separately tracked sdUSD strategy-vault receipt token, not to parent dUSD or its reserve assets. Documented unstaking returns dUSD at the prevailing vault NAV, subject to unutilized lending liquidity and up to 10 bps exit fees; the share can suffer losses if dLEND incurs bad debt. Neither a dollar-denominated name nor integration as DeFi collateral turns an appreciating share into a fixed-par payment stablecoin. Not-applicable is a product-scope classification under GENIUS section 2(22), not a GENIUS authorization, a conclusion of exemption from every securities/financial law, or a claim that underlying dUSD is compliant. Current protocol terms do not establish an exact legal issuer obligor, so issuerEntity and domicile are intentionally unset rather than inheriting the unsupported parent foundation attribution.",
+    "references": [
+      {
+        "label": "dTRINITY sdUSD dSTAKE vault documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "dTRINITY FAQ: sdUSD is NAV-referenced, not USD-pegged",
+        "url": "https://docs.dtrinity.org/informational/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "dTRINITY Terms of Use",
+        "url": "https://docs.dtrinity.org/informational/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-24",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

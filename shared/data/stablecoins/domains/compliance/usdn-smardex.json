@@ -1,0 +1,84 @@
+{
+  "id": "usdn-smardex",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "SMARDEX presents USDN as the yield-seeking vault side of a structured product paired with leveraged long positions. Base USDN itself distributes staking and trader-funding returns by increasing holder balances through rebases. Minting deposits underlying crypto collateral; withdrawal burns the vault units for corresponding underlying-asset value and can be blocked by protocol imbalance. No reviewed source promises an issuer-obligated fixed monetary-value exit or markets USDN as a payment/settlement instrument. This strategy-position nature supports non-payment-token without assuming all synthetic dollars are excluded.",
+      "references": [
+        {
+          "label": "SMARDEX USDN structured-product overview",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SMARDEX USDN protocol and vault mechanics",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-usdn-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SMARDEX USDN FAQ: rebasing yield and withdrawal restrictions",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": false,
+    "notes": "This assessment covers base SMARDEX USDN, not Waves/Neutrino USDN, wUSDN or sUSDN. Primary protocol documents describe a rebasing, yield-generating structured vault position with withdrawals into underlying cryptoassets at vault value and imbalance-dependent access. No securities exclusion, blanket decentralized-issuer exemption or general U.S. legality conclusion is asserted. The reviewed documents do not identify an exact legal issuer or domicile; those optional fields remain omitted. Governance documentation identifies multisig parameter, pause and upgrade powers. The redemption-policy field concerns an issuer-obligated fixed monetary-value policy, not the documented cryptoasset withdrawal mechanism.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "SMARDEX USDN structured-product overview",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SMARDEX USDN protocol and vault mechanics",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-usdn-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SMARDEX USDN FAQ: rebasing yield and withdrawal restrictions",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SMARDEX USDN privileged governance controls",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/governance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

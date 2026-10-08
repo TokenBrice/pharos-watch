@@ -1,115 +1,200 @@
 {
   "id": "ceur-celo",
-  "mica": {
-    "status": "non-compliant",
-    "tokenType": "EMT",
-    "references": [
-      {
-        "label": "ESMA Interim MiCA Register: EMT Issuers (EMTWP.csv, Dec 2024)",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      },
-      {
-        "label": "Mento website: no MiCA/EMI regulatory posture disclosed",
-        "url": "https://www.mento.org/"
-      }
-    ]
-  },
   "genius": {
-    "applicability": "apparent-payment-stablecoin",
+    "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "Mento markets EURm, formerly cEUR, as a decentralized euro stablecoin for payments and FX, with onchain mint and redemption mechanics. Mento also says the stablecoins are created through community governance with no central issuing entity, leaving the GENIUS issuer question unresolved.",
+      "summary": "EURm, formerly cEUR, is marketed for euro payments and FX. Current V3 contracts mint/burn through reserve rebalancing and swaps against digital collateral. A legal issuer obligated to convert the token into a fixed amount of national currency or a bank deposit is not established. Protocol governance, reserve stewardship and infrastructure operators are identifiable, but operational control alone does not establish that statutory obligation. Payment intent and unresolved issuer/redemption evidence make applicability unclear.",
       "references": [
         {
           "label": "Mento stablecoins: EURm product and payment description",
           "url": "https://www.mento.org/stablecoins",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Mento MiCAR workshop: decentralized cEUR and no identifiable issuer",
           "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2024-11-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Mento V3 StableToken mint and burn paths",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "MGP-19: proposed issuance governance and reserve-operator structure",
+          "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-21",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Mento Labs GmbH",
     "foreignExceptionStatus": "unknown",
-    "notes": "Mento's own regulatory discussion describes cEUR/EURm as fully decentralized and says there is no central entity pressing the minting button or identifiable issuer. EURm is nevertheless kept in apparent-payment-stablecoin scope because Mento markets it as a euro stablecoin for payments and FX. No token-specific GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration was located.",
+    "notes": "EURm is a V3 reserve-backed stable asset, not a CDP merely because some other Mento currencies use CDPs. Payment marketing does not resolve GENIUS section 2(22)'s legal-issuer and fixed monetary-value redemption requirements. issuerEntity \"Mento Protocol\" is a factual protocol-family descriptor for issuer-key grouping, not a confirmed legal issuing entity or fiat-redemption obligor. The reopened Mento workshop describes protocol/community issuance and Labs infrastructure provision; MGP-19 identifies Mento Labs GmbH as reserve/oracle operator, without establishing it as the legal issuer of EURm. Governance/admin powers, foundation stewardship and operator functions remain relevant and the protocol is not treated as immutable or exempt solely because a DAO participates. The 2024 workshop is issuer-side analysis, not an official GENIUS ruling; the August 2026 governance-transfer discussion is not evidence of execution. The opened reserve dashboard is first-party live disclosure, with no public 1:1 fiat issuer redemption policy or monthly independent reserve attestation established. No public token-specific GENIUS authorization, application, announced intent or registration was located. The full framework remains pre-effective; not-yet-restricted is a GENIUS timing description and does not establish permission under other US laws. MGP-18 separately describes existing migration-multisig control, so the older workshop claim of protocol immutability is not adopted as a current fact.",
     "references": [
       {
         "label": "OCC Digital Assets Licensing Applications",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Federal Register proposed rule: foreign issuer registration",
         "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-register",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "New York DFS virtual currency licensing and Greenlist",
         "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
         "sourceKind": "state-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Mento MiCAR workshop: decentralized cEUR and no identifiable issuer",
         "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2024-11-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mento V3 StableToken mint and burn paths",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MGP-19: proposed issuance governance and reserve-operator structure",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-21",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Mento reserve dashboard",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve GENIUS standards and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Act implementation and effective-date announcement",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MGP-18: current migration-multisig ownership and planned V2 pool deprecation",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA MiCA EMT and ART registers",
-        "OCC Digital Assets Licensing Applications directory",
-        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal",
-        "Federal Reserve GENIUS Act customer-identification proposal",
-        "New York DFS virtual-currency licensing page and Greenlist",
-        "Mento stablecoin, reserve, and MiCAR disclosures",
-        "Public searches for Mento/EURm/cEUR GENIUS approval, application, or foreign registration"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.mento.org/blog/highlights-from-the-micar-workshop",
+        "https://www.mento.org/stablecoins",
+        "https://docs.mento.org/mento-v3/dive-deeper/the-reserve",
+        "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "Official-domain web search on 2026-10-07: Mento, EURm, USDm, cEUR and cUSD combined with GENIUS, permitted payment stablecoin, enforcement and MiCA authorization across OCC, Federal Reserve, FDIC, NCUA, Treasury, NYDFS and ESMA",
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "https://reserve.mento.org/"
       ],
-      "summary": "No public GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration naming Mento, EURm, or cEUR was located. Mento's decentralized-issuance disclosure also does not identify a legal issuer that could be matched to a GENIUS authorization record.",
+      "summary": "No token-specific public GENIUS approval, state qualification, official application, foreign registration, announced GENIUS intent, or GENIUS enforcement action was located for EURm/USDm or the publicly described Mento operators in the opened official sources and targeted searches. The OCC directory covers national-bank applications, not all possible GENIUS filings. General rule proposals and unrelated licenses do not establish authorization. A legal issuer owing fixed monetary-value redemption remains unidentified in the reviewed disclosures; this finding records public evidence reviewed, not proof that no private filing or engagement exists.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Digital Assets Licensing Applications",
           "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Federal Reserve GENIUS Act customer-identification proposal",
           "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260618a.htm",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-06-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "New York DFS virtual currency licensing and Greenlist",
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
           "sourceKind": "state-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS standards and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://reserve.mento.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "issuerEntity": "Mento Protocol"
   }
 }

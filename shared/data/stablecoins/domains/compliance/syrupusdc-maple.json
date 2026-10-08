@@ -1,5 +1,18 @@
 {
   "id": "syrupusdc-maple",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Maple syrupUSDC product disclosures and disclaimers",
+        "url": "https://docs.maple.finance/legal/syrupusdc-product-disclosures-and-disclaimers.md"
+      },
+      {
+        "label": "MiCA Regulation (EU) 2023/1114, scope and definitions",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -9,20 +22,28 @@
           "label": "GENIUS Act enacted text: payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         },
         {
           "label": "Maple: syrupUSDC live on Balancer",
           "url": "https://maple.finance/insights/syrupusdc-live-on-balancer",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2024-08-15"
         },
         {
           "label": "Maple: syrupUSDC live on Morpho",
           "url": "https://maple.finance/insights/syrupusdc-is-now-live-on-morpho-curated-by-gauntlet-and-mev-capital",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-03-25"
+        },
+        {
+          "label": "Maple syrupUSDC legal claim and risk disclosures",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -31,28 +52,43 @@
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
     "notes": "GENIUS scope was assessed explicitly because syrupUSDC is a prominent dollar-denominated asset that can be confused with a payment stablecoin. Its yield-bearing lending-receipt and DeFi-collateral structure supports the conservative non-payment-token classification.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
     "references": [
       {
         "label": "GENIUS Act enacted text: payment stablecoin definition",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "Maple: syrupUSDC live on Balancer",
         "url": "https://maple.finance/insights/syrupusdc-live-on-balancer",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-08-15"
       },
       {
         "label": "Maple: syrupUSDC live on Morpho",
         "url": "https://maple.finance/insights/syrupusdc-is-now-live-on-morpho-curated-by-gauntlet-and-mev-capital",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-03-25"
+      },
+      {
+        "label": "Maple syrupUSDC legal claim and risk disclosures",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       }
-    ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    ]
   }
 }

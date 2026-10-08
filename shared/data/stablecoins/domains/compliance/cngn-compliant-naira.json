@@ -9,13 +9,13 @@
           "label": "cNGN terms: issuance and redemption",
           "url": "https://cngn.co/terms-and-condition",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "cNGN official site",
           "url": "https://cngn.co/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -30,92 +30,140 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://cngn.co/transparency",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "The Nigerian SEC VASP regulatory-incubation statement is not a U.S. GENIUS authorization. No public GENIUS approval, state qualification, OCC foreign registration, official application, or Treasury comparability determination for WrappedCBDC/cNGN was located. cNGN's public transparency page describes monthly reserve audits but does not expose a current reserve attestation report; the foreign-issuer posture remains unknown while GENIUS rulemaking is proposed.",
+    "monthlyAttestationPresent": true,
+    "notes": "Nigeria SEC admission to ARIP is not a final licence or a U.S. GENIUS authorization. The July 2 SEC announcement says admitted entities would receive conditional Approval-in-Principle. No public GENIUS approval, state qualification, official application, issuer-announced GENIUS pathway, OCC foreign registration or Treasury comparability determination was located for WrappedCBDC/cNGN. The public transparency page describes monthly reserve audits, and an actual August 31, 2026 ISAE 3000 reserve examination by Bala Isah Garba and Company was opened: NGN 3,550,845,048.39 reserve assets exceeded NGN 3,329,961,223.91 token liabilities. Its local regulatory-compliance discussion is not evidence of U.S. approval. Foreign-exception status remains unknown and the general GENIUS DASP restriction is not yet effective.",
     "references": [
       {
-        "label": "GENIUS Act, 12 U.S.C. chapter 56",
-        "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC digital-assets licensing applications",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "cNGN terms: issuer and redemption",
         "url": "https://cngn.co/terms-and-condition",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "cNGN transparency",
         "url": "https://cngn.co/transparency",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "SEC Nigeria: Wrapped CBDC admitted to ARIP",
         "url": "https://home.sec.gov.ng/for-investors/keep-track-of-circulars/sec-clears-seven-new-fintech-firms-for-admission-into-the-accelerated-regulatory-incubation-programme-arip/",
-        "sourceKind": "regulator-directory",
+        "sourceKind": "foreign-regulator",
         "sourceDate": "2026-07-02",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposed rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "cNGN independent reserve examination (2026-08-31)",
+        "url": "https://drive.google.com/file/d/1Hw3aKTD29QxEqawYQjpRmGtVuK1_lV92/view?usp=drive_link",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-31"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "ESMA Interim MiCA Register EMTWP.csv and ARTZZ.csv, update dated 2026-08-12",
-        "GENIUS Act text in 12 U.S.C. chapter 56",
-        "OCC GENIUS Act proposed rule and foreign-issuer registration framework",
-        "OCC Digital Assets Licensing Applications public table",
-        "Federal Reserve GENIUS Act customer-identification proposal",
-        "cNGN official terms, site, and transparency page",
-        "Exact-name searches for cNGN and Compliant Naira in OCC and Federal Register materials"
+        "OCC Bulletin 2026-3 and current Digital Assets Licensing Applications table; no named issuer or token approval/application located",
+        "Federal Reserve September 29, 2026 GENIUS implementation NPRM (R-1899)",
+        "Treasury August 17, 2026 Section 3 NPRM announcement and September 30, 2026 SCRC interim procedural rule",
+        "Exact token and legal-issuer GENIUS, enforcement and sanctions search across OCC, FDIC, Federal Reserve, Treasury, FinCEN, NCUA and NYDFS public domains; no exact matching authorization or action located",
+        "cNGN terms, official site and transparency page; actual August independent reserve examination",
+        "Nigerian SEC July 2, 2026 ARIP admission announcement"
       ],
-      "summary": "No token-specific GENIUS permitted-issuer approval, state-qualified approval, official application, OCC foreign registration, or Treasury comparability determination was found for WrappedCBDC Limited or cNGN as of 2026-08-14.",
+      "summary": "No public GENIUS permitted-payment-stablecoin-issuer approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination or token-specific GENIUS enforcement action was located for WrappedCBDC Limited or its token as of 2026-10-07. The reviewed rules are proposals or interim procedural rules, not issuer approvals. This is a bounded public-evidence finding, not proof of illegality or absence of unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "GENIUS Act, 12 U.S.C. chapter 56",
-          "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC GENIUS Act proposed rule",
           "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
           "sourceKind": "federal-regulator",
           "sourceDate": "2026-02-25",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "OCC digital-assets licensing applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "cNGN terms and conditions",
           "url": "https://cngn.co/terms-and-condition",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposed rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

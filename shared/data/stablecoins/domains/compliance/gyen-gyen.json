@@ -15,60 +15,163 @@
     "reserveDisclosureUrl": "https://stablecoin.z.com/attestation/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: GYEN has NYDFS trust-company supervision and monthly attestations, but no public GENIUS state-qualified approval or official application source was located. GMO-Z.com Trust Company announced a wind-down of GYEN and ZUSD issuance on May 15, 2026, with the parent GMO Internet Group dissolving the subsidiary and recording a ¥2.2bn write-down; the entity is pursuing a strategic shift to Japan. No GENIUS authorization posture is expected to develop given the planned dissolution. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "Evidence reviewed 2026-10-07: GYEN is issued by GMO-Z.com Trust Company, Inc., a U.S. New York limited-purpose trust company identified in the NYDFS directory; GMO JPY is also named on the NYDFS issuance Greenlist. Those legacy state approvals do not establish GENIUS state qualification or PPSI approval. No token-specific public GENIUS approval, state qualification, official application or announced GENIUS route was located in the checked public sources. The issuer commenced voluntary wind-down and dissolution under New York Banking Law section 605 on May 15; minting ceased, while verified account holders may redeem 1 GYEN for 1 JPY through November 11, 2026. This issuer-initiated wind-down is not coded as a GENIUS enforcement action. The August 6 and August 31 reserves received an AICPA examination opinion from The Network Firm, signed September 9; monthly reserve assurance remains publicly present during wind-down. Generic website minting/redeem-anytime descriptions are superseded by the dated wind-down terms. Substantive federal rules remain proposed; not-yet-restricted is limited to GENIUS DASP implementation, not European restrictions or issuer mint cessation.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "NYDFS virtual currency businesses",
         "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
         "sourceKind": "regulator-directory",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GMO Trust attestations",
         "url": "https://stablecoin.z.com/attestation/",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GMO Trust stablecoin overview",
         "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "GMO Trust wind-down announcement (May 15, 2026)",
         "url": "https://stablecoin.z.com/press/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-05-15",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "U.S. Treasury GENIUS issuance, offer and sale proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act proposed framework",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "GMO Trust August 2026 GYEN independent attestation",
+        "url": "https://stablecoin.z.com/attestation/file/2026-08%20GYEN%20%26%20ZUSD%20Attestation.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-09"
+      },
+      {
+        "label": "GMO Trust stablecoin user terms",
+        "url": "https://support.stablecoin.z.com/hc/en-us/articles/28734531119897-Stablecoin-User-Terms-and-Conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-14"
+      },
+      {
+        "label": "GMO Trust wind-down of stablecoin issuance",
+        "url": "https://support.stablecoin.z.com/hc/en-us/articles/57881757618969-Wind-down-of-GYEN-and-ZUSD-stablecoin-issuance",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-15"
+      },
+      {
+        "label": "GMO Trust wind-down redemption instructions",
+        "url": "https://support.stablecoin.z.com/hc/en-us/articles/60491926674585-GYEN-and-ZUSD-Wind-down-How-to-Redeem-Before-the-November-11-2026-Deadline",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-20"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "NYDFS virtual currency business registry",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "GMO Trust press page and Medium blog: wind-down of GYEN/ZUSD announced May 15 2026; no GENIUS application or authorization posture found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3, reopened 2026-10-07: proposed issuer and foreign-registration framework, not a token approval.",
+        "OCC Digital Assets Licensing Applications, direct HTTPS/HTML table extraction on 2026-10-07: nine pending charter applicants, none matching this token or identified issuer; this table is not an exhaustive GENIUS register.",
+        "Treasury August 17 section 3 proposal (sb0605), reopened 2026-10-07: expected January 18, 2027 effectiveness and separate DASP implementation dates.",
+        "September 30 SCRC procedural interim final rule, reopened 2026-10-07: procedures do not certify a state regime or qualify this issuer.",
+        "Federal Reserve September 24 proposals and Public Law 119-27, reopened 2026-10-07: functional payment-stablecoin definition and proposed implementation.",
+        "Public search on 2026-10-07 for IDRT, IDRX, EJPY and GMO-Z.com Trust with GENIUS, PPSI, enforcement or registration across OCC, Treasury, NYDFS, FDIC, NCUA, Federal Reserve, SEC, CFTC and FinCEN domains. No exact token-specific GENIUS approval, application, registration or enforcement result located; unrelated biotechnology IDRx results excluded.",
+        "https://www.dfs.ny.gov/virtual_currency_businesses - Redirected current NYDFS directory lists GMO-Z.com Trust Company, Inc. trust charter and GMO JPY issuance Greenlist; no GENIUS qualification entry.",
+        "https://stablecoin.z.com/press/ - May 15 issuer wind-down notice listing.",
+        "https://support.stablecoin.z.com/hc/en-us/articles/57881757618969-Wind-down-of-GYEN-and-ZUSD-stablecoin-issuance - Minting stopped and voluntary dissolution/redemption timeline; no GENIUS application or approval.",
+        "https://stablecoin.z.com/attestation/ - Monthly independent examination reports through August 2026.",
+        "https://stablecoin.z.com/attestation/file/2026-08%20GYEN%20%26%20ZUSD%20Attestation.pdf - August GYEN named contracts, reserves and independent assurance report."
       ],
-      "summary": "NYDFS trust-company and reserve-attestation materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, or official application source was located for GYEN. GMO-Z.com Trust Company announced dissolution of its U.S. stablecoin operations on May 15, 2026, making future authorization pursuit unlikely.",
+      "summary": "As of 2026-10-07, no public U.S. GENIUS PPSI approval, state qualification, official application or announced GENIUS route was located for GYEN or GMO-Z.com Trust Company, Inc. in the opened regulator and issuer sources. The NYDFS directory establishes the legacy New York limited-purpose trust charter and named GMO JPY issuance approval, not GENIUS qualification. Voluntary wind-down does not by itself establish prohibited-or-revoked GENIUS enforcement status.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "U.S. Treasury GENIUS issuance, offer and sale proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "NYDFS virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GMO Trust wind-down of stablecoin issuance",
+          "url": "https://support.stablecoin.z.com/hc/en-us/articles/57881757618969-Wind-down-of-GYEN-and-ZUSD-stablecoin-issuance",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-15"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "references": [
+        {
+          "label": "GMO Trust stablecoin user terms",
+          "url": "https://support.stablecoin.z.com/hc/en-us/articles/28734531119897-Stablecoin-User-Terms-and-Conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-14"
+        }
+      ],
+      "summary": "GYEN is a yen-referenced token issued by GMO-Z.com Trust Company, Inc. for payment and settlement, with contractual 1:1 JPY redemption for eligible verified account holders. Issuance has ceased during voluntary wind-down, while the initial redemption period remains open through November 11, 2026."
+    }
   }
 }

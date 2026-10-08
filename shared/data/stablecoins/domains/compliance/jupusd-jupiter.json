@@ -3,68 +3,160 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "JupUSD is a USD-pegged reserve-backed token issued on Solana for payment/settlement use within Jupiter's DeFi ecosystem; it presents as a payment stablecoin under GENIUS Act definitions. Jupiter's Terms of Service restrict US-based users, but this is an access restriction, not a legal carve-out from GENIUS applicability."
+      "summary": "JupUSD is marketed as a USD-referenced reserve-backed settlement stablecoin on Solana. Issuer documentation provides 1:1 issuance and direct redemption for USDC/USDtb collateral, subject to whitelisting and a 0.04% fee. The structure appears payment-stablecoin-like; the published technical redemption mechanism does not independently establish all statutory holder rights. Jupiter interface terms prohibit U.S. wallets, an access restriction that does not establish a GENIUS exemption.",
+      "references": [
+        {
+          "label": "JupUSD user docs",
+          "url": "https://docs.jup.ag/user-docs/earn/jupusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "JupUSD developer docs",
+          "url": "https://developers.jup.ag/docs/jupusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Jupiter interface Terms of Use",
+          "url": "https://developers.jup.ag/docs/legal/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Jupiter (Solana DEX aggregator, no disclosed US legal entity; Ethena Labs operates issuance backend)",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://jupusd.money/transparency",
+    "reserveDisclosureUrl": "https://api.jupusd.money/api/data",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Anchorage Digital and Ethena announced a USDtb regulatory issuance partnership on July 24, 2025; this concerns the reserve asset and does not establish authorization for the separate Jupiter-issued JupUSD token. No JupUSD-specific public approval, application, or issuer pathway was located in the checked issuer disclosures and OCC materials; this is a bounded negative search, not proof that no authorization exists anywhere. Jupiter's interface Terms of Use exclude US-based wallets, but an interface access restriction does not establish a formal GENIUS foreign-issuer exception. Issuer pathway and foreign-exception status remain unknown.",
+    "notes": "The reviewed materials identify Jupiter and Ethena operational roles but do not name the legal JupUSD issuance obligor. Block Raccoon S.A. is named only as Jupiter interface provider; no issuer domicile or formal pathway is assigned from that interface role. Anchorage/Ethena USDtb partnership concerns a reserve asset and establishes no JupUSD permission. The official live holdings API publishes supply and collateral balances for the mint in the base record; these data are self-published, not an independent monthly attestation. The transparency landing page did not expose holdings in the independently opened browser view, so the working official API is linked as the reserve disclosure. Published collateral-redemption mechanics do not establish an unrestricted right for retail holders to receive fiat at par. No matching public enforcement action was located in the bounded regulator-domain search. Section 20 sets the Act's effective date to January 18, 2027 or 120 days after implementing final regulations, whichever is earlier; no earlier-triggering final rules were located in the reviewed materials. The distinct general DASP offer/sale gate in section 3(b)(1) starts July 18, 2028. No current GENIUS offer/sale prohibition is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "JupUSD user docs",
         "url": "https://docs.jup.ag/user-docs/earn/jupusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "JupUSD developer docs",
         "url": "https://developers.jup.ag/docs/jupusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Anchorage Digital: Ethena USDtb GENIUS-compliant issuance announcement (July 24 2025)",
+        "label": "Anchorage Digital and Ethena USDtb partnership announcement (July 24 2025)",
         "url": "https://www.anchorage.com/insights/anchorage-digital-partners-with-ethena-labs-to-launch-first-genius-compliant-federally-regulated-stablecoin",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-07-24",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "JupUSD launch: The Block (Jan 2026)",
         "url": "https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb",
-        "sourceKind": "news"
+        "sourceKind": "news",
+        "sourceDate": "2026-01-05",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Jupiter interface Terms of Use",
+        "url": "https://developers.jup.ag/docs/legal/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "JupUSD live holdings and supply data",
+        "url": "https://api.jupusd.money/api/data",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve proposed GENIUS issuer and application rules",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stablecoin Certification Review Committee procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act, Public Law 119-27",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and public releases: no JupUSD or Jupiter issuer listing",
-        "Anchorage Digital / Ethena Labs USDtb GENIUS-compliant launch (July 24 2025): confirms USDtb is GENIUS-compliant via Anchorage Digital Bank N.A.; JupUSD is a separate token not covered by this authorization",
-        "JupUSD issuer disclosures and developer documentation: no regulatory authorization disclosed",
-        "Web search across US permitted-issuer, state-qualified, official-application, and foreign-exception materials: no Jupiter or JupUSD-specific result found",
-        "Jupiter Terms of Service (US user access restriction noted): no formal foreign-exception determination found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 proposed-rule main body and OCC digital-assets licensing applications full table: no JupUSD / Jupiter / Block Raccoon S.A. token-specific GENIUS permission or named applicant located.",
+        "Federal Reserve September 24, 2026 issuer standards and application proposals announcement, updated September 29.",
+        "September 30, 2026 SCRC procedural rule: no issuer-specific state qualification established by this rule.",
+        "NYDFS public regulated-entities table and Greenlist: no JupUSD / Jupiter / Block Raccoon S.A. named authorization identified; absence is limited to these published lists.",
+        "Current JupUSD user and developer documentation, Jupiter interface Terms of Use, live holdings API and Anchorage/Ethena USDtb announcement reopened: no JupUSD-specific approval, filed application or formal route disclosed.",
+        "Domain-restricted searches of OCC, FDIC, Federal Reserve, NCUA, NYDFS and Treasury for JupUSD / Jupiter / Block Raccoon S.A. plus GENIUS/approval/application, including enforcement terms: no matching issuer-specific public result found."
       ],
-      "summary": "No GENIUS approval, application, or issuer pathway for JupUSD or its issuer (Jupiter) found across federal/state regulator sources and issuer disclosures. USDtb's Anchorage/GENIUS pathway applies to the reserve asset issuer (Anchorage Digital Bank N.A.), not JupUSD itself.",
+      "summary": "No token-specific PPSI approval, state qualification, official GENIUS application or registered foreign exception was located for JupUSD / Jupiter / Block Raccoon S.A. in the opened sources and bounded name searches. Published proposals and bank/money-transmitter licenses do not establish GENIUS permission. This review is limited to public materials and does not establish that an authorization or nonpublic application cannot exist.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve proposed GENIUS issuer and application rules",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stablecoin Certification Review Committee procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

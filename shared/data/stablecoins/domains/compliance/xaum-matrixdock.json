@@ -14,6 +14,10 @@
       {
         "label": "Matrixdock XAUm token features: gold claim and KYC primary mint/redemption",
         "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features"
+      },
+      {
+        "label": "Matrixdock prohibited countries: EU member states",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/legal/prohibited-countries-regions.md"
       }
     ]
   },
@@ -26,19 +30,26 @@
           "label": "Matrixdock XAUm product page",
           "url": "https://www.matrixdock.com/xaum",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act text: payment stablecoin definition",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "XAUm token terms and conditions",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-10-21"
         }
       ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerDomicile": "Singapore",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
@@ -46,34 +57,56 @@
     "reserveDisclosureUrl": "https://www.matrixdock.com/xaum",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "XAUm is a prominent dashboard asset and could be confused with a payment stablecoin, so the usual omission for out-of-scope commodity products is replaced with an explicit non-payment-token row. Its gold backing and physical-gold redemption do not establish a GENIUS payment-stablecoin pathway or approval.",
+    "notes": "XAUm represents legal and beneficial ownership of gold under the October 21, 2025 terms. Matrix Mining Limited is the token issuer; Matrix Infinitus Hong Kong Limited maintains bullion on behalf of holders. Gold backing and physical-gold or market-value stablecoin redemption do not establish a GENIUS payment-stablecoin pathway or approval. The opened Bureau Veritas report is a physical inventory inspection, not a monthly token-liability reserve attestation. Issuer domicile is unverified: Singapore vault locations and BVI governing law do not establish incorporation. No enforcement action naming the reviewed products or Matrix Mining Limited was located in the opened FinCEN index or the 2026-10-07 SEC/OCC/Treasury/OFAC domain searches for Matrixdock, XAUm, XAGm and Matrix Mining Limited.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "GENIUS Act text: payment stablecoin definition",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "Matrixdock XAUm product page",
         "url": "https://www.matrixdock.com/xaum",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Matrixdock XAUm token features",
         "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "XAUm token terms and conditions",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-10-21"
+      },
+      {
+        "label": "Bureau Veritas gold and silver physical inventory inspection",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-17"
+      },
+      {
+        "label": "FinCEN public enforcement actions",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

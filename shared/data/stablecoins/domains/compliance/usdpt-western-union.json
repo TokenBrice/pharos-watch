@@ -1,22 +1,5 @@
 {
   "id": "usdpt-western-union",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA interim MiCA register: current ART/EMT register page (last update 12 August 2026)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Western Union USDPT launch: U.S. dollar payment stablecoin issued by Anchorage Digital Bank for global payments",
-        "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2026/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments/default.aspx"
-      },
-      {
-        "label": "Western Union USDPT page: global exchange support and select-market rollout, with no EU offer identified",
-        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -32,73 +15,155 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+    "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Anchorage Digital Bank, N.A. is the OCC-chartered national trust bank issuing USDPT for Western Union. Anchorage now publishes USDPT reserve holdings monthly and links Deloitte's May 2026 examination. ADB explicitly states it expects to become a PPSI once the GENIUS Act becomes effective (Jan 18, 2027 at the latest). The issuerPathway is federal-qualified-nonbank because ADB holds an OCC national trust charter but is uninsured (no FDIC insurance required), placing it outside the IDI-subsidiary category and instead on the federal nonbank/OCC pathway. A 2022 OCC consent order for BSA/AML deficiencies was fully terminated by the OCC in August 2025; no active enforcement action exists as of the review date. No PPSI approval or application has been filed; the PPSI application framework remains in proposed rulemaking.",
+    "notes": "USDPT is issued by Anchorage Digital Bank, N.A. as a payment stablecoin with USD redemption. The active OCC national trust bank list confirms the existing uninsured bank; federal-qualified-nonbank is its identified statutory route, not a claim of GENIUS PPSI approval. The reopened May 1, 2026 Anchorage comment-letter disclosure says the bank expects to become a PPSI once the Act takes effect and names the planned Western Union token. Retain issuer-announced-intent. The reserve hub provides monthly USDPT independent examination reports through August 31, 2026; the August report was opened and signed September 28. Reserve and liability reporting establishes disclosure/attestation presence, not approval or a guarantee. Current covered-stablecoin terms reserve direct contractual redemption to eligible clients subject to applicable agreements, and the Western Union product page describes 1:1 redemption. The historical April 2022 bank BSA/AML consent order was terminated August 18, 2025; the separate operating agreement was terminated February 9, 2026. The no-public-action-found flag is limited to current public GENIUS/token-specific action after these searches, not absence of any historical bank enforcement. Treasury describes expected effectiveness January 18, 2027; not-yet-restricted is timing-only and not evidence of lawful unrestricted EU distribution.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC: Anchorage national trust bank charter conditional approval (2021)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC consent order against Anchorage Digital Bank for BSA/AML (April 2022, terminated August 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2022/nr-occ-2022-41.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage Digital: GENIUS Act comment letter and PPSI intent statement",
         "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage Digital: First federally chartered stablecoin issuer post-GENIUS Act",
         "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Western Union USDPT page",
         "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Western Union USDPT announcement",
         "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anchorage Digital USDPT monthly reserve attestations",
         "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC active national trust bank list",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC termination of Anchorage 2022 BSA/AML consent order",
+        "url": "https://occ.gov/static/enforcement-actions/eaAA-ENF-2025-44.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-08-18"
+      },
+      {
+        "label": "OCC termination of Anchorage operating agreement",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/scl2026-01.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-09"
+      },
+      {
+        "label": "Anchorage covered-stablecoin terms",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-10-13"
+      },
+      {
+        "label": "USDPT August 31, 2026 independent reserve examination",
+        "url": "https://learn.anchorage.com/08.31.26_USDPT_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-28"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "OCC Anchorage Digital Bank charter materials and consent order history",
-        "Anchorage Digital Bank GENIUS Act comment letter and public disclosures",
-        "Western Union USDPT product and launch disclosures",
-        "OCC consent order termination (August 2025)",
-        "Anchorage Digital stablecoin solutions for banks disclosures (2026)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3; grouped exact-issuer GENIUS approval/application/enforcement search across OCC, Federal Reserve, FDIC, NCUA and Treasury",
+        "Federal Reserve September 24, 2026 proposals",
+        "Treasury August 17, 2026 Section 3 proposal",
+        "September 30, 2026 SCRC interim final rule",
+        "NYDFS licensed virtual-currency entities and approved stablecoin list",
+        "FinCEN enforcement-action index",
+        "OCC active national trust bank list and Anchorage charter notice",
+        "Anchorage May 1, 2026 OCC-comment-letter disclosure",
+        "OCC 2022 consent order and August 18, 2025 termination",
+        "OCC February 9, 2026 operating-agreement termination",
+        "Western Union USDPT product page, Anchorage covered-stablecoin terms and August 2026 reserve report"
       ],
-      "summary": "No PPSI approval, official PPSI application, or state-qualified approval has been located for USDPT or Anchorage Digital Bank. The PPSI application framework remains in proposed rulemaking. Anchorage has publicly stated it expects PPSI status once the GENIUS Act becomes effective, confirming issuer-announced-intent.",
+      "summary": "As of 2026-10-07, the opened federal proposals, SCRC certification procedure, state licensing list, issuer disclosures and targeted regulator-domain searches did not establish an issuer-specific GENIUS PPSI approval, state qualification, or registered foreign exception for Anchorage Digital Bank, N.A. / USDPT. Licensing or registration under earlier regimes is not such authorization. No public GENIUS-specific enforcement action was located in the checked sources; this is a bounded public-evidence review, not a legal compliance finding.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed regulations",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-regime certification interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "reviewer": "Pharos compliance research; OpenAI Codex SOL-UPGRADE disclosure update",
-    "reviewedAt": "2026-07-22"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

@@ -1,0 +1,59 @@
+{
+  "id": "stusds-sky",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Sky stUSDS protocol documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+      },
+      {
+        "label": "Sky stUSDS risk-capital product disclosure",
+        "url": "https://sky.money/stusds"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "stUSDS is an ERC-4626 risk-capital share over USDS supplied to SKY-backed borrowing. Its redemption value reflects vault returns and bad-debt losses, and withdrawal availability depends on unutilized liquidity. It does not represent an issuer promise to redeem each share for a fixed amount of national currency.",
+      "references": [
+        {
+          "label": "Sky stUSDS protocol documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky stUSDS risk-capital product disclosure",
+          "url": "https://sky.money/stusds",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Classification concerns the stUSDS risk-capital share independently of underlying USDS. Risk-bearing vault shares are treated as non-payment tokens under this tracker. No GENIUS authorization or legal issuer identity is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
+  }
+}

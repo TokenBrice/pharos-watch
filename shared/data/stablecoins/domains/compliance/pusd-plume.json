@@ -3,12 +3,25 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "pUSD is a non-interest-bearing USDC wrapper with payment-like use on Plume Chain. The legal issuer is Nest, a Marshall Islands DAO LLC, and the token explicitly restricts U.S. persons from minting. Whether secondary-market access or the payment use case brings it within GENIUS Act scope remains unresolved in proposed rulemaking."
+      "summary": "pUSD is marketed for payments and settlement with a stable USD value, but its documented redemption is 1:1 for USDC with no direct fiat conversion. GENIUS section 2(22) requires an issuer obligation to redeem for a fixed amount of monetary value rather than a digital asset denominated in that value. The exact pUSD legal redemption obligor remains unresolved, so applicability remains unclear on these facts.",
+      "references": [
+        {
+          "label": "Plume pUSD docs",
+          "url": "https://docs.plume.org/plume/tokens/plume-usd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Nest (Marshall Islands DAO LLC)",
-    "issuerDomicile": "Marshall Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -16,49 +29,143 @@
     "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "pUSD is issued by Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892), not Plume directly. Plume manages the underlying BoringVault infrastructure. The token explicitly excludes U.S. persons from minting per Nest/Plume product documentation and RWA.xyz eligibility listing (Non-U.S. Investors only). No GENIUS authorization has been sought. Applicability remains unclear because secondary-market exposure to U.S. persons is possible and the GENIUS Act's foreign-issuer scope is still being defined in NPRMs.",
+    "notes": "Reviewed 2026-10-07. Current product/docs attribute pUSD issuance and BoringVault management to Plume, with 1:1 onchain USDC backing and USDC redemption, no interest, and no direct fiat conversion. Removed the unsupported Nest issuerEntity and Marshall Islands domicile: Nest vault-curator identity does not establish the pUSD issuer. General website terms name Cayman Plume Foundation SEZC as interface provider; the footer names Kimber Labs Inc.; neither establishes the exact legal pUSD redemption obligor. Plume interface terms restrict U.S.-based service use; this is not a blanket finding about token secondary-market transfers or GENIUS applicability. Removed the unsupported claim that no authorization has been sought; no public exact-token GENIUS approval, application, intent or foreign exception was found in the bounded sources checked. Foreign exception remains unknown, and no monthly independent attestation was located. GENIUS remains pre-effective in the reviewed primary sources.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Plume pUSD docs",
         "url": "https://docs.plume.org/plume/tokens/plume-usd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Plume pUSD website",
         "url": "https://plume.org/pusd",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "RWA.xyz pUSD asset page: lists Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892) as issuer; eligible investors: Non-U.S. Investor",
-        "url": "https://app.rwa.xyz/assets/pUSD",
-        "sourceKind": "issuer-disclosure"
+        "label": "Plume website interface terms",
+        "url": "https://www.plume.org/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-10-07"
+      },
+      {
+        "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-03-02"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC digital assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "Plume pUSD docs and product page",
-        "RWA.xyz pUSD asset page (issuer: Nest, Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892; eligible investors: Non-U.S. only)",
-        "Cryptonews Plume Nest product guide (US persons excluded from vaults)",
-        "Federal Register GENIUS Act NPRMs (OCC, FDIC, FinCEN/OFAC, Treasury)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and March 2, 2026 GENIUS implementation proposed rule, including the full official Federal Register HTML",
+        "OCC current pending digital-assets licensing applications table (nine rows)",
+        "Federal Reserve September 29, 2026 implementation proposed rule in the Federal Register",
+        "FDIC April 7, 2026 notice of proposed GENIUS requirements and standards",
+        "NCUA financial-technology and digital-assets page describing its proposed GENIUS approval framework",
+        "Treasury August 17, 2026 issuance, offer and sale proposal announcement",
+        "Treasury September 30, 2026 SCRC certification procedural rule",
+        "NYDFS regulated virtual-currency entity directory and greenlist",
+        "Exact Plume pUSD searches on OCC, Treasury, SEC and NYDFS domains for approval or public regulatory action",
+        "Current Plume pUSD token mechanics and product page",
+        "Plume general interface terms and PLUME-only MiCA notice",
+        "RWA.xyz pUSD analytics, which does not support the old Nest legal issuer attribution"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for pUSD. Issuer (Nest, Marshall Islands DAO LLC) explicitly restricts U.S. persons and has made no public GENIUS authorization filing.",
+      "summary": "In the public sources checked on 2026-10-07, no token-specific GENIUS PPSI approval, state qualification, official application, OCC foreign-issuer registration or Treasury foreign comparability determination was found for Plume pUSD (exact legal issuer unresolved). This is a bounded public-evidence finding, not proof that no confidential application exists. No token-specific public U.S. regulatory action was located. Existing charters and foreign licenses are not GENIUS approval.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer and foreign registration proposal (91 FR 10202)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-03-02/html/2026-04089.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-03-02"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposal (91 FR 61580)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "Treasury GENIUS issuance, offer and sale proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Treasury SCRC certification procedures, not issuer approval (91 FR 61688)",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "OCC digital assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

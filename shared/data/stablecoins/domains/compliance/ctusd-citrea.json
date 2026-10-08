@@ -1,7 +1,17 @@
 {
   "id": "ctusd-citrea",
   "mica": {
-    "status": "out-of-scope"
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MoonPay stablecoin terms: EEA direct purchase and redemption excluded",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      },
+      {
+        "label": "MoonPay ctUSD announcement: EEA excluded",
+        "url": "https://www.moonpay.com/newsroom/citrea"
+      }
+    ]
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
@@ -20,64 +30,103 @@
     "reserveDisclosureUrl": "https://dashboard.m0.org/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MoonPay positions ctUSD as 'designed to align with the forthcoming GENIUS Act guidelines' (Citrea launch blog, Jan 2026) and MoonPay VP Harrison described GENIUS as a regulatory 'permission slip' at Consensus Miami 2026 (May 8, 2026). No token-specific PPSI application, state-qualified approval, or OCC/FDIC filing was found as of 2026-06-18. The application framework remains in NPRM stage. MoonPay USA LLC holds the NYDFS BitLicense and New York Money Transmitter License plus money-transmission licenses in other U.S. jurisdictions; MoonPay Trust Company, LLC separately holds the NY limited-purpose trust charter for custody and OTC trading. No GENIUS pathway has been publicly declared.",
+    "notes": "MoonPay and Citrea describe ctUSD as designed to align with forthcoming GENIUS Act guidelines. MoonPay USA LLC remains the legal issuer under its stablecoin terms, with one-for-one USD redemption for eligible onboarded customers and segregated reserves held for holders. EEA customers cannot purchase or redeem directly with MoonPay. The NYDFS directory separately lists MoonPay USA LLC virtual-currency/money-transmitter licenses and MoonPay Trust Company, LLC limited-purpose trust charter. Neither establishes a ctUSD GENIUS designation. No qualifying token-specific public GENIUS approval or application was located in the sources checked on 2026-10-07. M0 Validator disclosure concerns the underlying reserve infrastructure; no ctUSD-specific monthly independent accountant reserve attestation was located.",
     "references": [
-      {
-        "label": "MoonPay stablecoin issuance",
-        "url": "https://www.moonpay.com/business/issuance",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
-      },
       {
         "label": "MoonPay stablecoin terms",
         "url": "https://www.moonpay.com/legal/stablecoin_terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-25"
       },
       {
         "label": "Citrea ctUSD announcement",
         "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-01-15",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "MoonPay VP Harrison on GENIUS Act at Consensus Miami 2026",
-        "url": "https://www.coindesk.com/policy/2026/05/08/stablecoins-have-their-permission-slip-now-comes-the-hard-part",
-        "sourceKind": "news",
-        "sourceDate": "2026-05-08",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "MoonPay NY Trust Charter press release (April 2026)",
         "url": "https://www.prnewswire.com/news-releases/moonpay-launches-virtual-accounts-in-new-york-expanding-enterprise-stablecoin-infrastructure-302750808.html",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-04-23",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "MoonPay ctUSD GENIUS-alignment and EEA exclusion disclosure",
+        "url": "https://www.moonpay.com/newsroom/citrea",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-01-15"
+      },
+      {
+        "label": "NYDFS directory: MoonPay USA licenses and separate MoonPay Trust charter",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Treasury GENIUS issuance, offer and sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Treasury SCRC interim procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin (Bulletin 2026-3) and public releases: no MoonPay PPSI application found",
-        "MoonPay stablecoin issuance and licensing pages: no GENIUS authorization details",
-        "Citrea ctUSD launch materials (Citrea blog, Jan 2026): 'designed to align with forthcoming GENIUS Act guidelines' language only",
-        "M0 reserve dashboard",
-        "CoinDesk Consensus Miami 2026 coverage (May 8, 2026): MoonPay VP describes GENIUS as 'permission slip', no authorization announced",
-        "MoonPay April 2026 Virtual Accounts press release: confirms NYDFS Trust Charter, no GENIUS application mentioned",
-        "Federal Register search for MoonPay PPSI filings: none found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and current OCC interpretations and decisions index reopened on 2026-10-07",
+        "Federal Reserve September 24, 2026 GENIUS issuer and application proposal announcement reopened",
+        "Treasury August 17, 2026 section 3 proposal and September 30, 2026 SCRC procedural rule reopened",
+        "NYDFS virtual-currency business directory and Greenlist reopened; MoonPay USA LLC and MoonPay Trust Company, LLC distinguished",
+        "Official-domain search for MoonPay USA, Bridge Building Inc., NASD Inc. (Noble), mantraUSD and M0 with GENIUS or PPSI found no qualifying exact-token approval or official application",
+        "SEC, FinCEN, NYDFS, OCC and OFAC exact-entity enforcement search returned no matching action; historical securities-SRO NASD and unrelated Noble Corporation matches excluded",
+        "MoonPay USA LLC stablecoin terms, MoonPay ctUSD GENIUS-alignment announcement, Citrea launch blog and April MoonPay press release reopened",
+        "M0 dashboard returned a JavaScript shell; unique verifier browser tab navigation returned ERR_ABORTED; no live reserve figures extracted"
       ],
-      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application filing was located for ctUSD or MoonPay USA LLC. MoonPay's public posture as of June 2026 is intent-signaling only, with no regulator-grade authorization source found.",
+      "summary": "As of 2026-10-07, the checked public regulator and issuer sources did not identify a qualifying GENIUS PPSI approval, state-qualified designation, official GENIUS application or registered foreign-issuer exception for ctUSD / MoonPay USA LLC. This finding concerns the reviewed public record and does not exclude confidential or unpublished filings. Ordinary licenses and affiliate charter decisions are separate from token-specific GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS issuer and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury SCRC interim procedural rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-09-05"
+    "reviewedAt": "2026-10-07"
   }
 }

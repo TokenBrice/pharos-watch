@@ -1,5 +1,18 @@
 {
   "id": "susdc-spark-v1",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Spark Savings: Legacy V1 sUSDC vault mechanics",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "MiCA Article 3: EMT and ART definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
@@ -10,13 +23,13 @@
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
           "url": "https://docs.spark.finance/products/spark-savings",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -24,23 +37,30 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Reviewed as a yield share under GENIUS section 2(22). No payment-stablecoin authorization is asserted. MiCA is intentionally unassessed: transferable share mechanics alone do not resolve EU offering or instrument classification.",
+    "notes": "Reviewed as the Legacy V1 sUSDC yield share under GENIUS section 2(22). Spark documents USDC deposits routed into the Sky Savings Rate and an increasing share redemption rate. The wrapper has its own scope classification; USDC issuer licenses and parent payment-token classifications do not transfer to the vault share. No GENIUS payment-stablecoin authorization is asserted.",
     "references": [
       {
         "label": "GENIUS Act payment stablecoin definition, section 2(22)",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
         "url": "https://docs.spark.finance/products/spark-savings",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

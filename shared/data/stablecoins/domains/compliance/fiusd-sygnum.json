@@ -1,9 +1,38 @@
 {
   "id": "fiusd-sygnum",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA Article 2 financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Sygnum FIUSD ledger-based security and underlying-fund claim",
+        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "FIUSD is a Swiss ledger-based security representing the right to delivery of Fidelity ILF fund units, not a Sygnum deposit or the unrelated Fiserv FIUSD payment token. No payment-stablecoin authorization is asserted; the issuer-authored March 2025 application is historical and is not the definitive current bank-client contract."
+      "summary": "FIUSD is a Swiss ledger-based security representing the right to delivery of Fidelity ILF fund units, not a Sygnum deposit or the unrelated Fiserv FIUSD payment token. No payment-stablecoin authorization is asserted; the issuer-authored March 2025 application is historical and is not the definitive current bank-client contract.",
+      "references": [
+        {
+          "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
+          "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-03-20"
+        },
+        {
+          "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -17,23 +46,18 @@
         "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
         "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
-      }
-    ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
-  },
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "MiCA Article 2 financial-instrument exclusion",
-        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-03-20"
       },
       {
-        "label": "Sygnum FIUSD ledger-based security and underlying-fund claim",
-        "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
-    ]
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

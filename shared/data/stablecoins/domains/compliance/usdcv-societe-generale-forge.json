@@ -14,6 +14,14 @@
       {
         "label": "SG-FORGE USDCV MiCA white paper",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+      },
+      {
+        "label": "ESMA Interim MiCA Register: USDCV EMT row naming Société Générale - Forge and ACPR (retrieved 2026-10-07)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "SG-FORGE USDCV MiCA white paper (September 2026)",
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
       }
     ]
   },
@@ -31,48 +39,122 @@
     "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "MiCA authorization and SG-FORGE reserve/redemption disclosures do not establish a public U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. SG-FORGE actively restricts US persons from holding USDCV (Regulation S offshore-transaction carve-out only). The GENIUS Act foreign-issuer exception requires a Treasury MiCA-comparability determination plus OCC registration: a pathway still in proposed-rulemaking as of 2026-06-18 with no determination issued. No public indication SG-FORGE has initiated or intends to initiate that process.",
+    "notes": "SG-FORGE is a French ACPR-authorized EMI; the exact CoinVertible token is recorded as a MiCA EMT. That is not GENIUS permitted-issuer approval or a registered foreign exception. On 2026-10-07 the opened public U.S. materials and targeted official/issuer searches disclosed no SG-FORGE PPSI or state qualification, official application, OCC foreign registration, Treasury foreign comparability determination, announced filing intent, or GENIUS enforcement action. This is a bounded public-evidence finding, not a claim about confidential filings. Current September 2026 terms distinguish free third-party transfer from issuer dealings: EEA holders have par redemption subject to controls, non-EEA holders lack a direct redemption right, and the issuer cannot transact with US residents; these are not a universal U.S. holding ban or a regulatory prohibition. Daily reserve disclosures are self-reported, not independent monthly attestations. Treasury expects the substantive GENIUS regime to take effect on 2027-01-18, subject to the statutory trigger; the September SCRC procedural rule does not activate it. ForeignExceptionStatus and issuerPathway remain unknown; not-yet-restricted refers only to GENIUS, not issuer selling terms.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "SG-FORGE CoinVertible product page",
         "url": "https://www.sgforge.com/product/coinvertible/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "SG-FORGE USDCV MiCA white paper v2.0",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Paul Hastings: GENIUS Act foreign stablecoin issuer provisions",
-        "url": "https://www.paulhastings.com/insights/client-alerts/what-the-genius-act-means-for-uk-and-foreign-stablecoin-issuers",
-        "sourceKind": "news"
+        "label": "GENIUS Act Public Law 119-27: enacted payment-stablecoin and foreign-issuer framework",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury August 2026 GENIUS issuance and offer-sale proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state certification procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "OCC public digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SG-FORGE current CoinVertible MiCA white paper (September 2026)",
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM (Bulletin 2026-3, Federal Register 2026-04089): no SG-FORGE or USDCV-specific approval",
-        "SG-FORGE product page and USDCV white paper v2.0: confirms US selling restrictions, no GENIUS mention",
-        "Paul Hastings GENIUS Act foreign issuer alert: confirms Treasury comparability + OCC registration pathway still in proposed-rulemaking, no determination issued",
-        "Web search for SG-FORGE GENIUS Act application, foreign-issuer registration, qualifying foreign issuer status: no results found",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html (independently recovered official HTML main body using HTTPS fetch; displayed pending bank applications only, not a comprehensive GENIUS register)",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html (official HTML main body recovered; February 25, 2026 notice of proposed rulemaking)",
+        "https://public-inspection.federalregister.gov/2026-04089.pdf (foreign-registration proposed rules, not issuer approvals)",
+        "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm (enacted payment-stablecoin definition, foreign-issuer requirements and effective-date provision)",
+        "https://home.treasury.gov/news/press-releases/sb0605 (August 17, 2026 proposal and expected January 18, 2027 substantive effectiveness)",
+        "https://home.treasury.gov/news/press-releases/sb0428 (state-regime similarity proposal, not a foreign-regime determination)",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm (SCRC procedural interim final rule, not a named issuer approval)",
+        "Independent search: (Monerium OR SG-FORGE OR CoinVertible) AND (GENIUS OR permitted payment stablecoin issuer) across occ.gov, home.treasury.gov, federalreserve.gov, fdic.gov, dfs.ny.gov and ncua.gov; no matching named authorization located.",
+        "https://www.sgforge.com/product/coinvertible/ (issuer, redemption terms and daily self-reported reserves)",
+        "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "https://www.sgforge.com/legal-information/ (exact issuer and French licenses; securities-registration warning is not GENIUS authorization evidence)",
+        "Independent searches: site:sgforge.com GENIUS; CoinVertible GENIUS site:occ.gov; SG-FORGE GENIUS enforcement; no public filing intention, token-specific U.S. approval or GENIUS action located."
       ],
-      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, foreign-exception determination, or comparability finding was located for USDCV or SG-FORGE. SG-FORGE actively restricts US persons and has not announced intent to seek US market access under GENIUS. The foreign-exception framework itself remains in proposed-rulemaking.",
+      "summary": "Review on 2026-10-07 located the issuer foreign EMI license and payment-token disclosures, but no named public U.S. GENIUS approval, state qualification, official application or registered/comparable foreign exception, and no GENIUS-specific public enforcement action in the opened and searched sources. The pending OCC bank/digital-assets table is limited and no confidential filings are inferred. MiCA/EEA EMI authorization and generic proposed rules do not establish a GENIUS authorization; no foreign pathway is inferred merely from domicile.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC public digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury August 2026 GENIUS implementation proposal",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "OCC proposed issuer and foreign-registration framework",
+          "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "USDCV is a fiat-denominated payment and settlement EMT, issued at par and backed by safeguarded assets with issuer redemption obligations to eligible EEA holders; it is not a bank deposit, sovereign currency or yield-bearing security. The GENIUS definition covers fixed monetary value in any national currency, notwithstanding foreign issuance and U.S. distribution restrictions.",
+      "references": [
+        {
+          "label": "SG-FORGE current CoinVertible MiCA white paper",
+          "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "GENIUS Act: payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    }
   }
 }

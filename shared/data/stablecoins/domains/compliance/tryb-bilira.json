@@ -9,13 +9,13 @@
           "label": "BiLira TRYB product page",
           "url": "https://www.bilira.co/en/product/tryb-stablecoin",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "BiLira TRYB Terms of Use",
           "url": "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -33,46 +33,93 @@
     "references": [
       {
         "label": "GENIUS Act text",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "BiLira TRYB product page",
         "url": "https://www.bilira.co/en/product/tryb-stablecoin",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "BiLira TRYB Terms of Use",
         "url": "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-10"
+      },
+      {
+        "label": "OCC digital-asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BiLira audit reports index",
+        "url": "https://www.bilira.co/en/audit-reports",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 implementation proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "State Certification Review Committee procedural interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency entity directory and stablecoin issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and Federal Register implementation materials",
-        "OCC digital-assets licensing applications page",
-        "Federal Register and official U.S. regulator searches for BiLira, TRYB, and Bilira Kripto Varlık Alım Satım Platformu A.Ş.",
-        "Treasury foreign-issuer comparability and OCC registration materials",
-        "BiLira TRYB product page and Terms of Use",
-        "BiLira audit and disclosure pages"
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html - complete pending bank licensing table fetched and read; none names BiLira; not a comprehensive PPSI register",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22BiLira%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100 - exact-name Federal Register API search through 2026-10-07 returned count 0",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22TRYB%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100 - exact-name Federal Register API search through 2026-10-07 returned count 0",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Bilira%20Kripto%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100 - exact-name Federal Register API search through 2026-10-07 returned count 0",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses - complete regulated-entity table and issuance Greenlist read; none names BiLira or TRYB",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html - proposal metadata, not an issuer approval",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm - SCRC procedural rule; no named state regime or issuer approval",
+        "https://home.treasury.gov/news/press-releases/sb0605 - proposed issuance, offer and sale framework and distinct effective dates",
+        "https://www.bilira.co/en/legal-information/tryb-terms-of-use - issuer, reserve/redemption promises, Turkish temporary-list and license disclaimer",
+        "https://www.bilira.co/en/product/tryb-stablecoin - token payment and transfer marketing, Turkish bank reserves and 1:1 redemption",
+        "https://www.bilira.co/en/audit-reports - native page and raw HTML report links; February, May and August 2026 publication links",
+        "Exact-name public searches for BiLira and TRYB with GENIUS/PPSI/OCC, including federal regulator and NYDFS domains; no qualifying token-specific authorization or intent located"
       ],
-      "summary": "BiLira's Turkish issuer and domestic reserve/redemption disclosures were confirmed, but no token-specific U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found as of 2026-08-14. The Turkish crypto-asset-service-provider listing is not GENIUS authorization.",
+      "summary": "As of 2026-10-07, the reopened OCC pending-bank application table, exact-name Federal Register API searches, NYDFS regulated-entity directory and issuance Greenlist, federal implementation materials and BiLira issuer pages did not identify a public GENIUS PPSI approval, state qualification, official GENIUS application or registered foreign exception for BiLira/TRYB. The three Federal Register searches returned zero documents. The OCC bank-charter table is limited and neither that table nor existing Turkish CASP-list inclusion constitutes GENIUS authorization. This is a scoped public-source finding, not proof that unpublished filings do not exist.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "NYDFS virtual-currency entity directory and stablecoin issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
-    "notes": "No official GENIUS authorization or U.S. application was found. The Turkish issuer's temporary crypto-asset-service-provider listing is not a U.S. GENIUS pathway.",
+    "notes": "The existing legal issuer string is preserved. Turkish CASP-list inclusion is not GENIUS qualification. TRYB references Turkish lira; the Act defines monetary value using national currencies, so a non-USD peg does not establish exclusion. Issuer terms publish reserve and 1:1 redemption arrangements, subject to fees and verification. The current audit index links February, May and August 2026 reports, establishing a quarterly rather than monthly published cadence. The linked August PDF was opened but its image-only body was not recovered; no new attestation contents are asserted. The expected issuer/foreign-lawful-order effective date remains January 18, 2027 and the general DASP licensing restriction July 18, 2028 in the opened Treasury proposal. No foreign exception registration or specific compliance pathway was located.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

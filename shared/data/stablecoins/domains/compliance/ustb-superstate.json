@@ -1,50 +1,110 @@
 {
   "id": "ustb-superstate",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USTB fund ownership, investor eligibility and current risk disclosures",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "ESMA guidelines: tokenized financial instruments and collective-investment units",
+        "url": "https://www.esma.europa.eu/sites/default/files/2025-03/ESMA75453128700-1323_Guidelines_on_the_conditions_and_criteria_for_the_qualification_of_CAs_as_FIs.pdf"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "USTB represents NAV-accreting shares in a short-duration U.S. Treasury fund. GENIUS Act Section 2(22)(B)(iii) excludes securities as defined by the Securities Act of 1933, Securities Exchange Act of 1934, or Investment Company Act of 1940; it does not list the Investment Advisers Act. The statute also states that an instrument issued by a permitted payment stablecoin issuer is not a security solely because it satisfies the payment-stablecoin conditions. The excluded-security classification is based on USTB's fund-share structure, not a claim of GENIUS authorization."
+      "summary": "USTB represents NAV-accreting shares in a short-duration U.S. Treasury fund. GENIUS Act Section 2(22)(B)(iii) excludes securities as defined by the Securities Act of 1933, Securities Exchange Act of 1934, or Investment Company Act of 1940; it does not list the Investment Advisers Act. The statute also states that an instrument issued by a permitted payment stablecoin issuer is not a security solely because it satisfies the payment-stablecoin conditions. The excluded-security classification is based on USTB's fund-share structure, not a claim of GENIUS authorization.",
+      "references": [
+        {
+          "label": "Superstate USTB product page: fund share structure",
+          "url": "https://superstate.com/assets/ustb",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Invesco USTB investor documentation: NAV and redemption mechanics",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SEC EDGAR issuer submissions: USTB legal series and July 14, 2026 Form D/A",
+          "url": "https://data.sec.gov/submissions/CIK0002004367.json",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
     "issuerEntity": "Invesco Short Duration US Government Securities Fund, a separate series of Superstate Asset Trust",
     "issuerDomicile": "United States",
-    "licensingRegulator": "SEC Form D/A filed July 14, 2026 reports reliance on Regulation D Rule 506(c) and Investment Company Act Section 3(c)(7); current issuer disclosures state that the Fund is not registered as an investment company under the Investment Company Act. Form D is a notice filing, not SEC approval.",
+    "licensingRegulator": "SEC EDGAR CIK 2004367 identifies the fund issuer and a July 14, 2026 Form D/A. Current issuer disclosures state that the Fund is not registered as an investment company under the Investment Company Act. Form D is a notice filing, not SEC approval; the independently reopened submissions summary does not expose the precise filing-body exemption clauses.",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": false,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USTB represents NAV-accreting fund shares rather than a fixed-value payment token; no GENIUS authorization is asserted. The current issuer page names Invesco Advisers, Inc. as investment manager. SEC CIK 2004367 identifies the issuer as a separate series of Superstate Asset Trust. The April 2025 N-1A belongs to Superstate Trust, CIK 1982577; it does not by itself establish a current conversion timetable for this fund. Current issuer disclosures retain the adverse fact that the Fund is not registered under the Investment Company Act.",
+    "notes": "USTB represents NAV-accreting fund shares rather than a fixed-value payment token; no GENIUS authorization is asserted. The current issuer page names Invesco Advisers, Inc. as investment manager. SEC CIK 2004367 identifies the issuer as a separate series of Superstate Asset Trust. The April 2025 N-1A belongs to Superstate Trust, CIK 1982577; it does not by itself establish a current conversion timetable for this fund. Current issuer disclosures retain the adverse fact that the Fund is not registered under the Investment Company Act. Public fund holdings and NAV-based redemption instructions are present, but they do not establish payment-stablecoin reserves or a public 1:1 monetary redemption policy; the corresponding GENIUS disclosure flags remain false. The issuer explicitly calls the holdings unaudited, and no monthly reserve attestation was established. No token-specific enforcement action was found in the targeted SEC/OCC public search; this bounded finding does not establish comprehensive enforcement clearance. The requested July 14, 2026 filing-body URL returned a submissions summary through the SEC EDGAR reader rather than the original exemption fields. The working official submissions API independently confirmed issuer identity and the filing date. Precise filing-body exemptions are not reasserted.",
     "references": [
       {
-        "label": "GENIUS Act S.1582 text: payment stablecoin definition (excludes securities)",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "statute"
+        "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Superstate USTB product page: fund share structure",
         "url": "https://superstate.com/assets/ustb",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Fortune: Invesco takes over Superstate USTB (March 2026)",
         "url": "https://fortune.com/2026/03/24/invesco-superstate-ustb/",
-        "sourceKind": "news"
+        "sourceKind": "news",
+        "sourceDate": "2026-03-24",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "SEC Form D/A: USTB issuer identity and claimed Rule 506(c)/Section 3(c)(7) exemptions (July 14, 2026)",
-        "url": "https://www.sec.gov/Archives/edgar/data/2004367/000200436726000008/xslFormDX01/primary_doc.xml",
-        "sourceKind": "issuer-filing"
+        "label": "SEC EDGAR issuer submissions: USTB legal series and July 14, 2026 Form D/A",
+        "url": "https://data.sec.gov/submissions/CIK0002004367.json",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Invesco USTB investor documentation: NAV and redemption mechanics",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SEC EDGAR submissions: distinct Superstate Trust and April 2025 N-1A/A",
+        "url": "https://data.sec.gov/submissions/CIK0001982577.json",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

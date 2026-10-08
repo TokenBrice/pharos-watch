@@ -7,23 +7,151 @@
     "competentAuthority": "MFSA",
     "authorizedEntity": "Stable mint Ltd",
     "references": [
-      { "label": "ESMA EMT issuer register, exact Stable mint Ltd LEI and USD whitepaper row", "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv" },
-      { "label": "USDSM MiCA whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" }
+      {
+        "label": "ESMA EMT issuer register, exact Stable mint Ltd LEI and USD whitepaper row",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "USDSM MiCA whitepaper",
+        "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
+      },
+      {
+        "label": "MFSA Financial Services Register: Stable mint Ltd authorised financial institution and EMT issuer",
+        "url": "https://www.mfsa.mt/financial-services-register/"
+      }
     ]
   },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
-    "applicabilityBasis": { "summary": "USDSM is a transferable USD-referenced electronic money token with issuer par redemption; it is not a bank deposit or fund share." },
-    "authorizationStatus": "unknown",
+    "applicabilityBasis": {
+      "summary": "USDSM is a transferable USD-referenced electronic money token with issuer par redemption; it is not a bank deposit or fund share.",
+      "references": [
+        {
+          "label": "USDSM MiCA whitepaper",
+          "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Stable Mint terms and conditions",
+          "url": "https://stablemint.io/legal/terms-conditions/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Stable mint Ltd",
     "issuerDomicile": "Malta",
     "licensingRegulator": "MFSA",
     "foreignExceptionStatus": "unknown",
     "redemptionPolicyPresent": true,
-    "notes": "Retrieved ESMA EMT register on 2026-10-02 names Stable mint Ltd, LEI 984500A64C0EA64BC554, Electronic money institution, MFSA/MT, authorization-notification date 05/08/2024 with no end date and the exact USD whitepaper. That verifies the EU issuer mapping but establishes no U.S. GENIUS approval or foreign registration. U.S. authorization posture remains unresolved; no no-public-authorization finding or U.S. lawful-distribution conclusion is asserted. Itemized reserves and current signed financial assurance were not retrieved.",
-    "references": [{ "label": "Stable Mint issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/", "sourceKind": "issuer-disclosure", "sourceDate": "2026-08-14", "accessedAt": "2026-10-02" }],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "notes": "USDSM is a USD-denominated e-money payment token redeemable at par by Stable mint Ltd, a Malta EMI. ESMA lists the exact USD whitepaper under Stable mint Ltd; this supports MiCA authorization only. No named GENIUS approval, application, state qualification or registered foreign exception was located in opened regulator material and targeted issuer-name searches. IssuerPathway and foreignExceptionStatus remain unknown; Malta EMI authorization is not U.S. PPSI permission. The issuer stablecoin page and terms disclose cash/HQLA backing and issuer-claimed overcollateralization, supporting public reserve-structure disclosure, not verified reserve adequacy or a monthly independent examination. No public monthly independent USDSM attestation was retrieved. Par redemption and payments are evidenced by the USD whitepaper/terms. not-yet-restricted describes pre-effective GENIUS timing and does not affirm U.S. distribution permissions under other applicable laws.",
+    "references": [
+      {
+        "label": "Stable Mint issuance and redemption terms",
+        "url": "https://stablemint.io/legal/terms-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-14",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "USDSM MiCA whitepaper",
+        "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Stable Mint USDSM reserve and token disclosures",
+        "url": "https://stablemint.io/stablecoins/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "ESMA exact Stable mint Ltd EMT issuer and USD whitepaper row",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "MFSA Financial Services Register: Stable mint Ltd authorised financial institution and EMT issuer",
+        "url": "https://www.mfsa.mt/financial-services-register/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://stablemint.io/stablecoins/",
+    "monthlyAttestationPresent": false,
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3; grouped exact-issuer GENIUS approval/application/enforcement search across OCC, Federal Reserve, FDIC, NCUA and Treasury",
+        "Federal Reserve September 24, 2026 proposals",
+        "Treasury August 17, 2026 Section 3 proposal",
+        "September 30, 2026 SCRC interim final rule",
+        "NYDFS licensed virtual-currency entities and approved stablecoin list",
+        "FinCEN enforcement-action index",
+        "Exact-token ESMA EMT register and USDSM whitepaper",
+        "Stable Mint current August 2026 terms and stablecoin product/disclosure page",
+        "MFSA browser register search for Stable mint Ltd, showing Financial Institution and Issuer of EMTs licences authorised; no U.S. permission inferred"
+      ],
+      "summary": "As of 2026-10-07, the opened federal proposals, SCRC certification procedure, state licensing list, issuer disclosures and targeted regulator-domain searches did not establish an issuer-specific GENIUS PPSI approval, state qualification, or registered foreign exception for Stable mint Ltd / USDSM. Licensing or registration under earlier regimes is not such authorization. No public GENIUS-specific enforcement action was located in the checked sources; this is a bounded public-evidence review, not a legal compliance finding.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed regulations",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-regime certification interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    }
   }
 }

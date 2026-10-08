@@ -1,89 +1,83 @@
 {
   "id": "ggbr-goldfish-gold",
-  "mica": {
-    "status": "out-of-scope",
-    "references": [
-      {
-        "label": "ESMA MiCA register portal: no GGBR/GGBR Inc. issuer record located in the reviewed issuer registers",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "Goldfish official site: GGBR is gold-backed crypto structured under Wyoming and British Virgin Islands law; no Union offer/admission or MiCA authorization disclosed",
-        "url": "https://goldfishgold.com/"
-      },
-      {
-        "label": "Goldfish support: gold denomination and issuer-disclosed GGBR Trust backing",
-        "url": "https://goldfishgold.com/support"
-      }
-    ]
-  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "GGBR references and redeems against gold priced per troy ounce rather than a fixed amount of U.S. monetary value. It is therefore a commodity token, not a GENIUS payment stablecoin, even though Goldfish calls it a gold-backed stablecoin.",
+      "summary": "GGBR references 1/1000th of a troy ounce of gold and is advertised as redeemable against gold. Its reference unit is a commodity quantity rather than a fixed amount of monetary value in a national currency. The reviewed disclosures support commodity-token treatment under the GENIUS payment-stablecoin definition.",
       "references": [
         {
           "label": "GENIUS Act: payment stablecoin definition tied to fixed monetary value",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Goldfish support: each GGBR represents 1/1000th of a troy ounce",
           "url": "https://goldfishgold.com/support",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-01"
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
-    "issuerEntity": "GGBR Inc.",
-    "issuerDomicile": "United States",
+    "issuerEntity": "GGBR, Ltd",
+    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "not-applicable",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://goldfishgold.com/collateral",
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "GGBR is a gold-backed commodity claim and not a fixed-dollar payment stablecoin. The SEC-hosted I-ON Digital exhibit identifies GGBR Inc. as a Wyoming company and describes the Goldfish product, but it is not a GENIUS Act authorization or application.",
+    "notes": "The official entity disclosure identifies GGBR, Ltd as the BVI token issuer and GGBR, Inc. as the U.S. manager. Goldfish publishes issuer collateral claims concerning in-situ gold held through the GGBR Trust. The website advertises redemption but the reviewed pages do not establish a complete holder-eligibility, minimum, timing or contractual redemption policy; redemptionPolicyPresent is therefore false for the reviewed public record. No independent monthly reserve-to-token-liability attestation series was found on the reviewed collateral/support pages. Smart-contract audits and geological/collateral claims are not reserve attestations. No GENIUS payment-stablecoin authorization posture applies to the gold-denominated token. The OCC digital-assets list is a charter application list, not evidence of token-specific GENIUS approval.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "OCC digital assets licensing applications: no GGBR Inc./Goldfish applicant identified",
+        "label": "OCC digital assets licensing applications: no GGBR, Ltd or Goldfish applicant identified in the visible pending-application table",
         "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Goldfish official site",
         "url": "https://goldfishgold.com/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Goldfish support: each GGBR represents 1/1000th of a troy ounce",
         "url": "https://goldfishgold.com/support",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "SEC-hosted I-ON Digital exhibit describing the GGBR partnership",
-        "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315225015719/ex99-1.htm",
-        "sourceKind": "issuer-filing",
-        "sourceDate": "2025-09-22",
-        "accessedAt": "2026-08-14"
+        "label": "Goldfish legal entity disclosure: BVI issuer and U.S. manager",
+        "url": "https://goldfishgold.com/about",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Goldfish collateral: issuer-disclosed GGBR Trust and in-situ gold backing",
+        "url": "https://goldfishgold.com/collateral",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act: payment stablecoin definition tied to fixed monetary value",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

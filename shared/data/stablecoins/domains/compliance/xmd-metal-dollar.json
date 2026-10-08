@@ -3,74 +3,171 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "XMD is a U.S.-linked stablecoin index redeemable against a basket of reserve-backed dollar stablecoins rather than a standalone fiat-reserve issuance."
+      "summary": "XMD is a U.S.-linked stablecoin index redeemable against a basket of reserve-backed dollar stablecoins rather than a standalone fiat-reserve issuance.",
+      "references": [
+        {
+          "label": "Metal Dollar minting and redemption model",
+          "url": "https://metaldollar.com/how-it-works",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Metallicus / Metal DAO",
-    "issuerDomicile": "United States",
-    "foreignExceptionStatus": "not-applicable",
+    "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.metallicus.com/metal-dollar",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "XMD is stablecoin-adjacent and payment-oriented, but its basket-index structure makes GENIUS payment-stablecoin applicability unresolved. Metallicus published educational GENIUS Act content (metaldollar.com, Mar 2026) and operates a credit-union stablecoin sandbox pilot, but no token-specific PPSI approval, state-qualified approval, or official application was found. No GENIUS enforcement action found. Quarterly company reports exist but no monthly reserve attestation.",
+    "notes": "XMD has payment and settlement use cases, but its documented 1:1 redemption delivers an available supported digital-dollar reserve asset. GENIUS section 2(22) excludes digital assets from the fixed monetary value required for the issuer redemption obligation. The opened documents do not establish an additional legally obligated national-currency redemption issuer, so applicability remains unclear. Metallicus supplies infrastructure and Metal DAO governs basket changes. Those roles do not identify an exact legal redemption obligor or its domicile. The pre-sweep composite issuerEntity, Metallicus / Metal DAO, is retained as an operator/governance descriptor because removal of the load-bearing identity was not established at high confidence. This retained descriptor does not establish an exact legal issuer or a GENIUS-authorized entity. Issuer domicile remains unverified and is omitted. GENIUS educational and CIP-alignment articles, institutional contract updates, and credit-union pilot activity do not establish XMD-specific intent to seek PPSI authorization. Treasury balances and company quarterly reports do not establish monthly independent reserve assurance. No named token-specific public approval, official application or enforcement action was located as of 2026-10-07. Treasury August 17 proposed timing expects core activation January 18, 2027 and the broader DASP restriction July 18, 2028; the issuer explainer's enactment and activation dates are not used as legal authority.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Metal Dollar product page",
         "url": "https://www.metallicus.com/metal-dollar",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "XPR Network Metal Dollar help",
         "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Metal Dollar whitepaper",
         "url": "https://cdn.metallicus.com/Metal_Dollar_Whitepaper_v1.1.pdf",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Metal Dollar site (metaldollar.com)",
         "url": "https://metaldollar.com/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Metallicus newsroom",
         "url": "https://www.metallicus.com/news",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Metal Dollar minting and redemption model",
+        "url": "https://metaldollar.com/how-it-works",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Metal Dollar reserve disclosure",
+        "url": "https://metaldollar.com/reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Metal Dollar GENIUS Act explainer",
+        "url": "https://metaldollar.com/blog/the-genius-act-explained-what-new-stablecoin-regulations-mean-for-you",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-04",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Metal Dollar customer-identification commentary",
+        "url": "https://metaldollar.com/blog/proposed-stablecoin-cip-rules-reinforce-the-metal-dollar-model",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC state-certification procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury section 3 GENIUS proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Metal Dollar governance roles",
+        "url": "https://metaldollar.com/governance",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-25",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3.html)",
-        "Metallicus Metal Dollar product page (metallicus.com/metal-dollar)",
-        "Metal Dollar site (metaldollar.com): GENIUS Act article noted, no authorization found",
-        "Metallicus newsroom (metallicus.com/news): no PPSI or authorization announcement",
-        "XPR Network Metal Dollar help article",
-        "Metallicus Q2 2025 quarterly report CDN search: no XMD-specific GENIUS filing mentioned",
-        "Web search: Metallicus GENIUS Act PPSI license 2025 to 2026: no results linking Metallicus to PPSI application",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3: proposed rule, reopened full raw body on 2026-10-07",
+        "OCC pending digital-assets banking-license table: nine visible applicants, raw HTML reopened 2026-10-07; not a comprehensive PPSI register",
+        "GENIUS Act Public Law 119-27: sections 2, 3 and implementation provisions reopened 2026-10-07",
+        "Treasury September 30 SCRC procedural rule and August 17 section 3 proposed-rule release, reopened 2026-10-07",
+        "Independent targeted WSPN/Metallicus/MoonPay/BabelFish GENIUS/PPSI searches on OCC, FDIC, Federal Reserve, NCUA and Treasury domains on 2026-10-07",
+        "FinCEN enforcement index and independent SEC/CFTC/FinCEN/NYDFS named-entity enforcement searches on 2026-10-07",
+        "Metallicus product page and newsroom; Metal Dollar site, operating model, reserves, whitepaper and XPR Network help",
+        "Metal Dollar March 4 GENIUS explainer, June 18 CIP commentary, November 20 institutional-contract explainer and Metallicus October 5 Q3 report",
+        "Independent token-specific EU/MiCA search, ESMA EMT/ART files, Coinbase/Kraken venue lists"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for XMD. Metallicus shows GENIUS awareness but no public authorization posture.",
+      "summary": "No opened primary issuer or public regulator source identified XMD-specific PPSI approval, state qualification or official GENIUS application. First-party GENIUS positioning concerns basket interoperability or other institutions' issuance infrastructure, without identifying an XMD legal obligor or application. Public-domain searches and the OCC pending-charter table returned no relevant named issuer. The negative finding does not establish an exemption, legal non-compliance or the absence of unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital-assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Metal Dollar GENIUS Act explainer",
+          "url": "https://metaldollar.com/blog/the-genius-act-explained-what-new-stablecoin-regulations-mean-for-you",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-04",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Metal Dollar customer-identification commentary",
+          "url": "https://metaldollar.com/blog/proposed-stablecoin-cip-rules-reinforce-the-metal-dollar-model",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Metallicus / Metal DAO"
   }
 }

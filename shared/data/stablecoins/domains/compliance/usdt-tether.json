@@ -21,7 +21,16 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "USDT is a fiat-referenced dollar token designed for payments and settlement, with issuer redemption for eligible verified customers at fixed fiat value less applicable fees."
+      "summary": "USDT is a fiat-referenced dollar token designed for payments and settlement, with issuer redemption for eligible verified customers at fixed fiat value less applicable fees.",
+      "references": [
+        {
+          "label": "Tether token terms",
+          "url": "https://tether.to/en/legal/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-26",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
@@ -35,70 +44,98 @@
     "reserveDisclosureUrl": "https://tether.to/en/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Tether's January 27, 2026 USAT launch release says USD\u20ae is progressing towards GENIUS Act compliance, while USA\u20ae is issued by Anchorage Digital Bank, N.A. for the U.S. domestic market; this is issuer-announced intent, not USDT authorization. The issuer remains Tether International, S.A. de C.V. in El Salvador under CNAD. In the public OCC/Treasury sources searched on 2026-10-01, no USDT foreign-issuer approval or Treasury comparability determination for Tether/El Salvador was established; this negative public review does not establish that no confidential or unpublished application was filed. The March 2 OCC framework and August 17 Treasury section 3 framework are proposed rules, not evidence of an issuer-specific authorization. foreignExceptionStatus and issuerPathway remain unknown. Current reserve evidence is quarterly BDO ISAE3000R assurance; the separately announced August 13 KPMG audit covers FY2025 financial statements and is not a monthly attestation. The CFTC October 2021 reserve-misrepresentation order and NYAG February 2021 settlement are preserved as historical non-GENIUS enforcement evidence, not an issuer-specific GENIUS section 3 order.",
+    "notes": "Review dated 2026-10-07. Tether's January 27, 2026 USAT launch release says USDt is progressing towards GENIUS Act compliance; USAT has the distinct issuer Anchorage Digital Bank, N.A. The current February 26 token terms preserve Tether International, S.A. de C.V., El Salvador, CNAD authorization, eligible-customer fixed-fiat redemption net fees and restrictions on most U.S. Persons. Existing foreign home-country licensing and FinCEN registration do not establish GENIUS qualification. The public OCC/Treasury and issuer sources reviewed did not establish a USDT GENIUS approval, foreign-issuer registration or Treasury comparability determination; issuerPathway and foreignExceptionStatus remain unknown. The Act remains pre-effective, with expected January 18, 2027 effectiveness and July 18, 2028 general DASP deadline. Public reserve disclosure is present; the current FAQ specifies quarterly reporting and the June 30 BDO report is a point-in-time ISAE 3000 assurance report, not a monthly attestation or blanket GENIUS compliance opinion. warning-or-notice records the historical CFTC October 2021 order and NYAG February 2021 settlement, which predate GENIUS and must not be described as GENIUS enforcement or revocation.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Tether USAT launch press release: USDT progressing towards GENIUS Act compliance",
         "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-01-27",
-        "accessedAt": "2026-06-07"
-      },
-      {
-        "label": "CoinDesk: Tether CEO says he'll comply with GENIUS to come to U.S.",
-        "url": "https://www.coindesk.com/policy/2025/07/18/tether-ceo-says-he-ll-comply-with-genius-to-come-to-u-s-circle-says-it-s-set-now",
-        "sourceKind": "news",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Tether token terms",
         "url": "https://tether.to/en/legal/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-26",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Tether transparency",
         "url": "https://tether.to/en/transparency/",
-        "sourceKind": "auditor-report",
-        "accessedAt": "2026-06-07"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CFTC order filing and settling charges against Tether (2021)",
         "url": "https://www.cftc.gov/PressRoom/PressReleases/8450-21",
         "sourceKind": "federal-regulator",
         "sourceDate": "2021-10-15",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "NYAG settlement ending Bitfinex/Tether illegal activity in New York (2021)",
         "url": "https://ag.ny.gov/press-release/2021/attorney-general-james-ends-virtual-currency-trading-platform-bitfinexs-illegal",
         "sourceKind": "state-regulator",
         "sourceDate": "2021-02-23",
-        "accessedAt": "2026-06-18"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Treasury section 3 proposed rule, August 17 2026",
         "url": "https://home.treasury.gov/news/press-releases/sb0605",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-08-17",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC GENIUS proposed rule published March 2 2026",
         "url": "https://occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-03-02",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Tether FAQ: public reserve reporting frequency",
+        "url": "https://tether.to/en/faqs/?search=How-often-does-Tether-provide-its-transparency-information&only-questions=true",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BDO Tether International June 30, 2026 assurance report",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-07-31",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC certification forms and procedures interim final rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol curation validation 2026-10-01 (ValA01USDT)",
-    "reviewedAt": "2026-10-01"
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and March 2 GENIUS proposal PDF",
+        "Treasury August 17 section 3 proposal and September 30 SCRC procedural interim rule",
+        "Tether January 27 USAT/USDT GENIUS-intent announcement",
+        "Tether February 26 current issuer/redemption terms, transparency, FAQs and June 30 BDO report",
+        "CFTC October 15, 2021 Tether order announcement and NYAG February 23, 2021 settlement",
+        "Targeted OCC-domain GENIUS approval/enforcement search naming Anchorage, Circle and Tether"
+      ],
+      "summary": "Within these sources checked on 2026-10-07, no USDT/Tether International GENIUS PPSI approval, official application, OCC foreign-issuer registration or Treasury determination supporting the foreign exception was located. This finite public review does not establish that no confidential filing exists. CNAD home-country authorization, FinCEN registration and separate ADB-issued USAT do not qualify this issuer under GENIUS. Historical 2021 enforcement is separately identified.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

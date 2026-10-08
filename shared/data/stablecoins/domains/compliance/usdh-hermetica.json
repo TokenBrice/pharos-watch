@@ -1,0 +1,12 @@
+{
+  "id": "usdh-hermetica",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Hermetica Terms of Service: excluded EU/EEA jurisdictions",
+        "url": "https://docs.hermetica.fi/resources/legal/terms-of-service"
+      }
+    ]
+  }
+}

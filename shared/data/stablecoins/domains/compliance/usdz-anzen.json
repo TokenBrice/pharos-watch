@@ -3,65 +3,141 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "USDz is a private-credit-backed RWA dollar with permissioned QMM mint/redeem mechanics; Anzen Group Ltd explicitly blocks US persons (prohibited jurisdiction in ToS) and holds no regulatory authorization in any jurisdiction, making GENIUS payment-stablecoin applicability unresolved."
+      "summary": "USDz is marketed for payments and a USD peg. The disclosures describe 1:1 SPCT backing, institutional minting and redemption, and secondary swaps, but do not establish an issuer obligation to redeem for a fixed amount of national currency or a bank deposit. The monetary-value redemption obligation remains unresolved; private-credit collateral and U.S. access restrictions alone do not determine GENIUS scope.",
+      "references": [
+        {
+          "label": "Anzen USDz overview",
+          "url": "https://docs.anzen.finance/usdz-101/overview.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Anzen official website",
+          "url": "https://anzen.finance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Anzen Group Ltd",
-    "issuerDomicile": "British Virgin Islands",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://app.anzen.finance/transparency",
-    "redemptionPolicyPresent": true,
+    "reserveDisclosureUrl": "https://docs.anzen.finance/usdz-101/transparency.md",
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "USDz is stablecoin-adjacent but backed by private credit; GENIUS payment-stablecoin applicability is unresolved. The ToS explicitly excludes US persons and states Anzen Group Ltd is not registered with any regulatory body in any jurisdiction. No GENIUS PPSI approval, state-qualified approval, application, or foreign-issuer exception evidence found.",
+    "notes": "Anzen Group Ltd is named as the interface operator. The terms separate the protocol from company services and disclaim being party to transactions; they do not establish the legal issuer or redemption obligor of USDz. The pre-sweep issuerEntity Anzen Group Ltd is retained under the strict adjudication rule because the opened sources do not establish with high confidence that its removal is more accurate. The legal token issuer and redemption obligor remain unresolved; retaining the field does not establish a regulatory authorization. BVI governing law does not establish issuer incorporation or domicile. Terms exclude U.S. persons and attribute the no-regulatory-registration statement to the interface company. Public docs describe institutional redemption without publishing a fixed national-currency redemption obligation. Reserve disclosure is issuer-reported SPCT backing, not an independent monthly attestation. The dashboard yielded an app shell; dedicated browser navigation timed out. The reserve link in the docs, rwa.anzen.finance/transparency, did not resolve. No reserve amounts were independently verified. GENIUS issuer rules remain proposed in the opened October review sources; the Treasury SCRC procedural rule does not authorize Anzen.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Anzen Terms of Service: confirms Anzen Group Ltd (BVI), no regulatory registration",
+        "label": "Anzen Terms of Service",
         "url": "https://anzen.finance/terms",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Anzen docs: no GENIUS or regulatory disclosures",
         "url": "https://docs.anzen.finance/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Anzen transparency",
-        "url": "https://app.anzen.finance/transparency",
+        "label": "Anzen USDz overview",
+        "url": "https://docs.anzen.finance/usdz-101/overview.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anzen USDz transparency disclosure",
+        "url": "https://docs.anzen.finance/usdz-101/transparency.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Anzen geographic and staking FAQ",
+        "url": "https://docs.anzen.finance/welcome-to-anzen/faq.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Reserve September 2026 GENIUS proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury SCRC procedural rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-09-30",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets pending licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "Anzen Terms of Service (anzen.finance/terms): entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
-        "Anzen docs and website: no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
-        "Web search: no news or regulator source linking Anzen/USDz to any GENIUS authorization pathway",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3: proposed issuer and foreign registration framework",
+        "Federal Reserve September 24 proposals and Treasury September 30 SCRC procedural rule",
+        "Anzen current terms, website, overview, FAQ, and transparency documentation; dashboard app shell only, dedicated browser navigation timed out",
+        "Search: \"Anzen\" \"USDz\" (GENIUS OR PPSI OR OCC OR authorization OR enforcement)",
+        "Search: site:occ.gov OR site:fdic.gov OR site:federalreserve.gov OR site:ncua.gov OR site:dfs.ny.gov \"Anzen\"",
+        "OCC pending digital-asset licensing table (substantive raw HTML; no Anzen applicant)",
+        "NYDFS regulated-entity table and greenlisted issuance coins (no Anzen or USDz; not a GENIUS approval register)"
       ],
-      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDz. Anzen Group Ltd's own ToS states it holds no regulatory registration anywhere.",
+      "summary": "No qualifying public Anzen/USDz PPSI approval, GENIUS state qualification, official application, foreign registration or issuer GENIUS-route announcement was located in these sources and exact-name searches. No public action against Anzen/USDz surfaced in the same finite search. This does not exclude confidential or unindexed records.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets pending licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "issuerEntity": "Anzen Group Ltd"
   }
 }

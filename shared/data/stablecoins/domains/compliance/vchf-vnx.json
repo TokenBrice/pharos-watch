@@ -5,7 +5,7 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026): VNX Commodities AG not listed",
+        "label": "ESMA interim MiCA register (updated October 7 2026): VNX Commodities AG and VNX Global Ltd not listed as EMT issuers",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
@@ -15,6 +15,10 @@
       {
         "label": "Bitstamp: VEUR and VCHF trading disabled for EU/EEA customers Jan 2025 for MiCA non-compliance; deposits/withdrawals suspended May 2025, balances auto-converted to USDC May 2025",
         "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea/"
+      },
+      {
+        "label": "ESMA current issuers of e-money tokens register: no VNX issuer or VCHF entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
   },
@@ -27,7 +31,13 @@
           "label": "Bermuda Monetary Authority regulated entities: VNX Global Ltd Class M digital-asset license includes issuing, selling, and redeeming digital assets",
           "url": "https://www.bma.bm/regulated-entities",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "VNX Global Ltd terms: stablecoin issuance, payment use, redemption and VCHF annex",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -38,61 +48,120 @@
     "licensingRegulator": "Bermuda Monetary Authority; Digital Asset Business Class M, registration no. 202605548",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
-    "notes": "The BMA Class M license is a foreign digital-asset business license, not a GENIUS approval or registered foreign-issuer exception. Issuer mapping needs care: older VCHF reserve records name VNX Commodities AG, while the current BMA record names VNX Global Ltd; the VNX group’s migration and VCHF coverage should be re-checked.",
+    "notes": "The BMA Class M license is a foreign digital-asset business license, not GENIUS approval or a registered foreign-issuer exception. Current VNX Global Ltd terms identify the issuer and cover VCHF; current transparency contracts match tracked VCHF. Older VNX Commodities AG records describe the prior structure. Terms disclose reserve categories, restrict direct minting/redemption to verified sophisticated Organizations, specify a CHF 100,000 minimum issuance request, and permit delayed or in-kind redemption under stated conditions; the issuance threshold is not asserted to be a redemption minimum. Supply figures on the checked transparency page are marked mock data and no signed monthly attestation reports are publicly linked despite a monthly-audit description. GENIUS remains pre-effective; Treasury expects January 18, 2027, subject to the enacted earlier-final-rule trigger. The September 30 SCRC procedural rule is not issuer qualification or an earlier commencement rule; the July 18, 2028 DASP deadline is separate.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act regulations proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC Digital Assets Licensing Applications: current pending application table",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Bermuda Monetary Authority regulated entities: VNX Global Ltd",
         "url": "https://www.bma.bm/regulated-entities",
         "sourceKind": "foreign-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "VNX current website: group site currently under construction",
-        "url": "https://vnx.li/",
+        "label": "VNX current platform: VNX Global Ltd licensed in Bermuda",
+        "url": "https://vnx.io/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "VNX Global Ltd terms: reserve and redemption disclosures",
+        "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "VNX transparency: tracked VCHF contracts, illustrative supply figures and audit description",
+        "url": "https://vnx.io/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act enacted Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule: expected January 18 2027 effectiveness",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC procedural interim final rule: qualification process remains unopened",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and OCC Digital Assets Licensing Applications table",
-        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials and foreign-issuer framework materials",
-        "GENIUS Act statutory text on permitted and foreign issuers",
-        "Bermuda Monetary Authority regulated-entities register",
-        "VNX current site and VNX public notices/search results",
-        "Web searches for VCHF/VNX GENIUS Act approval, application, or foreign-exception registration"
+        "OCC Bulletin 2026-3 operative summary and full current OCC Digital Assets Licensing Applications table (including raw HTML); no VNX entry",
+        "Treasury section 3 GENIUS proposed rule and September 30, 2026 SCRC procedural interim final rule",
+        "Enacted GENIUS Public Law 119-27 definitions, foreign-issuer provisions and commencement clause",
+        "BMA regulated-entities live exact VNX search: VNX Global Ltd, registration 202605548, Class M, effective April 13, 2026-April 12, 2027",
+        "Current VNX Global stablecoin terms, vnx.io homepage and transparency, and issuer KYC FAQ",
+        "Exact-name VNX official-domain searches for GENIUS approval, application and enforcement on OCC, FDIC, Federal Reserve, NCUA, Treasury and NYDFS, plus issuer vnx.io; no issuer-specific GENIUS match found"
       ],
-      "summary": "VNX Global Ltd has a current Bermuda digital-asset business license, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for VCHF. The current issuer transition from VNX Commodities AG should be independently verified.",
+      "summary": "No public PPSI approval, qualified-state approval, official GENIUS application, registered foreign-issuer exception or GENIUS enforcement action naming VNX Global Ltd/VCHF was located in these bounded checks on October 7, 2026. BMA and current contractual disclosures establish the foreign issuer, not U.S. qualification. The OCC table covers digital-asset bank applications and is not an exhaustive GENIUS issuer register. A foreign-exception finding cannot be inferred from a Bermuda license. Treasury expects January 18, 2027 effectiveness, subject to the statute's earlier-final-rule trigger; the SCRC procedural IFR does not itself commence the issuer regime.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
           "label": "OCC Digital Assets Licensing Applications",
           "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "Bermuda Monetary Authority regulated entities",
           "url": "https://www.bma.bm/regulated-entities",
           "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC procedural interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "VNX Global Ltd current stablecoin terms",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false
   }
 }

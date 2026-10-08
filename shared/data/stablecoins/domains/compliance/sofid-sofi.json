@@ -1,11 +1,33 @@
 {
   "id": "sofid-sofi",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "SOFID Terms of Use, May 27, 2026: EEA and UK excluded persons",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf"
+      },
+      {
+        "label": "Kraken EEA asset restriction list naming SOFID",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "SOFID is a U.S. dollar payment stablecoin issued by SoFi Bank, N.A. with 1:1 mint and redemption."
+      "summary": "SoFi Bank, N.A. issues SOFID as a USD payment and settlement token, distinct from an insured deposit. Its Terms of Use provide par minting and redemption only for approved SoFi Customers under separate agreements; possession alone gives no direct holder redemption right.",
+      "references": [
+        {
+          "label": "SOFID issuer, reserve and redemption Terms of Use",
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-05-27"
+        }
+      ]
     },
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "idi-subsidiary",
     "issuerEntity": "SoFi Bank, N.A.",
     "issuerDomicile": "United States",
@@ -15,58 +37,105 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
+    "reserveDisclosureUrl": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Re-checked 2026-09-29: no SoFiUSD reserve attestation is publicly filed. EDGAR full-text search returns no SoFiUSD attestation, and SoFi Bank N.A. ABS-15G filings (March–September 2026) are Deloitte agreed-upon-procedures reports for consumer-loan securitization trusts, not stablecoin reserve attestations. The May 27, 2026 retail-launch release cites regular attestations by an independent U.S.-licensed CPA without naming cadence or attestor; monthlyAttestationPresent stays false pending a published report.",
+    "monthlyAttestationPresent": true,
+    "notes": "Reviewed October 7, 2026. Preserve SoFi Bank, N.A. as current issuer and OCC as its regulator. The FY2025 Form 10-K explicitly states SoFi Bank expects to request OCC approval to form a subsidiary that will become a Permitted Issuer for SoFiUSD. OCC Corporate Decision 1388, dated July 23, 2026, approves a payment-stablecoin operating subsidiary under 12 CFR 5.34 and requires future GENIUS compliance when effective. Together these support issuer-announced-intent and the announced idi-subsidiary pathway; they do not establish PPSI approval, GENIUS state qualification or an official GENIUS application pending. No named replacement legal issuer was verified. SOFID is not a deposit; the Terms limit direct par redemption to approved customers under separate agreements. Deloitte examined 304,041,093 redeemable SOFID and 309,934,457 cash reserves as of July 31, 2026, signing August 31. The publicly available monthly-period report and issuer regular-attestation disclosure replace the stale no-public-attestation claim. No claim of a complete on-time monthly history or legal compliance is made. The product and HTML release blocked plain fetch, and uniquely named browser attempts timed out; official PDF mirrors supplied the issuer terms, release and reserve report. Drop duplicate release references and the irrelevant ABS-15G consumer-loan source. GENIUS primary issuer rules remain pre-effective, with expected January 18, 2027 effectiveness and general DASP prohibition July 18, 2028.",
     "references": [
       {
         "label": "OCC Corporate Decision 1388: SoFi Bank payment-stablecoin operating subsidiary approval",
         "url": "https://occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1388.pdf",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-07-23",
-        "accessedAt": "2026-10-01"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "SoFiUSD page",
-        "url": "https://www.sofi.com/crypto/sofiusd/",
-        "sourceKind": "issuer-disclosure"
+        "label": "SoFi 2025 Form 10-K: intended GENIUS permitted-issuer subsidiary",
+        "url": "https://d18rn0p25nwr6d.cloudfront.net/CIK-0001818874/a5920985-7716-4f46-9395-985fe16ea52b.pdf",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "SoFiUSD launch announcement",
-        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "SEC ABS-15G, SoFi Consumer Loan Program 2026-2 Trust AUP report (Deloitte) — verified 2026-09-29 to be consumer-loan securitization due diligence, not a SoFiUSD reserve attestation",
-        "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
+        "label": "Deloitte SoFiUSD July 31, 2026 reserve examination",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf",
         "sourceKind": "auditor-report",
-        "sourceDate": "2026-04-09",
-        "accessedAt": "2026-09-29"
+        "sourceDate": "2026-08-31",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "SoFiUSD retail-launch press release (May 27, 2026) — cites regular attestations by an independent U.S.-licensed CPA",
-        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
-        "sourceKind": "issuer-disclosure"
+        "label": "Treasury foreign payment stablecoin issuer proposal",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SoFi May 27, 2026 launch release, official PDF mirror",
+        "url": "https://s27.q4cdn.com/749715820/files/doc_news/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform-2026.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-27"
+      },
+      {
+        "label": "SOFID issuer, reserve and redemption Terms of Use",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SOFID-Terms-of-Use-1.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-05-27"
+      },
+      {
+        "label": "OCC pending digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Corporate Decision 1388 (July 23, 2026; published September 2026): SoFi Bank operating subsidiary approval",
-        "OCC Bulletin 2026-3: GENIUS proposed rule",
-        "Targeted October 1, 2026 searches for SoFi GENIUS PPSI authorization or application",
-        "SoFi investor-relations launch releases (available metadata only; product/legal pages blocked)"
+        "OCC Bulletin 2026-3 proposed implementing rules",
+        "OCC pending digital-assets licensing application table (bounded list, not a complete PPSI register)",
+        "Federal Reserve September 24, 2026 implementing-rule proposal",
+        "FDIC April 7, 2026 GENIUS implementing-rule proposal",
+        "Treasury August 17, 2026 implementation proposal",
+        "September 30, 2026 State Stablecoin Regulatory Committee procedural interim final rule",
+        "FinCEN public enforcement-action index",
+        "Targeted official-domain searches for SoFi / SoFi Bank / SoFiUSD / SOFID GENIUS/PPSI approvals, applications and enforcement",
+        "SoFi FY2025 Form 10-K subsidiary intent paragraph",
+        "OCC Corporate Decision 1388 operating-subsidiary approval",
+        "SOFID Terms of Use, official release PDF and Deloitte July 2026 reserve examination"
       ],
-      "summary": "OCC Corporate Decision 1388 approves SoFi Bank's March 27, 2026 application to establish a payment-stablecoin operating subsidiary and requires conformance with GENIUS and implementing regulations. This establishes an approved subsidiary pathway, but the letter does not identify a GENIUS PPSI approval or the subsidiary's legal name. No separate token-specific PPSI approval was located in the reviewed sources as of 2026-10-01; issuer identity remains SoFi Bank pending evidence of an actual issuance transfer.",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
-      "reviewedAt": "2026-10-01"
+      "summary": "No token-specific GENIUS PPSI approval, state qualification, official GENIUS application pending or stablecoin enforcement action was identified in the reviewed public sources on October 7, 2026. The operating-subsidiary authorization is under ordinary bank licensing rules. The explicit filed subsidiary plan supports issuer-announced-intent instead of a formal GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC pending digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS implementation proposal and effective-date timetable",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        }
+      ]
     },
-    "reviewer": "Sol curation pass 2026-10-01 (CurA36SOFID)",
-    "reviewedAt": "2026-10-01"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

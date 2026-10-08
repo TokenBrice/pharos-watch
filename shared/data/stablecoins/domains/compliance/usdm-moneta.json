@@ -1,37 +1,8 @@
 {
   "id": "usdm-moneta",
-  "mica": {
-    "status": "pending",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
-    "competentAuthority": "Finanstilsynet",
-    "authorizedEntity": "Norwegian Block Exchange AS (NBX)",
-    "references": [
-      {
-        "label": "USDM EU Issuer white paper notified to Finanstilsynet (25 Sep 2024)",
-        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
-      },
-      {
-        "label": "NBX USDM terms",
-        "url": "https://nbx.com/en/usdm-terms"
-      },
-      {
-        "label": "Finanstilsynet registry - Norwegian Block Exchange AS",
-        "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
-      },
-      {
-        "label": "Norway kryptoeiendelsloven (MiCA) enacted 1 Jul 2025 - Finanstilsynet is NCA",
-        "url": "https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2025/lov-om-kryptoeiendeler-kryptoeiendelsloven-og-lov-om-endringer-i-hvitvaskingsloven-tfr-ii-trer-i/"
-      },
-      {
-        "label": "ESMA interim MiCA EMT issuer register: NBX/USDM not listed; page latest update 2026-06-12, checked 2026-06-18",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      }
-    ]
-  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
-    "authorizationStatus": "no-public-authorization-found",
+    "authorizationStatus": "issuer-announced-intent",
     "issuerPathway": "unknown",
     "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
     "issuerDomicile": "United States / Norway",
@@ -40,51 +11,134 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+    "reserveDisclosureUrl": "https://moneta.global/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "USDM has dual U.S./EEA issuer structure: Moneta Digital LLC (FinCEN MSB) for USA issuance, NBX (Finanstilsynet EMI) for EEA issuance. Norway enacted MiCA via kryptoeiendelsloven effective 1 Jul 2025; NBX whitepaper filed Sep 2024. ESMA EMTWP.csv re-checked Jun 2026: no NBX/USDM row present. GENIUS pathway remains unresolved. The GENIUS Act was enacted on July 18, 2025; OCC Bulletin 2026-3 describes implementing regulations as a proposed rule, not the Act itself as pending. The existing June 2026 authorization review is historical and does not establish current issuer approval.",
+    "notes": "Moneta terms section 2.1 expressly state its intention to obtain and maintain permitted payment stablecoin issuer status within the legally required timeframes. This supports issuer-announced-intent, not filed application or authorization. No specific federal or state PPSI route is named, so issuerPathway remains unknown. FinCEN MSB registration and NBX Norwegian EMI/CASP authorization describe existing regulatory frameworks, not GENIUS approval. The retained combined issuerEntity denotes parallel issuers, not co-issuance: current NBX whitepaper says separate reserves, no cross-liability, issuer-attributed redemption, and no NBX funding of Moneta redemptions before settled Moneta funds arrive. Moneta transparency provides issuer-reported live reserve balances/composition; a third-party reserve oracle is not a monthly independent accounting attestation. The former Charli3 URL failed the verifier static fetch and is replaced with the working Moneta disclosure. The independently reopened Finanstilsynet browser record confirms NBX EMI registration on January 22, 2024 and CASP registration on June 29, 2026; those institutional licences do not establish a U.S. GENIUS authorization. Foreign exception remains unknown for the NBX branch; not-yet-restricted reflects GENIUS timing, not other applicable-law permissions.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Moneta USDM - FinCEN MSB #31000327040139",
         "url": "https://moneta.global/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "NBX USDM terms",
         "url": "https://nbx.com/en/usdm-terms",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
-        "label": "Charli3 USDM reserve feed",
-        "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
-        "sourceKind": "issuer-disclosure"
+        "label": "Moneta USDM terms of service",
+        "url": "https://moneta.global/terms-of-service.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-07-22"
+      },
+      {
+        "label": "Moneta USDM reserve transparency",
+        "url": "https://moneta.global/transparency/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NBX USDM September 2026 modified whitepaper",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "Finanstilsynet NBX institutional licensing record (browser inspected)",
+        "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Moneta Digital LLC issuer disclosures (moneta.global): FinCEN MSB only, no PPSI claim",
-        "ESMA EMTWP.csv (re-checked Jun 2026)",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3; grouped exact-issuer GENIUS approval/application/enforcement search across OCC, Federal Reserve, FDIC, NCUA and Treasury",
+        "Federal Reserve September 24, 2026 proposals",
+        "Treasury August 17, 2026 Section 3 proposal",
+        "September 30, 2026 SCRC interim final rule",
+        "NYDFS licensed virtual-currency entities and approved stablecoin list",
+        "FinCEN enforcement-action index",
+        "Moneta USDM terms sections 1.6 and 2.1",
+        "NBX USDM July terms and September 24, 2026 whitepaper",
+        "Moneta public reserve transparency"
       ],
-      "summary": "Moneta Digital LLC is a FinCEN-registered MSB (#31000327040139) and NBX holds a Norwegian EMI license; no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for USDM. No PPSI approvals have been granted to any issuer as of Jun 2026.",
+      "summary": "As of 2026-10-07, the opened federal proposals, SCRC certification procedure, state licensing list, issuer disclosures and targeted regulator-domain searches did not establish an issuer-specific GENIUS PPSI approval, state qualification, or registered foreign exception for Moneta Digital LLC and Norwegian Block Exchange AS. Licensing or registration under earlier regimes is not such authorization. No public GENIUS-specific enforcement action was located in the checked sources; this is a bounded public-evidence review, not a legal compliance finding.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed regulations",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-02-25"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposal and expected effective date",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "SCRC state-regime certification interim final rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        },
+        {
+          "label": "NYDFS virtual currency businesses and approved stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FinCEN enforcement actions",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "applicabilityBasis": {
+      "summary": "USDM is intended for transactions and preserving value and carries a USD par-redemption obligation. Moneta issues outside the EEA and NBX independently issues in the EEA, with separate reserves and redemption liabilities despite a common Cardano asset identifier.",
+      "references": [
+        {
+          "label": "Moneta USDM terms of service",
+          "url": "https://moneta.global/terms-of-service.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-07-22"
+        },
+        {
+          "label": "NBX USDM September 2026 modified whitepaper",
+          "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-24"
+        }
+      ]
+    }
   }
 }

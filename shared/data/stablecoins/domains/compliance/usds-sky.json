@@ -4,68 +4,219 @@
     "status": "non-compliant",
     "references": [
       {
-        "label": "Kraken EEA stablecoin offerings: USDS delisting",
-        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+        "label": "Coinbase Luxembourg EEA MiCA stablecoin restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "Sky USDS protocol documentation",
-        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+        "label": "Coinbase Sky USDS identity and contract addresses",
+        "url": "https://www.coinbase.com/price/usds"
       },
       {
-        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
-        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+        "label": "Coinbase DAI to Sky USDS migration and EEA exclusions",
+        "url": "https://help.coinbase.com/en/coinbase/trading-and-funding/sending-or-receiving-cryptocurrency/token-migrations"
+      },
+      {
+        "label": "Sky USDS dollar target and protocol collateral disclosure",
+        "url": "https://sky.money/blog/what-is-usds"
       }
     ]
   },
   "genius": {
     "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDS is marketed as a dollar-targeting stablecoin for general use and as a redeemable protocol claim, while documented redemption routes exchange USDS for USDC or DAI through smart contracts. The reviewed documents do not establish a legal issuer obligation to redeem for a fixed amount of national currency or a national-currency deposit. This creates genuine ambiguity under the GENIUS payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "Sky USDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/usds/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky protocol token routes",
+          "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky USDS product and collateral disclosure",
+          "url": "https://sky.money/blog/what-is-usds",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-12",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky Frontier Foundation terms of use",
+          "url": "https://insights.skyeco.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-01-28",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
+    },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
     "issuerEntity": "Sky Protocol governance",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://financial.skyeco.com/usds/collateral-backing",
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "Sky documents protocol conversion routes rather than a legal PPSI issuer or direct fiat redemption path. Sky Frontier Foundation explicitly disclaims issuing, custodying, redeeming, or managing reserves for USDS. No PPSI application, state-qualified pathway, or foreign-exception status has been announced as of 2026-06-18.",
+    "notes": "Sky documents protocol conversion routes rather than a named legal PPSI issuer or direct fiat redemption policy. Sky Frontier Foundation expressly disclaims issuing, custodying, redeeming, or managing reserves for USDS. The existing issuerEntity string is retained as governance attribution, not a verified corporate obligor or issuer domicile. Public protocol collateral disclosure is present; no statutory monthly independent reserve attestation or legal-issuer fiat redemption policy was located. No public PPSI authorization, state qualification, official GENIUS application, foreign registration, or USDS-specific U.S. enforcement action was located in the sources and searches reviewed on 2026-10-07. Foreign-exception eligibility and issuer pathway remain unknown. Treasury still describes 2027-01-18 as the expected effective date and the general DASP permitted-issuer requirement as beginning 2028-07-18; pre-effective treatment does not establish issuer approval.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sky USDS docs",
         "url": "https://developers.skyeco.com/protocol/tokens/usds/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Sky protocol token routes",
         "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Sky USDS product and collateral disclosure",
+        "url": "https://sky.money/blog/what-is-usds",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-12",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Sky Frontier Foundation terms of use",
+        "url": "https://insights.skyeco.com/legal/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-01-28",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Sky USDS collateral backing dashboard",
+        "url": "https://financial.skyeco.com/usds/collateral-backing",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Sky protocol supply and collateral disclosure",
+        "url": "https://sky.money/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS section 3 proposed rule announcement",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "Sky Frontier Foundation press releases (2026): explicitly disclaim issuer role",
-        "Web search for Sky/USDS GENIUS Act application or PPSI compliance plan (2026)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 substantive proposed-rule body, reopened in raw HTML",
+        "OCC digital assets licensing applications pending table, reopened in raw HTML",
+        "Federal Reserve September 2026 standards and application proposals announcement",
+        "FDIC April 2026 GENIUS standards proposed-rule notice",
+        "NCUA GENIUS application and digital-assets resources",
+        "Treasury August 2026 section 3 proposed-rule announcement",
+        "Treasury September 30 SCRC procedural interim rule",
+        "NYDFS licensed virtual-currency entities and Greenlist",
+        "Sky USDS documentation and protocol token routes",
+        "Sky USDS product and collateral disclosure, protocol homepage and financial-dashboard route",
+        "Sky Frontier Foundation terms and Skybase International terms of use",
+        "Public regulator-domain searches for Sky, MakerDAO and USDS GENIUS authorization or application; issuer-domain search for USDS GENIUS plans",
+        "Public SEC, CFTC, OCC, Treasury and NYDFS-domain search for Sky Protocol USDS enforcement"
       ],
-      "summary": "Sky documents protocol conversion routes but no legal PPSI issuer entity has emerged; Sky Frontier Foundation explicitly disclaims issuing or managing USDS. No GENIUS authorization, state-qualified approval, official application, or foreign exception status was located for USDS as of 2026-06-18.",
+      "summary": "As of 2026-10-07, no reviewed regulator source names a legal USDS issuer as a permitted payment stablecoin issuer, state-qualified issuer, official GENIUS applicant or registered foreign-exception issuer. Opened agency materials remain proposals or procedural implementation, and the OCC pending bank-licensing and NYDFS public entity/token tables contain no Sky or USDS match. Sky disclosures establish protocol operation but no named legal PPSI obligor; the independent foundation disclaims the issuer role. Searches found no specific public Sky/USDS authorization, issuer GENIUS intent announcement or U.S. enforcement action. This is bounded negative evidence rather than a finding that no application exists or an approval was refused.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Federal Reserve GENIUS standards and application proposals",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "FDIC GENIUS standards proposed rule",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NCUA financial technology and digital assets GENIUS resources",
+          "url": "https://ncua.gov/regulation-supervision/regulatory-compliance-resources/financial-technology-and-digital-assets",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-10"
+        },
+        {
+          "label": "Treasury GENIUS section 3 proposed rule announcement",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury Stablecoin Certification Review Committee procedural interim rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-09-30",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Sky Frontier Foundation terms of use",
+          "url": "https://insights.skyeco.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-01-28",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

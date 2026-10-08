@@ -9,7 +9,7 @@
       },
       {
         "label": "EUR-Lex MiCA Regulation: crypto-assets qualifying as financial instruments are outside MiCA scope",
-        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
       },
       {
         "label": "Backed bIB01 product page: tracker certificate tracking an iShares Treasury ETF, offered to qualified EU/EEA investors",
@@ -24,7 +24,29 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "bIB01 is a tracker certificate (a security) referencing the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF, issued by Backed Assets (JE) Limited (Jersey). GENIUS Act §2(22)(B) (12 U.S.C. §5901(22)(B)) excludes from the payment-stablecoin definition any asset that meets the definition of a security under federal securities laws. Additionally, Backed does not offer or sell to US persons."
+      "summary": "bIB01 is a tracker certificate (a security) referencing the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF, issued by Backed Assets (JE) Limited (Jersey). GENIUS Act §2(22)(B) (12 U.S.C. §5901(22)(B)) excludes from the payment-stablecoin definition any asset that meets the definition of a security under federal securities laws. Additionally, Backed does not offer or sell to US persons.",
+      "references": [
+        {
+          "label": "Backed bIB01 product page",
+          "url": "https://assets.backed.fi/products/bib01",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-05",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Backed bToken debt-instrument structure",
+          "url": "https://assets.backed.fi/structure",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "GENIUS Act enacted security exclusion, section 2(22)(B)(iii)",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -34,28 +56,64 @@
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
-    "reserveDisclosurePresent": false,
+    "reserveDisclosurePresent": true,
     "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "bIB01 is outside GENIUS payment-stablecoin scope: (1) it is a tracker certificate/security referencing an ETF, not a payment instrument designed for a fixed amount of monetary value (GENIUS Act §2(22)(B) excludes securities from the definition), and (2) Backed Assets (JE) Limited does not offer or sell to US persons. Issuer domicile is Jersey (Channel Islands); the Swiss DLT Act provides the structural framework for token issuance but does not change the Jersey corporate domicile.",
+    "notes": "bIB01 is a NAV-tracking certificate and debt security referencing the iShares $ Treasury Bond 0-1yr UCITS ETF, supporting the enacted GENIUS security exclusion. The issuer also excludes U.S. persons from direct distribution; that territorial restriction is separate from the security exclusion. Issuer domicile is Jersey, while the Swiss DLT Act supplies the token-issuance framework. New issuance is closed and redemption remains supported during the end-2026 wind-down. Public product and structure disclosures identify underlying collateral; the retired live reserve dashboard is not evidence of current quantitative reserves. Automated proof-of-reserve updates do not establish monthly independent accountant attestations. No named issuer enforcement action was located in the bounded SEC, CFTC, OFAC and FinCEN indexed search on 2026-10-07. NAV-based redemption remains available to eligible holders but does not establish a fixed 1:1 national-currency redemption policy; redemptionPolicyPresent is false under the tracker field definition.",
     "references": [
       {
-        "label": "GENIUS Act Pub. L. 119-27 full text (Congress.gov)",
-        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
-        "sourceKind": "statute"
+        "label": "GENIUS Act Pub. L. 119-27 enacted full text (Congress.gov PDF)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Backed bIB01 product page",
         "url": "https://assets.backed.fi/products/bib01",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed product structure and underlying collateral disclosure",
+        "url": "https://assets.backed.fi/structure",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed current onboarding and redemption eligibility",
+        "url": "https://assets.backed.fi/onboarding",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed bToken wind-down and continued redemption",
+        "url": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed issuer address and identity",
+        "url": "https://assets.backed.fi/privacy-notice",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-08",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Backed proof-of-reserve methodology",
+        "url": "https://backed.fi/news-updates/chainlink-proof-of-reserve-is-now-active",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosureUrl": "https://assets.backed.fi/structure"
   }
 }

@@ -20,88 +20,151 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "JPYSC is a yen-denominated stablecoin issued by a Japanese trust bank for payment and settlement use, but its current distribution is limited to SBI VC Trade accounts.",
+      "summary": "JPYSC is a yen-denominated Type III electronic payment instrument issued by SBI Shinsei Trust & Banking Co., Ltd. for payments and settlement. The September 30 contractual terms identify a holder payment claim against the issuer, Japanese-yen settlement and a value of one yen per JPYSC; the trustee publishes direct redemption procedures. The trustee expressly describes JPYSC as neither legal tender nor a deposit. Initial distribution remains confined to SBI VC Trade accounts, with external withdrawals unavailable.",
       "references": [
         {
           "label": "Startale/SBI JPYSC launch announcement",
           "url": "https://startale.com/ja/blog/jpysc-launch",
           "sourceKind": "issuer-disclosure",
-          "sourceDate": "2026-06-24",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-24"
         },
         {
-          "label": "Japan FSA: trust-bank route for electronic payment instruments",
-          "url": "https://www.fsa.go.jp/en/news/2018/20180717.html",
-          "sourceKind": "foreign-regulator",
-          "accessedAt": "2026-08-14"
+          "label": "SBI Shinsei trustee JPYSC issuer, redemption and non-deposit disclosure, recovered through Jina",
+          "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SBI Shinsei JPYSC contractual terms updated September 30, recovered through Jina",
+          "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
         }
       ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "SBI Shinsei Trust Bank, Ltd.",
+    "issuerEntity": "SBI Shinsei Trust & Banking Co., Ltd.",
     "issuerDomicile": "Japan",
-    "licensingRegulator": "Japan FSA; trust-bank / electronic payment instrument framework",
     "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "unknown",
-    "notes": "The issuer's announcement describes JPYSC as a Japanese electronic payment instrument, initially usable only inside SBI VC Trade accounts; public-chain circulation, including overseas use, is prospective after legal, tax, and supervisory treatment is clarified. The current U.S. GENIUS rulemaking materials and OCC application list contain no JPYSC or SBI Shinsei Trust Bank approval, application, or foreign-issuer registration. issuerPathway remains unknown because Japanese authorization is not a GENIUS pathway and no U.S. or GENIUS foreign-exception route was found.",
+    "notes": "Reviewed as of 2026-10-07. The issuer is SBI新生信託銀行株式会社; its homepage supplies the official English name SBI Shinsei Trust & Banking Co., Ltd., replacing the prior literal translation SBI Shinsei Trust Bank, Ltd. SBI VC Trade is the distributor and trust settlor, not the legal issuer. Japanese trust-based payment-instrument issuance does not establish a U.S. GENIUS approval, state qualification, foreign registration or U.S. issuer pathway. The negative finding is limited to the public sources and names listed below; unpublished filings are not excluded. No U.S. state issuing nexus was identified; NYDFS was reviewed as a state licensing/issuance inventory. Generic FSA framework material does not establish a token-specific issuer license, so licensingRegulator is omitted. The issuer-wide no-public-action-found claim is omitted rather than treating unrelated historic trustee action as token or GENIUS enforcement. No reserve, redemption-policy-presence or monthly-attestation booleans are added. Trustee HTML and September 30 terms were recovered through Jina after direct fetches timed out; the uniquely named browser attempt timed out before a managed tab was created. The contractual yen-redemption description does not guarantee reserve adequacy or principal recovery: the terms disclose reserve losses and no principal guarantee.",
     "references": [
-      {
-        "label": "OCC Digital Assets Licensing Applications: no JPYSC or SBI Shinsei Trust Bank applicant listed",
-        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "OCC proposed GENIUS Act rule",
-        "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
-      },
-      {
-        "label": "Treasury proposed GENIUS Act AML/sanctions rule",
-        "url": "https://home.treasury.gov/news/press-releases/sb0435",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
-      },
       {
         "label": "Startale/SBI JPYSC launch announcement",
         "url": "https://startale.com/ja/blog/jpysc-launch",
         "sourceKind": "issuer-disclosure",
-        "sourceDate": "2026-06-24",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-06-24"
+      },
+      {
+        "label": "SBI Shinsei trustee JPYSC issuer, redemption and non-deposit disclosure, recovered through Jina",
+        "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/jpysc.html",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SBI Shinsei JPYSC contractual terms updated September 30, recovered through Jina",
+        "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "SBI Shinsei trustee homepage: official English corporate name, recovered through Jina",
+        "url": "https://r.jina.ai/https://www.shinseitrust.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital-assets bank licensing inventory; no JPYSC or Shinsei applicant identified",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Federal Register exact JPYSC search through October 7, 2026; zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=JPYSC&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "NYDFS virtual-currency entity directory and issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury section 3 GENIUS proposal and prospective restriction dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "SCRC state-certification procedural rule; no named JPYSC authorization",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC Digital Assets Licensing Applications list, checked 2026-08-14",
-        "OCC GENIUS Act proposed-rule announcement and Federal Register proposal",
-        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials",
-        "Federal Reserve GENIUS Act proposed-rule materials",
-        "Startale/SBI JPYSC issuer and launch disclosures",
-        "Japan FSA electronic-payment-instrument and trust-bank materials",
-        "ESMA/EBA MiCA registers and official register guidance"
+        "OCC digital-assets licensing inventory, directly fetched and complete bank-application table extracted; no JPYSC, SBI Shinsei or Shinsei Trust applicant identified as of 2026-10-07. This is a bank-charter inventory, not a comprehensive PPSI register.",
+        "Federal Register API, publication dates through 2026-10-07: JPYSC, SBI Shinsei Trust, Shinsei Trust, SBI新生信託銀行, SBI Shinsei Trust & Banking and Shinsei Trust & Banking each returned zero documents.",
+        "NYDFS virtual-currency regulated-entity directory and stablecoin issuance Greenlist reviewed 2026-10-07; no JPYSC or Shinsei issuer entry. No token-linked U.S. state issuing nexus identified.",
+        "Treasury August 17 GENIUS section 3 proposal and September 30 Federal Register SCRC procedural rule; neither provides named issuer approval or registration.",
+        "Startale/SBI June 24 launch announcement, current SBI VC Trade product page, trustee JPYSC page, September 30 terms and trustee homepage; no GENIUS application, approval, state qualification or foreign-registration statement found.",
+        "Bounded official-domain search for JPYSC, SBI Shinsei Trust and Shinsei Trust plus GENIUS across OCC, Federal Register, NYDFS and Treasury found no named qualifying record."
       ],
-      "summary": "No public U.S. GENIUS permitted-payment-stablecoin approval, state-qualified approval, official application, or registered foreign-issuer exception was located for JPYSC or SBI Shinsei Trust Bank. The reviewed issuer materials describe a Japan-only closed-loop launch and do not disclose a U.S. offering or GENIUS pathway.",
+      "summary": "The reviewed public federal inventory, Federal Register exact-name searches, NYDFS directory and issuer materials did not identify a qualifying U.S. GENIUS approval, official application, state-qualified approval or registered foreign-issuer exception for JPYSC or its named Japanese trustee issuer. This is a dated public-source finding, not proof that confidential filings do not exist. Japanese licensing and distributor registration are not U.S. GENIUS authorization.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-08-14",
+      "reviewedAt": "2026-10-07",
       "references": [
         {
-          "label": "OCC Digital Assets Licensing Applications",
+          "label": "OCC digital-assets bank licensing inventory; no JPYSC or Shinsei applicant identified",
           "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
           "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
-          "label": "Treasury proposed GENIUS Act AML/sanctions rule",
-          "url": "https://home.treasury.gov/news/press-releases/sb0435",
-          "sourceKind": "federal-regulator",
-          "accessedAt": "2026-08-14"
+          "label": "Federal Register exact JPYSC search through October 7, 2026; zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=JPYSC&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "NYDFS virtual-currency entity directory and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Startale/SBI JPYSC launch announcement",
+          "url": "https://startale.com/ja/blog/jpysc-launch",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-06-24"
+        },
+        {
+          "label": "SBI Shinsei trustee JPYSC issuer, redemption and non-deposit disclosure, recovered through Jina",
+          "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/jpysc.html",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "SBI Shinsei JPYSC contractual terms updated September 30, recovered through Jina",
+          "url": "https://r.jina.ai/https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260930.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
         }
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

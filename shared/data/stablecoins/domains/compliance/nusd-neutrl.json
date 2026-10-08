@@ -3,19 +3,20 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "NUSD is described as a DeFi-composable synthetic dollar backed by yield-bearing crypto assets and hedged strategies rather than cash, and Neutrl materials describe the token as a claim on strategy yield rather than a fixed-value payment claim. U.S. persons are also excluded from the reviewed service terms.",
+      "summary": "Current Neutrl Terms describe NUSD and sNUSD as strategy-yield claims and explicitly deny redemption at par, at a displayed value, or at any particular time. Exit is discretionary, may use a different supported stablecoin and may be pro rata from available assets. Portfolio and yield-generation use, together with the absence of an issuer-obligated fixed monetary-value redemption, supports the non-payment-token assessment. This is not an automatic exclusion for synthetic collateral or a finding that NUSD is a security.",
       "references": [
         {
           "label": "Neutrl Terms of Use: synthetic-dollar design and restricted jurisdictions",
           "url": "https://www.neutrl.finance/legal/terms-of-use",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "GENIUS Act: payment stablecoin fixed-value and security/deposit boundaries",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-08-14"
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2025-07-18"
         }
       ]
     },
@@ -27,36 +28,50 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": true,
+    "redemptionPolicyPresent": false,
     "monthlyAttestationPresent": false,
-    "notes": "NUSD is treated as an explicit GENIUS exclusion because the reviewed materials describe a synthetic, strategy-backed DeFi asset rather than an issuer-obligated fixed-value payment stablecoin; this is not a finding about general U.S. legality. The current Terms identify Caverna Auctus Inc. in Panama, while the RWA profile leaves issuer domicile blank; the issuer/token relationship should be re-checked. The dedicated Accountable dashboard was linked as the public reserve/solvency disclosure. No GENIUS authorization posture is applicable.",
+    "notes": "The exact existing issuerEntity string is retained. Current Terms identify Caverna Auctus Inc. in Panama and exclude U.S. persons; the risk disclosure separately identifies the company as sole NUSD issuer. The current Terms control the assessment despite older oracle-based redemption documentation. NUSD is distinct from the sNUSD staking wrapper. Public reserves sections state that reserve figures are being recalibrated and will be updated soon; no current quantitative reserve disclosure or monthly attestation was verified. A public exit policy exists, but the schema field for public 1:1 redemption is false because the Terms expressly deny par redemption. No public GENIUS enforcement action was found in the reviewed regulator sources and targeted searches. No general U.S. legality conclusion is made. The reopened RWA.xyz profile identifies the same Neutrl asset and strategy design; its displayed par-like market figures are not used to establish current reserve value or redemption rights.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       },
       {
         "label": "Neutrl Terms of Use",
         "url": "https://www.neutrl.finance/legal/terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Neutrl issuer and redemption risk disclosure",
+        "url": "https://docs.neutrl.finance/general-risk-disclosures",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Neutrl current reserves disclosure",
+        "url": "https://www.neutrl.finance/reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "RWA.xyz NUSD profile",
         "url": "https://app.rwa.xyz/assets/NUSD",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-08-14"
+        "sourceKind": "news",
+        "accessedAt": "2026-10-07"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-08-14"
+    "reviewedAt": "2026-10-07"
   }
 }

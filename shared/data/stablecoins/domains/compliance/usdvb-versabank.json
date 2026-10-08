@@ -15,18 +15,25 @@
         "label": "USDVB pilot announcement",
         "url": "https://www.versabank.com/versabank-announces-versabank-usa-launch-of-tokenized-deposit-pilot-program-in-united-states/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02",
+        "accessedAt": "2026-10-07",
         "sourceDate": "2025-08-26"
       },
       {
         "label": "VersaBank Q3 2026 management discussion",
         "url": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf",
         "sourceKind": "issuer-filing",
-        "accessedAt": "2026-10-02",
+        "accessedAt": "2026-10-07",
         "sourceDate": "2026-09-01"
+      },
+      {
+        "label": "GENIUS Act: deposits including DLT-recorded deposits excluded",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-07-18"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

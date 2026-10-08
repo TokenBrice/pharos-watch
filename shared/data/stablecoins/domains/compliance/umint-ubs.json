@@ -24,31 +24,38 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "The exact native token represents a yield-bearing money-market fund share with NAV-based dealing, rather than a payment-stablecoin promise. GENIUS section 2(22)(B)(iii) excludes securities. ",
+      "summary": "The exact native token represents a yield-bearing money-market fund share with NAV-based dealing, rather than a payment-stablecoin promise. GENIUS section 2(22)(B)(iii) excludes securities.",
       "references": [
         {
           "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
           "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "UBS production subscription and redemption (November 4, 2025)",
           "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
         },
         {
           "label": "UBS Ethereum uMINT launch",
           "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-02"
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "DigiFT uMINT reserve proposal: Singapore VCC issuer and redeemable participating Shares",
+          "url": "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-01-24",
+          "accessedAt": "2026-10-07"
         }
       ]
     },
@@ -64,28 +71,35 @@
         "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "DigiFT native uMINT disclosure within STEP2 application (March 20, 2025)",
         "url": "https://forum.arbitrum.foundation/t/digift-dr-umint-step2-application/28764",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "UBS production subscription and redemption (November 4, 2025)",
         "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20251104-chainlink.html",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "UBS Ethereum uMINT launch",
         "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-02"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "DigiFT uMINT reserve proposal: Singapore VCC issuer and redeemable participating Shares",
+        "url": "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-01-24",
+        "accessedAt": "2026-10-07"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-07"
   }
 }

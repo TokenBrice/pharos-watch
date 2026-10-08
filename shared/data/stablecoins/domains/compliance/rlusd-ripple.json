@@ -27,8 +27,7 @@
     "issuerPathway": "unknown",
     "issuerEntity": "Standard Custody & Trust Company, LLC",
     "issuerDomicile": "United States",
-    "licensingRegulator": "NYDFS (current issuer charter); OCC conditional national trust bank charter pending (Ripple National Trust Bank)",
-    "primaryFederalRegulator": "OCC",
+    "licensingRegulator": "NYDFS (Standard Custody & Trust Company, LLC limited-purpose trust charter)",
     "stateRegulator": "NYDFS",
     "foreignExceptionStatus": "not-applicable",
     "enforcementStatus": "no-public-action-found",
@@ -37,59 +36,116 @@
     "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Evidence as of 2026-06-18 review: RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a NYDFS-chartered limited purpose trust company. Ripple also received a conditional OCC approval (December 12, 2025) to establish Ripple National Trust Bank (RNTB) as a de novo national trust bank to manage RLUSD reserves: this is an OCC trust bank charter under existing authority, not a GENIUS Act PPSI approval. Ripple's stated GENIUS compliance pathway is NYDFS state equivalency (SCTC). No PPSI application or approval exists as of 2026-06-18; the GENIUS Act rulemaking remains at the NPRM stage. Reserve-report date recorded as of 2026-06-18 review: 2026-04-30 (date kind unspecified).",
+    "notes": "RLUSD is issued by Standard Custody & Trust Company, LLC (SCTC), a New York limited-purpose trust company. Current issuer legal terms, NYDFS directory/issuance greenlisting and the latest opened reserve report identify that same issuer. Ripple National Trust Bank (RNTB) is a separate proposed reserve-management/collateral-trustee affiliate: the December 12, 2025 OCC decision expressly says it does not plan to issue stablecoins and grants only preliminary conditional approval before preopening conditions. The OCC affiliate charter must not be used to name OCC as the current GENIUS primary federal regulator of SCTC or as an RLUSD PPSI approval. Ripple issuer statements signal GENIUS-era intent; no public regulator approval/application qualifying SCTC under GENIUS was located in reviewed sources. The final federal/state-qualified route remains unknown: ordinary NYDFS issuance approval is real, but no SCRC-approved state regime or token-specific GENIUS state qualification was established. September 30 SCRC procedural rules expressly postpone accepting certifications pending PRA approval and a Treasury notice. The framework remains pre-effective. ReserveDisclosurePresent and monthlyAttestationPresent refer to the current issuer hub and separately published independent examination, not to RNTB authorization or assurance about all Ripple entities. Redemption at $1 is governed by SCTC legal terms and onboarding eligibility. No relevant public SCTC/RLUSD enforcement action was found in the reviewed NYDFS index and targeted regulator search; actions against other Ripple affiliates are not automatically this issuer action.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-02-25"
       },
       {
         "label": "OCC NR-2025-125: Conditional approvals for five national trust bank charters including Ripple",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2025-12-12",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ripple press release: Secures Federal Approval for National Trust Bank",
         "url": "https://ripple.com/ripple-press/ripple-secures-federal-approval-to-establish-national-trust-bank/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-12-12",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ripple RLUSD issuer page",
         "url": "https://ripple.com/solutions/stablecoin/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "Ripple RLUSD transparency",
         "url": "https://ripple.com/solutions/stablecoin/transparency/",
-        "sourceKind": "auditor-report"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC Ripple National Trust Bank decision: separate non-issuing affiliate",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/ca1359.pdf",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2025-12-12"
+      },
+      {
+        "label": "Ripple USD legal terms: SCTC issuer and par redemption",
+        "url": "https://ripple.com/legal/stablecoin/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2024-10-03"
+      },
+      {
+        "label": "NYDFS regulated virtual-currency entities and approved stablecoin issuance",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "RLUSD August 2026 independent reserve examination and issuer assertion",
+        "url": "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "OCC current pending digital-asset licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC 2026 final-rule inventory",
+        "url": "https://www.occ.gov/topics/laws-and-regulations/occ-regulations/final-issuances/occ-final-issuances-2026.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS current enforcement index",
+        "url": "https://www.dfs.ny.gov/industry_guidance/enforcement_actions",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act rulemaking bulletin and public releases",
-        "OCC NR-2025-125 conditional trust bank charter announcements",
-        "Ripple national trust bank and OCC materials",
-        "NYDFS virtual-currency and stablecoin materials",
-        "Ripple RLUSD transparency pages",
-        "GENIUS Act PPSI rulemaking tracker (Chapman & Cutler)",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
+        "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/ca1359.pdf",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/topics/laws-and-regulations/occ-regulations/final-issuances/occ-final-issuances-2026.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.dfs.ny.gov/industry_guidance/enforcement_actions",
+        "https://ripple.com/legal/stablecoin/",
+        "https://ripple.com/ripple-press/ripple-secures-federal-approval-to-establish-national-trust-bank/",
+        "https://ripple.com/solutions/stablecoin/transparency/",
+        "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf"
       ],
-      "summary": "No GENIUS Act PPSI application, state-qualified PPSI approval, or official PPSI filing was located for RLUSD or Standard Custody & Trust Company. OCC December 2025 conditional approval is a trust bank charter under existing OCC authority, not a PPSI approval under the GENIUS Act.",
+      "summary": "No qualifying public GENIUS PPSI approval, state-qualified approval or issuer application naming Standard Custody & Trust Company, LLC/RLUSD was found in these reviewed sources and targeted regulator-domain searches. NYDFS trust/issuance permissions are not GENIUS state qualification; the OCC conditional charter is for a separate non-issuing reserve affiliate. Current OCC charter table is not an exhaustive PPSI register and rulemaking alone is not proof that no confidential filing exists. No relevant SCTC/RLUSD issuer enforcement action was located in the consulted NYDFS index/search.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07"
   }
 }

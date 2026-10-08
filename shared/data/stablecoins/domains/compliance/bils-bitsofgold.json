@@ -3,7 +3,21 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "BILS is a regulator-approved shekel stablecoin designed for 1:1 NIS redemption from segregated Israeli reserves."
+      "summary": "BILS is a regulator-approved shekel stablecoin designed for 1:1 NIS redemption from segregated Israeli reserves.",
+      "references": [
+        {
+          "label": "BILS whitepaper: reserves, holder rights and redemption",
+          "url": "https://www.bils.co.il/BILSWhitePaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Israel CMISA announcement of limited shekel stablecoin distribution",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:7454528669680607232/",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-10-07"
+        }
+      ]
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -13,43 +27,114 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
+    "reserveDisclosurePresent": true,
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "BILS has Israeli regulatory approval for a limited stablecoin launch, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found.",
+    "notes": "Israel CMISA's own public announcement confirms limited shekel stablecoin distribution by Bits of Gold after a pilot, with 1:1 backing in dedicated separate Israeli accounts. This domestic permission is not a U.S. GENIUS approval. The BILS whitepaper identifies Bits of Gold Ltd. and describes par shekel redemption subject to account verification and AML/KYC conditions; the existing issuerEntity string Bits of Gold is retained. The current transparency page discloses reserves and a quarterly EY reporting schedule, but marks Q3 2026 reports as forthcoming: no actual monthly reserve-attestation report was found. No U.S. GENIUS PPSI approval, state qualification, official application, issuer-announced GENIUS route, OCC foreign registration or Treasury comparability determination was located. Foreign-exception status remains unknown. GENIUS substantive implementation is still proposed and the general DASP offer/sale restriction is not yet effective.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
       },
       {
         "label": "CoinDesk: Israel approves Bits of Gold BILS stablecoin",
         "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin",
         "sourceKind": "news",
         "sourceDate": "2026-04-28",
-        "accessedAt": "2026-06-13"
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+        "url": "https://home.treasury.gov/news/press-releases/sb0605",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Federal Reserve GENIUS implementation proposed rule",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-29"
+      },
+      {
+        "label": "SCRC interim state-certification procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-07",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "BILS transparency and quarterly report schedule",
+        "url": "https://www.bils.co.il/en/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "BILS whitepaper: reserves, holder rights and redemption",
+        "url": "https://www.bils.co.il/BILSWhitePaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Israel CMISA announcement of limited shekel stablecoin distribution",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7454528669680607232/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-07"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS NPRM and reporting-form notices",
-        "Treasury foreign-comparability materials",
-        "Bits of Gold BILS launch and approval coverage",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC Bulletin 2026-3 and current Digital Assets Licensing Applications table; no named issuer or token approval/application located",
+        "Federal Reserve September 29, 2026 GENIUS implementation NPRM (R-1899)",
+        "Treasury August 17, 2026 Section 3 NPRM announcement and September 30, 2026 SCRC interim procedural rule",
+        "Exact token and legal-issuer GENIUS, enforcement and sanctions search across OCC, FDIC, Federal Reserve, Treasury, FinCEN, NCUA and NYDFS public domains; no exact matching authorization or action located",
+        "Israel CMISA own public shekel-stablecoin approval announcement; BILS official site, transparency hub and Hebrew whitepaper",
+        "Reopened April 28 CoinDesk report as secondary corroboration, not the basis for U.S. approval"
       ],
-      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, OCC foreign-issuer registration, or Treasury comparability determination was located for BILS or Bits of Gold.",
+      "summary": "No public GENIUS permitted-payment-stablecoin-issuer approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination or token-specific GENIUS enforcement action was located for Bits of Gold or its token as of 2026-10-07. The reviewed rules are proposals or interim procedural rules, not issuer approvals. This is a bounded public-evidence finding, not proof of illegality or absence of unpublished filings.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-10-07",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "Treasury GENIUS Section 3 proposed rule and expected effective dates",
+          "url": "https://home.treasury.gov/news/press-releases/sb0605",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Federal Reserve GENIUS implementation proposed rule",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-29"
+        },
+        {
+          "label": "SCRC interim state-certification procedures",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-07",
+          "sourceDate": "2026-09-30"
+        }
+      ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-10-07",
+    "reserveDisclosureUrl": "https://www.bils.co.il/en/transparency"
   }
 }
