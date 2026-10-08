@@ -33,6 +33,7 @@ import type { PipelineGapByAssetId } from "@shared/lib/report-cards-fixed-input-
 import type { ReportCardEvidenceJournalByIdV1 } from "@shared/lib/report-card-evidence-journal";
 import { compareCodeUnits } from "@shared/lib/compare";
 import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
+import { logWorkerEvent } from "../structured-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
@@ -154,13 +155,25 @@ export async function buildNativeSafetyScoreV9Capture(
     dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, clockSec, "DEX liquidity"),
     redemptionBackstops: freshnessAtClock(inputFreshness.redemptionBackstops, clockSec, "redemption backstops"),
   };
-  const consumedInputState = v9PublicationInputHealth.redemption.state === "current"
+  const consumedReserves = v9PublicationInputHealth.redemption.state === "current"
     ? assessConsumedRedemptionReserves(Object.values(readRedemptionBackstopMap), redemptionSnapshotProvenance.runMetadata, redemptionSnapshotProvenance.latestUpdatedAt ?? 0, clockSec)
-    : v9PublicationInputHealth.redemption.state === "stale" ? "stale" : v9PublicationInputHealth.redemption.state === "not-applicable" ? "fresh" : "unavailable";
+    : null;
+  const consumedInputUnavailable = v9PublicationInputHealth.redemption.state === "unavailable" || consumedReserves?.state === "unavailable";
+  const consumedInputFresh = v9PublicationInputHealth.redemption.state === "not-applicable" || consumedReserves?.state === "fresh";
   const redemptionOutputExpired = scoringInputFreshness.redemptionBackstops.ageSeconds != null && scoringInputFreshness.redemptionBackstops.ageSeconds > CRON_INTERVALS["sync-redemption-backstops"] * 2;
-  const redemptionStale = readRedemptionStale || scoringInputFreshness.redemptionBackstops.stale || redemptionOutputExpired || consumedInputState !== "fresh";
+  // An asset whose consumed reserve evidence lost admission at the scoring clock
+  // loses its redemption row alone (R8); every other asset keeps the producer run.
+  const quarantined = consumedReserves?.quarantined ?? {};
+  const admittedRedemptionRows = Object.entries(readRedemptionBackstopMap).filter(([stablecoinId]) => !(stablecoinId in quarantined));
+  const allRowsQuarantined = Object.keys(readRedemptionBackstopMap).length > 0 && admittedRedemptionRows.length === 0;
+  const redemptionStale = readRedemptionStale || scoringInputFreshness.redemptionBackstops.stale || redemptionOutputExpired || !consumedInputFresh || allRowsQuarantined;
   if (redemptionStale) scoringInputFreshness.redemptionBackstops.stale = true;
-  const redemptionBackstopMap = redemptionStale ? {} : readRedemptionBackstopMap;
+  if (!redemptionStale && Object.keys(quarantined).length > 0) {
+    logWorkerEvent({ scope: "lib", level: "warn", event: "v9-capture-redemption-reserve-quarantine",
+      message: "Safety Score v9 capture quarantined redemption rows with inadmissible consumed reserve evidence",
+      runId: redemptionSnapshotProvenance.runId ?? null, metadata: { quarantined } });
+  }
+  const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(admittedRedemptionRows);
 
   const activeDepegPeakBpsById = new Map<string, number>();
   for (const [stablecoinId, events] of pegAnalytics.eventsByCoin ?? new Map()) {
@@ -255,7 +268,7 @@ export async function buildNativeSafetyScoreV9Capture(
       },
       redemption: {
         ...v9PublicationInputHealth.redemption,
-        state: consumedInputState === "unavailable" ? "unavailable" : redemptionStale ? "stale" : v9PublicationInputHealth.redemption.state,
+        state: consumedInputUnavailable ? "unavailable" : redemptionStale ? "stale" : v9PublicationInputHealth.redemption.state,
         generationId: redemptionSnapshotProvenance.runId ?? redemptionGenerationId,
         updatedAtSec: redemptionUpdatedAt,
       },

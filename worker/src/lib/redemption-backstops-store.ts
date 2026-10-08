@@ -1,6 +1,6 @@
 import { logWorkerEvent } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { assessConsumedRedemptionReserves } from "./accepted-reserve-generation";
+import { assessConsumedRedemptionReserves, type ConsumedRedemptionReserveAssessment } from "./accepted-reserve-generation";
 import { RedemptionReserveRunMetadataSchema, type RedemptionReserveRunMetadata } from "@shared/types/reserve-input";
 import type {  RedemptionBackstopEntry,
   RedemptionBackstopDetails,
@@ -81,7 +81,7 @@ export interface RedemptionBackstopLoadResult {
   runId?: string | null;
   methodologyVersion?: string | null;
   snapshotSource?: RedemptionSnapshotSource;
-  reserveInputHealth?: "fresh" | "stale" | "unavailable";
+  reserveInputAssessment?: ConsumedRedemptionReserveAssessment;
   runMetadata?: RedemptionBackstopRunMetadata;
 }
 
@@ -582,7 +582,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         methodologyVersion: run.methodology_version,
         snapshotSource: "run-rows",
         runMetadata: run.metadata,
-        reserveInputHealth: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
+        reserveInputAssessment: assessConsumedRedemptionReserves(Object.values(map), run.metadata, run.max_updated_at ?? 0, Math.floor(Date.now() / 1000)),
       };
     }
 

@@ -96,7 +96,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
       expect(loaded.latestUpdatedAt).toBe(record.updatedAt);
       expect(loaded.runMetadata?.stablecoinsInput).toEqual({ updatedAt: record.updatedAt - 120, assessedAt: record.updatedAt, maxAgeSec: 600 });
       sqlite.exec("UPDATE redemption_backstop_runs SET metadata_json = '{}'");
-      expect((await loadRedemptionBackstopSnapshot(db)).reserveInputHealth).toBe("unavailable");
+      expect((await loadRedemptionBackstopSnapshot(db)).reserveInputAssessment?.state).toBe("unavailable");
     } finally { sqlite.close(); }
   });
 
