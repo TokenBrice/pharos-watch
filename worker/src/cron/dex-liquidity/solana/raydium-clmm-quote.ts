@@ -42,6 +42,7 @@ export interface RaydiumSnapshot {
   configSlot: number;
   bitmapSlot: number;
   initializedStarts: number[];
+  dependencyAddresses: string[];
   tickArrays: RaydiumTickArray[];
   mints: { slot: number; address: string; account: SolanaAccount }[];
 }
@@ -231,5 +232,5 @@ export async function fetchRaydiumSnapshot(poolAddress: string, discovery: Raydi
     return { slot: batch.slot, address, account };
   });
   if (onBankCapture) await captureSolanaDexBank({ profileId: "raydium-clmm-exact-v1", poolAddress, slot: batch.slot, addresses: bankAddresses, accounts: batch.accounts, sink: onBankCapture });
-  return { slot: batch.slot, poolAddress, pool, configSlot: batch.slot, bitmapSlot: batch.slot, feeRate: configView.getUint32(47, true), initializedStarts, tickArrays, mints };
+  return { slot: batch.slot, poolAddress, pool, configSlot: batch.slot, bitmapSlot: batch.slot, dependencyAddresses: [current.config, bitmapAddress], feeRate: configView.getUint32(47, true), initializedStarts, tickArrays, mints };
 }

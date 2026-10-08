@@ -1,19 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
 import { runHalfHourlyMeasuredExecutionSlot, runSupplementalMeasuredExecutionSlot, settleMeasuredExecutionLane } from "../half-hourly-measured-execution";
 import type { ScheduledRuntimeContext } from "../context";
 
-const runners = vi.hoisted(() => ({ evm: vi.fn(), orca: vi.fn(), raydium: vi.fn(), sui: vi.fn(), result: null as CronResult | null }));
+const runners = vi.hoisted(() => ({ evm: vi.fn(), orca: vi.fn(), raydium: vi.fn(), native: vi.fn(), sui: vi.fn(), result: null as CronResult | null }));
 vi.mock("../../../cron/measured-execution/sync", () => ({ syncDexMeasuredExecution: runners.evm }));
 vi.mock("../../../cron/dex-liquidity/solana/whirlpool-shadow", () => ({ collectWhirlpoolShadowQuotes: runners.orca, collectRaydiumShadowQuotes: runners.raydium }));
 vi.mock("../../../cron/dex-liquidity/sui/shadow", () => ({ collectSuiClmmShadowQuotes: runners.sui }));
+vi.mock("../../../cron/measured-execution/join", () => ({ loadNativeDexExecutionDiagnostic: runners.native }));
 vi.mock("../slot-groups", () => ({
   runSingleScheduledJob: async (_runtime: unknown, _label: string, job: { run: (signal: AbortSignal, progress?: CronProgressReporter) => Promise<CronResult> }) => {
     runners.result = await job.run(new AbortController().signal);
     return {};
   },
 }));
+
+beforeEach(() => {
+  runners.native.mockImplementation(async ({ profileId }) => ({ profileId, status: "current", scoreEligible: false }));
+});
 
 it("awaits the EVM lane before collecting isolated shadow evidence and preserves EVM status", async () => {
   const order: string[] = [];
@@ -22,7 +27,7 @@ it("awaits the EVM lane before collecting isolated shadow evidence and preserves
   runners.orca.mockImplementation(async () => { order.push("orca"); return { persisted: 1, scoreEligible: false }; });
   runners.raydium.mockImplementation(async () => { order.push("raydium"); return { persisted: 1, scoreEligible: false }; });
   runners.sui.mockImplementation(async () => { order.push("sui"); return { persisted: 1, scoreEligible: false }; });
-  const pending = runHalfHourlyMeasuredExecutionSlot({ db: {}, chainRpcs: new Map() } as ScheduledRuntimeContext);
+  const pending = runHalfHourlyMeasuredExecutionSlot({ db: {}, chainRpcs: new Map(), invocationId: "native-owner", jobAttemptNo: 2 } as ScheduledRuntimeContext);
   await Promise.resolve();
   expect(order).toEqual(["evm-start"]);
   release({ status: "degraded", itemCount: 2, metadata: JSON.stringify({ measuredCount: 2 }) });
@@ -35,7 +40,14 @@ it("awaits the EVM lane before collecting isolated shadow evidence and preserves
     orcaShadow: { persisted: 1, scoreEligible: false },
     raydiumShadow: { persisted: 1, scoreEligible: false },
     suiShadow: { persisted: 1, scoreEligible: false },
+    nativeDiagnostics: [
+      { profileId: "orca-whirlpool-exact-v1", status: "current", scoreEligible: false },
+      { profileId: "raydium-clmm-exact-v1", status: "current", scoreEligible: false },
+    ],
   });
+  expect(runners.orca).toHaveBeenCalledWith(expect.objectContaining({ publisherInvocationId: "native-owner", publisherAttemptNo: 2 }));
+  expect(runners.raydium).toHaveBeenCalledWith(expect.objectContaining({ publisherInvocationId: "native-owner", publisherAttemptNo: 2 }));
+  expect(runners.native.mock.calls.map(([input]) => input.profileId)).toEqual(["orca-whirlpool-exact-v1", "raydium-clmm-exact-v1"]);
 });
 
 it("retains active quote results when the diagnostic Sui pass fails", async () => {
@@ -64,6 +76,7 @@ it("adds an active EVM opportunity without repeating the native diagnostics", as
   expect(runners.orca).not.toHaveBeenCalled();
   expect(runners.raydium).not.toHaveBeenCalled();
   expect(runners.sui).not.toHaveBeenCalled();
+  expect(runners.native).not.toHaveBeenCalled();
 });
 
 it("records supplemental EVM failure without starting native collectors", async () => {
@@ -75,6 +88,7 @@ it("records supplemental EVM failure without starting native collectors", async 
   expect(runners.orca).not.toHaveBeenCalled();
   expect(runners.raydium).not.toHaveBeenCalled();
   expect(runners.sui).not.toHaveBeenCalled();
+  expect(runners.native).not.toHaveBeenCalled();
 });
 
 

@@ -70,17 +70,89 @@ function runCoverageCli(coins: readonly StablecoinMeta[], argv: readonly string[
   return { status, stdout, stderr };
 }
 
-it("enforces missing profiles by default and exposes advisory backfill mode", () => {
+it("enforces missing profiles without an advisory exit-success mode", () => {
   const enforced = runCoverageCli([makeCoin()]);
   expect(enforced.status).toBe(1);
   expect(enforced.stderr).toBe("");
+  expect(enforced.stdout).toContain("oracleRisk coverage:");
   expect(enforced.stdout).toContain("test-cdp (TCDP): missing-profile");
+});
 
-  const advisory = runCoverageCli([makeCoin()], ["--advisory"]);
-  expect(advisory.status).toBe(0);
-  expect(advisory.stderr).toBe("");
-  expect(advisory.stdout).toContain("oracleRisk coverage advisory:");
-  expect(advisory.stdout).toContain("test-cdp (TCDP): missing-profile");
+it("passes complete profiles without changing the output prefix", () => {
+  const result = runCoverageCli([makeCoin({ oracleRisk: reviewedMultiBranch() })]);
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toContain("oracleRisk coverage: 1/1");
+});
+
+it.each(["--advisory", "--advisory=true", "--advisory=false"])(
+  "rejects retired option %s independently of the coverage census",
+  (option) => {
+    for (const coins of [[], [makeCoin()], [makeCoin({ oracleRisk: reviewedMultiBranch() })]]) {
+      const rejected = runCoverageCli(coins, [option]);
+      expect(rejected.status).toBe(1);
+      expect(rejected.stderr).toBe(`Unknown argument: ${option}\n`);
+      expect(rejected.stdout).toBe("");
+    }
+  },
+);
+
+it.each([
+  { tier: "standard-external", summary: "Missing review provenance." },
+  reviewedMultiBranch({ branches: undefined }),
+  reviewedMultiBranch({ branches: [completeBranch({ liquidationDelaySec: undefined })] }),
+] satisfies OracleRisk[])("blocks structurally incomplete profiles %j", (oracleRisk) => {
+  const result = runCoverageCli([makeCoin({ oracleRisk })]);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toBe("");
+});
+
+it("preserves advisory reminder tags and the stale-days control", () => {
+  const coin = makeCoin({
+    oracleRisk: reviewedMultiBranch({
+      reviewedAt: "2000-01-01",
+      branches: [completeBranch({ observedAt: "2000-01-01" })],
+    }),
+  });
+  const stale = runCoverageCli([coin]);
+  expect(stale.status).toBe(0);
+  expect(stale.stderr).toBe("");
+  expect(stale.stdout).toContain("stale-review (advisory)");
+  expect(stale.stdout).toContain("stale-branch-observation (advisory)");
+  expect(stale.stdout).toContain("older than 180 days");
+  expect(stale.stdout).not.toContain("oracleRisk coverage advisory:");
+
+  const fresh = runCoverageCli([coin], ["--stale-days=100000"]);
+  expect(fresh.status).toBe(0);
+  expect(fresh.stderr).toBe("");
+  expect(fresh.stdout).not.toContain("Findings:");
+});
+
+it.each(["0", "-1", "invalid"])("preserves invalid stale-days rejection for %s", (days) => {
+  const result = runCoverageCli([], [`--stale-days=${days}`]);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toBe("--stale-days must be a positive integer\n");
+  expect(result.stdout).toBe("");
+});
+
+it("keeps the branch-applicability review queue advisory", () => {
+  const missing = runCoverageCli([makeCoin({
+    oracleRisk: reviewedMultiBranch({
+      branches: undefined, branchModel: "single-path", branchApplicability: undefined,
+    }),
+  })]);
+  expect(missing.status).toBe(0);
+  expect(missing.stdout).toContain("missing-branch-applicability (advisory)");
+
+  const unresolved = runCoverageCli([makeCoin({
+    oracleRisk: reviewedMultiBranch({
+      branches: undefined,
+      branchModel: "single-path",
+      branchApplicability: { ...reviewedMultiBranch().branchApplicability!, disposition: "unresolved" },
+    }),
+  })]);
+  expect(unresolved.status).toBe(0);
+  expect(unresolved.stdout).toContain("branch-applicability-unresolved (advisory)");
 });
 
 describe("analyzeOracleRiskCoverage", () => {

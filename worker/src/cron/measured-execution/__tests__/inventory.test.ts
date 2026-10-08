@@ -8,6 +8,7 @@ vi.mock("../../../lib/structured-log", () => ({
 
 import type { DexApiPool } from "../../../lib/dex-api-types";
 import {
+  buildNativeDexExecutionTarget,
   buildMeasuredPoolDirectionKey,
   buildPancakeMeasuredExecutionTargets,
   buildSlipstreamMeasuredExecutionTarget,
@@ -58,6 +59,19 @@ describe("measured execution target inventory", () => {
     expect(buildMeasuredPoolDirectionKey("usdc-circle", "solana:AbCd")).not.toBe(buildMeasuredPoolDirectionKey("usdc-circle", "solana:abcd"));
     expect(buildMeasuredPoolDirectionKey("usdc-circle", "ethereum:0xABCD")).toBe("usdc-circle|ethereum:0xabcd");
     expect(buildMeasuredPoolDirectionKey("usdc-circle", "sui:0xAB")).toBe(buildMeasuredPoolDirectionKey("usdc-circle", "sui:0xab"));
+  });
+
+  it("builds a native-only direction with exact Base58 case and excludes unsupported profiles", () => {
+    const input = { chain: "solana" as const, profileId: "orca-whirlpool-exact-v1" as const,
+      poolAddress: "AbCd".repeat(8), stablecoinId: "usdc-circle",
+      tokenMintIn: "A".repeat(32), tokenMintOut: "B".repeat(32) };
+    const native = buildNativeDexExecutionTarget(input);
+    expect(native.targetId).toContain(input.poolAddress);
+    expect(native).not.toHaveProperty("blockNumber");
+    expect(native).not.toHaveProperty("executionEndpoint");
+    expect(buildNativeDexExecutionTarget({ ...input, poolAddress: input.poolAddress.toLowerCase() }).targetId).not.toBe(native.targetId);
+    expect(() => buildNativeDexExecutionTarget({ ...input, tokenMintOut: input.tokenMintIn })).toThrow();
+    expect(() => buildNativeDexExecutionTarget(Object.assign({}, input, { profileId: "cetus-clmm-exact-v1" }))).toThrow();
   });
 
   it("parses exactly one Uniswap v3 percent fee and rejects ambiguous metadata", () => {

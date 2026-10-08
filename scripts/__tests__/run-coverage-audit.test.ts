@@ -7,6 +7,7 @@ import {
   type RunCoverageAuditOptions,
 } from "../maintenance/run-coverage-audit";
 import { parseArgs as parseReserveAuditArgs } from "../maintenance/generate-reserve-coverage-audit";
+import { runOracleRiskCoverageCheck } from "../ci/check-oracle-risk-coverage";
 
 const domains = Object.keys(DOMAIN_SCRIPTS);
 
@@ -66,6 +67,25 @@ describe("run-coverage-audit", () => {
     });
     await expect(runCoverageAudit(["--domain=reserve-coverage", "--check"], options)).resolves.toBe(1);
     expect(options.error).toHaveBeenCalledWith("[audit:coverage] reserve-coverage exited with status 1");
+  });
+
+  it("forwards the retired oracle advisory option and propagates child rejection", async () => {
+    let stderr = "";
+    const runCommandImpl = vi.fn((command: SpawnCommand): CommandResult => {
+      expect(command.args).toEqual([DOMAIN_SCRIPTS["oracle-risk"], "--advisory"]);
+      const status = runOracleRiskCoverageCheck([], command.args.slice(1), {
+        stdout: { write: vi.fn() },
+        stderr: { write: (value) => (stderr += value) },
+        reviewedBranchDispositions: [],
+      });
+      return { status, aborted: false };
+    });
+    const options = quietOptions({ runCommandImpl });
+
+    await expect(runCoverageAudit(["--domain=oracle-risk", "--advisory"], options)).resolves.toBe(1);
+    expect(runCommandImpl).toHaveBeenCalledOnce();
+    expect(stderr).toBe("Unknown argument: --advisory\n");
+    expect(options.error).toHaveBeenCalledWith("[audit:coverage] oracle-risk exited with status 1");
   });
 
   it("runs every selected domain after failures and returns the last non-zero status", async () => {

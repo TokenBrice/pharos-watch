@@ -129,54 +129,6 @@ export async function loadPositiveEmptyPoolQuarantines(
   return held;
 }
 
-export interface NativeShadowQuote {
-  poolId: string;
-  stablecoinId: string;
-  slot: number;
-  quotedAt: number;
-  notionalUsd: number;
-  tokenMintIn: string;
-  tokenMintOut: string;
-  amountIn: bigint;
-  amountOut: bigint;
-  inputPriceUsd: number;
-  inputDecimals: number;
-  modelVersion: string;
-  profileId: "orca-whirlpool-exact-v1" | "raydium-clmm-exact-v1" | "meteora-dlmm-exact-v1";
-}
-
-/** Deliberately isolated from V1 target/quote generations and all score readers. */
-export async function persistNativeShadowQuote(
-  db: D1Database,
-  quote: NativeShadowQuote,
-  signal?: AbortSignal,
-): Promise<void> {
-  if (quote.amountIn <= 0n || quote.amountOut <= 0n || !Number.isSafeInteger(quote.slot) || quote.slot <= 0) {
-    throw new Error("Invalid native shadow quote");
-  }
-  // The existing v2 CHECK deliberately admits only Orca/Raydium. DLMM has
-  // additive isolated storage; prior Workers retain their unchanged store.
-  const table = quote.profileId === "meteora-dlmm-exact-v1"
-    ? "dex_meteora_dlmm_shadow_quotes"
-    : "dex_native_shadow_quotes_v2";
-  // Idempotent insert (conflict-tolerant): a transient D1 overload must not
-  // drop an otherwise measured native shadow quote for the slot.
-  await runWithOverloadRetry(
-    () =>
-      // SAFETY: `table` is one of two literal table names chosen above, never caller input.
-      db.prepare(`INSERT INTO ${table}
-    (pool_id, stablecoin_id, slot, quoted_at, notional_usd, token_mint_in, token_mint_out,
-     amount_in, amount_out, input_price_usd, input_decimals, model_version, profile_id, capability_id, score_eligible)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'measured-adapter-shadow', 0)
-    ON CONFLICT(pool_id, stablecoin_id, slot, notional_usd, model_version) DO NOTHING`)
-        .bind(quote.poolId, quote.stablecoinId, quote.slot, quote.quotedAt, quote.notionalUsd,
-          quote.tokenMintIn, quote.tokenMintOut, quote.amountIn.toString(), quote.amountOut.toString(),
-          quote.inputPriceUsd, quote.inputDecimals, quote.modelVersion, quote.profileId).run(),
-    3,
-    signal,
-  );
-}
-
 export interface PublishedDexMeasuredTargets {
   generationId: string;
   targets: DexMeasuredExecutionTarget[];
