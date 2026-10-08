@@ -347,7 +347,11 @@ export function buildRedemptionExitRouteObservation(
             admitted: (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps)
               || boundedUnknownFee,
           }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
-          if (costBps !== null) point.executionCostBps = costBps;
+          // The exit-route contract carries realized cost only for a point that
+          // passed its request budget; a rejected point stays zero-capacity.
+          if (costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) {
+            point.executionCostBps = costBps;
+          }
           return point;
         });
   const point = capacityCurve?.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd) ?? {
