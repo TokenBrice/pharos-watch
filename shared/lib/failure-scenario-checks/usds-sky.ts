@@ -1,11 +1,11 @@
 import { formatUnits, hexToString, keccak256, parseAbi, parseAbiItem } from "viem";
 import {
+  memoizeRead,
   requireScenarioChain,
   scenarioSourceAddress,
   type ScenarioCheck,
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
-  type ScenarioChainContext,
   type ScenarioCheckValue,
 } from "./index";
 
@@ -105,18 +105,9 @@ interface BookState extends BookInventory {
 }
 // Do not let an unavailable debt/urn read erase the independent discovery of
 // registered ilks and allocator identities. Reuse discovery at each chain pin.
-const inventories = new WeakMap<ScenarioChainContext, Map<bigint, Promise<BookInventory>>>();
-
 function inventory(context: ScenarioCheckContext, blockNumber: bigint): Promise<BookInventory> {
   const chain = requireScenarioChain(context);
-  let pins = inventories.get(chain);
-  if (!pins) {
-    pins = new Map();
-    inventories.set(chain, pins);
-  }
-  const cached = pins.get(blockNumber);
-  if (cached) return cached;
-  const pending = (async () => {
+  return memoizeRead(context, `usds-book-inventory:1:${blockNumber}`, async () => {
     const { client } = chain;
     const registry = scenarioSourceAddress(context.record, "ils");
     const chainlog = scenarioSourceAddress(context.record, "chainlog");
@@ -130,9 +121,7 @@ function inventory(context: ScenarioCheckContext, blockNumber: bigint): Promise<
       allocators[name(key)] = (await client.readContract({ address: chainlog, abi: ABI, functionName: "getAddress", args: [key], blockNumber })).toLowerCase() as `0x${string}`;
     }
     return { ilks, allocators };
-  })();
-  pins.set(blockNumber, pending);
-  return pending;
+  });
 }
 
 async function book(context: ScenarioCheckContext, blockNumber: bigint): Promise<BookState> {

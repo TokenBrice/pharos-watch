@@ -1,10 +1,10 @@
 import { formatUnits, keccak256, parseAbi } from "viem";
 import {
+  memoizeRead,
   requireScenarioChain,
   scenarioSourceAddress,
   type ScenarioCheck,
   type ScenarioCheckContext,
-  type ScenarioChainContext,
   type ScenarioCheckValue,
 } from "./index";
 
@@ -101,61 +101,45 @@ interface SystemState {
   deposits: bigint;
   poolEth: bigint;
 }
-const systems = new WeakMap<ScenarioChainContext, Map<bigint, Promise<SystemState>>>();
 function system(context: ScenarioCheckContext, blockNumber: bigint): Promise<SystemState> {
   const chain = requireScenarioChain(context);
-  let pins = systems.get(chain);
-  if (!pins) { pins = new Map(); systems.set(chain, pins); }
-  let state = pins.get(blockNumber);
-  if (!state) {
-    state = (async () => {
-      const lastGoodPrice = await uintValue(context, "price-feed", "lastGoodPrice", blockNumber);
-      const debt = await uintValue(context, "trove-manager", "getEntireSystemDebt", blockNumber);
-      if (debt === 0n) throw new Error("Zero entire system debt; no collateral or Stability Pool coverage denominator");
-      return {
-        debt, lastGoodPrice,
-        supply: await uintValue(context, "lusd-token", "totalSupply", blockNumber),
-        collateral: await uintValue(context, "trove-manager", "getEntireSystemColl", blockNumber),
-        troves: await uintValue(context, "trove-manager", "getTroveOwnersCount", blockNumber),
-        tcr: await chain.client.readContract({ address: scenarioSourceAddress(context.record, "trove-manager"), abi: ABI, functionName: "getTCR", args: [lastGoodPrice], blockNumber }),
-        deposits: await uintValue(context, "stability-pool", "getTotalLUSDDeposits", blockNumber),
-        poolEth: await uintValue(context, "stability-pool", "getETH", blockNumber),
-      };
-    })();
-    pins.set(blockNumber, state);
-  }
-  return state;
+  return memoizeRead(context, `lusd-system:1:${blockNumber}`, async () => {
+    const lastGoodPrice = await uintValue(context, "price-feed", "lastGoodPrice", blockNumber);
+    const debt = await uintValue(context, "trove-manager", "getEntireSystemDebt", blockNumber);
+    if (debt === 0n) throw new Error("Zero entire system debt; no collateral or Stability Pool coverage denominator");
+    return {
+      debt, lastGoodPrice,
+      supply: await uintValue(context, "lusd-token", "totalSupply", blockNumber),
+      collateral: await uintValue(context, "trove-manager", "getEntireSystemColl", blockNumber),
+      troves: await uintValue(context, "trove-manager", "getTroveOwnersCount", blockNumber),
+      tcr: await chain.client.readContract({ address: scenarioSourceAddress(context.record, "trove-manager"), abi: ABI, functionName: "getTCR", args: [lastGoodPrice], blockNumber }),
+      deposits: await uintValue(context, "stability-pool", "getTotalLUSDDeposits", blockNumber),
+      poolEth: await uintValue(context, "stability-pool", "getETH", blockNumber),
+    };
+  });
 }
 
 interface Venue { label: string; address: `0x${string}`; balance: bigint }
-const venuePins = new WeakMap<ScenarioChainContext, Map<bigint, Promise<Venue[]>>>();
 function venues(context: ScenarioCheckContext, blockNumber: bigint): Promise<Venue[]> {
   const chain = requireScenarioChain(context);
-  let pins = venuePins.get(chain);
-  if (!pins) { pins = new Map(); venuePins.set(chain, pins); }
-  let result = pins.get(blockNumber);
-  if (!result) {
-    result = (async () => {
-      const lusd = scenarioSourceAddress(context.record, "lusd-token");
-      const found: Venue[] = [];
-      const add = async (label: string, address: `0x${string}`) => {
-        if (address.toLowerCase() === ZERO || found.some((entry) => entry.address === address.toLowerCase())) return;
-        const balance = await chain.client.readContract({ address: lusd, abi: ABI, functionName: "balanceOf", args: [address], blockNumber });
-        found.push({ label, address: address.toLowerCase() as `0x${string}`, balance });
-      };
-      await add("Curve LUSD/3CRV", scenarioSourceAddress(context.record, "curve-lusd-3crv"));
-      await add("Curve BOLD/LUSD", scenarioSourceAddress(context.record, "curve-bold-lusd"));
-      for (const pair of PAIRS) {
-        for (const fee of [100, 500, 3000, 10000]) {
-          const pool = await chain.client.readContract({ address: scenarioSourceAddress(context.record, "uniswap-v3-factory"), abi: ABI, functionName: "getPool", args: [lusd, pair.address, fee], blockNumber });
-          await add(`Uniswap v3 LUSD/${pair.label} fee ${fee}`, pool);
-        }
+  return memoizeRead(context, `lusd-venues:1:${blockNumber}`, async () => {
+    const lusd = scenarioSourceAddress(context.record, "lusd-token");
+    const found: Venue[] = [];
+    const add = async (label: string, address: `0x${string}`) => {
+      if (address.toLowerCase() === ZERO || found.some((entry) => entry.address === address.toLowerCase())) return;
+      const balance = await chain.client.readContract({ address: lusd, abi: ABI, functionName: "balanceOf", args: [address], blockNumber });
+      found.push({ label, address: address.toLowerCase() as `0x${string}`, balance });
+    };
+    await add("Curve LUSD/3CRV", scenarioSourceAddress(context.record, "curve-lusd-3crv"));
+    await add("Curve BOLD/LUSD", scenarioSourceAddress(context.record, "curve-bold-lusd"));
+    for (const pair of PAIRS) {
+      for (const fee of [100, 500, 3000, 10000]) {
+        const pool = await chain.client.readContract({ address: scenarioSourceAddress(context.record, "uniswap-v3-factory"), abi: ABI, functionName: "getPool", args: [lusd, pair.address, fee], blockNumber });
+        await add(`Uniswap v3 LUSD/${pair.label} fee ${fee}`, pool);
       }
-      return found;
-    })();
-    pins.set(blockNumber, result);
-  }
-  return result;
+    }
+    return found;
+  });
 }
 
 function venueEvidence(entries: Venue[]) {

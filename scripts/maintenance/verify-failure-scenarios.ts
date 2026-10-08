@@ -211,6 +211,8 @@ runDirectCli(import.meta.url, async () => {
     const observations: ReportRow[] = [];
     const documents: ReportRow[] = [];
     const covered = new Set<string>();
+    // One memo per coin per run: its checks share pinned reads, nothing crosses coins or runs.
+    const memo = new Map<string, Promise<unknown>>();
     for (const check of FAILURE_SCENARIO_CHECKS[id]!.checks) {
       const kind = check.kind ?? "falsifier";
       const falsifier = kind === "falsifier" || kind === "document" ? record.falsifiers.find((entry) => entry.id === check.id) : undefined;
@@ -220,7 +222,7 @@ runDirectCli(import.meta.url, async () => {
       if (check.kind === "figure" && !record[check.recordField.collection].some((entry) => entry.label === check.recordField.label)) {
         throw new Error(`${id}: figure check references unknown ${check.recordField.collection} entry ${check.recordField.label}`);
       }
-      const context: ScenarioCheckContext = { record, chains };
+      const context: ScenarioCheckContext = { record, chains, memo };
       let watched: { sourceId: string; url: string; publisher: string }[] | undefined;
       if (check.kind === "document") {
         watched = check.documentSources.map(({ sourceId, publisher }) => {

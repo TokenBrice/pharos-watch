@@ -1,6 +1,7 @@
 import { decodeFunctionData, keccak256, parseAbi, toFunctionSelector, toHex, type Address, type Hex } from "viem";
 import timelockHistory from "../../data/failure-scenarios/usde-timelock-history.json";
 import {
+  memoizeRead,
   requireScenarioChain,
   scenarioSourceAddress,
   type ScenarioCheck,
@@ -66,7 +67,6 @@ type History = {
   minterSchedules: number;
   cancellations: Cancellation[];
 };
-const historyCache = new WeakMap<object, Map<string, Promise<History>>>();
 
 function liveRoles(changes: readonly RoleChange[], role: string, throughBlock: bigint): string[] {
   const live = new Set<string>();
@@ -178,19 +178,9 @@ async function scanHistory(context: ScenarioCheckContext): Promise<History> {
 }
 
 function history(context: ScenarioCheckContext): Promise<History> {
-  const { client, blockNumber } = requireScenarioChain(context);
-  let entries = historyCache.get(client);
-  if (!entries) {
-    entries = new Map();
-    historyCache.set(client, entries);
-  }
-  const key = `${blockNumber}:${scenarioSourceAddress(context.record, "timelock")}:${scenarioSourceAddress(context.record, "token")}:${scenarioSourceAddress(context.record, "safe")}`;
-  let result = entries.get(key);
-  if (!result) {
-    result = scanHistory(context);
-    entries.set(key, result);
-  }
-  return result;
+  const { blockNumber } = requireScenarioChain(context);
+  const key = `usde-history:1:${blockNumber}:${scenarioSourceAddress(context.record, "timelock")}:${scenarioSourceAddress(context.record, "token")}:${scenarioSourceAddress(context.record, "safe")}`;
+  return memoizeRead(context, key, () => scanHistory(context));
 }
 
 const checks: readonly ScenarioCheck[] = [

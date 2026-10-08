@@ -1,11 +1,11 @@
 import { encodeFunctionData, keccak256, parseAbi, zeroAddress, type Hex } from "viem";
 import {
+  memoizeRead,
   requireScenarioChain,
   scenarioSourceAddress,
   type ScenarioCheck,
   type ScenarioCheckContext,
   type ScenarioCheckVerdict,
-  type ScenarioChainContext,
 } from "./index";
 
 const facilitatorAbi = parseAbi([
@@ -124,21 +124,8 @@ interface ReserveInventory {
 
 // The runner reuses its chain pin across checks. Share those exact reads, including
 // rejected reads; a figure must not silently retry into a different measurement.
-const reserveInventories = new WeakMap<ScenarioChainContext, Map<bigint, Promise<ReserveInventory>>>();
-
 function reserveInventory(context: ScenarioCheckContext, blockNumber = requireScenarioChain(context).blockNumber) {
-  const chain = requireScenarioChain(context);
-  let blocks = reserveInventories.get(chain);
-  if (!blocks) {
-    blocks = new Map();
-    reserveInventories.set(chain, blocks);
-  }
-  let inventory = blocks.get(blockNumber);
-  if (!inventory) {
-    inventory = readReserveInventory(context, blockNumber);
-    blocks.set(blockNumber, inventory);
-  }
-  return inventory;
+  return memoizeRead(context, `gho-reserve-inventory:1:${blockNumber}`, () => readReserveInventory(context, blockNumber));
 }
 
 async function readReserveInventory(context: ScenarioCheckContext, blockNumber: bigint): Promise<ReserveInventory> {

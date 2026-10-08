@@ -31,6 +31,26 @@ export interface ScenarioCheckContext {
     recorded: readonly ScenarioDocument[];
     fetched: readonly ScenarioDocument[];
   };
+  /**
+   * One coin's run-scoped read memo, shared by its checks and discarded when
+   * the run ends. Modules memoize through `memoizeRead` instead of holding
+   * module-level caches, so no read outlives the run that pinned it.
+   */
+  memo: Map<string, Promise<unknown>>;
+}
+
+/**
+ * Share one pinned read across a coin's checks within a run. A rejected read
+ * is kept, deliberately: a figure must not silently retry into a different
+ * measurement than the one its sibling checks saw. Keys must name the chain
+ * pin they read at.
+ */
+export function memoizeRead<T>(context: ScenarioCheckContext, key: string, read: () => Promise<T>): Promise<T> {
+  const cached = context.memo.get(key);
+  if (cached) return cached as Promise<T>;
+  const pending = read();
+  context.memo.set(key, pending);
+  return pending;
 }
 
 /** JSON-safe evidence: convert bigint to decimal strings before returning values. */

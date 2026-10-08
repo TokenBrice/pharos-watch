@@ -22,7 +22,7 @@ function document(html: string, metadata: Partial<NonNullable<ScenarioDocument["
 }
 
 async function compareDocuments(recorded: ScenarioDocument, fetched: ScenarioDocument) {
-  return watch.run({ record: documentRecord, chains: {}, documentWatch: { recorded: [recorded], fetched: [fetched] } });
+  return watch.run({ record: documentRecord, chains: {}, memo: new Map(), documentWatch: { recorded: [recorded], fetched: [fetched] } });
 }
 
 function html(noise: string, substance = "Verified customers may redeem at a minimum of $100,000.") {
@@ -83,7 +83,7 @@ function skyContext(overrides: { hat?: string; pauseAuthority?: string; pausePro
     }),
     getBytecode: vi.fn(async ({ blockNumber }: { blockNumber: bigint }) => blockNumber === 26139200n ? "0x6000" : overrides.currentCode ?? "0x6000"),
   } as unknown as ScenarioReadClient;
-  return { record, chains: { 1: { client, blockNumber: 26140166n } } };
+  return { record, chains: { 1: { client, blockNumber: 26140166n } }, memo: new Map() };
 }
 
 const skyChecks = FAILURE_SCENARIO_CHECKS["usds-sky"]!.checks;
