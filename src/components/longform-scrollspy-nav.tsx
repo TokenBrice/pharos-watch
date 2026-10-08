@@ -10,6 +10,13 @@ interface LongformSection {
   id: string;
   label: string;
   icon?: LucideIcon;
+  /**
+   * Ids of in-flow markers that re-activate this section after a later
+   * section's heading has already passed the activation line. A zone that
+   * continues below an interleaved section uses one so the reader is not told
+   * they are still in the interleaved one.
+   */
+  resumeAnchorIds?: readonly string[];
 }
 
 interface LongformScrollspyNavProps {
@@ -147,7 +154,11 @@ export function LongformScrollspyNav({
   const initialHashHandledRef = useRef(false);
   const activePillSyncedRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
-  const sectionSignature = sections.map((section) => section.id).join("|");
+  // Each entry is `id` or `id>resume1,resume2`, so the detection effect
+  // re-runs when either the sections or their resume markers change.
+  const sectionSignature = sections
+    .map((section) => (section.resumeAnchorIds?.length ? `${section.id}>${section.resumeAnchorIds.join(",")}` : section.id))
+    .join("|");
 
   useEffect(() => {
     onActiveChange?.(effectiveActiveId);
@@ -167,10 +178,19 @@ export function LongformScrollspyNav({
 
   useEffect(() => {
     const railNode = railRef.current;
-    const sectionIds = sectionSignature.length > 0 ? sectionSignature.split("|") : [];
-    const sectionNodes = sectionIds
-      .map((sectionId) => document.getElementById(sectionId))
-      .filter((node): node is HTMLElement => node !== null);
+    const sectionEntries = sectionSignature.length > 0 ? sectionSignature.split("|") : [];
+    // Anchors in document order, each mapped to the section it activates: a
+    // section's own heading, then any resume markers that return the reader
+    // to it after an interleaved section.
+    const anchors = sectionEntries
+      .flatMap((entry) => {
+        const [sectionId, resumeList] = entry.split(">");
+        const ids = [sectionId, ...(resumeList ? resumeList.split(",") : [])];
+        return ids.map((anchorId) => ({ sectionId, node: document.getElementById(anchorId) }));
+      })
+      .filter((anchor): anchor is { sectionId: string; node: HTMLElement } => anchor.node !== null)
+      .sort((a, b) => a.node.getBoundingClientRect().top - b.node.getBoundingClientRect().top);
+    const sectionNodes = anchors.map((anchor) => anchor.node);
 
     if (!railNode || sectionNodes.length === 0) return;
 
@@ -201,20 +221,20 @@ export function LongformScrollspyNav({
     const computeActiveSection = () => {
       const railRect = railNode.getBoundingClientRect();
       if (railRect.width === 0 && railRect.height === 0) return; // hidden instance
-      let nextActive = sectionNodes[0];
+      let nextActive = anchors[0];
       if (window.scrollY <= 0) {
-        nextActive = sectionNodes[0];
+        nextActive = anchors[0];
       } else if (isDocumentBottom()) {
-        nextActive = sectionNodes[sectionNodes.length - 1];
+        nextActive = anchors[anchors.length - 1];
       } else {
         const activationLine = getScrollOffset(railNode, stickyOffsetPx) + 8;
-        for (const node of sectionNodes) {
-          if (node.getBoundingClientRect().top <= activationLine) {
-            nextActive = node;
+        for (const anchor of anchors) {
+          if (anchor.node.getBoundingClientRect().top <= activationLine) {
+            nextActive = anchor;
           }
         }
       }
-      if (nextActive) setActiveId(nextActive.id);
+      if (nextActive) setActiveId(nextActive.sectionId);
 
       // Reading-progress beam (watch-rail only): fraction of the dossier
       // scrolled, from the first heading reaching the activation line (0) to

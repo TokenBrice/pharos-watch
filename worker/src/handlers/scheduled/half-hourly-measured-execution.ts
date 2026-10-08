@@ -8,6 +8,7 @@
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
 import { collectWhirlpoolShadowQuotes, collectRaydiumShadowQuotes } from "../../cron/dex-liquidity/solana/whirlpool-shadow";
 import { collectSuiClmmShadowQuotes } from "../../cron/dex-liquidity/sui/shadow";
+import { loadNativeDexExecutionDiagnostic } from "../../cron/measured-execution/join";
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -42,6 +43,7 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
       try {
         orcaShadow = await collectWhirlpoolShadowQuotes({
           db: runtime.db, signal, ctx: { db: runtime.db, chainRpcs: runtime.chainRpcs },
+          publisherInvocationId: runtime.invocationId, publisherAttemptNo: runtime.jobAttemptNo,
         });
       } catch (error) {
         throwIfAborted(signal);
@@ -53,10 +55,17 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
       try {
         raydiumShadow = await collectRaydiumShadowQuotes({
           db: runtime.db, signal, ctx: { db: runtime.db, chainRpcs: runtime.chainRpcs },
+          publisherInvocationId: runtime.invocationId, publisherAttemptNo: runtime.jobAttemptNo,
         });
       } catch (error) {
         throwIfAborted(signal);
         raydiumShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - raydiumStartedAt };
+      }
+      const nativeDiagnostics = [];
+      for (const profileId of ["orca-whirlpool-exact-v1", "raydium-clmm-exact-v1"] as const) {
+        nativeDiagnostics.push(await loadNativeDexExecutionDiagnostic({
+          db: runtime.db, profileId, nowSec: Math.floor(Date.now() / 1_000), signal,
+        }));
       }
       throwIfAborted(signal);
       let suiShadow: unknown;
@@ -68,7 +77,7 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
         suiShadow = { error: toErrorMessage(error).slice(0, 240), scoreEligible: false, durationMs: Date.now() - suiStartedAt };
       }
       throwIfAborted(signal);
-      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, suiShadow }) };
+      return { ...evm, metadata: JSON.stringify({ ...JSON.parse(evm.metadata ?? "{}"), orcaShadow, raydiumShadow, nativeDiagnostics, suiShadow }) };
     },
   });
 }

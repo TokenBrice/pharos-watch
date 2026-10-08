@@ -52,6 +52,18 @@ describe("focused checks", () => {
     )).toBe(false);
   });
 
+  it("selects the failure-scenario gate for scenario data and its check modules", () => {
+    for (const file of ["data/failure-scenarios.json", "shared/lib/failure-scenario-checks/usds-sky.ts"]) {
+      const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
+      expect(commands, file).toContain("npm run check:failure-scenarios");
+      expect(commands, file).toContain(
+        "npx vitest run shared/lib/__tests__/failure-scenarios.test.ts scripts/maintenance/__tests__/verify-failure-scenarios.test.ts",
+      );
+      // The live-network drift report is the monthly skill's job, never a routed check.
+      expect(commands.some((command) => command.includes("verify:failure-scenarios")), file).toBe(false);
+    }
+  });
+
   it("keeps directory test coverage for non-module and deleted files", () => {
     expect(buildFocusedCheckPlan(["src/deleted-module.ts"]).checks.map((check) => check.command)).toContain("npx vitest run src");
     expect(buildFocusedCheckPlan(["src/app/globals.css"]).checks.map((check) => check.command)).toContain("npx vitest run src");

@@ -26,6 +26,8 @@ import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinMeta } from "@shared/types";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "@/hooks/__tests__/use-stablecoin-detail-view-model.test-support";
+import failureScenarios from "@data/failure-scenarios.json";
+import type { FailureScenariosById } from "@shared/types/failure-scenarios";
 
 const {
   lazyViewportValues,
@@ -155,6 +157,37 @@ describe("StablecoinDetailClient", () => {
     }));
     const { container } = renderDetail();
     expect(container.querySelector("#activity") !== null).toBe(visible);
+  });
+
+  it.each([
+    { label: "with a scenario", withScenario: true },
+    { label: "without one", withScenario: false },
+  ])("publishes the How it breaks pill and section only $label", ({ withScenario }) => {
+    const coin = TRACKED_META_BY_ID.get("crvusd-curve")!;
+    const scenario = (failureScenarios as FailureScenariosById)["crvusd-curve"]!;
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        failureScenario={withScenario ? { scenario, isDraft: true } : null}
+      />,
+    );
+    const sectionIds = longformScrollspyNavMock.mock.calls[0]?.[0]?.sections.map((section: { id: string }) => section.id);
+    expect(sectionIds.includes("how-it-breaks")).toBe(withScenario);
+    expect(container.querySelector("#how-it-breaks") !== null).toBe(withScenario);
+    if (!withScenario) return;
+    // Risk → How it breaks → Context, and the draft preview says so.
+    expect(sectionIds.slice(0, 2)).toEqual(["overview", "how-it-breaks"]);
+    const overview = container.querySelector("#overview")!;
+    const banner = container.querySelector("#how-it-breaks")!;
+    expect(overview.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByText("Draft — not approved").length).toBeGreaterThan(0);
+    const branchStages = scenario.branchPoint?.branches.flatMap((branch) => branch.stages) ?? [];
+    expect(container.querySelectorAll("#failure-scenario details[data-scenario-step]")).toHaveLength(
+      scenario.stages.length + branchStages.length,
+    );
   });
 
   afterEach(() => {

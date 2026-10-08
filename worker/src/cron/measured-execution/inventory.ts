@@ -5,6 +5,7 @@ import {
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
+import { SolanaDexNativeTargetSchema, type SolanaDexNativeTarget, type SolanaDexShadowTarget } from "@shared/types/solana-dex-bank";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
@@ -29,6 +30,15 @@ import {
   computeUniswapV4PoolId,
   getUniswapV4Deployment,
 } from "./uniswap-v4";
+
+/** Separate native identity; never cast a Solana mint into the V1 EVM target schema. */
+export function buildNativeDexExecutionTarget(input: SolanaDexShadowTarget & { stablecoinId: string }): SolanaDexNativeTarget {
+  return SolanaDexNativeTargetSchema.parse({
+    ...input,
+    targetId: ["solana-dex-target-v1", input.profileId, input.stablecoinId, input.poolAddress,
+      input.tokenMintIn, input.tokenMintOut].join("|"),
+  });
+}
 
 export function parseUniV3FeePips(poolMeta: string | null | undefined): number | null {
   if (!poolMeta) return null;

@@ -173,10 +173,10 @@ writeFileSync('agents/v9-captures/historical/local-index.sql',
   `INSERT OR REPLACE INTO safety_score_capture_archive (${columns.join(',')}) VALUES (${values.join(',')});\n`);
 NODE
 
-# Apply 0262 once to the LOCAL database if this table is not already present.
+# Apply 0263 once to the LOCAL database if this table is not already present.
 # These --file writes are ONLY local fixture setup, never a remote inspection.
 (cd worker && npx wrangler d1 execute stablecoin-db --local \
-  --file migrations/0262_safety_score_capture_archive.sql)
+  --file migrations/0263_safety_score_capture_archive.sql)
 (cd worker && npx wrangler d1 execute stablecoin-db --local \
   --file ../agents/v9-captures/historical/local-index.sql)
 generation="$(jq -r .generation_id agents/v9-captures/historical/index.json)"

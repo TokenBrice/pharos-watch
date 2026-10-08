@@ -542,7 +542,7 @@ describe("worker data invariant canaries", () => {
     expect(summary.worstStatus).toBe("ok");
   });
 
-  it("errors when DEX rows in any generation are not published", async () => {
+  it("errors when generation-backed DEX rows in any generation are not published", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     const summary = await runCanaryChecks(
@@ -589,6 +589,72 @@ describe("worker data invariant canaries", () => {
       }),
     });
   });
+
+  it.each([null, "staged", "failed", "published"])(
+    "ignores generationless legacy DEX rows with publication state %s", async (publicationState) => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, current_row_count, metadata_json, created_at, published_at)
+        VALUES ('current', ?, 'published', 2, 2, '{"activeStablecoinCount":1}', ?, ?)`).run(NOW, NOW, NOW);
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state)
+        VALUES (?, 'TEST', ?, ?, ?)`);
+      insert.run("asset", NOW, "current", "published");
+      insert.run("__global__", NOW, "current", "published");
+      for (const id of ["buck-buck-assets", "euroe-membrane", "usnd-nerite", "usr-resolv"]) {
+        insert.run(id, NOW - 60, null, publicationState);
+      }
+
+      const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+      expect(summary.results.find((result) => result.checkId === "dex-liquidity-current-publication")).toMatchObject({
+        status: "ok",
+        severity: "info",
+        executionStatus: "completed",
+        executionFailureReason: null,
+        metadata: {
+          unpublishedRows: 0,
+          rowCount: 2,
+          latestPublishedRows: 2,
+          latestPublishedExpectedRows: 2,
+          latestGenerationPublishedRows: 2,
+        },
+      });
+    },
+  );
+
+  it.each([null, "staged", "failed"])(
+    "still errors on generation-backed DEX rows with publication state %s", async (publicationState) => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, current_row_count, metadata_json, created_at, published_at)
+        VALUES ('current', ?, 'published', 2, 2, '{"activeStablecoinCount":1}', ?, ?)`).run(NOW, NOW, NOW);
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, created_at)
+        VALUES ('candidate', ?, 'staged', 1, ?)`).run(NOW, NOW);
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, updated_at, publication_generation_id, publication_state)
+        VALUES (?, 'TEST', ?, ?, ?)`);
+      insert.run("asset", NOW, "current", "published");
+      insert.run("__global__", NOW, "current", "published");
+      insert.run("legacy", NOW - 60, null, null);
+      insert.run("unpublished", NOW, "candidate", publicationState);
+
+      const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+      expect(summary.results.find((result) => result.checkId === "dex-liquidity-current-publication")).toMatchObject({
+        status: "error",
+        severity: "error",
+        executionStatus: "completed",
+        executionFailureReason: null,
+        error: "1 current DEX liquidity rows are not published",
+        metadata: {
+          unpublishedRows: 1,
+          rowCount: 2,
+          latestPublishedRows: 2,
+          latestGenerationPublishedRows: null,
+        },
+      });
+    },
+  );
 
   it("checks the actual global identity only inside the published generation", async () => {
     const { db, sqlite } = fixtures.open();

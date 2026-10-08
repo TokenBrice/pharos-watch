@@ -1,5 +1,7 @@
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import {
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  type DexNativeExecutionDiagnostic,
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
   toDexMeasuredExecutionPublicProfile,
@@ -49,6 +51,59 @@ import {
   validateUniswapV4ProfileProof,
 } from "./uniswap-v4";
 
+import { loadCurrentNativeDexGeneration } from "./native-generation-store";
+import { throwIfAborted } from "../../lib/abort";
+import type { SolanaDexNativePoint } from "@shared/types/solana-dex-bank";
+
+/** No history fallback and no score-facing native profile or EVM pointer access. */
+export async function loadNativeDexExecutionDiagnostic(input: {
+  db: D1Database;
+  profileId: DexNativeExecutionDiagnostic["profileId"];
+  nowSec: number;
+  signal?: AbortSignal;
+}): Promise<DexNativeExecutionDiagnostic> {
+  const diagnostic: DexNativeExecutionDiagnostic = {
+    profileId: input.profileId, status: "missing", reason: "native-pointer-missing",
+    generationId: null, sourceGenerationId: null, publishedAt: null,
+    freshnessMaxSec: DEX_MEASURED_FRESHNESS_MAX_SEC, scoreEligible: false, quotes: [],
+  };
+  try {
+    const generation = await loadCurrentNativeDexGeneration(input.db, input.profileId, input.signal);
+    if (!generation) return diagnostic;
+    diagnostic.generationId = generation.generationId;
+    diagnostic.sourceGenerationId = generation.sourceGenerationId;
+    diagnostic.publishedAt = generation.publishedAt;
+    if (generation.publishedAt > input.nowSec) {
+      return { ...diagnostic, status: "unavailable", reason: "native-generation-future" };
+    }
+    const generationStale = input.nowSec - generation.publishedAt > diagnostic.freshnessMaxSec;
+    diagnostic.quotes = generation.quotes.map((quote) => {
+      const stale = generationStale || quote.points.some((point) => input.nowSec - point.quotedAt > diagnostic.freshnessMaxSec);
+      const failed = quote.points.find((point): point is Exclude<SolanaDexNativePoint, { status: "full-fill" }> => point.status === "failed");
+      const unavailable = quote.points.find((point): point is Exclude<SolanaDexNativePoint, { status: "full-fill" }> => point.status === "unavailable");
+      const status: DexNativeExecutionDiagnostic["quotes"][number]["status"] = stale ? "stale" : unavailable ? "unavailable" : failed ? "failed" : "current";
+      const reason = stale ? "native-observation-stale"
+        : unavailable?.reason ?? failed?.reason ?? "native-diagnostic-only";
+      return { targetId: quote.target.targetId, stablecoinId: quote.target.stablecoinId,
+        poolAddress: quote.target.poolAddress, slot: quote.bank?.slot ?? null,
+        status, reason, points: quote.points };
+    });
+    diagnostic.status = generationStale ? "stale"
+      : diagnostic.quotes.length === 0 ? "missing"
+      : diagnostic.quotes.some((quote) => quote.status === "unavailable") ? "unavailable"
+      : diagnostic.quotes.some((quote) => quote.status === "stale") ? "stale"
+      : diagnostic.quotes.some((quote) => quote.status === "failed") ? "failed" : "current";
+    diagnostic.reason = generationStale ? "native-generation-stale"
+      : diagnostic.quotes.length === 0 ? "native-target-missing"
+      : diagnostic.quotes.find((quote) => quote.status === diagnostic.status)?.reason ?? "native-diagnostic-only";
+    return diagnostic;
+  } catch (error) {
+    throwIfAborted(input.signal);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "native_generation_load_failed",
+      job: "sync-cl-exit-depth", message: "Native diagnostic generation unavailable", error });
+    return { ...diagnostic, status: "unavailable", reason: "native-generation-unavailable", quotes: [] };
+  }
+}
 export interface DexMeasuredExecutionJoinDiagnostics {
   targetCount: number;
   measuredCount: number;

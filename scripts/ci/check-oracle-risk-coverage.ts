@@ -2,8 +2,7 @@
 /**
  * Blocking coverage guard for reviewed CDP oracle-risk metadata.
  *
- * Pass `--advisory` while backfilling to report structural gaps without
- * failing. Stale-review reminders remain advisory in either mode.
+ * Stale-review reminders remain advisory; structural gaps always fail.
  */
 
 import type { StablecoinMeta } from "@shared/types";
@@ -37,7 +36,11 @@ export function runOracleRiskCoverageCheck(
     reviewedBranchDispositions = REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
   }: RunOracleRiskCoverageCheckOptions = {},
 ): number {
-  const advisory = argv.includes("--advisory");
+  const retiredArg = argv.find((arg) => arg === "--advisory" || arg.startsWith("--advisory="));
+  if (retiredArg) {
+    stderr.write(`Unknown argument: ${retiredArg}\n`);
+    return 1;
+  }
   const staleDaysArg = argv.find((arg) => arg.startsWith("--stale-days="));
   const staleDays = staleDaysArg ? Number.parseInt(staleDaysArg.slice("--stale-days=".length), 10) : 180;
 
@@ -50,10 +53,9 @@ export function runOracleRiskCoverageCheck(
     staleDays,
     reviewedBranchDispositions,
   });
-  const prefix = advisory ? "oracleRisk coverage advisory" : "oracleRisk coverage";
 
   stdout.write(
-    `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
+    `oracleRisk coverage: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
       `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete; ` +
       `${result.reviewedInoperableBranches} branches reviewed inoperable (evidence recorded, field inexpressible); ` +
       `${result.reviewedBranchApplicability} reviewed branch dispositions ` +
@@ -73,7 +75,7 @@ export function runOracleRiskCoverageCheck(
     }
   }
 
-  return !advisory && result.findings.some(isBlockingOracleRiskCoverageFinding) ? 1 : 0;
+  return result.findings.some(isBlockingOracleRiskCoverageFinding) ? 1 : 0;
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

@@ -94,8 +94,14 @@ const DEFAULT_BUDGETS = {
   // The release build measured 584,585-668,092 B HTML and 94,868-123,549 B
   // page TXT (USDT carries 40 drawn bridge routes for the deployment strip),
   // so HTML tightens and page TXT rises, each with ~2.5% headroom.
-  representativeDetailHtmlBytes: 685_000,
-  representativeDetailPageTxtBytes: 127_000,
+  // Re-ratcheted 2026-10-08 for the "How does X break?" section (#1350): an
+  // approved failure scenario server-renders its folded path, defenders,
+  // falsifiers and sources, adding 102-191 KB raw (11-17 KB gzip) per
+  // scenario coin. Three representative coins carry one; the release build
+  // measured 757-788 KiB HTML (USDe) and 128-137 KiB page TXT (USDT), so
+  // each ceiling keeps ~3% headroom over the top of that range.
+  representativeDetailHtmlBytes: 830_000,
+  representativeDetailPageTxtBytes: 145_000,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
   // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)

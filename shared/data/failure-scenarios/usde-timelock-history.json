@@ -1,0 +1,104 @@
+{
+  "chainId": 1,
+  "timelock": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+  "token": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+  "deploymentBlock": 25301829,
+  "deploymentTransaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+  "throughBlock": 26139380,
+  "blockHash": "0xcfe7f35de2fb9545dd2564c57fb8f138a496cfe74e4ad563ba22cda36c7643c7",
+  "runtimeHash": "0x177b426b5063b947e06e291b7bdc6beae2d06044b7198775d91839ded0d08873",
+  "source": "Etherscan v2 logs API; 500,000-block inclusive ranges, 1,000 logs/page, continuing until short page",
+  "rawCaptureSha256": "5c6b84d6610cc315634049f68ce6041cae323e42462bdc9ece0e1d87620e895f",
+  "scanRanges": [
+    { "fromBlock": 25301829, "toBlock": 25801828, "pages": 1, "logs": 300 },
+    { "fromBlock": 25801829, "toBlock": 26139380, "pages": 1, "logs": 461 }
+  ],
+  "counts": {
+    "CallScheduled": 289,
+    "CallExecuted": 276,
+    "Cancelled": 0,
+    "RoleGranted": 7,
+    "RoleRevoked": 0,
+    "RoleAdminChanged": 0
+  },
+  "minterSchedules": 0,
+  "roles": [
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "account": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1",
+      "account": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0xfd643c72710c63c0180259aba6b2d05451e3591a24e58b62239378085726f783",
+      "account": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63",
+      "account": "0x352040dc5f272563a2d6e0ef7abcd567a7440e8f",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63",
+      "account": "0xa07591b02fbd07d03df21ed9a574f058bf45c344",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0xd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63",
+      "account": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    },
+    {
+      "event": "RoleGranted",
+      "block": 25301829,
+      "transaction": "0x29e0a7bbf647ac3ceeeaf8c9ac5c3a1f669f316ccd3c558b42d2a7ce3eeed4fc",
+      "role": "0x389e8c0e82c32d300e95b13fa579aabf6ac32df2485cb1f756e174c811676cb2",
+      "account": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+      "sender": "0xba5ed099633d3b313e4d5f7bdc1305d3c28ba5ed"
+    }
+  ],
+  "pendingOperations": [
+    {
+      "id": "0x7461b78b37a3e8ba86afb77f6e0cbc83048581b745c5b9c5b6b3072df43b82ce",
+      "scheduledBlock": 26133937,
+      "scheduleTransaction": "0xea2df92d10ee60b8ac60bdcaeccab9afac664b13f1078dd131f2af501c1a3bda",
+      "minterChanges": []
+    },
+    {
+      "id": "0xc1655888d044e9249c15ae8c8eda9822a66735ae6c6450e25b99023483b32cd9",
+      "scheduledBlock": 26133942,
+      "scheduleTransaction": "0x9ff5f5039df79c4f35f784f71cc747e00bd0a876f2038ea7eb3ff93ebdad0bb0",
+      "minterChanges": []
+    },
+    {
+      "id": "0xfd2d417d107a3e75cafe55dbbd57e36d799ff59b5e9b9d4d948f028073b47d36",
+      "scheduledBlock": 26139184,
+      "scheduleTransaction": "0x2fa0bb4d0d84907ce418fd123c1a7e785c3268fda3baa57bdd3cb3991db96ad1",
+      "minterChanges": []
+    }
+  ],
+  "cancellations": []
+}

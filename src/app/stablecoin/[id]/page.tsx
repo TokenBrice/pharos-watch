@@ -19,6 +19,7 @@ import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import aiSummaries from "@data/ai-summaries.json";
+import failureScenarios from "@data/failure-scenarios.json";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
@@ -35,8 +36,11 @@ import { deriveLiquidationEngine } from "@/components/stablecoin-detail/mechanis
 import type { StablecoinDetailSnapshot } from "@/lib/api";
 import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
 import type { StablecoinAiSummariesById } from "@shared/types";
+import type { FailureScenariosById } from "@shared/types/failure-scenarios";
+import { selectFailureScenario } from "@shared/lib/failure-scenarios";
 
 const typedSummaries = aiSummaries as StablecoinAiSummariesById;
+const typedFailureScenarios = failureScenarios as FailureScenariosById;
 
 function readDetailSnapshot(id: string): StablecoinDetailSnapshot | null {
   try {
@@ -247,6 +251,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   // whenever the live detail row is unavailable.
   const frozenSnapshot = coin.status === "frozen" ? FROZEN_SNAPSHOTS_BY_ID.get(id) : undefined;
   const archivedLiveSummary = frozenSnapshot ? projectFrozenSnapshotLiveSummary(frozenSnapshot) : null;
+  // Only an approved, hash-bound, unexpired, unfalsified record publishes; a
+  // local dev server also previews drafts, marked as such. The static export
+  // is a production build, so it never ships a draft.
+  const failureScenario = selectFailureScenario(typedFailureScenarios, id, {
+    allowDrafts: process.env.NODE_ENV === "development",
+    now: new Date(),
+  });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
   // Keep the FAQ visible and its FAQPage JSON-LD attached to the hydrated
   // dossier without placing it ahead of the primary coin identity.
@@ -284,6 +295,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           parentLiquidationEngine={parentLiquidationEngine}
           backingParent={backingParent}
           transferReview={buildTransferReviewView(id)}
+          failureScenario={failureScenario}
           exploreNextContent={
             <ExploreNextSection
               coin={coin}
