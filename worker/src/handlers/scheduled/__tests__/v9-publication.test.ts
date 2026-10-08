@@ -80,6 +80,7 @@ describe("V9 publication scheduling", () => {
       ...scheduledRuntime.env,
       CF_VERSION_METADATA: { id: "executing-worker", timestamp: "2026-10-07T20:00:00Z", tag: "" },
       SAFETY_SCORE_V9_WORKFLOW: workflow,
+      SAFETY_CAPTURE_ARCHIVE: { put: vi.fn() },
     } as unknown as ScheduledRuntimeContext["env"];
     mocks.computeSafetyScoreV9.mockResolvedValue({ status: "ok", metadata: JSON.stringify(metadata) });
     mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) =>
@@ -135,6 +136,8 @@ describe("V9 publication scheduling", () => {
     expect(mocks.computeSafetyScoreV9).toHaveBeenCalledOnce();
     expect(mocks.computeSafetyScoreV9).toHaveBeenCalledWith(scheduledRuntime.db, expect.any(AbortSignal), expect.any(Function), {
       workerMetadata: scheduledRuntime.env.CF_VERSION_METADATA,
+      captureArchiveBucket: scheduledRuntime.env.SAFETY_CAPTURE_ARCHIVE,
+      captureArchiveContext: scheduledRuntime.ctx,
       executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 },
     });
     expect(workflow.create).not.toHaveBeenCalled();

@@ -12,6 +12,7 @@ import { pruneProducerHistory } from "../lib/producer-history";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "@shared/lib/request-attribution";
 import { deleteCapped } from "./shared/capped-delete";
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
+import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -104,6 +105,10 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       sql: "DELETE FROM safety_score_publication_attempts WHERE rowid IN (SELECT rowid FROM safety_score_publication_attempts WHERE attempted_at < ? ORDER BY attempted_at ASC LIMIT ?)",
       cutoff: now - SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC,
     },
+    safetyScoreCaptureArchive: {
+      sql: "DELETE FROM safety_score_capture_archive WHERE rowid IN (SELECT rowid FROM safety_score_capture_archive WHERE published_at < ? ORDER BY published_at ASC, generation_id ASC LIMIT ?)",
+      cutoff: now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC,
+    },
   } as const;
 
   const cronRunsDeleted = await runSimpleRetentionPass(db, simpleRetentionPolicies.cronRuns, signal);
@@ -161,6 +166,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   );
   const safetyScoreJournal = await runCappedRetentionPass(db, simpleRetentionPolicies.safetyScoreJournal, signal);
   const safetyScoreAttempts = await runCappedRetentionPass(db, simpleRetentionPolicies.safetyScoreAttempts, signal);
+  const safetyScoreCaptureArchive = await runCappedRetentionPass(db, simpleRetentionPolicies.safetyScoreCaptureArchive, signal);
 
   return createCronResult({
     status: "ok",
@@ -178,7 +184,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       siteDataRequestStats.pruned +
       apiKeyRequestStats.pruned +
       safetyScoreJournal.pruned +
-      safetyScoreAttempts.pruned,
+      safetyScoreAttempts.pruned +
+      safetyScoreCaptureArchive.pruned,
     metadata: {
       cronRunsDeleted,
       producerHistoryDeleted,
@@ -187,6 +194,9 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       safetyScoreJournalCappedAtLimit: safetyScoreJournal.cappedAtLimit,
       safetyScoreAttemptsCappedAtLimit: safetyScoreAttempts.cappedAtLimit,
       cutoffSafetyScoreJournalSec: now - SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC,
+      safetyScoreCaptureArchiveDeleted: safetyScoreCaptureArchive.pruned,
+      safetyScoreCaptureArchiveCappedAtLimit: safetyScoreCaptureArchive.cappedAtLimit,
+      cutoffSafetyScoreCaptureArchiveSec: now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC,
       repairTasksDeleted: repairTasks.deleted,
       canaryRunsDeleted: canaryRuns.deleted,
       recoveryCheckpointsDeleted: recoveryCheckpoints.deleted,

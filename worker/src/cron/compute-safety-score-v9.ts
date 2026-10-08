@@ -149,7 +149,7 @@ export async function computeSafetyScoreV9(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  options: { retainAcceptedReplay?: boolean; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
+  options: { retainAcceptedReplay?: boolean; captureArchiveBucket?: R2Bucket; captureArchiveContext?: ExecutionContext; workerMetadata?: V9WorkerProvenance; executionWindow?: V9ExecutionWindow } = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const catalogAdmission = assessSafetyScoreV9ResourceBudget({
@@ -363,6 +363,9 @@ export async function computeSafetyScoreV9(
     Record<string, unknown> = { status: "not-due" };
   const publication = await runSafetyScoreV9Publication({
     db,
+    captureArchiveBucket: options.captureArchiveBucket,
+    captureArchiveContext: options.captureArchiveContext,
+    publicationDeadlineMs: options.executionWindow?.deadlineMs,
     fixedInput: v9SeedInput,
     fixedInputCacheValue,
     fixedInputAlreadyNormalized: true,
@@ -466,8 +469,10 @@ export async function computeSafetyScoreV9(
     },
     signal,
   });
-  throwIfAborted(signal);
-  await reportProgress?.({
+  // Caller cancellation during best-effort post-commit archiving cannot erase
+  // the already accepted publication or its captureArchive outcome metadata.
+  if (publication.status !== "published") throwIfAborted(signal);
+  if (!signal?.aborted) await reportProgress?.({
     stage: "publication-settled",
     message: `V9 publication ${publication.status}`,
   });
@@ -532,6 +537,7 @@ export async function computeSafetyScoreV9(
       resourcePressure: resourceAdmission.resourcePressure,
       publication: publicationDiagnostics,
       journal: publication.journal,
+      captureArchive: publication.captureArchive,
     }),
     productivity: {
       productive: publication.status === "published",

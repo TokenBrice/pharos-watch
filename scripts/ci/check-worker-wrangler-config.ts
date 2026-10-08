@@ -111,6 +111,8 @@ export function evaluateWorkerWranglerConfig(
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
     expectValue("root", "preview_urls", "false");
+    expectValue("r2_buckets", "binding", '"SAFETY_CAPTURE_ARCHIVE"');
+    expectValue("r2_buckets", "bucket_name", '"pharos-measurements"');
     // The named resource still references this class. Remove these requirements
     // only after the reviewed history export and resource deletion.
     expectValue("workflows", "name", '"safety-score-v9-publication"');
@@ -122,6 +124,10 @@ export function evaluateWorkerWranglerConfig(
     }
   } else if (workflows.length > 0) {
     issues.push("Public must not own the V9 publication Workflow.");
+  }
+  if (role === "public" && assignments.some(({ section, key, value }) =>
+    section === "r2_buckets" && key === "binding" && unquote(value) === "SAFETY_CAPTURE_ARCHIVE")) {
+    issues.push("Public must not own the accepted Safety capture archive bucket binding.");
   }
   const catalogAliases = assignments.filter(({ section, key }) => section === "alias" && key === "#pharos-full-catalog");
   if (catalogAliases.length !== 1 || unquote(catalogAliases[0]?.value) !== "./src/lib/full-stablecoin-catalog.ts") {

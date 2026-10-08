@@ -49,6 +49,7 @@
 | 0259     | `0259_cron_slot_execution_started_at_indexes.sql`          | Add idempotent overall/per-slot actual-start indexes for request-time scheduler delivery evidence. |
 | 0260     | `0260_scheduled_child_attempts.sql`                        | Add nullable slot child-marker protocol and immutable scheduled-child attempt/terminal claims with executing-slot cascade retention; no backfill or producer-history rebuild. |
 | 0261     | `0261_safety_score_publication_journal.sql`                 | Add change-only, generation-addressed compact accepted Safety cards and accepted/held attempt lineage; no backfill or scoring change. |
+| 0262     | `0262_safety_score_capture_archive.sql`                     | Add the narrow R2 accepted-capture integrity/discovery index; no blobs, backfill or scoring change. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -279,6 +280,7 @@ Current owner rulings for append-only operational/product tables; permanent arch
 | `report_card_evidence_journal` | Retained accepted enrichment - 45 days and 32 rows per asset | Excluded from the base-input digest; exact captures retain at most the latest two bounded rows per asset. `fact-set-context.ts` consumes captured reserve-failure/pipeline-gap causes. Canonical accepted base/delta retention remains supported; not every row changes a scalar score. Keep table, indexes and capture fields. |
 | `safety_score_v9_supply_attribution_journal` | Retained accepted enrichment - 45 days and 32 rows per asset | Excluded from the base-input digest; exact captures retain at most the latest two bounded rows per asset. `extension-supply.ts` consumes captured null-review cause/responsibility/rejection and generation metadata. Canonical accepted base/delta retention remains supported; not every row changes a scalar score. Keep table, indexes and capture fields. |
 | `safety_score_publication_journal`, `safety_score_publication_attempts` | Operational attribution evidence - 120 days | Change-only compact cards and every accepted/held attempt retain identities, pillar/peg/cap/route diagnostics and pinned input lineage; daily `prune-cron-history` drains each table in bounded batches. This is not a full replay archive or the permanent public grade history. |
+| `safety_score_capture_archive` | Accepted replay object index - 180 days | Exact accepted base/delta/cards cache transports live in `pharos-measurements` R2 under its existing 180-day `captures/` lifecycle. Daily `prune-cron-history` deletes only expired D1 index rows in bounded batches; it never deletes R2 objects. |
 | `depeg_resolver_publication_snapshots_v2`, `depeg_resolver_publication_snapshot_refs` | Publication audit archive - keep forever until the Phase B archive rollout | Every published DDR generation must remain recoverable. Unchanged quarter-hourly publications now write a narrow reference row instead of a payload, so growth follows content changes; the compressed payloads move to R2 under their `base_payload_hash` only through the separate reviewed destructive rollout that replaces `trg_ddr_publication_snapshots_v2_no_delete`. Reference rows are never archived. |
 
 ## Reviewed Data Migrations
@@ -320,6 +322,8 @@ Migration `0258` adds nullable `worker_scheduled_checkpoints.superseded_by_json`
 Migration `0259` is additive and idempotent, with no row mutation. Integration ordering is reserve-lane's `0258` first, then `0259`, then Worker activation; the integration owner reconciles the preceding `0258` manifest entry. Capture the pre-window Time Travel bookmark, migration ledger, and Worker version. Worker rollback leaves these indexes installed; never reset slots, leases, or checkpoints to repair delivery evidence.
 
 Migration `0260` must apply before both new Workers activate. The nullable protocol column and new ledger leave old named-column slot/cron/producer writes valid. No backfill, reset, or UNIQUE rebuild occurs. Attempt claims inherit the executing slot's 14-day retention through `ON DELETE CASCADE`, independently of cron-row pruning. Capture the pre-window Time Travel bookmark, migration ledger and deployed Worker versions; drain pre-protocol code for 15 minutes before certifying protocol-v1 evidence.
+
+Migration `0262` adds only the accepted-capture R2 index and publication-time index, with no backfill or data mutation. Apply before the heavy Worker activates its `SAFETY_CAPTURE_ARCHIVE` binding to existing bucket `pharos-measurements`; no bucket or lifecycle creation belongs to this release. Capture the pre-window Time Travel bookmark, migration ledger and deployed Worker versions. Worker rollback stops prospective archiving but leaves D1/R2 evidence intact; object expiry remains owned by the existing lifecycle.
 
 ## Recent Migration Rollback Notes
 

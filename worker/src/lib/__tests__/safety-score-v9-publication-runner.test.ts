@@ -69,11 +69,16 @@ describe("Safety Score V9 publication runner", () => {
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior" });
     const serialization = vi.spyOn(fixedInputCodec, "buildFixedInputCacheEntry").mockRejectedValueOnce(new Error("Replay delta exceeds byte ceiling"));
+    const put = vi.fn().mockResolvedValue({ key: "stored" });
     try {
       await store.persistSafetyScoreV9Publication(db, { ...currentInput(prior), publicationReplayCaptureValue: "prior-delta", publicationReplayBaseValue: "prior-base" });
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
-      const result = await runSafetyScoreV9Publication({ db, fixedInput, fixedInputCacheValue: "current-base", nowSec: fixedInput.clockSec });
-      expect(result.status).toBe("published");
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, fixedInputCacheValue: "current-base",
+        nowSec: fixedInput.clockSec, captureArchiveBucket: { put } as unknown as R2Bucket });
+      expect(result).toMatchObject({ status: "published", captureArchive: {
+        status: "skipped", reason: "accepted-replay-unavailable",
+      } });
+      expect(put).not.toHaveBeenCalled();
       expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
       expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY)?.value).toBe("prior-delta");
       expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY)?.value).toBe("prior-base");
@@ -81,6 +86,70 @@ describe("Safety Score V9 publication runner", () => {
       serialization.mockRestore();
       sqlite.close();
     }
+  });
+  it.each(["upload", "index"] as const)("never rolls back accepted publication on archive %s failure", async failure => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const put = vi.fn().mockResolvedValue({ key: "stored" });
+    try {
+      if (failure === "upload") put.mockRejectedValue(new Error("R2 unavailable"));
+      else sqlite.exec("DROP TABLE safety_score_capture_archive");
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      const result = await runSafetyScoreV9Publication({
+        db, fixedInput, fixedInputCacheValue: "exact-base", nowSec: fixedInput.clockSec,
+        captureArchiveBucket: { put } as unknown as R2Bucket,
+      });
+      expect(result).toMatchObject({ status: "published", captureArchive: {
+        status: "failed", reason: failure === "upload" ? "capture-upload-failed" : "capture-index-write-failed",
+      } });
+      expect((await store.loadSafetyScoreV9Publication(db))?.publishedAtSec).toBe(fixedInput.clockSec);
+      expect((await store.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
+      expect(put).toHaveBeenCalledOnce();
+    } finally { sqlite.close(); }
+  });
+
+  it.each(["held", "failed"] as const)("archives nothing when publication is %s", async outcome => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const put = vi.fn().mockResolvedValue({ key: "stored" });
+    try {
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      if (outcome === "held") mocks.assess.mockReturnValue({
+        decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: [],
+      });
+      else mocks.persist.mockRejectedValue(new Error("canonical write failed"));
+      const result = await runSafetyScoreV9Publication({
+        db, fixedInput, fixedInputCacheValue: "exact-base", nowSec: fixedInput.clockSec,
+        captureArchiveBucket: { put } as unknown as R2Bucket,
+      });
+      expect(result).toMatchObject({ status: outcome, captureArchive: {
+        status: "skipped", reason: `publication-${outcome}`,
+      } });
+      expect(put).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    } finally { sqlite.close(); }
+  });
+  it("archives the newly accepted cache transports even when the journal fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const put = vi.fn().mockResolvedValue({ key: "stored" });
+    try {
+      sqlite.exec("DROP TABLE safety_score_publication_journal");
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      const result = await runSafetyScoreV9Publication({
+        db, fixedInput, fixedInputCacheValue: "exact-base", nowSec: fixedInput.clockSec,
+        captureArchiveBucket: { put } as unknown as R2Bucket,
+      });
+      expect(result).toMatchObject({ status: "published", journal: { status: "failed" },
+        captureArchive: { status: "written" } });
+      const object = JSON.parse(put.mock.calls[0]![1]);
+      for (const row of [object.base, object.delta, object.cards]) {
+        expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(row.key))
+          .toEqual({ value: row.value, updated_at: row.updatedAt });
+      }
+      expect(sqlite.prepare("SELECT generation_id FROM safety_score_capture_archive").get())
+        .toEqual({ generation_id: result.status === "published" ? result.publicationGenerationId : null });
+    } finally { sqlite.close(); }
   });
   beforeEach(() => {
     const publication = makeWorkerSafetyScoreV9Publication({
@@ -102,7 +171,7 @@ describe("Safety Score V9 publication runner", () => {
     });
     mocks.loadHealth.mockReset().mockResolvedValue(null);
     mocks.loadPublication.mockReset().mockResolvedValue(null);
-    mocks.persist.mockReset().mockResolvedValue(undefined);
+    mocks.persist.mockReset().mockResolvedValue(null);
     mocks.persistAttempt.mockReset().mockResolvedValue(undefined);
     mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
   });

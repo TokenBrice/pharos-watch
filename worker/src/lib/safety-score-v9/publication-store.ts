@@ -23,6 +23,7 @@ import {
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-score-capture-archive";
 
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
@@ -430,7 +431,7 @@ export async function persistSafetyScoreV9PublicationAttempt(
 export async function persistSafetyScoreV9Publication(
   db: D1Database,
   input: PersistSafetyScoreV9PublicationInput,
-): Promise<void> {
+): Promise<SafetyScoreCaptureArchiveCacheRows | null> {
   throwIfAborted(input.signal);
   if ((input.publicationReplayCaptureValue !== undefined) !== (input.publicationReplayBaseValue !== undefined)) {
     throw new Error("Accepted replay retention requires both base and delta or neither");
@@ -687,4 +688,16 @@ export async function persistSafetyScoreV9Publication(
   );
   await executeAtomicBatch(db, statements, { signal: input.signal });
   throwIfAborted(input.signal);
+  // Return references to the exact committed transports, never re-encode or
+  // re-read live cache rows which a later accepted generation could overwrite.
+  if (publicationValue === null || input.publicationReplayBaseValue === undefined ||
+      input.publicationReplayCaptureValue === undefined) return null;
+  return {
+    base: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
+      value: input.publicationReplayBaseValue, updatedAt: input.publicationClockSec },
+    delta: { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
+      value: input.publicationReplayCaptureValue, updatedAt: input.publicationClockSec },
+    cards: { key: SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      value: publicationValue, updatedAt: input.publicationClockSec },
+  };
 }
