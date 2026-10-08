@@ -51,6 +51,10 @@ binding = "DB"
 database_name = "stablecoin-db"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
+[[r2_buckets]]
+binding = "SAFETY_CAPTURE_ARCHIVE"
+bucket_name = "pharos-measurements"
+
 [[workflows]]
 name = "safety-score-v9-publication"
 binding = "SAFETY_SCORE_V9_WORKFLOW"

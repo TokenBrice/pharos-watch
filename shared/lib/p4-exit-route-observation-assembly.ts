@@ -70,6 +70,7 @@ export function buildP4DexExitRouteObservations(params: {
   stablecoinId: string;
   retainedPools: readonly P4DexRoutePoolInput[];
   observedAt: number;
+  onInvalidExecutionModel?: (pool: P4DexRoutePoolInput, issues: readonly string[]) => void;
 }): P4DexRouteObservationResult {
   const observations: ExitRouteObservation[] = [];
   const evidenceCounts: Record<string, number> = {};
@@ -306,6 +307,7 @@ export function buildP4DexExitRouteObservations(params: {
         nowSec: params.observedAt,
       });
       if (modelIssues.length > 0) {
+        params.onInvalidExecutionModel?.(pool, modelIssues);
         unsupportedPoolCount++;
         for (const issue of modelIssues) {
           const reason = `invalidExecutionModel:${issue}`;

@@ -211,6 +211,54 @@ describe("computeSafetyScoreV9", () => {
       .toBe(retainAcceptedReplay ? "fixed-input" : undefined);
   });
 
+  it.each([
+    { status: "written", bytes: 680_000 },
+    { status: "failed", reason: "capture-upload-failed", bytes: 680_000 },
+    { status: "skipped", reason: "capture-too-large", bytes: 8_000_001 },
+  ])("forwards archive binding and preserves $status metadata without changing publication health", async captureArchive => {
+    const captureArchiveBucket = { put: vi.fn() } as unknown as R2Bucket;
+    const captureArchiveContext = { waitUntil: vi.fn() } as unknown as ExecutionContext;
+    const executionWindow = { slotStartedAtSec: fixedInput.clockSec, deadlineMs: Date.now() + 60_000, minimumRemainingMs: 10_000 };
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: NativeSafetyScoreV9Input;
+      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+    }) => {
+      await input.prepareFixedInput(input.fixedInput, new AbortController().signal);
+      return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
+        candidateId: "candidate", outcome: "clean", quarantines: [], affectedAssetIds: [],
+        bridgeJoinDiagnostics: [], journal: { status: "written", rows: 1 }, captureArchive };
+    });
+    const result = await computeSafetyScoreV9({} as D1Database, undefined, undefined,
+      { captureArchiveBucket, captureArchiveContext, executionWindow });
+    expect(result.status).toBe("ok");
+    expect(mocks.runPublication.mock.calls[0][0].captureArchiveBucket).toBe(captureArchiveBucket);
+    expect(mocks.runPublication.mock.calls[0][0].captureArchiveContext).toBe(captureArchiveContext);
+    expect(mocks.runPublication.mock.calls[0][0].publicationDeadlineMs).toBe(executionWindow.deadlineMs);
+    expect(JSON.parse(result.metadata!)).toMatchObject({ captureArchive });
+    expect(compactCronMetadataForPersistence(result.metadata!).metadata).toContain('"captureArchive"');
+  });
+
+  it("keeps accepted publication/archive metadata when the caller aborts during post-commit archiving", async () => {
+    const caller = new AbortController();
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: NativeSafetyScoreV9Input;
+      prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+    }) => {
+      await input.prepareFixedInput(input.fixedInput, new AbortController().signal);
+      caller.abort(new Error("post-commit cancellation"));
+      return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
+        candidateId: "candidate", outcome: "clean", quarantines: [], affectedAssetIds: [],
+        bridgeJoinDiagnostics: [], journal: { status: "written", rows: 1 },
+        captureArchive: { status: "failed", reason: "capture-aborted", outcome: "pending-continuation" } };
+    });
+    const result = await computeSafetyScoreV9({} as D1Database, caller.signal);
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publication: { status: "published" },
+      captureArchive: { status: "failed", reason: "capture-aborted", outcome: "pending-continuation" },
+    });
+  });
+
   it("v10.01 second preparation keeps captured proof identity and rejects subsequent proof substitution", async () => {
     const failure = createRuntimeGapVerdict({
       assetId: "usdc-circle", scope: { pillar: "backing", componentKey: "reserve-composition",

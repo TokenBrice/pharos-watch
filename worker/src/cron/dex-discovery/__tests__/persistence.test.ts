@@ -249,7 +249,6 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
     expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
     expect(prepared[2]?.binds).toEqual([
-      1_710_000_000 - 24 * 60 * 60,
       1_710_000_000 - 4 * 60 * 60,
       1_000,
     ]);
@@ -279,14 +278,13 @@ describe("discovery persistence D1 retry coverage", () => {
     ]);
   });
 
-  it("keeps CoinGecko-tickers orderbook payloads on the staged price window while other sources clear after four hours", async () => {
+  it("clears legacy ticker depth payloads after the same four-hour TTL as other raw payloads", async () => {
     const { sqlite, db } = fixtures.open();
     const now = 1_710_000_000;
     const insert = sqlite.prepare(`INSERT INTO dex_pool_registry
       (pool_id, stablecoin_id, source, chain, protocol, symbol, raw_json, discovered_at, refreshed_at)
       VALUES (?, 'kag-kinesis', ?, 'orderbook', ?, 'KAG / USDC', '{"orderbookDepthUsd":1000}', ?, ?)`);
-    // Five hours old: past the generic four-hour payload TTL, inside the
-    // 24-hour orderbook-depth evidence window.
+    // Price-only ticker evidence lives in normalized columns, not raw depth.
     insert.run("orderbook:kinesis:kag-kinesis", "cg_tickers", "kinesis", now, now - 5 * 60 * 60);
     insert.run("orderbook:kinesis:kag-older", "cg_tickers", "kinesis", now, now - 25 * 60 * 60);
     sqlite.prepare(`INSERT INTO dex_pool_registry
@@ -296,12 +294,11 @@ describe("discovery persistence D1 retry coverage", () => {
 
     const cleanup = await cleanupStaging(db, now);
 
-    expect(cleanup.rawJsonClearedRows).toBe(2);
-    expect(cleanup.tickerRawJsonCutoff).toBe(now - 24 * 60 * 60);
+    expect(cleanup.rawJsonClearedRows).toBe(3);
     expect(sqlite.prepare("SELECT pool_id, raw_json FROM dex_pool_registry ORDER BY pool_id").all())
       .toEqual([
         { pool_id: "ethereum:0xother", raw_json: null },
-        { pool_id: "orderbook:kinesis:kag-kinesis", raw_json: '{"orderbookDepthUsd":1000}' },
+        { pool_id: "orderbook:kinesis:kag-kinesis", raw_json: null },
         { pool_id: "orderbook:kinesis:kag-older", raw_json: null },
       ]);
   });

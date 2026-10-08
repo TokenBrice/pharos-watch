@@ -280,7 +280,12 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.binds).toContain(first.id);
   });
 
-  it("can include schema-validated pending incidents with derivable confirmation categories", async () => {
+  it.each([
+    { label: "trusted pool evidence", count: 2, tvl: 5_000_000, dexAvailable: true },
+    { label: "ticker-only price evidence", count: 1, tvl: 0, dexAvailable: false },
+    { label: "absent TVL evidence", count: 1, tvl: null, dexAvailable: false },
+    { label: "malformed TVL evidence", count: 1, tvl: "5000000", dexAvailable: false },
+  ])("derives pending confirmation categories from $label", async ({ count, tvl, dexAvailable }) => {
     const nowSec = 1_800_000_000;
     vi.useFakeTimers();
     vi.setSystemTime(new Date(nowSec * 1000));
@@ -316,8 +321,8 @@ describe("handleDepegEvents", () => {
           rows: [
             {
               stablecoin_id: "usdt-tether",
-              source_pool_count: 2,
-              source_total_tvl: 5_000_000,
+              source_pool_count: count,
+              source_total_tvl: tvl,
               updated_at: nowSec - 60,
             },
           ],
@@ -353,8 +358,8 @@ describe("handleDepegEvents", () => {
           reason: "large-cap+low-confidence",
           ageSec: 600,
           expiresAt: nowSec - 600 + (45 * 60),
-          availableConfirmationCategories: ["offchain", "dex"],
-          missingConfirmationCategories: ["pool"],
+          availableConfirmationCategories: dexAvailable ? ["offchain", "dex"] : ["offchain"],
+          missingConfirmationCategories: dexAvailable ? ["pool"] : ["dex", "pool"],
         },
       ]);
     } finally {

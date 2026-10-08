@@ -11,6 +11,7 @@ import { createDexMeasuredExecutionRpcBudget } from "../measured-execution/profi
 import type { UniswapV4ExecutionCandidate } from "../measured-execution/candidate-types";
 import { normalizeProtocol } from "./pool-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
+import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
 const INITIALIZE_ABI = parseAbi([
   "event Initialize(bytes32 indexed id,address indexed currency0,address indexed currency1,uint24 fee,int24 tickSpacing,address hooks,uint160 sqrtPriceX96,int24 tick)",
@@ -196,7 +197,7 @@ export async function enrichUniswapV4ExecutionTargets(input: {
   signal?: AbortSignal;
   deadline?: SlotDeadline;
   dependencies?: Dependencies;
-}): Promise<void> {
+}): Promise<TargetEnrichmentTelemetry> {
   const probes = new Map<string, PoolProbe>();
   for (const [stablecoinId, metric] of input.metrics) {
     for (const pool of metric.topPools) {
@@ -219,7 +220,20 @@ export async function enrichUniswapV4ExecutionTargets(input: {
       probes.set(key, probe);
     }
   }
-  if (!probes.size || !input.chainRpcs) return;
+  const telemetry: TargetEnrichmentTelemetry = [];
+  const entryForChain = (chain: string) => {
+    let entry = telemetry.find((row) => row.chain === chain);
+    if (!entry) {
+      entry = { adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, chain, candidates: 0, attempted: 0, enriched: 0, dropReasons: {} };
+      telemetry.push(entry);
+    }
+    return entry;
+  };
+  for (const probe of probes.values()) entryForChain(probe.deployment.chain).candidates += probe.references.length;
+  if (!probes.size || !input.chainRpcs) {
+    for (const entry of telemetry) incrementReason(entry.dropReasons, "rpc-unconfigured", entry.candidates);
+    return telemetry;
+  }
   const deps = input.dependencies ?? DEFAULT_DEPENDENCIES;
   const nowMs = Date.now();
   const deadlineMs = nowMs + (input.deadline?.childCeilingMs(MAX_WALL_MS, nowMs) ?? MAX_WALL_MS);
@@ -229,7 +243,10 @@ export async function enrichUniswapV4ExecutionTargets(input: {
     beforeRequest: () => budget.tryConsume(),
   };
   const byChain = new Map<string, PoolProbe[]>();
+  const selectedProbes = new Set<PoolProbe>();
+  const attemptedProbes = new Set<PoolProbe>();
   for (const probe of [...probes.values()].sort((a, b) => b.tvlUsd - a.tvlUsd).slice(0, MAX_POOLS)) {
+    selectedProbes.add(probe);
     const chainProbes = byChain.get(probe.deployment.chain) ?? [];
     chainProbes.push(probe);
     byChain.set(probe.deployment.chain, chainProbes);
@@ -239,8 +256,13 @@ export async function enrichUniswapV4ExecutionTargets(input: {
     const mark = (detail: string) => {
       for (const probe of chainProbes) for (const reference of probe.references) {
         reference.pool.extra!.measuredExecutionDiagnostic = { adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, detail };
+        incrementReason(entryForChain(probe.deployment.chain).dropReasons, detail);
       }
     };
+    for (const probe of chainProbes) {
+      attemptedProbes.add(probe);
+      entryForChain(chain).attempted += probe.references.length;
+    }
     try {
       const blockNumber = await deps.blockNumber(chain, rpcOptions);
       const header = blockNumber == null ? null : await deps.header(chain, blockNumber, rpcOptions);
@@ -262,7 +284,10 @@ export async function enrichUniswapV4ExecutionTargets(input: {
             retainedTvlUsd: pool.tvlUsd, identityMatch: "exact-pool-id", capturedAt: header.timestamp,
           });
           if (target) pending.push({ pool, target });
-          else pool.extra!.measuredExecutionDiagnostic = { adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, detail: "initialize-or-state-unresolved" };
+          else {
+            pool.extra!.measuredExecutionDiagnostic = { adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID, detail: "initialize-or-state-unresolved" };
+            incrementReason(entryForChain(chain).dropReasons, "initialize-or-state-unresolved");
+          }
         }
       }
       const finalHeader = await deps.header(chain, header.number, rpcOptions);
@@ -271,10 +296,21 @@ export async function enrichUniswapV4ExecutionTargets(input: {
         pool.extra!.measuredExecutionTarget = target;
         delete pool.extra!.executionCapabilityGate;
         delete pool.extra!.measuredExecutionDiagnostic;
+        entryForChain(chain).enriched++;
       }
     } catch (error) {
       rethrowIfAborted(error, input.signal);
       mark("identity-transport-unavailable");
     }
   }
+  for (const probe of probes.values()) {
+    if (!selectedProbes.has(probe)) incrementReason(entryForChain(probe.deployment.chain).dropReasons, "enrichment-cap", probe.references.length);
+    else if (!attemptedProbes.has(probe)) incrementReason(entryForChain(probe.deployment.chain).dropReasons,
+      budget.stopReason ?? "request-budget-exhausted", probe.references.length);
+    else if (budget.stopReason) {
+      const deferred = probe.references.filter(({ pool }) => !pool.extra?.measuredExecutionTarget && !pool.extra?.measuredExecutionDiagnostic).length;
+      if (deferred > 0) incrementReason(entryForChain(probe.deployment.chain).dropReasons, budget.stopReason, deferred);
+    }
+  }
+  return telemetry;
 }

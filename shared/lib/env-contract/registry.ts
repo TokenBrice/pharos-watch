@@ -51,6 +51,14 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "SAFETY_CAPTURE_ARCHIVE",
+    valueType: "R2Bucket",
+    description: "Heavy-only R2 binding to existing pharos-measurements bucket for exact accepted Safety replay captures; required on heavy, absent on public.",
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
     key: "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",

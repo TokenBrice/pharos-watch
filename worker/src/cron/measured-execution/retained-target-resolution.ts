@@ -50,6 +50,7 @@ export function resolveDexMeasuredTargetForRetainedPool(input: {
   exactTargets: ReadonlyMap<string, DexMeasuredExecutionTarget>;
   fingerprintTargets: ReadonlyMap<string, readonly DexMeasuredExecutionTarget[]>;
   maxTvlRelativeDrift?: number;
+  onUnresolved?: (reason: "ambiguous-fingerprint" | "fingerprint-no-match") => void;
 }): DexMeasuredExecutionTarget | null {
   const exact = input.exactTargets.get(
     buildMeasuredPoolDirectionKey(input.stablecoinId, input.retainedPoolId),
@@ -74,5 +75,6 @@ export function resolveDexMeasuredTargetForRetainedPool(input: {
       candidate.retainedTvlUsd > 0 &&
       Math.abs(candidate.retainedTvlUsd / input.retainedTvlUsd - 1) <= maxTvlRelativeDrift,
   );
+  if (matching.length !== 1) input.onUnresolved?.(matching.length > 1 ? "ambiguous-fingerprint" : "fingerprint-no-match");
   return matching.length === 1 ? matching[0]! : null;
 }

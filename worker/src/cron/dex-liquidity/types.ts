@@ -244,6 +244,8 @@ export type PoolMeasurementFlags = NonNullable<NonNullable<DexLiquidityPool["ext
 export interface DexPriceObs {
   price: number;
   tvl: number;
+  /** Price-only exchange evidence: observed 24h USD flow, never liquidity. */
+  observedVolumeUsd?: number;
   chain: string;
   protocol: string;
   poolKey?: string;

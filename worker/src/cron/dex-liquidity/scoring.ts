@@ -26,9 +26,11 @@ import {
   type GlobalPoolAggregateEntry,
 } from "./scoring-helpers";
 import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { applyDexRouteObservationBounds, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
+import { applyDexRouteObservationBounds, collectDexRoutePackingOmissions, selectDexRouteObservationPoolSet, selectDexRouteObservationPools, selectDexRouteObservations, type DexRouteSelectionDiagnostic } from "./dex-route-observation-selection";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeDepthStability, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { getMeasuredTargetFunnelGroup, incrementReason, measuredPoolProfileIds, summarizeMeasuredTargetFunnel, type DexRouteRemovalEvidence, type MeasuredTargetFunnel, type MeasuredTargetFunnelGroup } from "./route-telemetry";
 
 export {
   DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
@@ -60,6 +62,8 @@ interface ScoreDiagnostics {
   /** Pools excluded by the v6.92 dead-pool floor (reason, count, TVL, top coins). */
   deadPoolExclusions: DeadPoolExclusionSummary;
   routeSelection: DexRouteSelectionDiagnostic[];
+  measuredTargetFunnel: MeasuredTargetFunnel;
+  routeRemovalEvidence: Map<string, DexRouteRemovalEvidence>;
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
     inventoryTargetCount: number;
@@ -165,6 +169,7 @@ export async function computeStablecoinScores(
   signal?: AbortSignal,
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
   measuredTargetPublicationMode: MeasuredTargetPublicationMode = "active-and-shadow",
+  registryEvaluatedAtSec = routeObservedAtSec,
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -178,11 +183,14 @@ export async function computeStablecoinScores(
   const results = new Map<string, FullScoreResult>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const routeSelectionDiagnostics: DexRouteSelectionDiagnostic[] = [];
+  const targetFunnelGroups = new Map<string, MeasuredTargetFunnelGroup>();
+  const initiallyResolvedPools = new WeakSet<LiquidityMetrics["topPools"][number]>();
+  const routeRemovalEvidence = new Map<string, DexRouteRemovalEvidence>();
   const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
-  // DEC-19 volume windows are evaluated at the run's source clock (the same
-  // clock the staged merge and live fetches used) with one producer budget.
+  // The stage pins registry admission and every coin/global volume summary to
+  // the same read-consumption basis, independently of quote no-lookahead.
   const volumeClock: DexVolumeClock = {
-    asOfSec: routeObservedAt,
+    asOfSec: registryEvaluatedAtSec,
     maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
   };
   const slipstreamMeasuredTargetsByFingerprint =
@@ -210,6 +218,18 @@ export async function computeStablecoinScores(
     // Eligibility first: retention filters and every later consumer see only
     // in-window volume (aged/absent readings are null, never decayed or zero).
     applyPoolVolumeEligibility(m.topPools, volumeClock);
+    const candidatePools = m.topPools;
+    for (const pool of candidatePools) {
+      for (const profile of measuredPoolProfileIds(pool)) {
+        const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
+        group.candidates++;
+        if (pool.extra?.measuredExecutionTarget?.adapterProfileId === profile ||
+          pool.extra?.measuredExecutionTargets?.some((target) => target.adapterProfileId === profile)) {
+          group.descriptorResolved++;
+          initiallyResolvedPools.add(pool);
+        }
+      }
+    }
     p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
     const deadPoolTally: DeadPoolExclusionTally = { poolCount: 0, tvlUsd: 0 };
     m.topPools = filterRetainedPools(
@@ -224,6 +244,14 @@ export async function computeStablecoinScores(
     protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
 
     const retainedPools = m.topPools;
+    const retainedPoolSet = new Set(retainedPools);
+    for (const pool of candidatePools) {
+      for (const profile of measuredPoolProfileIds(pool)) {
+        const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
+        if (retainedPoolSet.has(pool)) group.retained++;
+        else incrementReason(group.dropReasons, isP4OnlyPausedBalancerPool(pool) ? "paused-or-swap-disabled" : "retained-filter");
+      }
+    }
     for (const pool of retainedPools) {
       const existingPacketTargets = pool.extra?.measuredExecutionTargets;
       if (existingPacketTargets) {
@@ -256,6 +284,7 @@ export async function computeStablecoinScores(
       const isAerodromeSlipstream =
         (pool.project === "aerodrome" || pool.project === "aerodrome-slipstream") &&
         pool.poolType.startsWith("aerodrome-slipstream");
+      let unresolvedReason = "missing-descriptor";
       const candidate =
         isPancakeV3
           ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
@@ -267,6 +296,7 @@ export async function computeStablecoinScores(
                 adapterProfileId: "aerodrome-slipstream-quoter-v2",
                 exactTargets: slipstreamMeasuredTargets,
                 fingerprintTargets: slipstreamMeasuredTargetsByFingerprint,
+                onUnresolved: (reason) => { unresolvedReason = reason; },
               })
             : existingTarget;
       const adapterProfileId =
@@ -291,6 +321,8 @@ export async function computeStablecoinScores(
         delete pool.extra.measuredExecutionPhysicalPoolId;
         applyDexMeasuredExecutionGate(pool, "target-unresolved");
         pool.extra.measuredExecutionDiagnostic = { adapterProfileId };
+        incrementReason(getMeasuredTargetFunnelGroup(targetFunnelGroups, adapterProfileId, pool.chain).dropReasons,
+          !candidate ? unresolvedReason : "invalid-descriptor");
         continue;
       }
       pool.extra.measuredExecutionTarget = {
@@ -342,6 +374,23 @@ export async function computeStablecoinScores(
   const shadowTargetInventory = [...targetInventoryById.values()].filter(
     (target) => !isDexMeasuredExecutionTargetScoreEligible(target),
   );
+  for (const pools of preparedRetainedPools.values()) {
+    for (const pool of pools) {
+      const targets = [...(pool.extra?.measuredExecutionTargets ?? []), ...(pool.extra?.measuredExecutionTarget ? [pool.extra.measuredExecutionTarget] : [])];
+      for (const profile of measuredPoolProfileIds(pool)) {
+        const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
+        if (targets.some((target) => target.adapterProfileId === profile)) {
+          if (!initiallyResolvedPools.has(pool)) group.descriptorResolved++;
+        } else if (pool.extra?.executionCapabilityGate?.reason !== "target-unresolved") incrementReason(group.dropReasons, "missing-descriptor");
+      }
+    }
+  }
+  for (const target of activeTargetInventory) {
+    getMeasuredTargetFunnelGroup(targetFunnelGroups, target.adapterProfileId, target.chain).activeTargets++;
+  }
+  for (const target of shadowTargetInventory) {
+    incrementReason(getMeasuredTargetFunnelGroup(targetFunnelGroups, target.adapterProfileId, target.chain).dropReasons, "policy-lifecycle-ineligible");
+  }
   const inventoryTargetCount = activeTargetInventory.length;
   const shadowInventoryTargetCount = shadowTargetInventory.length;
   const targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"] = {
@@ -399,10 +448,23 @@ export async function computeStablecoinScores(
       [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
       retainedMeasuredRoutePools.get(id) ?? [],
     );
+    const removalEvidence: DexRouteRemovalEvidence = { omittedRouteIds: new Set(), poolReasons: new Map() };
+    for (const pool of routeObservationPoolSelection.pools) {
+      const gate = pool.extra?.executionCapabilityGate;
+      if (gate?.family === "measured-execution" && (gate.reason === "target-unresolved" || gate.reason === "stale-observation")) {
+        removalEvidence.poolReasons.set(canonicalExitRouteScopedKey(pool.chain, pool.extra?.measuredExecutionPhysicalPoolId ?? pool.poolId),
+          gate.reason === "target-unresolved" ? "target-missing" : "quote-stale");
+      }
+    }
     const baseRouteResult = buildP4DexExitRouteObservations({
       stablecoinId: id, retainedPools: routeObservationPoolSelection.pools, observedAt: routeObservedAt,
+      onInvalidExecutionModel: (pool, issues) => {
+        removalEvidence.poolReasons.set(canonicalExitRouteScopedKey(pool.chain, pool.poolId), `invalid-model:${issues[0]}`);
+      },
     });
     const routeObservationResult = applyDexRouteObservationBounds(id, baseRouteResult, routeSelectionDiagnostics);
+    removalEvidence.omittedRouteIds = collectDexRoutePackingOmissions(baseRouteResult.observations, routeObservationResult.observations);
+    routeRemovalEvidence.set(id, removalEvidence);
     stripDexMeasuredExecutionInternalFields(retainedPools);
     // Persistence and price publication are read-only consumers of the same
     // sanitized pool graph. Sharing it avoids cloning thousands of rich pool
@@ -545,6 +607,8 @@ export async function computeStablecoinScores(
       fallbackCounters,
       deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),
       routeSelection: routeSelectionDiagnostics,
+      measuredTargetFunnel: summarizeMeasuredTargetFunnel(targetFunnelGroups),
+      routeRemovalEvidence,
       measuredExecution: {
         join: measuredExecutionJoin,
         inventoryTargetCount,

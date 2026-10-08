@@ -272,6 +272,14 @@ export interface DexLiquidityPostScoreAnalysis {
     nearValueGuard: boolean;
     coinTvlStepCount150: number;
     coinTvlStepCount25: number;
+    coinTvlStepIds150: string[];
+    coinTvlStepIds150Omitted: number;
+    coinTvlStepIds25: string[];
+    coinTvlStepIds25Omitted: number;
+    coinTvlStepComparisons: number;
+    coinTvlStepMissingBaseline: number;
+    coinTvlStepMissingCurrent: number;
+    coinTvlStepBaselineUnavailable: boolean;
     coinTvlStepTop: Array<{
       stablecoinId: string;
       previousTvlUsd: number;
@@ -340,6 +348,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   criticalSourceFailures: string[];
 }): Promise<DexLiquidityPostScoreAnalysis> {
   const currentCoverage = params.scoreResults.size;
+  let coinTvlStepBaselineUnavailable = false;
   const [
     previousCoverageRow,
     previousGlobalRow,
@@ -351,7 +360,15 @@ export async function analyzeDexLiquidityPostScoring(params: {
   ] = await Promise.all([
     params.db
       .prepare(
-        `SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER} AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+        `SELECT COUNT(*) as cnt FROM dex_liquidity
+         WHERE stablecoin_id != '__global__'
+           AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER}
+           AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+           AND NOT (
+             json_valid(source_mix_json)
+             AND COALESCE(json_extract(source_mix_json, '$.cg_tickers.tvlUsd'), 0) > 0
+             AND total_tvl_usd <= COALESCE(json_extract(source_mix_json, '$.cg_tickers.tvlUsd'), 0)
+           )`,
       )
       .first<{ cnt: number }>()
       .catch((e) => {
@@ -456,19 +473,24 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .all<PreviousCoinTvlRow>()
       .catch((e) => {
         logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous per-coin TVL:", e);
+        coinTvlStepBaselineUnavailable = true;
         return { results: [] as PreviousCoinTvlRow[] };
       }),
   ]);
 
   const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows.results ?? []);
 
-  // Coverage guard baseline: the published row count plus the trailing
-  // productive runs, so a slow decay is measured against where coverage
-  // actually was rather than against the run it just overwrote.
+  // Compare observed coverage on the price-only ticker policy. The current
+  // published rows can be normalized exactly from their scored source mix;
+  // old ticker-bearing cron counts cannot, so don't mix those policy epochs
+  // into the trailing window. Real non-ticker losses still use the same gates.
   const coverageBaselineWindow = [
     ...(previousCoverageRow != null ? [previousCoverageRow.cnt] : []),
     ...parsedPreviousCronRows
-      .filter((row) => isProductiveCronRow(row) && isFiniteNonNegative(row.metadata.sourceCoverage.currentCoverage))
+      .filter((row) => isProductiveCronRow(row) &&
+        isFiniteNonNegative(row.metadata.sourceCoverage.currentCoverage) &&
+        row.metadata.sourceCoverage.retainedPoolCountBySourceFamily != null &&
+        (row.metadata.sourceCoverage.retainedPoolCountBySourceFamily.cg_tickers ?? 0) === 0)
       .map((row) => row.metadata.sourceCoverage.currentCoverage!),
   ];
   const coverageBaseline = medianOfRecentRuns(coverageBaselineWindow);
@@ -622,10 +644,19 @@ export async function analyzeDexLiquidityPostScoring(params: {
 
   let coinTvlStepCount150 = 0;
   let coinTvlStepCount25 = 0;
+  let coinTvlStepMissingBaseline = 0;
+  let coinTvlStepMissingCurrent = 0;
+  const positiveBaselineIds = new Set<string>();
   const coinTvlSteps: DexLiquidityPostScoreAnalysis["sourceCoverage"]["coinTvlStepTop"] = [];
   for (const previous of previousCoinTvlRows.results ?? []) {
     const current = params.scoreResults.get(previous.stablecoin_id);
-    if (!current || !isFinitePositive(previous.total_tvl_usd) || !isFiniteNonNegative(current.tvl)) continue;
+    if (!isFinitePositive(previous.total_tvl_usd)) continue;
+    positiveBaselineIds.add(previous.stablecoin_id);
+    if (!current) {
+      coinTvlStepMissingCurrent++;
+      continue;
+    }
+    if (!isFiniteNonNegative(current.tvl)) continue;
     const ratio = current.tvl / previous.total_tvl_usd;
     if (ratio > 1.5 || ratio < 0.5) coinTvlStepCount150++;
     if (ratio >= 1.25 || ratio <= 0.8) coinTvlStepCount25++;
@@ -667,12 +698,24 @@ export async function analyzeDexLiquidityPostScoring(params: {
       protocolDeltaUsd,
     });
   }
-  const coinTvlStepTop = coinTvlSteps
-    .sort((left, right) =>
-      Math.abs(right.currentTvlUsd - right.previousTvlUsd) - Math.abs(left.currentTvlUsd - left.previousTvlUsd) ||
-      left.stablecoinId.localeCompare(right.stablecoinId),
-    )
-    .slice(0, 5);
+  if (!coinTvlStepBaselineUnavailable) {
+    for (const stablecoinId of params.scoreResults.keys()) {
+      if (!positiveBaselineIds.has(stablecoinId)) coinTvlStepMissingBaseline++;
+    }
+  }
+  coinTvlSteps.sort((left, right) =>
+    Math.abs(right.currentTvlUsd - right.previousTvlUsd) - Math.abs(left.currentTvlUsd - left.previousTvlUsd) ||
+    left.stablecoinId.localeCompare(right.stablecoinId),
+  );
+  const coinTvlStepIds150 = coinTvlSteps
+    .filter((step) => step.ratio > 1.5 || step.ratio < 0.5)
+    .slice(0, 50)
+    .map((step) => step.stablecoinId);
+  const coinTvlStepIds25 = coinTvlSteps
+    .filter((step) => step.ratio >= 1.25 || step.ratio <= 0.8)
+    .slice(0, 50)
+    .map((step) => step.stablecoinId);
+  const coinTvlStepTop = coinTvlSteps.slice(0, 5);
 
   for (const [_stablecoinId, observations] of params.priceObservations) {
     const families = new Set(
@@ -775,6 +818,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
       nearValueGuard,
       coinTvlStepCount150,
       coinTvlStepCount25,
+      coinTvlStepIds150,
+      coinTvlStepIds150Omitted: coinTvlStepCount150 - coinTvlStepIds150.length,
+      coinTvlStepIds25,
+      coinTvlStepIds25Omitted: coinTvlStepCount25 - coinTvlStepIds25.length,
+      coinTvlStepComparisons: coinTvlSteps.length,
+      coinTvlStepMissingBaseline,
+      coinTvlStepMissingCurrent,
+      coinTvlStepBaselineUnavailable,
       coinTvlStepTop,
       currentTop10CoveredTvl,
       previousTop10CoveredTvl,

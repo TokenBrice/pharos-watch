@@ -7,6 +7,7 @@ import type {
 import type { DeadPoolUnindexedChainSkips, StagedPoolSkipDimension } from "./staging-merge";
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
 import type { PoolProcessingRejection } from "./process-pool-types";
+import type { TargetEnrichmentTelemetry } from "./route-telemetry";
 
 export interface DexLiquidityDirectApiSourceSummary {
   circuitEvents: DirectApiFetchPhaseResult["circuitEvents"];
@@ -40,6 +41,8 @@ export interface DexLiquidityScoringSourceState {
 }
 
 export interface DexLiquidityPoolState {
+  /** Wall clock captured after the registry SELECT; frozen for every consumer. */
+  registryEvaluatedAtSec: number;
   fallback: { weakCoverageCoinsBeforeFallback: number };
   metrics: Map<string, LiquidityMetrics>;
   poolRejections: PoolProcessingRejection[];
@@ -64,5 +67,7 @@ export interface DexLiquidityPoolState {
   registryFamilyBySource?: Record<string, number>;
   /** v6.92 dead-pool candidates kept because their chain is not trade-indexed; optional for older headers. */
   deadPoolUnindexedChainSkips?: DeadPoolUnindexedChainSkips;
+  targetEnrichment?: TargetEnrichmentTelemetry;
+  graphApiKeyConfigured?: boolean;
   directApiIntegration: DirectApiIntegrationResult;
 }

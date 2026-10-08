@@ -30,6 +30,7 @@ import {
   type DexDeploymentCensusDetailParams,
   type DexDeploymentCensusRow,
 } from "./deployment-census-coverage";
+import { addDexRouteTurnover, buildDexRouteTurnover, incrementReason, type DexRouteRemovalEvidence, type ExitRouteContinuity, type ExitRouteSelection } from "./route-telemetry";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 /** Retain one complete scoring window plus one missed half-hour producer cycle. */
@@ -214,15 +215,21 @@ export function selectStillFreshDexRouteSetHold(
   candidate: FullScoreResult,
   previousRaw: string | null,
   nowSec: number,
+  onDecision?: (reason: string) => void,
 ): HeldDexRouteSet | null {
   const candidateP4 = candidate as P4aFullScoreResult;
   const candidateObservations = candidateP4.exitRouteObservations ?? [];
   const previous = parseCurrentDexRouteSet(previousRaw);
-  if (
-    previous === null ||
-    candidateObservations.length === 0 ||
-    previous.observations.length === 0
-  ) {
+  if (previous === null) {
+    onDecision?.(previousRaw === null ? "empty-previous" : "invalid-previous");
+    return null;
+  }
+  if (candidateObservations.length === 0) {
+    onDecision?.("empty-candidate");
+    return null;
+  }
+  if (previous.observations.length === 0) {
+    onDecision?.("empty-previous");
     return null;
   }
   const previousRouteIds = new Set(
@@ -237,7 +244,10 @@ export function selectStillFreshDexRouteSetHold(
           candidateObservation.routeId === observation.routeId,
       ),
   );
-  if (!routeSetChanged) return null;
+  if (!routeSetChanged) {
+    onDecision?.("ids-unchanged");
+    return null;
+  }
 
   const previousBestCapacityUsd = Math.max(
     0,
@@ -253,6 +263,7 @@ export function selectStillFreshDexRouteSetHold(
     nowSec - previousBestObservation.observedAt >
       DEX_ROUTE_SET_HOLD_MAX_AGE_SEC
   ) {
+    onDecision?.(previousBestObservation?.observedAt != null && previousBestObservation.observedAt > nowSec ? "prior-future" : "prior-too-old");
     return null;
   }
   const candidateBestCapacityUsd = Math.max(
@@ -264,8 +275,10 @@ export function selectStillFreshDexRouteSetHold(
     candidateBestCapacityUsd >
       previousBestCapacityUsd * DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO
   ) {
+    onDecision?.(previousBestCapacityUsd < DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD ? "capacity-below-floor" : "not-collapsed");
     return null;
   }
+  onDecision?.("held");
   return {
     ...previous,
     previousBestCapacityUsd,
@@ -342,6 +355,8 @@ export interface PersistScoresResult {
   retention?: DexLiquidityGenerationRetentionResult;
   skipped?: boolean;
   skippedReason?: string | null;
+  exitRouteSelection?: ExitRouteSelection;
+  exitRouteContinuity?: ExitRouteContinuity;
 }
 
 export interface DexLiquidityGenerationRetentionResult {
@@ -685,6 +700,7 @@ export async function persistScores(
   globalAgg: GlobalAgg,
   nowSec: number,
   signal?: AbortSignal,
+  routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
 ): Promise<PersistScoresResult> {
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
@@ -701,6 +717,20 @@ export async function persistScores(
     if (ACTIVE_IDS.has(id)) activeScoredCount++;
   }
   const currentRouteSets = new Map<string, string | null>();
+  const exitRouteSelection: ExitRouteSelection = {
+    baselineAvailable: true, baselineUnavailableReason: null, comparedCoins: 0, unavailableCoins: 0,
+    changedCoins: 0, routesAdded: 0, routesRemoved: 0, removalReasons: {}, topCoins: [], topCoinsOmitted: 0,
+  };
+  const exitRouteContinuity: ExitRouteContinuity = {
+    baselineAvailable: true, held: 0, heldCoins: [], heldCoinsOmitted: 0, refused: 0, refusedReasons: {},
+  };
+  const recordTurnover = (id: string, observations: readonly ExitRouteObservation[]): void => {
+    if (!exitRouteSelection.baselineAvailable) return;
+    const raw = currentRouteSets.get(id);
+    const previous = raw === undefined ? { observations: [] } : parseCurrentDexRouteSet(raw);
+    if (previous === null) { exitRouteSelection.unavailableCoins++; return; }
+    addDexRouteTurnover(exitRouteSelection, buildDexRouteTurnover(id, previous.observations, observations, routeRemovalEvidence?.get(id)));
+  };
   try {
     const currentRows = await db
       .prepare(
@@ -714,6 +744,9 @@ export async function persistScores(
       currentRouteSets.set(row.stablecoin_id, row.score_components_json);
     }
   } catch (error) {
+    exitRouteSelection.baselineAvailable = false;
+    exitRouteSelection.baselineUnavailableReason = "previous-route-read-failed";
+    exitRouteContinuity.baselineAvailable = false;
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -837,8 +870,18 @@ export async function persistScores(
         sr,
         currentRouteSets.get(id) ?? null,
         nowSec,
+        (reason) => {
+          if (!exitRouteContinuity.baselineAvailable) return;
+          if (reason === "held") {
+            exitRouteContinuity.held++;
+            if (exitRouteContinuity.heldCoins.length < 25) exitRouteContinuity.heldCoins.push(id);
+            else exitRouteContinuity.heldCoinsOmitted++;
+          } else {
+            exitRouteContinuity.refused++;
+            incrementReason(exitRouteContinuity.refusedReasons, reason);
+          }
+        },
       );
-      currentRouteSets.delete(id);
       const persistedScoreResult: FullScoreResult =
         heldRouteSet === null
           ? sr
@@ -847,6 +890,8 @@ export async function persistScores(
               exitRouteObservations: heldRouteSet.observations,
               exitRouteObservationCoverage: heldRouteSet.coverage,
             } as FullScoreResult;
+      recordTurnover(id, (persistedScoreResult as P4aFullScoreResult).exitRouteObservations ?? []);
+      currentRouteSets.delete(id);
       // A scored row that retained no pool never reaches the placeholder loop,
       // so classify its deployment census here instead of publishing coverage
       // that carries no reason at all.
@@ -911,7 +956,6 @@ export async function persistScores(
         nowSec,
       ]);
     }
-    currentRouteSets.clear();
 
     // Write placeholder rows for tracked stablecoins with no DEX presence.
     // liquidity_score = NULL so report cards treat them as NR (not rated). They
@@ -930,6 +974,11 @@ export async function persistScores(
       throwIfAborted(signal);
       if (!metrics.has(meta.id)) {
         placeholderCount++;
+        recordTurnover(meta.id, []);
+        if (exitRouteContinuity.baselineAvailable) {
+          exitRouteContinuity.refused++;
+          incrementReason(exitRouteContinuity.refusedReasons, "empty-candidate");
+        }
         const coverage = classifyDexPlaceholderCoverage({
           deployments: censusDeployments(meta),
           outcomeRows: deploymentCensusById.get(meta.id) ?? [],
@@ -1076,6 +1125,8 @@ export async function persistScores(
     orphanRowsDeleted,
     orphanCleanupFailed,
     retention,
+    exitRouteSelection,
+    exitRouteContinuity,
   };
 }
 

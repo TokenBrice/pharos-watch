@@ -569,6 +569,8 @@ export async function syncDexDiscovery(
             });
           } : undefined,
         );
+        const discoveredPools = result.pools.filter((pool) => pool.source !== "cg_tickers");
+        const discoveredPoolCount = discoveredPools.length;
 
         try {
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
@@ -585,10 +587,10 @@ export async function syncDexDiscovery(
             outcome.outcome === "observed_pools" || outcome.outcome === "verified_no_pools")) {
             observedDeploymentOutcomesWritten += outcomesWritten;
           }
-          await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
+          await updateDiscoveryMeta(db, candidate.stablecoinId, discoveredPoolCount, nowSec, signal);
 
           coinsCrawled += 1;
-          poolsDiscovered += result.pools.length;
+          poolsDiscovered += discoveredPoolCount;
           if (targetWindow.windowed) {
             const nextCursor = advanceDiscoveryTargetCursor(
               targetWindow.targets,
@@ -604,7 +606,7 @@ export async function syncDexDiscovery(
           for (const chain of result.unresolvedChains) {
             allUnresolvedChains.add(chain);
           }
-          for (const pool of result.pools) {
+          for (const pool of discoveredPools) {
             poolsBySource[pool.source] = (poolsBySource[pool.source] ?? 0) + 1;
           }
         } catch (persistErr) {

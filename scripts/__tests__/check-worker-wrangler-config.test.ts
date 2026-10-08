@@ -93,11 +93,19 @@ describe("check-worker-wrangler-config", () => {
       toml.replace('[alias]', 'routes = []\n[alias]'),
       `${toml}\n[[ratelimits]]\nname = "HTTP"\n`,
       toml.replace('binding = "SAFETY_SCORE_V9_WORKFLOW"', 'binding = "WRONG_WORKFLOW"'),
+      toml.replace('binding = "SAFETY_CAPTURE_ARCHIVE"', 'binding = "WRONG_ARCHIVE"'),
+      toml.replace('bucket_name = "pharos-measurements"', 'bucket_name = "wrong-bucket"'),
       `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "shadow"\n`,
       `${toml}\n[vars]\nWORKER_V9_WORKFLOW_MODE = "off"\n`,
     ]) {
       expect(evaluateWorkerWranglerConfig(mutation, { workerRole: "heavy" }).failed).toBe(true);
     }
+  });
+  it("rejects accepted-capture bucket ownership on public", () => {
+    const report = evaluateWorkerWranglerConfig(
+      `${VALID_CONFIG}\n[[r2_buckets]]\nbinding = "SAFETY_CAPTURE_ARCHIVE"\nbucket_name = "pharos-measurements"\n`,
+    );
+    expect(report.issues).toContain("Public must not own the accepted Safety capture archive bucket binding.");
   });
   it("rejects the retired Workflow mode on public", () => {
     const report = evaluateWorkerWranglerConfig(

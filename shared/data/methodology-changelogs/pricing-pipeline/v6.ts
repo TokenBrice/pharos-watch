@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.44",
+    title: "Price-only ticker admission and observed-flow weights",
+    date: "2026-10-08",
+    effectiveAt: 1791504000,
+    summary:
+      "CoinGecko discovery tickers enter the hourly price bridge independently of pool TVL, weighted by observed USD flow times source confidence instead of synthetic orderbook TVL. They attribute zero liquidity TVL and cannot independently clear unchanged primary, display or depeg trust gates.",
+    impact: [
+      "Non-stale, non-anomalous USD-equivalent tickers with positive finite price and at least $1,000 reported USD flow are aggregated per exchange. Registry price evidence must remain non-future and within 24 hours of the frozen registry-read evaluation clock; peg-aware plausibility is required. Registry admission uses the unchanged original refresh timestamp. Price publication does not renew registry freshness; the aggregate row uses the publication generation's timestamp and does not expose per-ticker observation clocks.",
+      "Price eligibility now requires at least $1,000 finite observed USD flow rather than $50,000 synthetic TVL. Median weights are observed flow times the existing cg_tickers confidence (0.55), never volume times three, depth-capped flow or legacy stored TVL/depth. Genuine pool admission and TVL-times-confidence weighting are unchanged",
+      "New normalized ticker registry records store null TVL and no depth/pool model; requests no longer ask for depth. Stored legacy ticker rows use the same price-only path. Liquidity v6.93 separately removes all ticker-derived TVL, volume, pools, source mix, caps, coverage and orderbook diagnostics",
+      "A price-only dex_prices publication can have source_total_tvl = 0; that field sums actual retained pool TVL only. Its source_pool_count retains the existing count of price observations, including exchange evidence, rather than a liquidity pool count. Primary-missing, outlier, peg-deviation and display-ratio publication guards remain fail closed, and ticker-only zero-TVL prices cannot satisfy the unchanged UI/primary/depeg DEX trust floors",
+      "This changes the discovery ticker bridge, not the separate curated Kinesis cg-ticker primary source or direct CEX source weights. Mixed aggregates retain genuine pool support; observed exchange flow cannot substitute for trust TVL or an execution certificate. Safety formula is unchanged and improved Safety Score stability is unmeasured",
+      "Activation is provisionally 2026-10-09 00:00 UTC (1791504000); re-date effectiveAt at release",
+    ],
+    commits: ["b762a4034", "573140c03", "56c49e154"],
+    reconstructed: false,
+  },
+  {
     version: "6.43",
     title: "Unconditional pinned native-share admission for JLTXX",
     date: "2026-10-08",

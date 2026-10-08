@@ -1,6 +1,6 @@
 # Safety Score V9 Equivalence Harness
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: When to use it · Why the replay is a fair test · Prerequisites · (a) Export a production capture · (b) Replay a capture at a given commit · (c) Diff a baseline replay against a candidate replay · (d) Pre-activation sweep · (e) Post-deploy first-cycle check · Triaging a non-empty diff · Artifact hygiene · Worked example · Related.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: When to use it · Why the replay is a fair test · Prerequisites · (a) Export a production capture · [Historical release and data separation](#historical-release-and-data-separation) · [Local D1 and offline-object exercise](#local-d1-and-offline-object-exercise) · (b) Replay a capture at a given commit · (c) Diff a baseline replay against a candidate replay · (d) Pre-activation sweep · (e) Post-deploy first-cycle check · Triaging a non-empty diff · Artifact hygiene · Worked example · Related.
 
 Operational procedure for proving that a code change either leaves published Safety Score V9 output unchanged or moves only a reviewed, declared set of grades.
 
@@ -36,6 +36,8 @@ Private peg provenance uses the historical `verifiedOnlyDiagnostic` field as a l
 Comparators reject missing card arrays, empty/duplicate IDs and inconsistent score/grade/status projections before normalization. Full replay artifacts additionally undergo pure schema, asset-set, generation, fact/result-digest and identity-coherence validation in `worker/scripts/lib/safety-score-v9-replay-validation.ts`. That layer does not compile or pin either artifact's policy/build to the current checkout.
 
 The movers CLI lives at `worker/scripts/diff-safety-score-v9-movers.ts` behind the unchanged `safety-score-v9:movers` alias. Full-artifact validation parses the retained capture through its native v4 or legacy v3 schema before deriving the matching base-input digest; the compiler's narrower common projection is not an artifact admission contract.
+
+For weekly retrospective production-history review, use the separate [Safety Score movement ledger](../scripts.md#safety-score-movement-ledger). It reads 120-day change-only compact publication rows and accepted/held attempt lineage, reports missing baselines, and labels identity boundaries as non-comparable rather than causal proof. It is not the `safety-score-v9:movers` frozen-input gate and does not substitute for replay/equivalence or exact accepted-publication reproduction; no pre-deployment journal history is backfilled.
 
 Exact reproduction is a separate intended-revision operation: use a trusted checkout at the recorded source SHA, recorded policy/build, verified frozen registry, capture input/clock, expected output and accepted enrichment (both journals and explicit null transfer materiality). `reproduceSafetyScoreV9Replay` requires that context and verifies rebuilt pipeline equality. A normalized empty diff is not bit-identical artifact equality or expected-activation proof; independently check intended release identities.
 
@@ -97,6 +99,96 @@ npm run safety-score-v9:replay -- \
 ```
 
 `--accepted-cache-export` is mutually exclusive with `--exact-cache-export` and `--normalized-only`; neither a single prepare-time envelope nor a base-only normalized export can claim accepted-publication enrichment.
+
+### Historical release and data separation
+
+Archiving is **best effort** after the accepted publication commits: every successfully indexed generation has an R2 object containing the exact compressed base, delta and accepted-card cache strings. Failed/skipped archives can leave permanent coverage gaps when later publications overwrite the live retained rows; an index-write failure can leave an undiscoverable R2 orphan. `list --gaps` exposes accepted attempts without an archive index while their 120-day journal evidence remains available, not missing/pruned journal attempts or index-present missing objects. The enabled `pharos-measurements` lifecycle rule `180d-capture-cleanup`, covering `captures/` with a 180-day delete age, was verified on **2026-10-08**; it is **external account state**, not created or continuously established by this migration/CLI. D1 index pruning uses the publication-age window, while R2 expiry uses object upload age and asynchronous lifecycle deletion. There are no sampling tiers, retry backfills or pre-deployment captures. An index row is not proof that an object is still retrievable: export fails on missing objects, checksum/byte-count mismatch or identity drift. See [the archive CLI contract](../scripts.md#safety-score-historical-capture-archive).
+
+To measure a release against historical data, take the **exact UTC deployment instant from its deployment record**, resolve the last **archived** publication strictly before it, export its paired inputs and accepted publication, restore the capture, and replay on the candidate checkout. A calendar date alone selects midnight and is not the boundary of an intraday release:
+
+```sh
+mkdir -p agents/v9-captures/historical
+# Replace this example with the exact deployment timestamp from the deployment record.
+release_time="2026-10-08T12:00:00Z"
+# Audit retained accepted-attempt gaps around the deployment before claiming complete coverage.
+npx tsx worker/scripts/export-safety-score-capture-archive.ts list \
+  --from 2026-10-07 --to 2026-10-09 --gaps \
+  > agents/v9-captures/historical/coverage.json
+npx tsx worker/scripts/export-safety-score-capture-archive.ts boundary \
+  --before-time "$release_time" > agents/v9-captures/historical/index.json
+generation="$(jq -r .generation_id agents/v9-captures/historical/index.json)"
+npx tsx worker/scripts/export-safety-score-capture-archive.ts export \
+  --generation "$generation" \
+  --output agents/v9-captures/historical/accepted.raw.json \
+  --cards-output agents/v9-captures/historical/accepted.cards.json
+npm run report-cards:capture-fixed-input -- \
+  --accepted-cache-export agents/v9-captures/historical/accepted.raw.json \
+  --output agents/v9-captures/historical/capture.json
+# If registry admission fails, rerun capture with --registry-ref <trusted-capture-time-sha>.
+# Do not bypass the fingerprint check or substitute the current registry.
+clock_sec="$(jq -r .fixedInput.clockSec agents/v9-captures/historical/capture.json)"
+npm run safety-score-v9:replay -- \
+  --input agents/v9-captures/historical/capture.json --published-at "$clock_sec" \
+  --output agents/v9-captures/historical/candidate.replay.json
+
+# The diff CLI expects pipeline.candidate on BOTH sides. Accepted cards are a
+# publication, not a full replay: compare the same explicit projection.
+jq '{pipeline:{candidate:.}}' agents/v9-captures/historical/accepted.cards.json \
+  > agents/v9-captures/historical/accepted.projection.json
+jq '{pipeline:{candidate:.pipeline.candidate}}' agents/v9-captures/historical/candidate.replay.json \
+  > agents/v9-captures/historical/candidate.projection.json
+npm run safety-score-v9:diff -- \
+  --baseline agents/v9-captures/historical/accepted.projection.json \
+  --candidate agents/v9-captures/historical/candidate.projection.json
+```
+
+`--before-time` accepts nonnegative integer Unix seconds or a validated ISO-8601 timestamp ending in `Z` (seconds with optional millisecond precision), and compares publication clocks strictly before that instant. Existing `--before YYYY-MM-DD` retains its UTC-midnight semantics. The `--before build:<digest>`, `policy:<digest>` and `methodology:<version>` selectors are **retrospective**: they find the predecessor of an already archived transition into an identity, not an unpublished future release boundary. Permanent archive gaps mean the selected row is the latest known archived input, not necessarily the immediately preceding accepted production publication.
+
+This is the **release delta on the archived input**, including checkout evaluator/policy and non-transfer overlays. The comparator reports normalized candidate-output drift, not bit-identical bytes, a complete full-replay diff, or proof that a particular code edit caused each change. Identity keys are normalized separately; check the intended candidate build/policy identities independently. The archive contains exact accepted output, but not a source commit or the complete historical checkout. To check historical equivalence, run the same capture under a trusted checkout matching the recorded methodology/policy/build and its capture-time curation, project that replay identically, then diff against `accepted.projection.json` with `--assert-empty`. Resolve the matching source revision from deployment/release records; never infer it from a digest or claim a current-build replay reproduces an older build.
+
+For **data deltas**, select consecutive archived generations with unchanged methodology, policy digest and evaluation-build digest (`list --from ... --to ...` exposes those identities), export both accepted cards, wrap each as `{pipeline:{candidate:<publication>}}`, and diff them. This reports observed same-identity publication movement, including data/operational effects; it does not establish independent causal attribution, and missing archive rows prevent a claim of consecutive production coverage. Replaying both captures under one candidate build similarly measures its response to those two inputs without mixing in a build boundary. Do not compare a pre-release capture with a post-release capture and call the entire difference a release effect.
+
+#### Local D1 and offline-object exercise
+
+The exporter supports `--local` for its index and `--source-dir` for exact object bytes, so the same real archived generation can be exercised without production writes. First obtain `historical/index.json` with the remote `boundary` command above (or save a selected real index row from `list`). From the repository root, with read-capable R2 measurement credentials in the environment, download its object and prepare a **local-only** index fixture:
+
+```sh
+node --import tsx --input-type=module <<'NODE'
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { createR2MeasurementsClient } from './scripts/lib/r2-measurements-client.ts';
+import { sqlString } from './scripts/lib/remote-d1.ts';
+import { SafetyScoreCaptureArchiveIndexSchema, archiveObjectKey } from './worker/scripts/lib/safety-score-capture-archive.ts';
+const row = SafetyScoreCaptureArchiveIndexSchema.parse(JSON.parse(readFileSync('agents/v9-captures/historical/index.json', 'utf8')));
+if (row.r2_key !== archiveObjectKey(row)) throw new Error('archive key mismatch');
+const bytes = await createR2MeasurementsClient().get(row.r2_key);
+if (bytes === null) throw new Error('archived R2 object unavailable');
+const path = resolve('agents/v9-captures/historical/objects', row.r2_key);
+mkdirSync(dirname(path), { recursive: true });
+writeFileSync(path, bytes);
+const columns = ['generation_id', 'published_at', 'methodology_version', 'policy_digest',
+  'evaluation_build_digest', 'r2_key', 'object_sha256', 'object_bytes', 'archived_at'];
+const values = columns.map(name => typeof row[name] === 'number' ? String(row[name]) : sqlString(row[name]));
+writeFileSync('agents/v9-captures/historical/local-index.sql',
+  `INSERT OR REPLACE INTO safety_score_capture_archive (${columns.join(',')}) VALUES (${values.join(',')});\n`);
+NODE
+
+# Apply 0263 once to the LOCAL database if this table is not already present.
+# These --file writes are ONLY local fixture setup, never a remote inspection.
+(cd worker && npx wrangler d1 execute stablecoin-db --local \
+  --file migrations/0263_safety_score_capture_archive.sql)
+(cd worker && npx wrangler d1 execute stablecoin-db --local \
+  --file ../agents/v9-captures/historical/local-index.sql)
+generation="$(jq -r .generation_id agents/v9-captures/historical/index.json)"
+npx tsx worker/scripts/export-safety-score-capture-archive.ts export \
+  --local --source-dir agents/v9-captures/historical/objects \
+  --generation "$generation" \
+  --output agents/v9-captures/historical/accepted.raw.json \
+  --cards-output agents/v9-captures/historical/accepted.cards.json
+```
+
+Continue with the `report-cards:capture-fixed-input`, replay, projection and diff commands above. The local exercise consumes the same recorded checksums/identities and verifies the same bytes; it is not a deployment or a remote migration. The source directory preserves the complete R2 key under its root, not just the generation filename. A pruned/missing real row or object is an unavailable historical input, not permission to fabricate a fixture and describe it as production evidence.
+
 
 ### Prepare-time base only
 

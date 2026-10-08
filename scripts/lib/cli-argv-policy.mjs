@@ -68,8 +68,10 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/check-safety-score-v9-anchor-gate.ts"),
     strict("worker/scripts/check-safety-score-v9-live-withheld.ts"),
     strict("worker/scripts/compute-dependency-scenarios.ts"),
+    strict("worker/scripts/dex-liquidity-acceptance-capture.ts"),
     strict("worker/scripts/diff-safety-score-v9-movers.ts"),
     strict("worker/scripts/diff-safety-score-v9-replays.ts"),
+    strict("worker/scripts/export-safety-score-capture-archive.ts"),
     strict("worker/scripts/list-curation-expiry-queue.ts"),
     strict("worker/scripts/measure-contagion-gate0.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
@@ -86,6 +88,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/repair-tron-blacklist-amounts.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/replay-safety-score-v9.ts"),
     strict("worker/scripts/report-live-reserve-config-changes.ts"),
+    strict("worker/scripts/safety-score-movement-ledger.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),
   exemptions: Object.freeze([

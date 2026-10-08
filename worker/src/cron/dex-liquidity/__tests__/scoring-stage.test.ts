@@ -193,6 +193,9 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
     ["minor", populateMetric(initMetrics("minor", "MINOR"), pools.slice(majorCount))],
   ]);
   return {
+    registryEvaluatedAtSec: 1_087,
+    graphApiKeyConfigured: true,
+    targetEnrichment: [{ adapterProfileId: "uniswap-v3-quoter-v2", chain: "ethereum", candidates: 128, attempted: 100, enriched: 90, dropReasons: { "enrichment-cap": 28, "descriptor-builder-unresolved": 10 } }],
     fallback: {
       weakCoverageCoinsBeforeFallback: 7,
     },
@@ -331,6 +334,8 @@ describe("DEX liquidity scoring stage", () => {
     expect([...decoded.sourceState.protocolTvlCaps]).toEqual([...source.protocolTvlCaps]);
     expect([...decoded.sourceState.priceObservations]).toEqual([...source.priceObservations]);
     expect([...decoded.poolState.metrics.keys()]).toEqual(["major", "minor"]);
+    expect(decoded.poolState.targetEnrichment).toEqual(pool.targetEnrichment);
+    expect(decoded.poolState.graphApiKeyConfigured).toBe(true);
 
     const originalMajor = pool.metrics.get("major")!;
     const decodedMajor = decoded.poolState.metrics.get("major")!;
@@ -779,16 +784,21 @@ describe("DEX liquidity scoring stage", () => {
         ),
       ])
     ).toThrow("unknown target lane");
-    // A pre-6.9 payload carries no raw volume readings, and a pre-6.92 payload no
-    // dead-pool signatures: both are rejected, never scored under the current label.
+    // Previous payloads omit volume readings, dead-pool signatures or the
+    // registry evaluation basis: reject them, never score under the new label.
     const [header, ...rest] = base[0]!.payload.split("\n");
-    for (const schemaVersion of [1, 2]) {
+    for (const schemaVersion of [1, 2, 3]) {
       expect(() =>
         decodeDexLiquidityScoringStageChunks([
           withPayload([JSON.stringify({ ...JSON.parse(header!), schemaVersion }), ...rest].join("\n")),
         ])
       ).toThrow(`payload version ${schemaVersion}`);
     }
+    const missingClockHeader = JSON.parse(header!);
+    delete missingClockHeader.pool.registryEvaluatedAtSec;
+    expect(() => decodeDexLiquidityScoringStageChunks([
+      withPayload([JSON.stringify(missingClockHeader), ...rest].join("\n")),
+    ])).toThrow("registryEvaluatedAtSec");
 
     const invalidPool = poolState(1);
     invalidPool.metrics.get("major")!.totalTvlUsd = Number.NaN;

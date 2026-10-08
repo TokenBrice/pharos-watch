@@ -161,6 +161,10 @@ describe("check-env-contract Wrangler binding parser", () => {
       binding = "DB"
       database_name = "stablecoin-db"
 
+
+      [[r2_buckets]]
+      binding = "SAFETY_CAPTURE_ARCHIVE"
+      bucket_name = "pharos-measurements"
       [triggers]
       crons = ["*/15 * * * *"]
     `);
@@ -169,6 +173,7 @@ describe("check-env-contract Wrangler binding parser", () => {
       ["CORS_ORIGIN", { source: "[vars]", type: "string" }],
       ["SELF_URL", { source: "[vars]", type: "string" }],
       ["DB", { source: "[[d1_databases]]", type: "D1Database" }],
+      ["SAFETY_CAPTURE_ARCHIVE", { source: "[[r2_buckets]]", type: "R2Bucket" }],
     ]);
     expect([...result.duplicates]).toEqual([]);
     expect(result.unsupported).toEqual([]);

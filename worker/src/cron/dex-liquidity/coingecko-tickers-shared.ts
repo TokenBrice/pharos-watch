@@ -1,41 +1,32 @@
-import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import { ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS } from "./constants";
+import { USD_QUOTE_COIN_IDS } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgTicker, DexPriceObs } from "./types";
+
+// Flow admits ticker prices; it is not a substitute for pool TVL.
+export const CG_TICKER_PRICE_MIN_VOLUME_USD = 1_000;
+
+export function dexPriceEvidenceWeight(observation: DexPriceObs): number {
+  const weight = observation.sourceFamily === "cg_tickers"
+    ? observation.observedVolumeUsd
+    : observation.tvl;
+  return typeof weight === "number" && Number.isFinite(weight) && weight > 0 ? weight : 0;
+}
 
 export interface AggregatedExchangeTicker {
   name: string;
   volumeUsd: number;
   priceVolumeWeightedSum: number;
-  depthDownUsd: number;
-  depthDownCount: number;
-  depthUpUsd: number;
-  depthUpCount: number;
 }
 
 export interface CgTickerExchangeSummary {
   exchangeId: string;
   exchangeName: string;
   volumeUsd: number;
-  volumeDerivedTvlUsd: number;
-  syntheticTvlUsd: number;
-  depthDownUsd: number | null;
-  depthUpUsd: number | null;
-  tvlBasis: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
   priceUsd: number;
 }
 
-export interface CgTickerOrderbookMetadata {
-  orderbookDepthUsd?: number;
-  orderbookDepthUpUsd?: number;
-  orderbookTvlBasis?: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
-}
 
-function finitePositive(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
 
 export function filterValidCgTickers(tickers: CgTicker[]): CgTicker[] {
   return tickers.filter((ticker) => {
@@ -66,20 +57,10 @@ export function aggregateCgTickersByExchange(
   for (const ticker of tickers) {
     const exchangeId = ticker.market.identifier;
     const existing = byExchange.get(exchangeId);
-    const depthDownUsd = finitePositive(ticker.cost_to_move_down_usd);
-    const depthUpUsd = finitePositive(ticker.cost_to_move_up_usd);
 
     if (existing) {
       existing.volumeUsd += ticker.converted_volume.usd;
       existing.priceVolumeWeightedSum += ticker.converted_last.usd * ticker.converted_volume.usd;
-      if (depthDownUsd != null) {
-        existing.depthDownUsd += depthDownUsd;
-        existing.depthDownCount += 1;
-      }
-      if (depthUpUsd != null) {
-        existing.depthUpUsd += depthUpUsd;
-        existing.depthUpCount += 1;
-      }
       continue;
     }
 
@@ -87,10 +68,6 @@ export function aggregateCgTickersByExchange(
       name: ticker.market.name,
       volumeUsd: ticker.converted_volume.usd,
       priceVolumeWeightedSum: ticker.converted_last.usd * ticker.converted_volume.usd,
-      depthDownUsd: depthDownUsd ?? 0,
-      depthDownCount: depthDownUsd != null ? 1 : 0,
-      depthUpUsd: depthUpUsd ?? 0,
-      depthUpCount: depthUpUsd != null ? 1 : 0,
     });
   }
 
@@ -103,21 +80,10 @@ export function buildCgTickerExchangeSummaries(
   const summaries: CgTickerExchangeSummary[] = [];
 
   for (const [exchangeId, aggregate] of aggregates) {
-    const volumeDerivedTvlUsd = aggregate.volumeUsd * ORDERBOOK_TVL_FACTOR;
-    const depthDownUsd = aggregate.depthDownCount > 0 ? aggregate.depthDownUsd : null;
-    const depthUpUsd = aggregate.depthUpCount > 0 ? aggregate.depthUpUsd : null;
-    const syntheticTvlUsd = depthDownUsd != null
-      ? Math.min(volumeDerivedTvlUsd, depthDownUsd)
-      : volumeDerivedTvlUsd;
     summaries.push({
       exchangeId,
       exchangeName: aggregate.name,
       volumeUsd: aggregate.volumeUsd,
-      volumeDerivedTvlUsd,
-      syntheticTvlUsd,
-      depthDownUsd,
-      depthUpUsd,
-      tvlBasis: depthDownUsd != null ? "coingecko-depth-2pct-capped-by-volume" : "volume-derived",
       priceUsd: aggregate.volumeUsd > 0
         ? aggregate.priceVolumeWeightedSum / aggregate.volumeUsd
         : 0,
@@ -127,18 +93,6 @@ export function buildCgTickerExchangeSummaries(
   return summaries;
 }
 
-export function buildCgTickerOrderbookMetadata(
-  summary: CgTickerExchangeSummary,
-): CgTickerOrderbookMetadata | null {
-  if (summary.tvlBasis === "volume-derived" && summary.depthDownUsd == null && summary.depthUpUsd == null) {
-    return null;
-  }
-  return {
-    orderbookTvlBasis: summary.tvlBasis,
-    ...(summary.depthDownUsd != null ? { orderbookDepthUsd: summary.depthDownUsd } : {}),
-    ...(summary.depthUpUsd != null ? { orderbookDepthUpUsd: summary.depthUpUsd } : {}),
-  };
-}
 
 export function buildCgTickerPriceObservations(
   stablecoinId: string,
@@ -146,7 +100,7 @@ export function buildCgTickerPriceObservations(
   references?: PriceValidationReferences,
 ): DexPriceObs[] {
   return summaries.flatMap((summary) => {
-    if (summary.syntheticTvlUsd < DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+    if (!Number.isFinite(summary.volumeUsd) || summary.volumeUsd < CG_TICKER_PRICE_MIN_VOLUME_USD) {
       return [];
     }
 
@@ -156,9 +110,13 @@ export function buildCgTickerPriceObservations(
 
     return [{
       price: summary.priceUsd,
-      tvl: summary.syntheticTvlUsd,
+      tvl: 0,
+      observedVolumeUsd: summary.volumeUsd,
       chain: "orderbook",
       protocol: `cg-ticker-${summary.exchangeId}`,
+      sourceFamily: "cg_tickers",
+      poolKey: `orderbook:${summary.exchangeId}:${stablecoinId}`.toLowerCase(),
+      identityConfidence: "exact",
     }];
   });
 }

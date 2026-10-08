@@ -15,6 +15,8 @@ export interface Env {
   DONOR_KEY_CLAIM_RATE_LIMIT: RateLimit;
   SAFETY_GRADES_RATE_LIMIT: RateLimit;
   CF_VERSION_METADATA: WorkerVersionMetadata;
+  /** Heavy-only binding; public scheduled paths do not require archive access. */
+  SAFETY_CAPTURE_ARCHIVE?: R2Bucket;
   CORS_ORIGIN: string;
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;
@@ -89,6 +91,7 @@ export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
 
 export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY" | "GRAPH_API_KEY" | "SAFETY_SCORE_V9_WORKFLOW"> & {
   SAFETY_SCORE_V9_WORKFLOW: Workflow;
+  SAFETY_CAPTURE_ARCHIVE: R2Bucket;
 };
 
 export interface WorkerEnvIssue {

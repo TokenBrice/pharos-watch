@@ -121,20 +121,20 @@ describe("retained discovered rows enter actual target production", () => {
   it("does not issue capture requests after the executing event expires", async () => {
     const deadline = createSlotDeadline(Date.now() - 3_600_000);
     expect(await enrich([row("uniswap-v3", "ethereum", "cg-concentrated")], deadline))
-      .toEqual({ exactPoolCount: 0, exactCapableAssets: [] });
+      .toMatchObject({ exactPoolCount: 0, exactCapableAssets: [], telemetry: [{ candidates: 1, attempted: 0, enriched: 0, dropReasons: { "deadline-exhausted": 1 } }] });
     expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
   });
 
   it.each(["cg-concentrated", "cg-cl-1bp", "cg-cl-5bp"])("resolves Pancake %s using factory identity, not display fee", async (poolType) => {
     answers("pancakeswap-v3-quoter-v2", "bsc", 2500);
     const pool = row("pancakeswap", "bsc", poolType);
-    expect(await enrich([pool])).toEqual({ exactPoolCount: 1, exactCapableAssets: ["usdc-circle"] });
+    expect(await enrich([pool])).toMatchObject({ exactPoolCount: 1, exactCapableAssets: ["usdc-circle"], telemetry: [{ adapterProfileId: "pancakeswap-v3-quoter-v2", chain: "bsc", candidates: 1, attempted: 1, enriched: 1, dropReasons: {} }] });
     expect(pool.extra?.measuredExecutionTarget).toMatchObject({ adapterProfileId: "pancakeswap-v3-quoter-v2", feePips: 2500, retainedTvlUsd: 500_000 });
   });
   it("collects Base Uniswap targets without activating a shadow deployment", async () => {
     answers("uniswap-v3-quoter-v2", "base");
     const pool = row("uniswap-v3", "base", "cg-concentrated");
-    expect(await enrich([pool])).toEqual({ exactPoolCount: 1, exactCapableAssets: [] });
+    expect(await enrich([pool])).toMatchObject({ exactPoolCount: 1, exactCapableAssets: [] });
     expect(pool.extra?.measuredExecutionTarget?.chain).toBe("base");
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "base")).toBe(false);
   });
@@ -145,7 +145,7 @@ describe("retained discovered rows enter actual target production", () => {
   ])("collects %s without admitting new forks to scoring", async (profile, project, chain) => {
     answers(profile, chain, 100);
     const pool = row(project, chain, "cg-concentrated");
-    expect(await enrich([pool])).toEqual({ exactPoolCount: 1, exactCapableAssets: [] });
+    expect(await enrich([pool])).toMatchObject({ exactPoolCount: 1, exactCapableAssets: [] });
     const target = pool.extra?.measuredExecutionTarget;
     expect(target).toMatchObject({ adapterProfileId: profile, protocol: project, chain });
     expect(isDexMeasuredExecutionDeploymentScoreEligible(profile, chain)).toBe(false);
@@ -159,7 +159,7 @@ describe("retained discovered rows enter actual target production", () => {
   });
   it("keeps a fingerprint with multiple possible physical pools unresolved", async () => {
     const pool = row("uniswap-v3", "ethereum", "cg-concentrated", `fp:ethereum:uniswap-v3:${TOKEN0}:${TOKEN1}`);
-    expect(await enrich([pool])).toEqual({ exactPoolCount: 0, exactCapableAssets: [] });
+    expect(await enrich([pool])).toEqual({ exactPoolCount: 0, exactCapableAssets: [], telemetry: [] });
     expect(pool.extra?.measuredExecutionTarget).toBeUndefined();
     expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
   });

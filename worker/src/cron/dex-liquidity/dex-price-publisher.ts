@@ -10,6 +10,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
 import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations } from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
 
@@ -54,7 +55,7 @@ function dexPriceExactCurrentGenerationBinds(generationId: string, priceRowCount
   return [generationId, priceRowCount];
 }
 
-/** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
+/** Publish retained-pool prices plus independent, zero-TVL exchange price evidence. */
 export interface DexPricePersistenceDiagnostics {
   rejectedObservationCount: number;
   rejectedByStablecoin: Array<{
@@ -154,12 +155,12 @@ export async function computeDexPrices(
   let withheldStablecoinCount = 0;
   const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
   const withheldByStablecoin: NonNullable<DexPricePersistenceDiagnostics["withheldByStablecoin"]> = [];
-  for (const [id, retainedPools] of retainedPoolsByStablecoin) {
+  const priceEvidence = buildDexPriceObservationsFromRetainedPools(
+    retainedPoolsByStablecoin,
+    exactPriceEvidenceByStablecoin,
+  );
+  for (const [id, observations] of priceEvidence) {
     throwIfAborted(signal);
-    const observations =
-      buildDexPriceObservationsFromRetainedPools(new Map([[id, retainedPools]]), exactPriceEvidenceByStablecoin).get(
-        id,
-      ) ?? [];
     if (observations.length === 0) continue;
     const prices = await loadPrimaryPrices(id);
 
@@ -241,18 +242,14 @@ export async function computeDexPrices(
       }
     }
 
-    // Scale TVL weights by source confidence before computing median
-    const adjustedObs = medianInputObs.map((o) => ({
-      ...o,
-      tvl: o.tvl * dexPriceConfidenceForSourceFamily(o.sourceFamily),
-    }));
-
-    // TVL-weighted lower-discrete median. The first-observation fallback
-    // preserves the scoring lane's non-empty-input contract if all adjusted
-    // confidence weights are non-positive.
+    // Pool prices retain confidence-adjusted TVL weights. Exchange tickers
+    // use observed 24h USD volume, with zero liquidity attribution.
     const medianPrice = weightedMedian(
-      adjustedObs.map((observation) => ({ value: observation.price, weight: observation.tvl })),
-    ) ?? adjustedObs[0].price;
+      medianInputObs.map((observation) => ({
+        value: observation.price,
+        weight: dexPriceEvidenceWeight(observation) * dexPriceConfidenceForSourceFamily(observation.sourceFamily),
+      })),
+    ) ?? medianInputObs[0].price;
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
     const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);

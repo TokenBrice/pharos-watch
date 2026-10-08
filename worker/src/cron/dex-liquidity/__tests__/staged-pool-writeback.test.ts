@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
 import { initMetrics } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
@@ -18,6 +18,7 @@ const DIRECT_API_POOL = "0x00000000000000000000000000000000000000a5";
 const BACKFILLED_POOL = "base:0x00000000000000000000000000000000000000b2";
 const USDC_TOKEN = "0x00000000000000000000000000000000000000b1";
 const USDT_TOKEN = "0x00000000000000000000000000000000000000c2";
+afterEach(() => vi.restoreAllMocks());
 
 function makePoolEntry(overrides: Partial<PoolEntry> = {}): PoolEntry {
   return {
@@ -210,6 +211,7 @@ describe("buildStagedPoolWriteback", () => {
   });
 
   it("round-trips a written-back row into the next run's metrics", async () => {
+    vi.spyOn(Date, "now").mockReturnValue((NOW + 3_600) * 1000);
     const writeback = buildStagedPoolWriteback(
       new Map([["usdc-circle", makeMetrics("usdc-circle", [makePoolEntry({ price: 0.9998, extra: { measurement: { priceMeasured: true } } })])]]),
       NOW,
@@ -237,6 +239,7 @@ describe("buildStagedPoolWriteback", () => {
   });
 
   it("never writes back a row the merge itself backfilled", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
     const metrics = new Map([["usdc-circle", makeMetrics("usdc-circle", [makePoolEntry()])]]);
 
     // Production order: snapshot before the merge, upsert after it.

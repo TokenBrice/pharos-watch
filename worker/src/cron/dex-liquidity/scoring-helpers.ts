@@ -19,6 +19,7 @@ import {
 } from "@shared/lib/dex-volume-availability";
 import { normalizeProtocol } from "./pool-helpers";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { CG_TICKER_PRICE_MIN_VOLUME_USD, dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
 
 /** Evaluation clock for DEC-19 volume windows: the run's source clock plus the producer budget. */
 export type DexVolumeClock = Parameters<typeof summarizeDexVolumeWindow>[2];
@@ -563,9 +564,9 @@ function getObservationIdentityKey(observation: DexPriceObs): string | null {
 }
 
 // Protocol display prices require usable positive evidence weight.
-function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number | null {
+function evidenceWeightedMedian(observations: readonly DexPriceObs[]): number | null {
   return weightedMedian(
-    observations.map((observation) => ({ value: observation.price, weight: observation.tvl })),
+    observations.map((observation) => ({ value: observation.price, weight: dexPriceEvidenceWeight(observation) })),
   );
 }
 
@@ -612,7 +613,7 @@ export function aggregateProtocolSources(
 ): Array<{ protocol: string; chain: string; price: number; tvl: number; sourceFamily?: string }> {
   const byProtocolFamily = new Map<string, DexPriceObs[]>();
   for (const observation of observations) {
-    if (!Number.isFinite(observation.tvl) || observation.tvl <= 0 ||
+    if (dexPriceEvidenceWeight(observation) <= 0 ||
       !Number.isFinite(observation.price) || observation.price <= 0) continue;
     const sourceFamily = normalizeSourceFamily(observation.sourceFamily);
     const key = `${observation.protocol}:${sourceFamily ?? "unknown"}`;
@@ -625,7 +626,7 @@ export function aggregateProtocolSources(
     const protocol = protocolObs[0]?.protocol ?? "unknown";
     const sourceFamily = normalizeSourceFamily(protocolObs[0]?.sourceFamily);
     const totalTvl = protocolObs.reduce((sum, observation) => sum + observation.tvl, 0);
-    const price = tvlWeightedMedian(protocolObs);
+    const price = evidenceWeightedMedian(protocolObs);
     if (price == null) return [];
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
@@ -722,5 +723,17 @@ export function buildDexPriceObservationsFromRetainedPools(
     }
   }
 
+  // Exchange evidence is independent of retained pools. Its zero TVL must
+  // remain zero all the way to publication and downstream DEX trust gates.
+  for (const [stablecoinId, evidence] of exactPriceEvidenceByStablecoin ?? []) {
+    const tickerPrices = evidence.filter((observation) =>
+      observation.sourceFamily === "cg_tickers" && observation.tvl === 0 &&
+      dexPriceEvidenceWeight(observation) >= CG_TICKER_PRICE_MIN_VOLUME_USD &&
+      Number.isFinite(observation.price) && observation.price > 0
+    );
+    if (tickerPrices.length > 0) {
+      observations.set(stablecoinId, [...(observations.get(stablecoinId) ?? []), ...tickerPrices]);
+    }
+  }
   return observations;
 }

@@ -53,6 +53,7 @@ const phaseFixtures = vi.hoisted(() => {
       },
       poolMetrics: { metrics: new Map(), rejections: [] },
       stagedPools: {
+        registryEvaluatedAtSec: Math.floor(Date.now() / 1000),
         mergedCount: 0,
         skippedCount: 0,
         skippedByExactIdentityCount: 0,
@@ -75,6 +76,8 @@ const phaseFixtures = vi.hoisted(() => {
         diagnostics: {
           protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
           fallbackCounters: { tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 },
+          measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
+          routeRemovalEvidence: new Map(),
         },
       },
       stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null },
@@ -511,6 +514,8 @@ describe("dex liquidity scoring stage cycle", () => {
       tvlStabilityMap: new Map(),
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+        measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
+        routeRemovalEvidence: new Map(),
       },
     } as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
     const guardDb = makeNoopD1({
@@ -642,12 +647,13 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth");
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(persistScores).toHaveBeenCalledWith(
-      db,
+      expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }),
       expect.any(Map),
       phaseFixtures.current.scores.scores,
       phaseFixtures.current.scores.globalAgg,
       expect.any(Number),
       undefined,
+      phaseFixtures.current.scores.diagnostics.routeRemovalEvidence,
     );
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
@@ -662,6 +668,19 @@ describe("dex liquidity scoring stage cycle", () => {
       fallbackCounters?: Record<string, number>;
     };
     expect(metadata.fallbackCounters).toEqual({ tvlDepthMcapFallback: 2, retainedExclusionBlockedDex: 1 });
+    expect(metadata).toMatchObject({
+      d1Cost: {
+        queries: expect.any(Number),
+        rowsRead: expect.any(Number),
+        rowsWritten: expect.any(Number),
+        coverage: "partial",
+        reasons: expect.arrayContaining([
+          "outer-lease-and-progress-queries-excluded",
+          "cron-logger-and-terminal-writes-excluded",
+          "failed-run-cost-not-recorded",
+        ]),
+      },
+    });
   });
 
   it("surfaces pool-intake fallback counters in the scoring-stage run metadata", async () => {
@@ -673,6 +692,19 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.fallbackCounters).toBeDefined();
     expect(metadata.fallbackCounters?.unmeasuredBalanceOptimistic).toBeTypeOf("number");
     expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
+    expect(metadata).toMatchObject({
+      d1Cost: {
+        queries: expect.any(Number),
+        rowsRead: expect.any(Number),
+        rowsWritten: expect.any(Number),
+        coverage: "partial",
+        reasons: expect.arrayContaining([
+          "outer-lease-and-progress-queries-excluded",
+          "cron-logger-and-terminal-writes-excluded",
+          "failed-run-cost-not-recorded",
+        ]),
+      },
+    });
   });
 
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {
@@ -704,7 +736,7 @@ describe("dex liquidity scoring stage cycle", () => {
 
     expect(consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC).toBe(sourceSlot);
     expect(loadDexLiquidityScoringStage).toHaveBeenLastCalledWith(
-      db,
+      expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }),
       expect.objectContaining({ expectedSourceSlotStartedAt: sourceSlot }),
       undefined,
     );
@@ -978,6 +1010,7 @@ describe("dex liquidity scoring stage cycle", () => {
         expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toBeUndefined();
         expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")).toBeUndefined();
         return {
+          registryEvaluatedAtSec: Math.floor(Date.now() / 1000),
           mergedCount: 0,
           skippedCount: 0,
           skippedByExactIdentityCount: 0,
@@ -1324,6 +1357,8 @@ describe("dex liquidity scoring stage cycle", () => {
       tvlStabilityMap: new Map(),
       diagnostics: {
         protocolCapReductions: { cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50 },
+        measuredTargetFunnel: { stageOrigin: "scheduled", groups: [], groupsOmitted: 0, sourceFailures: [], sourceFailuresOmitted: 0 },
+        routeRemovalEvidence: new Map(),
       },
     } as unknown as Awaited<ReturnType<typeof computeStablecoinScores>>);
 
@@ -1559,7 +1594,12 @@ describe("dex liquidity stage same-hour recovery", () => {
         reason: "stage-run-errored",
         sourceSlotStartedAt: sourceSlot,
         generationId: `dex-liquidity-scoring-stage:${sourceSlot}`,
+        stageResult: {
+          status: "ok",
+          metadata: { graphApiKeyConfigured: true, targetEnrichment: [] },
+        },
       },
+      measuredTargetFunnel: { stageOrigin: "recovery", graphApiKeyConfigured: true },
     });
     // The recovery rewrote the exact slot's generation and consumed it, and it
     // released the stage-job lease it fenced the rewrite with.
@@ -1607,6 +1647,63 @@ describe("dex liquidity stage same-hour recovery", () => {
       reason: "stage-missing",
       sourceSlotStartedAt: sourceSlot,
     });
+  });
+
+  it.each([null, "", "   "])("refuses missing-stage recovery without Graph credentials (%j) before any producer writes", async (graphApiKey) => {
+    const harness = openHarness();
+
+    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey },
+    })).rejects.toThrow("missing-graph-api-key");
+
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+    for (const table of ["dex_liquidity_scoring_stages", "dex_liquidity_scoring_stage_chunks", "cron_leases"]) {
+      expect(harness.sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
+    }
+  });
+
+  it("consumes a ready source stage without requiring recovery credentials", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    vi.mocked(fetchDataSources).mockClear();
+
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey: null },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).toHaveBeenCalledOnce();
+    expect(harness.sqlite.prepare(
+      `SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`,
+    ).get(sourceSlot)).toEqual({ state: "consumed" });
+  });
+
+  it("reuses the prior generation at the half-hour tick when recovery lacks Graph credentials", async () => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+    vi.setSystemTime(halfHourSlot * 1_000);
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue("dex-liquidity-current");
+
+    const result = await reuseCurrentDexLiquidityScoringGeneration(
+      harness.db, undefined, undefined, halfHourSlot,
+      { stageRecovery: { graphApiKey: null } },
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      cadenceReuse: true,
+      persistence: { generationId: "dex-liquidity-current" },
+    });
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
+    expect(harness.sqlite.prepare(
+      `SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`,
+    ).get()).toEqual({ count: 0 });
   });
 
   it("fails fast with a machine-readable reason when a terminal stage has no recovery", async () => {

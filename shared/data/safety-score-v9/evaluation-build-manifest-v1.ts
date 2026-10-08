@@ -118,7 +118,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "ff8fa52f5477d673894bd6503ac374e84f007c7563f6b3684854e7f17fc3e083"
+      "sha256": "9bd8b609f73916fca64ec00a20a04d7edfd11bdafb634fac1a7e26b583105da0"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -142,7 +142,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-observation-assembly.ts",
-      "sha256": "41dabec4b31c36cd943eeb325a8588f4b2f1d485613e956de19164332cc9f810"
+      "sha256": "789d951fa3229740836f4a5966a030870c1e79c37bd3d392cc4f907066b0f42d"
     },
     {
       "path": "shared/lib/redemption-backstop-capacity.ts",
@@ -646,7 +646,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/cron/dex-liquidity/scoring.ts",
-      "sha256": "dcdfc6fd1f58f00ec7f3713114f2675b8741a3496c3452ed298259e2a77c5eb8"
+      "sha256": "68d09b391ae3e1696a08965e55e70759169d657396e494295a912d209e5a437d"
     },
     {
       "path": "worker/src/cron/reserve-adapters/evm-observation-plan.ts",
@@ -903,7 +903,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-07-block-26139859-shock-coverage.json.gz"
     }
   ],
-  "digest": "4cc186f0ebd9a87a58264db9818f25eca50c70a94329da3d889cbf3a793c25f0"
+  "digest": "d5b79949719c049498f51d08aa205aa9dcd2e5db0cd98928dc3dfefe93d2d03d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

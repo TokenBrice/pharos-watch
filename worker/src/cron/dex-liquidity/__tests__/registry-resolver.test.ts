@@ -34,7 +34,7 @@ describe("resolveRegistryPools", () => {
     const measured = row({ source: "cg_onchain", refreshedAt: NOW - 60 });
     expect(resolveRegistryPools([nullValue, measured], NOW)[0].value).toBe(measured);
     const freshestNull = row({ source: "dexscreener", tvlUsd: null, refreshedAt: NOW + 1 });
-    expect(resolveRegistryPools([nullValue, freshestNull], NOW)[0].value).toBe(freshestNull);
+    expect(resolveRegistryPools([nullValue, freshestNull], NOW + 1)[0].value).toBe(freshestNull);
   });
 
   it("selects price independently with its original source and its own day-fresh fence", () => {
@@ -59,11 +59,17 @@ describe("resolveRegistryPools", () => {
     expect(resolveRegistryPools([stale, staleNewer], NOW)[0].volume).toBe(staleNewer);
   });
 
-  it("ignores volume rows dated after the run clock", () => {
-    const future = row({ refreshedAt: NOW + 240 });
+  it("rejects future rows whole rather than accepting their TVL, price or metadata", () => {
+    const future = row({ refreshedAt: NOW + 240, priceUsd: 999, baseToken: "future-token" });
     const valid = row({ source: "dexscreener", refreshedAt: NOW - 3600 });
-    expect(resolveRegistryPools([future, valid], NOW)[0].volume).toBe(valid);
-    expect(resolveRegistryPools([future], NOW)[0].volume).toBeNull();
+    const view = resolveRegistryPools([future, valid], NOW)[0];
+    expect(view.value).toBe(valid);
+    expect(view.volume).toBe(valid);
+    expect(view.price).toBeNull();
+    expect(view.metadata.baseToken).toBeNull();
+    expect(view.sources).toEqual(["dexscreener"]);
+    expect(view.lastSeenAt).toBe(valid.refreshedAt);
+    expect(resolveRegistryPools([future], NOW)).toEqual([]);
   });
 
   it("treats a zero refreshed before the provenance cutover as absent and keeps positive legacy readings", () => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TEZOS_POOL_IDENTITY_REVIEW_VERSION,
   SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION,
@@ -131,6 +131,9 @@ describe("mergeStagedPools", () => {
   const baseToken = "0x00000000000000000000000000000000000000b1";
   const quoteToken = "0x00000000000000000000000000000000000000c2";
 
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(1_710_000_000 * 1000);
+  });
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -1616,7 +1619,7 @@ describe("mergeStagedPools", () => {
     expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
   });
 
-  it("orderbook pools skip fingerprint dedup (null tokens)", async () => {
+  it.each([null, 500000])("keeps ticker prices but no liquidity for stored TVL %s", async (tvl) => {
     const now = 1710000000;
     const mockDb = createMockDb([
       {
@@ -1626,7 +1629,7 @@ describe("mergeStagedPools", () => {
         chain: "orderbook",
         protocol: "binance",
         symbol: "USDT/USD",
-        tvl_usd: 500000,
+        tvl_usd: tvl,
         volume_24h: 1000000,
         fee_tier: null,
         balance_ratio: null,
@@ -1646,26 +1649,19 @@ describe("mergeStagedPools", () => {
       },
     ]);
     const metrics = new Map();
-    // Fingerprint for this pool would be null (no tokens), so it should NOT be
-    // skipped by fingerprint dedup — only exact poolId match matters
     const knownPoolIndex = makeKnownPoolIndex();
 
     const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
-    expect(result.mergedCount).toBe(1);
-    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
-    expect(metrics.get("usdt-tether")?.topPools[0]?.extra).toMatchObject({
-      orderbookTvlBasis: "coingecko-depth-2pct-capped-by-volume",
-      orderbookDepthUsd: 500000,
-      orderbookDepthUpUsd: 700000,
-      measurement: {
-        synthetic: true,
-        tvlMeasured: true,
-      },
-    });
+    expect(result.mergedCount).toBe(0);
+    expect(metrics.has("usdt-tether")).toBe(false);
+    expect(result.registryFamilyBySource).toEqual({});
+    expect(result.priceObservations.get("usdt-tether")).toEqual([
+      expect.objectContaining({ price: 1.0001, tvl: 0, observedVolumeUsd: 1000000, sourceFamily: "cg_tickers" }),
+    ]);
   });
 
-  it("does not exact-dedupe legacy exchange-only orderbook rows across stablecoins", async () => {
+  it("keeps legacy ticker price identity separate across stablecoins without scoring pools", async () => {
     const now = 1710000000;
     const makeOrderbookRow = (stablecoinId: string, symbol: string) => ({
       pool_id: "orderbook:binance",
@@ -1701,11 +1697,47 @@ describe("mergeStagedPools", () => {
 
     const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now, new Map());
 
-    expect(result.mergedCount).toBe(2);
+    expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
     expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(metrics.size).toBe(0);
+    expect(result.priceObservations.get("usdt-tether")?.[0].poolKey).toBe("orderbook:binance:usdt-tether");
+    expect(result.priceObservations.get("usdc-circle")?.[0].poolKey).toBe("orderbook:binance:usdc-circle");
+  });
+
+  it("removes only ticker liquidity from a mixed coin", async () => {
+    const metrics = new Map<string, LiquidityMetrics>();
+    const result = await mergeStagedPools(createMockDb([
+      makeStagedPoolRow({ source: "cg_onchain", tvl_usd: 100_000, price_usd: 1 }),
+      makeStagedPoolRow({
+        pool_id: "orderbook:binance:usdt-tether", source: "cg_tickers", chain: "orderbook",
+        protocol: "binance", tvl_usd: 30_000_000, volume_24h: 10_000_000, price_usd: 1,
+      }),
+    ]), metrics, makeKnownPoolIndex(), 1710000000, new Map());
+    const metric = metrics.get("usdt-tether")!;
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+    expect(result.mergedCount).toBe(1);
+    expect(metrics.get("usdt-tether")?.totalTvlUsd).toBe(100_000);
     expect(metrics.get("usdt-tether")?.topPools).toHaveLength(1);
-    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
+    expect(metrics.get("usdt-tether")?.topPools[0].source).toBe("cg_onchain");
+    expect(result.priceObservations.get("usdt-tether")).toHaveLength(2);
+  });
+
+  it.each([
+    { age: 24 * 3600 + 1, volume: 100_000 },
+    { age: -1, volume: 100_000 },
+    { age: 0, volume: null },
+    { age: 0, volume: 999 },
+  ])("does not admit unusable ticker price evidence %j", async ({ age, volume }) => {
+    const now = 1710000000;
+    const metrics = new Map<string, LiquidityMetrics>();
+    const result = await mergeStagedPools(createMockDb([makeStagedPoolRow({
+      pool_id: "orderbook:binance:usdt-tether", source: "cg_tickers", chain: "orderbook",
+      protocol: "binance", tvl_usd: 30_000_000, volume_24h: volume, price_usd: 1,
+      refreshed_at: now - age,
+    })]), metrics, makeKnownPoolIndex(), now, new Map());
+    expect(metrics.size).toBe(0);
+    expect(result.priceObservations.size).toBe(0);
   });
 
   it("resolves two sources to one pool while keeping value family and price provenance independent", async () => {
@@ -1755,6 +1787,10 @@ describe("mergeStagedPools", () => {
 
 describe("mergeStagedPools dead-pool floor (v6.92)", () => {
   const NOW = DEX_VOLUME_ZERO_PROVENANCE_SINCE_SEC + 6 * 3600;
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+  });
+  afterEach(() => vi.restoreAllMocks());
   const USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
   const USDT = "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2";
   const JUNK = "0x4c3f33fd2f6cf46dd53940eba9b7d0b16cef4e7b";

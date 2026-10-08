@@ -447,7 +447,7 @@ export function PriceTransparencyCard({
               <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
                 ·
               </span>
-              {dexPriceCheck.sourcePools} pools
+              {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"}
               <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
                 ·
               </span>
@@ -545,7 +545,7 @@ export function PriceTransparencyCard({
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground">
-                {dexPriceCheck.sourcePools} pools · ${(dexPriceCheck.sourceTvl / 1e6).toFixed(1)}M TVL
+                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · ${(dexPriceCheck.sourceTvl / 1e6).toFixed(1)}M TVL
               </span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">

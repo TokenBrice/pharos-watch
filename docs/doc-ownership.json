@@ -447,6 +447,8 @@
         { "path": "docs/digest-pipeline.md", "anchor": "generation" },
         { "path": "docs/report-cards.md", "anchor": "dependency-coverage" },
         { "path": "docs/report-cards.md", "anchor": "canonical-publication" },
+        { "path": "docs/report-cards.md", "anchor": "publication-journal-and-movement-attribution" },
+        { "path": "docs/report-cards.md", "anchor": "accepted-capture-archive-and-historical-replay" },
         { "path": "docs/mint-authority-scoring.md", "anchor": "mint-authority-entry" },
         { "path": "docs/digest-pipeline.md", "anchor": "distribution" }
       ],

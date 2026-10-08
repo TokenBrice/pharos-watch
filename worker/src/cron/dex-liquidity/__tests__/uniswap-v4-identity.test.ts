@@ -134,7 +134,8 @@ describe("retained V4 target recovery", () => {
   });
   it("does not start identity recovery after the executing event expires", async () => {
     const f = fixture();
-    await enrichUniswapV4ExecutionTargets({ ...f.input, deadline: createSlotDeadline(Date.now() - 3_600_000) });
+    expect(await enrichUniswapV4ExecutionTargets({ ...f.input, deadline: createSlotDeadline(Date.now() - 3_600_000) }))
+      .toMatchObject([{ candidates: 1, attempted: 0, enriched: 0, dropReasons: { "runtime-deadline-exceeded": 1 } }]);
     expect(f.dependencies.blockNumber).not.toHaveBeenCalled();
     expect(f.pool.extra?.measuredExecutionTarget).toBeUndefined();
   });
@@ -143,7 +144,7 @@ describe("retained V4 target recovery", () => {
     const f = fixture();
     f.pool.source = source;
     if (source === "dl") f.pool.poolType = "generic";
-    await enrichUniswapV4ExecutionTargets(f.input);
+    expect(await enrichUniswapV4ExecutionTargets(f.input)).toMatchObject([{ chain: "ethereum", candidates: 1, attempted: 1, enriched: 1, dropReasons: {} }]);
     expect(f.pool.extra?.measuredExecutionTarget).toMatchObject({ poolId: `ethereum:${POOL_ID}`, poolTokenAddresses: [TOKEN0, TOKEN1], feePips: 5, tickSpacing: 1, hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS, capturedAt: f.timestamp });
     expect(f.pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(f.pool).toMatchObject({ source, tvlUsd: 2_000_000, volumeUsd1d: null });
@@ -168,7 +169,7 @@ describe("retained V4 target recovery", () => {
   it("fails closed before PoolKey reads when the new chain's deployment verification fails", async () => {
     const f = fixture("base");
     f.dependencies.verify.mockResolvedValue({ ok: false, reason: "pool-manager-code-hash-mismatch" });
-    await enrichUniswapV4ExecutionTargets(f.input);
+    expect(await enrichUniswapV4ExecutionTargets(f.input)).toMatchObject([{ chain: "base", candidates: 1, attempted: 1, enriched: 0, dropReasons: { "pool-manager-code-hash-mismatch": 1 } }]);
     expect(f.pool.extra?.measuredExecutionTarget).toBeUndefined();
     expect(f.pool.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
     expect(f.pool.extra?.measuredExecutionDiagnostic?.detail).toBe("pool-manager-code-hash-mismatch");

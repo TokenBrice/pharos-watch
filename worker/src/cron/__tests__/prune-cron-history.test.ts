@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { WORKER_CANARY_RUN_RETENTION_SEC } from "../../lib/canary-checks";
+import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const createTestDb = fixtures.open;
@@ -39,6 +40,67 @@ describe("runPruneCronHistory", () => {
     controller.abort(new Error("cron history prune aborted"));
 
     await expect(runPruneCronHistory(db, controller.signal)).rejects.toThrow("cron history prune aborted");
+  });
+
+  it("prunes both Safety evidence stores at 120 days while retaining the exact boundary", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - 120 * 86_400;
+    for (const [id, clock] of [["old", cutoff - 1], ["boundary", cutoff]] as const) {
+      insert(sqlite, `INSERT INTO safety_score_publication_journal
+        (generation_id, stablecoin_id, published_at, methodology_version, policy_digest, evaluation_build_digest, compact_digest, compact_json, input_lineage_json)
+        VALUES (?, 'coin', ?, '10.12', 'policy', 'build', 'digest', '{}', '{}')`, id, clock);
+      insert(sqlite, `INSERT INTO safety_score_publication_attempts
+        (attempt_id, generation_id, attempted_at, published_at, outcome, hold_reason_codes_json, methodology_version, policy_digest, evaluation_build_digest, input_lineage_json)
+        VALUES (?, ?, ?, ?, 'held', '["dex-stale"]', '10.12', 'policy', 'build', '{}')`, id, id, clock, clock);
+    }
+    const result = await runPruneCronHistory(db);
+    expect(sqlite.prepare("SELECT generation_id FROM safety_score_publication_journal").all()).toEqual([{ generation_id: "boundary" }]);
+    expect(sqlite.prepare("SELECT attempt_id FROM safety_score_publication_attempts").all()).toEqual([{ attempt_id: "boundary" }]);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      safetyScoreJournalDeleted: 1, safetyScoreAttemptsDeleted: 1, cutoffSafetyScoreJournalSec: cutoff,
+      safetyScoreJournalCappedAtLimit: false, safetyScoreAttemptsCappedAtLimit: false,
+    });
+  });
+
+  it("prunes only the 180-day archive index expiry and retains every newer generation", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC;
+    const rows = [["expired", cutoff - 1], ["boundary", cutoff], ["recent-1", now - 100], ["recent-2", now - 99]] as const;
+    for (const [id, clock] of rows) {
+      insert(sqlite, `INSERT INTO safety_score_capture_archive
+        (generation_id, published_at, methodology_version, policy_digest, evaluation_build_digest,
+         r2_key, object_sha256, object_bytes, archived_at)
+        VALUES (?, ?, '10.12', 'policy', 'build', ?, 'digest', 123, ?)`, id, clock, `captures/${id}`, now);
+    }
+    const result = await runPruneCronHistory(db);
+    expect(sqlite.prepare("SELECT generation_id FROM safety_score_capture_archive ORDER BY published_at").all())
+      .toEqual([{ generation_id: "boundary" }, { generation_id: "recent-1" }, { generation_id: "recent-2" }]);
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      safetyScoreCaptureArchiveDeleted: 1, safetyScoreCaptureArchiveCappedAtLimit: false,
+      cutoffSafetyScoreCaptureArchiveSec: cutoff,
+    });
+  });
+
+  it("caps archive-index expiry at 100,000 rows and reports the remaining backlog", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 100001)
+      INSERT INTO safety_score_capture_archive
+        (generation_id, published_at, methodology_version, policy_digest, evaluation_build_digest,
+         r2_key, object_sha256, object_bytes, archived_at)
+      SELECT printf('generation-%06d', id), ?, '10.12', 'policy', 'build',
+        printf('captures/%d', id), 'digest', 123, ? FROM n`).run(cutoff - 1, now);
+    const result = await runPruneCronHistory(db);
+    expect(result.itemCount).toBe(100_000);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      safetyScoreCaptureArchiveDeleted: 100_000, safetyScoreCaptureArchiveCappedAtLimit: true,
+    });
+    expect(sqlite.prepare("SELECT generation_id FROM safety_score_capture_archive").all())
+      .toEqual([{ generation_id: "generation-100001" }]);
   });
 
   it.each([

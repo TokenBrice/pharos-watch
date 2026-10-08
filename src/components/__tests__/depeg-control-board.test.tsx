@@ -82,6 +82,16 @@ describe("getDeviationBarWidthPercent", () => {
 });
 
 describe("DepegControlBoard", () => {
+  it.each([1, 2])("labels %s DEX check observations as price sources", (sourcePools) => {
+    renderBoard([makeRow({
+      dexPriceCheck: { agrees: true, dexPrice: 1, dexDeviationBps: 0, sourcePools, sourceTvl: 1_740_000 },
+    })]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const label = `${sourcePools} price ${sourcePools === 1 ? "source" : "sources"} · $1.74M`;
+    expect(within(row).getByText(label)).toBeTruthy();
+    expect(within(row).queryByText(/\b\d+ pools?\b/)).toBeNull();
+  });
+
   it("renders unknown peg occupancy as unavailable rather than zero or perfect stability", () => {
     renderBoard([makeRow({ pegScore: null, pegPct: null })]);
     const row = screen.getByRole("button", { name: /open susd depeg detail/i });

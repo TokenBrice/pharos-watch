@@ -167,7 +167,7 @@ describe("PriceTransparencyCard", () => {
     expect(screen.getByText("DEX Check")).toBeTruthy();
     expect(screen.getByText("Agrees")).toBeTruthy();
     expect(screen.getByText("$0.9992")).toBeTruthy();
-    expect(screen.getByText(/12 pools/i)).toBeTruthy();
+    expect(screen.getByText(/12 price sources/i)).toBeTruthy();
     expect(screen.getByText("CoinGecko")).toBeTruthy();
     expect(screen.getByText("Kraken")).toBeTruthy();
     expect(screen.getByText("Uniswap V3")).toBeTruthy();
@@ -177,6 +177,28 @@ describe("PriceTransparencyCard", () => {
   });
 
   describe("DEX check verdict", () => {
+    it.each([
+      { compact: false, sourcePools: 1 },
+      { compact: true, sourcePools: 1 },
+      { compact: false, sourcePools: 2 },
+      { compact: true, sourcePools: 2 },
+    ])("labels price observations and retains genuine TVL (compact=$compact, count=$sourcePools)", ({ compact, sourcePools }) => {
+      render(
+        <PriceTransparencyCard
+          coinData={makeCoinData("coingecko")}
+          consensusSources={["coingecko"]}
+          agreeSources={["coingecko"]}
+          dexPriceCheck={{ agrees: true, dexPrice: 1, dexDeviationBps: 0, sourcePools, sourceTvl: 2_500_000 }}
+          compact={compact}
+        />,
+      );
+      const sourceLabel = `${sourcePools} price ${sourcePools === 1 ? "source" : "sources"}`;
+      const summary = screen.getByText(sourceLabel, { exact: false });
+      expect(summary.textContent).toContain("TVL");
+      expect(summary.textContent).toContain("2.5");
+      expect(screen.queryByText(/\b\d+ pools?\b/)).toBeNull();
+    });
+
     // A yield-bearing NAV token: the payload's deviation is measured against
     // the token's own reference price, so a matching print agrees.
     const navCheck = { agrees: true, dexPrice: 1.2513, dexDeviationBps: -1, sourcePools: 9, sourceTvl: 40_000_000 };

@@ -398,9 +398,11 @@ export function SafetyScoresOverview() {
       <p>
         Since methodology v10.12, exact orderbook execution is research-only with diagnostic certification.
         The dormant Kraken request observer is retired: a public book does not prove same-run account access,
-        deposits, withdrawals, fees or maximum settlement. Ordinary exchange spot prices and generic CoinGecko
-        synthetic books remain separate evidence; reviewed Securitize and synchronous ERC-4626 routes keep
-        their existing admission. A neutral captured-input replay is required before release, not assumed.
+        deposits, withdrawals, fees or maximum settlement. Ordinary exchange spot prices remain separate evidence;
+        Liquidity v6.93 excludes synthetic CoinGecko books while Pricing v6.44 retains price-only ticker evidence.
+        Reviewed Securitize and synchronous ERC-4626 routes keep their existing admission. The Safety formula is
+        unchanged and improved Safety Score stability is unmeasured. A neutral captured-input replay is required before
+        release, not assumed.
       </p>
       <p>
         The same release preserves source-native reserve quantities and original clocks: CAD/QCAD and GBP/tGBP
