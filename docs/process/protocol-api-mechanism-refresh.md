@@ -16,6 +16,8 @@ Archive resolution uses original local bytes or a hash-checked local cache first
 
 Live capture consumes each response body once, then requires a successful HTTP response, a JSON media type, and an object- or array-shaped body before schema parsing. Every response emits bounded transport provenance: source ID, query-free configured and final URLs, status, redirect state, normalized media type, byte length, body SHA-256, a coarse body class, and selected length-bounded edge headers. Response bytes, decoded text, query strings, cookies, authorization material, and arbitrary headers are never logged. Edge diagnostics remain capture logs only and do not enter Artifact V2 transport headers or evidence identity.
 
+Transport diagnostics also carry a machine-readable `reason`: `http-error` for unsuccessful HTTP status, `non-json-media-type` for missing or non-JSON media type, `unexpected-body-class` for a body that is neither object- nor array-shaped, or `null` when the transport gate accepts the response. HTTP status takes precedence over media type, which takes precedence over body shape. A redirect to restricted HTML remains a failed capture even when the final status is 200; schema and freshness validation still run only after transport acceptance.
+
 ## Target Semantics
 
 ### Ethena USDe
@@ -23,6 +25,19 @@ Live capture consumes each response body once, then requires a successful HTTP r
 USDe combines Ethena's collateralization-status and proof-of-reserves observations. Collateralization observations may be at most 12 hours old, PoR observations at most 10 days old, and timestamps may not be more than 5 minutes in the future.
 
 The producer measures collateralization, reserve excess, and the dedicated Reserve Fund share. Delta-neutral and overcollateralized statements remain dated qualitative claims. Quantitative hedge coverage, exchange-margin headroom, funding-basis stress, and executable unwind capacity remain unavailable. Direct score adoption stays blocked; measured collateral/fund facts can inform confirmatory or adverse human curation, never substitute excess collateral for exchange margin or custody allocation for hedge notional.
+
+#### Restricted-access source investigation
+
+The [September 30](https://github.com/TokenBrice/pharos-watch/actions/runs/36702589056) and [October 7](https://github.com/TokenBrice/pharos-watch/actions/runs/37611433702) captures followed `https://app.ethena.fi/api/collateralization/status` to `https://ethena.fi/restricted`: HTTP 200, `text/html`, and an HTML-shaped body. The restricted page states that access may depend on country or wallet risk; its text is not collateralization evidence.
+
+The October 8 investigation found no supported replacement with an equivalent, documented backing/fund/supply contract:
+
+- Ethena's [backing-assets documentation](https://docs.ethena.fi/backing-assets/overview) points to the official [Transparency dashboard](https://app.ethena.fi/dashboards/transparency). Its rendered page still requests the configured collateralization-status and `/api/por` endpoints. Local GET probes returned JSON without redirects for both; that egress-specific observation does not establish access from scheduled GitHub runners or resolve the recorded failures.
+- The documented [public API](https://docs.ethena.fi/api-documentation/overview) is a whitelisted mint/redeem API, not a public reserves interface.
+- The [PoR engineering description](https://ethena.fi/blog/ethena-engineering-blog-proof-of-reserves) documents an enclave-generated JSON proof and weekly attestation process, but does not provide a replacement public retrieval endpoint or a documented reserves-oracle address.
+- The [real-time dashboard documentation](https://docs.ethena.fi/backing-custody-and-security/real-time-dashboards) explicitly warns that Copper/Ceffu deposit addresses do not represent the protocol's full backing. Token supply or those address balances cannot substitute for total backing and the separate Reserve Fund.
+
+The source cutover remains blocked pending an official retrieval/access contract covering these fields. Keep the existing source configuration and fail-closed validation; do not invent a URL, bypass provider restrictions, infer complete backing from partial on-chain balances, or add blind retries. The focused transport fixture covers restricted HTML with both its real media type and a misleading JSON media type.
 
 ### Falcon USDf
 
@@ -44,6 +59,8 @@ Only the trusted capture and strict archive-replay steps receive `CLOUDFLARE_ACC
 If a target already has an open refresh PR and a new artifact was produced, the token-gated update step copies the validated artifact aside, points `core.hooksPath` at an empty temporary directory, snapshots `scripts/ci/verify-mechanism-refresh-diff.ts` and its imports into the temporary directory, checks out that branch, rebases it onto `origin/main`, revalidates the pre-existing PR diff as append-only target artifacts, restores the new artifact, and commits it. Disabling repository hooks before the unreviewed branch checkout prevents branch-controlled hook code from executing while the refresh token is available, and every verification after the checkout runs from the snapshot's absolute path so no verifier code is loaded from the unreviewed branch while the token is present. This preserves unmerged append-only history. With no open PR, the workflow inspects the remote branch and PR history before starting from `origin/main`; closed-unmerged, orphaned, or otherwise ambiguous branch state fails for operator review.
 
 Jobs use target-specific concurrency, stage only the target's evidence directory, run focused tests and repository-wide replay, and require the PR diff to contain additions only under that directory. They open or update a non-auto-merge PR only after those checks pass.
+
+When the branch guard reports unmerged commits without an open PR, inspect PR history and the actual diff before proposing reconciliation; a squash merge can leave branch commits unreachable from `main` even though their evidence was already adopted. On October 8, the Falcon branch at `971a39803deaaa7d9e1424bdfaf01e81ec79648a` was found stale: [PR #846](https://github.com/TokenBrice/pharos-watch/pull/846) had already merged its August 11 snapshot, and `main` subsequently migrated that same snapshot to an R2 hash summary. Reopening the branch would reintroduce an obsolete raw capture, not add current evidence. No new PR, push, or deletion was performed; branch-owner reconciliation remains an explicit maintainer operation, and the overwrite refusal stays intact.
 
 The PR records the snapshot identity, measured and unavailable metrics, adoption blockers, and the expected confirmatory or indeterminate effect. Automation never edits an overlay or grants an artifact score authority.
 
