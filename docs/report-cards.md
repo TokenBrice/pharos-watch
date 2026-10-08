@@ -384,7 +384,7 @@ Evidence responsibility separates scoring witnesses from open obligations. `scor
 
 Public evidence facts retain `sourceGapId` and `causeGapIds` for this accounting. Deduplication is owner-local within each card, never across assets or responsibility categories; synthetic, unmatched inherited and multi-root views cannot erase independent obligations.
 
-The current trace validator requires these obligation totals while separately requiring `totalFactCount === facts.length`. Older witness-count summaries containing duplicate roots are not reinterpreted as valid obligation summaries: activation must coordinate the newly computed accepted publication with consumers using the new validator. Retained history needs explicit historical dispatch or refusal, not compatibility aliases.
+Current traces require obligation totals and `totalFactCount === facts.length`; witness totals are not reinterpreted as obligations. Dated snapshots dispatch report7/breakdown6 by recorded methodology: 10.00–10.09 count witnesses, 10.10 counts obligations. They retain pre-10.11 routes, identity, bytes and ETag; live report8 stays strict. Identity mismatches, corrupt counts/scores and report7 claimed as 10.11 remain invalid.
 
 Publications carry `card.supply` with `circulatingUsdAtEvaluation`, `asOfSec`, and `generationId`. The amount is the evaluated compiled supply fact, not a current market-cap lookup. Unknown supply remains null, including its unavailable clock and identity. Observed zero remains zero. The supply clock is the fingerprint whose generation matches that fact; it is distinct from the publication clock.
 

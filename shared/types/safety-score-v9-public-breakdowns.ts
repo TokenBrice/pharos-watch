@@ -222,7 +222,7 @@ const EXIT_COMPONENT_KEYS = [
   "cost",
 ] as const;
 
-const SafetyScoreV9ExitBreakdownSchema = z
+const SafetyScoreV9ExitBreakdownBaseSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
     stressRequest: z
@@ -325,8 +325,14 @@ const SafetyScoreV9ExitBreakdownSchema = z
         .strict(),
     ),
   })
-  .strict()
-  .superRefine((breakdown, ctx) => {
+  .strict();
+
+type ExitBreakdownRefinementInput = Omit<z.infer<typeof SafetyScoreV9ExitBreakdownBaseSchema>, "primaryRoute" | "alternatives"> & {
+  primaryRoute: Omit<NonNullable<z.infer<typeof SafetyScoreV9ExitBreakdownBaseSchema>["primaryRoute"]>, "routeId" | "lane"> | null;
+  alternatives: readonly Omit<z.infer<typeof SafetyScoreV9ExitBreakdownBaseSchema>["alternatives"][number], "routeId" | "lane">[];
+};
+
+function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx): void {
     refineBreakdownAdjustments(breakdown, ctx);
     if (breakdown.primaryRoute === null) return;
     const keys = breakdown.primaryRoute.components.map((component) => component.key);
@@ -416,7 +422,17 @@ const SafetyScoreV9ExitBreakdownSchema = z
         message: "V9 alternative exit routes must be unique, sorted, and exclude the primary route",
       });
     }
-  });
+}
+
+const SafetyScoreV9ExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.superRefine(refineExitBreakdown);
+
+/** Breakdown6 predates typed route IDs/lanes; retain its exact strict shape. */
+const SafetyScoreV9HistoricalExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.extend({
+  primaryRoute: SafetyScoreV9ExitBreakdownBaseSchema.shape.primaryRoute.unwrap()
+    .omit({ routeId: true, lane: true }).nullable(),
+  alternatives: z.array(SafetyScoreV9ExitBreakdownBaseSchema.shape.alternatives.element
+    .omit({ routeId: true, lane: true })),
+}).superRefine(refineExitBreakdown);
 export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema
 >;
@@ -578,3 +594,7 @@ export const SafetyScoreV9BreakdownsSchema = z
     control: SafetyScoreV9ControlBreakdownSchema,
   })
   .strict();
+
+export const SafetyScoreV9HistoricalBreakdownsSchema = SafetyScoreV9BreakdownsSchema.extend({
+  exit: SafetyScoreV9HistoricalExitBreakdownSchema,
+});

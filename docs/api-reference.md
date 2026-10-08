@@ -680,7 +680,7 @@ Returns the dates available in the public daily snapshot archive.
 
 ### `GET /api/snapshots/:date.json`
 
-Returns the full public snapshot captured for one date. Historical report-v5 cards from methodologies before 9.15 may retain a valid nullable `stressStateDigest`; archive validation accepts only that retired field while preserving the original payload and ETag. Current report producers remain strict. The same compatibility applies to dated coin projections.
+Returns a dated snapshot unchanged, including identity and ETag. Archive validation also applies to coin projections; live producers remain strict. Pre-9.15 cards may retain nullable `stressStateDigest`. Report7 uses recorded pre-10.11 routes and methodology-specific witness/obligation counts; see [historical contracts](./report-cards.md#report-schema-v8).
 
 - **Operation ID:** `snapshotsDateJson`
 - **Path:** `/api/snapshots/{date}.json`

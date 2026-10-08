@@ -26,7 +26,11 @@ import {
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9ResponseSchema,
+  HistoricalReportCardsV9ResponseSchema,
+  WitnessHistoricalReportCardsV9ResponseSchema,
+} from "@shared/types/report-cards-v9";
 import {
   PublicSnapshotEnvelopeSchema,
   type PublicSnapshotEnvelope,
@@ -200,7 +204,18 @@ function validateV9ReportCards(
     }
     validationInput = { ...reportCards, cards };
   }
-  const parsed = ReportCardsV9ResponseSchema.safeParse(validationInput);
+  // Report7/breakdown6 predates typed route identity (10.11), and before
+  // 10.10 its responsibility summaries counted witnesses, not obligations.
+  // Select the recorded contract; never mutate stored bytes or use live-only
+  // fields to manufacture historical identity.
+  const historicalMinor = /^10\.(\d{2})$/.exec(version)?.[1];
+  const historicalSchema = reportCards.schemaVersion === 7
+    && historicalMinor !== undefined && Number(historicalMinor) <= 10
+    ? Number(historicalMinor) < 10
+      ? WitnessHistoricalReportCardsV9ResponseSchema
+      : HistoricalReportCardsV9ResponseSchema
+    : ReportCardsV9ResponseSchema;
+  const parsed = historicalSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";
   }

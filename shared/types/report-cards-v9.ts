@@ -3,6 +3,8 @@ import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publicati
 import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9HistoricalCardSchema,
+  SafetyScoreV9WitnessHistoricalCardSchema,
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
@@ -178,7 +180,7 @@ export type ReportCardsV9DependencyGraph = z.infer<typeof ReportCardsV9Dependenc
  * intentionally do not reuse the V8 dependency type or weight semantics.
  */
 export function buildReportCardsV9DependencyGraph(
-  cards: readonly SafetyScoreV9CurrentCard[],
+  cards: readonly Pick<SafetyScoreV9CurrentCard, "id" | "dependencies">[],
 ): ReportCardsV9DependencyGraph {
   const edges: ReportCardsV9DependencyEdge[] = [];
   for (const card of cards) {
@@ -286,7 +288,7 @@ function refineReportCardsV9Response(
     asOfSec: number;
     updatedAt: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
-    cards: readonly SafetyScoreV9CurrentCard[];
+    cards: readonly Omit<SafetyScoreV9CurrentCard, "breakdowns">[];
     foreignCauseGaps: readonly string[];
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
@@ -382,6 +384,23 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+
+/** Archive-only report7 validation; live producers remain report8-only. */
+const HistoricalReportCardsV9ResponseShape = {
+  ...ReportCardsV9ResponseShape,
+  lifecycle: z.literal("active"),
+  schemaVersion: z.literal(7),
+  publicationHealth: V9PublicationHealthSchema,
+  foreignCauseGaps: canonicalTextArray(),
+};
+export const HistoricalReportCardsV9ResponseSchema = z.object({
+  ...HistoricalReportCardsV9ResponseShape,
+  cards: z.array(SafetyScoreV9HistoricalCardSchema),
+}).strict().superRefine(refineReportCardsV9Response);
+export const WitnessHistoricalReportCardsV9ResponseSchema = z.object({
+  ...HistoricalReportCardsV9ResponseShape,
+  cards: z.array(SafetyScoreV9WitnessHistoricalCardSchema),
+}).strict().superRefine(refineReportCardsV9Response);
 
 /**
  * Free-lane projection of the current V9 publication: one grade per coin and
