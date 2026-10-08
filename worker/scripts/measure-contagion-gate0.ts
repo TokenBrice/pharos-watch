@@ -6,7 +6,7 @@ import { parseSafetyScoreV9ReplayFixedInput, buildSafetyScoreV9ReplayArtifact } 
 import { localRegistrySnapshot } from "./lib/safety-score-v9-registry";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
-import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
 import type { ContagionShock } from "@shared/types/contagion";
 import { setImmediate as yieldTurn } from "node:timers/promises";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
@@ -65,6 +65,7 @@ const recompileStart = performance.now();
 const recompileCpu = process.cpuUsage();
 compileV9FactSetV3(rawCompileInput);
 const recompile = { wallMs: performance.now() - recompileStart, cpuMs: (process.cpuUsage(recompileCpu).user + process.cpuUsage(recompileCpu).system) / 1000 };
+const evaluateScenario = createV9ContagionScenarioEvaluator({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId });
 for (const [assetId, directExposureMarketCapProxyUsd] of hubs) {
   const shocks: ContagionShock[] = [
     { kind: "score-limit", assetId, dimension: "final", limit: 40 },
@@ -76,7 +77,7 @@ for (const [assetId, directExposureMarketCapProxyUsd] of hubs) {
     const cpu = process.cpuUsage();
     const started = performance.now();
     const memoryBefore = process.memoryUsage();
-    const result = evaluateV9ContagionScenario({ rawCompileInput, policy, clock: fixedInput.clockSec, publicationGenerationId }, { id: `gate0:${assetId}:${shock.kind}`, shocks: [shock] });
+    const result = evaluateScenario({ id: `gate0:${assetId}:${shock.kind}`, shocks: [shock] });
     const cpuUsed = process.cpuUsage(cpu);
     const memoryAfter = process.memoryUsage();
     measurements.push({ assetId, directExposureMarketCapProxyUsd, shock, cpuMs: (cpuUsed.user + cpuUsed.system) / 1000, wallMs: performance.now() - started,
@@ -87,7 +88,7 @@ for (const [assetId, directExposureMarketCapProxyUsd] of hubs) {
 }
 const cohortCpu = process.cpuUsage(startCpu);
 const results = { measuredAt: new Date().toISOString(), node: process.version, platform: process.platform, arch: process.arch,
-  method: "Sequential tsx Node process. Each scenario recompiles baseline and hypothetical raw V3 facts and evaluates both full sets. CPU=process.cpuUsage user+system; wall=performance.now; peak RSS=process.resourceUsage lifetime high-water; heap=memoryUsage boundary samples, not exact intrafunction peak. Capture/replay bootstrap excluded from cohort time but included in lifetime RSS. When --expose-gc is supplied, GC runs before each scenario, included in cohort but excluded from scenario time. No Worker/concurrency or publication placement decision.",
+  method: "Sequential tsx Node process. Baseline raw V3 facts and compact results are prepared once per cohort; each scenario recompiles changed roots and evaluates the full hypothetical set. Baseline preparation is included in cohort time, excluded from individual scenario time. CPU=process.cpuUsage user+system; wall=performance.now; peak RSS=process.resourceUsage lifetime high-water; heap=memoryUsage boundary samples, not exact intrafunction peak. Capture/replay bootstrap excluded from cohort time but included in lifetime RSS. When --expose-gc is supplied, GC runs before each scenario, included in cohort but excluded from scenario time. No Worker/concurrency or publication placement decision.",
   explicitGc: typeof globalThis.gc === "function",
   policyDigest: policy.semanticDigest,
   captureIdentity, assets: rawCompileInput.assets.length, scenarios: measurements.length, recompile,

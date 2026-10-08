@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileNativeV3FactSet, coreFixture, V9_CANDIDATE_POLICY_V1, AS_OF_SEC } from "./safety-score-v9-facts.fixture-support";
 import { evaluateValidatedV9FactSet, evaluateValidatedV9FactSetForPublication, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
-import { evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
+import { createV9ContagionScenarioEvaluator, evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
 import { ContagionResultSchema, type ContagionShock } from "../../types/contagion";
 import { V9FactSetCoreV3Schema } from "../../types/safety-score-v9-facts";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -43,6 +43,41 @@ describe("hypothetical V9 contagion reruns", () => {
         changedDimensions: [], delta: asset.trace.finalScore === null ? null : 0,
       });
     }
+  });
+
+  it("shares an admitted baseline without sharing hypothetical state across scenarios", () => {
+    const { input } = fixture();
+    const prepared = createV9ContagionScenarioEvaluator(input);
+    const before = stableJsonStringifyV1(input.rawCompileInput);
+    const scenarios = input.rawCompileInput.activeAssetIds.flatMap((assetId) => [
+      { id: `${assetId}:zero`, shocks: [] },
+      { id: `${assetId}:final`, shocks: [{ kind: "score-limit" as const, assetId, dimension: "final" as const, limit: 40 }] },
+      { id: `${assetId}:backing`, shocks: [{ kind: "score-limit" as const, assetId, dimension: "backing" as const, limit: 5 }] },
+      { id: `${assetId}:depeg`, shocks: [{ kind: "depeg" as const, assetId, activeDepegBps: 1000, template: "one-day-history-and-exit-held" as const }] },
+      { id: `${assetId}:mint`, shocks: [{ kind: "mint-control-compromise" as const, assetId }] },
+    ]);
+    const expected = scenarios.map((scenario) => stableJsonStringifyV1(evaluateV9ContagionScenario(input, scenario)));
+    for (const [index, scenario] of scenarios.entries()) {
+      expect(stableJsonStringifyV1(prepared(scenario))).toBe(expected[index]);
+    }
+    for (const [index, scenario] of scenarios.entries()) {
+      expect(stableJsonStringifyV1(prepared(scenario))).toBe(expected[index]);
+    }
+    expect(stableJsonStringifyV1(input.rawCompileInput)).toBe(before);
+  });
+
+  it("binds a prepared evaluator to its admitted facts, clock and publication", () => {
+    const { input } = fixture();
+    const mutable = { ...input, rawCompileInput: V9FactSetCoreV3Schema.parse(input.rawCompileInput) };
+    const prepared = createV9ContagionScenarioEvaluator(mutable);
+    const definition = { id: "bound", shocks: [] };
+    const expected = stableJsonStringifyV1(prepared(definition));
+    mutable.clock += 1;
+    mutable.publicationGenerationId = "another-publication";
+    mutable.rawCompileInput.activeAssetIds.length = 0;
+    mutable.rawCompileInput.assets.length = 0;
+    expect(stableJsonStringifyV1(prepared(definition))).toBe(expected);
+    expect(() => prepared({ id: "unknown", shocks: [{ kind: "mint-control-compromise", assetId: "missing" }] })).toThrow("Unknown scenario root");
   });
 
   it("limits serial final inheritance without treating a final limit as basket impairment", () => {
