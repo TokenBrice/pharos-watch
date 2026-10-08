@@ -56,14 +56,14 @@ export function PoolSourceLabel({
     priceSources && priceSources.length > 0
       ? [...new Set(priceSources.map((s) => prettifyProtocol(s.protocol)))]
       : null;
-  const summary = `from ${count} ${count === 1 ? "pool" : "pools"}`;
+  const summary = `from ${count} price ${count === 1 ? "source" : "sources"}`;
   const tvlSuffix = tvl != null ? ` (${formatCurrency(tvl)} TVL)` : "";
 
   if (!protocols || protocols.length <= 5) {
     const protocolLabel = protocols ? protocols.join(" / ") : "DEX";
     return (
       <span className="text-xs text-muted-foreground">
-        from {count} {protocolLabel} {count === 1 ? "pool" : "pools"}
+        from {count} {protocolLabel} price {count === 1 ? "source" : "sources"}
         {tvlSuffix}
       </span>
     );

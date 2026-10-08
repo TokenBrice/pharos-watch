@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
+import { PoolSourceLabel } from "@/components/dex-liquidity-card-parts";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
@@ -61,6 +62,26 @@ function makeHistoryPoint(overrides: Partial<DexLiquidityHistoryPoint> = {}): De
     ...overrides,
   };
 }
+
+describe("PoolSourceLabel", () => {
+  it.each([
+    { count: 1, sources: null, expected: "from 1 DEX price source" },
+    { count: 2, sources: [{ protocol: "curve" }], expected: "from 2 Curve price sources" },
+  ])("labels $count observations as price sources rather than pools", ({ count, sources, expected }) => {
+    render(<PoolSourceLabel count={count} tvl={null} priceSources={sources} />);
+    expect(screen.getByText(expected)).toBeTruthy();
+  });
+
+  it("keeps the source label when the protocol list expands", () => {
+    const sources = ["curve", "uniswap-v3", "balancer", "pancakeswap", "aerodrome", "orca"]
+      .map((protocol) => ({ protocol }));
+    render(<PoolSourceLabel count={6} tvl={null} priceSources={sources} />);
+    expect(screen.getByText("from 6 price sources")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "show all" }));
+    expect(screen.getByRole("button", { name: "hide sources" })).toBeTruthy();
+    expect(screen.getByText("from 6 price sources")).toBeTruthy();
+  });
+});
 
 describe("DexLiquidityCard", () => {
   beforeEach(() => {

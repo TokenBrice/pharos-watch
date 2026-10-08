@@ -171,6 +171,41 @@ describe("DEX acceptance aggregation", () => {
     expect(transitions[1]).toMatchObject({ status: "unavailable", reason: "captured-generation-incomplete", changes: null });
   });
 
+  it("keeps the global sentinel in completeness but excludes it from rated and route-bearing asset populations", () => {
+    const generations = [{ generation_id: "complete", started_at: FROM, state: "published", expected_row_count: 3,
+      metadata_json: JSON.stringify({ activeStablecoinCount: 2, activeMetricsCount: 2, activeScoredCount: 2 }) }];
+    const rows = [
+      { generation_id: "complete", stablecoin_id: "rated", updated_at: FROM, liquidity_score: 50, coverage_class: "primary", score_eligible_routes: 1 },
+      { generation_id: "complete", stablecoin_id: "nr", updated_at: FROM, liquidity_score: null, coverage_class: "primary", score_eligible_routes: 0 },
+      { generation_id: "complete", stablecoin_id: "__global__", updated_at: FROM, liquidity_score: null, coverage_class: null, score_eligible_routes: null },
+    ];
+    const report = buildAcceptanceReport([capture({ generations: query(generations), generation_rows: query(rows) })], FROM, TO);
+    expect(report.prospective.coverageGenerations[0]).toMatchObject({
+      complete: true, capturedRows: 3, activeCatalog: 2, observed: 2, rated: 1, routeBearing: 1,
+      observedCatalogFraction: 1, ratedCatalogFraction: 0.5, routeBearingCatalogFraction: 0.5,
+    });
+    const missingRoute = buildAcceptanceReport([capture({ generations: query(generations),
+      generation_rows: query(rows.map((row) => row.stablecoin_id === "nr" ? { ...row, score_eligible_routes: null } : row)) })], FROM, TO);
+    expect(missingRoute.prospective.coverageGenerations[0]).toMatchObject({ complete: true, rated: 1, routeBearing: null });
+    const incomplete = buildAcceptanceReport([capture({ generations: query(generations), generation_rows: query(rows.slice(0, 2)) })], FROM, TO);
+    expect(incomplete.prospective.coverageGenerations[0]).toMatchObject({ complete: false, capturedRows: 2, rated: null, routeBearing: null });
+  });
+
+  it("counts a return at the window start using both retained pre-window observations", () => {
+    const observations = [{ at: FROM - 7200, tvl: 100 }, { at: FROM - 3600, tvl: 300 }, { at: FROM, tvl: 100 }];
+    const generations = observations.map(({ at }, i) => ({ generation_id: `boundary-${i}`, started_at: at, state: "published", expected_row_count: 1 }));
+    const rows = observations.map(({ at, tvl }, i) => ({ generation_id: `boundary-${i}`, stablecoin_id: "small-coin",
+      updated_at: at, total_tvl_usd: tvl, liquidity_score: 50, coverage_class: "primary", methodology_version: "6.93", score_eligible_routes: 1 }));
+    const packet = capture({ generations: query(generations), generation_rows: query(rows, { truncated: true }) });
+    const report = buildAcceptanceReport([packet], FROM, TO);
+    expect(report.prospective.hourlyMaterialMoves).toHaveLength(1);
+    expect(report.prospective.hourlyReturns).toHaveLength(1);
+    expect(report.prospective.hourlyReturns[0]).toMatchObject({
+      stablecoinId: "small-coin", firstAt: FROM - 3600, returnAt: FROM, a: 100, b: 300, returned: 100, belowOneMillion: true,
+    });
+    expect(report.prospective.unavailableQueries).toContainEqual(expect.objectContaining({ key: "generation_rows", truncated: true }));
+  });
+
   it("deduplicates generation moves against top-five evidence and preserves manifest catalog/rated coverage", () => {
     const generations = [0, 1, 2].map((i) => ({ generation_id: `g${i}`, started_at: FROM + i * 3600, state: "published", expected_row_count: 1,
       metadata_json: JSON.stringify({ methodologyVersion: "6.93", activeStablecoinCount: 2, activeMetricsCount: 1, activeScoredCount: 1 }) }));

@@ -42,17 +42,48 @@ describe("safety score movement ledger", () => {
     expect(movement.identity.policyDigest).toBe(identityB.policyDigest);
   });
 
-  it("classifies operational when a pipeline-gap status or an adjacent hold is present, and never invents a pillar delta", () => {
+  it("classifies pipeline-gap transitions and unexplained hold-adjacent movement as operational, without inventing a pillar delta", () => {
     const rated = row("usdc-circle", "g1", 100, identityA, card(70, 80, 75, 70), 70);
     const held = classifySafetyScoreMovement(rated, row("usdc-circle", "g2", 200, identityA, { ...card(70, 80, 75, 70) }, 70), ["dex-stale"]);
     expect(held.classification).toBe("operational");
     expect(held.adjacentHoldReasonCodes).toEqual(["dex-stale"]);
     const gap = { ...card(70, 80, 75, 70), ratingStatus: "pipeline-gap" as const, score: null };
     expect(classifySafetyScoreMovement(rated, row("usdc-circle", "g2", 200, identityA, gap, null), []).classification).toBe("operational");
+    expect(classifySafetyScoreMovement(row("usdc-circle", "g1", 100, identityA, gap, null), rated, []).classification).toBe("operational");
     const unavailable = { ...card(70, 80, 75, 70), pillars: { ...card(70, 80, 75, 70).pillars, exit: { ...card(70, 80, 75, 70).pillars.exit, score: null } } };
     const unavailableMovement = classifySafetyScoreMovement(rated, row("usdc-circle", "g2", 200, identityA, unavailable, null), []);
     expect(unavailableMovement.classification).toBe("data:exit");
     expect(unavailableMovement.pillarDeltas.find((delta) => delta.pillar === "exit")).toMatchObject({ delta: null, before: 75, after: null });
+  });
+
+  it("keeps persistent partial Control evidence as context while attributing included Exit, peg and cap movements", () => {
+    const partialEvidence: NonNullable<SafetyScoreCompactCard["partialEvidence"]> = {
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["control"], causes: ["A"],
+    };
+    const beforeCard: SafetyScoreCompactCard = {
+      ...card(70, 80, 70, 0), partialEvidence,
+      pillars: { ...card(70, 80, 70, 0).pillars, control: { score: null, inclusion: "excluded-a-b", causes: [] } },
+    };
+    const before = row("usdc-circle", "g1", 100, identityA, beforeCard, 70);
+    const exitCard: SafetyScoreCompactCard = {
+      ...beforeCard, score: 75,
+      pillars: { ...beforeCard.pillars, exit: { ...beforeCard.pillars.exit, score: 80 } },
+    };
+    const movement = classifySafetyScoreMovement(before, row("usdc-circle", "g2", 200, identityA, exitCard, 75), ["dex-stale"]);
+    expect(movement.classification).toBe("data:exit");
+    expect(movement.pillarDeltas.find((delta) => delta.pillar === "exit")).toMatchObject({ delta: 10, before: 70, after: 80 });
+    expect(movement.card.partialEvidence).toEqual(partialEvidence);
+    expect(movement.previousCard.partialEvidence).toEqual(partialEvidence);
+    expect(movement.card.pillars.control.score).toBeNull();
+    expect(movement.previousCard.pillars.control.score).toBeNull();
+    expect(movement.adjacentHoldReasonCodes).toEqual(["dex-stale"]);
+    expect(classifySafetyScoreMovement(before, row("usdc-circle", "g2", 200, identityA,
+      { ...beforeCard, score: 65, pegMultiplier: 0.8 }, 65), ["dex-stale"]).classification).toBe("data:peg");
+    expect(classifySafetyScoreMovement(before, row("usdc-circle", "g2", 200, identityA,
+      { ...beforeCard, score: 65, bindingCap: { kind: "active-depeg", reason: "depeg", limit: 65 } }, 65), ["dex-stale"]).classification).toBe("data:cap");
+    const full = row("usdc-circle", "g3", 300, identityA, card(80, 80, 80, 80), 80);
+    expect(classifySafetyScoreMovement(before, full, []).classification).toBe("operational");
+    expect(classifySafetyScoreMovement(full, before, []).classification).toBe("operational");
   });
 
   it("attributes peg-only and cap-only movements explicitly instead of guessing a pillar", () => {

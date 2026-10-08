@@ -569,7 +569,8 @@ export async function syncDexDiscovery(
             });
           } : undefined,
         );
-        const discoveredPoolCount = result.pools.filter((pool) => pool.source !== "cg_tickers").length;
+        const discoveredPools = result.pools.filter((pool) => pool.source !== "cg_tickers");
+        const discoveredPoolCount = discoveredPools.length;
 
         try {
           if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
@@ -605,7 +606,7 @@ export async function syncDexDiscovery(
           for (const chain of result.unresolvedChains) {
             allUnresolvedChains.add(chain);
           }
-          for (const pool of result.pools) {
+          for (const pool of discoveredPools) {
             poolsBySource[pool.source] = (poolsBySource[pool.source] ?? 0) + 1;
           }
         } catch (persistErr) {

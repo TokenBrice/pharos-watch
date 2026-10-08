@@ -28,12 +28,12 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
 interface DexAvailabilityRow {
   stablecoin_id: string;
-  source_pool_count: number | null;
   source_total_tvl: number | null;
   updated_at: number | null;
 }
@@ -62,15 +62,16 @@ async function loadDexAvailability(
     const stmt = db
       .prepare(
         `SELECT /* pharos:depeg-events:dex-availability */
-           stablecoin_id, source_pool_count, source_total_tvl, updated_at FROM dex_prices${where}`,
+           stablecoin_id, source_total_tvl, updated_at FROM dex_prices${where}`,
       );
     const result = stablecoinId
       ? await stmt.bind(stablecoinId).all<DexAvailabilityRow>()
       : await stmt.all<DexAvailabilityRow>();
     return new Map((result.results ?? []).map((row) => [
       row.stablecoin_id,
-      isFreshTimestamp(row.updated_at, nowSec, DEX_FRESHNESS_SEC) &&
-        ((row.source_pool_count ?? 0) > 0 || (row.source_total_tvl ?? 0) > 0),
+      typeof row.updated_at === "number" &&
+        typeof row.source_total_tvl === "number" &&
+        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg"),
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);

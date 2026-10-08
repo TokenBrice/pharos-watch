@@ -231,6 +231,23 @@ describe("syncDexDiscovery", () => {
     });
   });
 
+  it.each([false, true])("excludes ticker records from pool metadata with mixed sources=%s", async (mixed) => {
+    const ticker = stagedPool({
+      poolId: "orderbook:example:coin-a", stablecoinId: "coin-a", source: "cg_tickers",
+      chain: "orderbook", protocol: "example", tvlUsd: null, volume24h: 100_000, priceUsd: 1,
+    });
+    const pools = mixed ? [ticker, makeStagedPool("ethereum:0xpool1")] : [ticker];
+    vi.mocked(crawlCoin).mockResolvedValue({
+      pools, unresolvedChains: [], deploymentOutcomes: [], checkedDeploymentKeys: [],
+    });
+    const result = await syncDexDiscovery(db, null);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.poolsDiscovered).toBe(mixed ? 1 : 0);
+    expect(metadata.poolsBySource).toEqual(mixed ? { dexscreener: 1 } : undefined);
+    expect(upsertStagedPools).toHaveBeenCalledWith(db, pools, undefined);
+    expect(updateDiscoveryMeta).toHaveBeenCalledWith(db, "coin-a", mixed ? 1 : 0, expect.any(Number), undefined);
+  });
+
   it("keeps crawling the cohort queue when the stale-pool refresh pass fails", async () => {
     const failingRegistryDb = makeNoopD1({
       prepare: (sql: string) => ({

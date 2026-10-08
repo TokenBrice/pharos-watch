@@ -52,17 +52,19 @@ export function classifySafetyScoreMovement(previous: SafetyScoreMovementRow, cu
   const previousIdentity = { methodologyVersion: previous.methodology_version, policyDigest: previous.policy_digest, evaluationBuildDigest: previous.evaluation_build_digest };
   const release = identity.methodologyVersion !== previousIdentity.methodologyVersion ||
     identity.policyDigest !== previousIdentity.policyDigest || identity.evaluationBuildDigest !== previousIdentity.evaluationBuildDigest;
-  // Card-level operational signals own the movement; a merely adjacent held
-  // attempt stays linked context and must not mask a genuine same-identity
-  // pillar delta. With no data explanation at all, hold adjacency is operational.
-  const cardLevelOperational = [before, after].some((card) =>
-    card.ratingStatus === "pipeline-gap" || card.partialEvidence !== null || card.reasonCodes.some((code) => code.includes("pipeline-gap")));
+  // Persistent partial-evidence context is not an operational transition.
+  // Preserve both endpoints in JSON, but only a change in their operational
+  // state can take precedence over an included-pillar, peg or cap movement.
+  const operationalTransition = (before.ratingStatus === "pipeline-gap") !== (after.ratingStatus === "pipeline-gap") ||
+    JSON.stringify(before.partialEvidence) !== JSON.stringify(after.partialEvidence) ||
+    JSON.stringify(before.reasonCodes.filter((code) => code.includes("pipeline-gap"))) !==
+      JSON.stringify(after.reasonCodes.filter((code) => code.includes("pipeline-gap")));
   // A pillar availability flip (null on exactly one side) is that pillar's own
   // data change; it is never reported as another pillar's delta or as zero.
   const primary = pillarDeltas.find((delta) =>
     (delta.before === null) !== (delta.after === null) || (delta.delta !== null && delta.delta !== 0));
   const classification = release ? "release"
-    : cardLevelOperational ? "operational"
+    : operationalTransition ? "operational"
     : primary ? `data:${primary.pillar}`
     : before.pegMultiplier !== after.pegMultiplier ? "data:peg"
     : JSON.stringify(before.bindingCap) !== JSON.stringify(after.bindingCap) ? "data:cap"
@@ -113,7 +115,7 @@ export function renderSafetyScoreMovementMarkdown(movements: readonly SafetyScor
   const cell = (value: unknown) => String(value ?? "unavailable").replace(/\|/g, "\\|").replace(/\n/g, " ");
   return [
     "# Safety Score movement ledger", "",
-    "Labels describe evidence: release = non-comparable identity (not proof of release-only causation); data pillar = largest observed absolute pillar delta; operational = adjacent hold or pipeline gap. Secondary deltas remain in JSON. Peg/cap-only movements and unattributed edges are explicit, never fabricated pillar deltas.", "",
+    "Labels describe evidence: release = non-comparable identity (not proof of release-only causation); data pillar = largest observed absolute pillar delta; operational = changed partial-evidence/pipeline-gap state or unexplained movement adjacent to a hold. Persistent partial evidence and hold adjacency remain context, not an override of included-pillar, peg or cap changes. Secondary deltas and both endpoints remain in JSON. Peg/cap-only movements and unattributed edges are explicit, never fabricated pillar deltas.", "",
     `Missing prior retained baseline: ${missingBaselineCoinIds.length} (${missingBaselineCoinIds.join(", ") || "none"}). First sight is not counted as a movement.`, "",
     "| UTC | Coin | Score | Grade | Classification | Pillar deltas | Hold reasons | Generation |",
     "| --- | --- | --- | --- | --- | --- | --- | --- |",

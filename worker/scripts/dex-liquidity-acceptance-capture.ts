@@ -120,11 +120,14 @@ export function buildCaptureQueries(from: number, to: number, clock: number): Re
   if (!Number.isInteger(from) || !Number.isInteger(to) || !Number.isInteger(clock)) {
     throw new Error("Query clocks must be integer epoch seconds");
   }
+  const contextFrom = from - 6 * 3600;
+  // SAFETY: contextFrom is derived from an integer-validated clock and a fixed integer lookback.
+  const predecessorGenerationIds = `SELECT generation_id FROM dex_liquidity_publication_generations WHERE state='published' AND started_at<${contextFrom} ORDER BY started_at DESC,generation_id DESC LIMIT 1`;
   const allowedJobs = new Set<string>(JOBS);
   const previousVersionIds = JOBS.map((job) => {
     if (!allowedJobs.has(job)) throw new Error(`Unsupported DEX job: ${job}`);
-    // SAFETY: job is checked against the JOBS allowlist and SQL-quoted; from is integer-validated above.
-    return `SELECT id FROM (SELECT id FROM cron_runs WHERE job=${sqlString(job)} AND productive=1 AND started_at<${from} ORDER BY started_at DESC,id DESC LIMIT 1)`;
+    // SAFETY: job is checked against the JOBS allowlist and SQL-quoted; contextFrom is integer-derived.
+    return `SELECT id FROM (SELECT id FROM cron_runs WHERE job=${sqlString(job)} AND productive=1 AND started_at<${contextFrom} ORDER BY started_at DESC,id DESC LIMIT 1)`;
   }).join(" UNION ALL ");
   const firstDay = Math.floor(from / DAY) * DAY;
   const endDay = Math.floor(to / DAY) * DAY;
@@ -133,8 +136,8 @@ export function buildCaptureQueries(from: number, to: number, clock: number): Re
     band25: { sql: pinnedFlipSql(firstDay, endDay, true) },
     // SAFETY: firstDay/endDay are integer UTC-midnight values derived from integer-validated clocks.
     history: { sql: `SELECT stablecoin_id,snapshot_date,total_tvl_usd,liquidity_score,methodology_version,coverage_class,coverage_confidence,source_mix_json,exit_route_summary_json FROM dex_liquidity_history WHERE snapshot_date BETWEEN ${firstDay} AND ${endDay} ORDER BY snapshot_date,stablecoin_id LIMIT 25000;`, limit: 25000 },
-    // SAFETY: JOB_SQL consists of SQL-quoted fixed JOBS literals; from/to are integer-validated above.
-    crons: { sql: `SELECT * FROM cron_runs WHERE job IN (${JOB_SQL}) AND started_at>=${from} AND started_at<${to} ORDER BY started_at,id LIMIT 5000;`, limit: 5000 },
+    // SAFETY: JOB_SQL consists of SQL-quoted fixed JOBS literals; contextFrom/to are integer-derived.
+    crons: { sql: `SELECT * FROM cron_runs WHERE job IN (${JOB_SQL}) AND started_at>=${contextFrom} AND started_at<${to} ORDER BY started_at,id LIMIT 5000;`, limit: 5000 },
     // SAFETY: previousVersionIds contains only allowlisted, SQL-quoted jobs and integer-validated clocks.
     previous_versions: { sql: `SELECT * FROM cron_runs WHERE id IN (${previousVersionIds}) ORDER BY job,started_at;` },
     // SAFETY: JOB_SQL consists of SQL-quoted fixed JOBS literals; from/to are integer-validated above.
@@ -146,10 +149,10 @@ export function buildCaptureQueries(from: number, to: number, clock: number): Re
     registry_identity: { sql: "WITH p AS (SELECT stablecoin_id,pool_id,COUNT(*) n FROM dex_pool_registry GROUP BY stablecoin_id,pool_id) SELECT COUNT(*) AS distinct_coin_pools,SUM(n>1) AS multisource_coin_pools,SUM(n) AS registry_rows FROM p;" },
     multisource_identities: { sql: "SELECT stablecoin_id,pool_id,COUNT(*) source_rows,GROUP_CONCAT(source) sources,MIN(refreshed_at) oldest,MAX(refreshed_at) newest FROM dex_pool_registry GROUP BY stablecoin_id,pool_id HAVING COUNT(*)>1 ORDER BY stablecoin_id,pool_id LIMIT 17000;", limit: 17000 },
     physical_pools: { sql: "SELECT COUNT(DISTINCT pool_id) distinct_pool_ids,COUNT(DISTINCT stablecoin_id) distinct_coins FROM dex_pool_registry;" },
-    // SAFETY: from/to are integer-validated above; the lookback is a fixed integer literal.
-    generations: { sql: `SELECT * FROM dex_liquidity_publication_generations WHERE started_at>=${from - 3600} AND started_at<${to} ORDER BY started_at,generation_id LIMIT 5000;`, limit: 5000 },
-    // SAFETY: from/to are integer-validated above; the lookback is a fixed integer literal.
-    generation_rows: { sql: `SELECT r.generation_id,r.stablecoin_id,r.total_tvl_usd,r.liquidity_score,r.coverage_class,r.methodology_version,r.source_mix_json,r.updated_at,json_extract(r.score_components_json,'$.exitRouteObservationCoverage.scoreEligibleObservationCount') AS score_eligible_routes FROM dex_liquidity_run_rows r JOIN dex_liquidity_publication_generations g ON g.generation_id=r.generation_id WHERE g.state='published' AND g.started_at>=${from - 3600} AND g.started_at<${to} ORDER BY r.updated_at,r.generation_id,r.stablecoin_id LIMIT 100000;`, limit: 100000 },
+    // SAFETY: contextFrom/to are integer-derived; predecessorGenerationIds is fixed SQL with an integer clock.
+    generations: { sql: `SELECT * FROM dex_liquidity_publication_generations WHERE started_at<${to} AND (started_at>=${contextFrom} OR generation_id IN (${predecessorGenerationIds})) ORDER BY started_at,generation_id LIMIT 5000;`, limit: 5000 },
+    // SAFETY: contextFrom/to are integer-derived; predecessorGenerationIds is fixed SQL with an integer clock.
+    generation_rows: { sql: `SELECT r.generation_id,r.stablecoin_id,r.total_tvl_usd,r.liquidity_score,r.coverage_class,r.methodology_version,r.source_mix_json,r.updated_at,json_extract(r.score_components_json,'$.exitRouteObservationCoverage.scoreEligibleObservationCount') AS score_eligible_routes FROM dex_liquidity_run_rows r JOIN dex_liquidity_publication_generations g ON g.generation_id=r.generation_id WHERE g.state='published' AND g.started_at<${to} AND (g.started_at>=${contextFrom} OR g.generation_id IN (${predecessorGenerationIds})) ORDER BY r.updated_at,r.generation_id,r.stablecoin_id LIMIT 100000;`, limit: 100000 },
     current_coverage: { sql: "SELECT d.publication_generation_id,d.methodology_version,COUNT(*) catalog_rows,SUM(d.liquidity_score IS NOT NULL OR (d.coverage_class IS NOT NULL AND d.coverage_class!='unobserved')) observed,SUM(d.liquidity_score IS NOT NULL) rated,SUM(CASE WHEN json_extract(d.score_components_json,'$.exitRouteObservationCoverage.scoreEligibleObservationCount')>0 THEN 1 WHEN json_extract(d.score_components_json,'$.exitRouteObservationCoverage.scoreEligibleObservationCount')=0 THEN 0 ELSE NULL END) route_bearing,SUM(json_extract(d.score_components_json,'$.exitRouteObservationCoverage.scoreEligibleObservationCount') IS NULL) route_unavailable,MIN(d.updated_at) oldest,MAX(d.updated_at) newest FROM dex_liquidity d WHERE d.publication_generation_id IS NULL OR d.publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state='published') GROUP BY d.publication_generation_id,d.methodology_version;" },
   };
 }
@@ -456,7 +459,7 @@ export function buildAcceptanceReport(captures: readonly AcceptanceCapture[], fr
     }
     priorCoin.set(sid, row);
   }
-  for (const { run } of publications) {
+  for (const { run } of classified.filter((entry) => entry.run.job === JOBS[0] && entry.run.productive === 1)) {
     const top = sourceCoverage(run).coinTvlStepTop;
     if (!Array.isArray(top)) continue;
     for (const value of top) {
@@ -471,7 +474,8 @@ export function buildAcceptanceReport(captures: readonly AcceptanceCapture[], fr
       if (!moves.has(key)) moves.set(key, { stablecoinId: entry.stablecoinId, at, runId: run.id, previousTvlUsd: prior, currentTvlUsd: current, method: runMethod(run), build: run.worker_version, basis: "top-five-lower-bound", detail: entry });
     }
   }
-  const allMoves = [...moves.values()].filter((move) => move.at >= from && move.at < to);
+  const contextualMoves = [...moves.values()];
+  const allMoves = contextualMoves.filter((move) => move.at >= from && move.at < to);
   const unnamedSteps = stepped.flatMap((step) => {
     const ids = [...new Set([step.coinTvlStepIds150, step.coinTvlStepIds25].flatMap((value) =>
       Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []))];
@@ -486,11 +490,12 @@ export function buildAcceptanceReport(captures: readonly AcceptanceCapture[], fr
     const rows = generationRows.filter((r) => r.generation_id === g.generation_id);
     const meta = jsonObject(g.metadata_json);
     const complete = g.state === "published" && number(g.expected_row_count) === rows.length && rows.length > 0;
+    const assetRows = rows.filter((row) => row.stablecoin_id !== "__global__");
     const activeCatalog = number(meta.activeStablecoinCount);
     const observed = number(meta.activeMetricsCount);
-    const rated = number(meta.activeScoredCount);
-    const routeBearing = complete && rows.every((r) => number(r.score_eligible_routes) !== null)
-      ? rows.filter((r) => Number(r.score_eligible_routes) > 0).length : null;
+    const rated = complete ? assetRows.filter((row) => number(row.liquidity_score) !== null).length : null;
+    const routeBearing = complete && assetRows.every((row) => number(row.score_eligible_routes) !== null)
+      ? assetRows.filter((row) => Number(row.score_eligible_routes) > 0).length : null;
     return { generationId: g.generation_id, at: g.started_at, state: g.state, method: meta.methodologyVersion ?? null,
       activeCatalog, observed, rated, routeBearing,
       observedCatalogFraction: activeCatalog != null && activeCatalog > 0 && observed != null ? observed / activeCatalog : null,
@@ -509,7 +514,7 @@ export function buildAcceptanceReport(captures: readonly AcceptanceCapture[], fr
         pairDates: new Set(eligible.map((p) => p.day0)).size, flips150: flips, steps25: eligible.filter((p) => Number(p.currentTvlUsd) >= 1.25 * Number(p.previousTvlUsd) || Number(p.currentTvlUsd) <= 0.8 * Number(p.previousTvlUsd)),
         flipsPer100EligiblePairDays: eligible.length ? flips.length / eligible.length * 100 : null,
         methodCohorts: Object.fromEntries([...new Set(eligible.map((p) => `${p.method0}→${p.method1}`))].map((key) => [key, eligible.filter((p) => `${p.method0}→${p.method1}` === key).length])) },
-      stepped, hourlyReturns: findHourlyReturns(allMoves), hourlyMaterialMoves: allMoves,
+      stepped, hourlyReturns: findHourlyReturns(contextualMoves).filter((event) => Number(event.returnAt) >= from && Number(event.returnAt) < to), hourlyMaterialMoves: allMoves,
       inventoryTransitions: buildInventoryTransitions(generations, generationRows).filter((row) => Number(row.at) >= from && Number(row.at) < to),
       hourlyBasis: "Material moves: inclusive ≥1.25x/≤0.80x OR absolute delta ≥$1M; A→B→A uses strict >1.5x/<0.5x opposite steps, ≤6h and 5% bridge/return tolerance. Generation rows when retained plus censored top-five evidence; missing values/omitted IDs prevent a complete hourly census",
       unexplainedMaterialMoves: [...allMoves.map((move) => ({ ...move, reason: "Source/protocol telemetry is not a verified root-cause reason packet" })), ...unnamedSteps, ...dailyMoves.map((move) => ({ ...move, basis: "daily", reason: "Daily source mix does not prove policy/market/operational cause" }))],
