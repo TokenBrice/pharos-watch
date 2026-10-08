@@ -22,14 +22,15 @@ export function hasSameLiquidityMethodologyBasis(
  * measured, as a one-step change with no market move behind it: 6.91 stopped
  * counting NEAR Intents custody as pool reserve (global TVL -8.0%, FRAX -29.7%),
  * and 6.92 stopped counting zero-trade single-sided pools against untracked
- * tokens (global -4.9%, eleven coins -40% to -98%). Versions that only reweight
- * pools, change volume admission, or tighten discovery admission (whose TVL
- * effect ages in over the 14-day registry horizon) are not breaks. Ascending and
+ * tokens (global -4.9%, eleven coins -40% to -98%). Version 6.93 removes
+ * volume-derived CoinGecko ticker TVL, including legacy registry rows.
+ * Versions that only reweight pools, change volume admission, or tighten discovery
+ * admission (whose TVL effect ages in over the 14-day registry horizon) are not breaks. Ascending and
  * append-only: any future liquidity version that changes how retained TVL is
  * measured must be appended here in the same change that bumps
  * LIQUIDITY_METHODOLOGY_VERSION, or the 30-day stability series will mix bases.
  */
-const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92"];
+const LIQUIDITY_TVL_BASIS_BREAK_VERSIONS: readonly string[] = ["6.91", "6.92", "6.93"];
 
 /**
  * TVL-measurement epoch of a persisted liquidity methodology version: the number

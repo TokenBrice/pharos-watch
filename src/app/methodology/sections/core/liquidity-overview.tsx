@@ -4,9 +4,8 @@ export function LiquidityOverview() {
   return (
     <>
       <p>
-        Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every two hours. DEX-implied
-        prices refresh hourly. The score aggregates
-        pool data across all major DEXes and chains.
+        Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, published hourly alongside DEX-implied
+        prices. The score aggregates genuine pool data across major DEXes and chains.
       </p>
       <p>
         Dead or explicitly blocked DEX slugs such as Bunni are excluded upstream from crawl intake, retained pools,
@@ -14,6 +13,14 @@ export function LiquidityOverview() {
         The same block covers non-AMM venues whose reported &ldquo;pool&rdquo; reserves are not executable depth: NEAR
         Intents pairs are priced from the settlement contract&rsquo;s shared custody of the quote asset, so they never
         count as liquidity.
+      </p>
+      <p>
+        Since v6.93, CoinGecko exchange tickers supply price evidence only, not TVL, pools, liquidity volume, source mix,
+        coverage or orderbook depth. Legacy synthetic rows are excluded too. A ticker-only asset is liquidity-unobserved,
+        not measured zero; the first publication can show a one-time policy TVL step rather than a market withdrawal.
+        The 2026-10-08 registry inventory found ten ticker-only assets, with USDGO, YLDS and Gate GUSD each above $1M of
+        raw ticker TVL. That inventory is not a forecast of published TVL. Safety formula is unchanged, and improved
+        Safety Score stability has not been measured.
       </p>
     </>
   );
@@ -24,7 +31,7 @@ export function LiquidityPreconditions() {
     <>
       <MethodologyFacts
         facts={[
-          { label: "Update cadence", value: "Score: 2h; source stage and DEX-implied prices: hourly" },
+          { label: "Update cadence", value: "Score, source stage and DEX-implied prices: hourly" },
           { label: "Signal mix", value: "5 weighted liquidity components" },
           { label: "Output", value: "0-100 DEX depth score" },
         ]}

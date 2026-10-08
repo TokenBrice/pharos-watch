@@ -37,6 +37,8 @@ Comparators reject missing card arrays, empty/duplicate IDs and inconsistent sco
 
 The movers CLI lives at `worker/scripts/diff-safety-score-v9-movers.ts` behind the unchanged `safety-score-v9:movers` alias. Full-artifact validation parses the retained capture through its native v4 or legacy v3 schema before deriving the matching base-input digest; the compiler's narrower common projection is not an artifact admission contract.
 
+For weekly retrospective production-history review, use the separate [Safety Score movement ledger](../scripts.md#safety-score-movement-ledger). It reads 120-day change-only compact publication rows and accepted/held attempt lineage, reports missing baselines, and labels identity boundaries as non-comparable rather than causal proof. It is not the `safety-score-v9:movers` frozen-input gate and does not substitute for replay/equivalence or exact accepted-publication reproduction; no pre-deployment journal history is backfilled.
+
 Exact reproduction is a separate intended-revision operation: use a trusted checkout at the recorded source SHA, recorded policy/build, verified frozen registry, capture input/clock, expected output and accepted enrichment (both journals and explicit null transfer materiality). `reproduceSafetyScoreV9Replay` requires that context and verifies rebuilt pipeline equality. A normalized empty diff is not bit-identical artifact equality or expected-activation proof; independently check intended release identities.
 
 > **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**

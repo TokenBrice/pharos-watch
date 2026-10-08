@@ -116,11 +116,12 @@ export function LiquidityPoolMatchingDetails() {
           weighted rows.
         </p>
         <p>
-          Orderbook fallback rows now validate observable ticker quality directly. CoinGecko deprecated `trust_score`, so
-          Pharos filters those tickers by freshness flags, finite USD price/volume, exchange identity, and USD-equivalent
-          quote assets instead of relying on a legacy badge. The scoring-cron orderbook fallback is reserved for absent,
-          no-price, or tiny DEX coverage; weak but already-covered DEX assets stay on the on-chain repair path instead of
-          receiving time-budget-dependent centralized synthetic books.
+          CoinGecko discovery tickers are price-only since Liquidity v6.93. When earlier discovery found no pools or no
+          usable price, Pharos checks non-stale/non-anomalous USD-equivalent quotes with positive finite prices, exchange
+          identity and at least $1,000 reported USD flow. It requests no depth and admits only non-future registry
+          observations within 24 hours. Pricing v6.44 weights exchange prices by observed flow &times; source confidence,
+          with zero TVL attribution. Neither fresh nor legacy ticker rows enter pool scoring, caps, coverage or orderbook
+          diagnostics, and exchange flow cannot satisfy the unchanged primary, display or depeg trust floors.
         </p>
         <p>
           PancakeSwap V3 volume now uses a bounded trailing-hour window from the official subgraph&apos;s
@@ -144,6 +145,15 @@ export function LiquidityPoolMatchingDetails() {
           A 24h or 7d total is published only when every retained pool is
           admitted; otherwise the total is unavailable and the record shows the observed volume of the admitted pools
           next to their share of retained TVL (volume coverage), including for the ecosystem-wide aggregate.
+        </p>
+        <p>
+          Since v6.93, one registry evaluation clock is captured after the registry read completes. A row later than that
+          clock is rejected whole as <code>future_observation</code>, before identity, value, metadata, price or volume
+          can contribute. Trust/freshness, TVL confidence, maturity, trade-index evidence, dead-pool predicates and
+          coin/global volume summaries share this frozen basis. This fixes a one-generation dead-pool bypass for valid
+          post-source-start refreshes. Stage payload v4 carries the clock through hourly publication and any half-hour
+          publication of an unconsumed stage; normal half-hour reuse keeps the prior accepted generation. Source-fetch,
+          source-slot and measured-quote clocks, the 24-hour price/TVL budget and 72-hour volume budget are unchanged.
         </p>
         <p>
           Curve balance, registry, token-price, and metapool TVL enrichment is applied only to Curve DeFiLlama rows.

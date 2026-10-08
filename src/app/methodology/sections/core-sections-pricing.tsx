@@ -47,10 +47,24 @@ export function PricingPipelineMethodologySection() {
           addressed unknown tokens are dropped instead of being reinterpreted by symbol. Reviewed provider-specific
           deployment narrowing applies only while the exact address remains in current metadata; stale configuration
           produces no target, and eligible exact reviewed CoinGecko Onchain overrides reserve one bounded network request
-          before ordinary network round-robin. Promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX
-          voices exist, rejected protocol lanes no longer suppress a valid aggregate DEX fallback, and direct-API quote legs prefer
-          tracked live stablecoin prices instead of unconditional{" "}
+          before ordinary network round-robin. Promoted protocol DEX prices only enter consensus when corroborated or
+          when no non-DEX voices exist. Their presence withholds the overlapping aggregate DEX fallback even if those
+          candidates fail corroboration. Direct-API quote legs prefer tracked live stablecoin prices instead of unconditional{" "}
           <code className="mx-1 text-xs">$1</code> symbol assumptions.
+        </p>
+
+        <p>
+          <strong className="text-foreground">Price-only exchange evidence (v6.44).</strong>{" "}
+          CoinGecko discovery tickers are separate from the curated primary ticker lane. Non-stale, non-anomalous
+          USD-equivalent quotes need a positive finite price and at least $1,000 reported USD flow; registry evidence
+          must be non-future and within 24 hours of its captured evaluation clock. Per-exchange prices are
+          volume-weighted, and aggregate price weights use observed flow &times; the existing ticker confidence (0.55),
+          never synthetic TVL or depth. Genuine pools keep TVL-based price weights. Tickers request no depth and
+          attribute zero TVL even for legacy rows. A price-only publication can therefore have zero source TVL, but
+          still needs a usable primary and passes the unchanged peg, outlier and display guards; it cannot independently
+          clear the primary, UI or depeg DEX trust floors. Price-observation counts can include exchange records, while
+          liquidity pool counts cannot. Liquidity v6.93 records the separate removal of synthetic ticker liquidity and
+          registry-clock correction; Safety formula is unchanged and improved Safety Score stability is unmeasured.
         </p>
 
         <p>
@@ -415,7 +429,7 @@ export function PricingPipelineMethodologySection() {
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground font-medium">Authoritative primary:</span> can admit deep downside for fixed pegs, but publication still requires corroboration unless the mark is protocol redemption or a pool-challenge replacement</li>
               <li><span className="text-foreground font-medium">Fallback enrichment:</span> rejects isolated bad prints below a lower bound</li>
-              <li><span className="text-foreground font-medium">DEX observation:</span> requires consistent $50K post-confidence TVL floor</li>
+              <li><span className="text-foreground font-medium">DEX pool observation:</span> requires the existing $50K TVL floor; independent ticker prices require at least $1,000 observed USD flow with zero TVL attribution and unchanged publication/trust guards</li>
               <li><span className="text-foreground font-medium">Historical backfill:</span> validates against per-timestamp peg references</li>
             </ul>
             <p>USD and fiat-FX pegs share the same upside tolerance ratio when a usable reference exists, while commodity tokens (gold, silver) keep the broader 2x reference band and scale references by <code className="text-xs">commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>

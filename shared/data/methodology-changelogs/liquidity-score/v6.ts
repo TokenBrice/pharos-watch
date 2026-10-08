@@ -4,6 +4,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // Entries below are newest-first; use a new major file only for a major change.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.93",
+    title: "Coherent registry evaluation and price-only CoinGecko tickers",
+    date: "2026-10-08",
+    effectiveAt: 1791504000,
+    summary:
+      "Registry observations are evaluated whole against a clock captured when the registry read completes, closing the one-generation dead-pool-floor bypass for post-start refreshes. CoinGecko Tickers no longer supplies volume-derived synthetic liquidity, including legacy stored rows; it remains independent price evidence under the separately versioned Pricing policy.",
+    impact: [
+      "Registry trust/freshness selection, confidence, maturity, chain trade evidence, dead-pool predicates and coin/global volume admission share registryEvaluatedAtSec, captured after SELECT retries finish. Rows after that clock are rejected whole as future_observation before identity, value, metadata, volume or price can contribute. Source-slot, source-fetch and measured-quote clocks, the 24h price/TVL freshness budget and 72h volume window are unchanged",
+      "Scoring-stage payload v4 requires the registry evaluation clock and rejects prior versions. The D1 layout remains schema v1. A v3 stage from the previous Worker fails closed at :16; :46 reuses the prior accepted publication and the next :10 produces v4. Inline source recovery also requires Graph-key preflight, refusing keyless heavy recovery as missing-graph-api-key rather than publishing a reduced measured-target catalog",
+      "CoinGecko ticker evidence contributes no liquidity TVL, pools, volume, source mix, caps, coverage or orderbook diagnostics, even when old registry rows still carry synthetic TVL/depth. New records store normalized price/observed USD flow with null TVL, request no depth and use generic four-hour raw cleanup. Pricing v6.44 admits and weights the independent zero-TVL price observations; genuine pools retain their existing policy",
+      "The 2026-10-08 read-only inventory found 39 coins/221 recent ticker observations, including ten registry ticker-only identities: usdgo-osl, ylds-figure, gusd-gate, kau-kinesis, fusd-freedom-dollar, usdpt-western-union, sofid-sofi, frnt-wyoming, eurot-token-teknoloji, zsd-zephyr-protocol. The first three had raw ticker TVL above $1M each. Inventory is not a forecast of scored TVL; live-only genuine pools can alter the rollout cohort. Ticker-only liquidity becomes unobserved, not measured zero",
+      "Expect one-time policy TVL steps on affected assets, not measured market withdrawals. The retained-TVL basis break list appends 6.93 so durability does not mix measurement epochs. Observed-coverage baselines exclude prior rows proven wholly ticker-valued and use proven ticker-free trailing epochs; mixed coins and missing/malformed provenance remain protected by the unchanged coverage/value/major-asset guards. Step attribution remains visible",
+      "Registry, measured-target funnel, final persisted route turnover/continuity, bounded TVL-step IDs and partial DEX-body D1 result costs are diagnostics, not formula changes. Safety formula and route-selection/hold policy are unchanged; corrected upstream evidence can affect downstream outputs but improved Safety Score stability has not been measured",
+      "Activation is provisionally the next UTC day boundary, 2026-10-09 00:00 UTC (1791504000); re-date effectiveAt at release",
+    ],
+    commits: ["b762a4034", "573140c03", "56c49e154"],
+    reconstructed: false,
+  },
+  {
     version: "6.92",
     title: "Dead-pool floor for zero-trade pools against untracked tokens",
     date: "2026-09-28",

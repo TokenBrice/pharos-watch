@@ -1,6 +1,6 @@
 # Scripts
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Safety Score Map Refresh · Operator CLI Contract · [Safety Score movement ledger](#safety-score-movement-ledger) · [DEX liquidity acceptance capture](#dex-liquidity-acceptance-capture) · Safety Score Capture-Time Replay · D1 Insights Capture · Routing Index · Validation Command Index · Build And Generated Artifacts · PR And Release Gates · Operational Notes · Pre-Commit Hook Mechanics · Release Ownership · Safe Usage Guidelines.
 
 ## Overview
 
@@ -40,6 +40,42 @@ New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.
 | `check:focused` | Repeatable `--file`, `--staged`, or `--base` selects the authoritative file set forwarded to lint. `--plan-only` performs no checks. Narrowed related-test plans fail when no tests are selected; cron/scheduler owner suites stay broad unless measured closure justifies narrowing. |
 | `check:pr:static` | Retains the explicit base/head range for child lint; rejects `--staged` rather than silently discarding it. Use `check:focused -- --staged` for index-selected checks. |
 | `check:generated-artifacts` | Explicit uncheckable IDs, including mixed `--only` requests, fail before execution with lifecycle and generation guidance. Adaptive callers filter via the registry's shared checkability selector; empty plans skip rather than imply freshness. |
+
+### Safety Score movement ledger
+
+`worker/scripts/safety-score-movement-ledger.ts` reports score or grade changes from the [publication journal](./report-cards.md#publication-journal-and-movement-attribution). Run from the repository root; recommended cadence is **weekly**, while the 120-day evidence window and pre-window baselines are still retained:
+
+```bash
+npx tsx worker/scripts/safety-score-movement-ledger.ts \
+  --from 2026-10-01 --to 2026-10-08 \
+  --output agents/safety-score-movements/2026-10-01-2026-10-08
+```
+
+`--from` / `--to` are required UTC `YYYY-MM-DD` dates; the window is `[from,to)` and at most 120 days. `--output` is a required local filename prefix; it creates parent directories and writes `<prefix>.md` and `<prefix>.json`. `--database` defaults to `stablecoin-db`. The script performs only remote D1 `SELECT`s through `createRemoteD1Client()` using Wrangler `--remote --command <SQL> --json`, never `--file` or production writes. It keyset-paginates change rows and attempts, loads each changed coin's latest retained pre-window baseline, and includes one attempt before/after the window for hold context. Failed/malformed query envelopes fail instead of becoming empty evidence.
+
+The ledger counts only score/grade changes, not every compact diagnostic change. First sight without a prior retained baseline is reported in `missingBaselineCoinIds`, not counted as movement. Identity changes take precedence as `release` (non-comparable methodology/policy/build, **not causal proof**). Same-identity pipeline-gap or partial-evidence cards classify as `operational`; otherwise the largest observed absolute pillar delta or pillar availability change supplies `data:<pillar>`, with all secondary/null deltas retained. Peg-only and cap-only changes have explicit labels; adjacent holds remain linked context and classify as operational only when no pillar/peg/cap explanation exists. Remaining edges are `data:unattributed`. The JSON retains before/after compact cards, identities, lineage and hold codes; retained change-only observations cannot replace a full frozen-input replay or prove that missing edges did not occur.
+
+### DEX liquidity acceptance capture
+
+`worker/scripts/dex-liquidity-acceptance-capture.ts` archives short-lived DEX operational evidence for offline acceptance reporting. **Capture daily, report weekly**: `cron_runs` is pruned after seven days, so a weekly-only pull has no safety margin. This is an operator cadence, not a deployed scheduler.
+
+```bash
+npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts capture
+npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts capture \
+  --from 2026-10-01 --to 2026-10-04 --out agents/dex-acceptance/2026-10-04
+npx tsx worker/scripts/dex-liquidity-acceptance-capture.ts report \
+  --input agents/dex-acceptance --from 2026-10-01 --to 2026-10-08
+```
+
+- **`capture`** reads remote D1 with the same read-only `--remote --command <SQL> --json` client (no `--file` or D1 mutation), default database `stablecoin-db`. Its default trailing three-day window gives overlapping opportunities before pruning; explicit increasing past windows may span at most seven days. Dates or timezone-qualified ISO timestamps are accepted. Default output is `agents/dex-acceptance/<UTC capture date>/`, resolved against the repository root; `--out` accepts another directory or an absolute path.
+- Each schema-v1 `capture-<timestamp>.json` preserves remote clock, database/window, exact SQL, local query time, raw Wrangler envelopes, row counts, query limits/truncation and failures. It captures daily history/flips, all publication/source-stage/discovery cron rows and prior productive version anchors, registry age/source/identity diagnostics, manifests, retained generation-row projections and current coverage. Registry/current reads are sequential live snapshots, **not an as-of transaction**. A failed/truncated query still writes the partial packet and exits unsuccessfully; an unavailable remote clock is fatal. Capture files use exclusive creation, not overwrite.
+- **`report`** is offline: recursively reads `capture-*.json` under `--input` (default `agents/dex-acceptance`), rejects mixed databases, deduplicates overlapping run IDs using the latest capture, and writes `scorecard-<from>-<to>.md` / `.json` into `--out` (default input directory). The default window is the seven complete UTC days ending at midnight on the latest capture date; explicit windows must also span exactly seven complete UTC days. `--database` belongs only to capture and `--input` only to report.
+
+The report separates the **unchanged legacy handover targets** from **prospective evidence**. Legacy daily flips require both day endpoints strictly above $1M and strict `>1.5x` / `<0.5x` steps, bucketed by **day0**; the day1 endpoint is needed beyond the half-open report window. Prospective material moves use inclusive `>=1.25x` / `<=0.80x` **or** an absolute delta `>=$1M`, with separate eligible pair coin-day denominators, below-$1M/hourly return diagnostics, zero/new/missing-observation transitions, method/build cohorts, route funnel/selection/continuity, and active-catalog/observed/rated/score-bearing-route coverage. Retained generation rows are preferred; top-five fallback is explicitly a censored lower bound, never a complete hourly census.
+
+Only the first productive run after a version change **of the same job** is excluded from clean distributions; absent version anchors are unavailable, not assumed unchanged. Median is the ordinary sample median and p95 is nearest-rank. Missing telemetry, baselines, query windows, generation inventories or prior-week captures remain null/`UNMEASURABLE`, never a passing zero. `d1Cost.coverage: "partial"` retains its measured sums/reasons in raw evidence but **never passes the complete-cost gate**. Cost comparison uses actual complete hourly stage + publication D1-read totals (failed/neutral invocations included), not provider `rowsRead`, registry inventory reads or the operator query's own D1 metadata. The legacy authoritative-confirmation baseline remains unmeasurable; captured registry PASS does not certify unseen between-capture maxima.
+
+Preserve ignored `agents/dex-acceptance/` archives externally as required before source rows expire; pruned history cannot be reconstructed. Nonzero flip attribution requires operator root-cause review, not source/protocol names or coincident builds. This reports DEX/Liquidity acceptance evidence, not unchanged-policy Safety score/grade/NR stability. See [DEX liquidity](./dex-liquidity.md) for the producer and methodology contracts.
 
 ## Safety Score Capture-Time Replay
 
